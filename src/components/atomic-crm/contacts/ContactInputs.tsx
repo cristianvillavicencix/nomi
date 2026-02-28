@@ -1,77 +1,57 @@
 import { email, required } from "ra-core";
-import type { FocusEvent, ClipboardEventHandler } from "react";
+import type { ClipboardEventHandler, FocusEvent } from "react";
 import { useFormContext } from "react-hook-form";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { BooleanInput } from "@/components/admin/boolean-input";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { TextInput } from "@/components/admin/text-input";
-import { RadioButtonGroupInput } from "@/components/admin/radio-button-group-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 
-import { isLinkedinUrl } from "../misc/isLinkedInUrl";
-import { contactGender } from "./contactGender";
-import type { Sale } from "../types";
-import { Avatar } from "./Avatar";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
+import { isLinkedinUrl } from "../misc/isLinkedInUrl";
+import { useConfigurationContext } from "../root/ConfigurationContext";
+import type { Sale } from "../types";
 
 export const ContactInputs = () => {
   const isMobile = useIsMobile();
 
   return (
-    <div className="flex flex-col gap-2 p-1 relative md:static">
-      <div className="absolute top-0 right-1 md:static">
-        <Avatar />
-      </div>
-      <div className="flex gap-10 md:gap-6 flex-col md:flex-row">
-        <div className="flex flex-col gap-10 flex-1">
-          <ContactIdentityInputs />
-          <ContactPositionInputs />
+    <div className="flex flex-col gap-6 p-1">
+      <ContactBasicsSection />
+      <Separator />
+      <div className={`flex gap-6 ${isMobile ? "flex-col" : "flex-row"}`}>
+        <div className="flex flex-col gap-6 flex-1">
+          <ContactPersonalInformationInputs />
         </div>
         {isMobile ? null : (
           <Separator orientation="vertical" className="flex-shrink-0" />
         )}
-        <div className="flex flex-col gap-10 flex-1">
-          <ContactPersonalInformationInputs />
-          <ContactMiscInputs />
+        <div className="flex flex-col gap-6 flex-1">
+          <ContactManagementInputs />
         </div>
       </div>
     </div>
   );
 };
 
-const ContactIdentityInputs = () => {
+const ContactBasicsSection = () => {
   return (
     <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Identity</h6>
-      <RadioButtonGroupInput
-        label={false}
-        row
-        source="gender"
-        choices={contactGender}
-        helperText={false}
-        optionText="label"
-        optionValue="value"
-        defaultValue={contactGender[0].value}
-      />
-      <TextInput source="first_name" validate={required()} helperText={false} />
-      <TextInput source="last_name" validate={required()} helperText={false} />
-    </div>
-  );
-};
-
-const ContactPositionInputs = () => {
-  return (
-    <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Position</h6>
-      <TextInput source="title" helperText={false} />
-      <ReferenceInput source="company_id" reference="companies" perPage={10}>
-        <AutocompleteCompanyInput />
-      </ReferenceInput>
+      <h6 className="text-lg font-semibold">Contact</h6>
+      <div className="grid gap-4 md:grid-cols-2">
+        <TextInput source="first_name" validate={required()} helperText={false} />
+        <TextInput source="last_name" validate={required()} helperText={false} />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <TextInput source="title" helperText={false} />
+        <ReferenceInput source="company_id" reference="companies" perPage={10}>
+          <AutocompleteCompanyInput />
+        </ReferenceInput>
+      </div>
     </div>
   );
 };
@@ -79,35 +59,34 @@ const ContactPositionInputs = () => {
 const ContactPersonalInformationInputs = () => {
   const { getValues, setValue } = useFormContext();
 
-  // set first and last name based on email
-  const handleEmailChange = (email: string) => {
+  const handleEmailChange = (emailAddress: string) => {
     const { first_name, last_name } = getValues();
-    if (first_name || last_name || !email) return;
-    const [first, last] = email.split("@")[0].split(".");
-    setValue("first_name", first.charAt(0).toUpperCase() + first.slice(1));
-    setValue(
-      "last_name",
-      last ? last.charAt(0).toUpperCase() + last.slice(1) : "",
-    );
+    if (first_name || last_name || !emailAddress) return;
+    const [first = "", last = ""] = emailAddress.split("@")[0].split(".");
+    if (first) {
+      setValue("first_name", first.charAt(0).toUpperCase() + first.slice(1));
+    }
+    if (last) {
+      setValue("last_name", last.charAt(0).toUpperCase() + last.slice(1));
+    }
   };
 
   const handleEmailPaste: ClipboardEventHandler<
     HTMLTextAreaElement | HTMLInputElement
   > = (e) => {
-    const email = e.clipboardData?.getData("text/plain");
-    handleEmailChange(email);
+    const emailAddress = e.clipboardData?.getData("text/plain");
+    handleEmailChange(emailAddress);
   };
 
   const handleEmailBlur = (
     e: FocusEvent<HTMLTextAreaElement | HTMLInputElement>,
   ) => {
-    const email = e.target.value;
-    handleEmailChange(email);
+    handleEmailChange(e.target.value);
   };
 
   return (
     <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Personal info</h6>
+      <h6 className="text-lg font-semibold">Contact Info</h6>
       <ArrayInput
         source="email_jsonb"
         label="Email addresses"
@@ -178,17 +157,22 @@ const ContactPersonalInformationInputs = () => {
 
 const personalInfoTypes = [{ id: "Work" }, { id: "Home" }, { id: "Other" }];
 
-const ContactMiscInputs = () => {
+const ContactManagementInputs = () => {
+  const { noteStatuses } = useConfigurationContext();
+
   return (
     <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Misc</h6>
-      <TextInput
-        source="background"
-        label="Background info (bio, how you met, etc)"
-        multiline
+      <h6 className="text-lg font-semibold">Management</h6>
+      <SelectInput
+        source="status"
+        label="Status"
         helperText={false}
+        choices={noteStatuses.map((status) => ({
+          id: status.value,
+          name: status.label,
+        }))}
+        validate={required()}
       />
-      <BooleanInput source="has_newsletter" helperText={false} />
       <ReferenceInput
         reference="sales"
         source="sales_id"
@@ -199,11 +183,17 @@ const ContactMiscInputs = () => {
       >
         <SelectInput
           helperText={false}
-          label="Account manager"
+          label="Assigned To"
           optionText={saleOptionRenderer}
           validate={required()}
         />
       </ReferenceInput>
+      <TextInput
+        source="background"
+        label="Background info (bio, how you met, etc)"
+        multiline
+        helperText={false}
+      />
     </div>
   );
 };

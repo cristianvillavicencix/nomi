@@ -12,6 +12,7 @@ import ImageEditorField from "../misc/ImageEditorField";
 import { isLinkedinUrl } from "../misc/isLinkedInUrl";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Sale } from "../types";
+import { getCompanyAvatarFallback } from "./CompanyAvatar";
 import { sizes } from "./sizes";
 
 const isUrl = (url: string) => {
@@ -55,7 +56,7 @@ const CompanyDisplayInputs = () => {
         type="avatar"
         width={60}
         height={60}
-        emptyText={record?.name.charAt(0)}
+        emptyText={getCompanyAvatarFallback(record)}
         linkPosition="bottom"
       />
       <TextInput

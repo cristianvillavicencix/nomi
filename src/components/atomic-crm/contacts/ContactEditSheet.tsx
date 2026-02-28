@@ -1,6 +1,6 @@
 import { RecordRepresentation, type Identifier } from "ra-core";
 import { EditSheet } from "../misc/EditSheet";
-import { ContactInputs } from "./ContactInputs";
+import { ContactFormFields } from "./ContactFormFields";
 
 export interface ContactEditSheetProps {
   open: boolean;
@@ -25,7 +25,7 @@ export const ContactEditSheet = ({
       open={open}
       onOpenChange={onOpenChange}
     >
-      <ContactInputs />
+      <ContactFormFields />
     </EditSheet>
   );
 };

@@ -2,10 +2,9 @@ import {
   CreateBase,
   Form,
   useGetIdentity,
-  useListContext,
   useNotify,
+  useRefresh,
   useRecordContext,
-  useResourceContext,
   useUpdate,
   type Identifier,
   type RaRecord,
@@ -22,23 +21,32 @@ export const NoteCreate = ({
   reference,
   showStatus,
   className,
+  contactId,
 }: {
   reference: "contacts" | "deals";
   showStatus?: boolean;
   className?: string;
+  contactId?: Identifier;
 }) => {
-  const resource = useResourceContext();
   const record = useRecordContext();
   const { identity } = useGetIdentity();
+  const resource = reference === "contacts" ? "contact_notes" : "deal_notes";
+  const referenceRecordId =
+    reference === "contacts" ? contactId ?? record?.id : record?.id;
 
-  if (!record || !identity) return null;
+  if (!referenceRecordId || !identity) return null;
 
   return (
     <CreateBase resource={resource} redirect={false}>
       <Form>
         <div className={cn("space-y-3", className)}>
           <NoteInputs showStatus={showStatus} />
-          <NoteCreateButton reference={reference} record={record} />
+          <NoteCreateButton
+            reference={reference}
+            record={record}
+            contactId={reference === "contacts" ? referenceRecordId : undefined}
+            referenceRecordId={referenceRecordId}
+          />
         </div>
       </Form>
     </CreateBase>
@@ -48,17 +56,21 @@ export const NoteCreate = ({
 const NoteCreateButton = ({
   reference,
   record,
+  contactId,
+  referenceRecordId,
 }: {
   reference: "contacts" | "deals";
-  record: RaRecord<Identifier>;
+  record?: RaRecord<Identifier>;
+  contactId?: Identifier;
+  referenceRecordId: Identifier;
 }) => {
   const [update] = useUpdate();
   const notify = useNotify();
+  const refresh = useRefresh();
   const { identity } = useGetIdentity();
   const { reset } = useFormContext();
-  const { refetch } = useListContext();
 
-  if (!record || !identity) return null;
+  if (!identity) return null;
 
   const resetValues: {
     date: string;
@@ -77,16 +89,17 @@ const NoteCreateButton = ({
 
   const handleSuccess = (data: any) => {
     reset(resetValues, { keepValues: false });
-    refetch();
-    update(reference, {
-      id: (record && record.id) as unknown as Identifier,
-      data: {
-        last_seen:
-          reference === "contacts" ? new Date().toISOString() : undefined,
-        status: data.status,
-      },
-      previousData: record,
-    });
+    refresh();
+    if (reference === "contacts" && record) {
+      update(reference, {
+        id: record.id as unknown as Identifier,
+        data: {
+          last_seen: new Date().toISOString(),
+          status: data.status,
+        },
+        previousData: record,
+      });
+    }
     notify("Note added");
   };
 
@@ -97,7 +110,9 @@ const NoteCreateButton = ({
         label="Add this note"
         transform={(data) => ({
           ...data,
-          [foreignKeyMapping[reference]]: record.id,
+          [foreignKeyMapping[reference]]:
+            reference === "contacts" ? contactId : referenceRecordId,
+          contact_id: reference === "contacts" ? contactId : data.contact_id,
           sales_id: identity.id,
           date: new Date(data.date || getCurrentDate()).toISOString(),
         })}

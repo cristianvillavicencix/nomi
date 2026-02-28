@@ -37,7 +37,7 @@ export const ContactPersonalInfo = () => {
           icon={<Linkedin className="w-4 h-4 text-muted-foreground" />}
           primary={
             <a
-              className="underline hover:no-underline text-sm text-muted-foreground"
+              className="link-action text-sm text-muted-foreground"
               href={record.linkedin_url}
               target="_blank"
               rel="noopener noreferrer"

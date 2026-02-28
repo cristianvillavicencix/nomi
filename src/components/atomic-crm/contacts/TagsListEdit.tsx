@@ -20,7 +20,7 @@ import { TagChip } from "../tags/TagChip";
 import { TagCreateModal } from "../tags/TagCreateModal";
 import type { Contact, Tag } from "../types";
 
-export const TagsListEdit = () => {
+export const TagsListEdit = ({ buttonOnly = false }: { buttonOnly?: boolean }) => {
   const record = useRecordContext<Contact>();
   const [open, setOpen] = useState(false);
 
@@ -102,11 +102,13 @@ export const TagsListEdit = () => {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {tags?.map((tag) => (
-        <div key={tag.id}>
-          <TagChip tag={tag} onUnlink={() => handleTagDelete(tag.id)} />
-        </div>
-      ))}
+      {!buttonOnly
+        ? tags?.map((tag) => (
+            <div key={tag.id}>
+              <TagChip tag={tag} onUnlink={() => handleTagDelete(tag.id)} />
+            </div>
+          ))
+        : null}
 
       <div>
         <DropdownMenu>
