@@ -9,6 +9,7 @@ import { TextField } from "@/components/admin/text-field";
 import { DateField } from "@/components/admin/date-field";
 import { UrlField } from "@/components/admin/url-field";
 import { SelectField } from "@/components/admin/select-field";
+import { mapsHref } from "@/lib/linking";
 
 import { AsideSection } from "../misc/AsideSection";
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -78,7 +79,7 @@ export const CompanyInfo = ({ record }: { record: Company }) => {
         <div className="flex flex-row items-center gap-1 min-h-[24px]">
           <Linkedin className="w-4 h-4" />
           <a
-            className="underline hover:no-underline"
+            className="link-action"
             href={record.linkedin_url}
             target="_blank"
             rel="noopener noreferrer"
@@ -142,11 +143,25 @@ export const AddressInfo = ({ record }: { record: Company }) => {
 
   return (
     <AsideSection title="Main Address" noGap>
-      <TextField source="address" />
-      <TextField source="city" />
-      <TextField source="zipcode" />
-      <TextField source="state_abbr" />
-      <TextField source="country" />
+      <a
+        href={mapsHref(
+          [record.address, record.city, record.state_abbr, record.zipcode, record.country]
+            .filter(Boolean)
+            .join(" "),
+        )}
+        target="_blank"
+        rel="noreferrer"
+        className="link-action text-sm"
+        title={[record.address, record.city, record.state_abbr, record.zipcode, record.country]
+          .filter(Boolean)
+          .join(", ")}
+      >
+        <TextField source="address" />
+        <TextField source="city" />
+        <TextField source="zipcode" />
+        <TextField source="state_abbr" />
+        <TextField source="country" />
+      </a>
     </AsideSection>
   );
 };
@@ -176,7 +191,7 @@ export const AdditionalInfo = ({ record }: { record: Company }) => {
             link ? (
               <a
                 key={index}
-                className="text-sm underline hover:no-underline mb-1"
+                className="link-action text-sm mb-1"
                 href={link.startsWith("http") ? link : `https://${link}`}
                 target="_blank"
                 rel="noopener noreferrer"

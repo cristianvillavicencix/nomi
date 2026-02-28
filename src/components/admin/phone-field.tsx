@@ -2,12 +2,8 @@ import { genericMemo, useFieldValue, useTranslate } from "ra-core";
 import type { AnchorHTMLAttributes } from "react";
 import React from "react";
 import { cn } from "@/lib/utils";
+import { normalizePhoneForTel } from "@/lib/linking";
 import type { FieldProps } from "@/lib/field.type";
-import {
-  formatUsPhoneDisplayFromAny,
-  getPhoneHref,
-  isValidUsPhone,
-} from "@/utils/phone";
 
 const PhoneFieldImpl = <
   RecordType extends Record<string, any> = Record<string, any>,
@@ -39,25 +35,23 @@ const PhoneFieldImpl = <
     );
   }
 
-  const displayValue = formatUsPhoneDisplayFromAny(String(resolvedValue));
-  const href = getPhoneHref(String(resolvedValue));
-
-  if (!href || !isValidUsPhone(String(resolvedValue))) {
+  const { display, telHref } = normalizePhoneForTel(String(resolvedValue));
+  if (!telHref) {
     return (
       <span className={className} {...rest}>
-        {displayValue}
+        {display}
       </span>
     );
   }
 
   return (
     <a
-      className={cn("underline hover:no-underline", className)}
-      href={href}
+      className={cn("link-action", className)}
+      href={telHref}
       onClick={stopPropagation}
       {...rest}
     >
-      {displayValue}
+      {display}
     </a>
   );
 };
@@ -75,4 +69,3 @@ export interface PhoneFieldProps<
 
 const stopPropagation = (e: React.MouseEvent<HTMLAnchorElement>) =>
   e.stopPropagation();
-

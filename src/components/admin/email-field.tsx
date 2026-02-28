@@ -4,6 +4,7 @@ import React from "react";
 
 import { cn } from "@/lib/utils";
 import type { FieldProps } from "@/lib/field.type";
+import { mailtoHref } from "@/lib/linking";
 
 const EmailFieldImpl = <
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,10 +28,15 @@ const EmailFieldImpl = <
     );
   }
 
+  const href = mailtoHref(String(value));
+  if (!href) {
+    return <span className={className}>{value}</span>;
+  }
+
   return (
     <a
-      className={cn("underline hover:no-underline", className)}
-      href={`mailto:${value}`}
+      className={cn("link-action", className)}
+      href={href}
       onClick={stopPropagation}
       {...rest}
     >

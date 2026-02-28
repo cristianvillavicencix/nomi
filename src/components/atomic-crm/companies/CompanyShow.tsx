@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistance } from "date-fns";
-import { UserPlus } from "lucide-react";
+import { ChevronLeft, UserPlus } from "lucide-react";
 import {
   RecordContextProvider,
   ShowBase,
@@ -52,6 +52,8 @@ export const CompanyShow = () => {
 
 const CompanyShowContentMobile = () => {
   const { record, isPending } = useShowContext<Company>();
+  const location = useLocation();
+  const navigate = useNavigate();
   if (isPending || !record) return null;
 
   return (
@@ -66,6 +68,15 @@ const CompanyShowContentMobile = () => {
       </MobileHeader>
 
       <MobileContent>
+        <Button
+          type="button"
+          variant="ghost"
+          className="mb-4 px-0 link-action"
+          onClick={() => navigate(location.state?.from ?? -1)}
+        >
+          <ChevronLeft className="size-4" />
+          Volver
+        </Button>
         <div className="mb-6">
           <div className="flex items-center mb-4">
             <CompanyAvatar />
@@ -86,6 +97,7 @@ const CompanyShowContentMobile = () => {
 const CompanyShowContent = () => {
   const { record, isPending } = useShowContext<Company>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Get tab from URL or default to "activity"
   const tabMatch = useMatch("/companies/:id/show/:tab");
@@ -107,6 +119,15 @@ const CompanyShowContent = () => {
       <div className="flex-1">
         <Card>
           <CardContent>
+            <Button
+              type="button"
+              variant="ghost"
+              className="mb-3 px-0 link-action"
+              onClick={() => navigate(location.state?.from ?? -1)}
+            >
+              <ChevronLeft className="size-4" />
+              Volver
+            </Button>
             <div className="flex mb-3">
               <CompanyAvatar />
               <h5 className="text-xl ml-2 flex-1">{record.name}</h5>
@@ -194,7 +215,7 @@ const ContactsIterator = () => {
             <RouterLink
               to={`/contacts/${contact.id}/show`}
               state={{ from: location.pathname }}
-              className="flex items-center justify-between hover:bg-muted py-2 transition-colors"
+              className="link-action flex items-center justify-between hover:bg-muted py-2 transition-colors"
             >
               <div className="mr-4">
                 <Avatar />

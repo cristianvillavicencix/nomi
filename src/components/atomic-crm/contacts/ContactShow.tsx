@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { RecordRepresentation, ShowBase, useShowContext } from "ra-core";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ReferenceField } from "@/components/admin/reference-field";
 import { ReferenceManyField } from "@/components/admin/reference-many-field";
 import { ReferenceManyCount } from "@/components/admin/reference-many-count";
-import { TextField } from "@/components/admin/text-field";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Pencil } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
@@ -51,6 +49,7 @@ const ContactShowContentMobile = () => {
   const { record, isPending } = useShowContext<Contact>();
   const [noteCreateOpen, setNoteCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const location = useLocation();
   if (isPending || !record) return null;
 
   return (
@@ -99,25 +98,24 @@ const ContactShowContentMobile = () => {
                 {record.title}
                 {record.title && record.company_id != null && " at "}
                 {record.company_id != null && (
-                  <ReferenceField
-                    source="company_id"
-                    reference="companies"
-                    link="show"
+                  <Link
+                    to={`/companies/${record.company_id}/show`}
+                    state={{ from: `${location.pathname}${location.search}` }}
+                    className="link-action"
                   >
-                    <TextField source="name" className="underline" />
-                  </ReferenceField>
+                    {record.company_name ?? "Company"}
+                  </Link>
                 )}
               </div>
             </div>
             <div>
-              <ReferenceField
-                source="company_id"
-                reference="companies"
-                link="show"
-                className="no-underline"
+              <Link
+                to={`/companies/${record.company_id}/show`}
+                state={{ from: `${location.pathname}${location.search}` }}
+                className="link-action"
               >
                 <CompanyAvatar />
-              </ReferenceField>
+              </Link>
             </div>
           </div>
         </div>
@@ -203,6 +201,7 @@ const ContactShowContentMobile = () => {
 
 const ContactShowContent = () => {
   const { record, isPending } = useShowContext<Contact>();
+  const location = useLocation();
   if (isPending || !record) return null;
 
   return (
@@ -220,26 +219,25 @@ const ContactShowContent = () => {
                   {record.title}
                   {record.title && record.company_id != null && " at "}
                   {record.company_id != null && (
-                    <ReferenceField
-                      source="company_id"
-                      reference="companies"
-                      link="show"
+                    <Link
+                      to={`/companies/${record.company_id}/show`}
+                      state={{ from: `${location.pathname}${location.search}` }}
+                      className="link-action"
                     >
                       &nbsp;
-                      <TextField source="name" />
-                    </ReferenceField>
+                      {record.company_name ?? "Company"}
+                    </Link>
                   )}
                 </div>
               </div>
               <div>
-                <ReferenceField
-                  source="company_id"
-                  reference="companies"
-                  link="show"
-                  className="no-underline"
+                <Link
+                  to={`/companies/${record.company_id}/show`}
+                  state={{ from: `${location.pathname}${location.search}` }}
+                  className="link-action"
                 >
                   <CompanyAvatar />
-                </ReferenceField>
+                </Link>
               </div>
             </div>
             <ReferenceManyField

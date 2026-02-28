@@ -7,18 +7,15 @@ import {
   useTimeout,
 } from "ra-core";
 import { type MouseEvent, useCallback, useRef } from "react";
-import { Link } from "react-router";
-import { ReferenceField } from "@/components/admin/reference-field";
-import { TextField } from "@/components/admin/text-field";
+import { useLocation, useNavigate } from "react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 
-import { Status } from "../misc/Status";
 import type { Contact } from "../types";
 import { Avatar } from "./Avatar";
-import { formatUsPhoneDisplayFromAny, getPhoneHref } from "@/utils/phone";
+import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
 
 const getPrimaryPhone = (contact: Contact) =>
   contact.phone_jsonb?.find((phone) => phone.number?.trim())?.number ?? "—";
@@ -26,22 +23,48 @@ const getPrimaryPhone = (contact: Contact) =>
 const getPrimaryEmail = (contact: Contact) =>
   contact.email_jsonb?.find((email) => email.email?.trim())?.email ?? "—";
 
-const PhoneText = ({ value }: { value: string }) => {
-  const href = getPhoneHref(value);
-  const displayValue = formatUsPhoneDisplayFromAny(value);
+const stopRowNavigation = (event: MouseEvent | React.MouseEvent) => {
+  event.stopPropagation();
+};
 
-  if (!href) {
-    return <span>{displayValue}</span>;
+const PlainAnchor = ({
+  href,
+  children,
+  title,
+  external,
+  onClick,
+}: {
+  href: string;
+  children: React.ReactNode;
+  title?: string;
+  external?: boolean;
+  onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+}) => (
+  <a
+    href={href}
+    title={title}
+    className="link-action focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+    target={external ? "_blank" : undefined}
+    rel={external ? "noreferrer" : undefined}
+    onClick={(event) => {
+      stopRowNavigation(event);
+      onClick?.(event);
+    }}
+  >
+    {children}
+  </a>
+);
+
+const PhoneText = ({ value }: { value: string }) => {
+  const { display, telHref } = normalizePhoneForTel(value);
+  if (!telHref) {
+    return <span>{display}</span>;
   }
 
   return (
-    <a
-      href={href}
-      className="underline hover:no-underline"
-      onClick={(event) => event.stopPropagation()}
-    >
-      {displayValue}
-    </a>
+    <PlainAnchor href={telHref} title={display}>
+      {display}
+    </PlainAnchor>
   );
 };
 
@@ -50,7 +73,15 @@ const ContactAddress = ({ contact }: { contact: Contact }) => {
     return <span>—</span>;
   }
 
-  return <span title={contact.address}>{contact.address}</span>;
+  return (
+    <PlainAnchor
+      href={mapsHref(contact.address)}
+      external
+      title={contact.address}
+    >
+      {contact.address}
+    </PlainAnchor>
+  );
 };
 
 export const ContactListContent = () => {
@@ -132,58 +163,78 @@ const ContactItemContent = ({
   handleToggleItem: (id: Identifier, event: MouseEvent) => void;
 }) => {
   const { selectedIds } = useListContext<Contact>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const companyPath = contact.company_id
+    ? `/companies/${contact.company_id}/show`
+    : null;
+  const contactPath = `/contacts/${contact.id}/show`;
+  const companyLabel = contact.company_name ?? "—";
+  const email = getPrimaryEmail(contact);
+  const emailHref = mailtoHref(email);
 
   return (
-    <div className="flex flex-row items-center pl-2 pr-4 py-2 hover:bg-muted transition-colors first:rounded-t-xl last:rounded-b-xl">
+    <div
+      className="flex flex-row items-center pl-2 pr-4 py-2 hover:bg-muted transition-colors first:rounded-t-xl last:rounded-b-xl cursor-pointer"
+      onClick={() => navigate(contactPath)}
+    >
       <div
         className="px-4 py-3 flex items-center cursor-pointer"
-        onClick={(e) => handleToggleItem(contact.id, e)}
+        onClick={(e) => {
+          stopRowNavigation(e);
+          handleToggleItem(contact.id, e);
+        }}
       >
         <Checkbox
           className="cursor-pointer"
           checked={selectedIds.includes(contact.id)}
         />
       </div>
-      <Link
-        to={`/contacts/${contact.id}/show`}
-        className="flex-1 min-w-0"
-      >
-        <div className="flex min-w-0 items-center gap-4">
-          <Avatar />
-          <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.4fr)] md:items-center md:gap-4">
-            <div className="min-w-0">
-              <div className="truncate font-medium">
-                {`${contact.first_name} ${contact.last_name ?? ""}`}
-              </div>
-              <div className="truncate text-sm text-muted-foreground">
-                {contact.company_id != null ? (
-                  <ReferenceField
-                    source="company_id"
-                    reference="companies"
-                    link={false}
-                  >
-                    <TextField source="name" />
-                  </ReferenceField>
-                ) : (
-                  "—"
-                )}
-              </div>
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <Avatar />
+        <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.4fr)] md:items-center md:gap-4">
+          <div className="min-w-0">
+            <div className="truncate font-medium">
+              {`${contact.first_name} ${contact.last_name ?? ""}`}
             </div>
-            <div className="min-w-0 truncate text-sm text-muted-foreground">
-              <PhoneText value={getPrimaryPhone(contact)} />
-            </div>
-            <div
-              className="min-w-0 truncate text-sm text-muted-foreground"
-              title={getPrimaryEmail(contact)}
-            >
-              {getPrimaryEmail(contact)}
-            </div>
-            <div className="min-w-0 truncate text-sm text-muted-foreground">
-              <ContactAddress contact={contact} />
+            <div className="truncate text-sm text-muted-foreground">
+              {companyPath ? (
+                <PlainAnchor
+                  href={companyPath}
+                  title={companyLabel}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    navigate(companyPath, {
+                      state: {
+                        from: `${location.pathname}${location.search}`,
+                      },
+                    });
+                  }}
+                >
+                  {companyLabel}
+                </PlainAnchor>
+              ) : (
+                "—"
+              )}
             </div>
           </div>
+          <div className="min-w-0 truncate text-sm text-muted-foreground">
+            <PhoneText value={getPrimaryPhone(contact)} />
+          </div>
+          <div className="min-w-0 truncate text-sm text-muted-foreground" title={email}>
+            {emailHref ? (
+              <PlainAnchor href={emailHref} title={email}>
+                {email}
+              </PlainAnchor>
+            ) : (
+              email
+            )}
+          </div>
+          <div className="min-w-0 truncate text-sm text-muted-foreground">
+            <ContactAddress contact={contact} />
+          </div>
         </div>
-      </Link>
+      </div>
     </div>
   );
 };
@@ -257,46 +308,68 @@ export const ContactListContentMobile = () => {
   );
 };
 
-const ContactItemContentMobile = ({ contact }: { contact: Contact }) => (
-  <Link
-    to={`/contacts/${contact.id}/show`}
-    className="flex flex-row gap-4 items-center py-2 hover:bg-muted transition-colors"
-  >
-    <Avatar />
-    <div className="flex flex-col grow justify-between">
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between">
+const ContactItemContentMobile = ({ contact }: { contact: Contact }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const companyPath = contact.company_id
+    ? `/companies/${contact.company_id}/show`
+    : null;
+  const companyLabel = contact.company_name ?? "—";
+  const email = getPrimaryEmail(contact);
+  const emailHref = mailtoHref(email);
+
+  return (
+    <div
+      className="flex flex-row gap-4 items-center py-2 hover:bg-muted transition-colors cursor-pointer"
+      onClick={() => navigate(`/contacts/${contact.id}/show`)}
+    >
+      <Avatar />
+      <div className="flex flex-col grow justify-between">
+        <div className="flex-1 min-w-0">
           <div className="font-medium">
             <RecordRepresentation />
           </div>
-          <Status status={contact.status} />
-        </div>
-        <div className="text-sm text-muted-foreground">
-          <div className="flex flex-col gap-1">
-            <span>
-              {contact.company_id != null && (
-                <ReferenceField
-                  source="company_id"
-                  reference="companies"
-                  link={false}
-                >
-                  <TextField source="name" />
-                </ReferenceField>
-              )}
-              {contact.company_id == null ? "—" : null}
-            </span>
-            <span className="truncate">
-              <PhoneText value={getPrimaryPhone(contact)} />
-            </span>
-            <span className="truncate" title={getPrimaryEmail(contact)}>
-              {getPrimaryEmail(contact)}
-            </span>
-            <span className="truncate">
-              <ContactAddress contact={contact} />
-            </span>
+          <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col gap-1">
+              <span className="truncate">
+                {companyPath ? (
+                  <PlainAnchor
+                    href={companyPath}
+                    title={companyLabel}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      navigate(companyPath, {
+                        state: {
+                          from: `${location.pathname}${location.search}`,
+                        },
+                      });
+                    }}
+                  >
+                    {companyLabel}
+                  </PlainAnchor>
+                ) : (
+                  "—"
+                )}
+              </span>
+              <span className="truncate">
+                <PhoneText value={getPrimaryPhone(contact)} />
+              </span>
+              <span className="truncate" title={email}>
+                {emailHref ? (
+                  <PlainAnchor href={emailHref} title={email}>
+                    {email}
+                  </PlainAnchor>
+                ) : (
+                  email
+                )}
+              </span>
+              <span className="truncate">
+                <ContactAddress contact={contact} />
+              </span>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </Link>
-);
+  );
+};

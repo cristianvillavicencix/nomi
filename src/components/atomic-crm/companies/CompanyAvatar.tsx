@@ -13,16 +13,18 @@ export const CompanyAvatar = (props: {
   if (!record) return null;
 
   const sizeClass = width !== 40 ? `w-[20px] h-[20px]` : "w-10 h-10";
+  const companyName = record.name?.trim() ?? "";
+  const fallbackInitial = companyName.charAt(0).toUpperCase() || "?";
 
   return (
     <Avatar className={sizeClass}>
       <AvatarImage
         src={record.logo?.src}
-        alt={record.name}
+        alt={companyName || "Company"}
         className="object-contain"
       />
       <AvatarFallback className={width !== 40 ? "text-xs" : "text-sm"}>
-        {record.name.charAt(0)}
+        {fallbackInitial}
       </AvatarFallback>
     </Avatar>
   );

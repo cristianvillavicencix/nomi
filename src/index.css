@@ -166,6 +166,24 @@ input[type="time"] {
   position: relative;
 }
 
+.link-action {
+  text-decoration: none;
+  cursor: pointer;
+  color: inherit;
+  transition: color 0.15s ease;
+}
+
+.link-action:hover {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.link-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 0.4);
+  border-radius: 0.25rem;
+}
+
 .dark ::-webkit-calendar-picker-indicator {
   filter: invert(1);
   position: absolute;

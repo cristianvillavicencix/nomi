@@ -4,8 +4,9 @@ import { SingleFieldList } from "@/components/admin/single-field-list";
 import { PhoneField } from "@/components/admin/phone-field";
 import { TextField } from "@/components/admin/text-field";
 import { EmailField } from "@/components/admin/email-field";
-import { Mail, Phone, Linkedin } from "lucide-react";
+import { Mail, Phone, Linkedin, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
+import { mapsHref } from "@/lib/linking";
 import { contactGender } from "./contactGender";
 import type { Contact } from "../types";
 
@@ -56,6 +57,22 @@ export const ContactPersonalInfo = () => {
           />
         </SingleFieldList>
       </ArrayField>
+      {record.address && (
+        <PersonalInfoRow
+          icon={<MapPin className="w-4 h-4 text-muted-foreground" />}
+          primary={
+            <a
+              className="link-action text-sm text-muted-foreground"
+              href={mapsHref(record.address)}
+              target="_blank"
+              rel="noreferrer"
+              title={record.address}
+            >
+              {record.address}
+            </a>
+          }
+        />
+      )}
       {contactGender
         .map((genderOption) => {
           if (record.gender === genderOption.value) {
