@@ -10,13 +10,17 @@ import type {
   ContactNote,
   Deal,
   DealNote,
+  PhoneNumberAndType,
   RAFile,
   Sale,
   SalesFormData,
   SignUpData,
+  EmailAndType,
 } from "../../types";
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { getActivityLog } from "../commons/activity";
+import { isValidEmail } from "@/utils/email";
+import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getIsInitialized } from "./authProvider";
 import { supabase } from "./supabase";
 
@@ -52,6 +56,58 @@ const processCompanyLogo = async (params: any) => {
   };
 };
 
+const normalizeEmailValue = (value?: string | null, label = "email") => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (!isValidEmail(trimmed)) {
+    throw new Error(`Invalid ${label}`);
+  }
+
+  return trimmed;
+};
+
+const normalizePhoneValue = (value?: string | null, label = "phone") => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const normalized = normalizeUsPhoneToE164(trimmed);
+  if (!normalized) {
+    throw new Error(`Invalid ${label}. Use 10 digits`);
+  }
+
+  return normalized;
+};
+
+const normalizeEmailEntries = (entries?: EmailAndType[]) =>
+  entries
+    ?.map((entry) => {
+      const email = normalizeEmailValue(entry.email, "email");
+      return email ? { ...entry, email } : null;
+    })
+    .filter((entry): entry is EmailAndType => entry != null);
+
+const normalizePhoneEntries = (entries?: PhoneNumberAndType[]) =>
+  entries
+    ?.map((entry) => {
+      const number = normalizePhoneValue(entry.number);
+      return number ? { ...entry, number } : null;
+    })
+    .filter((entry): entry is PhoneNumberAndType => entry != null);
+
+const normalizeContactData = <T extends {
+  email_jsonb?: EmailAndType[];
+  phone_jsonb?: PhoneNumberAndType[];
+}>(data: T): T => ({
+  ...data,
+  email_jsonb: normalizeEmailEntries(data.email_jsonb),
+  phone_jsonb: normalizePhoneEntries(data.phone_jsonb),
+});
+
 const dataProviderWithCustomMethods = {
   ...baseDataProvider,
   async getList(resource: string, params: GetListParams) {
@@ -76,8 +132,9 @@ const dataProviderWithCustomMethods = {
   },
 
   async signUp({ email, password, first_name, last_name }: SignUpData) {
+    const normalizedEmail = normalizeEmailValue(email, "email");
     const response = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         data: {
@@ -97,16 +154,20 @@ const dataProviderWithCustomMethods = {
 
     return {
       id: response.data.user.id,
-      email,
+      email: normalizedEmail!,
       password,
     };
   },
   async salesCreate(body: SalesFormData) {
+    const normalizedBody = {
+      ...body,
+      email: normalizeEmailValue(body.email, "email")!,
+    };
     const { data, error } = await supabase.functions.invoke<{ data: Sale }>(
       "users",
       {
         method: "POST",
-        body,
+        body: normalizedBody,
       },
     );
 
@@ -128,8 +189,19 @@ const dataProviderWithCustomMethods = {
     id: Identifier,
     data: Partial<Omit<SalesFormData, "password">>,
   ) {
-    const { email, first_name, last_name, administrator, avatar, disabled } =
-      data;
+    const {
+      email,
+      first_name,
+      last_name,
+      administrator,
+      avatar,
+      disabled,
+    } = data;
+
+    let persistedAvatar = avatar;
+    if (persistedAvatar?.rawFile instanceof File) {
+      persistedAvatar = await uploadToBucket(persistedAvatar);
+    }
 
     const { data: updatedData, error } = await supabase.functions.invoke<{
       data: Sale;
@@ -137,12 +209,12 @@ const dataProviderWithCustomMethods = {
       method: "PATCH",
       body: {
         sales_id: id,
-        email,
+        email: normalizeEmailValue(email, "email"),
         first_name,
         last_name,
         administrator,
         disabled,
-        avatar,
+        avatar: persistedAvatar,
       },
     });
 
@@ -292,6 +364,9 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       if (data.avatar) {
         await uploadToBucket(data.avatar);
       }
+      if ("email" in data) {
+        data.email = normalizeEmailValue(data.email, "email") ?? "";
+      }
       return data;
     },
   },
@@ -322,6 +397,7 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       ])(params);
     },
     beforeCreate: async (params) => {
+      params.data = normalizeContactData(params.data);
       const createParams = await processCompanyLogo(params);
 
       return {
@@ -333,6 +409,7 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       };
     },
     beforeUpdate: async (params) => {
+      params.data = normalizeContactData(params.data);
       return await processCompanyLogo(params);
     },
   },
@@ -344,6 +421,16 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   },
   {
     resource: "people",
+    beforeCreate: async (params) => {
+      params.data.email = normalizeEmailValue(params.data.email, "email");
+      params.data.phone = normalizePhoneValue(params.data.phone);
+      return params;
+    },
+    beforeUpdate: async (params) => {
+      params.data.email = normalizeEmailValue(params.data.email, "email");
+      params.data.phone = normalizePhoneValue(params.data.phone);
+      return params;
+    },
     beforeGetList: async (params) => {
       return applyFullTextSearch(["first_name", "last_name", "email", "phone"])(
         params,

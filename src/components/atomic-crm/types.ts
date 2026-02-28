@@ -17,7 +17,7 @@ export type SignUpData = {
 };
 
 export type SalesFormData = {
-  avatar?: string;
+  avatar?: RAFile | null;
   email: string;
   password?: string;
   first_name: string;
@@ -85,6 +85,7 @@ export type Contact = {
   first_name: string;
   last_name: string;
   title: string;
+  address?: string | null;
   company_id?: Identifier | null;
   email_jsonb: EmailAndType[];
   avatar?: Partial<RAFile>;

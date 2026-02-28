@@ -14,12 +14,16 @@ import type {
   ContactNote,
   Deal,
   DealNote,
+  EmailAndType,
+  PhoneNumberAndType,
   Sale,
   SalesFormData,
   SignUpData,
   Task,
 } from "../../types";
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
+import { isValidEmail } from "@/utils/email";
+import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getActivityLog } from "../commons/activity";
 import { getCompanyAvatar } from "../commons/getCompanyAvatar";
 import { getContactAvatar } from "../commons/getContactAvatar";
@@ -54,6 +58,58 @@ const processCompanyLogo = async (params: any) => {
     },
   };
 };
+
+const normalizeEmailValue = (value?: string | null, label = "email") => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (!isValidEmail(trimmed)) {
+    throw new Error(`Invalid ${label}`);
+  }
+
+  return trimmed;
+};
+
+const normalizePhoneValue = (value?: string | null, label = "phone") => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const normalized = normalizeUsPhoneToE164(trimmed);
+  if (!normalized) {
+    throw new Error(`Invalid ${label}. Use 10 digits`);
+  }
+
+  return normalized;
+};
+
+const normalizeEmailEntries = (entries?: EmailAndType[]) =>
+  entries
+    ?.map((entry) => {
+      const email = normalizeEmailValue(entry.email, "email");
+      return email ? { ...entry, email } : null;
+    })
+    .filter((entry): entry is EmailAndType => entry != null);
+
+const normalizePhoneEntries = (entries?: PhoneNumberAndType[]) =>
+  entries
+    ?.map((entry) => {
+      const number = normalizePhoneValue(entry.number);
+      return number ? { ...entry, number } : null;
+    })
+    .filter((entry): entry is PhoneNumberAndType => entry != null);
+
+const normalizeContactData = <T extends {
+  email_jsonb?: EmailAndType[];
+  phone_jsonb?: PhoneNumberAndType[];
+}>(data: T): T => ({
+  ...data,
+  email_jsonb: normalizeEmailEntries(data.email_jsonb),
+  phone_jsonb: normalizePhoneEntries(data.phone_jsonb),
+});
 
 async function processContactAvatar(
   params: UpdateParams<Contact>,
@@ -148,9 +204,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     first_name,
     last_name,
   }: SignUpData): Promise<{ id: string; email: string; password: string }> => {
+    const normalizedEmail = normalizeEmailValue(email, "email")!;
     const user = await baseDataProvider.create("sales", {
       data: {
-        email,
+        email: normalizedEmail,
         first_name,
         last_name,
       },
@@ -158,6 +215,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
 
     return {
       ...user.data,
+      email: normalizedEmail,
       password,
     };
   },
@@ -165,6 +223,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     const response = await dataProvider.create("sales", {
       data: {
         ...data,
+        email: normalizeEmailValue(data.email, "email")!,
         password: "new_password",
       },
     });
@@ -185,7 +244,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
 
     const { data: sale } = await dataProvider.update<Sale>("sales", {
       id,
-      data,
+      data: {
+        ...data,
+        email: normalizeEmailValue(data.email, "email"),
+      },
       previousData,
     });
     return { ...sale, user_id: sale.id.toString() };
@@ -375,6 +437,11 @@ export const dataProvider = withLifecycleCallbacks(
         if (data.administrator == null) {
           data.administrator = false;
         }
+        data.email = normalizeEmailValue(data.email, "email") ?? "";
+        return params;
+      },
+      beforeUpdate: async (params) => {
+        params.data.email = normalizeEmailValue(params.data.email, "email");
         return params;
       },
       afterSave: async (data) => {
@@ -464,7 +531,7 @@ export const dataProvider = withLifecycleCallbacks(
         const params = {
           ...createParams,
           data: {
-            ...createParams.data,
+            ...normalizeContactData(createParams.data),
             first_seen:
               createParams.data.first_seen ?? new Date().toISOString(),
             last_seen: createParams.data.last_seen ?? new Date().toISOString(),
@@ -483,7 +550,10 @@ export const dataProvider = withLifecycleCallbacks(
         return result;
       },
       beforeUpdate: async (params) => {
-        const newParams = await processContactAvatar(params);
+        const newParams = await processContactAvatar({
+          ...params,
+          data: normalizeContactData(params.data),
+        });
         return fetchAndUpdateCompanyData(newParams, dataProvider);
       },
       afterDelete: async (result) => {
@@ -563,6 +633,7 @@ export const dataProvider = withLifecycleCallbacks(
     {
       resource: "companies",
       beforeCreate: async (params) => {
+        params.data.phone_number = normalizePhoneValue(params.data.phone_number);
         const createParams = await processCompanyLogo(params);
 
         return {
@@ -574,6 +645,7 @@ export const dataProvider = withLifecycleCallbacks(
         };
       },
       beforeUpdate: async (params) => {
+        params.data.phone_number = normalizePhoneValue(params.data.phone_number);
         return await processCompanyLogo(params);
       },
       afterUpdate: async (result, dataProvider) => {
@@ -593,6 +665,19 @@ export const dataProvider = withLifecycleCallbacks(
         return result;
       },
     } satisfies ResourceCallbacks<Company>,
+    {
+      resource: "people",
+      beforeCreate: async (params) => {
+        params.data.email = normalizeEmailValue(params.data.email, "email");
+        params.data.phone = normalizePhoneValue(params.data.phone);
+        return params;
+      },
+      beforeUpdate: async (params) => {
+        params.data.email = normalizeEmailValue(params.data.email, "email");
+        params.data.phone = normalizePhoneValue(params.data.phone);
+        return params;
+      },
+    },
     {
       resource: "deals",
       beforeCreate: async (params) => {

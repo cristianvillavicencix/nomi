@@ -1,4 +1,3 @@
-import { formatRelative } from "date-fns";
 import { difference, union } from "lodash";
 import {
   type Identifier,
@@ -19,7 +18,40 @@ import { RotateCcw } from "lucide-react";
 import { Status } from "../misc/Status";
 import type { Contact } from "../types";
 import { Avatar } from "./Avatar";
-import { TagsList } from "./TagsList";
+import { formatUsPhoneDisplayFromAny, getPhoneHref } from "@/utils/phone";
+
+const getPrimaryPhone = (contact: Contact) =>
+  contact.phone_jsonb?.find((phone) => phone.number?.trim())?.number ?? "—";
+
+const getPrimaryEmail = (contact: Contact) =>
+  contact.email_jsonb?.find((email) => email.email?.trim())?.email ?? "—";
+
+const PhoneText = ({ value }: { value: string }) => {
+  const href = getPhoneHref(value);
+  const displayValue = formatUsPhoneDisplayFromAny(value);
+
+  if (!href) {
+    return <span>{displayValue}</span>;
+  }
+
+  return (
+    <a
+      href={href}
+      className="underline hover:no-underline"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {displayValue}
+    </a>
+  );
+};
+
+const ContactAddress = ({ contact }: { contact: Contact }) => {
+  if (!contact.address?.trim()) {
+    return <span>—</span>;
+  }
+
+  return <span title={contact.address}>{contact.address}</span>;
+};
 
 export const ContactListContent = () => {
   const {
@@ -100,7 +132,6 @@ const ContactItemContent = ({
   handleToggleItem: (id: Identifier, event: MouseEvent) => void;
 }) => {
   const { selectedIds } = useListContext<Contact>();
-  const now = Date.now();
 
   return (
     <div className="flex flex-row items-center pl-2 pr-4 py-2 hover:bg-muted transition-colors first:rounded-t-xl last:rounded-b-xl">
@@ -115,46 +146,43 @@ const ContactItemContent = ({
       </div>
       <Link
         to={`/contacts/${contact.id}/show`}
-        className="flex-1 flex flex-row gap-4 items-center"
+        className="flex-1 min-w-0"
       >
-        <Avatar />
-        <div className="flex-1 min-w-0">
-          <div className="font-medium">
-            {`${contact.first_name} ${contact.last_name ?? ""}`}
-          </div>
-          {contact.title || contact.company_id != null || contact.nb_tasks ? (
-            <div className="text-sm text-muted-foreground">
-              {contact.title}
-              {contact.title && contact.company_id != null && " at "}
-              {contact.company_id != null && (
-                <ReferenceField
-                  source="company_id"
-                  reference="companies"
-                  link={false}
-                >
-                  <TextField source="name" />
-                </ReferenceField>
-              )}
-              {contact.nb_tasks
-                ? ` - ${contact.nb_tasks} task${contact.nb_tasks > 1 ? "s" : ""}`
-                : ""}
-              &nbsp;&nbsp;
-              <TagsList />
+        <div className="flex min-w-0 items-center gap-4">
+          <Avatar />
+          <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.4fr)] md:items-center md:gap-4">
+            <div className="min-w-0">
+              <div className="truncate font-medium">
+                {`${contact.first_name} ${contact.last_name ?? ""}`}
+              </div>
+              <div className="truncate text-sm text-muted-foreground">
+                {contact.company_id != null ? (
+                  <ReferenceField
+                    source="company_id"
+                    reference="companies"
+                    link={false}
+                  >
+                    <TextField source="name" />
+                  </ReferenceField>
+                ) : (
+                  "—"
+                )}
+              </div>
             </div>
-          ) : null}
-        </div>
-        {contact.last_seen && (
-          <div className="text-right ml-4">
+            <div className="min-w-0 truncate text-sm text-muted-foreground">
+              <PhoneText value={getPrimaryPhone(contact)} />
+            </div>
             <div
-              className="text-sm text-muted-foreground"
-              title={contact.last_seen}
+              className="min-w-0 truncate text-sm text-muted-foreground"
+              title={getPrimaryEmail(contact)}
             >
-              {"last activity "}
-              {formatRelative(contact.last_seen, now)}{" "}
-              <Status status={contact.status} />
+              {getPrimaryEmail(contact)}
+            </div>
+            <div className="min-w-0 truncate text-sm text-muted-foreground">
+              <ContactAddress contact={contact} />
             </div>
           </div>
-        )}
+        </div>
       </Link>
     </div>
   );
@@ -246,8 +274,6 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => (
         <div className="text-sm text-muted-foreground">
           <div className="flex flex-col gap-1">
             <span>
-              {contact.title}
-              {contact.title && contact.company_id != null && " at "}
               {contact.company_id != null && (
                 <ReferenceField
                   source="company_id"
@@ -257,12 +283,17 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => (
                   <TextField source="name" />
                 </ReferenceField>
               )}
+              {contact.company_id == null ? "—" : null}
             </span>
-            {contact.nb_tasks ? (
-              <span>
-                {contact.nb_tasks} task{contact.nb_tasks > 1 ? "s" : ""}
-              </span>
-            ) : null}
+            <span className="truncate">
+              <PhoneText value={getPrimaryPhone(contact)} />
+            </span>
+            <span className="truncate" title={getPrimaryEmail(contact)}>
+              {getPrimaryEmail(contact)}
+            </span>
+            <span className="truncate">
+              <ContactAddress contact={contact} />
+            </span>
           </div>
         </div>
       </div>

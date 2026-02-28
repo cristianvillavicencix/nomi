@@ -4,6 +4,8 @@ import { useFormContext } from "react-hook-form";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BooleanInput } from "@/components/admin/boolean-input";
+import { EmailInput } from "@/components/admin/email-input";
+import { PhoneInput } from "@/components/admin/phone-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { TextInput } from "@/components/admin/text-input";
 import { RadioButtonGroupInput } from "@/components/admin/radio-button-group-input";
@@ -117,7 +119,7 @@ const ContactPersonalInformationInputs = () => {
           disableClear
           className="[&>ul>li]:border-b-0 [&>ul>li]:pb-0"
         >
-          <TextInput
+          <EmailInput
             source="email"
             className="w-full"
             helperText={false}
@@ -145,7 +147,7 @@ const ContactPersonalInformationInputs = () => {
           disableClear
           className="[&>ul>li]:border-b-0 [&>ul>li]:pb-0"
         >
-          <TextInput
+          <PhoneInput
             source="number"
             className="w-full"
             helperText={false}
@@ -163,6 +165,7 @@ const ContactPersonalInformationInputs = () => {
           />
         </SimpleFormIterator>
       </ArrayInput>
+      <TextInput source="address" helperText={false} />
       <TextInput
         source="linkedin_url"
         label="Linkedin URL"

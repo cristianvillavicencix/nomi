@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 import { useFormState } from "react-hook-form";
 import { RecordField } from "@/components/admin/record-field";
+import { EmailInput } from "@/components/admin/email-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -211,6 +212,9 @@ const TextRender = ({
   isEditMode: boolean;
 }) => {
   if (isEditMode) {
+    if (source === "email") {
+      return <EmailInput source={source} helperText={false} />;
+    }
     return <TextInput source={source} helperText={false} />;
   }
   return (

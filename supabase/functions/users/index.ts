@@ -52,7 +52,7 @@ async function createSale(
   return sales.at(0);
 }
 
-async function updateSaleAvatar(user_id: string, avatar: string) {
+async function updateSaleAvatar(user_id: string, avatar: unknown | null) {
   const { data: sales, error: salesError } = await supabaseAdmin
     .from("sales")
     .update({ avatar })
@@ -179,6 +179,7 @@ async function inviteUser(req: Request, currentUserSale: any) {
 }
 
 async function patchUser(req: Request, currentUserSale: any) {
+  const body = await req.json();
   const {
     sales_id,
     email,
@@ -187,7 +188,7 @@ async function patchUser(req: Request, currentUserSale: any) {
     avatar,
     administrator,
     disabled,
-  } = await req.json();
+  } = body;
   const { data: sale } = await supabaseAdmin
     .from("sales")
     .select("*")
@@ -215,8 +216,8 @@ async function patchUser(req: Request, currentUserSale: any) {
     return createErrorResponse(500, "Internal Server Error");
   }
 
-  if (avatar) {
-    await updateSaleAvatar(data.user.id, avatar);
+  if ("avatar" in body) {
+    await updateSaleAvatar(data.user.id, avatar ?? null);
   }
 
   // Only administrators can update the administrator and disabled status

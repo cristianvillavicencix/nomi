@@ -3,6 +3,7 @@ import { Form, required, useLogin, useNotify } from "ra-core";
 import type { SubmitHandler, FieldValues } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
+import { EmailInput } from "@/components/admin/email-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Notification } from "@/components/admin/notification";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext.tsx";
@@ -105,7 +106,7 @@ export const LoginPage = (props: { redirectTo?: string }) => {
             </div>
             {disableEmailPasswordAuthentication ? null : (
               <Form className="space-y-8" onSubmit={handleSubmit}>
-                <TextInput
+                <EmailInput
                   label="Email"
                   source="email"
                   type="email"

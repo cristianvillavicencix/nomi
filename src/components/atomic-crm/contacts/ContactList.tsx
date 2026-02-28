@@ -1,6 +1,7 @@
 import jsonExport from "jsonexport/dist";
 import {
   downloadCSV,
+  FilterLiveForm,
   InfiniteListBase,
   useGetIdentity,
   useListContext,
@@ -10,6 +11,7 @@ import { BulkActionsToolbar } from "@/components/admin/bulk-actions-toolbar";
 import { CreateButton } from "@/components/admin/create-button";
 import { ExportButton } from "@/components/admin/export-button";
 import { List } from "@/components/admin/list";
+import { SearchInput } from "@/components/admin/search-input";
 import { SortButton } from "@/components/admin/sort-button";
 import { Card } from "@/components/ui/card";
 
@@ -28,6 +30,8 @@ import { TopToolbar } from "../layout/TopToolbar";
 import { InfinitePagination } from "../misc/InfinitePagination";
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
+
+const showSidebar = false;
 
 export const ContactList = () => {
   const { identity } = useGetIdentity();
@@ -58,7 +62,7 @@ const ContactListLayoutDesktop = () => {
 
   return (
     <div className="flex flex-row gap-8">
-      <ContactListFilter />
+      {showSidebar ? <ContactListFilter /> : null}
       <div className="w-full flex flex-col gap-4">
         <Card className="py-0">
           <ContactListContent />
@@ -70,11 +74,22 @@ const ContactListLayoutDesktop = () => {
 };
 
 const ContactListActions = () => (
-  <TopToolbar>
-    <SortButton fields={["first_name", "last_name", "last_seen"]} />
-    <ContactImportButton />
-    <ExportButton exporter={exporter} />
-    <CreateButton />
+  <TopToolbar className="w-full flex-wrap items-center justify-between gap-3">
+    <div className="min-w-0 flex-1 md:max-w-sm">
+      <FilterLiveForm>
+        <SearchInput
+          source="q"
+          placeholder="Search name, company..."
+          className="w-full"
+        />
+      </FilterLiveForm>
+    </div>
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <SortButton fields={["first_name", "last_name", "last_seen"]} />
+      <ContactImportButton />
+      <ExportButton exporter={exporter} />
+      <CreateButton />
+    </div>
   </TopToolbar>
 );
 
@@ -108,10 +123,18 @@ const ContactListLayoutMobile = () => {
   return (
     <div>
       <MobileHeader>
-        <ContactListFilter />
+        <div className="w-full">
+          <FilterLiveForm>
+            <SearchInput
+              source="q"
+              placeholder="Search name, company..."
+              className="w-full"
+            />
+          </FilterLiveForm>
+        </div>
       </MobileHeader>
       <MobileContent>
-        <ContactListFilterSummary />
+        {showSidebar ? <ContactListFilterSummary /> : null}
         <ContactListContentMobile />
         {!error && (
           <div className="flex justify-center">

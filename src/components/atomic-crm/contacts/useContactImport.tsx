@@ -1,5 +1,7 @@
 import { useDataProvider, useGetIdentity, type DataProvider } from "ra-core";
 import { useCallback, useMemo } from "react";
+import { isValidEmail } from "@/utils/email";
+import { normalizeUsPhoneToE164 } from "@/utils/phone";
 
 import type { Company, Tag } from "../types";
 
@@ -109,12 +111,31 @@ export function useContactImport() {
               { email: email_work, type: "Work" },
               { email: email_home, type: "Home" },
               { email: email_other, type: "Other" },
-            ].filter(({ email }) => email);
+            ]
+              .map((entry) => {
+                const trimmedEmail = entry.email?.trim();
+                if (!trimmedEmail) return null;
+                if (!isValidEmail(trimmedEmail)) {
+                  throw new Error(`Invalid email: ${trimmedEmail}`);
+                }
+                return { ...entry, email: trimmedEmail };
+              })
+              .filter((entry) => entry != null);
             const phone_jsonb = [
               { number: phone_work, type: "Work" },
               { number: phone_home, type: "Home" },
               { number: phone_other, type: "Other" },
-            ].filter(({ number }) => number);
+            ]
+              .map((entry) => {
+                const trimmedNumber = entry.number?.trim();
+                if (!trimmedNumber) return null;
+                const normalizedPhone = normalizeUsPhoneToE164(trimmedNumber);
+                if (!normalizedPhone) {
+                  throw new Error(`Invalid phone: ${trimmedNumber}`);
+                }
+                return { ...entry, number: normalizedPhone };
+              })
+              .filter((entry) => entry != null);
             const company = companyName?.trim()
               ? companies.get(companyName.trim())
               : undefined;

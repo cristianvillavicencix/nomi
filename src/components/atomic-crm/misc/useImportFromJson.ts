@@ -11,6 +11,8 @@ import mime from "mime/lite";
 import type { CrmDataProvider } from "../providers/types";
 import type { RAFile, Tag } from "../types";
 import { colors } from "../tags/colors";
+import { isValidEmail } from "@/utils/email";
+import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { contactGender } from "../contacts/contactGender";
 
@@ -146,8 +148,12 @@ export const useImportFromJson = (): [
         if (!isSale(dataToImport)) {
           throw new Error(`Error while importing sale: Invalid data`);
         }
+        const saleEmail = dataToImport.email.trim();
+        if (!isValidEmail(saleEmail)) {
+          throw new Error(`Invalid email: ${saleEmail}`);
+        }
         const existingRecordResponse = await dataProvider.getList("sales", {
-          filter: { email: dataToImport.email.trim() },
+          filter: { email: saleEmail },
           pagination: { page: 1, perPage: 1 },
           sort: { field: "id", order: "ASC" },
         });
@@ -157,7 +163,7 @@ export const useImportFromJson = (): [
         }
 
         const data = await dataProvider.salesCreate({
-          email: dataToImport.email.trim(),
+          email: saleEmail,
           first_name: dataToImport.first_name.trim(),
           last_name: dataToImport.last_name.trim(),
           administrator: false,
@@ -261,7 +267,15 @@ export const useImportFromJson = (): [
               : undefined,
             linkedin_url: dataToImport.linkedin_url?.trim(),
             website: dataToImport.website?.trim(),
-            phone_number: dataToImport.phone_number?.trim(),
+            phone_number: (() => {
+              const phoneNumber = dataToImport.phone_number?.trim();
+              if (!phoneNumber) return undefined;
+              const normalizedPhone = normalizeUsPhoneToE164(phoneNumber);
+              if (!normalizedPhone) {
+                throw new Error(`Invalid phone: ${phoneNumber}`);
+              }
+              return normalizedPhone;
+            })(),
             revenue: dataToImport.revenue?.trim(),
             tax_identifier: dataToImport.tax_identifier?.trim(),
             context_links: Array.isArray(dataToImport.context_links)
@@ -375,10 +389,25 @@ export const useImportFromJson = (): [
               ? idsMaps.companies[dataToImport.company_id]
               : undefined,
             email_jsonb: Array.isArray(dataToImport.emails)
-              ? dataToImport.emails
+              ? dataToImport.emails.map((entry) => {
+                  const email = entry.email?.trim();
+                  if (!email || !isValidEmail(email)) {
+                    throw new Error(`Invalid email: ${entry.email ?? ""}`);
+                  }
+                  return { ...entry, email };
+                })
               : undefined,
             phone_jsonb: Array.isArray(dataToImport.phones)
-              ? dataToImport.phones
+              ? dataToImport.phones.map((entry) => {
+                  const number = entry.number?.trim();
+                  const normalizedPhone = number
+                    ? normalizeUsPhoneToE164(number)
+                    : null;
+                  if (!normalizedPhone) {
+                    throw new Error(`Invalid phone: ${entry.number ?? ""}`);
+                  }
+                  return { ...entry, number: normalizedPhone };
+                })
               : undefined,
             sales_id: dataToImport.sales_id
               ? idsMaps.sales[dataToImport.sales_id]

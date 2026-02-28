@@ -1,6 +1,12 @@
 import { required } from "ra-core";
 import { useFormContext, useWatch } from "react-hook-form";
-import { NumberInput, SelectInput, TextInput } from "@/components/admin";
+import {
+  EmailInput,
+  NumberInput,
+  PhoneInput,
+  SelectInput,
+  TextInput,
+} from "@/components/admin";
 import { payTypeChoices, personStatusChoices, personTypeChoices } from "./constants";
 
 export const PeopleForm = () => {
@@ -23,8 +29,8 @@ export const PeopleForm = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <TextInput source="first_name" validate={required()} helperText={false} />
       <TextInput source="last_name" validate={required()} helperText={false} />
-      <TextInput source="email" helperText={false} />
-      <TextInput source="phone" helperText={false} />
+      <EmailInput source="email" helperText={false} />
+      <PhoneInput source="phone" helperText={false} />
       <SelectInput
         source="type"
         choices={personTypeChoices}

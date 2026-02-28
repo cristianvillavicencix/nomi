@@ -5,6 +5,7 @@ import {
   name,
   phone,
   random,
+  address as fakerAddress,
 } from "faker/locale/en_US";
 
 import { defaultNoteStatuses } from "../../../root/defaultConfiguration";
@@ -83,6 +84,7 @@ export const generateContacts = (db: Db, size = 500): Required<Contact>[] => {
       company_name: company.name,
       email_jsonb,
       phone_jsonb,
+      address: fakerAddress.streetAddress(),
       background: lorem.sentence(),
       acquisition: random.arrayElement(["inbound", "outbound"]),
       avatar,

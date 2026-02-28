@@ -1,4 +1,5 @@
 import { required, useRecordContext } from "ra-core";
+import { PhoneInput } from "@/components/admin/phone-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { TextInput } from "@/components/admin/text-input";
 import { SelectInput } from "@/components/admin/select-input";
@@ -78,7 +79,7 @@ const CompanyContactInputs = () => {
         helperText={false}
         validate={isLinkedinUrl}
       />
-      <TextInput source="phone_number" helperText={false} />
+      <PhoneInput source="phone_number" helperText={false} />
     </div>
   );
 };

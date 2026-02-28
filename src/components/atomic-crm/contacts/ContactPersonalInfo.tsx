@@ -1,6 +1,7 @@
 import { useRecordContext, WithRecord } from "ra-core";
 import { ArrayField } from "@/components/admin/array-field";
 import { SingleFieldList } from "@/components/admin/single-field-list";
+import { PhoneField } from "@/components/admin/phone-field";
 import { TextField } from "@/components/admin/text-field";
 import { EmailField } from "@/components/admin/email-field";
 import { Mail, Phone, Linkedin } from "lucide-react";
@@ -50,7 +51,7 @@ export const ContactPersonalInfo = () => {
         <SingleFieldList className="flex-col gap-y-0">
           <PersonalInfoRow
             icon={<Phone className="w-4 h-4 text-muted-foreground" />}
-            primary={<TextField source="number" />}
+            primary={<PhoneField source="number" />}
             showType
           />
         </SingleFieldList>

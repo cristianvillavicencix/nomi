@@ -2,6 +2,7 @@ import { Globe, Linkedin, Phone } from "lucide-react";
 import { useRecordContext } from "ra-core";
 import { EditButton } from "@/components/admin/edit-button";
 import { DeleteButton } from "@/components/admin/delete-button";
+import { PhoneField } from "@/components/admin/phone-field";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { ShowButton } from "@/components/admin/show-button";
 import { TextField } from "@/components/admin/text-field";
@@ -90,7 +91,7 @@ export const CompanyInfo = ({ record }: { record: Company }) => {
       {record.phone_number && (
         <div className="flex flex-row items-center gap-1 min-h-[24px]">
           <Phone className="w-4 h-4" />
-          <TextField source="phone_number" />
+          <PhoneField source="phone_number" />
         </div>
       )}
     </AsideSection>

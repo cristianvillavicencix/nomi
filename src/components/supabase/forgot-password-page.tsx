@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useResetPassword } from "ra-supabase-core";
 import { Form, required, useNotify, useRedirect, useTranslate } from "ra-core";
+import { EmailInput } from "@/components/admin/email-input";
 import { Layout } from "@/components/supabase/layout";
 import type { FieldValues, SubmitHandler } from "react-hook-form";
-import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
 
 interface FormData {
@@ -71,7 +71,7 @@ export const ForgotPasswordPage = () => {
         className="space-y-8"
         onSubmit={submit as SubmitHandler<FieldValues>}
       >
-        <TextInput
+        <EmailInput
           source="email"
           label={translate("ra.auth.email", {
             _: "Email",
