@@ -17,6 +17,7 @@ import {
   useGetMany,
   useShowContext,
 } from "ra-core";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -98,7 +99,11 @@ const ContactShowContentMobile = () => {
           onEdit={() => setEditOpen(true)}
           isMobile
         />
-        <ContactMainTabs record={record} />
+        <Card>
+          <CardContent>
+            <ContactMainTabs record={record} />
+          </CardContent>
+        </Card>
       </MobileContent>
     </>
   );
@@ -118,16 +123,18 @@ const ContactShowContent = () => {
         onOpenChange={setEditOpen}
         contactId={record.id}
       />
-      <Card>
-        <CardContent>
-          <ContactHeader
-            record={record}
-            locationSearch={location.search}
-            onEdit={() => setEditOpen(true)}
-          />
-          <ContactMainTabs record={record} />
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <ContactHeader
+          record={record}
+          locationSearch={location.search}
+          onEdit={() => setEditOpen(true)}
+        />
+        <Card>
+          <CardContent>
+            <ContactMainTabs record={record} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
@@ -135,6 +142,15 @@ const ContactShowContent = () => {
 const ContactMainTabs = ({ record }: { record: Contact }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = getValidTab(searchParams.get("tab"));
+  const { total: projectsCount } = useGetList<Deal>(
+    "deals",
+    {
+      filter: { "contact_ids@cs": `{${record.id}}` },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "updated_at", order: "DESC" },
+    },
+    { staleTime: 30_000 },
+  );
 
   const handleTabChange = (tab: string) => {
     const nextTab = getValidTab(tab);
@@ -147,7 +163,9 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
     <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
       <TabsList className="grid h-10 w-full grid-cols-3">
         <TabsTrigger value="activities">Activities</TabsTrigger>
-        <TabsTrigger value="projects">Projects</TabsTrigger>
+        <TabsTrigger value="projects">
+          Projects{typeof projectsCount === "number" ? ` (${projectsCount})` : ""}
+        </TabsTrigger>
         <TabsTrigger value="financials">Financials</TabsTrigger>
       </TabsList>
 

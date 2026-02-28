@@ -668,11 +668,23 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/contacts/ContactHeader.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/contacts/ContactFormFields.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/contacts/ContactEmpty.tsx",
           "type": "registry:component"
         },
         {
           "path": "src/components/atomic-crm/contacts/ContactEditSheet.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/contacts/ContactEditModal.tsx",
           "type": "registry:component"
         },
         {

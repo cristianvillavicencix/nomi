@@ -20,7 +20,13 @@ import { TagChip } from "../tags/TagChip";
 import { TagCreateModal } from "../tags/TagCreateModal";
 import type { Contact, Tag } from "../types";
 
-export const TagsListEdit = ({ buttonOnly = false }: { buttonOnly?: boolean }) => {
+export const TagsListEdit = ({
+  buttonOnly = false,
+  hideButton = false,
+}: {
+  buttonOnly?: boolean;
+  hideButton?: boolean;
+}) => {
   const record = useRecordContext<Contact>();
   const [open, setOpen] = useState(false);
 
@@ -110,48 +116,50 @@ export const TagsListEdit = ({ buttonOnly = false }: { buttonOnly?: boolean }) =
           ))
         : null}
 
-      <div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 md:h-6 cursor-pointer"
-            >
-              <Plus className="w-4 h-4 md:w-3 md:h-3 mr-1" />
-              Add tag
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {unselectedTags?.map((tag) => (
-              <DropdownMenuItem
-                key={tag.id}
-                onClick={() => handleTagAdd(tag.id)}
-              >
-                <Badge
-                  variant="secondary"
-                  className="text-sm md:text-xs font-normal text-black"
-                  style={{
-                    backgroundColor: tag.color,
-                  }}
-                >
-                  {tag.name}
-                </Badge>
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuItem onClick={openTagCreateDialog}>
+      {!hideButton ? (
+        <div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="w-full justify-start p-0 cursor-pointer text-base md:text-sm"
+                className="h-9 md:h-6 cursor-pointer"
               >
-                <Edit className="w-4 h-4 md:w-3 md:h-3 mr-2" />
-                Create new tag
+                <Plus className="w-4 h-4 md:w-3 md:h-3 mr-1" />
+                Add tag
               </Button>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {unselectedTags?.map((tag) => (
+                <DropdownMenuItem
+                  key={tag.id}
+                  onClick={() => handleTagAdd(tag.id)}
+                >
+                  <Badge
+                    variant="secondary"
+                    className="text-sm md:text-xs font-normal text-black"
+                    style={{
+                      backgroundColor: tag.color,
+                    }}
+                  >
+                    {tag.name}
+                  </Badge>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuItem onClick={openTagCreateDialog}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start p-0 cursor-pointer text-base md:text-sm"
+                >
+                  <Edit className="w-4 h-4 md:w-3 md:h-3 mr-2" />
+                  Create new tag
+                </Button>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ) : null}
 
       <TagCreateModal
         open={open}
