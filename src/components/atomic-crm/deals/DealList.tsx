@@ -8,6 +8,7 @@ import { ReferenceInput } from "@/components/admin/reference-input";
 import { FilterButton } from "@/components/admin/filter-form";
 import { SearchInput } from "@/components/admin/search-input";
 import { SelectInput } from "@/components/admin/select-input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TopToolbar } from "../layout/TopToolbar";
@@ -16,8 +17,10 @@ import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
 import { DealListContent } from "./DealListContent";
+import { DealTableView } from "./DealTableView";
 import { DealShow } from "./DealShow";
 import { OnlyMineInput } from "./OnlyMineInput";
+import { useDealsViewPreference } from "./useDealsViewPreference";
 
 const DealList = () => {
   const { identity } = useGetIdentity();
@@ -60,12 +63,13 @@ const DealLayout = () => {
   const matchCreate = matchPath("/deals/create", location.pathname);
   const matchShow = matchPath("/deals/:id/show", location.pathname);
   const matchEdit = matchPath("/deals/:id", location.pathname);
+  const { view } = useDealsViewPreference();
 
   const { data, isPending, filterValues } = useListContext();
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
 
   if (isPending) return null;
-  if (!data?.length && !hasFilters)
+  if (!data?.length && !hasFilters && view === "board")
     return (
       <>
         <DealEmpty>
@@ -77,7 +81,7 @@ const DealLayout = () => {
 
   return (
     <div className="w-full">
-      <DealListContent />
+      {view === "board" ? <DealListContent /> : <DealTableView />}
       <DealArchivedList />
       <DealCreate open={!!matchCreate} />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />
@@ -86,12 +90,33 @@ const DealLayout = () => {
   );
 };
 
-const DealActions = () => (
+const DealActions = () => {
+  const { view, setView } = useDealsViewPreference();
+
+  return (
   <TopToolbar>
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">View</span>
+      <ToggleGroup
+        type="single"
+        value={view}
+        onValueChange={(nextView) => {
+          if (nextView === "board" || nextView === "list") {
+            setView(nextView);
+          }
+        }}
+        variant="outline"
+        size="sm"
+      >
+        <ToggleGroupItem value="board">Board</ToggleGroupItem>
+        <ToggleGroupItem value="list">List</ToggleGroupItem>
+      </ToggleGroup>
+    </div>
     <FilterButton />
     <ExportButton />
     <CreateButton label="New Project" />
   </TopToolbar>
-);
+  );
+};
 
 export default DealList;
