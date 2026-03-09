@@ -2,24 +2,31 @@ import { Droppable } from "@hello-pangea/dnd";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
-import { findDealLabel } from "./deal";
+import { getStageColor, getStageLabel } from "./pipelines";
 import { DealCard } from "./DealCard";
 
 export const DealColumn = ({
   stage,
   deals,
+  pipelineId,
 }: {
   stage: string;
   deals: Deal[];
+  pipelineId: string;
 }) => {
   const totalAmount = deals.reduce((sum, deal) => sum + deal.amount, 0);
 
-  const { dealStages } = useConfigurationContext();
+  const config = useConfigurationContext();
+  const stageColor = getStageColor(config, stage, pipelineId);
   return (
     <div className="flex-1 pb-8">
       <div className="flex flex-col items-center">
-        <h3 className="text-base font-medium">
-          {findDealLabel(dealStages, stage)}
+        <h3 className="flex items-center gap-2 text-base font-medium">
+          <span
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: stageColor }}
+          />
+          {getStageLabel(config, stage, pipelineId)}
         </h3>
         <p className="text-sm text-muted-foreground">
           {totalAmount.toLocaleString("en-US", {

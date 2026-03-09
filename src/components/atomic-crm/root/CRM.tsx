@@ -51,6 +51,7 @@ import {
   defaultCompanySectors,
   defaultDarkModeLogo,
   defaultDealCategories,
+  defaultDealPipelines,
   defaultDealPipelineStatuses,
   defaultDealStages,
   defaultLightModeLogo,
@@ -118,6 +119,7 @@ export type CRMProps = {
 export const CRM = ({
   companySectors = defaultCompanySectors,
   dealCategories = defaultDealCategories,
+  dealPipelines = defaultDealPipelines,
   dealPipelineStatuses = defaultDealPipelineStatuses,
   dealStages = defaultDealStages,
   darkModeLogo = defaultDarkModeLogo,
@@ -154,6 +156,7 @@ export const CRM = ({
     store.setItem(CONFIGURATION_STORE_KEY, {
       companySectors,
       dealCategories,
+      dealPipelines,
       dealPipelineStatuses,
       dealStages,
       noteStatuses,

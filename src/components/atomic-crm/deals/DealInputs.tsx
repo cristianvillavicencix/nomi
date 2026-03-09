@@ -8,10 +8,13 @@ import { DateInput } from "@/components/admin/date-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect, useMemo } from "react";
+import { useFormContext } from "react-hook-form";
 
 import { contactOptionText } from "../misc/ContactOption";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
+import { getDefaultPipeline, getPipelineStages, toStageChoices } from "./pipelines";
 
 export const DealInputs = () => {
   const isMobile = useIsMobile();
@@ -62,7 +65,30 @@ const DealLinkedToInputs = () => {
 };
 
 const DealMiscInputs = () => {
-  const { dealStages, dealCategories } = useConfigurationContext();
+  const config = useConfigurationContext();
+  const { dealCategories, dealPipelines } = config;
+  const { watch, setValue } = useFormContext();
+  const pipelineId = watch("pipeline_id") as string | undefined;
+  const selectedPipelineId =
+    pipelineId || getDefaultPipeline(config)?.id || dealPipelines[0]?.id;
+  const stageChoices = useMemo(
+    () => toStageChoices(getPipelineStages(config, selectedPipelineId)),
+    [config, selectedPipelineId],
+  );
+
+  useEffect(() => {
+    if (!pipelineId && selectedPipelineId) {
+      setValue("pipeline_id", selectedPipelineId);
+    }
+  }, [pipelineId, selectedPipelineId, setValue]);
+
+  useEffect(() => {
+    const currentStage = watch("stage") as string | undefined;
+    if (!stageChoices.some((stage) => stage.value === currentStage)) {
+      setValue("stage", stageChoices[0]?.value ?? "");
+    }
+  }, [setValue, stageChoices, watch]);
+
   return (
     <div className="flex flex-col gap-4 flex-1">
       <h3 className="text-base font-medium">Misc</h3>
@@ -88,11 +114,24 @@ const DealMiscInputs = () => {
         defaultValue={new Date().toISOString().split("T")[0]}
       />
       <SelectInput
-        source="stage"
-        choices={dealStages}
+        source="pipeline_id"
+        label="Board"
+        choices={dealPipelines.map((pipeline) => ({
+          value: pipeline.id,
+          label: pipeline.label,
+        }))}
         optionText="label"
         optionValue="value"
-        defaultValue="opportunity"
+        defaultValue={selectedPipelineId}
+        helperText={false}
+        validate={required()}
+      />
+      <SelectInput
+        source="stage"
+        choices={stageChoices}
+        optionText="label"
+        optionValue="value"
+        defaultValue={stageChoices[0]?.value}
         helperText={false}
         validate={required()}
       />

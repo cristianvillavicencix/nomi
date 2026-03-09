@@ -30,6 +30,28 @@ export const defaultDealStages = [
 
 export const defaultDealPipelineStatuses = ["won"];
 
+export const defaultDealPipelines = [
+  {
+    id: "default",
+    label: "Default Board",
+    order: 1,
+    isDefault: true,
+    stages: defaultDealStages.map((stage, index) => ({
+      id: stage.value,
+      label: stage.label,
+      color:
+        stage.value === "won"
+          ? "#16a34a"
+          : stage.value === "lost"
+            ? "#dc2626"
+            : "#64748b",
+      order: index + 1,
+      pipelineId: "default",
+      isDefault: stage.value === "opportunity",
+    })),
+  },
+];
+
 export const defaultDealCategories = [
   { value: "other", label: "Other" },
   { value: "copywriting", label: "Copywriting" },
@@ -62,6 +84,7 @@ export const defaultConfiguration: ConfigurationContextValue = {
   dealCategories: defaultDealCategories,
   dealPipelineStatuses: defaultDealPipelineStatuses,
   dealStages: defaultDealStages,
+  dealPipelines: defaultDealPipelines,
   projectsView: "board",
   noteStatuses: defaultNoteStatuses,
   taskTypes: defaultTaskTypes,

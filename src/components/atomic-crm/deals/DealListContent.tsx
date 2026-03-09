@@ -1,32 +1,40 @@
 import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd";
 import isEqual from "lodash/isEqual";
 import { useDataProvider, useListContext, type DataProvider } from "ra-core";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { DealColumn } from "./DealColumn";
+import { getPipelineStages } from "./pipelines";
 import type { DealsByStage } from "./stages";
 import { getDealsByStage } from "./stages";
 
-export const DealListContent = () => {
-  const { dealStages } = useConfigurationContext();
+export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
+  const config = useConfigurationContext();
+  const stages = useMemo(
+    () => getPipelineStages(config, pipelineId),
+    [config, pipelineId],
+  );
   const { data: unorderedDeals, isPending, refetch } = useListContext<Deal>();
   const dataProvider = useDataProvider();
 
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>(
-    getDealsByStage([], dealStages),
+    getDealsByStage([], stages),
   );
 
   useEffect(() => {
     if (unorderedDeals) {
-      const newDealsByStage = getDealsByStage(unorderedDeals, dealStages);
+      const pipelineDeals = unorderedDeals.filter(
+        (deal) => (deal.pipeline_id || pipelineId) === pipelineId,
+      );
+      const newDealsByStage = getDealsByStage(pipelineDeals, stages);
       if (!isEqual(newDealsByStage, dealsByStage)) {
         setDealsByStage(newDealsByStage);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unorderedDeals]);
+  }, [unorderedDeals, pipelineId, stages]);
 
   if (isPending) return null;
 
@@ -73,11 +81,12 @@ export const DealListContent = () => {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="flex gap-4">
-        {dealStages.map((stage) => (
+        {stages.map((stage) => (
           <DealColumn
-            stage={stage.value}
-            deals={dealsByStage[stage.value]}
-            key={stage.value}
+            stage={stage.id}
+            deals={dealsByStage[stage.id]}
+            key={stage.id}
+            pipelineId={pipelineId}
           />
         ))}
       </div>
@@ -129,13 +138,14 @@ const updateDealStage = async (
   },
   dataProvider: DataProvider,
 ) => {
+  const pipelineId = source.pipeline_id || "default";
   if (source.stage === destination.stage) {
     // moving deal inside the same column
     // Fetch all the deals in this stage (because the list may be filtered, but we need to update even non-filtered deals)
     const { data: columnDeals } = await dataProvider.getList("deals", {
       sort: { field: "index", order: "ASC" },
       pagination: { page: 1, perPage: 100 },
-      filter: { stage: source.stage },
+      filter: { stage: source.stage, pipeline_id: pipelineId },
     });
     const destinationIndex = destination.index ?? columnDeals.length + 1;
 
@@ -200,12 +210,12 @@ const updateDealStage = async (
         dataProvider.getList("deals", {
           sort: { field: "index", order: "ASC" },
           pagination: { page: 1, perPage: 100 },
-          filter: { stage: source.stage },
+          filter: { stage: source.stage, pipeline_id: pipelineId },
         }),
         dataProvider.getList("deals", {
           sort: { field: "index", order: "ASC" },
           pagination: { page: 1, perPage: 100 },
-          filter: { stage: destination.stage },
+          filter: { stage: destination.stage, pipeline_id: pipelineId },
         }),
       ]);
     const destinationIndex = destination.index ?? destinationDeals.length + 1;

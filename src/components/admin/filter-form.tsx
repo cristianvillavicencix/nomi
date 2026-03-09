@@ -226,6 +226,7 @@ export const FilterButton = (props: FilterButtonProps) => {
     filters: filtersProp,
     className,
     disableSaveQuery,
+    showLabel = true,
     size,
     variant = "outline",
     ...rest
@@ -338,7 +339,7 @@ export const FilterButton = (props: FilterButtonProps) => {
             aria-haspopup="true"
           >
             <Filter className="h-4 w-4" />
-            {translate("ra.action.add_filter")}
+            {showLabel ? <span>{translate("ra.action.add_filter")}</span> : null}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
@@ -445,6 +446,7 @@ export interface FilterButtonProps extends HtmlHTMLAttributes<HTMLDivElement> {
   disableSaveQuery?: boolean;
   filters?: ReactNode[];
   resource?: string;
+  showLabel?: boolean;
   variant?:
     | "default"
     | "destructive"

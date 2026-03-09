@@ -116,6 +116,7 @@ export type Deal = {
   name: string;
   company_id: Identifier;
   contact_ids: Identifier[];
+  pipeline_id?: string;
   category: string;
   stage: string;
   description: string;
@@ -270,6 +271,23 @@ export interface LabeledValue {
 }
 
 export type DealStage = LabeledValue;
+
+export type DealPipelineStage = {
+  id: string;
+  label: string;
+  color: string;
+  order: number;
+  pipelineId: string;
+  isDefault?: boolean;
+};
+
+export type DealPipeline = {
+  id: string;
+  label: string;
+  order: number;
+  isDefault?: boolean;
+  stages: DealPipelineStage[];
+};
 
 export interface NoteStatus extends LabeledValue {
   color: string;

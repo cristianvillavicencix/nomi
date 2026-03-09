@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Contact, Deal, Sale } from "../types";
+import { getStageColor, getStageLabel } from "./pipelines";
 
 type SortField = "stage" | "amount" | "updated_at" | "created_at";
 type SortOrder = "ASC" | "DESC";
@@ -50,7 +51,7 @@ export const DealTableView = () => {
   const navigate = useNavigate();
   const notify = useNotify();
   const refresh = useRefresh();
-  const { dealStages } = useConfigurationContext();
+  const config = useConfigurationContext();
   const { data: deals = [], isPending } = useListContext<Deal>();
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("DESC");
@@ -115,16 +116,11 @@ export const DealTableView = () => {
     () => Object.fromEntries(sales.map((sale) => [sale.id, sale])),
     [sales],
   );
-  const stageLabels = useMemo(
-    () => Object.fromEntries(dealStages.map((stage) => [stage.value, stage.label])),
-    [dealStages],
-  );
-
   const sortedDeals = useMemo(() => {
     const records = [...deals];
     records.sort((left, right) => {
-      const stageLeft = stageLabels[left.stage] ?? left.stage ?? "";
-      const stageRight = stageLabels[right.stage] ?? right.stage ?? "";
+      const stageLeft = getStageLabel(config, left.stage, left.pipeline_id);
+      const stageRight = getStageLabel(config, right.stage, right.pipeline_id);
 
       const values: Record<SortField, string | number> = {
         amount: Number(left.amount ?? 0) - Number(right.amount ?? 0),
@@ -146,7 +142,7 @@ export const DealTableView = () => {
       return sortOrder === "ASC" ? result : -result;
     });
     return records;
-  }, [deals, sortField, sortOrder, stageLabels]);
+  }, [config, deals, sortField, sortOrder]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -293,8 +289,18 @@ export const DealTableView = () => {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary">
-                    {stageLabels[deal.stage] ?? deal.stage ?? "—"}
+                  <Badge
+                    variant="secondary"
+                    style={{
+                      backgroundColor: `${getStageColor(
+                        config,
+                        deal.stage,
+                        deal.pipeline_id,
+                      )}22`,
+                      borderColor: getStageColor(config, deal.stage, deal.pipeline_id),
+                    }}
+                  >
+                    {getStageLabel(config, deal.stage, deal.pipeline_id)}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">

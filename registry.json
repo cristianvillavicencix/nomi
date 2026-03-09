@@ -492,6 +492,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/useDealsViewPreference.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/stages.ts",
           "type": "registry:component"
         },
@@ -509,6 +513,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/OnlyMineInput.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/DealTableView.tsx",
           "type": "registry:component"
         },
         {

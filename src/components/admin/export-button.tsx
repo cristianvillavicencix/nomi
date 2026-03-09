@@ -41,6 +41,7 @@ export const ExportButton = (props: ExportButtonProps) => {
     maxResults = 1000,
     onClick,
     label = "ra.action.export",
+    showLabel = true,
     icon = defaultIcon,
     exporter: customExporter,
     meta,
@@ -102,7 +103,7 @@ export const ExportButton = (props: ExportButtonProps) => {
       className={className}
     >
       {icon}
-      <Translate i18nKey={label}>Export</Translate>
+      {showLabel ? <Translate i18nKey={label}>Export</Translate> : null}
     </Button>
   );
 };
@@ -114,6 +115,7 @@ export interface ExportButtonProps {
   exporter?: Exporter;
   icon?: React.ReactNode;
   label?: string;
+  showLabel?: boolean;
   maxResults?: number;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   resource?: string;
