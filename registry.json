@@ -120,6 +120,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/settings/UsersSettingsSection.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/settings/SettingsPage.tsx",
           "type": "registry:component"
         },
@@ -285,6 +289,10 @@
         },
         {
           "path": "src/components/atomic-crm/providers/commons/getCompanyAvatar.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/providers/commons/crmPermissions.ts",
           "type": "registry:component"
         },
         {
@@ -460,6 +468,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/layout/page-shell.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/layout/navigationLayoutPreference.ts",
           "type": "registry:component"
         },
@@ -472,7 +484,19 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/layout/SpotlightSearchButton.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/layout/SidebarLayout.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/layout/QuickMasterDetailLayout.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/layout/ModuleInfoPopover.tsx",
           "type": "registry:component"
         },
         {
@@ -517,6 +541,14 @@
         },
         {
           "path": "src/components/atomic-crm/deals/stages.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/projectForm.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/projectAssignments.ts",
           "type": "registry:component"
         },
         {
@@ -680,6 +712,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/contacts/ContactQuickViewPage.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/contacts/ContactPersonalInfo.tsx",
           "type": "registry:component"
         },
@@ -765,6 +801,10 @@
         },
         {
           "path": "src/components/atomic-crm/companies/CompanyShow.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/companies/CompanyQuickViewPage.tsx",
           "type": "registry:component"
         },
         {
