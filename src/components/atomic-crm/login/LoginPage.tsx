@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Form, required, useLogin, useNotify } from "ra-core";
 import type { SubmitHandler, FieldValues } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -7,7 +8,10 @@ import { EmailInput } from "@/components/admin/email-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Notification } from "@/components/admin/notification";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext.tsx";
+import type { CrmDataProvider } from "../providers/types";
 import { SSOAuthButton } from "./SSOAuthButton";
+import { useDataProvider } from "ra-core";
+import { LoginSkeleton } from "./LoginSkeleton";
 
 /**
  * Login page displayed when authentication is enabled and the user is not authenticated.
@@ -32,6 +36,13 @@ export const LoginPage = (props: { redirectTo?: string }) => {
   const navigate = useNavigate();
   const login = useLogin();
   const notify = useNotify();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const { data: isInitialized, isPending } = useQuery({
+    queryKey: ["init"],
+    queryFn: async () => {
+      return dataProvider.isInitialized();
+    },
+  });
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -89,6 +100,10 @@ export const LoginPage = (props: { redirectTo?: string }) => {
       });
   };
 
+  if (isPending) {
+    return <LoginSkeleton />;
+  }
+
   return (
     <div className="min-h-screen flex">
       <div className="relative grid w-full lg:grid-cols-2">
@@ -104,6 +119,21 @@ export const LoginPage = (props: { redirectTo?: string }) => {
             <div className="text-center">
               <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
             </div>
+            {!isInitialized && !disableEmailPasswordAuthentication ? (
+              <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
+                <p>
+                  This workspace still needs its first administrator account.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate("/sign-up")}
+                >
+                  Create first account
+                </Button>
+              </div>
+            ) : null}
             {disableEmailPasswordAuthentication ? null : (
               <Form className="space-y-8" onSubmit={handleSubmit}>
                 <EmailInput

@@ -139,7 +139,7 @@ export const authProvider: AuthProvider = {
     if (!isInitialized) {
       await supabase.auth.signOut();
       throw {
-        redirectTo: "/sign-up",
+        redirectTo: "/login",
         message: false,
       };
     }

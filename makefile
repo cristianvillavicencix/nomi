@@ -41,7 +41,7 @@ prod-start: build supabase-deploy
 	open http://127.0.0.1:3000 && npx serve -l tcp://127.0.0.1:3000 dist
 
 prod-deploy: build supabase-deploy
-	npm run ghpages:deploy
+	@echo "Production frontend deployment is handled by Vercel. Backend deployed to Supabase."
 
 supabase-remote-init:
 	npm run supabase:remote:init
