@@ -101,3 +101,94 @@ INSERT INTO favicons_excluded_domains (domain) VALUES
     ('bigpond.net.au'),
     ('online.de'),
     ('apple.com');
+
+-- Local dev: default super-admin (email/password). Re-runs are skipped if the user already exists.
+-- Login: admin@admin.com / admin — only for development; change or remove in production.
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
+DO $$
+DECLARE
+  v_user_id uuid := gen_random_uuid();
+  v_encrypted_pw text := extensions.crypt('admin', extensions.gen_salt('bf'));
+BEGIN
+  IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@admin.com') THEN
+    RETURN;
+  END IF;
+
+  INSERT INTO auth.users (
+    id,
+    instance_id,
+    aud,
+    role,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    confirmation_token,
+    recovery_token,
+    email_change,
+    email_change_token_new,
+    email_change_token_current,
+    reauthentication_token,
+    phone_change,
+    phone_change_token,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    v_user_id,
+    '00000000-0000-0000-0000-000000000000',
+    'authenticated',
+    'authenticated',
+    'admin@admin.com',
+    v_encrypted_pw,
+    now(),
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"first_name":"Admin","last_name":"User"}'::jsonb,
+    now(),
+    now()
+  );
+
+  INSERT INTO auth.identities (
+    id,
+    user_id,
+    identity_data,
+    provider,
+    provider_id,
+    last_sign_in_at,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    v_user_id,
+    v_user_id,
+    jsonb_build_object(
+      'sub', v_user_id::text,
+      'email', 'admin@admin.com',
+      'email_verified', true,
+      'phone_verified', false
+    ),
+    'email',
+    'admin@admin.com',
+    now(),
+    now(),
+    now()
+  );
+
+  -- Exactly one CRM administrator; this account is the sole admin with full roles.
+  UPDATE public.sales SET administrator = false WHERE true;
+  UPDATE public.sales
+  SET
+    administrator = true,
+    roles = array['admin']::text[]
+  WHERE user_id = v_user_id;
+END $$;

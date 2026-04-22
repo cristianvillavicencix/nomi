@@ -23,6 +23,9 @@ import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getIsInitialized } from "./authProvider";
 import { supabase } from "./supabase";
+import { canApprovePayroll } from "@/payroll/permissions";
+import { canMutateCrmResource } from "../commons/crmPermissions";
+import { normalizeLoanPayload } from "@/loans/helpers";
 
 if (import.meta.env.VITE_SUPABASE_URL === undefined) {
   throw new Error("Please set the VITE_SUPABASE_URL environment variable");
@@ -39,6 +42,113 @@ const baseDataProvider = supabaseDataProvider({
   supabaseClient: supabase,
   sortOrder: "asc,desc.nullslast" as any,
 });
+
+const invokeEdgeFunction = async <TData = unknown>(
+  functionName: string,
+  options: {
+    method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {},
+) => {
+  const getSessionToken = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) {
+      return data.session.access_token;
+    }
+    const refreshed = await supabase.auth.refreshSession();
+    return refreshed.data.session?.access_token;
+  };
+
+  const invokeWithToken = async (token?: string) =>
+    supabase.functions.invoke<TData>(functionName, {
+      ...options,
+      headers: {
+        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers ?? {}),
+      },
+    });
+
+  const token = await getSessionToken();
+  let result = await invokeWithToken(token);
+
+  const status = result.error?.context?.status;
+  if (status === 401) {
+    const refreshed = await supabase.auth.refreshSession();
+    const retryToken = refreshed.data.session?.access_token;
+    result = await invokeWithToken(retryToken);
+  }
+
+  return result;
+};
+
+const looksLikeUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+
+const resolveSalesId = async (id: Identifier): Promise<Identifier> => {
+  if (typeof id !== "string" || !looksLikeUuid(id)) {
+    return id;
+  }
+
+  const { data, error } = await supabase
+    .from("sales")
+    .select("id")
+    .eq("user_id", id)
+    .single();
+
+  if (error || !data?.id) {
+    return id;
+  }
+
+  return data.id as Identifier;
+};
+
+const getCurrentMutationIdentity = async () => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const authUserId = sessionData.session?.user?.id;
+  if (!authUserId) return null;
+
+  const { data: sale } = await supabase
+    .from("sales")
+    .select("id, administrator, roles")
+    .eq("user_id", authUserId)
+    .single();
+
+  if (!sale) return null;
+
+  return {
+    id: sale.id,
+    administrator: sale.administrator === true,
+    role: sale.administrator ? "admin" : (sale.roles?.[0] ?? "user"),
+    roles: sale.roles ?? (sale.administrator ? ["admin"] : []),
+  };
+};
+
+const assertMutationAllowed = async (
+  resource: string,
+  action: "create" | "update" | "delete",
+  params: any,
+) => {
+  const identity =
+    params?.meta?.identity ?? (await getCurrentMutationIdentity());
+  const data = params?.data ?? params?.previousData ?? {};
+
+  if (
+    !canMutateCrmResource({
+      identity,
+      resource,
+      action,
+      data,
+    })
+  ) {
+    throw new Error(`Not authorized to ${action} ${resource}`);
+  }
+
+  return identity;
+};
 
 const processCompanyLogo = async (params: any) => {
   const logo = params.data.logo;
@@ -99,10 +209,14 @@ const normalizePhoneEntries = (entries?: PhoneNumberAndType[]) =>
     })
     .filter((entry): entry is PhoneNumberAndType => entry != null);
 
-const normalizeContactData = <T extends {
-  email_jsonb?: EmailAndType[];
-  phone_jsonb?: PhoneNumberAndType[];
-}>(data: T): T => ({
+const normalizeContactData = <
+  T extends {
+    email_jsonb?: EmailAndType[];
+    phone_jsonb?: PhoneNumberAndType[];
+  },
+>(
+  data: T,
+): T => ({
   ...data,
   email_jsonb: normalizeEmailEntries(data.email_jsonb),
   phone_jsonb: normalizePhoneEntries(data.phone_jsonb),
@@ -110,22 +224,88 @@ const normalizeContactData = <T extends {
 
 const dataProviderWithCustomMethods = {
   ...baseDataProvider,
-  async getList(resource: string, params: GetListParams) {
-    if (resource === "companies") {
-      return baseDataProvider.getList("companies_summary", params);
-    }
-    if (resource === "contacts") {
-      return baseDataProvider.getList("contacts_summary", params);
+  async create(resource: string, params: any) {
+    await assertMutationAllowed(resource, "create", params);
+    return baseDataProvider.create(resource, params);
+  },
+  async update(resource: string, params: any) {
+    const identity = await assertMutationAllowed(resource, "update", params);
+    if (
+      resource === "time_entries" &&
+      params?.data?.status === "approved" &&
+      !canApprovePayroll(params?.meta?.identity ?? identity)
+    ) {
+      throw new Error("Only owner/admin/accountant can approve time entries");
     }
 
-    return baseDataProvider.getList(resource, params);
+    return baseDataProvider.update(resource, params);
   },
-  async getOne(resource: string, params: any) {
+  async updateMany(resource: string, params: any) {
+    const identity = await assertMutationAllowed(resource, "update", params);
+    if (
+      resource === "time_entries" &&
+      params?.data?.status === "approved" &&
+      !canApprovePayroll(params?.meta?.identity ?? identity)
+    ) {
+      throw new Error("Only owner/admin/accountant can approve time entries");
+    }
+
+    return baseDataProvider.updateMany(resource, params);
+  },
+  async delete(resource: string, params: any) {
+    await assertMutationAllowed(resource, "delete", params);
+    return baseDataProvider.delete(resource, params);
+  },
+  async deleteMany(resource: string, params: any) {
+    await assertMutationAllowed(resource, "delete", params);
+    return baseDataProvider.deleteMany(resource, params);
+  },
+  async getList(resource: string, params: GetListParams) {
+    let request = params;
+    if (
+      resource === "time_entries" &&
+      params.filter &&
+      typeof params.filter === "object" &&
+      "__hours_all_statuses" in params.filter
+    ) {
+      const { __hours_all_statuses: _legacy, ...rest } =
+        params.filter as Record<string, unknown>;
+      request = { ...params, filter: rest };
+    }
+
     if (resource === "companies") {
-      return baseDataProvider.getOne("companies_summary", params);
+      return baseDataProvider.getList("companies_summary", request);
     }
     if (resource === "contacts") {
-      return baseDataProvider.getOne("contacts_summary", params);
+      return baseDataProvider.getList("contacts_summary", request);
+    }
+
+    return baseDataProvider.getList(resource, request);
+  },
+  async getOne(resource: string, params: any) {
+    if (params?.id == null) {
+      throw new Error(`Missing id for getOne(${resource})`);
+    }
+
+    if (resource === "companies") {
+      try {
+        return await baseDataProvider.getOne("companies_summary", params);
+      } catch (error: any) {
+        if (error?.status === 406) {
+          return baseDataProvider.getOne("companies", params);
+        }
+        throw error;
+      }
+    }
+    if (resource === "contacts") {
+      try {
+        return await baseDataProvider.getOne("contacts_summary", params);
+      } catch (error: any) {
+        if (error?.status === 406) {
+          return baseDataProvider.getOne("contacts", params);
+        }
+        throw error;
+      }
     }
 
     return baseDataProvider.getOne(resource, params);
@@ -162,14 +342,12 @@ const dataProviderWithCustomMethods = {
     const normalizedBody = {
       ...body,
       email: normalizeEmailValue(body.email, "email")!,
+      roles: Array.isArray(body.roles) ? Array.from(new Set(body.roles)) : [],
     };
-    const { data, error } = await supabase.functions.invoke<{ data: Sale }>(
-      "users",
-      {
-        method: "POST",
-        body: normalizedBody,
-      },
-    );
+    const { data, error } = await invokeEdgeFunction<{ data: Sale }>("users", {
+      method: "POST",
+      body: normalizedBody,
+    });
 
     if (!data || error) {
       console.error("salesCreate.error", error);
@@ -189,11 +367,13 @@ const dataProviderWithCustomMethods = {
     id: Identifier,
     data: Partial<Omit<SalesFormData, "password">>,
   ) {
+    const salesId = await resolveSalesId(id);
     const {
       email,
       first_name,
       last_name,
       administrator,
+      roles,
       avatar,
       disabled,
     } = data;
@@ -203,36 +383,48 @@ const dataProviderWithCustomMethods = {
       persistedAvatar = await uploadToBucket(persistedAvatar);
     }
 
-    const { data: updatedData, error } = await supabase.functions.invoke<{
+    const { data: updatedData, error } = await invokeEdgeFunction<{
       data: Sale;
     }>("users", {
       method: "PATCH",
       body: {
-        sales_id: id,
+        sales_id: salesId,
         email: normalizeEmailValue(email, "email"),
         first_name,
         last_name,
         administrator,
+        roles: Array.isArray(roles) ? Array.from(new Set(roles)) : undefined,
         disabled,
         avatar: persistedAvatar,
       },
     });
 
     if (!updatedData || error) {
-      console.error("salesCreate.error", error);
-      throw new Error("Failed to update account manager");
+      console.error("salesUpdate.error", error);
+      const errorDetails = await (async () => {
+        try {
+          return (await error?.context?.json()) ?? {};
+        } catch {
+          return {};
+        }
+      })();
+      throw new Error(
+        errorDetails?.message || "Failed to update account manager",
+      );
     }
 
     return updatedData.data;
   },
   async updatePassword(id: Identifier) {
-    const { data: passwordUpdated, error } =
-      await supabase.functions.invoke<boolean>("update_password", {
+    const { data: passwordUpdated, error } = await invokeEdgeFunction<boolean>(
+      "update_password",
+      {
         method: "PATCH",
         body: {
           sales_id: id,
         },
-      });
+      },
+    );
 
     if (!passwordUpdated || error) {
       console.error("update_password.error", error);
@@ -273,7 +465,7 @@ const dataProviderWithCustomMethods = {
     return getIsInitialized();
   },
   async mergeContacts(sourceId: Identifier, targetId: Identifier) {
-    const { data, error } = await supabase.functions.invoke("merge_contacts", {
+    const { data, error } = await invokeEdgeFunction("merge_contacts", {
       method: "POST",
       body: { loserId: sourceId, winnerId: targetId },
     });
@@ -310,6 +502,35 @@ const dataProviderWithCustomMethods = {
     }
 
     return Number(data ?? 0);
+  },
+  async generatePayrollRun(payrollRunId: Identifier): Promise<number> {
+    const { data, error } = await supabase.rpc("generate_payroll_run", {
+      p_payroll_run_id: payrollRunId,
+    });
+
+    if (error) {
+      console.error("generate_payroll_run.error", error);
+      throw new Error("Failed to generate payroll run lines");
+    }
+
+    return Number(data ?? 0);
+  },
+  async releasePayrollRunLinkedResources(
+    payrollRunId: Identifier,
+  ): Promise<void> {
+    const { error } = await supabase.rpc(
+      "release_payroll_run_linked_resources",
+      {
+        p_run_id: payrollRunId,
+      },
+    );
+
+    if (error) {
+      console.error("release_payroll_run_linked_resources.error", error);
+      throw new Error(
+        error.message ?? "Failed to release hours for this payroll run",
+      );
+    }
   },
 } satisfies DataProvider;
 
@@ -359,7 +580,56 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
     },
   },
   {
+    resource: "deal_subcontractor_entries",
+    beforeSave: async (data: any) => {
+      if (data.invoice_attachments) {
+        data.invoice_attachments = await Promise.all(
+          data.invoice_attachments.map((fi: RAFile) => uploadToBucket(fi)),
+        );
+      }
+      return data;
+    },
+  },
+  {
+    resource: "deal_expenses",
+    beforeSave: async (data: any) => {
+      if (data.attachments) {
+        data.attachments = await Promise.all(
+          data.attachments.map((fi: RAFile) => uploadToBucket(fi)),
+        );
+      }
+      return data;
+    },
+  },
+  {
+    resource: "deal_change_orders",
+    beforeSave: async (data: any) => {
+      if (data.attachments) {
+        data.attachments = await Promise.all(
+          data.attachments.map((fi: RAFile) => uploadToBucket(fi)),
+        );
+      }
+      return data;
+    },
+  },
+  {
+    resource: "deal_client_payments",
+    beforeSave: async (data: any) => {
+      if (data.attachments) {
+        data.attachments = await Promise.all(
+          data.attachments.map((fi: RAFile) => uploadToBucket(fi)),
+        );
+      }
+      return data;
+    },
+  },
+  {
     resource: "sales",
+    beforeGetList: async (params) => {
+      return applyFullTextSearch(["first_name", "last_name", "email"], {
+        useContactFtsColumns: false,
+      })(params);
+    },
     beforeSave: async (data: Sale, _, __) => {
       if (data.avatar) {
         await uploadToBucket(data.avatar);
@@ -432,15 +702,41 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       return params;
     },
     beforeGetList: async (params) => {
-      return applyFullTextSearch(["first_name", "last_name", "email", "phone"])(
-        params,
-      );
+      return applyFullTextSearch(
+        ["first_name", "last_name", "email", "phone"],
+        {
+          useContactFtsColumns: false,
+        },
+      )(params);
+    },
+  },
+  {
+    resource: "employee_loans",
+    beforeCreate: async (params) => {
+      return {
+        ...params,
+        data: normalizeLoanPayload(params.data),
+      };
+    },
+    beforeUpdate: async (params) => {
+      return {
+        ...params,
+        data: normalizeLoanPayload(params.data),
+      };
     },
   },
   {
     resource: "deals",
     beforeGetList: async (params) => {
-      return applyFullTextSearch(["name", "category", "description"])(params);
+      return applyFullTextSearch([
+        "name",
+        "category",
+        "description",
+        "notes",
+        "project_type",
+        "project_address",
+        "company_name",
+      ])(params);
     },
   },
 ];
@@ -450,35 +746,38 @@ export const dataProvider = withLifecycleCallbacks(
   lifeCycleCallbacks,
 ) as CrmDataProvider;
 
-const applyFullTextSearch = (columns: string[]) => (params: GetListParams) => {
-  if (!params.filter?.q) {
-    return params;
-  }
-  const { q, ...filter } = params.filter;
-  return {
-    ...params,
-    filter: {
-      ...filter,
-      "@or": columns.reduce((acc, column) => {
-        if (column === "email")
-          return {
-            ...acc,
-            [`email_fts@ilike`]: q,
-          };
-        if (column === "phone")
-          return {
-            ...acc,
-            [`phone_fts@ilike`]: q,
-          };
-        else
-          return {
-            ...acc,
-            [`${column}@ilike`]: q,
-          };
-      }, {}),
-    },
+const applyFullTextSearch =
+  (columns: string[], options: { useContactFtsColumns?: boolean } = {}) =>
+  (params: GetListParams) => {
+    if (!params.filter?.q) {
+      return params;
+    }
+    const { useContactFtsColumns = true } = options;
+    const { q, ...filter } = params.filter;
+    return {
+      ...params,
+      filter: {
+        ...filter,
+        "@or": columns.reduce((acc, column) => {
+          if (useContactFtsColumns && column === "email")
+            return {
+              ...acc,
+              [`email_fts@ilike`]: q,
+            };
+          if (useContactFtsColumns && column === "phone")
+            return {
+              ...acc,
+              [`phone_fts@ilike`]: q,
+            };
+          else
+            return {
+              ...acc,
+              [`${column}@ilike`]: q,
+            };
+        }, {}),
+      },
+    };
   };
-};
 
 const uploadToBucket = async (fi: RAFile) => {
   if (!fi.src.startsWith("blob:") && !fi.src.startsWith("data:")) {

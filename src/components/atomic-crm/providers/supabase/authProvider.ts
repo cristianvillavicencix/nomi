@@ -6,7 +6,7 @@ import { supabase } from "./supabase";
 
 const baseAuthProvider = supabaseAuthProvider(supabase, {
   getIdentity: async () => {
-    const sale = await getSale();
+    const sale = await getSale(false);
 
     if (sale == null) {
       throw new Error();
@@ -16,6 +16,9 @@ const baseAuthProvider = supabaseAuthProvider(supabase, {
       id: sale.id,
       fullName: `${sale.first_name} ${sale.last_name}`,
       avatar: sale.avatar?.src,
+      administrator: sale.administrator === true,
+      role: sale.administrator ? 'admin' : sale.roles?.[0] ?? 'user',
+      roles: sale.roles ?? (sale.administrator ? ['admin'] : []),
     };
   },
 });
@@ -49,13 +52,7 @@ export async function getIsInitialized() {
   return isInitialized;
 }
 
-const getSale = async () => {
-  const storage = getLocalStorage();
-  const cachedValue = storage?.getItem(CURRENT_SALE_CACHE_KEY);
-  if (cachedValue != null) {
-    return JSON.parse(cachedValue);
-  }
-
+const fetchSale = async () => {
   const { data: dataSession, error: errorSession } =
     await supabase.auth.getSession();
 
@@ -66,7 +63,7 @@ const getSale = async () => {
 
   const { data: dataSale, error: errorSale } = await supabase
     .from("sales")
-    .select("id, first_name, last_name, avatar, administrator")
+    .select("id, first_name, last_name, avatar, administrator, roles")
     .match({ user_id: dataSession?.session?.user.id })
     .single();
 
@@ -75,8 +72,19 @@ const getSale = async () => {
     return undefined;
   }
 
+  const storage = getLocalStorage();
   storage?.setItem(CURRENT_SALE_CACHE_KEY, JSON.stringify(dataSale));
   return dataSale;
+};
+
+const getSale = async (useCache = true) => {
+  const storage = getLocalStorage();
+  const cachedValue = useCache ? storage?.getItem(CURRENT_SALE_CACHE_KEY) : null;
+  if (cachedValue != null) {
+    return JSON.parse(cachedValue);
+  }
+
+  return fetchSale();
 };
 
 function clearCache() {
@@ -146,9 +154,14 @@ export const authProvider: AuthProvider = {
     const sale = await getSale();
     if (sale == null) return false;
 
-    // Compute access rights from the sale role
-    const role = sale.administrator ? "admin" : "user";
-    return canAccess(role, params);
+    return canAccess(
+      {
+        administrator: sale.administrator,
+        role: sale.administrator ? "admin" : "user",
+        roles: sale.roles ?? [],
+      },
+      params,
+    );
   },
   getAuthorizationDetails(authorizationId: string) {
     return supabase.auth.oauth.getAuthorizationDetails(authorizationId);

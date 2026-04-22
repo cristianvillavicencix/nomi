@@ -1,4 +1,5 @@
 import type { ConfigurationContextValue } from "./ConfigurationContext";
+import { defaultPayrollSettings } from "@/payroll/rules";
 
 export const defaultDarkModeLogo = "./logos/logo_atomic_crm_dark.svg";
 export const defaultLightModeLogo = "./logos/logo_atomic_crm_light.svg";
@@ -20,15 +21,16 @@ export const defaultCompanySectors = [
 ];
 
 export const defaultDealStages = [
-  { value: "opportunity", label: "Opportunity" },
-  { value: "proposal-sent", label: "Proposal Sent" },
-  { value: "in-negociation", label: "In Negotiation" },
-  { value: "won", label: "Won" },
-  { value: "lost", label: "Lost" },
-  { value: "delayed", label: "Delayed" },
+  { value: "approved", label: "Approved" },
+  { value: "scheduled", label: "Scheduled" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "material_ordered", label: "Material Ordered" },
+  { value: "pending_inspection", label: "Pending Inspection" },
+  { value: "completed", label: "Completed" },
+  { value: "closed", label: "Closed" },
 ];
 
-export const defaultDealPipelineStatuses = ["won"];
+export const defaultDealPipelineStatuses = ["completed", "closed"];
 
 export const defaultDealPipelines = [
   {
@@ -40,24 +42,21 @@ export const defaultDealPipelines = [
       id: stage.value,
       label: stage.label,
       color:
-        stage.value === "won"
+        stage.value === "completed"
           ? "#16a34a"
-          : stage.value === "lost"
-            ? "#dc2626"
+          : stage.value === "closed"
+            ? "#0f766e"
             : "#64748b",
       order: index + 1,
       pipelineId: "default",
-      isDefault: stage.value === "opportunity",
+      isDefault: stage.value === "approved",
     })),
   },
 ];
 
 export const defaultDealCategories = [
-  { value: "other", label: "Other" },
-  { value: "copywriting", label: "Copywriting" },
-  { value: "print-project", label: "Print project" },
-  { value: "ui-design", label: "UI Design" },
-  { value: "website-design", label: "Website design" },
+  { value: "retail", label: "Retail" },
+  { value: "insurance", label: "Insurance" },
 ];
 
 export const defaultNoteStatuses = [
@@ -81,6 +80,18 @@ export const defaultTaskTypes = [
 
 export const defaultConfiguration: ConfigurationContextValue = {
   companySectors: defaultCompanySectors,
+  companyLegalName: defaultTitle,
+  companyTaxId: "",
+  companyAddressLine1: "",
+  companyAddressLine2: "",
+  companyCity: "",
+  companyState: "",
+  companyPostalCode: "",
+  companyCountry: "United States",
+  companyPhone: "",
+  companyEmail: "",
+  companyRepresentativeName: "",
+  companyRepresentativeTitle: "Authorized Representative",
   dealCategories: defaultDealCategories,
   dealPipelineStatuses: defaultDealPipelineStatuses,
   dealStages: defaultDealStages,
@@ -91,4 +102,5 @@ export const defaultConfiguration: ConfigurationContextValue = {
   title: defaultTitle,
   darkModeLogo: defaultDarkModeLogo,
   lightModeLogo: defaultLightModeLogo,
+  payrollSettings: defaultPayrollSettings,
 };

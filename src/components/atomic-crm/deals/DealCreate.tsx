@@ -4,6 +4,7 @@ import {
   useDataProvider,
   useGetIdentity,
   useListContext,
+  useNotify,
   useRedirect,
   type GetListResult,
 } from "ra-core";
@@ -11,13 +12,17 @@ import { Create } from "@/components/admin/create";
 import { SaveButton } from "@/components/admin/form";
 import { FormToolbar } from "@/components/admin/simple-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 import type { Deal } from "../types";
 import { DealInputs } from "./DealInputs";
+import { syncProjectAssignments } from "./projectAssignments";
+import { normalizeProjectPayload } from "./projectForm";
 
 export const DealCreate = ({ open }: { open: boolean }) => {
   const redirect = useRedirect();
   const dataProvider = useDataProvider();
+  const notify = useNotify();
   const { data: allDeals } = useListContext<Deal>();
 
   const handleClose = () => {
@@ -27,6 +32,19 @@ export const DealCreate = ({ open }: { open: boolean }) => {
   const queryClient = useQueryClient();
 
   const onSuccess = async (deal: Deal) => {
+    try {
+      await syncProjectAssignments(
+        dataProvider,
+        deal.id,
+        deal.salesperson_ids,
+        deal.subcontractor_ids,
+      );
+    } catch {
+      notify("Project saved, but assignments could not be fully synced", {
+        type: "warning",
+      });
+    }
+
     if (!allDeals) {
       redirect("/deals");
       return;
@@ -75,17 +93,42 @@ export const DealCreate = ({ open }: { open: boolean }) => {
   return (
     <Dialog open={open} onOpenChange={() => handleClose()}>
       <DialogContent className="lg:max-w-4xl overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
-        <Create resource="deals" mutationOptions={{ onSuccess }}>
+        <DialogTitle className="text-2xl font-semibold">New Project</DialogTitle>
+        <DialogDescription>
+          Create and configure a construction project with contact, address, stage, and assignments.
+        </DialogDescription>
+        <Create
+          resource="deals"
+          title={false}
+          disableBreadcrumb
+          mutationOptions={{ onSuccess }}
+        >
           <Form
             defaultValues={{
               sales_id: identity?.id,
+              category: "retail",
+              stage: "lead",
+              project_type: "roofing",
+              estimated_value: 0,
+              notes: "",
+              project_address: "",
+              contact_id: null,
               contact_ids: [],
+              salesperson_ids: [],
+              subcontractor_ids: [],
               index: 0,
+              pipeline_id: "default",
             }}
           >
             <DealInputs />
             <FormToolbar>
-              <SaveButton />
+              <div className="flex justify-end">
+                <SaveButton
+                  type="button"
+                  transform={normalizeProjectPayload}
+                  label="Save project"
+                />
+              </div>
             </FormToolbar>
           </Form>
         </Create>

@@ -30,14 +30,15 @@ export const getCompanyAvatarFallback = (record?: CompanyAvatarSource | null) =>
 
 export const CompanyAvatar = (props: {
   record?: Company;
-  width?: 20 | 40;
-  height?: 20 | 40;
+  width?: 20 | 25 | 40;
+  height?: 20 | 25 | 40;
 }) => {
   const { width = 40 } = props;
   const record = useRecordContext<Company>(props);
   if (!record) return null;
 
-  const sizeClass = width !== 40 ? `w-[20px] h-[20px]` : "w-10 h-10";
+  const resolvedSizeClass =
+    width === 20 ? "w-[20px] h-[20px]" : width === 25 ? "w-[25px] h-[25px]" : "w-10 h-10";
   const companyName = String(record.name ?? "").trim();
   const fallbackInitial = getCompanyAvatarFallback(record);
 
@@ -49,13 +50,13 @@ export const CompanyAvatar = (props: {
   }
 
   return (
-    <Avatar className={sizeClass}>
+    <Avatar className={resolvedSizeClass}>
       <AvatarImage
         src={record.logo?.src}
         alt={companyName || "Company"}
         className="object-contain"
       />
-      <AvatarFallback className={width !== 40 ? "text-xs" : "text-sm"}>
+      <AvatarFallback className={width !== 40 ? "text-[10px]" : "text-sm"}>
         {fallbackInitial}
       </AvatarFallback>
     </Avatar>

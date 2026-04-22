@@ -132,7 +132,10 @@ const ImageEditorDialog = (props: ImageEditorDialogProps) => {
   };
 
   const { getRootProps, getInputProps } = useDropzone({
-    accept: { "image/jpeg": [".jpeg", ".png"] },
+    accept: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+    },
     onDrop,
     maxFiles: 1,
   });

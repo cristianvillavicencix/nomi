@@ -71,7 +71,16 @@ enabled = true
 # in emails.
 site_url = "http://localhost:5173"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://localhost:5173/auth-callback.html"]
+additional_redirect_urls = [
+  "http://localhost:5173/auth-callback.html",
+  "http://localhost:5174/auth-callback.html",
+  "https://localhost:5173/auth-callback.html",
+  "https://localhost:5174/auth-callback.html",
+  "http://localhost:5173/set-password",
+  "http://localhost:5174/set-password",
+  "https://localhost:5173/set-password",
+  "https://localhost:5174/set-password",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # If disabled, the refresh token will never expire.
@@ -81,6 +90,9 @@ enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
+# Default is 6; set to 4 so the seeded dev account can use password "admin" (5 chars).
+minimum_password_length = 4
+password_requirements = ""
 # Development signing keys
 signing_keys_path = "./signing_keys.json"
 

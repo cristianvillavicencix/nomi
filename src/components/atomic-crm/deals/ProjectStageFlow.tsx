@@ -93,8 +93,8 @@ export const ProjectStageFlow = ({
   }, [activeStageId]);
 
   return (
-    <div className="mb-6 w-full rounded-xl border bg-card p-3">
-      <div className="overflow-x-auto pb-1">
+    <div className="mb-4 w-full rounded-xl bg-card p-2.5">
+      <div className="overflow-x-auto pb-0.5">
         <div className="flex min-w-[680px] w-full items-stretch">
           <TooltipProvider>
             {stages.map((stage, index) => {

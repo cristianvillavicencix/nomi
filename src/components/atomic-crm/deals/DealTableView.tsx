@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   useDelete,
   useGetMany,
@@ -56,6 +56,7 @@ export const DealTableView = () => {
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("DESC");
   const [deleteOne, { isPending: isDeleting }] = useDelete<Deal>();
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const companyIds = useMemo(
     () => Array.from(new Set(deals.map((deal) => deal.company_id).filter(Boolean))),
@@ -154,7 +155,23 @@ export const DealTableView = () => {
   };
 
   const handleRowClick = (dealId: Deal["id"]) => {
-    navigate(`/deals/${dealId}/show`, {
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+    clickTimeoutRef.current = setTimeout(() => {
+      navigate(`/deals/${dealId}/show`, {
+        state: { _scrollToTop: false },
+      });
+      clickTimeoutRef.current = null;
+    }, 220);
+  };
+
+  const handleRowDoubleClick = (dealId: Deal["id"]) => {
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+    navigate(`/deals/${dealId}`, {
       state: { _scrollToTop: false },
     });
   };
@@ -250,6 +267,7 @@ export const DealTableView = () => {
                 key={deal.id}
                 className="cursor-pointer"
                 onClick={() => handleRowClick(deal.id)}
+                onDoubleClick={() => handleRowDoubleClick(deal.id)}
               >
                 <TableCell className="max-w-[280px]">
                   <Link

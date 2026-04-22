@@ -4,6 +4,7 @@ import {
   localStorageStore,
   Resource,
   type AuthProvider,
+  useCanAccess,
 } from "ra-core";
 import { useEffect, useMemo } from "react";
 import { Route } from "react-router";
@@ -21,7 +22,7 @@ import contacts from "../contacts";
 import { Dashboard } from "../dashboard/Dashboard";
 import { MobileDashboard } from "../dashboard/MobileDashboard";
 import deals from "../deals";
-import { Layout } from "../layout/Layout";
+import { DesktopLayout } from "../layout/DesktopLayout";
 import { MobileLayout } from "../layout/MobileLayout";
 import { SignupPage } from "../login/SignupPage";
 import { ConfirmationRequired } from "../login/ConfirmationRequired";
@@ -34,13 +35,12 @@ import sales from "../sales";
 import people from "@/people";
 import timeEntries from "@/timeEntries";
 import payments from "@/payments";
+import payrollRuns from "@/payrollRuns";
+import loans from "@/loans";
 import { ProfilePage } from "../settings/ProfilePage";
 import { SettingsPage } from "../settings/SettingsPage";
 import {
-  LaborCostByPersonReportPage,
-  PayrollSummaryReportPage,
-  ProjectProfitabilityReportPage,
-  SalesCommissionsReportPage,
+  ReportsPage,
 } from "@/reports";
 import {
   CONFIGURATION_STORE_KEY,
@@ -67,6 +67,10 @@ import { ContactListMobile } from "../contacts/ContactList.tsx";
 import { ContactShow } from "../contacts/ContactShow.tsx";
 import { CompanyShow } from "../companies/CompanyShow.tsx";
 import { NoteShowPage } from "../notes/NoteShowPage.tsx";
+import { PeopleQuickViewPage } from "@/people/PeopleQuickViewPage";
+import { ContactQuickViewPage } from "../contacts/ContactQuickViewPage";
+import { CompanyQuickViewPage } from "../companies/CompanyQuickViewPage";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -235,7 +239,7 @@ export const CRM = ({
 
 const DesktopAdmin = (props: CoreAdminProps) => {
   return (
-    <Admin layout={Layout} dashboard={Dashboard} {...props}>
+    <Admin layout={DesktopLayout} dashboard={Dashboard} {...props}>
       <CustomRoutes noLayout>
         <Route path={SignupPage.path} element={<SignupPage />} />
         <Route
@@ -252,23 +256,150 @@ const DesktopAdmin = (props: CoreAdminProps) => {
 
       <CustomRoutes>
         <Route path={ProfilePage.path} element={<ProfilePage />} />
-        <Route path={SettingsPage.path} element={<SettingsPage />} />
+        <Route
+          path={SettingsPage.path}
+          element={
+            <ProtectedRoute resource="configuration" action="edit">
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path={ImportPage.path} element={<ImportPage />} />
         <Route
+          path="/contacts/:id/show"
+          element={
+            <ProtectedRoute resource="contacts" action="list">
+              <ContactQuickViewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/companies/:id/show"
+          element={
+            <ProtectedRoute resource="companies" action="list">
+              <CompanyQuickViewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/companies/:id/show/:tab"
+          element={
+            <ProtectedRoute resource="companies" action="list">
+              <CompanyQuickViewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/employees"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="employee" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/employees/:id"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="employee" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/employees/:id/:tab"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="employee" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/salespeople"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="salesperson" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/salespeople/:id"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="salesperson" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/salespeople/:id/:tab"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="salesperson" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/subcontractors"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="subcontractor" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/subcontractors/:id"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="subcontractor" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/subcontractors/:id/:tab"
+          element={
+            <ProtectedRoute resource="people" action="list">
+              <PeopleQuickViewPage type="subcontractor" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute resource="reports" action="list">
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/reports/project-profitability"
-          element={<ProjectProfitabilityReportPage />}
+          element={
+            <ProtectedRoute resource="reports" action="list">
+              <ReportsPage initialTab="project-profitability" />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/reports/payroll-summary"
-          element={<PayrollSummaryReportPage />}
+          element={
+            <ProtectedRoute resource="reports" action="list">
+              <ReportsPage initialTab="payroll-summary" />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/reports/labor-cost-by-person"
-          element={<LaborCostByPersonReportPage />}
+          element={
+            <ProtectedRoute resource="reports" action="list">
+              <ReportsPage initialTab="labor-cost-by-person" />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/reports/sales-commissions"
-          element={<SalesCommissionsReportPage />}
+          element={
+            <ProtectedRoute resource="reports" action="list">
+              <ReportsPage initialTab="sales-commissions" />
+            </ProtectedRoute>
+          }
         />
         <Route path="/projects" element={<Navigate to="/deals" replace />} />
       </CustomRoutes>
@@ -277,15 +408,47 @@ const DesktopAdmin = (props: CoreAdminProps) => {
       <Resource name="time_entries" {...timeEntries} />
       <Resource name="payments" {...payments} />
       <Resource name="payment_lines" />
+      <Resource name="payroll_runs" {...payrollRuns} />
+      <Resource name="payroll_run_lines" />
+      <Resource name="employee_loans" {...loans} />
+      <Resource name="employee_loan_deductions" />
+      <Resource name="employee_pto_adjustments" />
       <Resource name="contacts" {...contacts} />
       <Resource name="companies" {...companies} />
       <Resource name="contact_notes" />
       <Resource name="deal_notes" />
+      <Resource name="deal_subcontractor_entries" />
+      <Resource name="deal_expenses" />
+      <Resource name="deal_change_orders" />
+      <Resource name="deal_commissions" />
+      <Resource name="deal_client_payments" />
       <Resource name="tasks" />
       <Resource name="sales" {...sales} />
       <Resource name="tags" />
     </Admin>
   );
+};
+
+const ProtectedRoute = ({
+  resource,
+  action,
+  children,
+}: {
+  resource: string;
+  action: string;
+  children: JSX.Element;
+}) => {
+  const { canAccess, isPending } = useCanAccess({ resource, action });
+
+  if (isPending) {
+    return <Skeleton className="h-24 w-full rounded-xl" />;
+  }
+
+  if (!canAccess) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 };
 
 const MobileAdmin = (props: CoreAdminProps) => {

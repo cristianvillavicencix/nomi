@@ -23,6 +23,11 @@ export default (): Db => {
   db.time_entries = [];
   db.payments = [];
   db.payment_lines = [];
+  db.payroll_runs = [];
+  db.payroll_run_lines = [];
+  db.employee_loans = [];
+  db.employee_loan_deductions = [];
+  db.employee_pto_adjustments = [];
   db.configuration = [
     {
       id: 1,

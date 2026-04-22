@@ -4,8 +4,13 @@ import type {
   ContactNote,
   Deal,
   DealNote,
+  EmployeeLoan,
+  EmployeeLoanDeduction,
+  EmployeePtoAdjustment,
   Payment,
   PaymentLine,
+  PayrollRun,
+  PayrollRunLine,
   Person,
   Sale,
   Tag,
@@ -27,5 +32,10 @@ export interface Db {
   time_entries: TimeEntry[];
   payments: Payment[];
   payment_lines: PaymentLine[];
+  payroll_runs: PayrollRun[];
+  payroll_run_lines: PayrollRunLine[];
+  employee_loans: EmployeeLoan[];
+  employee_loan_deductions: EmployeeLoanDeduction[];
+  employee_pto_adjustments: EmployeePtoAdjustment[];
   configuration: Array<{ id: number; config: ConfigurationContextValue }>;
 }

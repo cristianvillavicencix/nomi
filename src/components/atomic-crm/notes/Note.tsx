@@ -23,6 +23,7 @@ import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { Markdown } from "../misc/Markdown";
 import { RelativeDate } from "../misc/RelativeDate";
 import { Status } from "../misc/Status";
+import { parseAssetLinkText } from "../misc/assetLinks";
 import { SaleName } from "../sales/SaleName";
 import type { ContactNote, DealNote } from "../types";
 import { NoteAttachments } from "./NoteAttachments";
@@ -36,6 +37,7 @@ export const Note = ({
   note: DealNote | ContactNote;
   isLast: boolean;
 }) => {
+  const assetLink = parseAssetLinkText(note.text);
   const [isHover, setHover] = useState(false);
   const [isEditing, setEditing] = useState(false);
   const [isExpanded, setExpanded] = useState(false);
@@ -178,7 +180,26 @@ export const Note = ({
         </Form>
       ) : (
         <div className="pt-2 text-sm max-w-150">
-          {note.text && (
+          {assetLink ? (
+            <div className="rounded-md border p-3">
+              <div className="text-xs uppercase text-muted-foreground tracking-wide">
+                {assetLink.kind === "photos" ? "Photo Link" : "Document Link"}
+              </div>
+              <a
+                href={assetLink.url}
+                target="_blank"
+                rel="noreferrer"
+                className="block mt-1 text-sm font-medium underline"
+              >
+                {assetLink.title || assetLink.url}
+              </a>
+              {assetLink.note ? (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {assetLink.note}
+                </div>
+              ) : null}
+            </div>
+          ) : note.text ? (
             <div
               ref={contentRef}
               className={cn(
@@ -190,8 +211,8 @@ export const Note = ({
                 {note.text}
               </Markdown>
             </div>
-          )}
-          {isTruncated && (
+          ) : null}
+          {!assetLink && isTruncated ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -201,7 +222,7 @@ export const Note = ({
             >
               {isExpanded ? "Show less" : "Read more"}
             </button>
-          )}
+          ) : null}
 
           {note.attachments && <NoteAttachments note={note} />}
         </div>

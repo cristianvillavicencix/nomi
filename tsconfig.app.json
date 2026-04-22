@@ -24,8 +24,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    "types": ["vitest/globals", "faker"],
-
     // Shadcn
     "baseUrl": ".",
     "paths": {

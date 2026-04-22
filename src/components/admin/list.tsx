@@ -21,6 +21,11 @@ import { CreateButton } from "@/components/admin/create-button";
 import { ExportButton } from "@/components/admin/export-button";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { FilterButton, FilterForm } from "@/components/admin/filter-form";
+import {
+  PageLayout,
+  ScrollableContentArea,
+  StickyPageHeader,
+} from "@/components/atomic-crm/layout/page-shell";
 
 /**
  * A complete list page with breadcrumb, title, filters, and pagination.
@@ -108,6 +113,7 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
     title,
     children,
     actions,
+    contentScrollable = true,
   } = props;
   const translate = useTranslate();
   const resource = useResourceContext();
@@ -128,41 +134,51 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
   const hasDashboard = useHasDashboard();
 
   return (
-    <>
-      {!disableBreadcrumb && (
-        <Breadcrumb>
-          {hasDashboard && (
-            <BreadcrumbItem>
-              <Link to="/">
-                <Translate i18nKey="ra.page.dashboard">Home</Translate>
-              </Link>
-            </BreadcrumbItem>
-          )}
-          <BreadcrumbPage>{resourceLabel}</BreadcrumbPage>
-        </Breadcrumb>
-      )}
-
+    <PageLayout>
       <FilterContext.Provider value={filters}>
-        <div className="flex justify-between items-start flex-wrap gap-2 my-2">
-          {finalTitle !== false ? (
-            <h2 className="text-2xl font-bold tracking-tight mb-2">
-              {finalTitle}
-            </h2>
-          ) : null}
-          {actions ?? (
-            <div className="flex items-center gap-2">
-              {filters && filters.length > 0 ? <FilterButton /> : null}
-              {hasCreate ? <CreateButton /> : null}
-              {<ExportButton />}
-            </div>
+        <StickyPageHeader className="pb-2">
+          {!disableBreadcrumb && (
+            <Breadcrumb>
+              {hasDashboard && (
+                <BreadcrumbItem>
+                  <Link to="/">
+                    <Translate i18nKey="ra.page.dashboard">Home</Translate>
+                  </Link>
+                </BreadcrumbItem>
+              )}
+              <BreadcrumbPage>{resourceLabel}</BreadcrumbPage>
+            </Breadcrumb>
           )}
-        </div>
-        <FilterForm />
+          <div className="my-2 flex min-w-0 w-full flex-wrap items-start justify-between gap-2">
+            {finalTitle !== false ? (
+              <h2 className="text-2xl font-bold tracking-tight mb-2">
+                {finalTitle}
+              </h2>
+            ) : null}
+            {actions ?? (
+              <div className="flex items-center gap-2">
+                {filters && filters.length > 0 ? <FilterButton /> : null}
+                {hasCreate ? <CreateButton /> : null}
+                {<ExportButton />}
+              </div>
+            )}
+          </div>
+          <FilterForm />
+        </StickyPageHeader>
 
-        <div className={cn("my-2", props.className)}>{children}</div>
-        {pagination}
+        {contentScrollable ? (
+          <ScrollableContentArea className={cn("my-2", props.className)}>
+            {children}
+            {pagination}
+          </ScrollableContentArea>
+        ) : (
+          <div className={cn("my-2 min-h-0 flex-1 overflow-hidden", props.className)}>
+            {children}
+            {pagination}
+          </div>
+        )}
       </FilterContext.Provider>
-    </>
+    </PageLayout>
   );
 };
 
@@ -202,4 +218,5 @@ export interface ListViewProps<RecordType extends RaRecord = RaRecord> {
   pagination?: ReactNode;
   title?: ReactNode | string | false;
   className?: string;
+  contentScrollable?: boolean;
 }

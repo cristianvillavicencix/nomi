@@ -5,33 +5,41 @@ import {
   InfiniteListBase,
   useGetIdentity,
   useListContext,
+  useListFilterContext,
   type Exporter,
 } from "ra-core";
+import { useEffect, useState } from "react";
 import { BulkActionsToolbar } from "@/components/admin/bulk-actions-toolbar";
 import { CreateButton } from "@/components/admin/create-button";
+import { DataTable } from "@/components/admin/data-table";
 import { ExportButton } from "@/components/admin/export-button";
 import { List } from "@/components/admin/list";
 import { SearchInput } from "@/components/admin/search-input";
 import { SortButton } from "@/components/admin/sort-button";
-import { Card } from "@/components/ui/card";
+import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 
 import type { Company, Contact, Sale, Tag } from "../types";
 import { ContactEmpty } from "./ContactEmpty";
 import { ContactImportButton } from "./ContactImportButton";
-import {
-  ContactListContent,
-  ContactListContentMobile,
-} from "./ContactListContent";
+import { ContactListContentMobile } from "./ContactListContent";
+import { Avatar } from "./Avatar";
 import {
   ContactListFilterSummary,
   ContactListFilter,
 } from "./ContactListFilter";
 import { TopToolbar } from "../layout/TopToolbar";
+import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
+import { SpotlightSearchButton } from "../layout/SpotlightSearchButton";
 import { InfinitePagination } from "../misc/InfinitePagination";
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
 
 const showSidebar = false;
+const getPrimaryPhone = (contact: Contact) =>
+  contact.phone_jsonb?.find((phone) => phone.number?.trim())?.number ?? "—";
+
+const getPrimaryEmail = (contact: Contact) =>
+  contact.email_jsonb?.find((email) => email.email?.trim())?.email ?? "—";
 
 export const ContactList = () => {
   const { identity } = useGetIdentity();
@@ -41,6 +49,7 @@ export const ContactList = () => {
   return (
     <List
       title={false}
+      disableBreadcrumb
       actions={<ContactListActions />}
       perPage={25}
       sort={{ field: "last_seen", order: "DESC" }}
@@ -61,37 +70,111 @@ const ContactListLayoutDesktop = () => {
   if (!data?.length && !hasFilters) return <ContactEmpty />;
 
   return (
-    <div className="flex flex-row gap-8">
+    <div className="w-full flex flex-row gap-8">
       {showSidebar ? <ContactListFilter /> : null}
-      <div className="w-full flex flex-col gap-4">
-        <Card className="py-0">
-          <ContactListContent />
-        </Card>
+      <div className="w-full">
+        <DataTable rowClick="show" rowClassName={() => "[&_td]:py-2.5"}>
+          <DataTable.Col
+            label=""
+            disableSort
+            className="w-[52px]"
+            cellClassName="w-[52px]"
+            render={(record: Contact) => <Avatar record={record} width={25} />}
+          />
+          <DataTable.Col
+            source="first_name"
+            label="Contact"
+            className="w-[30%]"
+            cellClassName="w-[30%]"
+            render={(record: Contact) =>
+              `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim() || "—"
+            }
+          />
+          <DataTable.Col
+            source="company_name"
+            label="Company"
+            className="w-[22%]"
+            cellClassName="w-[22%] text-xs text-muted-foreground"
+          />
+          <DataTable.Col
+            source="phone_jsonb"
+            label="Phone"
+            className="w-[13%]"
+            cellClassName="w-[13%] text-xs text-muted-foreground"
+            render={(record: Contact) => getPrimaryPhone(record)}
+          />
+          <DataTable.Col
+            source="email_jsonb"
+            label="Email"
+            className="w-[15%]"
+            cellClassName="w-[15%] text-xs text-muted-foreground"
+            render={(record: Contact) => getPrimaryEmail(record)}
+          />
+          <DataTable.Col
+            source="address"
+            label="Address"
+            className="w-[20%]"
+            cellClassName="w-[20%] text-xs text-muted-foreground"
+          />
+        </DataTable>
       </div>
       <BulkActionsToolbar />
     </div>
   );
 };
 
-const ContactListActions = () => (
-  <TopToolbar className="w-full flex-wrap items-center justify-between gap-3">
-    <div className="min-w-0 flex-1 md:max-w-sm">
-      <FilterLiveForm>
-        <SearchInput
-          source="q"
+const ContactListActions = () => {
+  const { identity } = useGetIdentity();
+  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
+  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
+  const [query, setQuery] = useState(() =>
+    typeof filterValues.q === "string" ? filterValues.q : "",
+  );
+
+  useEffect(() => {
+    setQuery(typeof filterValues.q === "string" ? filterValues.q : "");
+  }, [filterValues.q]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const currentQ = typeof filterValues.q === "string" ? filterValues.q : undefined;
+      const nextQ = query.trim() ? query : undefined;
+      if (currentQ === nextQ) {
+        return;
+      }
+      const nextFilterValues = { ...filterValues };
+      if (nextQ) {
+        nextFilterValues.q = nextQ;
+      } else {
+        delete nextFilterValues.q;
+      }
+      setFilters(nextFilterValues, displayedFilters);
+    }, 250);
+    return () => clearTimeout(timeoutId);
+  }, [displayedFilters, filterValues, query, setFilters]);
+
+  return (
+    <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <SpotlightSearchButton
+          title="Search Contacts"
+          description="Find contacts by name or company without leaving the page."
           placeholder="Search name, company..."
-          className="w-full"
+          value={query}
+          onValueChange={setQuery}
         />
-      </FilterLiveForm>
-    </div>
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <SortButton fields={["first_name", "last_name", "last_seen"]} />
-      <ContactImportButton />
-      <ExportButton exporter={exporter} />
-      <CreateButton />
-    </div>
-  </TopToolbar>
-);
+        <SortButton fields={["first_name", "last_name", "last_seen"]} />
+        {canManageSales ? <ContactImportButton /> : null}
+        <ExportButton exporter={exporter} />
+        {canManageSales ? <CreateButton /> : null}
+        <ModuleInfoPopover
+          title="Contacts"
+          description="Your clean, searchable directory of clients and stakeholders."
+        />
+      </div>
+    </TopToolbar>
+  );
+};
 
 export const ContactListMobile = () => {
   const { identity } = useGetIdentity();

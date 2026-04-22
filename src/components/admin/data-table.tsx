@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Children, createElement, isValidElement, useCallback } from "react";
+import { Children, createElement, isValidElement, useCallback, useRef } from "react";
 import type {
   DataTableBaseProps,
   ExtractRecordPaths,
@@ -93,6 +93,7 @@ export function DataTable<RecordType extends RaRecord = RaRecord>(
     children,
     className,
     rowClassName,
+    rowDoubleClick,
     bulkActionButtons = defaultBulkActionButtons,
     bulkActionsToolbar,
     ...rest
@@ -112,12 +113,15 @@ export function DataTable<RecordType extends RaRecord = RaRecord>(
       empty={<DataTableEmpty />}
       {...rest}
     >
-      <div className={cn("rounded-md border", className)}>
+      <div className={cn("rounded-md border overflow-auto min-h-0", className)}>
         <Table>
           <DataTableRenderContext.Provider value="header">
-            <DataTableHead>{columns}</DataTableHead>
-          </DataTableRenderContext.Provider>
-          <DataTableBody<RecordType> rowClassName={rowClassName}>
+          <DataTableHead>{columns}</DataTableHead>
+        </DataTableRenderContext.Provider>
+          <DataTableBody<RecordType>
+            rowClassName={rowClassName}
+            rowDoubleClick={rowDoubleClick}
+          >
             {columns}
           </DataTableBody>
         </Table>
@@ -165,7 +169,7 @@ const DataTableHead = ({ children }: { children: ReactNode }) => {
     <TableHeader>
       <TableRow>
         {hasBulkActions ? (
-          <TableHead className="w-8">
+          <TableHead className="sticky top-0 z-20 w-8 bg-background">
             <Checkbox
               onCheckedChange={handleToggleSelectAll}
               checked={
@@ -187,9 +191,11 @@ const DataTableHead = ({ children }: { children: ReactNode }) => {
 const DataTableBody = <RecordType extends RaRecord = RaRecord>({
   children,
   rowClassName,
+  rowDoubleClick,
 }: {
   children: ReactNode;
   rowClassName?: (record: RecordType) => string | undefined;
+  rowDoubleClick?: DataTableBaseProps<RecordType>["rowClick"];
 }) => {
   const data = useDataTableDataContext();
   return (
@@ -199,7 +205,10 @@ const DataTableBody = <RecordType extends RaRecord = RaRecord>({
           value={record}
           key={record.id ?? `row${rowIndex}`}
         >
-          <DataTableRow className={rowClassName?.(record)}>
+          <DataTableRow
+            className={rowClassName?.(record)}
+            rowDoubleClick={rowDoubleClick}
+          >
             {children}
           </DataTableRow>
         </RecordContextProvider>
@@ -211,9 +220,11 @@ const DataTableBody = <RecordType extends RaRecord = RaRecord>({
 const DataTableRow = ({
   children,
   className,
+  rowDoubleClick,
 }: {
   children: ReactNode;
   className?: string;
+  rowDoubleClick?: DataTableBaseProps["rowClick"];
 }) => {
   const { rowClick, handleToggleItem } = useDataTableCallbacksContext();
   const selectedIds = useDataTableSelectedIdsContext();
@@ -231,6 +242,7 @@ const DataTableRow = ({
 
   const navigate = useNavigate();
   const getPathForRecord = useGetPathForRecordCallback();
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleToggle = useCallback(
     (event: React.MouseEvent) => {
@@ -241,11 +253,11 @@ const DataTableRow = ({
     [handleToggleItem, record.id],
   );
 
-  const handleClick = useCallback(async () => {
+  const navigateToLink = useCallback(async (linkSource: DataTableBaseProps["rowClick"]) => {
     const temporaryLink =
-      typeof rowClick === "function"
-        ? rowClick(record.id, resource, record)
-        : rowClick;
+      typeof linkSource === "function"
+        ? linkSource(record.id, resource, record)
+        : linkSource;
 
     const link = isPromise(temporaryLink) ? await temporaryLink : temporaryLink;
 
@@ -260,12 +272,36 @@ const DataTableRow = ({
     navigate(path, {
       state: { _scrollToTop: true },
     });
-  }, [record, resource, rowClick, navigate, getPathForRecord]);
+  }, [record, resource, navigate, getPathForRecord]);
+
+  const handleClick = useCallback(() => {
+    if (rowDoubleClick && rowDoubleClick !== false) {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+      clickTimeoutRef.current = setTimeout(() => {
+        void navigateToLink(rowClick);
+        clickTimeoutRef.current = null;
+      }, 220);
+      return;
+    }
+    void navigateToLink(rowClick);
+  }, [navigateToLink, rowClick, rowDoubleClick]);
+
+  const handleDoubleClick = useCallback(() => {
+    if (!rowDoubleClick || rowDoubleClick === false) return;
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+    void navigateToLink(rowDoubleClick);
+  }, [navigateToLink, rowDoubleClick]);
 
   return (
     <TableRow
       key={record.id}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       className={cn(rowClick !== false && "cursor-pointer", className)}
     >
       {hasBulkActions ? (
@@ -298,6 +334,7 @@ export interface DataTableProps<RecordType extends RaRecord = RaRecord>
   children: ReactNode;
   className?: string;
   rowClassName?: (record: RecordType) => string | undefined;
+  rowDoubleClick?: DataTableBaseProps<RecordType>["rowClick"];
   bulkActionButtons?: ReactNode;
   bulkActionsToolbar?: ReactNode;
 }
@@ -376,7 +413,7 @@ function DataTableHeadCell<
   });
 
   return (
-    <TableHead className={cn(className, headerClassName)}>
+    <TableHead className={cn("sticky top-0 z-10 bg-background", className, headerClassName)}>
       {handleSort && sort && !disableSort && source ? (
         <TooltipProvider>
           <Tooltip>

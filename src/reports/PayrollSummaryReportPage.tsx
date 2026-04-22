@@ -3,7 +3,11 @@ import { useGetList } from 'ra-core';
 import { Card, CardContent } from '@/components/ui/card';
 import { ReportDateFilters } from './ReportFilters';
 
-export const PayrollSummaryReportPage = () => {
+export const PayrollSummaryReportPage = ({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
@@ -23,7 +27,9 @@ export const PayrollSummaryReportPage = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Payroll Summary by Period</h1>
+      {!embedded ? (
+        <h1 className="text-2xl font-semibold">Payroll Summary by Period</h1>
+      ) : null}
       <ReportDateFilters from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
       <Card>
         <CardContent className="pt-6 overflow-x-auto">

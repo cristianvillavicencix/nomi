@@ -17,7 +17,7 @@ make start-demo       # Start full-stack with FakeRest data provider
 ### Testing and Code Quality
 
 ```bash
-make test             # Run unit tests (vitest)
+make test             # Placeholder (no unit tests in repo)
 make typecheck        # Run TypeScript type checking
 make lint             # Run ESLint and Prettier checks
 ```
@@ -182,6 +182,5 @@ Import `test-data/contacts.csv` via the Contacts page → Import button.
 
 - The codebase is intentionally small (~15,000 LOC in `src/components/atomic-crm`) for easy customization
 - Modify files in `src/components/admin` and `src/components/ui` directly - they are meant to be customized
-- Unit tests can be added in the `src/` directory (test files are named `*.test.ts` or `*.test.tsx`)
 - User deletion is not supported to avoid data loss; use account disabling instead
 - Filter operators must be supported by the `supabaseAdapter` when using FakeRest

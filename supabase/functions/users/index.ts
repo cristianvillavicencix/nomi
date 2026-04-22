@@ -5,6 +5,58 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 import { getUserSale } from "../_shared/getUserSale.ts";
 
+const ALLOWED_ROLES = [
+  "admin",
+  "accountant",
+  "payroll_manager",
+  "hr",
+  "sales_manager",
+  "manager",
+  "employee",
+] as const;
+
+function normalizeRoles(input: unknown, administrator: boolean) {
+  const incoming = Array.isArray(input) ? input : [];
+  const normalized = Array.from(
+    new Set(
+      incoming
+        .map((role) => String(role ?? "").trim().toLowerCase())
+        .filter((role): role is (typeof ALLOWED_ROLES)[number] =>
+          ALLOWED_ROLES.includes(role as (typeof ALLOWED_ROLES)[number]),
+        ),
+    ),
+  );
+
+  if (administrator && !normalized.includes("admin")) {
+    normalized.unshift("admin");
+  }
+
+  if (!administrator) {
+    return normalized.filter((role) => role !== "admin");
+  }
+
+  return normalized;
+}
+
+async function assertSingleAdministrator(user_id: string | null, administrator: boolean) {
+  if (!administrator) return;
+
+  const { data, error } = await supabaseAdmin
+    .from("sales")
+    .select("id, user_id")
+    .eq("administrator", true);
+
+  if (error) {
+    console.error("Error checking administrator uniqueness:", error);
+    throw error;
+  }
+
+  const otherAdmin = (data ?? []).find((sale) => sale.user_id !== user_id);
+  if (otherAdmin) {
+    throw new Error("Only one administrator user is allowed");
+  }
+}
+
 async function updateSaleDisabled(user_id: string, disabled: boolean) {
   return await supabaseAdmin
     .from("sales")
@@ -15,10 +67,11 @@ async function updateSaleDisabled(user_id: string, disabled: boolean) {
 async function updateSaleAdministrator(
   user_id: string,
   administrator: boolean,
+  roles?: string[],
 ) {
   const { data: sales, error: salesError } = await supabaseAdmin
     .from("sales")
-    .update({ administrator })
+    .update({ administrator, roles: normalizeRoles(roles, administrator) })
     .eq("user_id", user_id)
     .select("*");
 
@@ -38,11 +91,16 @@ async function createSale(
     last_name: string;
     disabled: boolean;
     administrator: boolean;
+    roles?: string[];
   },
 ) {
   const { data: sales, error: salesError } = await supabaseAdmin
     .from("sales")
-    .insert({ ...data, user_id })
+    .insert({
+      ...data,
+      roles: normalizeRoles(data.roles, data.administrator),
+      user_id,
+    })
     .select("*");
 
   if (!sales?.length || salesError) {
@@ -66,12 +124,67 @@ async function updateSaleAvatar(user_id: string, avatar: unknown | null) {
   return sales.at(0);
 }
 
+async function updateSaleProfile(
+  sales_id: number,
+  profile: {
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+  },
+) {
+  const updates = Object.fromEntries(
+    Object.entries(profile).filter(([, value]) => value !== undefined),
+  );
+
+  if (Object.keys(updates).length === 0) {
+    const { data: sale, error: salesError } = await supabaseAdmin
+      .from("sales")
+      .select("*")
+      .eq("id", sales_id)
+      .single();
+
+    if (!sale || salesError) {
+      console.error("Error fetching updated sale:", salesError);
+      throw salesError ?? new Error("Failed to fetch sale");
+    }
+
+    return sale;
+  }
+
+  const { data: sale, error: salesError } = await supabaseAdmin
+    .from("sales")
+    .update(updates)
+    .eq("id", sales_id)
+    .select("*")
+    .single();
+
+  if (!sale || salesError) {
+    console.error("Error updating sale profile:", salesError);
+    throw salesError ?? new Error("Failed to update sale");
+  }
+
+  return sale;
+}
+
 async function inviteUser(req: Request, currentUserSale: any) {
-  const { email, password, first_name, last_name, disabled, administrator } =
-    await req.json();
+  const {
+    email,
+    password,
+    first_name,
+    last_name,
+    disabled,
+    administrator,
+    roles,
+  } = await req.json();
 
   if (!currentUserSale.administrator) {
     return createErrorResponse(401, "Not Authorized");
+  }
+
+  try {
+    await assertSingleAdministrator(null, administrator);
+  } catch (error) {
+    return createErrorResponse(400, (error as Error).message);
   }
 
   const { data, error: userError } = await supabaseAdmin.auth.admin.createUser({
@@ -121,6 +234,7 @@ async function inviteUser(req: Request, currentUserSale: any) {
         last_name,
         disabled,
         administrator,
+        roles,
       });
 
       return new Response(
@@ -162,7 +276,7 @@ async function inviteUser(req: Request, currentUserSale: any) {
 
   try {
     await updateSaleDisabled(user.id, disabled);
-    const sale = await updateSaleAdministrator(user.id, administrator);
+    const sale = await updateSaleAdministrator(user.id, administrator, roles);
 
     return new Response(
       JSON.stringify({
@@ -174,7 +288,10 @@ async function inviteUser(req: Request, currentUserSale: any) {
     );
   } catch (e) {
     console.error("Error patching sale:", e);
-    return createErrorResponse(500, "Internal Server Error");
+    return createErrorResponse(
+      (e as any)?.message === "Only one administrator user is allowed" ? 400 : 500,
+      (e as Error).message || "Internal Server Error",
+    );
   }
 }
 
@@ -187,6 +304,7 @@ async function patchUser(req: Request, currentUserSale: any) {
     last_name,
     avatar,
     administrator,
+    roles,
     disabled,
   } = body;
   const { data: sale } = await supabaseAdmin
@@ -216,6 +334,17 @@ async function patchUser(req: Request, currentUserSale: any) {
     return createErrorResponse(500, "Internal Server Error");
   }
 
+  try {
+    await updateSaleProfile(sales_id, {
+      email,
+      first_name,
+      last_name,
+    });
+  } catch (e) {
+    console.error("Error patching sale profile:", e);
+    return createErrorResponse(500, "Internal Server Error");
+  }
+
   if ("avatar" in body) {
     await updateSaleAvatar(data.user.id, avatar ?? null);
   }
@@ -241,8 +370,9 @@ async function patchUser(req: Request, currentUserSale: any) {
   }
 
   try {
+    await assertSingleAdministrator(data.user.id, administrator);
     await updateSaleDisabled(data.user.id, disabled);
-    const sale = await updateSaleAdministrator(data.user.id, administrator);
+    const sale = await updateSaleAdministrator(data.user.id, administrator, roles);
     return new Response(
       JSON.stringify({
         data: sale,
@@ -256,7 +386,10 @@ async function patchUser(req: Request, currentUserSale: any) {
     );
   } catch (e) {
     console.error("Error patching sale:", e);
-    return createErrorResponse(500, "Internal Server Error");
+    return createErrorResponse(
+      (e as any)?.message === "Only one administrator user is allowed" ? 400 : 500,
+      (e as Error).message || "Internal Server Error",
+    );
   }
 }
 

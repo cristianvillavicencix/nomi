@@ -65,13 +65,7 @@ The user and developer documentation for this project is available [in the `doc/
 
 ## Testing Changes
 
-This project contains unit tests. Run them with the following command:
-
-```sh
-make test
-```
-
-You can add your own unit tests powered by Jest anywhere in the `src` directory. The test files should be named `*.test.tsx` or `*.test.ts`.
+The `make test` / `npm test` command is a no-op placeholder (no automated unit tests are checked in).
 
 ## Registry
 

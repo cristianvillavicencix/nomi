@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { TopToolbar } from "../layout/TopToolbar";
 
 const SalesListActions = () => (
-  <TopToolbar>
+  <TopToolbar className="w-full flex-wrap items-center justify-end gap-2">
     <ExportButton />
     <CreateButton label="New user" />
   </TopToolbar>

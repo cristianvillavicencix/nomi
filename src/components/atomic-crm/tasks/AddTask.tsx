@@ -47,6 +47,10 @@ export const AddTask = ({
 
   const handleSuccess = async (data: any) => {
     setOpen(false);
+    if (!data?.contact_id) {
+      notify("Task added");
+      return;
+    }
     const contact = await dataProvider.getOne("contacts", {
       id: data.contact_id,
     });

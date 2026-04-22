@@ -9,11 +9,24 @@ import type {
   NoteStatus,
 } from "../types";
 import { defaultConfiguration } from "./defaultConfiguration";
+import { type PayrollSettings } from "@/payroll/rules";
 
 export const CONFIGURATION_STORE_KEY = "app.configuration";
 
 export interface ConfigurationContextValue {
   companySectors: LabeledValue[];
+  companyLegalName?: string;
+  companyTaxId?: string;
+  companyAddressLine1?: string;
+  companyAddressLine2?: string;
+  companyCity?: string;
+  companyState?: string;
+  companyPostalCode?: string;
+  companyCountry?: string;
+  companyPhone?: string;
+  companyEmail?: string;
+  companyRepresentativeName?: string;
+  companyRepresentativeTitle?: string;
   dealCategories: LabeledValue[];
   dealPipelineStatuses: string[];
   dealStages: DealStage[];
@@ -24,6 +37,7 @@ export interface ConfigurationContextValue {
   title: string;
   darkModeLogo: string;
   lightModeLogo: string;
+  payrollSettings?: PayrollSettings;
   googleWorkplaceDomain?: string;
   disableEmailPasswordAuthentication?: boolean;
 }

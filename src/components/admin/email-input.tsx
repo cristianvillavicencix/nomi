@@ -60,6 +60,7 @@ export const EmailInput = (props: EmailInputProps) => {
   });
   const [inputValue, setInputValue] = useState("");
   const [open, setOpen] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   useEffect(() => {
     setInputValue(field.value ?? "");
@@ -71,8 +72,8 @@ export const EmailInput = (props: EmailInputProps) => {
   );
 
   useEffect(() => {
-    setOpen(suggestions.length > 0);
-  }, [suggestions]);
+    setOpen(isInputFocused && suggestions.length > 0);
+  }, [isInputFocused, suggestions]);
 
   const completeDomain = (domain: string) => {
     const localPart = inputValue.split("@")[0]?.trim();
@@ -98,7 +99,7 @@ export const EmailInput = (props: EmailInputProps) => {
           />
         </FormLabel>
       )}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open}>
         <PopoverAnchor asChild>
           <div>
             <FormControl>
@@ -107,6 +108,9 @@ export const EmailInput = (props: EmailInputProps) => {
                 {...field}
                 autoComplete="email"
                 value={inputValue}
+                onFocus={() => {
+                  setIsInputFocused(true);
+                }}
                 onChange={(event) => {
                   const nextValue = event.target.value;
                   setInputValue(nextValue);
@@ -119,13 +123,25 @@ export const EmailInput = (props: EmailInputProps) => {
                   field.onChange(trimmedValue);
                   field.onBlur();
                   onBlur?.(event);
-                  window.setTimeout(() => setOpen(false), 100);
+                  window.setTimeout(() => {
+                    setIsInputFocused(false);
+                  }, 250);
                 }}
               />
             </FormControl>
           </div>
         </PopoverAnchor>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+          onOpenAutoFocus={(event) => {
+            // Keep typing focus on the email input when suggestions open.
+            event.preventDefault();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+          }}
+        >
           <Command>
             <CommandList>
               <CommandGroup heading="Suggested domains">
@@ -133,9 +149,13 @@ export const EmailInput = (props: EmailInputProps) => {
                   <CommandItem
                     key={domain}
                     value={domain}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      completeDomain(domain);
+                    }}
                     onSelect={() => completeDomain(domain)}
                   >
-                    {inputValue.split("@")[0]}@{domain}
+                    @{domain}
                   </CommandItem>
                 ))}
               </CommandGroup>

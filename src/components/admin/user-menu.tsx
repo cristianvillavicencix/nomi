@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 
 export type UserMenuProps = {
   children?: React.ReactNode;
+  trigger?: React.ReactNode;
 };
 
 /**
@@ -31,7 +32,7 @@ export type UserMenuProps = {
  *
  * @see {@link https://marmelab.com/shadcn-admin-kit/docs/usermenu UserMenu documentation}
  */
-export function UserMenu({ children }: UserMenuProps) {
+export function UserMenu({ children, trigger }: UserMenuProps) {
   const authProvider = useAuthProvider();
   const { data: identity } = useGetIdentity();
   const logout = useLogout();
@@ -52,15 +53,17 @@ export function UserMenu({ children }: UserMenuProps) {
     <UserMenuContext.Provider value={{ onClose: handleClose }}>
       <DropdownMenu open={open} onOpenChange={handleToggleOpen}>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="relative h-8 w-8 ml-2 rounded-full"
-          >
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={identity?.avatar} role="presentation" />
-              <AvatarFallback>{identity?.fullName?.charAt(0)}</AvatarFallback>
-            </Avatar>
-          </Button>
+          {trigger ?? (
+            <Button
+              variant="ghost"
+              className="relative h-8 w-8 ml-2 rounded-full"
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={identity?.avatar} role="presentation" />
+                <AvatarFallback>{identity?.fullName?.charAt(0)}</AvatarFallback>
+              </Avatar>
+            </Button>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">

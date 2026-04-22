@@ -8,6 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toSlug } from "@/lib/toSlug";
 import { ArrayInput } from "@/components/admin/array-input";
+import { BooleanInput } from "@/components/admin/boolean-input";
+import { NumberInput } from "@/components/admin/number-input";
+import { SelectInput } from "@/components/admin/select-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { TextInput } from "@/components/admin/text-input";
 
@@ -19,9 +22,12 @@ import {
 } from "../root/ConfigurationContext";
 import { defaultConfiguration } from "../root/defaultConfiguration";
 import type { DealPipeline, DealPipelineStage } from "../types";
+import { UsersSettingsSection } from "./UsersSettingsSection";
 
 const SECTIONS = [
   { id: "branding", label: "Branding" },
+  { id: "users", label: "Users" },
+  { id: "payroll", label: "Payment Settings" },
   { id: "companies", label: "Companies" },
   { id: "deals", label: "Projects" },
   { id: "notes", label: "Notes" },
@@ -78,6 +84,18 @@ const transformFormValues = (data: Record<string, any>) => ({
     title: data.title,
     lightModeLogo: data.lightModeLogo,
     darkModeLogo: data.darkModeLogo,
+    companyLegalName: data.companyLegalName,
+    companyTaxId: data.companyTaxId,
+    companyAddressLine1: data.companyAddressLine1,
+    companyAddressLine2: data.companyAddressLine2,
+    companyCity: data.companyCity,
+    companyState: data.companyState,
+    companyPostalCode: data.companyPostalCode,
+    companyCountry: data.companyCountry,
+    companyPhone: data.companyPhone,
+    companyEmail: data.companyEmail,
+    companyRepresentativeName: data.companyRepresentativeName,
+    companyRepresentativeTitle: data.companyRepresentativeTitle,
     companySectors: ensureValues(data.companySectors),
     dealCategories: ensureValues(data.dealCategories),
     taskTypes: ensureValues(data.taskTypes),
@@ -102,6 +120,29 @@ const transformFormValues = (data: Record<string, any>) => ({
     dealStages: ensureValues(data.dealStages),
     dealPipelineStatuses: data.dealPipelineStatuses,
     noteStatuses: ensureValues(data.noteStatuses),
+    payrollSettings: {
+      overtimeEnabledGlobally: Boolean(data.payrollSettings?.overtimeEnabledGlobally ?? true),
+      overtimeWeeklyThreshold: Number(data.payrollSettings?.overtimeWeeklyThreshold ?? 40),
+      defaultOvertimeMultiplier: Number(data.payrollSettings?.defaultOvertimeMultiplier ?? 1.5),
+      defaultHoursPerWeekReference: Number(data.payrollSettings?.defaultHoursPerWeekReference ?? 40),
+      lunchAutoSuggestHours: Number(data.payrollSettings?.lunchAutoSuggestHours ?? 6),
+      lunchAutoSuggestMinutes: Number(data.payrollSettings?.lunchAutoSuggestMinutes ?? 30),
+      usFederalHolidaysEnabled: Boolean(data.payrollSettings?.usFederalHolidaysEnabled ?? true),
+      customHolidays: data.payrollSettings?.customHolidays ?? [],
+      defaultPaySchedule: data.payrollSettings?.defaultPaySchedule ?? "biweekly",
+      companyPaySchedule:
+        data.payrollSettings?.companyPaySchedule ??
+        data.payrollSettings?.defaultPaySchedule ??
+        "biweekly",
+      defaultPaymentMethod: data.payrollSettings?.defaultPaymentMethod ?? "bank_deposit",
+      weeklyPayday: data.payrollSettings?.weeklyPayday ?? "Friday",
+      biweeklyAnchorDate: data.payrollSettings?.biweeklyAnchorDate ?? "2026-01-02",
+      monthlyPayRule: data.payrollSettings?.monthlyPayRule ?? "end_of_month",
+      monthlyDayOfMonth: Number(data.payrollSettings?.monthlyDayOfMonth ?? 30),
+      payday: data.payrollSettings?.payday ?? "Friday",
+      payPeriodStartDay: Number(data.payrollSettings?.payPeriodStartDay ?? 1),
+      payPeriodEndDay: Number(data.payrollSettings?.payPeriodEndDay ?? 14),
+    },
   } as ConfigurationContextValue,
 });
 
@@ -141,6 +182,18 @@ const SettingsForm = () => {
       title: config.title,
       lightModeLogo: { src: config.lightModeLogo },
       darkModeLogo: { src: config.darkModeLogo },
+      companyLegalName: config.companyLegalName,
+      companyTaxId: config.companyTaxId,
+      companyAddressLine1: config.companyAddressLine1,
+      companyAddressLine2: config.companyAddressLine2,
+      companyCity: config.companyCity,
+      companyState: config.companyState,
+      companyPostalCode: config.companyPostalCode,
+      companyCountry: config.companyCountry,
+      companyPhone: config.companyPhone,
+      companyEmail: config.companyEmail,
+      companyRepresentativeName: config.companyRepresentativeName,
+      companyRepresentativeTitle: config.companyRepresentativeTitle,
       companySectors: config.companySectors,
       dealCategories: config.dealCategories,
       taskTypes: config.taskTypes,
@@ -148,6 +201,7 @@ const SettingsForm = () => {
       dealStages: config.dealStages,
       dealPipelineStatuses: config.dealPipelineStatuses,
       noteStatuses: config.noteStatuses,
+      payrollSettings: config.payrollSettings,
     }),
     [config],
   );
@@ -160,6 +214,7 @@ const SettingsForm = () => {
 };
 
 const SettingsFormFields = () => {
+  const config = useConfigurationContext();
   const {
     watch,
     setValue,
@@ -174,9 +229,27 @@ const SettingsFormFields = () => {
   });
 
   const validateDealCategories = useCallback(
-    (categories: { value: string; label: string }[] | undefined) =>
-      validateItemsInUse(categories, deals, "category", "categories"),
-    [deals],
+    (categories: { value: string; label: string }[] | undefined) => {
+      if (!categories) return undefined;
+
+      const normalized = categories.map((item) => item.value || toSlug(item.label));
+      const duplicateValues = normalized.filter((value, index) => normalized.indexOf(value) !== index);
+      if (duplicateValues.length > 0) {
+        return `Duplicate categories: ${[...new Set(duplicateValues)].join(", ")}`;
+      }
+
+      const initialValues = new Set(
+        (config.dealCategories ?? []).map((item) => item.value || toSlug(item.label)),
+      );
+      const currentValues = new Set(normalized);
+      const removedInitialValues = [...initialValues].filter((value) => !currentValues.has(value));
+
+      // Allow saving unrelated sections (e.g. Branding) when categories haven't been removed.
+      if (removedInitialValues.length === 0) return undefined;
+
+      return validateItemsInUse(categories, deals, "category", "categories");
+    },
+    [config.dealCategories, deals],
   );
 
   return (
@@ -236,12 +309,114 @@ const SettingsFormFields = () => {
           </CardContent>
         </Card>
 
+        <UsersSettingsSection />
+
+        {/* Companies */}
+        <Card id="payroll">
+          <CardContent className="space-y-4">
+            <h2 className="text-xl font-semibold text-muted-foreground">
+              Payroll Settings
+            </h2>
+            <h3 className="text-lg font-medium text-muted-foreground">Company Pay Schedule</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <SelectInput
+                source="payrollSettings.companyPaySchedule"
+                choices={[
+                  { id: "weekly", name: "Weekly" },
+                  { id: "biweekly", name: "Biweekly" },
+                  { id: "semimonthly", name: "Semi-monthly" },
+                  { id: "monthly", name: "Monthly" },
+                ]}
+                label="How often the company runs payroll"
+              />
+              <SelectInput
+                source="payrollSettings.defaultPaymentMethod"
+                choices={[
+                  { id: "cash", name: "Cash" },
+                  { id: "check", name: "Check" },
+                  { id: "zelle", name: "Zelle" },
+                  { id: "bank_deposit", name: "Bank Deposit" },
+                ]}
+              />
+            </div>
+
+            <h3 className="text-lg font-medium text-muted-foreground">Payroll Timing Rules</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <TextInput source="payrollSettings.weeklyPayday" label="Weekly payday" />
+              <TextInput source="payrollSettings.biweeklyAnchorDate" label="Biweekly anchor date (YYYY-MM-DD)" />
+              <SelectInput
+                source="payrollSettings.monthlyPayRule"
+                label="Monthly pay rule"
+                choices={[
+                  { id: "end_of_month", name: "End of month" },
+                  { id: "day_of_month", name: "Specific day of month" },
+                ]}
+              />
+              <NumberInput source="payrollSettings.monthlyDayOfMonth" label="Monthly day number" />
+              <NumberInput source="payrollSettings.payPeriodStartDay" label="Pay Period Start Day" />
+              <NumberInput source="payrollSettings.payPeriodEndDay" label="Pay Period End Day" />
+              <TextInput source="payrollSettings.payday" label="Legacy payday label" />
+            </div>
+
+            <h3 className="text-lg font-medium text-muted-foreground">Overtime Settings</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <BooleanInput source="payrollSettings.overtimeEnabledGlobally" label="Overtime enabled globally" />
+              <NumberInput source="payrollSettings.overtimeWeeklyThreshold" label="Weekly OT Threshold" />
+              <NumberInput source="payrollSettings.defaultOvertimeMultiplier" label="OT Multiplier" />
+              <NumberInput source="payrollSettings.defaultHoursPerWeekReference" label="Default hours/week reference" />
+            </div>
+
+            <h3 className="text-lg font-medium text-muted-foreground">Time Entry Defaults</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <NumberInput source="payrollSettings.lunchAutoSuggestHours" label="Lunch Suggest Hours" />
+              <NumberInput source="payrollSettings.lunchAutoSuggestMinutes" label="Lunch Suggest Minutes" />
+              <BooleanInput source="payrollSettings.usFederalHolidaysEnabled" label="Enable US Federal Holidays" />
+            </div>
+
+            <h3 className="text-lg font-medium text-muted-foreground">Custom Holidays</h3>
+            <ArrayInput source="payrollSettings.customHolidays" label={false} helperText={false}>
+              <SimpleFormIterator inline disableReordering>
+                <TextInput source="date" label="Date (YYYY-MM-DD)" />
+                <TextInput source="label" label="Label" />
+              </SimpleFormIterator>
+            </ArrayInput>
+          </CardContent>
+        </Card>
+
         {/* Companies */}
         <Card id="companies">
           <CardContent className="space-y-4">
             <h2 className="text-xl font-semibold text-muted-foreground">
               Companies
             </h2>
+            <h3 className="text-lg font-medium text-muted-foreground">
+              Legal Profile
+            </h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <TextInput source="companyLegalName" label="Legal company name" />
+              <TextInput source="companyTaxId" label="Tax ID / EIN" />
+              <TextInput source="companyRepresentativeName" label="Representative name" />
+              <TextInput source="companyRepresentativeTitle" label="Representative title" />
+              <TextInput source="companyPhone" label="Company phone" />
+              <TextInput source="companyEmail" label="Company email" />
+              <TextInput
+                source="companyAddressLine1"
+                label="Address line 1"
+                className="md:col-span-2"
+              />
+              <TextInput
+                source="companyAddressLine2"
+                label="Address line 2"
+                className="md:col-span-2"
+              />
+              <TextInput source="companyCity" label="City" />
+              <TextInput source="companyState" label="State" />
+              <TextInput source="companyPostalCode" label="ZIP / Postal code" />
+              <TextInput source="companyCountry" label="Country" />
+            </div>
+
+            <Separator />
+
             <h3 className="text-lg font-medium text-muted-foreground">
               Sectors
             </h3>

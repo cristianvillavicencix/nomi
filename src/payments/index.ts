@@ -1,14 +1,15 @@
-import { PaymentsCreateWizard } from './PaymentsCreateWizard';
-import { PaymentsEdit } from './PaymentsEdit';
-import { PaymentsList } from './PaymentsList';
-import { PaymentsShow } from './PaymentsShow';
+import { PaymentsCreateWizard } from "./PaymentsCreateWizard";
+import { PaymentsList, PaymentsListContent } from "./PaymentsList";
+import { PaymentsShow } from "./PaymentsShow";
+
+export { PaymentsListContent };
+export type { PaymentsListContentProps } from "./PaymentsList";
 
 export default {
   list: PaymentsList,
   create: PaymentsCreateWizard,
-  edit: PaymentsEdit,
   show: PaymentsShow,
   options: {
-    label: 'Payments',
+    label: "Payments",
   },
 };

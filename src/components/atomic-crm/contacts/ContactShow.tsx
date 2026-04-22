@@ -23,6 +23,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useSearchParams } from "react-router";
+import {
+  ScrollableContentArea,
+  StickyTabsBar,
+} from "@/components/atomic-crm/layout/page-shell";
 
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
@@ -109,7 +113,7 @@ const ContactShowContentMobile = () => {
   );
 };
 
-const ContactShowContent = () => {
+export const ContactShowContent = () => {
   const { record, isPending } = useShowContext<Contact>();
   const location = useLocation();
   const [editOpen, setEditOpen] = useState(false);
@@ -160,26 +164,30 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
   };
 
   return (
-    <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="grid h-10 w-full grid-cols-3">
-        <TabsTrigger value="activities">Activities</TabsTrigger>
-        <TabsTrigger value="projects">
-          Projects{typeof projectsCount === "number" ? ` (${projectsCount})` : ""}
-        </TabsTrigger>
-        <TabsTrigger value="financials">Financials</TabsTrigger>
-      </TabsList>
+    <Tabs value={currentTab} onValueChange={handleTabChange} className="flex min-h-0 w-full flex-col">
+      <StickyTabsBar className="pb-2">
+        <TabsList className="grid h-10 w-full grid-cols-3">
+          <TabsTrigger value="activities">Activities</TabsTrigger>
+          <TabsTrigger value="projects">
+            Projects{typeof projectsCount === "number" ? ` (${projectsCount})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="financials">Financials</TabsTrigger>
+        </TabsList>
+      </StickyTabsBar>
 
-      <TabsContent value="activities" className="pt-4">
-        <ContactActivitiesTab record={record} />
-      </TabsContent>
+      <ScrollableContentArea>
+        <TabsContent value="activities" className="pt-2">
+          <ContactActivitiesTab record={record} />
+        </TabsContent>
 
-      <TabsContent value="projects" className="pt-4">
-        <ContactProjectsTab record={record} />
-      </TabsContent>
+        <TabsContent value="projects" className="pt-2">
+          <ContactProjectsTab record={record} />
+        </TabsContent>
 
-      <TabsContent value="financials" className="pt-4">
-        <ContactFinancialsTab record={record} />
-      </TabsContent>
+        <TabsContent value="financials" className="pt-2">
+          <ContactFinancialsTab record={record} />
+        </TabsContent>
+      </ScrollableContentArea>
     </Tabs>
   );
 };

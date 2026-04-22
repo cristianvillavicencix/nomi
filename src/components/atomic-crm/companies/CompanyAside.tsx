@@ -1,5 +1,5 @@
 import { Globe, Linkedin, Phone } from "lucide-react";
-import { useRecordContext } from "ra-core";
+import { useGetIdentity, useRecordContext } from "ra-core";
 import { EditButton } from "@/components/admin/edit-button";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { PhoneField } from "@/components/admin/phone-field";
@@ -16,6 +16,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { SaleName } from "../sales/SaleName";
 import type { Company } from "../types";
 import { sizes } from "./sizes";
+import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 
 interface CompanyAsideProps {
   link?: string;
@@ -23,14 +24,16 @@ interface CompanyAsideProps {
 
 export const CompanyAside = ({ link = "edit" }: CompanyAsideProps) => {
   const record = useRecordContext<Company>();
+  const { data: identity } = useGetIdentity();
+  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
   if (!record) return null;
 
   return (
     <div className="hidden sm:block w-92 min-w-92 space-y-4">
       <div className="flex flex-row space-x-1">
-        {link === "edit" ? (
+        {link === "edit" && canManageSales ? (
           <EditButton label="Edit Company" />
-        ) : (
+        ) : !canManageSales ? null : (
           <ShowButton label="Show Company" />
         )}
       </div>
@@ -43,14 +46,14 @@ export const CompanyAside = ({ link = "edit" }: CompanyAsideProps) => {
 
       <AdditionalInfo record={record} />
 
-      {link !== "edit" && (
+      {link !== "edit" && canManageSales ? (
         <div className="mt-6 pt-6 border-t hidden sm:flex flex-col gap-2 items-start">
           <DeleteButton
             className="h-6 cursor-pointer hover:bg-destructive/10! text-destructive! border-destructive! focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40"
             size="sm"
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

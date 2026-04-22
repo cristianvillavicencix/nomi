@@ -3,7 +3,7 @@ import { PeopleForm } from './PeopleForm';
 
 export const PeopleEdit = () => (
   <Edit>
-    <SimpleForm>
+    <SimpleForm toolbar={null} className="max-w-6xl">
       <PeopleForm />
     </SimpleForm>
   </Edit>

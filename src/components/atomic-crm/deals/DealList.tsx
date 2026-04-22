@@ -15,15 +15,18 @@ import { List } from "@/components/admin/list";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { FilterButton } from "@/components/admin/filter-form";
 import { SelectInput } from "@/components/admin/select-input";
+import { TopToolbar, ACTION_BAR_SURFACE_CLASSNAME } from "@/components/atomic-crm/layout/TopToolbar";
+import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationUpdater } from "../root/ConfigurationContext";
+import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { DealArchivedList } from "./DealArchivedList";
 import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
@@ -63,6 +66,7 @@ const DealList = () => {
       perPage={100}
       filter={{ "archived_at@is": null }}
       title={false}
+      disableBreadcrumb
       sort={{ field: "index", order: "DESC" }}
       filters={dealFilters}
       actions={<DealActions />}
@@ -113,6 +117,7 @@ const DealLayout = () => {
 
 const DealActions = () => {
   const config = useConfigurationContext();
+  const { data: identity } = useGetIdentity();
   const [manageOpen, setManageOpen] = useState(false);
   const { view, setView } = useDealsViewPreference();
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
@@ -120,6 +125,7 @@ const DealActions = () => {
     (filterValues.pipeline_id as string | undefined) ||
     getDefaultPipeline(config)?.id ||
     "default";
+  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
 
   useEffect(() => {
     if (!filterValues.pipeline_id && selectedPipelineId) {
@@ -132,19 +138,24 @@ const DealActions = () => {
 
   return (
     <div className="w-full">
-      <div className="flex w-full items-center justify-between gap-3 overflow-x-auto">
-        <div className="flex min-w-max flex-1 items-center gap-2">
+      <TopToolbar
+        surface={false}
+        className={`w-full items-center justify-between gap-3 overflow-x-auto ${ACTION_BAR_SURFACE_CLASSNAME}`}
+      >
+        <div className="flex min-w-max items-center gap-2">
           <ProjectSearchField />
           <PipelineSelect />
           <OnlyMineSwitch />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setManageOpen(true)}
-          >
-            Manage Stages
-          </Button>
+          {canManageSales ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setManageOpen(true)}
+            >
+              Manage Stages
+            </Button>
+          ) : null}
         </div>
         <div className="flex min-w-max items-center gap-2">
           <span className="hidden text-sm text-muted-foreground xl:inline">View</span>
@@ -174,17 +185,25 @@ const DealActions = () => {
           <div className="hidden xl:block">
             <ExportButton />
           </div>
-          <CreateButton
-            label="New Project"
-            className="bg-black text-white hover:bg-black/90 border-black"
+          {canManageSales ? (
+            <CreateButton
+              label="New Project"
+              className="bg-black text-white hover:bg-black/90 border-black"
+            />
+          ) : null}
+          <ModuleInfoPopover
+            title="Projects"
+            description="Pipeline control for every project, from lead to close."
           />
         </div>
-      </div>
-      <ManageStagesDialog
-        open={manageOpen}
-        onOpenChange={setManageOpen}
-        pipelineId={selectedPipelineId}
-      />
+      </TopToolbar>
+      {canManageSales ? (
+        <ManageStagesDialog
+          open={manageOpen}
+          onOpenChange={setManageOpen}
+          pipelineId={selectedPipelineId}
+        />
+      ) : null}
     </div>
   );
 };
@@ -216,15 +235,13 @@ const ProjectSearchField = () => {
   }, [displayedFilters, filterValues, setFilters, value]);
 
   return (
-    <div className="relative min-w-[220px] max-w-[460px] flex-1">
-      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-      <Input
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder="Search"
-        className="pl-8"
-      />
-    </div>
+    <SpotlightSearchButton
+      title="Search Projects"
+      description="Jump to any project instantly with a focused search."
+      placeholder="Search projects..."
+      value={value}
+      onValueChange={setValue}
+    />
   );
 };
 

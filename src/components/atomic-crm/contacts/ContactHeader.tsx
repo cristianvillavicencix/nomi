@@ -5,7 +5,9 @@ import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router";
 
 import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
+import { useGetIdentity } from "ra-core";
 import type { Contact } from "../types";
+import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { AddTask } from "../tasks/AddTask";
 import { TagsListEdit } from "./TagsListEdit";
 import { Avatar } from "./Avatar";
@@ -22,6 +24,8 @@ export const ContactHeader = ({
   isMobile?: boolean;
 }) => {
   const location = useLocation();
+  const { data: identity } = useGetIdentity();
+  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
 
   const primaryEmail =
     record.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() ?? "";
@@ -112,9 +116,13 @@ export const ContactHeader = ({
             isMobile ? "flex-wrap" : "items-center justify-end",
           )}
         >
-          <TagsListEdit buttonOnly />
-          <AddTask display="chip" />
-          <Button onClick={onEdit}>Edit Profile</Button>
+          {canManageSales ? (
+            <>
+              <TagsListEdit buttonOnly />
+              <AddTask display="chip" />
+              <Button onClick={onEdit}>Edit Profile</Button>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

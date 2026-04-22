@@ -8,6 +8,7 @@ import { ChevronLeft, UserPlus } from "lucide-react";
 import {
   RecordContextProvider,
   ShowBase,
+  useGetIdentity,
   useListContext,
   useRecordContext,
   useShowContext,
@@ -18,6 +19,7 @@ import {
   useLocation,
   useMatch,
   useNavigate,
+  useSearchParams,
 } from "react-router-dom";
 
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -31,6 +33,11 @@ import { MobileBackButton } from "../misc/MobileBackButton";
 import { Status } from "../misc/Status";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Contact, Deal } from "../types";
+import { canUseCrmPermission } from "../providers/commons/crmPermissions";
+import {
+  ScrollableContentArea,
+  StickyTabsBar,
+} from "@/components/atomic-crm/layout/page-shell";
 import {
   AdditionalInfo,
   AddressInfo,
@@ -54,6 +61,8 @@ const CompanyShowContentMobile = () => {
   const { record, isPending } = useShowContext<Company>();
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: identity } = useGetIdentity();
+  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
   if (isPending || !record) return null;
 
   return (
@@ -94,22 +103,47 @@ const CompanyShowContentMobile = () => {
   );
 };
 
-const CompanyShowContent = () => {
+const COMPANY_TABS = ["activity", "contacts", "deals"] as const;
+type CompanyTab = (typeof COMPANY_TABS)[number];
+
+const getValidCompanyTab = (value?: string | null): CompanyTab =>
+  value === "contacts" || value === "deals" ? value : "activity";
+
+export const CompanyShowContent = () => {
   const { record, isPending } = useShowContext<Company>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: identity } = useGetIdentity();
+  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
 
   // Get tab from URL or default to "activity"
   const tabMatch = useMatch("/companies/:id/show/:tab");
-  const currentTab = tabMatch?.params?.tab || "activity";
+  const isShowRoute = !!useMatch("/companies/:id/show") || !!tabMatch;
+  const currentTab = getValidCompanyTab(
+    (tabMatch?.params?.tab as string | undefined) ?? searchParams.get("tab"),
+  );
 
   const handleTabChange = (value: string) => {
-    if (value === currentTab) return;
-    if (value === "activity") {
-      navigate(`/companies/${record?.id}/show`);
+    const nextTab = getValidCompanyTab(value);
+    if (nextTab === currentTab) return;
+
+    if (isShowRoute) {
+      if (nextTab === "activity") {
+        navigate(`/companies/${record?.id}/show`);
+        return;
+      }
+      navigate(`/companies/${record?.id}/show/${nextTab}`);
       return;
     }
-    navigate(`/companies/${record?.id}/show/${value}`);
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (nextTab === "activity") {
+      nextSearchParams.delete("tab");
+    } else {
+      nextSearchParams.set("tab", nextTab);
+    }
+    setSearchParams(nextSearchParams, { replace: true });
   };
 
   if (isPending || !record) return null;
@@ -132,65 +166,69 @@ const CompanyShowContent = () => {
               <CompanyAvatar />
               <h5 className="text-xl ml-2 flex-1">{record.name}</h5>
             </div>
-            <Tabs defaultValue={currentTab} onValueChange={handleTabChange}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="activity">Activity</TabsTrigger>
-                <TabsTrigger value="contacts">
-                  {record.nb_contacts
-                    ? record.nb_contacts === 1
-                      ? "1 Contact"
-                      : `${record.nb_contacts} Contacts`
-                    : "No Contacts"}
-                </TabsTrigger>
-                {record.nb_deals ? (
-                  <TabsTrigger value="deals">
-                    {record.nb_deals === 1
-                      ? "1 project"
-                      : `${record.nb_deals} projects`}
+            <Tabs defaultValue={currentTab} onValueChange={handleTabChange} className="flex min-h-0 flex-col">
+              <StickyTabsBar className="pb-2">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="activity">Activity</TabsTrigger>
+                  <TabsTrigger value="contacts">
+                    {record.nb_contacts
+                      ? record.nb_contacts === 1
+                        ? "1 Contact"
+                        : `${record.nb_contacts} Contacts`
+                      : "No Contacts"}
                   </TabsTrigger>
-                ) : null}
-              </TabsList>
-              <TabsContent value="activity" className="pt-2">
-                <ActivityLog companyId={record.id} context="company" />
-              </TabsContent>
-              <TabsContent value="contacts">
-                {record.nb_contacts ? (
-                  <ReferenceManyField
-                    reference="contacts_summary"
-                    target="company_id"
-                    sort={{ field: "last_name", order: "ASC" }}
-                  >
+                  {record.nb_deals ? (
+                    <TabsTrigger value="deals">
+                      {record.nb_deals === 1
+                        ? "1 project"
+                        : `${record.nb_deals} projects`}
+                    </TabsTrigger>
+                  ) : null}
+                </TabsList>
+              </StickyTabsBar>
+              <ScrollableContentArea>
+                <TabsContent value="activity" className="pt-2">
+                  <ActivityLog companyId={record.id} context="company" />
+                </TabsContent>
+                <TabsContent value="contacts">
+                  {record.nb_contacts ? (
+                    <ReferenceManyField
+                      reference="contacts_summary"
+                      target="company_id"
+                      sort={{ field: "last_name", order: "ASC" }}
+                    >
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-row justify-end space-x-2 mt-1">
+                          {!!record.nb_contacts && (
+                            <SortButton
+                              fields={["last_name", "first_name", "last_seen"]}
+                            />
+                          )}
+                          {canManageSales ? <CreateRelatedContactButton /> : null}
+                        </div>
+                        <ContactsIterator />
+                      </div>
+                    </ReferenceManyField>
+                  ) : (
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-row justify-end space-x-2 mt-1">
-                        {!!record.nb_contacts && (
-                          <SortButton
-                            fields={["last_name", "first_name", "last_seen"]}
-                          />
-                        )}
-                        <CreateRelatedContactButton />
+                        {canManageSales ? <CreateRelatedContactButton /> : null}
                       </div>
-                      <ContactsIterator />
                     </div>
-                  </ReferenceManyField>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-row justify-end space-x-2 mt-1">
-                      <CreateRelatedContactButton />
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-              <TabsContent value="deals">
-                {record.nb_deals ? (
-                  <ReferenceManyField
-                    reference="deals"
-                    target="company_id"
-                    sort={{ field: "name", order: "ASC" }}
-                  >
-                    <ProjectsIterator />
-                  </ReferenceManyField>
-                ) : null}
-              </TabsContent>
+                  )}
+                </TabsContent>
+                <TabsContent value="deals">
+                  {record.nb_deals ? (
+                    <ReferenceManyField
+                      reference="deals"
+                      target="company_id"
+                      sort={{ field: "name", order: "ASC" }}
+                    >
+                      <ProjectsIterator />
+                    </ReferenceManyField>
+                  ) : null}
+                </TabsContent>
+              </ScrollableContentArea>
             </Tabs>
           </CardContent>
         </Card>

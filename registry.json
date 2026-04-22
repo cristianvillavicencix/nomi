@@ -376,6 +376,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/misc/assetLinks.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/misc/Status.tsx",
           "type": "registry:component"
         },
@@ -456,7 +460,19 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/layout/navigationLayoutPreference.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/layout/UserMenuItems.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/layout/TopToolbar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/layout/SidebarLayout.tsx",
           "type": "registry:component"
         },
         {
@@ -485,6 +501,10 @@
         },
         {
           "path": "src/components/atomic-crm/layout/FormToolbar.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/layout/DesktopLayout.tsx",
           "type": "registry:component"
         },
         {
@@ -521,6 +541,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/OnlyMineInput.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/DealsExplorerPanel.tsx",
           "type": "registry:component"
         },
         {

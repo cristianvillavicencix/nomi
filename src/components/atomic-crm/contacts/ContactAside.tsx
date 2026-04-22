@@ -1,4 +1,4 @@
-import { useRecordContext } from "ra-core";
+import { useGetIdentity, useRecordContext } from "ra-core";
 import { EditButton } from "@/components/admin/edit-button";
 import { DeleteButton } from "@/components/admin";
 import { ReferenceManyField } from "@/components/admin/reference-many-field";
@@ -13,17 +13,20 @@ import { AsideSection } from "../misc/AsideSection";
 import type { Contact } from "../types";
 import { ContactMergeButton } from "./ContactMergeButton";
 import { ExportVCardButton } from "./ExportVCardButton";
+import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 
 export const ContactAside = ({ link = "edit" }: { link?: "edit" | "show" }) => {
   const record = useRecordContext<Contact>();
+  const { data: identity } = useGetIdentity();
+  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
 
   if (!record) return null;
   return (
     <div className="hidden sm:block w-92 min-w-92 text-sm">
       <div className="mb-4 -ml-1">
-        {link === "edit" ? (
+        {link === "edit" && canManageSales ? (
           <EditButton label="Edit Contact" />
-        ) : (
+        ) : !canManageSales ? null : (
           <ShowButton label="Show Contact" />
         )}
       </div>
@@ -37,7 +40,7 @@ export const ContactAside = ({ link = "edit" }: { link?: "edit" | "show" }) => {
       </AsideSection>
 
       <AsideSection title="Tags">
-        <TagsListEdit />
+        <TagsListEdit hideButton={!canManageSales} />
       </AsideSection>
 
       <AsideSection title="Tasks">
@@ -48,10 +51,10 @@ export const ContactAside = ({ link = "edit" }: { link?: "edit" | "show" }) => {
         >
           <TasksIterator />
         </ReferenceManyField>
-        <AddTask />
+        {canManageSales ? <AddTask /> : null}
       </AsideSection>
 
-      {link !== "edit" && (
+      {link !== "edit" && canManageSales ? (
         <>
           <div className="mt-6 pt-6 border-t hidden sm:flex flex-col gap-2 items-start">
             <ExportVCardButton />

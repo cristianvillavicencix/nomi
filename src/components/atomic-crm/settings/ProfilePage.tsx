@@ -38,10 +38,10 @@ export const ProfilePage = () => {
   const { mutate } = useMutation({
     mutationKey: ["signup"],
     mutationFn: async (data: SalesFormData) => {
-      if (!identity) {
+      if (!data?.id) {
         throw new Error("Record not found");
       }
-      return dataProvider.salesUpdate(identity.id, data);
+      return dataProvider.salesUpdate(data.id, data);
     },
     onSuccess: () => {
       refetchIdentity();

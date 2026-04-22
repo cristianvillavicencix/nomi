@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDataProvider, useNotify, useRedirect } from 'ra-core';
+import { useDataProvider, useGetIdentity, useNotify, useRedirect } from 'ra-core';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,23 +8,30 @@ import type { CrmDataProvider } from '@/components/atomic-crm/providers/types';
 
 type CreateData = {
   org_id: number;
+  run_name?: string;
+  category?: 'hourly' | 'salaried' | 'subcontractor' | 'sales_commissions' | 'mixed';
   pay_period_start: string;
   pay_period_end: string;
   pay_date: string;
   status: 'draft' | 'approved' | 'paid';
+  created_by?: string;
 };
 
 export const PaymentsCreateWizard = () => {
   const dataProvider = useDataProvider() as CrmDataProvider;
+  const { data: identity } = useGetIdentity();
   const notify = useNotify();
   const redirect = useRedirect();
 
   const [formData, setFormData] = useState<CreateData>({
     org_id: 1,
+    run_name: '',
+    category: 'hourly',
     pay_period_start: new Date().toISOString().slice(0, 10),
     pay_period_end: new Date().toISOString().slice(0, 10),
     pay_date: new Date().toISOString().slice(0, 10),
     status: 'draft',
+    created_by: 'Current User',
   });
   const [paymentId, setPaymentId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +39,7 @@ export const PaymentsCreateWizard = () => {
   const onCreateDraft = async () => {
     setIsLoading(true);
     try {
-      const result = await dataProvider.create('payments', { data: formData });
+      const result = await dataProvider.create('payments', { data: formData, meta: { identity } });
       setPaymentId(result.data.id as number);
       notify('Draft payment created');
     } catch {
@@ -65,6 +72,35 @@ export const PaymentsCreateWizard = () => {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label htmlFor="run_name">Run Name</Label>
+            <Input
+              id="run_name"
+              value={formData.run_name ?? ''}
+              onChange={(e) => setFormData((s) => ({ ...s, run_name: e.target.value }))}
+              placeholder="Example: Hourly Payroll - Week 1"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="category">Category</Label>
+            <select
+              id="category"
+              className="flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm"
+              value={formData.category ?? 'hourly'}
+              onChange={(e) =>
+                setFormData((s) => ({
+                  ...s,
+                  category: e.target.value as CreateData['category'],
+                }))
+              }
+            >
+              <option value="hourly">Hourly Staff</option>
+              <option value="salaried">Salaried Staff</option>
+              <option value="subcontractor">Subcontractors</option>
+              <option value="sales_commissions">Sales Commissions</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </div>
           <div className="space-y-1">
             <Label htmlFor="pay_period_start">Period Start</Label>
             <Input

@@ -1,6 +1,6 @@
 import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd";
 import isEqual from "lodash/isEqual";
-import { useDataProvider, useListContext, type DataProvider } from "ra-core";
+import { useDataProvider, useGetIdentity, useListContext, type DataProvider } from "ra-core";
 import { useEffect, useMemo, useState } from "react";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -18,6 +18,7 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
   );
   const { data: unorderedDeals, isPending, refetch } = useListContext<Deal>();
   const dataProvider = useDataProvider();
+  const { data: identity } = useGetIdentity();
 
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>(
     getDealsByStage([], stages),
@@ -166,6 +167,7 @@ const updateDealStage = async (
               id: deal.id,
               data: { index: deal.index + 1 },
               previousData: deal,
+              meta: { identity },
             }),
           ),
         // for the deal that was moved, update its index
@@ -173,6 +175,7 @@ const updateDealStage = async (
           id: source.id,
           data: { index: destinationIndex },
           previousData: source,
+          meta: { identity },
         }),
       ]);
     } else {
@@ -192,6 +195,7 @@ const updateDealStage = async (
               id: deal.id,
               data: { index: deal.index - 1 },
               previousData: deal,
+              meta: { identity },
             }),
           ),
         // for the deal that was moved, update its index
@@ -199,6 +203,7 @@ const updateDealStage = async (
           id: source.id,
           data: { index: destinationIndex },
           previousData: source,
+          meta: { identity },
         }),
       ]);
     }
@@ -229,6 +234,7 @@ const updateDealStage = async (
             id: deal.id,
             data: { index: deal.index - 1 },
             previousData: deal,
+            meta: { identity },
           }),
         ),
       // increase index on the deals after the destination index in the destination columns
@@ -239,6 +245,7 @@ const updateDealStage = async (
             id: deal.id,
             data: { index: deal.index + 1 },
             previousData: deal,
+            meta: { identity },
           }),
         ),
       // change the dragged deal to take the destination index and column
@@ -249,6 +256,7 @@ const updateDealStage = async (
           stage: destination.stage,
         },
         previousData: source,
+        meta: { identity },
       }),
     ]);
   }

@@ -4,7 +4,11 @@ import { ResponsiveBar } from '@nivo/bar';
 import { Card, CardContent } from '@/components/ui/card';
 import { ReportDateFilters } from './ReportFilters';
 
-export const ProjectProfitabilityReportPage = () => {
+export const ProjectProfitabilityReportPage = ({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
@@ -30,7 +34,9 @@ export const ProjectProfitabilityReportPage = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Project Profitability</h1>
+      {!embedded ? (
+        <h1 className="text-2xl font-semibold">Project Profitability</h1>
+      ) : null}
       <ReportDateFilters from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
 
       <Card>
