@@ -165,12 +165,23 @@ export const LoginPage = (props: { redirectTo?: string }) => {
               </SSOAuthButton>
             ) : null}
             {disableEmailPasswordAuthentication ? null : (
-              <Link
-                to={"/forgot-password"}
-                className="block text-sm text-center hover:underline"
-              >
-                Forgot your password?
-              </Link>
+              <>
+                <Link
+                  to={"/forgot-password"}
+                  className="block text-sm text-center hover:underline"
+                >
+                  Forgot your password?
+                </Link>
+                <p className="text-sm text-center text-muted-foreground">
+                  Don&apos;t have an account?{" "}
+                  <Link
+                    to="/sign-up"
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    Register
+                  </Link>
+                </p>
+              </>
             )}
           </div>
         </div>

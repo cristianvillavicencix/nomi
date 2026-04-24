@@ -1,8 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useDataProvider, useLogin, useNotify } from "ra-core";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { Navigate, useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "../providers/types";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { SignUpData } from "../types";
-import { LoginSkeleton } from "./LoginSkeleton";
 import { Notification } from "@/components/admin/notification";
 import { ConfirmationRequired } from "./ConfirmationRequired";
 import { SSOAuthButton } from "./SSOAuthButton";
@@ -24,13 +23,6 @@ export const SignupPage = () => {
     googleWorkplaceDomain,
   } = useConfigurationContext();
   const navigate = useNavigate();
-  const { data: isInitialized, isPending } = useQuery({
-    queryKey: ["init"],
-    queryFn: async () => {
-      return dataProvider.isInitialized();
-    },
-  });
-
   const { isPending: isSignUpPending, mutate } = useMutation({
     mutationKey: ["signup"],
     mutationFn: async (data: SignUpData) => {
@@ -43,7 +35,7 @@ export const SignupPage = () => {
         redirectTo: "/contacts",
       })
         .then(() => {
-          notify("Initial user successfully created");
+          notify("Account created");
           // FIXME: We should probably provide a hook for that in the ra-core package
           queryClient.invalidateQueries({
             queryKey: ["auth", "canAccess"],
@@ -62,7 +54,7 @@ export const SignupPage = () => {
         });
     },
     onError: (error) => {
-      notify(error.message);
+      notify(error.message, { type: "error" });
     },
   });
 
@@ -75,16 +67,10 @@ export const SignupPage = () => {
     formState: { isValid },
   } = useForm<SignUpData>({
     mode: "onChange",
+    defaultValues: {
+      company_name: "",
+    },
   });
-
-  if (isPending) {
-    return <LoginSkeleton />;
-  }
-
-  // For the moment, we only allow one user to sign up. Other users must be created by the administrator.
-  if (isInitialized) {
-    return <Navigate to="/login" />;
-  }
 
   const onSubmit: SubmitHandler<SignUpData> = async (data) => {
     mutate(data);
@@ -92,22 +78,52 @@ export const SignupPage = () => {
 
   return (
     <div className="h-screen p-8">
-      <div className="flex items-center gap-4">
-        <img
-          src={logo}
-          alt={title}
-          width={24}
-          className="filter brightness-0 invert"
-        />
-        <h1 className="text-xl font-semibold">{title}</h1>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" asChild className="shrink-0 gap-1.5">
+          <Link to="/login" aria-label="Volver al inicio de sesión">
+            <ArrowLeft className="h-4 w-4" />
+            Volver
+          </Link>
+        </Button>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <img
+            src={logo}
+            alt={title}
+            width={24}
+            className="shrink-0 filter brightness-0 invert"
+          />
+          <h1 className="truncate text-xl font-semibold">{title}</h1>
+        </div>
       </div>
       <div className="h-full">
-        <div className="max-w-sm mx-auto h-full flex flex-col justify-center gap-4">
-          <h1 className="text-2xl font-bold mb-4">Welcome to Nomi CRM</h1>
-          <p className="text-base mb-4">
-            Create the first user account to complete the setup.
+        <div className="mx-auto flex h-full max-w-sm flex-col justify-center gap-4">
+          <h1 className="mb-1 text-2xl font-bold">Welcome to {title}</h1>
+          <p className="mb-2 text-sm text-muted-foreground">
+            ¿Ya tienes cuenta?{" "}
+            <Link
+              to="/login"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Inicia sesión
+            </Link>
+            .
+          </p>
+          <p className="text-base text-muted-foreground">
+            Create your company workspace. You can invite your team later from
+            Settings → Users.
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="company_name">Company name</Label>
+              <Input
+                {...register("company_name", { required: true, minLength: 2 })}
+                id="company_name"
+                type="text"
+                required
+                autoComplete="organization"
+                placeholder="Your company or team name"
+              />
+            </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="first_name">First name</Label>
               <Input
@@ -144,7 +160,7 @@ export const SignupPage = () => {
                 required
               />
             </div>
-            <div className="flex flex-col gap-4 justify-between items-center mt-8">
+            <div className="mt-6 flex flex-col items-stretch gap-3">
               <Button
                 type="submit"
                 disabled={!isValid || isSignUpPending}
@@ -152,13 +168,31 @@ export const SignupPage = () => {
               >
                 {isSignUpPending ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...
                   </>
                 ) : (
                   "Create account"
                 )}
               </Button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => navigate("/login")}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full text-muted-foreground sm:w-auto"
+                  asChild
+                >
+                  <Link to="/login">Iniciar sesión</Link>
+                </Button>
+              </div>
               {googleWorkplaceDomain ? (
                 <SSOAuthButton
                   className="w-full"

@@ -8,7 +8,7 @@ import type {
   LabeledValue,
   NoteStatus,
 } from "../types";
-import { defaultConfiguration } from "./defaultConfiguration";
+import { defaultConfiguration, withCurrentProductName } from "./defaultConfiguration";
 import { type PayrollSettings } from "@/payroll/rules";
 
 export const CONFIGURATION_STORE_KEY = "app.configuration";
@@ -126,7 +126,10 @@ export const useConfigurationContext = () => {
   // Merge with defaults so that missing fields in stored config
   // fall back to default values (e.g. when new settings are added)
   return useMemo(() => {
-    const merged = { ...defaultConfiguration, ...config };
+    const merged = withCurrentProductName({
+      ...defaultConfiguration,
+      ...config,
+    });
     const dealPipelines = normalizeDealPipelines(merged);
     const defaultPipeline = getDefaultPipeline(dealPipelines);
     const defaultStages = defaultPipeline?.stages ?? [];

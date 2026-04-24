@@ -14,6 +14,8 @@ export type SignUpData = {
   password: string;
   first_name: string;
   last_name: string;
+  /** Company / organization name; used on sign-up to create an isolated org (see handle_new_user). */
+  company_name: string;
 };
 
 export type SalesFormData = {
@@ -30,6 +32,8 @@ export type SalesFormData = {
 export type Sale = {
   first_name: string;
   last_name: string;
+  /** Tenant scope; all CRM rows are filtered by this via RLS. */
+  org_id?: number;
   administrator: boolean;
   roles?: string[];
   avatar?: RAFile;

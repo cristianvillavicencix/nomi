@@ -25,6 +25,7 @@ import type {
   Task,
 } from "../../types";
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
+import { withCurrentProductName } from "../../root/defaultConfiguration";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getActivityLog } from "../commons/activity";
@@ -326,6 +327,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     password,
     first_name,
     last_name,
+    company_name: _company_name,
   }: SignUpData): Promise<{ id: string; email: string; password: string }> => {
     const normalizedEmail = normalizeEmailValue(email, "email")!;
     const user = await baseDataProvider.create("sales", {
@@ -414,7 +416,8 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
   getConfiguration: async (): Promise<ConfigurationContextValue> => {
     const { data } = await baseDataProvider.getOne("configuration", { id: 1 });
-    return (data?.config as ConfigurationContextValue) ?? {};
+    const raw = (data?.config as ConfigurationContextValue) ?? {};
+    return withCurrentProductName(raw) as ConfigurationContextValue;
   },
   updateConfiguration: async (
     config: ConfigurationContextValue,

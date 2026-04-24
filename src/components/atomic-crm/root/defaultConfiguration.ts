@@ -6,6 +6,26 @@ export const defaultLightModeLogo = "./logos/logo_atomic_crm_light.svg";
 
 export const defaultTitle = "Nomi CRM";
 
+/** Older deployments may still store this as `title` / `companyLegalName` in `configuration.config`. */
+export const LEGACY_DEFAULT_APP_TITLE = "Atomic CRM";
+
+/**
+ * Maps the legacy product name in stored config to {@link defaultTitle} so all users
+ * (including new signups and invites) see the current branding.
+ */
+export function withCurrentProductName<
+  T extends { title?: string; companyLegalName?: string },
+>(config: T): T {
+  const out: T = { ...config };
+  if (out.title === LEGACY_DEFAULT_APP_TITLE) {
+    out.title = defaultTitle;
+  }
+  if (out.companyLegalName === LEGACY_DEFAULT_APP_TITLE) {
+    out.companyLegalName = defaultTitle;
+  }
+  return out;
+}
+
 export const defaultCompanySectors = [
   { value: "communication-services", label: "Communication Services" },
   { value: "consumer-discretionary", label: "Consumer Discretionary" },
