@@ -26,7 +26,14 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+        // Do not precache index.html: after a deploy, an old service worker
+        // could still serve a cached index that points at removed hashed chunks (404
+        // on e.g. DealList-*.js). HTML should load from the network to pick up
+        // the current import map. JS/CSS stay precached for speed.
+        globPatterns: ["**/*.{js,css,ico,png,svg,woff,woff2}"],
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
       },
       manifest: false, // Use existing manifest.json from public/

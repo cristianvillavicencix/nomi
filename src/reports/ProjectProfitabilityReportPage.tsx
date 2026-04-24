@@ -41,14 +41,19 @@ export const ProjectProfitabilityReportPage = ({
 
       <Card>
         <CardContent className="pt-6">
-          {isPending ? null : (
-            <div className="h-[320px]">
+          {isPending ? null : chartData.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6">
+              No data for this date range.
+            </p>
+          ) : (
+            <div className="h-[320px] min-h-[200px]">
               <ResponsiveBar
                 data={chartData}
                 keys={['profit']}
                 indexBy="project"
                 margin={{ top: 20, right: 20, bottom: 80, left: 80 }}
                 padding={0.3}
+                valueScale={{ type: 'linear', min: 0, max: 'auto' as const }}
                 axisBottom={{ tickRotation: -25 }}
               />
             </div>

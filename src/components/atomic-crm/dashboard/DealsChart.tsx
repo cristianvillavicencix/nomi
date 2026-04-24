@@ -1,5 +1,5 @@
 import { ResponsiveBar } from "@nivo/bar";
-import { format, startOfMonth } from "date-fns";
+import { format, parseISO, startOfMonth } from "date-fns";
 import { DollarSign } from "lucide-react";
 import { useGetList } from "ra-core";
 import { memo, useMemo } from "react";
@@ -48,25 +48,23 @@ export const DealsChart = memo(() => {
 
     const amountByMonth = Object.keys(dealsByMonth).map((month) => {
       return {
-        date: format(month, "MMM"),
+        date: format(parseISO(month), "MMM"),
         won: dealsByMonth[month]
           .filter((deal: Deal) => deal.stage === "won")
           .reduce((acc: number, deal: Deal) => {
-            acc += deal.amount;
-            return acc;
+            return acc + (Number(deal.amount) || 0);
           }, 0),
         pending: dealsByMonth[month]
           .filter((deal: Deal) => !["won", "lost"].includes(deal.stage))
           .reduce((acc: number, deal: Deal) => {
-            // @ts-expect-error - multiplier type issue
-            acc += deal.amount * multiplier[deal.stage];
-            return acc;
+            const m =
+              multiplier[deal.stage as keyof typeof multiplier] ?? 0;
+            return acc + (Number(deal.amount) || 0) * m;
           }, 0),
         lost: dealsByMonth[month]
           .filter((deal: Deal) => deal.stage === "lost")
           .reduce((acc: number, deal: Deal) => {
-            acc -= deal.amount;
-            return acc;
+            return acc - (Number(deal.amount) || 0);
           }, 0),
       };
     });
@@ -75,17 +73,62 @@ export const DealsChart = memo(() => {
   }, [data]);
 
   if (isPending) return null; // FIXME return skeleton instead
+
+  if (months.length === 0) {
+    return (
+      <div className="flex flex-col">
+        <div className="mb-4 flex items-center">
+          <div className="mr-3 flex">
+            <DollarSign className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h2 className="text-xl font-semibold text-muted-foreground">
+            Upcoming Project Revenue
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          No deals in the last 6 months.
+        </p>
+      </div>
+    );
+  }
+
   const range = months.reduce(
     (acc, month) => {
-      acc.min = Math.min(acc.min, month.lost);
-      acc.max = Math.max(acc.max, month.won + month.pending);
+      const w = Number(month.won) || 0;
+      const p = Number(month.pending) || 0;
+      const l = Number(month.lost) || 0;
+      acc.min = Math.min(acc.min, l);
+      acc.max = Math.max(acc.max, w + p, Math.abs(l));
       return acc;
     },
     { min: 0, max: 0 },
   );
+
+  // Nivo/d3 need a non-degenerate domain (min === max yields NaN bar geometry)
+  const scaleMin = range.min * 1.2;
+  let scaleMax = range.max * 1.2;
+  if (!Number.isFinite(scaleMin) || !Number.isFinite(scaleMax)) {
+    return (
+      <div className="flex flex-col">
+        <div className="mb-4 flex items-center">
+          <div className="mr-3 flex">
+            <DollarSign className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h2 className="text-xl font-semibold text-muted-foreground">
+            Upcoming Project Revenue
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground">No data to display.</p>
+      </div>
+    );
+  }
+  if (scaleMax <= scaleMin) {
+    scaleMax = scaleMin + 1;
+  }
+
   return (
     <div className="flex flex-col">
-      <div className="flex items-center mb-4">
+      <div className="mb-4 flex items-center">
         <div className="mr-3 flex">
           <DollarSign className="text-muted-foreground w-6 h-6" />
         </div>
@@ -103,8 +146,8 @@ export const DealsChart = memo(() => {
           padding={0.3}
           valueScale={{
             type: "linear",
-            min: range.min * 1.2,
-            max: range.max * 1.2,
+            min: scaleMin,
+            max: scaleMax,
           }}
           indexScale={{ type: "band", round: true }}
           enableGridX={true}
