@@ -1,4 +1,4 @@
-import { Import, PanelTop, Settings, User, Users } from "lucide-react";
+import { Import, PanelTop, Settings, User } from "lucide-react";
 import { CanAccess, useUserMenu } from "ra-core";
 import { Link } from "react-router";
 import {
@@ -16,9 +16,6 @@ import { useNavigationLayoutPreference } from "./navigationLayoutPreference";
 export const CRMUserMenuItems = () => (
   <>
     <ProfileMenu />
-    <CanAccess resource="sales" action="list">
-      <UsersMenu />
-    </CanAccess>
     <CanAccess resource="configuration" action="edit">
       <SettingsMenu />
     </CanAccess>
@@ -57,20 +54,6 @@ const NavigationLayoutMenu = () => {
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
     </DropdownMenuSub>
-  );
-};
-
-const UsersMenu = () => {
-  const userMenuContext = useUserMenu();
-  if (!userMenuContext) {
-    throw new Error("<UsersMenu> must be used inside <UserMenu>");
-  }
-  return (
-    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
-      <Link to="/sales" className="flex items-center gap-2">
-        <Users /> Users
-      </Link>
-    </DropdownMenuItem>
   );
 };
 

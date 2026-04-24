@@ -1,7 +1,8 @@
 import { RotateCcw, Save } from "lucide-react";
 import type { RaRecord } from "ra-core";
 import { EditBase, Form, useGetList, useInput, useNotify } from "ra-core";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -221,8 +222,22 @@ const SettingsFormFields = () => {
     reset,
     formState: { isSubmitting },
   } = useFormContext();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const hasHandledUsersSection = useRef(false);
 
   const dealPipelines: DealPipeline[] = watch("dealPipelines") ?? [];
+
+  useLayoutEffect(() => {
+    if (hasHandledUsersSection.current) return;
+    if (searchParams.get("section") !== "users") return;
+    hasHandledUsersSection.current = true;
+    requestAnimationFrame(() => {
+      document.getElementById("users")?.scrollIntoView({ block: "start" });
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete("section");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const { data: deals } = useGetList("deals", {
     pagination: { page: 1, perPage: 1000 },

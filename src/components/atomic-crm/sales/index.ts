@@ -1,12 +1,10 @@
 import type { Sale } from "../types";
-import { SalesCreate } from "./SalesCreate";
-import { SalesEdit } from "./SalesEdit";
-import { SalesList } from "./SalesList";
+import { RedirectToSettingsUsers } from "./RedirectToSettingsUsers";
 
 export default {
-  list: SalesList,
-  create: SalesCreate,
-  edit: SalesEdit,
+  list: RedirectToSettingsUsers,
+  create: RedirectToSettingsUsers,
+  edit: RedirectToSettingsUsers,
   recordRepresentation: (record: Sale) =>
     `${record.first_name} ${record.last_name}`,
 };
