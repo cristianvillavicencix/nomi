@@ -182,7 +182,7 @@ export const getDayHours = (day: DayDraft) => {
 /** Hours for payroll preview; matches buildTimeEntryPayloads (worked shift vs unpaid vs paid absence). */
 export const getPayrollHoursForDayDraft = (
   day: DayDraft,
-  options?: { defaultPaidHours?: number },
+  options?: { defaultPaidHours?: number; offDaysPaid?: boolean },
 ) => {
   const isWorkedShift =
     day.day_type === 'worked_day' && day.day_state === 'working';
@@ -190,6 +190,10 @@ export const getPayrollHoursForDayDraft = (
     return calculateHours(day.start_time, day.end_time, day.break_minutes);
   }
   if (day.day_type === 'unpaid_leave') return 0;
+  // "Day off" is only paid if the employee has Off days paid enabled (people.off_days_paid).
+  if (day.day_type === 'day_off' && !options?.offDaysPaid) {
+    return 0;
+  }
   return Number(options?.defaultPaidHours ?? 8);
 };
 
@@ -297,11 +301,14 @@ export const buildTimeEntryPayloads = ({
         return;
       }
       const isWorkedShift = day.day_type === 'worked_day' && day.day_state === 'working';
+      const paidDayDefault = Number(employee.paid_day_hours ?? 8);
       const hours = isWorkedShift
         ? calculateHours(day.start_time, day.end_time, day.break_minutes)
         : day.day_type === 'unpaid_leave'
           ? 0
-          : 8;
+          : day.day_type === 'day_off' && !employee.off_days_paid
+            ? 0
+            : paidDayDefault;
 
       if (!hours && !day.start_time && !day.end_time && isWorkedShift) {
         return;

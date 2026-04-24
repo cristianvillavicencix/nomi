@@ -72,7 +72,7 @@ const absentDayAddressNoteEs = (
     case 'vacation_day':
       return 'Nota: vacaciones. No aplica entrada / lunch / salida; se muestran horas y pago del día.';
     case 'day_off':
-      return 'Nota: día libre. No aplica entrada / lunch / salida; se muestran horas y pago del día.';
+      return 'Nota: día libre. Sin entrada / lunch / salida. El pago depende de «Off days paid» en el empleado (apagado = 0h pagadas; encendido = jornada pagada).';
     case 'unpaid_leave':
       return 'Nota: permiso sin goce. Sin horas ni pago en esta fila.';
     default:
@@ -655,6 +655,7 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
         sum +
         getPayrollHoursForDayDraft(day, {
           defaultPaidHours: Number(previewEmployee?.paid_day_hours ?? 8),
+          offDaysPaid: Boolean(previewEmployee?.off_days_paid),
         }),
       0,
     );
@@ -676,6 +677,7 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
           } else if (!worked && day.day_type !== 'unpaid_leave') {
             acc.regular += getPayrollHoursForDayDraft(day, {
               defaultPaidHours: defaultPaid,
+              offDaysPaid: Boolean(employee.off_days_paid),
             });
           }
         }
@@ -703,6 +705,7 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
         } else if (day.day_type !== 'unpaid_leave') {
           regularHours += getPayrollHoursForDayDraft(day, {
             defaultPaidHours: defaultPaid,
+            offDaysPaid: Boolean(employee.off_days_paid),
           });
         }
       }
@@ -718,7 +721,12 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
       total: Number((totalPayableHours * employeeCount).toFixed(2)),
       estimatedGross: Number(estimatedGross.toFixed(2)),
     };
-  }, [daysForEditablePay, selectedEmployees, previewEmployee?.paid_day_hours]);
+  }, [
+    daysForEditablePay,
+    selectedEmployees,
+    previewEmployee?.paid_day_hours,
+    previewEmployee?.off_days_paid,
+  ]);
 
   const employeeTotals = useMemo(() => {
     const totalsByEmployee = selectedEmployees.reduce(
@@ -731,7 +739,10 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
         const totalHours = daysForEditablePay.reduce(
           (sum, day) =>
             sum +
-            getPayrollHoursForDayDraft(day, { defaultPaidHours: defaultPaid }),
+            getPayrollHoursForDayDraft(day, {
+              defaultPaidHours: defaultPaid,
+              offDaysPaid: Boolean(employee.off_days_paid),
+            }),
           0,
         );
         let regularHours = 0;
@@ -745,6 +756,7 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
           } else if (day.day_type !== 'unpaid_leave') {
             regularHours += getPayrollHoursForDayDraft(day, {
               defaultPaidHours: defaultPaid,
+              offDaysPaid: Boolean(employee.off_days_paid),
             });
           }
         }
@@ -1285,11 +1297,15 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
                           day.day_type === 'worked_day' &&
                           day.day_state === 'working';
                         const isUnpaidAbsence = day.day_type === 'unpaid_leave';
+                        const isUnpaidDayOff =
+                          day.day_type === 'day_off' &&
+                          !Boolean(previewEmployee?.off_days_paid);
                         const paidDayDefault = Number(
                           previewEmployee?.paid_day_hours ?? 8,
                         );
                         const rowDisplayHours = getPayrollHoursForDayDraft(day, {
                           defaultPaidHours: paidDayDefault,
+                          offDaysPaid: Boolean(previewEmployee?.off_days_paid),
                         });
                         const dayIssues = rowIssues[day.row_id] ?? [];
                         const dayHasTimeIssue = dayIssues.some((issue) =>
@@ -1308,7 +1324,8 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
                               overtime: 0,
                             };
                         const strikeTimeCells = !isWorkedShift;
-                        const strikeHoursPayCells = isUnpaidAbsence;
+                        const strikeHoursPayCells =
+                          isUnpaidAbsence || isUnpaidDayOff;
                         const addressDayNote = absentDayAddressNoteEs(day.day_type);
                         const weekendType = getWeekendType(day.date);
                         const existingRow = existingRowsById[day.row_id];

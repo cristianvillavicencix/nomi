@@ -66,7 +66,14 @@ export const TimeEntriesForm = () => {
     lunchMinutes ?? existingMeta.lunch_minutes ?? 0,
   );
   const paidDayHours = Number(person?.paid_day_hours ?? 8);
+  const offDaysPaid = Boolean(person?.off_days_paid);
   const currentDayType = dayType ?? 'worked_day';
+  const paidAbsenceDayHours =
+    currentDayType === 'unpaid_leave'
+      ? 0
+      : currentDayType === 'day_off' && !offDaysPaid
+        ? 0
+        : paidDayHours;
 
   useEffect(() => {
     if (paidLocked) return;
@@ -82,8 +89,8 @@ export const TimeEntriesForm = () => {
       setValue('start_time', '');
       setValue('end_time', '');
       setValue('worked_hours_raw', 0);
-      setValue('payable_hours', currentDayType === 'unpaid_leave' ? 0 : paidDayHours);
-      setValue('regular_hours', currentDayType === 'unpaid_leave' ? 0 : paidDayHours);
+      setValue('payable_hours', paidAbsenceDayHours);
+      setValue('regular_hours', paidAbsenceDayHours);
       setValue('overtime_hours', 0);
     } else {
       const calculatedHours = calculateHours(startTime, endTime, effectiveLunchMinutes);
@@ -111,6 +118,7 @@ export const TimeEntriesForm = () => {
     endTime,
     existingMeta,
     paidDayHours,
+    paidAbsenceDayHours,
     setValue,
     startTime,
     paidLocked,
