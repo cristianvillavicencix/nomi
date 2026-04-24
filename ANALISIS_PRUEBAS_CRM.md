@@ -1,4 +1,4 @@
-# Análisis de Pruebas - Atomic CRM
+# Análisis de Pruebas - Nomi CRM
 
 ## Resumen Ejecutivo
 

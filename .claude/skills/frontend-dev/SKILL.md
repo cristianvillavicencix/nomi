@@ -1,6 +1,6 @@
 ---
 name: frontend-dev
-description: Coding practices for frontend development in Atomic CRM. Use when creating or modifying React components, forms, list pages, detail views, filters, data fetching, or responsive layouts.
+description: Coding practices for frontend development in Nomi CRM. Use when creating or modifying React components, forms, list pages, detail views, filters, data fetching, or responsive layouts.
 ---
 
 The frontend uses ra-core (react-admin headless) for data fetching, routing, and CRUD logic, with shadcn-admin-kit and shadcn/ui for the UI layer.

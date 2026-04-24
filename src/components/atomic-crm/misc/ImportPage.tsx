@@ -185,7 +185,7 @@ const DownloadErrorFileButton = ({
         const url = window.URL.createObjectURL(blob);
         event.currentTarget.href = url;
       }}
-      download="atomic-crm-import-report.json"
+      download="nomi-crm-import-report.json"
     >
       Download the error report
     </a>

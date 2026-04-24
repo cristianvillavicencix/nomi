@@ -53,7 +53,7 @@ export const DashboardStepper = ({
             <div className="flex flex-col gap-12">
               <div className="flex gap-8 items-center">
                 <CheckCircle className="text-green-600 w-5 h-5 shrink-0" />
-                <h4 className="font-bold">Install Atomic CRM</h4>
+                <h4 className="font-bold">You&apos;re in Nomi CRM</h4>
               </div>
               <div className="flex gap-8 items-start">
                 {step > 1 ? (

@@ -6,7 +6,7 @@
     {
       "name": "atomic-crm",
       "type": "registry:block",
-      "title": "Atomic CRM",
+      "title": "Nomi CRM",
       "description": "A fully fledged CRM application built with Shadcn Admin Kit",
       "registryDependencies": [
         "item",
