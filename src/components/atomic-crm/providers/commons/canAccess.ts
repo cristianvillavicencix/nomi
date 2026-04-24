@@ -86,7 +86,10 @@ export const canAccess = <
 
   const canAccessFinance = roles.includes("accountant") || roles.includes("payroll_manager");
   const canAccessPeople = roles.includes("hr");
-  const canAccessSales = roles.includes("sales_manager");
+  const canAccessSales =
+    roles.includes("sales_manager") ||
+    roles.includes("manager") ||
+    roles.includes("employee");
 
   if (params.resource === "sales" || params.resource === "configuration") {
     return false;

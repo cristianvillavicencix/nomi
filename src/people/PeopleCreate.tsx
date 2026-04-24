@@ -1,13 +1,21 @@
+import { useDataProvider, useNotify } from "ra-core";
 import { Create, SimpleForm } from "@/components/admin";
 import { useLocation, useNavigate } from "react-router";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { getCompanyPaySchedule } from "@/payroll/rules";
 import { PeopleForm } from "./PeopleForm";
+import {
+  buildDraftPayrollRunFromOnboarding,
+  consumeSalariedPayrollOnboarding,
+} from "./salariedPayrollOnboarding";
 
 export const PeopleCreate = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const config = useConfigurationContext();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const notify = useNotify();
   const type = new URLSearchParams(location.search).get("type");
   const payrollSettings = config.payrollSettings;
   const normalizedType =
@@ -19,7 +27,37 @@ export const PeopleCreate = () => {
     <Create
       redirect={false}
       mutationOptions={{
-        onSuccess: () => {
+        onSuccess: async (data) => {
+          const record = (data as { data?: Record<string, unknown> })?.data ?? (data as Record<string, unknown> | undefined);
+          const id = record?.id;
+          const orgId = Number(record?.org_id ?? 1);
+          if (id != null) {
+            const pending = consumeSalariedPayrollOnboarding();
+            if (pending) {
+              try {
+                const payload = buildDraftPayrollRunFromOnboarding(
+                  Number(id),
+                  orgId,
+                  pending,
+                  "Current User",
+                );
+                const { data: run } = await dataProvider.create("payroll_runs", {
+                  data: payload,
+                });
+                if (run?.id != null) {
+                  await dataProvider.generatePayrollRun(run.id);
+                  notify("Saved. Draft payroll is ready in Payroll runs.", {
+                    type: "success",
+                  });
+                }
+              } catch {
+                notify(
+                  "Saved. Draft payroll could not be created — add it from Payroll.",
+                  { type: "warning" },
+                );
+              }
+            }
+          }
           navigate(`/people?type=${normalizedType}`);
         },
       }}
@@ -61,6 +99,8 @@ export const PeopleCreate = () => {
           zelle_contact: "",
           check_pay_to_name: "",
           type: normalizedType,
+          create_draft_payroll_run: false,
+          employment_start_date: null,
         }}
       >
         <PeopleForm />

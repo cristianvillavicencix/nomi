@@ -327,6 +327,14 @@ export const DealInputs = () => {
     () => withCurrentCustomChoice(projectTypeChoices, String(projectType ?? "")),
     [projectType],
   );
+  const projectTypeAutocompleteChoices = useMemo(
+    () =>
+      typeChoices.map((c) => ({
+        id: c.value,
+        name: c.label,
+      })),
+    [typeChoices],
+  );
 
   useEffect(() => {
     if (!category) {
@@ -489,14 +497,17 @@ export const DealInputs = () => {
             helperText={false}
             validate={required()}
           />
-          <SelectInput
+          <AutocompleteInput
             source="project_type"
             label="Project type"
-            choices={typeChoices}
-            optionText="label"
-            optionValue="value"
-            helperText={false}
+            choices={projectTypeAutocompleteChoices}
+            optionText="name"
+            optionValue="id"
+            translateChoice={false}
             validate={required()}
+            create
+            placeholder="Search or add a type"
+            helperText="Pick a common type or type a new name, then use Create in the list."
           />
           <NumberInput
             source="estimated_value"

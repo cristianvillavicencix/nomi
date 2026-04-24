@@ -192,7 +192,7 @@ export type Person = {
   notes?: string | null;
   status: "active" | "inactive";
   compensation_mode?: "hourly" | "salary" | "day_rate" | null;
-  compensation_unit?: "hour" | "day" | "week" | "month" | "commission" | null;
+  compensation_unit?: "hour" | "day" | "week" | "month" | "year" | "commission" | null;
   compensation_amount?: number | null;
   pay_type: "hourly" | "salary" | "commission" | "day_rate";
   compensation_type?:
@@ -243,6 +243,8 @@ export type Person = {
   emergency_contact_relationship?: string | null;
   emergency_notes?: string | null;
   pay_schedule?: "weekly" | "biweekly" | "semimonthly" | "monthly" | null;
+  /** First day the person starts work; company pay schedule lives in org Payment Settings. */
+  employment_start_date?: string | null;
   default_hours_per_week?: number | null;
   default_work_days?: number[] | null;
   created_at?: string;
@@ -347,7 +349,7 @@ export type PayrollRun = {
 export type PayrollRunLine = {
   payroll_run_id: Identifier;
   employee_id: Identifier;
-  compensation_unit?: "hour" | "day" | "week" | "month" | null;
+  compensation_unit?: "hour" | "day" | "week" | "month" | "year" | null;
   compensation_amount?: number | null;
   compensation_type:
     | "hourly"
@@ -419,7 +421,7 @@ export type PaymentLine = {
   payment_id: Identifier;
   person_id: Identifier;
   project_id?: Identifier | null;
-  compensation_unit?: "hour" | "day" | "week" | "month" | "commission" | null;
+  compensation_unit?: "hour" | "day" | "week" | "month" | "year" | "commission" | null;
   compensation_amount?: number | null;
   compensation_type?:
     | "hourly"

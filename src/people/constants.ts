@@ -23,6 +23,7 @@ export const compensationModeChoices = [
   { id: "day", name: "Per Day" },
   { id: "week", name: "Per Week" },
   { id: "month", name: "Per Month" },
+  { id: "year", name: "Salary (annual)" },
 ] as const;
 
 export const compensationTypeChoices = [
@@ -36,6 +37,7 @@ export const compensationTypeChoices = [
 export const payScheduleChoices = [
   { id: "weekly", name: "Weekly" },
   { id: "biweekly", name: "Biweekly" },
+  { id: "semimonthly", name: "Semi-Monthly" },
   { id: "monthly", name: "Monthly" },
 ] as const;
 
@@ -90,6 +92,7 @@ export const compensationUnitLabels = {
   day: "Per Day",
   week: "Per Week",
   month: "Per Month",
+  year: "Salary (annual)",
   commission: "Commission",
 } as const;
 
@@ -112,7 +115,9 @@ export const formatRate = (person: Partial<Person>) => {
             ? "/ week"
             : person.compensation_unit === "month"
               ? "/ month"
-              : "";
+              : person.compensation_unit === "year"
+                ? " / year"
+                : "";
     return `${formatMoney(person.compensation_amount)}${suffix}`;
   }
 

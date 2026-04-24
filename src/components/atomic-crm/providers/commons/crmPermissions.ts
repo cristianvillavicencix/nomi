@@ -22,6 +22,14 @@ export const canUseCrmPermission = (
   identity: AccessIdentity | string | null | undefined,
   permission: CrmPermission,
 ) => {
+  if (
+    identity &&
+    typeof identity === "object" &&
+    (identity as AccessIdentity).administrator === true
+  ) {
+    return true;
+  }
+
   const roles = getAccessRoles(identity);
 
   if (roles.includes("admin")) {
@@ -46,7 +54,9 @@ export const canUseCrmPermission = (
       return hasRole(roles, ["hr", "accountant", "payroll_manager"]);
     case "sales.view":
     case "sales.manage":
-      return hasRole(roles, ["sales_manager"]);
+      // Align with Settings → roles: "Employee" is described as org-wide CRM;
+      // "Sales & CRM" and "Manager" are specialists; admins handled above.
+      return hasRole(roles, ["sales_manager", "manager", "employee"]);
     default:
       return false;
   }
@@ -102,6 +112,13 @@ export const canMutateCrmResource = ({
   action: CrmMutationAction;
   data?: Record<string, unknown>;
 }) => {
+  if (
+    identity &&
+    typeof identity === "object" &&
+    (identity as AccessIdentity).administrator === true
+  ) {
+    return true;
+  }
   const permission = getMutationPermission(resource, action, data);
   if (!permission) return true;
   return canUseCrmPermission(identity, permission);

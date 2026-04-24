@@ -33,6 +33,23 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 
 const toIso = (date: Date) => date.toISOString().slice(0, 10);
 
+/** Parse YYYY-MM-DD in local calendar (avoid UTC off-by-one). */
+const parseLocalDate = (iso: string | undefined) => {
+  if (!iso || typeof iso !== "string") return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]) - 1;
+  const d = Number(m[3]);
+  if (![y, mo, d].every(Number.isFinite)) return null;
+  return new Date(y, mo, d, 12, 0, 0, 0);
+};
+
+const isWeeklySalariedEmployee = (person: Person | undefined) => {
+  if (!person) return false;
+  return getPersonCompensationProfile(person).unit === "week";
+};
+
 const endOfMonth = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth() + 1, 0, 12, 0, 0, 0);
 
@@ -192,6 +209,189 @@ const PayrollScopeDefaults = () => {
   }, [employee, getFieldState, getValues, setValue]);
 
   return null;
+};
+
+/**
+ * Weekly fixed salary: one payroll period = exactly 7 calendar days.
+ * When scope is a single such employee and category is Salaried, we force pay schedule
+ * to Weekly, derive pay_period_end from pay_period_start, and block manual end edits.
+ */
+const WeeklySalariedSingleEmployeePeriod = () => {
+  const { setValue, getValues } = useFormContext();
+  const scope = useWatch({ name: "payroll_scope" }) as
+    | "all"
+    | "employee"
+    | undefined;
+  const category = useWatch({ name: "category" }) as
+    | PayrollRun["category"]
+    | undefined;
+  const employeeId = useWatch({ name: "employee_id" }) as
+    | number
+    | string
+    | undefined;
+  const payPeriodStart = useWatch({ name: "pay_period_start" }) as
+    | string
+    | undefined;
+
+  const { data: employee } = useGetOne<Person>(
+    "people",
+    { id: employeeId ?? "" },
+    {
+      enabled: scope === "employee" && employeeId != null && employeeId !== "",
+    },
+  );
+
+  const lockWeek =
+    scope === "employee" &&
+    category === "salaried" &&
+    isWeeklySalariedEmployee(employee);
+
+  useEffect(() => {
+    if (!lockWeek) return;
+    setValue("pay_schedule", "weekly", { shouldDirty: false });
+  }, [lockWeek, setValue]);
+
+  useEffect(() => {
+    if (!lockWeek) return;
+    const start = parseLocalDate(payPeriodStart);
+    if (!start) return;
+    const end = addDays(start, 6);
+    const endIso = toIso(end);
+    if (getValues("pay_period_end") !== endIso) {
+      setValue("pay_period_end", endIso, { shouldDirty: true });
+    }
+    if (getValues("payday") !== endIso) {
+      setValue("payday", endIso, { shouldDirty: true });
+    }
+  }, [getValues, lockWeek, payPeriodStart, setValue]);
+
+  return null;
+};
+
+const PayPeriodEndField = () => {
+  const scope = useWatch({ name: "payroll_scope" }) as
+    | "all"
+    | "employee"
+    | undefined;
+  const category = useWatch({ name: "category" }) as
+    | PayrollRun["category"]
+    | undefined;
+  const employeeId = useWatch({ name: "employee_id" }) as
+    | number
+    | string
+    | undefined;
+
+  const { data: employee } = useGetOne<Person>(
+    "people",
+    { id: employeeId ?? "" },
+    {
+      enabled: scope === "employee" && employeeId != null && employeeId !== "",
+    },
+  );
+
+  const lockEnd =
+    scope === "employee" &&
+    category === "salaried" &&
+    isWeeklySalariedEmployee(employee);
+
+  return (
+    <div className="space-y-1.5">
+      <DateInput
+        source="pay_period_end"
+        validate={required()}
+        disabled={lockEnd}
+        helperText={
+          lockEnd
+            ? "Set by Pay period start: exactly 7 days (one week) for weekly salary."
+            : false
+        }
+      />
+    </div>
+  );
+};
+
+const PayScheduleField = () => {
+  const scope = useWatch({ name: "payroll_scope" }) as
+    | "all"
+    | "employee"
+    | undefined;
+  const category = useWatch({ name: "category" }) as
+    | PayrollRun["category"]
+    | undefined;
+  const employeeId = useWatch({ name: "employee_id" }) as
+    | number
+    | string
+    | undefined;
+
+  const { data: employee } = useGetOne<Person>(
+    "people",
+    { id: employeeId ?? "" },
+    {
+      enabled: scope === "employee" && employeeId != null && employeeId !== "",
+    },
+  );
+
+  const lockSchedule =
+    scope === "employee" &&
+    category === "salaried" &&
+    isWeeklySalariedEmployee(employee);
+
+  return (
+    <SelectInput
+      source="pay_schedule"
+      disabled={lockSchedule}
+      helperText={
+        lockSchedule
+          ? "Weekly — fixed to match this employee’s weekly salary."
+          : false
+      }
+      choices={[
+        { id: "weekly", name: "Weekly" },
+        { id: "biweekly", name: "Biweekly" },
+        { id: "semimonthly", name: "Semi-Monthly" },
+        { id: "monthly", name: "Monthly" },
+      ]}
+    />
+  );
+};
+
+const PayPeriodStartField = () => {
+  const scope = useWatch({ name: "payroll_scope" }) as
+    | "all"
+    | "employee"
+    | undefined;
+  const category = useWatch({ name: "category" }) as
+    | PayrollRun["category"]
+    | undefined;
+  const employeeId = useWatch({ name: "employee_id" }) as
+    | number
+    | string
+    | undefined;
+
+  const { data: employee } = useGetOne<Person>(
+    "people",
+    { id: employeeId ?? "" },
+    {
+      enabled: scope === "employee" && employeeId != null && employeeId !== "",
+    },
+  );
+
+  const lockEnd =
+    scope === "employee" &&
+    category === "salaried" &&
+    isWeeklySalariedEmployee(employee);
+
+  return (
+    <DateInput
+      source="pay_period_start"
+      validate={required()}
+      helperText={
+        lockEnd
+          ? "First day of the work week; end date is the 7th day (set automatically)."
+          : false
+      }
+    />
+  );
 };
 
 const PayrollScopeEmployeeInput = () => {
@@ -468,6 +668,7 @@ const PayrollRunsCreateForm = () => {
       >
         <PayrollPeriodDefaults />
         <PayrollScopeDefaults />
+        <WeeklySalariedSingleEmployeePeriod />
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
           <div className="space-y-4">
             <SelectInput
@@ -488,17 +689,9 @@ const PayrollRunsCreateForm = () => {
               ]}
             />
             <PayrollScopeEmployeeInput />
-            <SelectInput
-              source="pay_schedule"
-              choices={[
-                { id: "weekly", name: "Weekly" },
-                { id: "biweekly", name: "Biweekly" },
-                { id: "semimonthly", name: "Semi-Monthly" },
-                { id: "monthly", name: "Monthly" },
-              ]}
-            />
-            <DateInput source="pay_period_start" validate={required()} />
-            <DateInput source="pay_period_end" validate={required()} />
+            <PayScheduleField />
+            <PayPeriodStartField />
+            <PayPeriodEndField />
             <DateInput source="payday" validate={required()} />
             <TextInput source="created_by" />
             <TextInput source="notes" multiline />

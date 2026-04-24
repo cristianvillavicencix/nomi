@@ -1,10 +1,11 @@
 import { required } from "ra-core";
-import { useMemo, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { CancelButton, SaveButton } from "@/components/admin";
 import {
   AutocompleteInput,
   BooleanInput,
+  DateInput,
   EmailInput,
   NumberInput,
   PhoneInput,
@@ -13,6 +14,7 @@ import {
 } from "@/components/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { getCompanyPaySchedule } from "@/payroll/rules";
 import {
   bankAccountTypeChoices,
   compensationModeChoices,
@@ -21,9 +23,10 @@ import {
   personTypeChoices,
   specialtyChoices,
 } from "./constants";
+import { captureSalariedPayrollOnboarding } from "./salariedPayrollOnboarding";
 
 type PersonType = "employee" | "salesperson" | "subcontractor";
-type CompensationUnit = "hour" | "day" | "week" | "month";
+type CompensationUnit = "hour" | "day" | "week" | "month" | "year";
 type PaymentMethod = "cash" | "check" | "zelle" | "bank_deposit";
 
 const requiresNameByType = (value: unknown, type: PersonType | undefined) => {
@@ -57,6 +60,15 @@ const validateCompensationMode = (
   return "Required";
 };
 
+const validateEmploymentForDraft = (value: unknown, values: Record<string, unknown>) => {
+  if (values.type !== "employee" || !values.create_draft_payroll_run) return undefined;
+  const unit = String(values.compensation_unit ?? "hour");
+  const salaried = unit === "week" || unit === "month" || unit === "year";
+  if (!salaried) return undefined;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) return undefined;
+  return "Set their start date (above) or turn off the draft run.";
+};
+
 export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
   const data = { ...rawData };
   const type = String(data.type ?? "employee") as PersonType;
@@ -74,13 +86,13 @@ export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
     data.compensation_unit = compensationUnit;
     data.compensation_amount = Number.isFinite(compensationAmount) ? compensationAmount : null;
     data.pay_type =
-      compensationUnit === "week" || compensationUnit === "month"
+      compensationUnit === "week" || compensationUnit === "month" || compensationUnit === "year"
         ? "salary"
         : compensationUnit === "day"
           ? "day_rate"
           : "hourly";
     data.compensation_mode =
-      compensationUnit === "week" || compensationUnit === "month"
+      compensationUnit === "week" || compensationUnit === "month" || compensationUnit === "year"
         ? "salary"
         : compensationUnit === "day"
           ? "day_rate"
@@ -88,15 +100,17 @@ export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
     data.compensation_type =
       compensationUnit === "week"
         ? "weekly_salary"
-        : compensationUnit === "month"
+        : compensationUnit === "month" || compensationUnit === "year"
           ? "monthly_salary"
           : compensationUnit === "day"
             ? "daily"
             : "hourly";
     data.annual_salary =
-      compensationUnit === "month" && Number.isFinite(compensationAmount)
-        ? Number((compensationAmount * 12).toFixed(2))
-        : null;
+      compensationUnit === "year" && Number.isFinite(compensationAmount)
+        ? Number(compensationAmount.toFixed(2))
+        : compensationUnit === "month" && Number.isFinite(compensationAmount)
+          ? Number((compensationAmount * 12).toFixed(2))
+          : null;
     data.hourly_rate =
       compensationUnit === "hour"
         ? (Number.isFinite(compensationAmount) ? compensationAmount : Number.isFinite(hourlyRate) ? hourlyRate : null)
@@ -105,10 +119,20 @@ export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
       compensationUnit === "day"
         ? (Number.isFinite(compensationAmount) ? compensationAmount : Number.isFinite(dayRate) ? dayRate : null)
         : null;
-    data.salary_rate = compensationUnit === "month" && Number.isFinite(compensationAmount) ? compensationAmount : null;
+    data.salary_rate =
+      compensationUnit === "month" && Number.isFinite(compensationAmount)
+        ? compensationAmount
+        : compensationUnit === "year" && Number.isFinite(compensationAmount)
+          ? Number((compensationAmount / 12).toFixed(2))
+          : null;
     data.weekly_salary_amount = compensationUnit === "week" && Number.isFinite(compensationAmount) ? compensationAmount : null;
     data.biweekly_salary_amount = null;
-    data.monthly_salary_amount = compensationUnit === "month" && Number.isFinite(compensationAmount) ? compensationAmount : null;
+    data.monthly_salary_amount =
+      compensationUnit === "month" && Number.isFinite(compensationAmount)
+        ? compensationAmount
+        : compensationUnit === "year" && Number.isFinite(compensationAmount)
+          ? Number((compensationAmount / 12).toFixed(2))
+          : null;
     if (paymentMethod !== "bank_deposit") {
       data.bank_account_holder_name = null;
       data.bank_name = null;
@@ -138,8 +162,18 @@ export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
     data.working_days_per_week = Number.isFinite(workingDaysPerWeek)
       ? workingDaysPerWeek
       : 5;
+    const startRaw = (data as Record<string, unknown>).employment_start_date;
+    const startStr =
+      typeof startRaw === "string" && /^\d{4}-\d{2}-\d{2}/.test(startRaw)
+        ? startRaw.slice(0, 10)
+        : null;
+    (data as Record<string, unknown>).employment_start_date = startStr;
+    captureSalariedPayrollOnboarding(rawData);
+    delete (data as Record<string, unknown>).create_draft_payroll_run;
     return data;
   }
+
+  captureSalariedPayrollOnboarding(rawData);
 
   data.compensation_mode = null;
   data.compensation_unit = null;
@@ -190,7 +224,26 @@ export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
   data.emergency_contact_relationship = null;
   data.emergency_notes = null;
   data.pay_type = type === "salesperson" ? "commission" : "day_rate";
+  data.employment_start_date = null;
+  delete (data as Record<string, unknown>).create_draft_payroll_run;
   return data;
+};
+
+/** Keeps `pay_schedule` in sync with org Payment Settings (company, not the employee’s pay type). */
+const SyncEmployeePayScheduleFromSettings = () => {
+  const { setValue } = useFormContext();
+  const type = useWatch({ name: "type" });
+  const config = useConfigurationContext();
+  const companySchedule = getCompanyPaySchedule(config.payrollSettings);
+  useEffect(() => {
+    if (type === "employee") {
+      setValue("pay_schedule", companySchedule, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+  }, [type, setValue, companySchedule]);
+  return null;
 };
 
 const FormToolbar = () => (
@@ -211,6 +264,10 @@ export const PeopleForm = () => {
     useState(specialtyChoices);
 
   const allowCompensationAmount = type === "employee";
+  const isSalariedCompensation =
+    compensationUnit === "week" ||
+    compensationUnit === "month" ||
+    compensationUnit === "year";
 
   const specialtyOptions = useMemo(() => subcontractorSpecialties, [subcontractorSpecialties]);
 
@@ -270,6 +327,7 @@ export const PeopleForm = () => {
 
   return (
     <div className="space-y-6">
+      <SyncEmployeePayScheduleFromSettings />
       {type === "employee" ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <div className="space-y-6">
@@ -279,6 +337,12 @@ export const PeopleForm = () => {
                 <CardTitle>Employee Details</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <DateInput
+                  source="employment_start_date"
+                  label="Start date (first day of work)"
+                  validate={validateEmploymentForDraft}
+                  helperText={false}
+                />
                 <TextInput source="emergency_contact_name" label="Emergency contact name" helperText={false} />
                 <PhoneInput source="emergency_contact_phone" label="Emergency contact phone" helperText={false} />
                 <TextInput
@@ -323,7 +387,9 @@ export const PeopleForm = () => {
                                 ? "Amount per week"
                                 : compensationUnit === "month"
                                   ? "Amount per month"
-                                  : "Amount per hour"
+                                  : compensationUnit === "year"
+                                    ? "Annual salary"
+                                    : "Amount per hour"
                           }
                           step={0.01}
                           helperText={false}
@@ -360,6 +426,20 @@ export const PeopleForm = () => {
                       ) : null}
                     </div>
                   </div>
+
+                  {isSalariedCompensation ? (
+                    <div className="rounded-md border p-4">
+                      <h4 className="mb-1 text-sm font-semibold">Payroll (optional)</h4>
+                      <p className="mb-3 text-xs text-muted-foreground">
+                        Pay days follow your company in Settings (Payment settings). A draft
+                        run uses the start date in Employee details and that schedule.
+                      </p>
+                      <BooleanInput
+                        source="create_draft_payroll_run"
+                        label="Create a draft run (review later in Payroll)"
+                      />
+                    </div>
+                  ) : null}
 
                   <div className="rounded-md border p-4">
                     <h4 className="mb-3 text-sm font-semibold">Paid Time Off</h4>

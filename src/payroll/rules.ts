@@ -50,7 +50,7 @@ export const defaultPayrollSettings: PayrollSettings = {
   customHolidays: [],
 };
 
-export type CompensationUnit = 'hour' | 'day' | 'week' | 'month' | 'commission';
+export type CompensationUnit = 'hour' | 'day' | 'week' | 'month' | 'year' | 'commission';
 
 export type PersonCompensationProfile = {
   unit: CompensationUnit;
@@ -68,6 +68,14 @@ export const getCompanyPaySchedule = (
 export const getPersonCompensationProfile = (
   person: Partial<Person>,
 ): PersonCompensationProfile => {
+  if (person.compensation_unit === 'year' && person.compensation_amount != null) {
+    const annual = Number(person.compensation_amount ?? 0);
+    return {
+      unit: 'month',
+      amount: roundMoney(annual / 12),
+      label: 'year',
+    };
+  }
   if (person.compensation_unit && person.compensation_amount != null) {
     return {
       unit: person.compensation_unit,

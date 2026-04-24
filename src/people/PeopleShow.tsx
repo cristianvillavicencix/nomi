@@ -248,6 +248,7 @@ const getCompensationLabel = (person: Person) => {
   if (person.compensation_unit === "day") return "Per Day";
   if (person.compensation_unit === "week") return "Per Week";
   if (person.compensation_unit === "month") return "Per Month";
+  if (person.compensation_unit === "year") return "Salary (annual)";
   if (person.compensation_mode === "hourly") return "Hourly";
   if (person.compensation_mode === "salary") return "Salary";
   if (person.compensation_mode === "day_rate") return "Daily";
@@ -1391,6 +1392,14 @@ export const PeopleProfileDetailsContent = ({
                   <span className="text-muted-foreground">Compensation type:</span>{" "}
                   <span className="font-medium">{getCompensationLabel(record)}</span>
                 </p>
+                {record.employment_start_date ? (
+                  <p>
+                    <span className="text-muted-foreground">Start date (work):</span>{" "}
+                    <span className="font-medium">
+                      {formatDate(record.employment_start_date as string)}
+                    </span>
+                  </p>
+                ) : null}
                 {record.compensation_unit === "hour" || record.compensation_mode === "hourly" ? (
                   <p>
                     <span className="text-muted-foreground">Hourly rate:</span>{" "}
@@ -1403,7 +1412,30 @@ export const PeopleProfileDetailsContent = ({
                     <span className="font-medium">{money(record.compensation_amount ?? record.weekly_salary_amount)}</span>
                   </p>
                 ) : null}
-                {record.compensation_unit === "month" || record.compensation_mode === "salary" ? (
+                {record.compensation_unit === "year" ? (
+                  <>
+                    <p>
+                      <span className="text-muted-foreground">Annual salary:</span>{" "}
+                      <span className="font-medium">
+                        {money(record.annual_salary ?? record.compensation_amount)}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Monthly equivalent (approx.):</span>{" "}
+                      <span className="font-medium">
+                        {money(record.monthly_salary_amount ?? record.salary_rate)}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Company pay schedule:</span>{" "}
+                      <span className="font-medium">
+                        Payment Settings ({getCompanyPaySchedule(config.payrollSettings)})
+                      </span>
+                    </p>
+                  </>
+                ) : null}
+                {record.compensation_unit === "month" ||
+                (record.compensation_mode === "salary" && record.compensation_unit !== "year") ? (
                   <>
                     <p>
                       <span className="text-muted-foreground">Monthly amount:</span>{" "}

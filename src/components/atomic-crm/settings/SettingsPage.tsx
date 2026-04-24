@@ -2,6 +2,7 @@ import { RotateCcw, Save } from "lucide-react";
 import type { RaRecord } from "ra-core";
 import { EditBase, Form, useGetList, useInput, useNotify } from "ra-core";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { isTenantBrandingEditorVisible } from "./tenantBrandingFlags";
 import { useSearchParams } from "react-router";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -80,27 +81,40 @@ export const validateItemsInUse = (
   return undefined;
 };
 
-const transformFormValues = (data: Record<string, any>) => ({
-  config: {
-    title: data.title,
-    lightModeLogo: data.lightModeLogo,
-    darkModeLogo: data.darkModeLogo,
-    companyLegalName: data.companyLegalName,
-    companyTaxId: data.companyTaxId,
-    companyAddressLine1: data.companyAddressLine1,
-    companyAddressLine2: data.companyAddressLine2,
-    companyCity: data.companyCity,
-    companyState: data.companyState,
-    companyPostalCode: data.companyPostalCode,
-    companyCountry: data.companyCountry,
-    companyPhone: data.companyPhone,
-    companyEmail: data.companyEmail,
-    companyRepresentativeName: data.companyRepresentativeName,
-    companyRepresentativeTitle: data.companyRepresentativeTitle,
-    companySectors: ensureValues(data.companySectors),
-    dealCategories: ensureValues(data.dealCategories),
-    taskTypes: ensureValues(data.taskTypes),
-    dealPipelines: (data.dealPipelines ?? []).map(
+const transformFormValues = (
+  data: Record<string, any>,
+  currentConfig: ConfigurationContextValue,
+) => {
+  const canEditBranding = isTenantBrandingEditorVisible();
+  const title = canEditBranding ? data.title : currentConfig.title;
+  const lightModeLogo = canEditBranding
+    ? data.lightModeLogo
+    : currentConfig.lightModeLogo;
+  const darkModeLogo = canEditBranding
+    ? data.darkModeLogo
+    : currentConfig.darkModeLogo;
+
+  return {
+    config: {
+      title,
+      lightModeLogo,
+      darkModeLogo,
+      companyLegalName: data.companyLegalName,
+      companyTaxId: data.companyTaxId,
+      companyAddressLine1: data.companyAddressLine1,
+      companyAddressLine2: data.companyAddressLine2,
+      companyCity: data.companyCity,
+      companyState: data.companyState,
+      companyPostalCode: data.companyPostalCode,
+      companyCountry: data.companyCountry,
+      companyPhone: data.companyPhone,
+      companyEmail: data.companyEmail,
+      companyRepresentativeName: data.companyRepresentativeName,
+      companyRepresentativeTitle: data.companyRepresentativeTitle,
+      companySectors: ensureValues(data.companySectors),
+      dealCategories: ensureValues(data.dealCategories),
+      taskTypes: ensureValues(data.taskTypes),
+      dealPipelines: (data.dealPipelines ?? []).map(
       (pipeline: DealPipeline, pipelineIndex: number) => ({
         ...pipeline,
         id: pipeline.id || `pipeline-${pipelineIndex + 1}`,
@@ -118,38 +132,65 @@ const transformFormValues = (data: Record<string, any>) => ({
         ),
       }),
     ),
-    dealStages: ensureValues(data.dealStages),
-    dealPipelineStatuses: data.dealPipelineStatuses,
-    noteStatuses: ensureValues(data.noteStatuses),
-    payrollSettings: {
-      overtimeEnabledGlobally: Boolean(data.payrollSettings?.overtimeEnabledGlobally ?? true),
-      overtimeWeeklyThreshold: Number(data.payrollSettings?.overtimeWeeklyThreshold ?? 40),
-      defaultOvertimeMultiplier: Number(data.payrollSettings?.defaultOvertimeMultiplier ?? 1.5),
-      defaultHoursPerWeekReference: Number(data.payrollSettings?.defaultHoursPerWeekReference ?? 40),
-      lunchAutoSuggestHours: Number(data.payrollSettings?.lunchAutoSuggestHours ?? 6),
-      lunchAutoSuggestMinutes: Number(data.payrollSettings?.lunchAutoSuggestMinutes ?? 30),
-      usFederalHolidaysEnabled: Boolean(data.payrollSettings?.usFederalHolidaysEnabled ?? true),
-      customHolidays: data.payrollSettings?.customHolidays ?? [],
-      defaultPaySchedule: data.payrollSettings?.defaultPaySchedule ?? "biweekly",
-      companyPaySchedule:
-        data.payrollSettings?.companyPaySchedule ??
-        data.payrollSettings?.defaultPaySchedule ??
-        "biweekly",
-      defaultPaymentMethod: data.payrollSettings?.defaultPaymentMethod ?? "bank_deposit",
-      weeklyPayday: data.payrollSettings?.weeklyPayday ?? "Friday",
-      biweeklyAnchorDate: data.payrollSettings?.biweeklyAnchorDate ?? "2026-01-02",
-      monthlyPayRule: data.payrollSettings?.monthlyPayRule ?? "end_of_month",
-      monthlyDayOfMonth: Number(data.payrollSettings?.monthlyDayOfMonth ?? 30),
-      payday: data.payrollSettings?.payday ?? "Friday",
-      payPeriodStartDay: Number(data.payrollSettings?.payPeriodStartDay ?? 1),
-      payPeriodEndDay: Number(data.payrollSettings?.payPeriodEndDay ?? 14),
-    },
-  } as ConfigurationContextValue,
-});
+      dealStages: ensureValues(data.dealStages),
+      dealPipelineStatuses: data.dealPipelineStatuses,
+      noteStatuses: ensureValues(data.noteStatuses),
+      payrollSettings: {
+        overtimeEnabledGlobally: Boolean(
+          data.payrollSettings?.overtimeEnabledGlobally ?? true,
+        ),
+        overtimeWeeklyThreshold: Number(
+          data.payrollSettings?.overtimeWeeklyThreshold ?? 40,
+        ),
+        defaultOvertimeMultiplier: Number(
+          data.payrollSettings?.defaultOvertimeMultiplier ?? 1.5,
+        ),
+        defaultHoursPerWeekReference: Number(
+          data.payrollSettings?.defaultHoursPerWeekReference ?? 40,
+        ),
+        lunchAutoSuggestHours: Number(
+          data.payrollSettings?.lunchAutoSuggestHours ?? 6,
+        ),
+        lunchAutoSuggestMinutes: Number(
+          data.payrollSettings?.lunchAutoSuggestMinutes ?? 30,
+        ),
+        usFederalHolidaysEnabled: Boolean(
+          data.payrollSettings?.usFederalHolidaysEnabled ?? true,
+        ),
+        customHolidays: data.payrollSettings?.customHolidays ?? [],
+        defaultPaySchedule: data.payrollSettings?.defaultPaySchedule ?? "biweekly",
+        companyPaySchedule:
+          data.payrollSettings?.companyPaySchedule ??
+          data.payrollSettings?.defaultPaySchedule ??
+          "biweekly",
+        defaultPaymentMethod:
+          data.payrollSettings?.defaultPaymentMethod ?? "bank_deposit",
+        weeklyPayday: data.payrollSettings?.weeklyPayday ?? "Friday",
+        biweeklyAnchorDate:
+          data.payrollSettings?.biweeklyAnchorDate ?? "2026-01-02",
+        monthlyPayRule: data.payrollSettings?.monthlyPayRule ?? "end_of_month",
+        monthlyDayOfMonth: Number(data.payrollSettings?.monthlyDayOfMonth ?? 30),
+        payday: data.payrollSettings?.payday ?? "Friday",
+        payPeriodStartDay: Number(data.payrollSettings?.payPeriodStartDay ?? 1),
+        payPeriodEndDay: Number(data.payrollSettings?.payPeriodEndDay ?? 14),
+      },
+    } as ConfigurationContextValue,
+  };
+};
 
-export const SettingsPage = () => {
+const SETTINGS_SECTIONS = SECTIONS.filter(
+  (section) =>
+    section.id !== "branding" || isTenantBrandingEditorVisible(),
+);
+
+const SettingsPageContent = () => {
+  const currentConfig = useConfigurationContext();
   const updateConfiguration = useConfigurationUpdater();
   const notify = useNotify();
+  const transform = useCallback(
+    (data: Record<string, any>) => transformFormValues(data, currentConfig),
+    [currentConfig],
+  );
 
   return (
     <EditBase
@@ -157,7 +198,7 @@ export const SettingsPage = () => {
       id={1}
       mutationMode="pessimistic"
       redirect={false}
-      transform={transformFormValues}
+      transform={transform}
       mutationOptions={{
         onSuccess: (data: any) => {
           updateConfiguration(data.config);
@@ -172,6 +213,8 @@ export const SettingsPage = () => {
     </EditBase>
   );
 };
+
+export const SettingsPage = () => <SettingsPageContent />;
 
 SettingsPage.path = "/settings";
 
@@ -273,7 +316,7 @@ const SettingsFormFields = () => {
       <nav className="hidden md:block w-48 shrink-0">
         <div className="sticky top-4 space-y-1">
           <h1 className="text-2xl font-semibold px-3 mb-2">Settings</h1>
-          {SECTIONS.map((section) => (
+          {SETTINGS_SECTIONS.map((section) => (
             <button
               key={section.id}
               type="button"
@@ -292,37 +335,38 @@ const SettingsFormFields = () => {
 
       {/* Main content */}
       <div className="flex-1 min-w-0 max-w-2xl space-y-6">
-        {/* Branding */}
-        <Card id="branding">
-          <CardContent className="space-y-4">
-            <h2 className="text-xl font-semibold text-muted-foreground">
-              Branding
-            </h2>
-            <TextInput source="title" label="App Title" />
-            <div className="flex gap-8">
-              <div className="flex flex-col items-center gap-1">
-                <p className="text-sm text-muted-foreground">Light Mode Logo</p>
-                <ImageEditorField
-                  source="lightModeLogo"
-                  width={100}
-                  height={100}
-                  linkPosition="bottom"
-                  backgroundImageColor="#f5f5f5"
-                />
+        {isTenantBrandingEditorVisible() && (
+          <Card id="branding">
+            <CardContent className="space-y-4">
+              <h2 className="text-xl font-semibold text-muted-foreground">
+                Branding
+              </h2>
+              <TextInput source="title" label="App Title" />
+              <div className="flex gap-8">
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-sm text-muted-foreground">Light Mode Logo</p>
+                  <ImageEditorField
+                    source="lightModeLogo"
+                    width={100}
+                    height={100}
+                    linkPosition="bottom"
+                    backgroundImageColor="#f5f5f5"
+                  />
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-sm text-muted-foreground">Dark Mode Logo</p>
+                  <ImageEditorField
+                    source="darkModeLogo"
+                    width={100}
+                    height={100}
+                    linkPosition="bottom"
+                    backgroundImageColor="#1a1a1a"
+                  />
+                </div>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <p className="text-sm text-muted-foreground">Dark Mode Logo</p>
-                <ImageEditorField
-                  source="darkModeLogo"
-                  width={100}
-                  height={100}
-                  linkPosition="bottom"
-                  backgroundImageColor="#1a1a1a"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <UsersSettingsSection />
 
@@ -520,13 +564,24 @@ const SettingsFormFields = () => {
               type="button"
               variant="ghost"
               onClick={() =>
-                reset({
-                  ...defaultConfiguration,
-                  lightModeLogo: {
-                    src: defaultConfiguration.lightModeLogo,
-                  },
-                  darkModeLogo: { src: defaultConfiguration.darkModeLogo },
-                })
+                reset(
+                  isTenantBrandingEditorVisible()
+                    ? {
+                        ...defaultConfiguration,
+                        lightModeLogo: {
+                          src: defaultConfiguration.lightModeLogo,
+                        },
+                        darkModeLogo: {
+                          src: defaultConfiguration.darkModeLogo,
+                        },
+                      }
+                    : {
+                        ...defaultConfiguration,
+                        title: config.title,
+                        lightModeLogo: { src: config.lightModeLogo },
+                        darkModeLogo: { src: config.darkModeLogo },
+                      },
+                )
               }
             >
               <RotateCcw className="h-4 w-4 mr-1" />

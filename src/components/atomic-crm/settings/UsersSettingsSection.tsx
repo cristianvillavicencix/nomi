@@ -17,10 +17,25 @@ const ROLE_CHOICES = [
   { id: "accountant", label: "Accountant", description: "Approve hours, payroll, and payout workflows." },
   { id: "payroll_manager", label: "Payroll Manager", description: "Manage payroll runs and approve payroll operations." },
   { id: "hr", label: "HR", description: "Review people and employment-related data." },
-  { id: "sales_manager", label: "Sales Manager", description: "Oversee sales operations without full system access." },
-  { id: "manager", label: "Manager", description: "Operational access for team supervision." },
-  { id: "employee", label: "Employee", description: "Standard CRM access with no admin privileges." },
+  {
+    id: "sales_manager",
+    label: "Sales & CRM",
+    description:
+      "For your salespeople: contacts, projects/deals, and day-to-day CRM. Not a company admin — that stays on Administrator.",
+  },
+  { id: "manager", label: "Manager", description: "Operational access for team supervision (projects, time, and CRM where allowed)." },
+  { id: "employee", label: "Employee", description: "Typical team member: time and HR-facing views as configured; limited CRM by default." },
 ] as const;
+
+/** Internal slugs in DB → short label in the user table (ids stay the same for compatibility). */
+const ROLE_DISPLAY_LABELS: Record<string, string> = {
+  accountant: "Accountant",
+  payroll_manager: "Payroll",
+  hr: "HR",
+  sales_manager: "Sales & CRM",
+  manager: "Manager",
+  employee: "Employee",
+};
 
 type UserDialogState =
   | { mode: "create"; sale?: undefined }
@@ -51,7 +66,9 @@ const UserRolesInput = ({ disabled }: { disabled?: boolean }) => {
       <div>
         <p className="text-sm font-medium">Roles</p>
         <p className="text-xs text-muted-foreground">
-          Roles add operational permissions. Administrator remains the only full-access account.
+          Your company signs up once; the administrator invites teammates here. These roles are{" "}
+          <span className="text-foreground">permissions</span> (payroll, HR, CRM, etc.) — not job titles
+          in your org.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -212,8 +229,8 @@ const RoleBadges = ({ sale }: { sale: Sale }) => {
   return (
     <div className="flex flex-wrap gap-1.5">
       {roles.map((role) => (
-        <span key={role} className="rounded-full border px-2 py-0.5 text-xs capitalize">
-          {role.replace("_", " ")}
+        <span key={role} className="rounded-full border px-2 py-0.5 text-xs">
+          {ROLE_DISPLAY_LABELS[role] ?? role.replaceAll("_", " ")}
         </span>
       ))}
     </div>
@@ -236,7 +253,8 @@ export const UsersSettingsSection = () => {
           <div className="space-y-1">
             <CardTitle>Users & Roles</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Manage system access. Only one user can be the full administrator.
+              Each registered company has its own data. Invite users, assign what they can do, and
+              keep contacts, people (employees, sales reps, subs) in one place.
             </p>
           </div>
           <Button type="button" onClick={() => setDialogState({ mode: "create" })}>
