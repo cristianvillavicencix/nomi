@@ -838,6 +838,19 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   releasePayrollRunLinkedResources: async (payrollRunId: Identifier) => {
     await releasePayrollRunResourcesOnCancel(dataProvider, payrollRunId);
   },
+  stripeCreateCheckoutSession: async () => {
+    throw new Error("Stripe billing is not available in demo mode");
+  },
+  stripeBillingPortal: async () => {
+    throw new Error("Stripe billing is not available in demo mode");
+  },
+  stripeSyncSeats: async () => {
+    throw new Error("Stripe billing is not available in demo mode");
+  },
+  getPlatformAuthUsers: async () => ({
+    users: [],
+    total: 0,
+  }),
 };
 
 const roundMoney = (value: number) =>

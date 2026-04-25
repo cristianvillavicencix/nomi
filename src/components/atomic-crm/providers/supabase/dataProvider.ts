@@ -566,6 +566,87 @@ const dataProviderWithCustomMethods = {
       );
     }
   },
+  async stripeCreateCheckoutSession(params: {
+    orgId: number;
+    returnPath?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{ url?: string; id?: string }>(
+      "stripe-billing",
+      {
+        method: "POST",
+        body: {
+          action: "create_checkout",
+          org_id: params.orgId,
+          return_path: params.returnPath ?? "/platform",
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to start Stripe checkout",
+      );
+    }
+    if (data?.url && typeof window !== "undefined") {
+      window.location.assign(data.url);
+    }
+    return data;
+  },
+  async stripeBillingPortal(params: { orgId: number; returnPath?: string }) {
+    const { data, error } = await invokeEdgeFunction<{ url?: string }>(
+      "stripe-billing",
+      {
+        method: "POST",
+        body: {
+          action: "billing_portal",
+          org_id: params.orgId,
+          return_path: params.returnPath ?? "/platform",
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to open billing portal",
+      );
+    }
+    if (data?.url && typeof window !== "undefined") {
+      window.location.assign(data.url);
+    }
+    return data;
+  },
+  async stripeSyncSeats(params: { orgId: number }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok: boolean;
+      quantity?: number;
+      skipped?: boolean;
+    }>("stripe-billing", {
+      method: "POST",
+      body: { action: "sync_seats", org_id: params.orgId },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to sync seats to Stripe",
+      );
+    }
+    return data;
+  },
+  async getPlatformAuthUsers() {
+    const { data, error } = await invokeEdgeFunction<{
+      users: Array<{
+        id: string;
+        email: string | null;
+        created_at: string;
+        last_sign_in_at: string | null;
+        email_confirmed_at: string | null;
+      }>;
+      total: number;
+    }>("platform-directory", { method: "POST", body: {} });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to list auth users",
+      );
+    }
+    return data ?? { users: [], total: 0 };
+  },
 } satisfies DataProvider;
 
 export type CrmDataProvider = typeof dataProviderWithCustomMethods;

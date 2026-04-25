@@ -71,6 +71,7 @@ import { PeopleQuickViewPage } from "@/people/PeopleQuickViewPage";
 import { ContactQuickViewPage } from "../contacts/ContactQuickViewPage";
 import { CompanyQuickViewPage } from "../companies/CompanyQuickViewPage";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PlatformPage } from "@/platform/PlatformPage";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -402,6 +403,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           }
         />
         <Route path="/projects" element={<Navigate to="/deals" replace />} />
+        <Route path="/platform" element={<PlatformPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
       <Resource name="people" {...people} />

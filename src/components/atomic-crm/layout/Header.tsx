@@ -1,5 +1,6 @@
 import { Link, matchPath, useLocation } from "react-router";
 import { ChevronDown } from "lucide-react";
+import { usePlatformOperator } from "@/platform/usePlatformOperator";
 import { RefreshButton } from "@/components/admin/refresh-button";
 import { ThemeModeToggle } from "@/components/admin/theme-mode-toggle";
 import { UserMenu } from "@/components/admin/user-menu";
@@ -32,6 +33,7 @@ const TIME_AND_PAY_NAV = [
 const Header = () => {
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
   const location = useLocation();
+  const { data: platformGate } = usePlatformOperator();
 
   let currentPath: string | boolean = "/";
   if (matchPath("/", location.pathname)) {
@@ -54,6 +56,8 @@ const Header = () => {
     currentPath = "/employee_loans";
   } else if (matchPath("/reports/*", location.pathname)) {
     currentPath = "/reports";
+  } else if (matchPath("/platform", location.pathname)) {
+    currentPath = "/platform";
   } else {
     currentPath = false;
   }
@@ -121,6 +125,13 @@ const Header = () => {
                 to="/reports"
                 isActive={currentPath === "/reports"}
               />
+              {platformGate?.isPlatformOperator ? (
+                <NavigationTab
+                  label="Platform"
+                  to="/platform"
+                  isActive={currentPath === "/platform"}
+                />
+              ) : null}
             </nav>
           </div>
           <div className="flex items-center">

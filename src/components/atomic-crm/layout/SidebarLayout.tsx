@@ -7,6 +7,7 @@ import {
   Landmark,
   Moon,
   ReceiptText,
+  Shield,
   Sun,
   Users,
 } from "lucide-react";
@@ -41,6 +42,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
+import { usePlatformOperator } from "@/platform/usePlatformOperator";
 
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();
@@ -185,6 +187,8 @@ const SidebarNavigation = () => {
     action: "list",
     resource: "reports",
   });
+
+  const { data: platformGate } = usePlatformOperator();
 
   const isActive = (pattern: string) => !!matchPath(pattern, location.pathname);
 
@@ -334,6 +338,20 @@ const SidebarNavigation = () => {
                 label="People"
                 icon={<Users />}
                 active={isActive("/people/*")}
+              />
+            </SidebarMenu>
+          </SidebarGroup>
+        ) : null}
+
+        {platformGate?.isPlatformOperator ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarItem
+                to="/platform"
+                label="SaaS &amp; billing"
+                icon={<Shield />}
+                active={isActive("/platform")}
               />
             </SidebarMenu>
           </SidebarGroup>

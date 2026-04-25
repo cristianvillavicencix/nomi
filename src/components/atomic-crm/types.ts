@@ -29,6 +29,18 @@ export type SalesFormData = {
   disabled: boolean;
 };
 
+/** Workspaces / tenants (`public.organizations`). Exposed to the Platform console for billing. */
+export type OrganizationForPlatform = {
+  name: string;
+  created_at?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_seat_price_id?: string | null;
+  billing_status?: string | null;
+  billable_seat_count?: number | null;
+  price_per_seat_usd_monthly?: number | null;
+} & Pick<RaRecord, "id">;
+
 export type Sale = {
   first_name: string;
   last_name: string;
