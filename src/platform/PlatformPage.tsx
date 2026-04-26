@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDataProvider, useNotify, type Identifier } from "ra-core";
 import { useQuery } from "@tanstack/react-query";
-import { Navigate, useSearchParams } from "react-router";
+import { Link, Navigate, useSearchParams } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -61,6 +61,13 @@ const formatPlatformDate = (iso: string | null) => {
   } catch {
     return String(iso);
   }
+};
+
+/** UI + user-facing label when `organizations.name` is missing or only whitespace. */
+const displayOrgName = (record: { id: unknown; name?: string | null }): string => {
+  const n = record.name?.trim() ?? "";
+  if (n.length > 0) return n;
+  return `Organización (id ${String(record.id)})`;
 };
 
 const OrgStripeActions = ({
@@ -265,7 +272,7 @@ const OrganizationAccountDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{org.name}</DialogTitle>
+          <DialogTitle>{displayOrgName(org)}</DialogTitle>
           <DialogDescription>
             Espacio de trabajo (tenant) · ID <span className="font-mono">{String(org.id)}</span>
             {org.created_at ? (
@@ -607,15 +614,39 @@ export const PlatformPage = () => {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Plataforma (SaaS)</h1>
         <p className="text-muted-foreground text-sm">
-          <strong>Empresas registradas</strong> abajo. Haz clic en una fila para abrir su ficha: usuarios
-          de esa empresa, facturación y Stripe. Modelo: <strong>${DEFAULT_SEAT_USD_PER_MONTH}/usuario/mes</strong>;{" "}
-          <code className="text-xs">{resolveSeatPriceId()}</code>.
+          Cada <strong>empresa</strong> (organización) es una fila. El número de <strong>usuarios</strong> es la suma
+          de fichas de equipo; haz clic en la fila para ver nombres, emails y facturación. Modelo:{" "}
+          <strong>${DEFAULT_SEAT_USD_PER_MONTH}/usuario/mes</strong>; <code className="text-xs">{resolveSeatPriceId()}</code>.
         </p>
         <p className="text-muted-foreground text-xs font-mono mt-2">
           Proyecto: <span className="text-foreground">{supabaseProjectHost}</span> (VITE_SUPABASE_URL).
         </p>
+        <p className="text-sm text-muted-foreground mt-2 space-y-1">
+          {orgsQuery.isLoading || salesQuery.isLoading ? (
+            "Cargando resumen…"
+          ) : (
+            <>
+              <span className="block">
+                <strong className="text-foreground tabular-nums">{orgs.length}</strong>{" "}
+                {orgs.length === 1 ? "empresa" : "empresas"} en la base ·{" "}
+                <strong className="text-foreground tabular-nums">{sales.length}</strong>{" "}
+                {sales.length === 1 ? "usuario con ficha" : "usuarios con ficha (sales) en total"}
+                {salesQuery.isError ? " — error al leer `sales`" : ""}
+              </span>
+              {salesQuery.isError ? (
+                <span className="block text-destructive text-xs">
+                  No se pudo listar `sales` (revisa RLS, migraciones y que el proyecto sea el correcto).
+                </span>
+              ) : null}
+            </>
+          )}
+        </p>
         <p className="text-sm text-muted-foreground mt-2">
-          {orgsQuery.isLoading ? "…" : <><strong className="text-foreground tabular-nums">{orgs.length}</strong> empresas en total</>}
+          <strong>Nuevas empresas por registro</strong> usan la pantalla pública de alta:{" "}
+          <Link to="/sign-up" className="text-foreground font-medium underline-offset-2 hover:underline">
+            abrir registro
+          </Link>
+          . Ahí se pide nombre de empresa: se crea la organización y el primer usuario queda admin.
         </p>
       </div>
 
@@ -669,7 +700,7 @@ const OrganizationsPanel = ({
 
   const orgNameById = useMemo(() => {
     const m = new Map<number, string>();
-    for (const o of rows) m.set(Number(o.id), o.name);
+    for (const o of rows) m.set(Number(o.id), displayOrgName(o));
     return m;
   }, [rows]);
 
@@ -710,8 +741,12 @@ const OrganizationsPanel = ({
         <CardHeader>
           <CardTitle>Empresas registradas</CardTitle>
           <CardDescription>
-            Una sola lista. Clic en la fila para abrir: usuarios bajo esa empresa, precios, Stripe y
-            sincronización de asientos.
+            Si el nombre de la empresa en la base quedó vacío, mostramos &quot;Organización (id …)&quot;. Clic
+            en la fila: lista de usuarios de esa org, edición de facturación y Stripe. Los nuevos usan{" "}
+            <Link to="/sign-up" className="underline-offset-2 hover:underline">
+              /sign-up
+            </Link>{" "}
+            con nombre de empresa.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -739,8 +774,11 @@ const OrganizationsPanel = ({
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => setOpenOrgId(row.id)}
                     >
-                      <TableCell className="font-medium max-w-[220px] truncate" title={row.name}>
-                        {row.name}
+                      <TableCell
+                        className="font-medium max-w-[220px] truncate"
+                        title={displayOrgName(row)}
+                      >
+                        {displayOrgName(row)}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{row.id}</TableCell>
                       <TableCell className="tabular-nums">{n}</TableCell>
