@@ -19,7 +19,7 @@ export const addNoteToContact = async ({
   attachments: Attachment[];
 }) => {
   const { data: sales, error: fetchSalesError } = await supabaseAdmin
-    .from("sales")
+    .from("organization_members")
     .select("*")
     .eq("email", salesEmail)
     .neq("disabled", true)
@@ -79,7 +79,7 @@ export const addNoteToContact = async ({
       const { data: newCompanies, error: createCompanyError } =
         await supabaseAdmin
           .from("companies")
-          .insert({ name: domain, sales_id: sales.id })
+          .insert({ name: domain, organization_member_id: sales.id })
           .select();
       if (createCompanyError)
         return new Response(
@@ -97,7 +97,7 @@ export const addNoteToContact = async ({
         last_name: lastName,
         email_jsonb: [{ email, type: "Work" }],
         company_id: company.id,
-        sales_id: sales.id,
+        organization_member_id: sales.id,
         first_seen: new Date(),
         last_seen: new Date(),
         tags: [],
@@ -117,7 +117,7 @@ export const addNoteToContact = async ({
     .insert({
       contact_id: contact.id,
       text: noteContent,
-      sales_id: sales.id,
+      organization_member_id: sales.id,
       attachments,
     });
   if (createNoteError)

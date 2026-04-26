@@ -5,7 +5,7 @@ import { SimpleForm } from "@/components/admin/simple-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import type { CrmDataProvider } from "../providers/types";
-import type { SalesFormData } from "../types";
+import type { OrganizationMemberFormData } from "../types";
 import { SalesInputs } from "./SalesInputs";
 
 export function SalesCreate() {
@@ -15,14 +15,14 @@ export function SalesCreate() {
 
   const { mutate } = useMutation({
     mutationKey: ["signup"],
-    mutationFn: async (data: SalesFormData) => {
-      return dataProvider.salesCreate(data);
+    mutationFn: async (data: OrganizationMemberFormData) => {
+      return dataProvider.organizationMemberCreate(data);
     },
     onSuccess: () => {
       notify(
         "User created. They will soon receive an email to set their password.",
       );
-      redirect("/sales");
+      redirect("/organization_members");
     },
     onError: (error) => {
       notify(error.message || "An error occurred while creating the user.", {
@@ -30,7 +30,7 @@ export function SalesCreate() {
       });
     },
   });
-  const onSubmit: SubmitHandler<SalesFormData> = async (data) => {
+  const onSubmit: SubmitHandler<OrganizationMemberFormData> = async (data) => {
     mutate(data);
   };
 

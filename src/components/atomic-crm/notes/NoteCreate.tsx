@@ -113,7 +113,7 @@ const NoteCreateButton = ({
           [foreignKeyMapping[reference]]:
             reference === "contacts" ? contactId : referenceRecordId,
           contact_id: reference === "contacts" ? contactId : data.contact_id,
-          sales_id: identity.id,
+          organization_member_id: identity.id,
           date: new Date(data.date || getCurrentDate()).toISOString(),
         })}
         mutationOptions={{

@@ -8,7 +8,7 @@ export const TasksListEmpty = () => {
     {
       pagination: { page: 1, perPage: 1 },
       filter: {
-        sales_id: identity?.id,
+        organization_member_id: identity?.id,
       },
     },
     { enabled: !!identity },

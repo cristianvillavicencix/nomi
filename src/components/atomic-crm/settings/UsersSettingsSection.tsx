@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CrmDataProvider } from "../providers/types";
-import type { Sale, SalesFormData } from "../types";
+import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 
 const ROLE_CHOICES = [
   { id: "accountant", label: "Accountant", description: "Approve hours, payroll, and payout workflows." },
@@ -39,9 +39,9 @@ const ROLE_DISPLAY_LABELS: Record<string, string> = {
 
 type UserDialogState =
   | { mode: "create"; sale?: undefined }
-  | { mode: "edit"; sale: Sale };
+  | { mode: "edit"; sale: OrganizationMember };
 
-type UserFormValues = SalesFormData & { id?: number | string };
+type UserFormValues = OrganizationMemberFormData & { id?: number | string };
 
 const normalizeRoles = (roles?: string[], administrator?: boolean) => {
   const unique = Array.from(new Set((roles ?? []).map((role) => String(role))));
@@ -178,9 +178,9 @@ const UserDialog = ({
         roles: normalizeRoles(values.roles, values.administrator),
       };
       if (state?.mode === "edit" && sale) {
-        return dataProvider.salesUpdate(sale.id, payload);
+        return dataProvider.organizationMemberUpdate(sale.id, payload);
       }
-      return dataProvider.salesCreate(payload);
+      return dataProvider.organizationMemberCreate(payload);
     },
     onSuccess: () => {
       notify(state?.mode === "edit" ? "User updated successfully" : "User created successfully");
@@ -220,7 +220,7 @@ const UserDialog = ({
   );
 };
 
-const RoleBadges = ({ sale }: { sale: Sale }) => {
+const RoleBadges = ({ sale }: { sale: OrganizationMember }) => {
   const roles = normalizeRoles(sale.roles, sale.administrator).filter((role) => role !== "admin");
   if (!roles.length) {
     return <span className="text-xs text-muted-foreground">No operational roles</span>;
@@ -239,7 +239,7 @@ const RoleBadges = ({ sale }: { sale: Sale }) => {
 
 export const UsersSettingsSection = () => {
   const [dialogState, setDialogState] = useState<UserDialogState | null>(null);
-  const { data: users = [], isPending } = useGetList<Sale>("sales", {
+  const { data: users = [], isPending } = useGetList<OrganizationMember>("organization_members", {
     pagination: { page: 1, perPage: 100 },
     sort: { field: "id", order: "ASC" },
   });

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import type { Contact, Deal, Sale } from "../types";
+import type { Contact, Deal, OrganizationMember } from "../types";
 import { getStageColor, getStageLabel } from "./pipelines";
 
 export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string }) => {
@@ -35,7 +35,7 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
       Array.from(
         new Set(
           deals
-            .map((deal) => deal.sales_id)
+            .map((deal) => deal.organization_member_id)
             .filter((salesId): salesId is NonNullable<typeof salesId> =>
               salesId != null,
             ),
@@ -58,8 +58,8 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
     [deals],
   );
 
-  const { data: sales = [] } = useGetMany<Sale>(
-    "sales",
+  const { data: sales = [] } = useGetMany<OrganizationMember>(
+    "organization_members",
     { ids: salesIds },
     { enabled: salesIds.length > 0 },
   );
@@ -167,8 +167,8 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
                     .filter(Boolean)
                     .join(" ")
                 : "—";
-              const manager = deal.sales_id
-                ? salesById[String(deal.sales_id)]
+              const manager = deal.organization_member_id
+                ? salesById[String(deal.organization_member_id)]
                 : undefined;
               const managerName = manager
                 ? [manager.first_name, manager.last_name].filter(Boolean).join(" ")

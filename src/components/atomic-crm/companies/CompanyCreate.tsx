@@ -20,7 +20,7 @@ export const CompanyCreate = () => {
     >
       <div className="mt-2 flex lg:mr-72">
         <div className="flex-1">
-          <Form defaultValues={{ sales_id: identity?.id }}>
+          <Form defaultValues={{ organization_member_id: identity?.id }}>
             <Card>
               <CardContent>
                 <CompanyInputs />

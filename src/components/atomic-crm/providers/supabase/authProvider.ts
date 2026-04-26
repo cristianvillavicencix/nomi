@@ -62,7 +62,7 @@ const fetchSale = async () => {
   }
 
   const { data: dataSale, error: errorSale } = await supabase
-    .from("sales")
+    .from("organization_members")
     .select("id, first_name, last_name, avatar, administrator, roles")
     .match({ user_id: dataSession?.session?.user.id })
     .single();
@@ -108,6 +108,19 @@ function isPublicAuthRoute(): boolean {
   return segment("set-password") || segment("forgot-password") || segment("sign-up");
 }
 
+/** Rutas bajo `/platform/…` — consola de operador, login separada del CRM. */
+function isPlatformRoute(): boolean {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname.replace(/\/$/, "") || "/";
+  if (path === "/platform" || path.endsWith("/platform")) {
+    return true;
+  }
+  if (path.includes("/platform/")) {
+    return true;
+  }
+  return false;
+}
+
 export const authProvider: AuthProvider = {
   ...baseAuthProvider,
   login: async (params) => {
@@ -128,6 +141,9 @@ export const authProvider: AuthProvider = {
   },
   checkAuth: async (params) => {
     if (isPublicAuthRoute()) {
+      return;
+    }
+    if (isPlatformRoute()) {
       return;
     }
 

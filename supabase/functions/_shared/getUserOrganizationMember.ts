@@ -1,13 +1,11 @@
 import { type User } from "jsr:@supabase/supabase-js@2";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
-/**
- * Get the sale associated to the provided user.
- */
-export const getUserSale = async (user: User) => {
+/** `public.organization_members` row for the auth user (CRM member / login profile). */
+export const getUserOrganizationMember = async (user: User) => {
   return (
     await supabaseAdmin
-      .from("sales")
+      .from("organization_members")
       .select("*")
       .eq("user_id", user.id)
       .single()

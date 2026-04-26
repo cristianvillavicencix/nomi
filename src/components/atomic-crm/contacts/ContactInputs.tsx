@@ -14,7 +14,7 @@ import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
 import { isLinkedinUrl } from "../misc/isLinkedInUrl";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import type { Sale } from "../types";
+import type { OrganizationMember } from "../types";
 
 export const ContactInputs = () => {
   const isMobile = useIsMobile();
@@ -174,8 +174,8 @@ const ContactManagementInputs = () => {
         validate={required()}
       />
       <ReferenceInput
-        reference="sales"
-        source="sales_id"
+        reference="organization_members"
+        source="organization_member_id"
         sort={{ field: "last_name", order: "ASC" }}
         filter={{
           "disabled@neq": true,
@@ -198,5 +198,5 @@ const ContactManagementInputs = () => {
   );
 };
 
-const saleOptionRenderer = (choice: Sale) =>
+const saleOptionRenderer = (choice: OrganizationMember) =>
   `${choice.first_name} ${choice.last_name}`;

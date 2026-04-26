@@ -199,8 +199,8 @@ const ImportStats = ({
 }) => {
   const data = [
     {
-      entity: "sales",
-      imported: stats.sales,
+      entity: "organization_members",
+      imported: stats.organizationMembers,
       failed: failedImports.sales.length,
     },
     {

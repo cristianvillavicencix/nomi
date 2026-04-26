@@ -249,13 +249,13 @@ const OnlyMineSwitch = () => {
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
   const { identity } = useGetIdentity();
 
-  const isActive = typeof filterValues.sales_id !== "undefined";
+  const isActive = typeof filterValues.organization_member_id !== "undefined";
   const handleChange = () => {
     const nextFilterValues = { ...filterValues };
     if (isActive) {
-      delete nextFilterValues.sales_id;
+      delete nextFilterValues.organization_member_id;
     } else {
-      nextFilterValues.sales_id = identity?.id;
+      nextFilterValues.organization_member_id = identity?.id;
     }
     setFilters(nextFilterValues, displayedFilters);
   };

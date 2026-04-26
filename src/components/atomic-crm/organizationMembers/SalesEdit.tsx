@@ -13,7 +13,7 @@ import { SaveButton } from "@/components/admin/form";
 import { Card, CardContent } from "@/components/ui/card";
 
 import type { CrmDataProvider } from "../providers/types";
-import type { Sale, SalesFormData } from "../types";
+import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 import { SalesInputs } from "./SalesInputs";
 
 function EditToolbar() {
@@ -34,14 +34,14 @@ export function SalesEdit() {
 
   const { mutate } = useMutation({
     mutationKey: ["signup"],
-    mutationFn: async (data: SalesFormData) => {
+    mutationFn: async (data: OrganizationMemberFormData) => {
       if (!record) {
         throw new Error("Record not found");
       }
-      return dataProvider.salesUpdate(record.id, data);
+      return dataProvider.organizationMemberUpdate(record.id, data);
     },
     onSuccess: () => {
-      redirect("/sales");
+      redirect("/organization_members");
       notify("User updated successfully");
     },
     onError: () => {
@@ -49,7 +49,7 @@ export function SalesEdit() {
     },
   });
 
-  const onSubmit: SubmitHandler<SalesFormData> = async (data) => {
+  const onSubmit: SubmitHandler<OrganizationMemberFormData> = async (data) => {
     mutate(data);
   };
 
@@ -72,7 +72,7 @@ export function SalesEdit() {
 }
 
 const SaleEditTitle = () => {
-  const record = useRecordContext<Sale>();
+  const record = useRecordContext<OrganizationMember>();
   if (!record) return null;
   return (
     <h2 className="text-lg font-semibold mb-4">

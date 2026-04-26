@@ -83,6 +83,7 @@ const getMutationPermission = (
   }
 
   if (
+    resource === "organization_members" ||
     resource === "deals" ||
     resource === "companies" ||
     resource === "contacts" ||

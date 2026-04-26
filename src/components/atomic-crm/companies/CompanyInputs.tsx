@@ -11,7 +11,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import ImageEditorField from "../misc/ImageEditorField";
 import { isLinkedinUrl } from "../misc/isLinkedInUrl";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import type { Company, Sale } from "../types";
+import type { Company, OrganizationMember } from "../types";
 import { getCompanyAvatarFallback } from "./CompanyAvatar";
 import { sizes } from "./sizes";
 
@@ -141,8 +141,8 @@ const CompanyAccountManagerInput = () => {
     <div className="flex flex-col gap-4">
       <h6 className="text-lg font-semibold">Account manager</h6>
       <ReferenceInput
-        source="sales_id"
-        reference="sales"
+        source="organization_member_id"
+        reference="organization_members"
         filter={{
           "disabled@neq": true,
         }}
@@ -157,5 +157,5 @@ const CompanyAccountManagerInput = () => {
   );
 };
 
-const saleOptionRenderer = (choice: Sale) =>
+const saleOptionRenderer = (choice: OrganizationMember) =>
   `${choice.first_name} ${choice.last_name}`;

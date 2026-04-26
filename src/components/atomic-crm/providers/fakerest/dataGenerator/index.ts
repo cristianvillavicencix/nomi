@@ -4,14 +4,14 @@ import { generateContacts } from "./contacts";
 import { generateDealNotes } from "./dealNotes";
 import { generateDeals } from "./deals";
 import { finalize } from "./finalize";
-import { generateSales } from "./sales";
+import { generateOrganizationMembers } from "./organizationMembers";
 import { generateTags } from "./tags";
 import { generateTasks } from "./tasks";
 import type { Db } from "./types";
 
 export default (): Db => {
   const db = {} as Db;
-  db.sales = generateSales(db);
+  db.organizationMembers = generateOrganizationMembers(db);
   db.people = [];
   db.tags = generateTags(db);
   db.companies = generateCompanies(db);

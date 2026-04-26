@@ -48,7 +48,7 @@ export function useContactImport() {
         (name) => ({
           name,
           created_at: new Date().toISOString(),
-          sales_id: user?.identity?.id,
+          organization_member_id: user?.identity?.id,
         }),
         dataProvider,
       ),
@@ -162,7 +162,7 @@ export function useContactImport() {
                 status,
                 company_id: company?.id,
                 tags: tagList.map((tag) => tag.id),
-                sales_id: user?.identity?.id,
+                organization_member_id: user?.identity?.id,
                 linkedin_url,
               },
             });

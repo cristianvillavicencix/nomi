@@ -12,7 +12,7 @@ import type {
   PayrollRun,
   PayrollRunLine,
   Person,
-  Sale,
+  OrganizationMember,
   Tag,
   TimeEntry,
   Task,
@@ -25,7 +25,7 @@ export interface Db {
   contact_notes: ContactNote[];
   deals: Deal[];
   deal_notes: DealNote[];
-  sales: Sale[];
+  organizationMembers: OrganizationMember[];
   people: Person[];
   tags: Tag[];
   tasks: Task[];

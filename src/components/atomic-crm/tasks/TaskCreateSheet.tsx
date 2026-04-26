@@ -69,7 +69,7 @@ export const TaskCreateSheet = ({
         type: "None",
         contact_id,
         due_date: new Date().toISOString().slice(0, 10),
-        sales_id: identity.id,
+        organization_member_id: identity.id,
       }}
       transform={(data) => {
         const dueDate = new Date(data.due_date);

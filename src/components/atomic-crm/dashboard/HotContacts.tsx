@@ -25,7 +25,7 @@ export const HotContacts = () => {
     {
       pagination: { page: 1, perPage: 10 },
       sort: { field: "last_seen", order: "DESC" },
-      filter: { status: "hot", sales_id: identity?.id },
+      filter: { status: "hot", organization_member_id: identity?.id },
     },
     { enabled: Number.isInteger(identity?.id) },
   );

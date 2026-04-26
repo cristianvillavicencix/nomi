@@ -33,7 +33,7 @@ export interface ContactsTable {
   status: string | null;
   tags: number[] | null;
   company_id: number | null;
-  sales_id: number | null;
+  organization_member_id: number | null;
   linkedin_url: string | null;
 }
 
@@ -44,7 +44,7 @@ interface TasksTable {
   text: string | null;
   due_date: Date;
   done_date: Date | null;
-  sales_id: number | null;
+  organization_member_id: number | null;
 }
 
 interface ContactNotesTable {
@@ -52,7 +52,7 @@ interface ContactNotesTable {
   contact_id: number;
   text: string | null;
   date: Date | null;
-  sales_id: number | null;
+  organization_member_id: number | null;
   status: string | null;
   attachments: unknown[] | null; // JSONB array
 }
@@ -70,7 +70,7 @@ interface DealsTable {
   updated_at: Date;
   archived_at: Date | null;
   expected_closing_date: Date | null;
-  sales_id: number | null;
+  organization_member_id: number | null;
   index: number | null;
 }
 

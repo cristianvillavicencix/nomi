@@ -2,7 +2,7 @@ import { useRecordContext, WithRecord } from "ra-core";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { TextField } from "@/components/admin/text-field";
 import { DateField } from "@/components/admin/date-field";
-import { SaleName } from "../sales/SaleName";
+import { OrganizationMemberName } from "../organizationMembers/OrganizationMemberName";
 import type { Contact } from "../types";
 
 export const ContactBackgroundInfo = () => {
@@ -41,8 +41,8 @@ export const ContactBackgroundInfo = () => {
 
       <div className="inline-flex text-muted-foreground text-sm md:py-0.5">
         Followed by&nbsp;
-        <ReferenceField source="sales_id" reference="sales">
-          <SaleName />
+        <ReferenceField source="organization_member_id" reference="organization_members">
+          <OrganizationMemberName />
         </ReferenceField>
       </div>
     </div>

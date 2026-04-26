@@ -27,14 +27,14 @@ export async function getActivityLog(
   if (companyId) {
     companyFilter.id = companyId;
   } else if (salesId) {
-    companyFilter["sales_id@in"] = `(${salesId})`;
+    companyFilter["organization_member_id@in"] = `(${salesId})`;
   }
 
   const filter = {} as any;
   if (companyId) {
     filter.company_id = companyId;
   } else if (salesId) {
-    filter["sales_id@in"] = `(${salesId})`;
+    filter["organization_member_id@in"] = `(${salesId})`;
   }
 
   const [newCompanies, newContactsAndNotes, newDealsAndNotes] =
@@ -71,7 +71,7 @@ const getNewCompanies = async (
     type: COMPANY_CREATED,
     company_id: company.id,
     company,
-    sales_id: company.sales_id,
+    organization_member_id: company.organization_member_id,
     date: company.created_at,
   }));
 };
@@ -87,8 +87,8 @@ async function getNewContactsAndNotes(
   });
 
   const recentContactNotesFilter = {} as any;
-  if (filter.sales_id) {
-    recentContactNotesFilter.sales_id = filter.sales_id;
+  if (filter.organization_member_id) {
+    recentContactNotesFilter.organization_member_id = filter.organization_member_id;
   }
   if (filter.company_id) {
     // No company_id field in contactNote, filtering by related contacts instead.
@@ -110,7 +110,7 @@ async function getNewContactsAndNotes(
     id: `contact.${contact.id}.created`,
     type: CONTACT_CREATED,
     company_id: contact.company_id,
-    sales_id: contact.sales_id,
+    organization_member_id: contact.organization_member_id,
     contact,
     date: contact.first_seen,
   }));
@@ -118,7 +118,7 @@ async function getNewContactsAndNotes(
   const newContactNotes = contactNotes.map((contactNote) => ({
     id: `contactNote.${contactNote.id}.created`,
     type: CONTACT_NOTE_CREATED,
-    sales_id: contactNote.sales_id,
+    organization_member_id: contactNote.organization_member_id,
     contactNote,
     date: contactNote.date,
   }));
@@ -137,8 +137,8 @@ async function getNewDealsAndNotes(
   });
 
   const recentDealNotesFilter = {} as any;
-  if (filter.sales_id) {
-    recentDealNotesFilter.sales_id = filter.sales_id;
+  if (filter.organization_member_id) {
+    recentDealNotesFilter.organization_member_id = filter.organization_member_id;
   }
   if (filter.company_id) {
     // No company_id field in dealNote, filtering by related deals instead.
@@ -160,7 +160,7 @@ async function getNewDealsAndNotes(
     id: `deal.${deal.id}.created`,
     type: DEAL_CREATED,
     company_id: deal.company_id,
-    sales_id: deal.sales_id,
+    organization_member_id: deal.organization_member_id,
     deal,
     date: deal.created_at,
   }));
@@ -168,7 +168,7 @@ async function getNewDealsAndNotes(
   const newDealNotes = dealNotes.map((dealNote) => ({
     id: `dealNote.${dealNote.id}.created`,
     type: DEAL_NOTE_CREATED,
-    sales_id: dealNote.sales_id,
+    organization_member_id: dealNote.organization_member_id,
     dealNote,
     date: dealNote.date,
   }));

@@ -1,6 +1,6 @@
 import type { AuthProvider } from "ra-core";
 
-import type { Sale } from "../../types";
+import type { OrganizationMember } from "../../types";
 import { canAccess } from "../commons/canAccess";
 import { dataProvider } from "./dataProvider";
 
@@ -22,7 +22,7 @@ export const USER_STORAGE_KEY = "user";
 localStorage.setItem(USER_STORAGE_KEY, JSON.stringify({ ...DEFAULT_USER }));
 
 async function getUser(email: string) {
-  const sales = await dataProvider.getList("sales", {
+  const sales = await dataProvider.getList("organization_members", {
     pagination: { page: 1, perPage: 200 },
     sort: { field: "name", order: "ASC" },
   });
@@ -66,7 +66,7 @@ export const authProvider: AuthProvider = {
   canAccess: async ({ signal: _signal, ...params }) => {
     // Get the current user
     const userItem = localStorage.getItem(USER_STORAGE_KEY);
-    const localUser = userItem ? (JSON.parse(userItem) as Sale) : null;
+    const localUser = userItem ? (JSON.parse(userItem) as OrganizationMember) : null;
     if (!localUser) return false;
 
     return canAccess(
@@ -80,7 +80,7 @@ export const authProvider: AuthProvider = {
   },
   getIdentity: () => {
     const userItem = localStorage.getItem(USER_STORAGE_KEY);
-    const user = userItem ? (JSON.parse(userItem) as Sale) : null;
+    const user = userItem ? (JSON.parse(userItem) as OrganizationMember) : null;
     return Promise.resolve({
       id: user?.id ?? 0,
       fullName: user ? `${user.first_name} ${user.last_name}` : "Juan Capriles",

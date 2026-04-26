@@ -19,8 +19,8 @@ import type {
   Payment,
   PayrollRun,
   PhoneNumberAndType,
-  Sale,
-  SalesFormData,
+  OrganizationMember,
+  OrganizationMemberFormData,
   SignUpData,
   Task,
 } from "../../types";
@@ -330,7 +330,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     company_name: _company_name,
   }: SignUpData): Promise<{ id: string; email: string; password: string }> => {
     const normalizedEmail = normalizeEmailValue(email, "email")!;
-    const user = await baseDataProvider.create("sales", {
+    const user = await baseDataProvider.create("organization_members", {
       data: {
         email: normalizedEmail,
         first_name,
@@ -344,8 +344,8 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       password,
     };
   },
-  salesCreate: async ({ ...data }: SalesFormData): Promise<Sale> => {
-    const response = await dataProvider.create("sales", {
+  organizationMemberCreate: async ({ ...data }: OrganizationMemberFormData): Promise<OrganizationMember> => {
+    const response = await dataProvider.create("organization_members", {
       data: {
         ...data,
         email: normalizeEmailValue(data.email, "email")!,
@@ -355,11 +355,11 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
 
     return response.data;
   },
-  salesUpdate: async (
+  organizationMemberUpdate: async (
     id: Identifier,
-    data: Partial<Omit<SalesFormData, "password">>,
-  ): Promise<Sale> => {
-    const { data: previousData } = await dataProvider.getOne<Sale>("sales", {
+    data: Partial<Omit<OrganizationMemberFormData, "password">>,
+  ): Promise<OrganizationMember> => {
+    const { data: previousData } = await dataProvider.getOne<OrganizationMember>("organization_members", {
       id,
     });
 
@@ -367,7 +367,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       throw new Error("User not found");
     }
 
-    const { data: sale } = await dataProvider.update<Sale>("sales", {
+    const { data: member } = await dataProvider.update<OrganizationMember>("organization_members", {
       id,
       data: {
         ...data,
@@ -375,10 +375,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       },
       previousData,
     });
-    return { ...sale, user_id: sale.id.toString() };
+    return { ...member, user_id: member.id.toString() };
   },
   isInitialized: async (): Promise<boolean> => {
-    const sales = await dataProvider.getList<Sale>("sales", {
+    const sales = await dataProvider.getList<OrganizationMember>("organization_members", {
       filter: {},
       pagination: { page: 1, perPage: 1 },
       sort: { field: "id", order: "ASC" },
@@ -393,7 +393,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     if (!currentUser) {
       throw new Error("User not found");
     }
-    const { data: previousData } = await dataProvider.getOne<Sale>("sales", {
+    const { data: previousData } = await dataProvider.getOne<OrganizationMember>("organization_members", {
       id: currentUser.id,
     });
 
@@ -401,7 +401,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       throw new Error("User not found");
     }
 
-    await dataProvider.update("sales", {
+    await dataProvider.update("organization_members", {
       id,
       data: {
         password: "demo_newPassword",
@@ -618,7 +618,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       for (const deal of wonDeals) {
         // Support multiple salespersons per deal
         const salespersonIds = [
-          deal.sales_id,
+          deal.organization_member_id,
           ...(deal.salesperson_ids || []),
         ].filter((id, index, self) => self.indexOf(id) === index); // Remove duplicates
 
@@ -993,7 +993,7 @@ export const dataProvider = withLifecycleCallbacks(
       },
     },
     {
-      resource: "sales",
+      resource: "organization_members",
       beforeGetList: async (params) => {
         return applyFullTextSearch(["first_name", "last_name", "email"], {
           useContactFtsColumns: false,
@@ -1038,7 +1038,7 @@ export const dataProvider = withLifecycleCallbacks(
 
         const [companies, contacts, contactNotes, deals] = await Promise.all([
           dataProvider.getList("companies", {
-            filter: { sales_id: params.id },
+            filter: { organization_member_id: params.id },
             pagination: {
               page: 1,
               perPage: 10_000,
@@ -1046,7 +1046,7 @@ export const dataProvider = withLifecycleCallbacks(
             sort: { field: "id", order: "ASC" },
           }),
           dataProvider.getList("contacts", {
-            filter: { sales_id: params.id },
+            filter: { organization_member_id: params.id },
             pagination: {
               page: 1,
               perPage: 10_000,
@@ -1054,7 +1054,7 @@ export const dataProvider = withLifecycleCallbacks(
             sort: { field: "id", order: "ASC" },
           }),
           dataProvider.getList("contact_notes", {
-            filter: { sales_id: params.id },
+            filter: { organization_member_id: params.id },
             pagination: {
               page: 1,
               perPage: 10_000,
@@ -1062,7 +1062,7 @@ export const dataProvider = withLifecycleCallbacks(
             sort: { field: "id", order: "ASC" },
           }),
           dataProvider.getList("deals", {
-            filter: { sales_id: params.id },
+            filter: { organization_member_id: params.id },
             pagination: {
               page: 1,
               perPage: 10_000,
@@ -1075,32 +1075,32 @@ export const dataProvider = withLifecycleCallbacks(
           dataProvider.updateMany("companies", {
             ids: companies.data.map((company) => company.id),
             data: {
-              sales_id: newSaleId,
+              organization_member_id: newSaleId,
             },
           }),
           dataProvider.updateMany("contacts", {
             ids: contacts.data.map((company) => company.id),
             data: {
-              sales_id: newSaleId,
+              organization_member_id: newSaleId,
             },
           }),
           dataProvider.updateMany("contact_notes", {
             ids: contactNotes.data.map((company) => company.id),
             data: {
-              sales_id: newSaleId,
+              organization_member_id: newSaleId,
             },
           }),
           dataProvider.updateMany("deals", {
             ids: deals.data.map((company) => company.id),
             data: {
-              sales_id: newSaleId,
+              organization_member_id: newSaleId,
             },
           }),
         ]);
 
         return params;
       },
-    } satisfies ResourceCallbacks<Sale>,
+    } satisfies ResourceCallbacks<OrganizationMember>,
     {
       resource: "contacts",
       beforeCreate: async (createParams, dataProvider) => {

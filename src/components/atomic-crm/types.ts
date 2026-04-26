@@ -18,7 +18,7 @@ export type SignUpData = {
   company_name: string;
 };
 
-export type SalesFormData = {
+export type OrganizationMemberFormData = {
   avatar?: RAFile | null;
   email: string;
   password?: string;
@@ -41,7 +41,11 @@ export type OrganizationForPlatform = {
   price_per_seat_usd_monthly?: number | null;
 } & Pick<RaRecord, "id">;
 
-export type Sale = {
+/**
+ * `public.organization_members` — CRM login + profile (one row per auth user, scoped by `org_id`).
+ * Formerly named "sales" in the Atomic schema.
+ */
+export type OrganizationMember = {
   first_name: string;
   last_name: string;
   /** Tenant scope; all CRM rows are filtered by this via RLS. */
@@ -78,7 +82,7 @@ export type Company = {
   zipcode: string;
   city: string;
   state_abbr: string;
-  sales_id?: Identifier | null;
+  organization_member_id?: Identifier | null;
   created_at: string;
   description: string;
   revenue: string;
@@ -113,7 +117,7 @@ export type Contact = {
   has_newsletter: boolean;
   tags: Identifier[];
   gender: string;
-  sales_id?: Identifier | null;
+  organization_member_id?: Identifier | null;
   status: string;
   background: string;
   phone_jsonb: PhoneNumberAndType[];
@@ -125,7 +129,7 @@ export type ContactNote = {
   contact_id: Identifier;
   text: string;
   date: string;
-  sales_id: Identifier;
+  organization_member_id: Identifier;
   status: string;
   attachments?: AttachmentNote[];
 } & Pick<RaRecord, "id">;
@@ -161,7 +165,7 @@ export type Deal = {
   updated_at: string;
   archived_at?: string;
   expected_closing_date: string;
-  sales_id: Identifier;
+  organization_member_id: Identifier;
   index: number;
 } & Pick<RaRecord, "id">;
 
@@ -169,7 +173,7 @@ export type DealNote = {
   deal_id: Identifier;
   text: string;
   date: string;
-  sales_id: Identifier;
+  organization_member_id: Identifier;
   attachments?: AttachmentNote[];
 
   // This is defined for compatibility with `ContactNote`
@@ -188,7 +192,7 @@ export type Task = {
   text: string;
   due_date: string;
   done_date?: string | null;
-  sales_id?: Identifier;
+  organization_member_id?: Identifier;
 } & Pick<RaRecord, "id">;
 
 export type Person = {
@@ -532,21 +536,21 @@ export type ActivityCompanyCreated = {
   type: typeof COMPANY_CREATED;
   company_id: Identifier;
   company: Company;
-  sales_id: Identifier;
+  organization_member_id: Identifier;
   date: string;
 } & Pick<RaRecord, "id">;
 
 export type ActivityContactCreated = {
   type: typeof CONTACT_CREATED;
   company_id: Identifier;
-  sales_id?: Identifier;
+  organization_member_id?: Identifier;
   contact: Contact;
   date: string;
 } & Pick<RaRecord, "id">;
 
 export type ActivityContactNoteCreated = {
   type: typeof CONTACT_NOTE_CREATED;
-  sales_id?: Identifier;
+  organization_member_id?: Identifier;
   contactNote: ContactNote;
   date: string;
 } & Pick<RaRecord, "id">;
@@ -554,14 +558,14 @@ export type ActivityContactNoteCreated = {
 export type ActivityDealCreated = {
   type: typeof DEAL_CREATED;
   company_id: Identifier;
-  sales_id?: Identifier;
+  organization_member_id?: Identifier;
   deal: Deal;
   date: string;
 };
 
 export type ActivityDealNoteCreated = {
   type: typeof DEAL_NOTE_CREATED;
-  sales_id?: Identifier;
+  organization_member_id?: Identifier;
   dealNote: DealNote;
   date: string;
 };

@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { Avatar } from "../contacts/Avatar";
 import { RelativeDate } from "../misc/RelativeDate";
-import { SaleName } from "../sales/SaleName";
+import { OrganizationMemberName } from "../organizationMembers/OrganizationMemberName";
 import type { ActivityContactCreated } from "../types";
 import { useActivityLogContext } from "./ActivityLogContext";
 
@@ -21,8 +21,8 @@ export function ActivityLogContactCreated({
       <div className="flex flex-row gap-2 items-start w-full">
         <Avatar width={20} height={20} record={contact} />
         <span className="text-muted-foreground text-sm flex-grow">
-          <ReferenceField source="sales_id" reference="sales" record={activity}>
-            <SaleName />
+          <ReferenceField source="organization_member_id" reference="organization_members" record={activity}>
+            <OrganizationMemberName />
           </ReferenceField>{" "}
           added{" "}
           <Link to={`/contacts/${contact.id}/show`}>

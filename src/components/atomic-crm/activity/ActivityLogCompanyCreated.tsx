@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { RelativeDate } from "../misc/RelativeDate";
-import { SaleName } from "../sales/SaleName";
+import { OrganizationMemberName } from "../organizationMembers/OrganizationMemberName";
 import type { ActivityCompanyCreated } from "../types";
 import { useActivityLogContext } from "./ActivityLogContext";
 
@@ -22,8 +22,8 @@ export function ActivityLogCompanyCreated({
         <CompanyAvatar width={20} height={20} record={company} />
 
         <span className="text-muted-foreground text-sm flex-grow">
-          <ReferenceField source="sales_id" reference="sales" record={activity}>
-            <SaleName />
+          <ReferenceField source="organization_member_id" reference="organization_members" record={activity}>
+            <OrganizationMemberName />
           </ReferenceField>{" "}
           added company{" "}
           <Link to={`/companies/${company.id}/show`}>{company.name}</Link>

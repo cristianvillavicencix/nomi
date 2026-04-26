@@ -185,8 +185,8 @@ BEGIN
   );
 
   -- Exactly one CRM administrator; this account is the sole admin with full roles.
-  UPDATE public.sales SET administrator = false WHERE true;
-  UPDATE public.sales
+  UPDATE public.organization_members SET administrator = false WHERE true;
+  UPDATE public.organization_members
   SET
     administrator = true,
     roles = array['admin']::text[]

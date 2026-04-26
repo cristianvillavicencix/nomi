@@ -91,7 +91,7 @@ export const canAccess = <
     roles.includes("manager") ||
     roles.includes("employee");
 
-  if (params.resource === "sales" || params.resource === "configuration") {
+  if (params.resource === "organization_members" || params.resource === "configuration") {
     return false;
   }
 

@@ -12,8 +12,8 @@ import type {
   DealNote,
   PhoneNumberAndType,
   RAFile,
-  Sale,
-  SalesFormData,
+  OrganizationMember,
+  OrganizationMemberFormData,
   SignUpData,
   EmailAndType,
 } from "../../types";
@@ -89,13 +89,13 @@ const looksLikeUuid = (value: string) =>
     value,
   );
 
-const resolveSalesId = async (id: Identifier): Promise<Identifier> => {
+const resolveOrganizationMemberId = async (id: Identifier): Promise<Identifier> => {
   if (typeof id !== "string" || !looksLikeUuid(id)) {
     return id;
   }
 
   const { data, error } = await supabase
-    .from("sales")
+    .from("organization_members")
     .select("id")
     .eq("user_id", id)
     .single();
@@ -112,19 +112,19 @@ const getCurrentMutationIdentity = async () => {
   const authUserId = sessionData.session?.user?.id;
   if (!authUserId) return null;
 
-  const { data: sale } = await supabase
-    .from("sales")
+  const { data: member } = await supabase
+    .from("organization_members")
     .select("id, administrator, roles")
     .eq("user_id", authUserId)
     .single();
 
-  if (!sale) return null;
+  if (!member) return null;
 
   return {
-    id: sale.id,
-    administrator: sale.administrator === true,
-    role: sale.administrator ? "admin" : (sale.roles?.[0] ?? "user"),
-    roles: sale.roles ?? (sale.administrator ? ["admin"] : []),
+    id: member.id,
+    administrator: member.administrator === true,
+    role: member.administrator ? "admin" : (member.roles?.[0] ?? "user"),
+    roles: member.roles ?? (member.administrator ? ["admin"] : []),
   };
 };
 
@@ -371,19 +371,19 @@ const dataProviderWithCustomMethods = {
       password,
     };
   },
-  async salesCreate(body: SalesFormData) {
+  async organizationMemberCreate(body: OrganizationMemberFormData) {
     const normalizedBody = {
       ...body,
       email: normalizeEmailValue(body.email, "email")!,
       roles: Array.isArray(body.roles) ? Array.from(new Set(body.roles)) : [],
     };
-    const { data, error } = await invokeEdgeFunction<{ data: Sale }>("users", {
+    const { data, error } = await invokeEdgeFunction<{ data: OrganizationMember }>("users", {
       method: "POST",
       body: normalizedBody,
     });
 
     if (!data || error) {
-      console.error("salesCreate.error", error);
+      console.error("organizationMemberCreate.error", error);
       const errorDetails = await (async () => {
         try {
           return (await error?.context?.json()) ?? {};
@@ -396,11 +396,11 @@ const dataProviderWithCustomMethods = {
 
     return data.data;
   },
-  async salesUpdate(
+  async organizationMemberUpdate(
     id: Identifier,
-    data: Partial<Omit<SalesFormData, "password">>,
+    data: Partial<Omit<OrganizationMemberFormData, "password">>,
   ) {
-    const salesId = await resolveSalesId(id);
+    const orgMemberId = await resolveOrganizationMemberId(id);
     const {
       email,
       first_name,
@@ -417,11 +417,11 @@ const dataProviderWithCustomMethods = {
     }
 
     const { data: updatedData, error } = await invokeEdgeFunction<{
-      data: Sale;
+      data: OrganizationMember;
     }>("users", {
       method: "PATCH",
       body: {
-        sales_id: salesId,
+        organization_member_id: orgMemberId,
         email: normalizeEmailValue(email, "email"),
         first_name,
         last_name,
@@ -433,7 +433,7 @@ const dataProviderWithCustomMethods = {
     });
 
     if (!updatedData || error) {
-      console.error("salesUpdate.error", error);
+      console.error("organizationMemberUpdate.error", error);
       const errorDetails = await (async () => {
         try {
           return (await error?.context?.json()) ?? {};
@@ -454,7 +454,7 @@ const dataProviderWithCustomMethods = {
       {
         method: "PATCH",
         body: {
-          sales_id: id,
+          organization_member_id: id,
         },
       },
     );
@@ -739,13 +739,13 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
     },
   },
   {
-    resource: "sales",
+    resource: "organization_members",
     beforeGetList: async (params) => {
       return applyFullTextSearch(["first_name", "last_name", "email"], {
         useContactFtsColumns: false,
       })(params);
     },
-    beforeSave: async (data: Sale, _, __) => {
+    beforeSave: async (data: OrganizationMember, _, __) => {
       if (data.avatar) {
         await uploadToBucket(data.avatar);
       }

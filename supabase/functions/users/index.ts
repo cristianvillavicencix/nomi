@@ -3,7 +3,7 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
-import { getUserSale } from "../_shared/getUserSale.ts";
+import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 
 const ALLOWED_ROLES = [
   "admin",
@@ -53,7 +53,7 @@ async function assertSingleAdministrator(
   if (!administrator) return;
 
   const { data, error } = await supabaseAdmin
-    .from("sales")
+    .from("organization_members")
     .select("id, user_id")
     .eq("administrator", true)
     .eq("org_id", org_id);
@@ -71,7 +71,7 @@ async function assertSingleAdministrator(
 
 async function updateSaleDisabled(user_id: string, disabled: boolean) {
   return await supabaseAdmin
-    .from("sales")
+    .from("organization_members")
     .update({ disabled: disabled ?? false })
     .eq("user_id", user_id);
 }
@@ -82,7 +82,7 @@ async function updateSaleAdministrator(
   roles?: string[],
 ) {
   const { data: sales, error: salesError } = await supabaseAdmin
-    .from("sales")
+    .from("organization_members")
     .update({ administrator, roles: normalizeRoles(roles, administrator) })
     .eq("user_id", user_id)
     .select("*");
@@ -109,7 +109,7 @@ async function createSale(
 ) {
   const { password: _password, ...rest } = data;
   const { data: sales, error: salesError } = await supabaseAdmin
-    .from("sales")
+    .from("organization_members")
     .insert({
       ...rest,
       roles: normalizeRoles(data.roles, data.administrator),
@@ -127,7 +127,7 @@ async function createSale(
 
 async function updateSaleAvatar(user_id: string, avatar: unknown | null) {
   const { data: sales, error: salesError } = await supabaseAdmin
-    .from("sales")
+    .from("organization_members")
     .update({ avatar })
     .eq("user_id", user_id)
     .select("*");
@@ -140,7 +140,7 @@ async function updateSaleAvatar(user_id: string, avatar: unknown | null) {
 }
 
 async function updateSaleProfile(
-  sales_id: number,
+  organization_member_id: number,
   profile: {
     email?: string;
     first_name?: string;
@@ -153,9 +153,9 @@ async function updateSaleProfile(
 
   if (Object.keys(updates).length === 0) {
     const { data: sale, error: salesError } = await supabaseAdmin
-      .from("sales")
+      .from("organization_members")
       .select("*")
-      .eq("id", sales_id)
+      .eq("id", organization_member_id)
       .single();
 
     if (!sale || salesError) {
@@ -167,9 +167,9 @@ async function updateSaleProfile(
   }
 
   const { data: sale, error: salesError } = await supabaseAdmin
-    .from("sales")
+    .from("organization_members")
     .update(updates)
-    .eq("id", sales_id)
+    .eq("id", organization_member_id)
     .select("*")
     .single();
 
@@ -181,7 +181,7 @@ async function updateSaleProfile(
   return sale;
 }
 
-async function inviteUser(req: Request, currentUserSale: any) {
+async function inviteUser(req: Request, currentOrgMember: any) {
   const {
     email,
     password,
@@ -192,11 +192,11 @@ async function inviteUser(req: Request, currentUserSale: any) {
     roles,
   } = await req.json();
 
-  if (!currentUserSale.administrator) {
+  if (!currentOrgMember.administrator) {
     return createErrorResponse(401, "Not Authorized");
   }
 
-  const orgId = saleOrgId(currentUserSale);
+  const orgId = saleOrgId(currentOrgMember);
 
   try {
     await assertSingleAdministrator(null, administrator, orgId);
@@ -233,7 +233,7 @@ async function inviteUser(req: Request, currentUserSale: any) {
     user = data[0];
     try {
       const { data: existingSale, error: salesError } = await supabaseAdmin
-        .from("sales")
+        .from("organization_members")
         .select("*")
         .eq("user_id", user.id);
       if (salesError) {
@@ -324,10 +324,10 @@ async function inviteUser(req: Request, currentUserSale: any) {
   }
 }
 
-async function patchUser(req: Request, currentUserSale: any) {
+async function patchUser(req: Request, currentOrgMember: any) {
   const body = await req.json();
   const {
-    sales_id,
+    organization_member_id,
     email,
     first_name,
     last_name,
@@ -337,9 +337,9 @@ async function patchUser(req: Request, currentUserSale: any) {
     disabled,
   } = body;
   const { data: sale } = await supabaseAdmin
-    .from("sales")
+    .from("organization_members")
     .select("*")
-    .eq("id", sales_id)
+    .eq("id", organization_member_id)
     .single();
 
   if (!sale) {
@@ -347,12 +347,12 @@ async function patchUser(req: Request, currentUserSale: any) {
   }
 
   // Users can only update their own profile unless they are an administrator
-  if (!currentUserSale.administrator && currentUserSale.id !== sale.id) {
+  if (!currentOrgMember.administrator && currentOrgMember.id !== sale.id) {
     return createErrorResponse(401, "Not Authorized");
   }
 
-  if (currentUserSale.administrator) {
-    if (saleOrgId(sale) !== saleOrgId(currentUserSale)) {
+  if (currentOrgMember.administrator) {
+    if (saleOrgId(sale) !== saleOrgId(currentOrgMember)) {
       return createErrorResponse(403, "Not Authorized");
     }
   }
@@ -374,7 +374,7 @@ async function patchUser(req: Request, currentUserSale: any) {
   }
 
   try {
-    await updateSaleProfile(sales_id, {
+    await updateSaleProfile(organization_member_id, {
       email,
       first_name,
       last_name,
@@ -389,11 +389,11 @@ async function patchUser(req: Request, currentUserSale: any) {
   }
 
   // Only administrators can update the administrator and disabled status
-  if (!currentUserSale.administrator) {
+  if (!currentOrgMember.administrator) {
     const { data: new_sale } = await supabaseAdmin
-      .from("sales")
+      .from("organization_members")
       .select("*")
-      .eq("id", sales_id)
+      .eq("id", organization_member_id)
       .single();
     return new Response(
       JSON.stringify({
@@ -442,17 +442,17 @@ Deno.serve(async (req: Request) =>
   OptionsMiddleware(req, async (req) =>
     AuthMiddleware(req, async (req) =>
       UserMiddleware(req, async (req, user) => {
-        const currentUserSale = await getUserSale(user);
-        if (!currentUserSale) {
+        const currentOrgMember = await getUserOrganizationMember(user);
+        if (!currentOrgMember) {
           return createErrorResponse(401, "Unauthorized");
         }
 
         if (req.method === "POST") {
-          return inviteUser(req, currentUserSale);
+          return inviteUser(req, currentOrgMember);
         }
 
         if (req.method === "PATCH") {
-          return patchUser(req, currentUserSale);
+          return patchUser(req, currentOrgMember);
         }
 
         return createErrorResponse(405, "Method Not Allowed");

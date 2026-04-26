@@ -24,7 +24,7 @@ import { Markdown } from "../misc/Markdown";
 import { RelativeDate } from "../misc/RelativeDate";
 import { Status } from "../misc/Status";
 import { parseAssetLinkText } from "../misc/assetLinks";
-import { SaleName } from "../sales/SaleName";
+import { OrganizationMemberName } from "../organizationMembers/OrganizationMemberName";
 import type { ContactNote, DealNote } from "../types";
 import { NoteAttachments } from "./NoteAttachments";
 import { NoteInputs } from "./NoteInputs";
@@ -103,11 +103,11 @@ export const Note = ({
           <ReferenceField
             record={note}
             resource={resource}
-            source="sales_id"
-            reference="sales"
+            source="organization_member_id"
+            reference="organization_members"
             link={false}
           >
-            <WithRecord render={(record) => <SaleName sale={record} />} />
+            <WithRecord render={(record) => <OrganizationMemberName member={record} />} />
           </ReferenceField>{" "}
           added a note{" "}
           {showStatus && note.status && (

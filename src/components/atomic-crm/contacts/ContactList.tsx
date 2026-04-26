@@ -18,7 +18,7 @@ import { SearchInput } from "@/components/admin/search-input";
 import { SortButton } from "@/components/admin/sort-button";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 
-import type { Company, Contact, Sale, Tag } from "../types";
+import type { Company, Contact, OrganizationMember, Tag } from "../types";
 import { ContactEmpty } from "./ContactEmpty";
 import { ContactImportButton } from "./ContactImportButton";
 import { ContactListContentMobile } from "./ContactListContent";
@@ -235,7 +235,7 @@ const exporter: Exporter<Contact> = async (records, fetchRelatedRecords) => {
     "company_id",
     "companies",
   );
-  const sales = await fetchRelatedRecords<Sale>(records, "sales_id", "sales");
+  const sales = await fetchRelatedRecords<OrganizationMember>(records, "organization_member_id", "organization_members");
   const tags = await fetchRelatedRecords<Tag>(records, "tags", "tags");
 
   const contacts = records.map((contact) => {
@@ -245,8 +245,8 @@ const exporter: Exporter<Contact> = async (records, fetchRelatedRecords) => {
         contact.company_id != null
           ? companies[contact.company_id].name
           : undefined,
-      sales: `${sales[contact.sales_id].first_name} ${
-        sales[contact.sales_id].last_name
+      sales: `${sales[contact.organization_member_id].first_name} ${
+        sales[contact.organization_member_id].last_name
       }`,
       tags: contact.tags.map((tagId) => tags[tagId].name).join(", "),
       email_work: contact.email_jsonb?.find((email) => email.type === "Work")

@@ -45,7 +45,7 @@ export const CompanyListFilter = () => {
         <ToggleFilterButton
           className="w-full justify-between"
           label={"Me"}
-          value={{ sales_id: identity?.id }}
+          value={{ organization_member_id: identity?.id }}
         />
       </FilterCategory>
     </div>

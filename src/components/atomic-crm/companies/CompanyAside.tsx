@@ -13,7 +13,7 @@ import { mapsHref } from "@/lib/linking";
 
 import { AsideSection } from "../misc/AsideSection";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import { SaleName } from "../sales/SaleName";
+import { OrganizationMemberName } from "../organizationMembers/OrganizationMemberName";
 import type { Company } from "../types";
 import { sizes } from "./sizes";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
@@ -172,7 +172,7 @@ export const AddressInfo = ({ record }: { record: Company }) => {
 export const AdditionalInfo = ({ record }: { record: Company }) => {
   if (
     !record.created_at &&
-    !record.sales_id &&
+    !record.organization_member_id &&
     !record.description &&
     !record.context_links
   ) {
@@ -206,11 +206,11 @@ export const AdditionalInfo = ({ record }: { record: Company }) => {
           )}
         </div>
       )}
-      {record.sales_id !== null && (
+      {record.organization_member_id !== null && (
         <div className="inline-flex text-sm text-muted-foreground mb-1">
           Followed by&nbsp;
-          <ReferenceField source="sales_id" reference="sales" record={record}>
-            <SaleName />
+          <ReferenceField source="organization_member_id" reference="organization_members" record={record}>
+            <OrganizationMemberName />
           </ReferenceField>
         </div>
       )}

@@ -3,7 +3,7 @@ import type { RaRecord } from "ra-core";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { RelativeDate } from "../misc/RelativeDate";
-import { SaleName } from "../sales/SaleName";
+import { OrganizationMemberName } from "../organizationMembers/OrganizationMemberName";
 import type { ActivityDealNoteCreated } from "../types";
 import { useActivityLogContext } from "./ActivityLogContext";
 import { ActivityLogNote } from "./ActivityLogNote";
@@ -40,12 +40,12 @@ export function ActivityLogDealNoteCreated({
 
           <span className="text-muted-foreground text-sm flex-grow">
             <ReferenceField
-              source="sales_id"
-              reference="sales"
+              source="organization_member_id"
+              reference="organization_members"
               record={activity}
               link={false}
             >
-              <SaleName />
+              <OrganizationMemberName />
             </ReferenceField>{" "}
             added a note about project{" "}
             <ReferenceField

@@ -4109,7 +4109,7 @@ const DealFilesTab = ({
       {
         data: {
           deal_id: dealId,
-          sales_id: identity.id,
+          organization_member_id: identity.id,
           date: new Date().toISOString(),
           text: serializeAssetLink({
             kind,
@@ -4160,7 +4160,7 @@ const DealFilesTab = ({
       {
         data: {
           deal_id: dealId,
-          sales_id: identity.id,
+          organization_member_id: identity.id,
           date: new Date().toISOString(),
           text: "",
           attachments,

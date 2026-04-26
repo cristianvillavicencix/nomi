@@ -31,7 +31,7 @@ import {
   authProvider as defaultAuthProvider,
   dataProvider as defaultDataProvider,
 } from "../providers/supabase";
-import sales from "../sales";
+import organizationMembers from "../organizationMembers";
 import people from "@/people";
 import timeEntries from "@/timeEntries";
 import payments from "@/payments";
@@ -71,7 +71,8 @@ import { PeopleQuickViewPage } from "@/people/PeopleQuickViewPage";
 import { ContactQuickViewPage } from "../contacts/ContactQuickViewPage";
 import { CompanyQuickViewPage } from "../companies/CompanyQuickViewPage";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlatformPage } from "@/platform/PlatformPage";
+import { PlatformApp } from "@/platform/PlatformApp";
+import { PlatformEmpresasPage } from "@/platform/PlatformEmpresasPage";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -259,6 +260,10 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           element={<ForgotPasswordPage />}
         />
         <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
+        <Route path="/platform/*" element={<PlatformApp />}>
+          <Route index element={<Navigate to="empresas" replace />} />
+          <Route path="empresas" element={<PlatformEmpresasPage />} />
+        </Route>
       </CustomRoutes>
 
       <CustomRoutes>
@@ -409,7 +414,6 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           }
         />
         <Route path="/projects" element={<Navigate to="/deals" replace />} />
-        <Route path="/platform" element={<PlatformPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
       <Resource name="people" {...people} />
@@ -431,7 +435,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
       <Resource name="deal_commissions" />
       <Resource name="deal_client_payments" />
       <Resource name="tasks" />
-      <Resource name="sales" {...sales} />
+      <Resource name="organization_members" {...organizationMembers} />
       <Resource name="tags" />
     </Admin>
   );
@@ -498,6 +502,10 @@ const MobileAdmin = (props: CoreAdminProps) => {
             element={<ForgotPasswordPage />}
           />
           <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
+          <Route path="/platform/*" element={<PlatformApp />}>
+            <Route index element={<Navigate to="empresas" replace />} />
+            <Route path="empresas" element={<PlatformEmpresasPage />} />
+          </Route>
         </CustomRoutes>
         <Resource
           name="contacts"

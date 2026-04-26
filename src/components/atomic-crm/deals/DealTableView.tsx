@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import type { Company, Contact, Deal, Sale } from "../types";
+import type { Company, Contact, Deal, OrganizationMember } from "../types";
 import { getStageColor, getStageLabel } from "./pipelines";
 
 type SortField = "stage" | "amount" | "updated_at" | "created_at";
@@ -80,7 +80,7 @@ export const DealTableView = () => {
       Array.from(
         new Set(
           deals
-            .map((deal) => deal.sales_id)
+            .map((deal) => deal.organization_member_id)
             .filter((salesId): salesId is NonNullable<typeof salesId> =>
               salesId != null,
             ),
@@ -99,8 +99,8 @@ export const DealTableView = () => {
     { ids: primaryContactIds },
     { enabled: primaryContactIds.length > 0 },
   );
-  const { data: sales = [] } = useGetMany<Sale>(
-    "sales",
+  const { data: sales = [] } = useGetMany<OrganizationMember>(
+    "organization_members",
     { ids: salesIds },
     { enabled: salesIds.length > 0 },
   );
@@ -260,7 +260,7 @@ export const DealTableView = () => {
             const primaryContact = deal.contact_ids?.[0]
               ? contactsById[deal.contact_ids[0]]
               : undefined;
-            const assignedSale = salesById[deal.sales_id];
+            const assignedSale = salesById[deal.organization_member_id];
 
             return (
               <TableRow

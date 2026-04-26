@@ -24,12 +24,12 @@ import {
 
 import ImageEditorField from "../misc/ImageEditorField";
 import type { CrmDataProvider } from "../providers/types";
-import type { Sale, SalesFormData } from "../types";
+import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 
 export const ProfilePage = () => {
   const [isEditMode, setEditMode] = useState(false);
   const { identity, refetch: refetchIdentity } = useGetIdentity();
-  const { data, refetch: refetchUser } = useGetOne("sales", {
+  const { data, refetch: refetchUser } = useGetOne("organization_members", {
     id: identity?.id,
   });
   const notify = useNotify();
@@ -37,11 +37,11 @@ export const ProfilePage = () => {
 
   const { mutate } = useMutation({
     mutationKey: ["signup"],
-    mutationFn: async (data: SalesFormData) => {
+    mutationFn: async (data: OrganizationMemberFormData) => {
       if (!data?.id) {
         throw new Error("Record not found");
       }
-      return dataProvider.salesUpdate(data.id, data);
+      return dataProvider.organizationMemberUpdate(data.id, data);
     },
     onSuccess: () => {
       refetchIdentity();
@@ -79,7 +79,7 @@ const ProfileForm = ({
   setEditMode: (value: boolean) => void;
 }) => {
   const notify = useNotify();
-  const record = useRecordContext<Sale>();
+  const record = useRecordContext<OrganizationMember>();
   const { identity, refetch } = useGetIdentity();
   const { isDirty } = useFormState();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -104,11 +104,11 @@ const ProfileForm = ({
 
   const { mutate: mutateSale } = useMutation({
     mutationKey: ["signup"],
-    mutationFn: async (data: SalesFormData) => {
+    mutationFn: async (data: OrganizationMemberFormData) => {
       if (!record) {
         throw new Error("Record not found");
       }
-      return dataProvider.salesUpdate(record.id, data);
+      return dataProvider.organizationMemberUpdate(record.id, data);
     },
     onSuccess: () => {
       refetch();

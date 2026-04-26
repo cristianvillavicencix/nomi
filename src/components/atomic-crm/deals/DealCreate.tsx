@@ -105,7 +105,7 @@ export const DealCreate = ({ open }: { open: boolean }) => {
         >
           <Form
             defaultValues={{
-              sales_id: identity?.id,
+              organization_member_id: identity?.id,
               category: "retail",
               stage: "lead",
               project_type: "roofing",
