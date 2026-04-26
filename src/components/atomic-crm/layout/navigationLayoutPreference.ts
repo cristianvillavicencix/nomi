@@ -4,22 +4,32 @@ const LS_KEY = "nomi-crm:navigationLayout";
 
 export type NavigationLayoutMode = "top" | "sidebar";
 
-function readInitial(): NavigationLayoutMode {
-  if (typeof window === "undefined") return "top";
+const DEFAULT_MODE: NavigationLayoutMode = "sidebar";
+
+function readFromStorage(): NavigationLayoutMode {
+  if (typeof window === "undefined") {
+    return DEFAULT_MODE;
+  }
   try {
     const s = localStorage.getItem(LS_KEY);
     if (s === "sidebar" || s === "top") return s;
   } catch {
     /* Quota or privacy mode */
   }
-  return "top";
+  return DEFAULT_MODE;
 }
 
-let modeState: NavigationLayoutMode = readInitial();
 const listeners = new Set<() => void>();
 
 function getSnapshot(): NavigationLayoutMode {
-  return modeState;
+  return readFromStorage();
+}
+
+/** Matches initial client read when `window` is undefined (e.g. SSR / server render). */
+const getServerSnapshot = getSnapshot;
+
+function emit() {
+  listeners.forEach((fn) => fn());
 }
 
 function subscribe(callback: () => void) {
@@ -31,35 +41,31 @@ function subscribe(callback: () => void) {
 
 function setLayoutState(next: NavigationLayoutMode) {
   if (next !== "top" && next !== "sidebar") return;
-  if (next === modeState) return;
-  modeState = next;
+  if (readFromStorage() === next) {
+    return;
+  }
   try {
     localStorage.setItem(LS_KEY, next);
   } catch {
-    /* */
+    return;
   }
-  listeners.forEach((fn) => fn());
+  emit();
 }
 
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
     if (e.key !== LS_KEY) return;
-    if (e.newValue === "sidebar" || e.newValue === "top") {
-      setLayoutState(e.newValue);
-    }
+    emit();
   });
 }
 
 /**
  * One shared preference for the whole app (unlike a per-component useState).
- * Persists in localStorage so it survives route changes, reloads, and new sessions.
+ * Persists in localStorage. getSnapshot always reads from storage so it stays
+ * the source of truth (no stale module-level state after reload or other writers).
  */
 export const useNavigationLayoutPreference = () => {
-  const mode = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    () => "top" as NavigationLayoutMode,
-  );
+  const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const setMode = useCallback(
     (next: NavigationLayoutMode | ((prev: NavigationLayoutMode) => NavigationLayoutMode)) => {
