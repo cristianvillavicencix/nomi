@@ -6,6 +6,7 @@ import {
   type AuthProvider,
   useCanAccess,
 } from "ra-core";
+import { browserReactRouterProvider } from "@/lib/browserReactRouterProvider";
 import { useEffect, useMemo } from "react";
 import { Route } from "react-router";
 import { Navigate } from "react-router";
@@ -243,6 +244,7 @@ export const CRM = ({
       loginPage={StartPage}
       requireAuth
       disableTelemetry
+      routerProvider={browserReactRouterProvider}
       {...rest}
       basename={adminBasename}
     />

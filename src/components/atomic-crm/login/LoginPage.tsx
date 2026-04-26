@@ -44,12 +44,27 @@ export const LoginPage = (props: { redirectTo?: string }) => {
     },
   });
 
-  // Evita /login#/login (hash duplicado por SW, extensiones o redirecciones antiguas).
+  // Con router por *historia* la ruta es solo /login. Quitar fragmentos #/… heredados del
+  // HashRouter (marcadores, SW, caché) — p. ej. /login#/login. No tocar #access_token=…
+  // ni otros hashes con carga útil.
   useLayoutEffect(() => {
     const path = location.pathname.replace(/\/$/, "") || "/";
-    if (path === "/login" && location.hash === "#/login") {
-      navigate({ pathname: "/login", search: location.search, hash: "" }, { replace: true });
+    if (path !== "/login" || !location.hash) {
+      return;
     }
+    if (location.hash.includes("=")) {
+      return;
+    }
+    const h = location.hash;
+    const isLegacyAppRouteHash =
+      h === "#/login" || h.startsWith("#/login/") || h === "#/" || h === "#";
+    if (!isLegacyAppRouteHash) {
+      return;
+    }
+    navigate(
+      { pathname: location.pathname, search: location.search, hash: "" },
+      { replace: true },
+    );
   }, [location.hash, location.pathname, location.search, navigate]);
 
   useEffect(() => {
@@ -126,10 +141,6 @@ export const LoginPage = (props: { redirectTo?: string }) => {
           <div className="w-full space-y-6 lg:mx-auto lg:w-[350px]">
             <div className="text-center space-y-1">
               <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-              <p className="text-sm text-muted-foreground">
-                Dueños, administradores y el resto del equipo: todos entran aquí. Con tu usuario
-                y rol verás en el CRM lo que te corresponde.
-              </p>
             </div>
             {!isInitialized && !disableEmailPasswordAuthentication ? (
               <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
@@ -195,15 +206,6 @@ export const LoginPage = (props: { redirectTo?: string }) => {
                 </p>
               </>
             )}
-            <p className="text-xs text-center text-muted-foreground pt-2 border-t border-border/60">
-              ¿Equipo de operación Nomi (no un cliente)?{" "}
-              <Link
-                to="/sas"
-                className="font-medium text-foreground underline-offset-4 hover:underline"
-              >
-                Consola /sas
-              </Link>
-            </p>
           </div>
         </div>
       </div>

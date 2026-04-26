@@ -2,6 +2,17 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 
+/** `true` si el usuario de Supabase figura en `platform_operators`. */
+export const isUserPlatformOperator = async (userId: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from("platform_operators")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+};
+
 /**
  * Resolves if the current auth user is in `platform_operators` (SaaS / global directory).
  * Invalidates on auth changes so a fresh login sees updated permissions.

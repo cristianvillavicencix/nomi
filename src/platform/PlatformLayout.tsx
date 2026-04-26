@@ -18,6 +18,7 @@ import {
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { ThemeModeToggle } from "@/components/admin/theme-mode-toggle";
 import { isPlatformEmpresasPath } from "./platformConsolePaths";
+import { PlatformChangePasswordDialog } from "./PlatformChangePasswordDialog";
 
 const PlatformNavItem = ({
   to,
@@ -116,8 +117,15 @@ export const PlatformLayout = () => {
             <SidebarTrigger className="shrink-0 md:hidden" />
             <h2 className="text-sm font-medium text-muted-foreground truncate">Nomi — operador de plataforma</h2>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
             <ThemeModeToggle />
+            <PlatformChangePasswordDialog
+              trigger={
+                <Button type="button" variant="outline" size="sm">
+                  Cambiar contraseña
+                </Button>
+              }
+            />
             <Button type="button" variant="secondary" size="sm" onClick={() => void logout()}>
               Cerrar sesión
             </Button>

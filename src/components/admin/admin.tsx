@@ -118,6 +118,7 @@ export const Admin = (props: CoreAdminProps) => {
     queryClient,
     ready = Ready,
     requireAuth,
+    routerProvider,
     store = defaultStore,
     title = "Shadcn Admin",
   } = props;
@@ -128,6 +129,7 @@ export const Admin = (props: CoreAdminProps) => {
       dataProvider={dataProvider}
       i18nProvider={i18nProvider}
       queryClient={queryClient}
+      routerProvider={routerProvider}
       store={store}
     >
       <AdminUI

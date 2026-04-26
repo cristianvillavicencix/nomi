@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { useNotify, useLogout } from "ra-core";
@@ -6,12 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePlatformOperator } from "./usePlatformOperator";
+import { isUserPlatformOperator, usePlatformOperator } from "./usePlatformOperator";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { PlatformLayout } from "./PlatformLayout";
 import { ThemeModeToggle } from "@/components/admin/theme-mode-toggle";
 
-const PlatformAuthShell = ({ children }: { children: React.ReactNode }) => {
+const PlatformAuthShell = ({
+  children,
+  showLogout = true,
+}: {
+  children: React.ReactNode;
+  /** Solo si ya hay sesión Supabase (p. ej. usuario sin rol de operador). En la pantalla de login no hay sesión: no mostrar "Cerrar sesión". */
+  showLogout?: boolean;
+}) => {
   const logout = useLogout();
   return (
     <div className="min-h-svh flex flex-col bg-background">
@@ -30,9 +37,11 @@ const PlatformAuthShell = ({ children }: { children: React.ReactNode }) => {
           </div>
           <div className="flex items-center gap-2">
             <ThemeModeToggle />
-            <Button type="button" variant="secondary" onClick={() => void logout()}>
-              Cerrar sesión
-            </Button>
+            {showLogout ? (
+              <Button type="button" variant="secondary" onClick={() => void logout()}>
+                Cerrar sesión
+              </Button>
+            ) : null}
           </div>
         </div>
       </header>
@@ -52,13 +61,35 @@ const PlatformLogin = () => {
     e.preventDefault();
     setBusy(true);
     void (async () => {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      setBusy(false);
-      if (error) {
-        notify(error.message, { type: "error" });
-        return;
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (error) {
+          notify(error.message, { type: "error" });
+          return;
+        }
+        const uid = data.user?.id;
+        if (!uid) {
+          notify("No se pudo comprobar el usuario.", { type: "error" });
+          await supabase.auth.signOut();
+          return;
+        }
+        const allowed = await isUserPlatformOperator(uid);
+        if (!allowed) {
+          await supabase.auth.signOut();
+          notify("Acceso no autorizado.", { type: "error" });
+          return;
+        }
+        await queryClient.invalidateQueries({ queryKey: ["auth", "platform_operator"] });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Error al comprobar el acceso.";
+        notify(message, { type: "error" });
+        await supabase.auth.signOut();
+      } finally {
+        setBusy(false);
       }
-      await queryClient.invalidateQueries({ queryKey: ["auth", "platform_operator"] });
     })();
   };
 
@@ -74,11 +105,12 @@ const PlatformLogin = () => {
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="platform-email">Correo</Label>
+              <Label htmlFor="platform-email">Usuario o correo</Label>
               <Input
                 id="platform-email"
                 type="email"
                 autoComplete="username"
+                placeholder="mismo que en Nomi (correo de acceso)"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -98,9 +130,47 @@ const PlatformLogin = () => {
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Ingresando…" : "Entrar"}
             </Button>
+            <div className="flex flex-col gap-2 text-center text-sm border-t border-border/60 pt-4">
+              <Link
+                to="/forgot-password"
+                className="text-foreground font-medium underline-offset-2 hover:underline"
+              >
+                Recuperar contraseña
+              </Link>
+              <span className="text-muted-foreground">Contraseña nueva: te enviamos un enlace al correo.</span>
+              <Link
+                to="/forgot-password"
+                className="text-foreground font-medium underline-offset-2 hover:underline"
+              >
+                Enlace para cambiar contraseña
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>
+    </div>
+  );
+};
+
+/** Sesión Supabase (p. ej. CRM) sin fila en `platform_operators`: no mostrar otra UI; solo cerrar y avisar. */
+const PlatformSessionWithoutOperator = () => {
+  const queryClient = useQueryClient();
+  const notify = useNotify();
+  const didRun = useRef(false);
+  useEffect(() => {
+    if (didRun.current) {
+      return;
+    }
+    didRun.current = true;
+    void (async () => {
+      await supabase.auth.signOut();
+      await queryClient.invalidateQueries({ queryKey: ["auth", "platform_operator"] });
+      notify("Acceso no autorizado.", { type: "error" });
+    })();
+  }, [queryClient, notify]);
+  return (
+    <div className="min-h-svh flex items-center justify-center bg-background p-6">
+      <p className="text-muted-foreground text-sm">Comprobando acceso…</p>
     </div>
   );
 };
@@ -133,26 +203,14 @@ export const PlatformApp = () => {
   const hasSession = Boolean(gate?.authUserId);
   if (!hasSession) {
     return (
-      <PlatformAuthShell>
+      <PlatformAuthShell showLogout={false}>
         <PlatformLogin />
       </PlatformAuthShell>
     );
   }
 
   if (!gate?.isPlatformOperator) {
-    return (
-      <PlatformAuthShell>
-        <Card className="max-w-md mx-auto">
-          <CardHeader>
-            <CardTitle>Sin permiso de operador</CardTitle>
-            <CardDescription>
-              Esta sesión no figura en <code className="text-xs">platform_operators</code>. Usa un correo con permiso
-              o cierra sesión.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </PlatformAuthShell>
-    );
+    return <PlatformSessionWithoutOperator />;
   }
 
   return <PlatformLayout />;
