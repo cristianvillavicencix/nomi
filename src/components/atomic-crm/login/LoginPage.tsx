@@ -116,8 +116,12 @@ export const LoginPage = (props: { redirectTo?: string }) => {
         </div>
         <div className="flex flex-col justify-center w-full p-4 lg:p-8">
           <div className="w-full space-y-6 lg:mx-auto lg:w-[350px]">
-            <div className="text-center">
+            <div className="text-center space-y-1">
               <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+              <p className="text-sm text-muted-foreground">
+                Dueños, administradores y el resto del equipo: todos entran aquí. Con tu usuario
+                y rol verás en el CRM lo que te corresponde.
+              </p>
             </div>
             {!isInitialized && !disableEmailPasswordAuthentication ? (
               <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
@@ -183,6 +187,15 @@ export const LoginPage = (props: { redirectTo?: string }) => {
                 </p>
               </>
             )}
+            <p className="text-xs text-center text-muted-foreground pt-2 border-t border-border/60">
+              ¿Equipo de operación Nomi (no un cliente)?{" "}
+              <Link
+                to="/sas"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Consola /sas
+              </Link>
+            </p>
           </div>
         </div>
       </div>

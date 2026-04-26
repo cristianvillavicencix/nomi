@@ -17,11 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { ThemeModeToggle } from "@/components/admin/theme-mode-toggle";
-
-const isEmpresasPath = (pathname: string) => {
-  const segments = pathname.replace(/\/$/, "").split("/").filter(Boolean);
-  return segments.includes("platform") && segments[segments.length - 1] === "empresas";
-};
+import { isPlatformEmpresasPath } from "./platformConsolePaths";
 
 const PlatformNavItem = ({
   to,
@@ -33,7 +29,7 @@ const PlatformNavItem = ({
   icon: React.ReactNode;
 }) => {
   const location = useLocation();
-  const active = to === "empresas" ? isEmpresasPath(location.pathname) : false;
+  const active = to === "empresas" ? isPlatformEmpresasPath(location.pathname) : false;
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={active}>
@@ -52,7 +48,7 @@ const PlatformNavItem = ({
 };
 
 /**
- * Shell de consola de plataforma: sidebar con módulos SaaS (Empresas; ampliar con más enlaces a /platform/… / aquí.
+ * Shell de consola Nomi (`/sas`): operadores de plataforma; sidebar extensible bajo /sas/….
  */
 export const PlatformLayout = () => {
   const logout = useLogout();
@@ -101,7 +97,7 @@ export const PlatformLayout = () => {
               />
             </SidebarMenu>
             <p className="px-2 text-xs text-muted-foreground mt-2 max-w-[14rem] group-data-[collapsible=icon]:hidden">
-              Puedes añadir aquí más módulos (nuevas rutas bajo <code className="text-[0.65rem]">/platform/…</code>).
+              Más módulos: rutas bajo <code className="text-[0.65rem]">/sas/…</code>.
             </p>
           </SidebarGroup>
         </SidebarContent>

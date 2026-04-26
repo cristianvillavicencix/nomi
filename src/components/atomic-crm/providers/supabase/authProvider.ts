@@ -1,6 +1,7 @@
 import type { AuthProvider } from "ra-core";
 import { supabaseAuthProvider } from "ra-supabase-core";
 
+import { isPlatformConsolePath } from "@/platform/platformConsolePaths";
 import { canAccess } from "../commons/canAccess";
 import { supabase } from "./supabase";
 
@@ -108,17 +109,10 @@ function isPublicAuthRoute(): boolean {
   return segment("set-password") || segment("forgot-password") || segment("sign-up");
 }
 
-/** Rutas bajo `/platform/…` — consola de operador, login separada del CRM. */
-function isPlatformRoute(): boolean {
+/** `/sas/*` (consola Nomi) o path legado/typo; no exige ficha de `organization_members`. */
+function isPlatformConsoleAuthRoute(): boolean {
   if (typeof window === "undefined") return false;
-  const path = window.location.pathname.replace(/\/$/, "") || "/";
-  if (path === "/platform" || path.endsWith("/platform")) {
-    return true;
-  }
-  if (path.includes("/platform/")) {
-    return true;
-  }
-  return false;
+  return isPlatformConsolePath(window.location.pathname);
 }
 
 export const authProvider: AuthProvider = {
@@ -143,7 +137,7 @@ export const authProvider: AuthProvider = {
     if (isPublicAuthRoute()) {
       return;
     }
-    if (isPlatformRoute()) {
+    if (isPlatformConsoleAuthRoute()) {
       return;
     }
 

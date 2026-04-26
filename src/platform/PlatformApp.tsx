@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { useNotify, useLogout } from "ra-core";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,12 @@ const PlatformAuthShell = ({ children }: { children: React.ReactNode }) => {
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Plataforma</h1>
             <p className="text-muted-foreground text-sm max-w-xl">
-              Acceso de operador global. El CRM mantiene su propio inicio de sesión y registro.
+              Consola de operación <strong className="text-foreground">Nomi</strong> (equipo interno, tabla{" "}
+              <code className="text-xs">platform_operators</code>). Dueños y equipos de cada empresa usan el CRM en{" "}
+              <Link to="/login" className="text-foreground font-medium underline-offset-2 hover:underline">
+                /login
+              </Link>
+              .
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -100,7 +106,7 @@ const PlatformLogin = () => {
 };
 
 /**
- * Punto de entrada de `/platform/*`: login, permisos, y (si aplica) layout con sidebar y `<Outlet />` para módulos.
+ * Punto de entrada de `/sas/*`: login de operadores Nomi (`platform_operators`), layout y `<Outlet />`.
  */
 export const PlatformApp = () => {
   const { data: gate, isPending, isError } = usePlatformOperator();

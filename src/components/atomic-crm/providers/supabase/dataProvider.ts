@@ -577,7 +577,7 @@ const dataProviderWithCustomMethods = {
         body: {
           action: "create_checkout",
           org_id: params.orgId,
-          return_path: params.returnPath ?? "/platform",
+          return_path: params.returnPath ?? "/sas",
         },
       },
     );
@@ -599,7 +599,7 @@ const dataProviderWithCustomMethods = {
         body: {
           action: "billing_portal",
           org_id: params.orgId,
-          return_path: params.returnPath ?? "/platform",
+          return_path: params.returnPath ?? "/sas",
         },
       },
     );

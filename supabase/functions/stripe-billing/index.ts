@@ -47,7 +47,7 @@ Deno.serve((req: Request) =>
       const base = siteBaseUrl();
       const returnPath = typeof body.return_path === "string" && body.return_path.startsWith("/")
         ? body.return_path
-        : "/platform";
+        : "/sas";
 
       try {
         switch (body.action) {

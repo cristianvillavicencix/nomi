@@ -136,34 +136,6 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/sales/index.ts",
-          "type": "registry:component"
-        },
-        {
-          "path": "src/components/atomic-crm/sales/SalesList.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "src/components/atomic-crm/sales/SalesInputs.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "src/components/atomic-crm/sales/SalesEdit.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "src/components/atomic-crm/sales/SalesCreate.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "src/components/atomic-crm/sales/SaleName.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "src/components/atomic-crm/sales/RedirectToSettingsUsers.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/root/useConfigurationLoader.ts",
           "type": "registry:component"
         },
@@ -256,7 +228,7 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/providers/fakerest/dataGenerator/sales.ts",
+          "path": "src/components/atomic-crm/providers/fakerest/dataGenerator/organizationMembers.ts",
           "type": "registry:component"
         },
         {
@@ -309,6 +281,34 @@
         },
         {
           "path": "src/components/atomic-crm/providers/commons/activity.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/organizationMembers/index.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/organizationMembers/SalesList.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/organizationMembers/SalesInputs.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/organizationMembers/SalesEdit.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/organizationMembers/SalesCreate.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/organizationMembers/RedirectToSettingsUsers.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/organizationMembers/OrganizationMemberName.tsx",
           "type": "registry:component"
         },
         {

@@ -71,6 +71,10 @@ import { PeopleQuickViewPage } from "@/people/PeopleQuickViewPage";
 import { ContactQuickViewPage } from "../contacts/ContactQuickViewPage";
 import { CompanyQuickViewPage } from "../companies/CompanyQuickViewPage";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  OldPlatformToSasRedirect,
+  PlatafformToSasRedirect,
+} from "@/platform/PlatafformRedirect";
 import { PlatformApp } from "@/platform/PlatformApp";
 import { PlatformEmpresasPage } from "@/platform/PlatformEmpresasPage";
 
@@ -260,7 +264,11 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           element={<ForgotPasswordPage />}
         />
         <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
-        <Route path="/platform/*" element={<PlatformApp />}>
+        <Route path="/platafform" element={<Navigate to="/sas" replace />} />
+        <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
+        <Route path="/platform" element={<Navigate to="/sas" replace />} />
+        <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
+        <Route path="/sas/*" element={<PlatformApp />}>
           <Route index element={<Navigate to="empresas" replace />} />
           <Route path="empresas" element={<PlatformEmpresasPage />} />
         </Route>
@@ -502,7 +510,11 @@ const MobileAdmin = (props: CoreAdminProps) => {
             element={<ForgotPasswordPage />}
           />
           <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
-          <Route path="/platform/*" element={<PlatformApp />}>
+          <Route path="/platafform" element={<Navigate to="/sas" replace />} />
+          <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
+          <Route path="/platform" element={<Navigate to="/sas" replace />} />
+          <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
+          <Route path="/sas/*" element={<PlatformApp />}>
             <Route index element={<Navigate to="empresas" replace />} />
             <Route path="empresas" element={<PlatformEmpresasPage />} />
           </Route>
