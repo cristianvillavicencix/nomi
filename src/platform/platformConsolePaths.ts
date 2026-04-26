@@ -9,9 +9,8 @@ export function isPlatformConsolePath(pathname: string): boolean {
   );
 }
 
-/** Vista Empresas bajo /sas/empresas (o legado /platform/... durante redirect). */
-export function isPlatformEmpresasPath(pathname: string): boolean {
-  const segs = pathname.replace(/\/$/, "").split("/").filter(Boolean);
-  if (segs[segs.length - 1] !== "empresas") return false;
-  return isPlatformConsolePath(pathname);
+/** Vista «Empresas» solo en `/sas/empresas` (ruta fija, sin `/empresas/empresas/…`). */
+export function isPlatformEmpresasPathExact(pathname: string): boolean {
+  const p = pathname.replace(/\/$/, "") || "/";
+  return p === "/sas/empresas";
 }

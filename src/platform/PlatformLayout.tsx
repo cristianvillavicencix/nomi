@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { ThemeModeToggle } from "@/components/admin/theme-mode-toggle";
-import { isPlatformEmpresasPath } from "./platformConsolePaths";
+import { isPlatformEmpresasPathExact } from "./platformConsolePaths";
 import { PlatformChangePasswordDialog } from "./PlatformChangePasswordDialog";
 
 const PlatformNavItem = ({
@@ -30,14 +30,15 @@ const PlatformNavItem = ({
   icon: React.ReactNode;
 }) => {
   const location = useLocation();
-  const active = to === "empresas" ? isPlatformEmpresasPath(location.pathname) : false;
+  const active =
+    to === "/sas/empresas" ? isPlatformEmpresasPathExact(location.pathname) : false;
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={active}>
         <NavLink
           to={to}
           className="flex items-center gap-2"
-          end={to === "empresas"}
+          end
           state={{ _scrollToTop: true }}
         >
           {icon}
@@ -92,7 +93,7 @@ export const PlatformLayout = () => {
             <SidebarGroupLabel>Consola SaaS</SidebarGroupLabel>
             <SidebarMenu>
               <PlatformNavItem
-                to="empresas"
+                to="/sas/empresas"
                 label="Empresas"
                 icon={<Building2 className="size-4" />}
               />

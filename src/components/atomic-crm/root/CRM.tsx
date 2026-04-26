@@ -271,7 +271,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
         <Route path="/platform" element={<Navigate to="/sas" replace />} />
         <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
         <Route path="/sas/*" element={<PlatformApp />}>
-          <Route index element={<Navigate to="empresas" replace />} />
+          <Route index element={<Navigate to="/sas/empresas" replace />} />
           <Route path="empresas" element={<PlatformEmpresasPage />} />
         </Route>
       </CustomRoutes>
@@ -516,10 +516,10 @@ const MobileAdmin = (props: CoreAdminProps) => {
           <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
           <Route path="/platform" element={<Navigate to="/sas" replace />} />
           <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
-          <Route path="/sas/*" element={<PlatformApp />}>
-            <Route index element={<Navigate to="empresas" replace />} />
+<Route path="/sas/*" element={<PlatformApp />}>
+            <Route index element={<Navigate to="/sas/empresas" replace />} />
             <Route path="empresas" element={<PlatformEmpresasPage />} />
-          </Route>
+        </Route>
         </CustomRoutes>
         <Resource
           name="contacts"

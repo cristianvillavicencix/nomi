@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router";
+import { Link, Navigate, useLocation } from "react-router";
 import { useNotify, useLogout } from "ra-core";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -176,6 +176,17 @@ const PlatformSessionWithoutOperator = () => {
 };
 
 /**
+ * Evita URLs como `/sas/empresas/empresas/...` (NavLink con `to` relativo). Normaliza a `/sas/empresas`.
+ */
+const PlatformSasPathRedirect = () => {
+  const { pathname, search, hash, state } = useLocation();
+  if (pathname.includes("/empresas/empresas")) {
+    return <Navigate to={{ pathname: "/sas/empresas", search, hash }} replace state={state} />;
+  }
+  return <PlatformLayout />;
+};
+
+/**
  * Punto de entrada de `/sas/*`: login de operadores Nomi (`platform_operators`), layout y `<Outlet />`.
  */
 export const PlatformApp = () => {
@@ -213,5 +224,5 @@ export const PlatformApp = () => {
     return <PlatformSessionWithoutOperator />;
   }
 
-  return <PlatformLayout />;
+  return <PlatformSasPathRedirect />;
 };
