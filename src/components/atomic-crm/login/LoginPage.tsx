@@ -44,6 +44,28 @@ export const LoginPage = (props: { redirectTo?: string }) => {
     },
   });
 
+  // Tras un logout, react-admin pone en `state` el path previo (nextPathname) para
+  // redirigir al usuario tras /login. Si estuvo en la consola `/sas/...`, `useLogin` le
+  // devolvería a SAS en vez del CRM; al entrar por /login (dueños/equipo) queremos /.
+  useLayoutEffect(() => {
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    if (!path.endsWith("/login")) {
+      return;
+    }
+    const st = location.state as
+      | { nextPathname?: string; nextSearch?: string }
+      | null
+      | undefined;
+    const next = st?.nextPathname;
+    if (typeof next !== "string" || (next !== "/sas" && !next.startsWith("/sas/"))) {
+      return;
+    }
+    navigate(
+      { pathname: location.pathname, search: location.search, hash: location.hash },
+      { replace: true, state: { ...st, nextPathname: undefined, nextSearch: undefined } },
+    );
+  }, [location.pathname, location.search, location.hash, location.state, navigate]);
+
   // Con router por *historia* la ruta es solo /login. Quitar fragmentos #/… heredados del
   // HashRouter (marcadores, SW, caché) — p. ej. /login#/login. No tocar #access_token=…
   // ni otros hashes con carga útil.
