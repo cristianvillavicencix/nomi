@@ -31,6 +31,9 @@ export default defineConfig({
         // on e.g. DealList-*.js). HTML should load from the network to pick up
         // the current import map. JS/CSS stay precached for speed.
         globPatterns: ["**/*.{js,css,ico,png,svg,woff,woff2}"],
+        // Sin index.html en precache, un navigateFallback a index.html dispara
+        // "non-precached-url" en Workbox. Desactivar fallback; la app sigue en línea.
+        navigateFallback: null,
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Form, required, useLogin, useNotify } from "ra-core";
 import type { SubmitHandler, FieldValues } from "react-hook-form";
@@ -43,6 +43,14 @@ export const LoginPage = (props: { redirectTo?: string }) => {
       return dataProvider.isInitialized();
     },
   });
+
+  // Evita /login#/login (hash duplicado por SW, extensiones o redirecciones antiguas).
+  useLayoutEffect(() => {
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    if (path === "/login" && location.hash === "#/login") {
+      navigate({ pathname: "/login", search: location.search, hash: "" }, { replace: true });
+    }
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);

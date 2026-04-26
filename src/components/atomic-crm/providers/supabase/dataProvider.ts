@@ -510,9 +510,21 @@ const dataProviderWithCustomMethods = {
 
     return data;
   },
+  /**
+   * Usa el cliente de Supabase con `.maybeSingle()` en lugar de `getOne` del data provider.
+   * Sin sesión, RLS no devuelve filas: PostgREST respondía 406 (Accept object+json) al esperar
+   * exactamente un registro. Esto afecta /login, /sas y otras rutas anónimas.
+   */
   async getConfiguration(): Promise<ConfigurationContextValue> {
-    const { data } = await baseDataProvider.getOne("configuration", { id: 1 });
-    const raw = (data?.config as ConfigurationContextValue) ?? {};
+    const { data, error } = await supabase
+      .from("configuration")
+      .select("config")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error || data == null) {
+      return withCurrentProductName({}) as ConfigurationContextValue;
+    }
+    const raw = (data.config as ConfigurationContextValue) ?? {};
     return withCurrentProductName(raw) as ConfigurationContextValue;
   },
   async updateConfiguration(
