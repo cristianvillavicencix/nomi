@@ -224,6 +224,11 @@ export const CRM = ({
 
   const ResponsiveAdmin = isMobile ? MobileAdmin : DesktopAdmin;
 
+  const adminBasename =
+    import.meta.env.BASE_URL.length > 1
+      ? import.meta.env.BASE_URL.replace(/\/$/, "")
+      : undefined;
+
   return (
     <ResponsiveAdmin
       dataProvider={dataProvider}
@@ -234,6 +239,7 @@ export const CRM = ({
       requireAuth
       disableTelemetry
       {...rest}
+      basename={adminBasename}
     />
   );
 };

@@ -93,6 +93,21 @@ function clearCache() {
   storage?.removeItem(CURRENT_SALE_CACHE_KEY);
 }
 
+/**
+ * When the app is deployed with a Vite `base` (e.g. /profile/), pathname is
+ * /profile/sign-up, not /sign-up — strict equality in checkAuth was skipping
+ * the public page and users ended up in the app with an active session.
+ */
+function isPublicAuthRoute(): boolean {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname.replace(/\/$/, "") || "/";
+  const hash = window.location.hash;
+  const segment =
+    (s: "sign-up" | "set-password" | "forgot-password") =>
+    path === `/${s}` || path.endsWith(`/${s}`) || hash.includes(`#/${s}`);
+  return segment("set-password") || segment("forgot-password") || segment("sign-up");
+}
+
 export const authProvider: AuthProvider = {
   ...baseAuthProvider,
   login: async (params) => {
@@ -112,25 +127,7 @@ export const authProvider: AuthProvider = {
     return baseAuthProvider.logout(params);
   },
   checkAuth: async (params) => {
-    // Users are on the set-password page, nothing to do
-    if (
-      window.location.pathname === "/set-password" ||
-      window.location.hash.includes("#/set-password")
-    ) {
-      return;
-    }
-    // Users are on the forgot-password page, nothing to do
-    if (
-      window.location.pathname === "/forgot-password" ||
-      window.location.hash.includes("#/forgot-password")
-    ) {
-      return;
-    }
-    // Users are on the sign-up page, nothing to do
-    if (
-      window.location.pathname === "/sign-up" ||
-      window.location.hash.includes("#/sign-up")
-    ) {
+    if (isPublicAuthRoute()) {
       return;
     }
 
