@@ -26,6 +26,12 @@ export function withCurrentProductName<
   return out;
 }
 
+/**
+ * Used in Settings “Your sector” Select: Radix SelectItem cannot use `value=""`, so we store this
+ * in the form when no industry is chosen and map to {@link ConfigurationContextValue.primaryBusinessSector} "" on save.
+ */
+export const primaryBusinessSectorUnsetToken = "__unset__";
+
 export const defaultCompanySectors = [
   { value: "communication-services", label: "Communication Services" },
   { value: "consumer-discretionary", label: "Consumer Discretionary" },
@@ -100,6 +106,7 @@ export const defaultTaskTypes = [
 
 export const defaultConfiguration: ConfigurationContextValue = {
   companySectors: defaultCompanySectors,
+  primaryBusinessSector: "",
   companyLegalName: defaultTitle,
   companyTaxId: "",
   companyAddressLine1: "",
@@ -110,6 +117,7 @@ export const defaultConfiguration: ConfigurationContextValue = {
   companyCountry: "United States",
   companyPhone: "",
   companyEmail: "",
+  companyWebsite: "",
   companyRepresentativeName: "",
   companyRepresentativeTitle: "Authorized Representative",
   dealCategories: defaultDealCategories,

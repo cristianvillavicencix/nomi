@@ -15,6 +15,8 @@ export const CONFIGURATION_STORE_KEY = "app.configuration";
 
 export interface ConfigurationContextValue {
   companySectors: LabeledValue[];
+  /** The tenant’s primary industry (one value from the standard GICS-style sector list). */
+  primaryBusinessSector?: string;
   companyLegalName?: string;
   companyTaxId?: string;
   companyAddressLine1?: string;
@@ -25,6 +27,8 @@ export interface ConfigurationContextValue {
   companyCountry?: string;
   companyPhone?: string;
   companyEmail?: string;
+  /** Public website URL for the tenant (optional). */
+  companyWebsite?: string;
   companyRepresentativeName?: string;
   companyRepresentativeTitle?: string;
   dealCategories: LabeledValue[];

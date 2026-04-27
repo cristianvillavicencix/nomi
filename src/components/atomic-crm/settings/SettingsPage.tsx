@@ -1,12 +1,11 @@
 import { RotateCcw, Save } from "lucide-react";
 import type { RaRecord } from "ra-core";
 import { EditBase, Form, useGetList, useInput, useNotify } from "ra-core";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { isTenantBrandingEditorVisible } from "./tenantBrandingFlags";
 import { useSearchParams } from "react-router";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toSlug } from "@/lib/toSlug";
 import { ArrayInput } from "@/components/admin/array-input";
@@ -16,25 +15,41 @@ import { SelectInput } from "@/components/admin/select-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { TextInput } from "@/components/admin/text-input";
 
-import ImageEditorField from "../misc/ImageEditorField";
 import {
   useConfigurationContext,
   useConfigurationUpdater,
   type ConfigurationContextValue,
 } from "../root/ConfigurationContext";
-import { defaultConfiguration } from "../root/defaultConfiguration";
+import {
+  defaultCompanySectors,
+  defaultConfiguration,
+  primaryBusinessSectorUnsetToken,
+} from "../root/defaultConfiguration";
 import type { DealPipeline, DealPipelineStage } from "../types";
+import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import { UsersSettingsSection } from "./UsersSettingsSection";
 
-const SECTIONS = [
-  { id: "branding", label: "Branding" },
-  { id: "users", label: "Users" },
-  { id: "payroll", label: "Payment Settings" },
-  { id: "companies", label: "Companies" },
-  { id: "deals", label: "Projects" },
+const SETTINGS_TAB_IDS = [
+  "general",
+  "users",
+  "payments",
+  "projects",
+  "notes",
+  "tasks",
+] as const;
+type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];
+
+const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = [
+  { id: "general", label: "General" },
+  { id: "users", label: "Users & roles" },
+  { id: "payments", label: "Payments" },
+  { id: "projects", label: "Projects" },
   { id: "notes", label: "Notes" },
   { id: "tasks", label: "Tasks" },
 ];
+
+const isSettingsTabId = (value: string | null): value is SettingsTabId =>
+  value != null && (SETTINGS_TAB_IDS as readonly string[]).includes(value);
 
 /** Ensure every item in a { value, label } array has a value (slug from label). */
 const ensureValues = (items: { value?: string; label: string }[] | undefined) =>
@@ -109,9 +124,16 @@ const transformFormValues = (
       companyCountry: data.companyCountry,
       companyPhone: data.companyPhone,
       companyEmail: data.companyEmail,
+      companyWebsite: typeof data.companyWebsite === "string" ? data.companyWebsite.trim() : "",
       companyRepresentativeName: data.companyRepresentativeName,
       companyRepresentativeTitle: data.companyRepresentativeTitle,
-      companySectors: ensureValues(data.companySectors),
+      primaryBusinessSector:
+        typeof data.primaryBusinessSector === "string" &&
+        data.primaryBusinessSector.length > 0 &&
+        data.primaryBusinessSector !== primaryBusinessSectorUnsetToken
+          ? data.primaryBusinessSector
+          : "",
+      companySectors: defaultCompanySectors,
       dealCategories: ensureValues(data.dealCategories),
       taskTypes: ensureValues(data.taskTypes),
       dealPipelines: (data.dealPipelines ?? []).map(
@@ -178,11 +200,6 @@ const transformFormValues = (
   };
 };
 
-const SETTINGS_SECTIONS = SECTIONS.filter(
-  (section) =>
-    section.id !== "branding" || isTenantBrandingEditorVisible(),
-);
-
 const SettingsPageContent = () => {
   const currentConfig = useConfigurationContext();
   const updateConfiguration = useConfigurationUpdater();
@@ -236,9 +253,14 @@ const SettingsForm = () => {
       companyCountry: config.companyCountry,
       companyPhone: config.companyPhone,
       companyEmail: config.companyEmail,
+      companyWebsite: config.companyWebsite,
       companyRepresentativeName: config.companyRepresentativeName,
       companyRepresentativeTitle: config.companyRepresentativeTitle,
-      companySectors: config.companySectors,
+      companySectors: defaultCompanySectors,
+      primaryBusinessSector:
+        config.primaryBusinessSector && config.primaryBusinessSector.length > 0
+          ? config.primaryBusinessSector
+          : primaryBusinessSectorUnsetToken,
       dealCategories: config.dealCategories,
       taskTypes: config.taskTypes,
       dealPipelines: config.dealPipelines,
@@ -266,20 +288,53 @@ const SettingsFormFields = () => {
     formState: { isSubmitting },
   } = useFormContext();
   const [searchParams, setSearchParams] = useSearchParams();
-  const hasHandledUsersSection = useRef(false);
 
   const dealPipelines: DealPipeline[] = watch("dealPipelines") ?? [];
 
+  const tabParam = searchParams.get("tab");
+  const normalizedTab = tabParam === "plans" ? "users" : tabParam;
+  const activeTab: SettingsTabId = isSettingsTabId(normalizedTab) ? normalizedTab : "general";
+
+  const setSettingsTab = useCallback(
+    (id: SettingsTabId) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("tab", id);
+          next.delete("section");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   useLayoutEffect(() => {
-    if (hasHandledUsersSection.current) return;
-    if (searchParams.get("section") !== "users") return;
-    hasHandledUsersSection.current = true;
-    requestAnimationFrame(() => {
-      document.getElementById("users")?.scrollIntoView({ block: "start" });
-    });
-    const next = new URLSearchParams(searchParams);
-    next.delete("section");
-    setSearchParams(next, { replace: true });
+    if (searchParams.get("tab") !== "plans") return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", "users");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
+
+  useLayoutEffect(() => {
+    const section = searchParams.get("section");
+    if (section == null) return;
+    if (section !== "users" && section !== "general") return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", section === "users" ? "users" : "general");
+        next.delete("section");
+        return next;
+      },
+      { replace: true },
+    );
   }, [searchParams, setSearchParams]);
 
   const { data: deals } = useGetList("deals", {
@@ -311,73 +366,34 @@ const SettingsFormFields = () => {
   );
 
   return (
-    <div className="flex gap-8 mt-4 pb-20">
-      {/* Left navigation */}
-      <nav className="hidden md:block w-48 shrink-0">
-        <div className="sticky top-4 space-y-1">
-          <h1 className="text-2xl font-semibold px-3 mb-2">Settings</h1>
-          {SETTINGS_SECTIONS.map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => {
-                document
-                  .getElementById(section.id)
-                  ?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="block w-full text-left px-3 py-1 text-sm rounded-md hover:text-foreground hover:bg-muted transition-colors"
-            >
-              {section.label}
-            </button>
-          ))}
-        </div>
+    <div className="w-full min-w-0 mt-1 pb-28">
+      <h1 className="text-2xl font-semibold tracking-tight mb-5">Settings</h1>
+      <nav
+        className="flex flex-wrap gap-2 mb-8 border-b border-border/50 pb-4"
+        aria-label="Settings sections"
+        role="tablist"
+      >
+        {SETTINGS_TABS.map((t) => (
+          <Button
+            key={t.id}
+            type="button"
+            role="tab"
+            variant={activeTab === t.id ? "default" : "secondary"}
+            size="sm"
+            aria-selected={activeTab === t.id}
+            onClick={() => setSettingsTab(t.id)}
+          >
+            {t.label}
+          </Button>
+        ))}
       </nav>
 
-      {/* Main content */}
-      <div className="flex-1 min-w-0 max-w-2xl space-y-6">
-        {isTenantBrandingEditorVisible() && (
-          <Card id="branding">
-            <CardContent className="space-y-4">
-              <h2 className="text-xl font-semibold text-muted-foreground">
-                Branding
-              </h2>
-              <TextInput source="title" label="App Title" />
-              <div className="flex gap-8">
-                <div className="flex flex-col items-center gap-1">
-                  <p className="text-sm text-muted-foreground">Light Mode Logo</p>
-                  <ImageEditorField
-                    source="lightModeLogo"
-                    width={100}
-                    height={100}
-                    linkPosition="bottom"
-                    backgroundImageColor="#f5f5f5"
-                  />
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <p className="text-sm text-muted-foreground">Dark Mode Logo</p>
-                  <ImageEditorField
-                    source="darkModeLogo"
-                    width={100}
-                    height={100}
-                    linkPosition="bottom"
-                    backgroundImageColor="#1a1a1a"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <UsersSettingsSection />
-
-        {/* Companies */}
-        <Card id="payroll">
-          <CardContent className="space-y-4">
-            <h2 className="text-xl font-semibold text-muted-foreground">
-              Payroll Settings
-            </h2>
-            <h3 className="text-lg font-medium text-muted-foreground">Company Pay Schedule</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {activeTab === "general" ? <SettingsGeneralTab /> : null}
+      {activeTab === "users" ? <UsersSettingsSection /> : null}
+      {activeTab === "payments" ? (
+        <div className="space-y-8 max-w-6xl">
+            <h2 className="text-sm font-medium text-muted-foreground">Pay schedule &amp; methods</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <SelectInput
                 source="payrollSettings.companyPaySchedule"
                 choices={[
@@ -386,7 +402,7 @@ const SettingsFormFields = () => {
                   { id: "semimonthly", name: "Semi-monthly" },
                   { id: "monthly", name: "Monthly" },
                 ]}
-                label="How often the company runs payroll"
+                label="Payroll frequency"
               />
               <SelectInput
                 source="payrollSettings.defaultPaymentMethod"
@@ -394,120 +410,62 @@ const SettingsFormFields = () => {
                   { id: "cash", name: "Cash" },
                   { id: "check", name: "Check" },
                   { id: "zelle", name: "Zelle" },
-                  { id: "bank_deposit", name: "Bank Deposit" },
+                  { id: "bank_deposit", name: "Bank deposit" },
                 ]}
+                label="Default payment method"
               />
             </div>
-
-            <h3 className="text-lg font-medium text-muted-foreground">Payroll Timing Rules</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <h2 className="text-sm font-medium text-muted-foreground">Pay timing</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <TextInput source="payrollSettings.weeklyPayday" label="Weekly payday" />
-              <TextInput source="payrollSettings.biweeklyAnchorDate" label="Biweekly anchor date (YYYY-MM-DD)" />
+              <TextInput source="payrollSettings.biweeklyAnchorDate" label="Biweekly anchor (YYYY-MM-DD)" />
               <SelectInput
                 source="payrollSettings.monthlyPayRule"
-                label="Monthly pay rule"
+                label="Monthly rule"
                 choices={[
                   { id: "end_of_month", name: "End of month" },
-                  { id: "day_of_month", name: "Specific day of month" },
+                  { id: "day_of_month", name: "Day of month" },
                 ]}
               />
-              <NumberInput source="payrollSettings.monthlyDayOfMonth" label="Monthly day number" />
-              <NumberInput source="payrollSettings.payPeriodStartDay" label="Pay Period Start Day" />
-              <NumberInput source="payrollSettings.payPeriodEndDay" label="Pay Period End Day" />
-              <TextInput source="payrollSettings.payday" label="Legacy payday label" />
+              <NumberInput source="payrollSettings.monthlyDayOfMonth" label="Monthly day" />
+              <NumberInput source="payrollSettings.payPeriodStartDay" label="Period start day" />
+              <NumberInput source="payrollSettings.payPeriodEndDay" label="Period end day" />
+              <TextInput source="payrollSettings.payday" label="Payday (legacy label)" />
             </div>
-
-            <h3 className="text-lg font-medium text-muted-foreground">Overtime Settings</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <BooleanInput source="payrollSettings.overtimeEnabledGlobally" label="Overtime enabled globally" />
-              <NumberInput source="payrollSettings.overtimeWeeklyThreshold" label="Weekly OT Threshold" />
-              <NumberInput source="payrollSettings.defaultOvertimeMultiplier" label="OT Multiplier" />
-              <NumberInput source="payrollSettings.defaultHoursPerWeekReference" label="Default hours/week reference" />
+            <h2 className="text-sm font-medium text-muted-foreground">Overtime</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <BooleanInput source="payrollSettings.overtimeEnabledGlobally" label="Overtime on" />
+              <NumberInput source="payrollSettings.overtimeWeeklyThreshold" label="Weekly OT threshold" />
+              <NumberInput source="payrollSettings.defaultOvertimeMultiplier" label="OT multiplier" />
+              <NumberInput
+                source="payrollSettings.defaultHoursPerWeekReference"
+                label="Default hours / week"
+              />
             </div>
-
-            <h3 className="text-lg font-medium text-muted-foreground">Time Entry Defaults</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <NumberInput source="payrollSettings.lunchAutoSuggestHours" label="Lunch Suggest Hours" />
-              <NumberInput source="payrollSettings.lunchAutoSuggestMinutes" label="Lunch Suggest Minutes" />
-              <BooleanInput source="payrollSettings.usFederalHolidaysEnabled" label="Enable US Federal Holidays" />
+            <h2 className="text-sm font-medium text-muted-foreground">Time entry</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <NumberInput source="payrollSettings.lunchAutoSuggestHours" label="Lunch after (h)" />
+              <NumberInput source="payrollSettings.lunchAutoSuggestMinutes" label="Lunch (min)" />
+              <BooleanInput source="payrollSettings.usFederalHolidaysEnabled" label="US federal holidays" />
             </div>
-
-            <h3 className="text-lg font-medium text-muted-foreground">Custom Holidays</h3>
+            <h2 className="text-sm font-medium text-muted-foreground">Holidays</h2>
             <ArrayInput source="payrollSettings.customHolidays" label={false} helperText={false}>
               <SimpleFormIterator inline disableReordering>
                 <TextInput source="date" label="Date (YYYY-MM-DD)" />
                 <TextInput source="label" label="Label" />
               </SimpleFormIterator>
             </ArrayInput>
-          </CardContent>
-        </Card>
-
-        {/* Companies */}
-        <Card id="companies">
-          <CardContent className="space-y-4">
-            <h2 className="text-xl font-semibold text-muted-foreground">
-              Companies
-            </h2>
-            <h3 className="text-lg font-medium text-muted-foreground">
-              Legal Profile
-            </h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <TextInput source="companyLegalName" label="Legal company name" />
-              <TextInput source="companyTaxId" label="Tax ID / EIN" />
-              <TextInput source="companyRepresentativeName" label="Representative name" />
-              <TextInput source="companyRepresentativeTitle" label="Representative title" />
-              <TextInput source="companyPhone" label="Company phone" />
-              <TextInput source="companyEmail" label="Company email" />
-              <TextInput
-                source="companyAddressLine1"
-                label="Address line 1"
-                className="md:col-span-2"
-              />
-              <TextInput
-                source="companyAddressLine2"
-                label="Address line 2"
-                className="md:col-span-2"
-              />
-              <TextInput source="companyCity" label="City" />
-              <TextInput source="companyState" label="State" />
-              <TextInput source="companyPostalCode" label="ZIP / Postal code" />
-              <TextInput source="companyCountry" label="Country" />
-            </div>
-
-            <Separator />
-
-            <h3 className="text-lg font-medium text-muted-foreground">
-              Sectors
-            </h3>
-            <ArrayInput
-              source="companySectors"
-              label={false}
-              helperText={false}
-            >
-              <SimpleFormIterator disableReordering disableClear>
-                <TextInput source="label" label={false} />
-              </SimpleFormIterator>
-            </ArrayInput>
-          </CardContent>
-        </Card>
-
-        {/* Projects */}
-        <Card id="deals">
-          <CardContent className="space-y-4">
-            <h2 className="text-xl font-semibold text-muted-foreground">
-              Projects
-            </h2>
+        </div>
+      ) : null}
+      {activeTab === "projects" ? (
+        <div className="space-y-6 max-w-6xl">
             <PipelinesEditor
               pipelines={dealPipelines}
               onChange={(pipelines) => setValue("dealPipelines", pipelines)}
               deals={deals}
             />
-
             <Separator />
-
-            <h3 className="text-lg font-medium text-muted-foreground">
-              Categories
-            </h3>
+            <h2 className="text-sm font-medium text-muted-foreground">Categories</h2>
             <ArrayInput
               source="dealCategories"
               label={false}
@@ -518,48 +476,32 @@ const SettingsFormFields = () => {
                 <TextInput source="label" label={false} />
               </SimpleFormIterator>
             </ArrayInput>
-          </CardContent>
-        </Card>
-
-        {/* Notes */}
-        <Card id="notes">
-          <CardContent className="space-y-4">
-            <h2 className="text-xl font-semibold text-muted-foreground">
-              Notes
-            </h2>
-            <h3 className="text-lg font-medium text-muted-foreground">
-              Statuses
-            </h3>
+        </div>
+      ) : null}
+      {activeTab === "notes" ? (
+        <div className="space-y-4 max-w-4xl">
+            <h2 className="text-sm font-medium text-muted-foreground">Note statuses</h2>
             <ArrayInput source="noteStatuses" label={false} helperText={false}>
               <SimpleFormIterator inline disableReordering disableClear>
                 <TextInput source="label" label={false} className="flex-1" />
                 <ColorInput source="color" />
               </SimpleFormIterator>
             </ArrayInput>
-          </CardContent>
-        </Card>
-
-        {/* Tasks */}
-        <Card id="tasks">
-          <CardContent className="space-y-4">
-            <h2 className="text-xl font-semibold text-muted-foreground">
-              Tasks
-            </h2>
-            <h3 className="text-lg font-medium text-muted-foreground">Types</h3>
+        </div>
+      ) : null}
+      {activeTab === "tasks" ? (
+        <div className="space-y-4 max-w-4xl">
+            <h2 className="text-sm font-medium text-muted-foreground">Task types</h2>
             <ArrayInput source="taskTypes" label={false} helperText={false}>
               <SimpleFormIterator disableReordering disableClear>
                 <TextInput source="label" label={false} />
               </SimpleFormIterator>
             </ArrayInput>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
+      ) : null}
 
-      {/* Sticky save button */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-background p-4">
-        <div className="max-w-screen-xl mx-auto flex gap-8 px-4">
-          <div className="hidden md:block w-48 shrink-0" />
-          <div className="flex-1 min-w-0 max-w-2xl flex justify-between">
+      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="flex w-full min-w-0 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <Button
               type="button"
               variant="ghost"
@@ -568,6 +510,7 @@ const SettingsFormFields = () => {
                   isTenantBrandingEditorVisible()
                     ? {
                         ...defaultConfiguration,
+                        primaryBusinessSector: primaryBusinessSectorUnsetToken,
                         lightModeLogo: {
                           src: defaultConfiguration.lightModeLogo,
                         },
@@ -577,6 +520,7 @@ const SettingsFormFields = () => {
                       }
                     : {
                         ...defaultConfiguration,
+                        primaryBusinessSector: primaryBusinessSectorUnsetToken,
                         title: config.title,
                         lightModeLogo: { src: config.lightModeLogo },
                         darkModeLogo: { src: config.darkModeLogo },
@@ -602,7 +546,6 @@ const SettingsFormFields = () => {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 };

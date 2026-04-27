@@ -1,6 +1,6 @@
 import { getStripe } from "./stripeClient.ts";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
-import { countSalesForOrg } from "./billingAccess.ts";
+import { getActiveMemberCount } from "./billingAccess.ts";
 
 /**
  * Pushes the current `sales` row count for the org to the Stripe subscription quantity
@@ -18,7 +18,7 @@ export async function pushSeatCountToStripeForOrg(orgId: number) {
     return { ok: false as const, error: "No subscription on file for this organization" };
   }
 
-  const seats = await countSalesForOrg(orgId);
+  const seats = await getActiveMemberCount(orgId);
   const quantity = Math.max(1, seats);
 
   const sub = await stripe.subscriptions.retrieve(org.stripe_subscription_id, {

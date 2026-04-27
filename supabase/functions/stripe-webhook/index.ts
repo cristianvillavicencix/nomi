@@ -121,23 +121,35 @@ Deno.serve(async (req: Request) => {
       }
       case "customer.subscription.created":
       case "customer.subscription.updated": {
-        const sub = event.data.object as {
+        const subPartial = event.data.object as {
           id: string;
           status: string;
           customer: string;
           metadata?: Record<string, string> | null;
         };
-        const orgId = await resolveOrgIdFromSubscription(sub);
+        const orgId = await resolveOrgIdFromSubscription(subPartial);
         if (orgId == null) {
           break;
         }
-        const status = mapStripeStatusToBilling(sub.status);
+        let billableCount: number | null = null;
+        try {
+          const stripe = getStripe();
+          const full = await stripe.subscriptions.retrieve(subPartial.id, {
+            expand: ["items.data"],
+          });
+          const q = full.items.data[0]?.quantity;
+          billableCount = typeof q === "number" ? q : null;
+        } catch (e) {
+          console.error("subscription webhook retrieve", e);
+        }
+        const status = mapStripeStatusToBilling(subPartial.status);
         await supabaseAdmin
           .from("organizations")
           .update({
-            stripe_customer_id: sub.customer,
-            stripe_subscription_id: sub.id,
+            stripe_customer_id: subPartial.customer,
+            stripe_subscription_id: subPartial.id,
             billing_status: status,
+            ...(billableCount != null ? { billable_seat_count: billableCount } : {}),
           })
           .eq("id", orgId);
         break;
@@ -163,6 +175,7 @@ Deno.serve(async (req: Request) => {
           .update({
             billing_status: "canceled",
             stripe_subscription_id: null,
+            billable_seat_count: null,
           })
           .eq("id", targetOrgId);
         break;

@@ -4,6 +4,7 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
+import { assertSeatsAllowNewInvite } from "../_shared/billingAccess.ts";
 
 const ALLOWED_ROLES = [
   "admin",
@@ -197,6 +198,24 @@ async function inviteUser(req: Request, currentOrgMember: any) {
   }
 
   const orgId = saleOrgId(currentOrgMember);
+
+  try {
+    await assertSeatsAllowNewInvite(orgId);
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (msg.startsWith("SUBSCRIBE_FIRST:")) {
+      return createErrorResponse(400, msg.replace(/^SUBSCRIBE_FIRST:\s*/, ""), {
+        code: "SUBSCRIBE_FIRST",
+      });
+    }
+    if (msg.startsWith("SEAT_LIMIT:")) {
+      return createErrorResponse(400, msg.replace(/^SEAT_LIMIT:\s*/, ""), { code: "SEAT_LIMIT" });
+    }
+    if (msg === "Organization not found") {
+      return createErrorResponse(404, msg);
+    }
+    return createErrorResponse(500, msg);
+  }
 
   try {
     await assertSingleAdministrator(null, administrator, orgId);

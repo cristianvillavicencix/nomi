@@ -7,7 +7,7 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
   assertPlatformOrOrgAdmin,
   getPrimaryAdminEmail,
-  countSalesForOrg,
+  getActiveMemberCount,
 } from "../_shared/billingAccess.ts";
 import { defaultSeatPriceId, getStripe } from "../_shared/stripeClient.ts";
 import { pushSeatCountToStripeForOrg } from "../_shared/syncSubscriptionSeats.ts";
@@ -48,6 +48,7 @@ Deno.serve((req: Request) =>
       const returnPath = typeof body.return_path === "string" && body.return_path.startsWith("/")
         ? body.return_path
         : "/sas";
+      const checkoutQuerySep = returnPath.includes("?") ? "&" : "?";
 
       try {
         switch (body.action) {
@@ -80,12 +81,12 @@ Deno.serve((req: Request) =>
             if (!price) {
               return createErrorResponse(500, "Missing STRIPE_SEAT_PRICE_ID / stripe_seat_price_id");
             }
-            const seatCount = Math.max(1, await countSalesForOrg(orgId));
+            const seatCount = Math.max(1, await getActiveMemberCount(orgId));
             const adminEmail = await getPrimaryAdminEmail(orgId);
             const session = await stripe.checkout.sessions.create({
               mode: "subscription",
-              success_url: `${base}${returnPath}?checkout=success&org_id=${orgId}`,
-              cancel_url: `${base}${returnPath}?checkout=cancel`,
+              success_url: `${base}${returnPath}${checkoutQuerySep}checkout=success&org_id=${orgId}`,
+              cancel_url: `${base}${returnPath}${checkoutQuerySep}checkout=cancel`,
               client_reference_id: String(orgId),
               line_items: [{ price, quantity: seatCount }],
               ...(org.stripe_customer_id
@@ -137,6 +138,60 @@ Deno.serve((req: Request) =>
               status: 200,
               headers: { "Content-Type": "application/json", ...corsHeaders },
             });
+          }
+          case "add_one_seat": {
+            let stripe: ReturnType<typeof getStripe>;
+            try {
+              stripe = getStripe();
+            } catch (e) {
+              return createErrorResponse(500, (e as Error).message);
+            }
+            const { data: org, error: oerr } = await supabaseAdmin
+              .from("organizations")
+              .select("id, stripe_subscription_id, billing_status")
+              .eq("id", orgId)
+              .single();
+            if (oerr || !org?.stripe_subscription_id) {
+              return createErrorResponse(
+                400,
+                "You need an active subscription first. Use Subscribe in this screen.",
+              );
+            }
+            const canChange = new Set(["active", "trialing", "past_due"]);
+            if (!canChange.has((org.billing_status ?? "").trim())) {
+              return createErrorResponse(
+                400,
+                "Your subscription is not in a state that allows adding seats from here. Use Manage billing, or try again when the subscription is active.",
+              );
+            }
+            const sub = await stripe.subscriptions.retrieve(
+              org.stripe_subscription_id,
+              { expand: ["items.data"] },
+            );
+            const first = sub.items.data[0];
+            if (!first?.id) {
+              return createErrorResponse(500, "Subscription has no line items to update");
+            }
+            const current = typeof first.quantity === "number" && first.quantity > 0
+              ? first.quantity
+              : 1;
+            const nextQty = current + 1;
+            const updated = await stripe.subscriptions.update(sub.id, {
+              items: [{ id: first.id, quantity: nextQty }],
+              proration_behavior: "create_prorations",
+            });
+            const qty = updated.items.data[0]?.quantity ?? nextQty;
+            await supabaseAdmin
+              .from("organizations")
+              .update({ billable_seat_count: qty })
+              .eq("id", orgId);
+            return new Response(
+              JSON.stringify({ ok: true as const, quantity: qty, previous: current }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              },
+            );
           }
           default:
             return createErrorResponse(400, "Unknown action");

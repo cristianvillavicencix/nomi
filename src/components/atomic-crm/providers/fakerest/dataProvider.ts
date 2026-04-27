@@ -847,6 +847,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   stripeSyncSeats: async () => {
     throw new Error("Stripe billing is not available in demo mode");
   },
+  stripeAddOneSeat: async () => {
+    throw new Error("Stripe billing is not available in demo mode");
+  },
   getPlatformAuthUsers: async () => ({
     users: [],
     total: 0,

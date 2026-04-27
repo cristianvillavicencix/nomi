@@ -641,6 +641,26 @@ const dataProviderWithCustomMethods = {
     }
     return data;
   },
+  async stripeAddOneSeat(params: { orgId: number; returnPath?: string }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok: boolean;
+      quantity?: number;
+      previous?: number;
+    }>("stripe-billing", {
+      method: "POST",
+      body: {
+        action: "add_one_seat",
+        org_id: params.orgId,
+        return_path: params.returnPath ?? "/settings?tab=users",
+      },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to add a seat in Stripe",
+      );
+    }
+    return data;
+  },
   async getPlatformAuthUsers() {
     const { data, error } = await invokeEdgeFunction<{
       users: Array<{
