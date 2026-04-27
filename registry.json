@@ -132,6 +132,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/settings/SettingsGeneralTab.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/settings/ProfilePage.tsx",
           "type": "registry:component"
         },
