@@ -4,9 +4,19 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 
-async function updatePassword(user: any) {
+function getSetPasswordRedirectUrl(req: Request) {
+  const origin =
+    req.headers.get("origin") ??
+    Deno.env.get("BILLING_PUBLIC_SITE_URL") ??
+    "http://localhost:5173";
+
+  return new URL("/set-password", origin).toString();
+}
+
+async function updatePassword(req: Request, user: any) {
   const { data, error } = await supabaseAdmin.auth.resetPasswordForEmail(
     user.email,
+    { redirectTo: getSetPasswordRedirectUrl(req) },
   );
 
   if (!data || error) {
@@ -28,7 +38,7 @@ Deno.serve(async (req: Request) =>
     AuthMiddleware(req, async (req) =>
       UserMiddleware(req, async (req, user) => {
         if (req.method === "PATCH") {
-          return updatePassword(user);
+          return updatePassword(req, user);
         }
 
         return createErrorResponse(405, "Method Not Allowed");

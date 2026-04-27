@@ -32,7 +32,12 @@ export type OrganizationMemberFormData = {
 /** Workspaces / tenants (`public.organizations`). Exposed to the Platform console for billing. */
 export type OrganizationForPlatform = {
   name: string;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  address?: string | null;
   created_at?: string | null;
+  disabled_at?: string | null;
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   stripe_seat_price_id?: string | null;
@@ -261,7 +266,6 @@ export type Person = {
   pay_schedule?: "weekly" | "biweekly" | "semimonthly" | "monthly" | null;
   /** First day the person starts work; company pay schedule lives in org Payment Settings. */
   employment_start_date?: string | null;
-  default_hours_per_week?: number | null;
   default_work_days?: number[] | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;

@@ -9,8 +9,8 @@ export function isPlatformConsolePath(pathname: string): boolean {
   );
 }
 
-/** Vista «Empresas» solo en `/sas/empresas` (ruta fija, sin `/empresas/empresas/…`). */
+/** Vista «Empresas»: `/sas/empresas` y el detalle `/sas/empresas/:id`. */
 export function isPlatformEmpresasPathExact(pathname: string): boolean {
   const p = pathname.replace(/\/$/, "") || "/";
-  return p === "/sas/empresas";
+  return p === "/sas/empresas" || p.startsWith("/sas/empresas/");
 }

@@ -144,10 +144,22 @@ export const authProvider: AuthProvider = {
     const isInitialized = await getIsInitialized();
 
     if (!isInitialized) {
+      clearCache();
       await supabase.auth.signOut();
       throw {
         redirectTo: "/login",
         message: false,
+      };
+    }
+
+    // Verify the user still has an organization_member row (catches deleted/disabled orgs)
+    const sale = await getSale(false);
+    if (sale == null) {
+      clearCache();
+      await supabase.auth.signOut();
+      throw {
+        redirectTo: "/login",
+        message: "Tu cuenta ya no tiene acceso a este CRM.",
       };
     }
 

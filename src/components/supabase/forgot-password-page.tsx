@@ -10,6 +10,12 @@ interface FormData {
   email: string;
 }
 
+const getSetPasswordRedirectUrl = () => {
+  const base = import.meta.env.BASE_URL || "/";
+  const basePath = base.endsWith("/") ? base : `${base}/`;
+  return new URL(`${basePath}set-password`, window.location.origin).toString();
+};
+
 export const ForgotPasswordPage = () => {
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +34,7 @@ export const ForgotPasswordPage = () => {
       setLoading(true);
       await resetPassword({
         email: values.email,
+        redirectTo: getSetPasswordRedirectUrl(),
       });
     } catch (error: any) {
       notify(

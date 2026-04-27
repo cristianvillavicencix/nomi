@@ -78,6 +78,7 @@ import {
 } from "@/platform/PlatafformRedirect";
 import { PlatformApp } from "@/platform/PlatformApp";
 import { PlatformEmpresasPage } from "@/platform/PlatformEmpresasPage";
+import { PlatformEmpresaDetailPage } from "@/platform/PlatformEmpresaDetailPage";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -273,6 +274,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
         <Route path="/sas/*" element={<PlatformApp />}>
           <Route index element={<Navigate to="/sas/empresas" replace />} />
           <Route path="empresas" element={<PlatformEmpresasPage />} />
+          <Route path="empresas/:id" element={<PlatformEmpresaDetailPage />} />
         </Route>
       </CustomRoutes>
 
@@ -519,6 +521,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
 <Route path="/sas/*" element={<PlatformApp />}>
             <Route index element={<Navigate to="/sas/empresas" replace />} />
             <Route path="empresas" element={<PlatformEmpresasPage />} />
+            <Route path="empresas/:id" element={<PlatformEmpresaDetailPage />} />
         </Route>
         </CustomRoutes>
         <Resource
