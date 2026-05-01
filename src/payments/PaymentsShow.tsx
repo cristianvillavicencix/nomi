@@ -254,7 +254,7 @@ const PaymentPeoplePayoutCenter = ({
   );
 };
 
-const PaymentPrintDocument = ({
+export const PaymentPrintDocument = ({
   activePersonId,
   lines,
   people,
@@ -664,10 +664,11 @@ export const PaymentsShowContent = ({
 
   useEffect(() => {
     if (!isPrintMode || isPending || !record) return;
-    const frame = window.requestAnimationFrame(() => {
+    const timer = setTimeout(() => {
       window.print();
-    });
-    return () => window.cancelAnimationFrame(frame);
+      window.history.back();
+    }, 150);
+    return () => clearTimeout(timer);
   }, [isPending, isPrintMode, record]);
 
   if (!record) return null;

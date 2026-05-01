@@ -9,7 +9,7 @@ import {
   required,
 } from "ra-core";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   AutocompleteInput,
   Create,
@@ -18,6 +18,9 @@ import {
   SimpleForm,
   TextInput,
 } from "@/components/admin";
+import { SaveButton } from "@/components/admin/form";
+import { FormToolbar } from "@/components/admin/simple-form";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   PayrollRun,
@@ -59,7 +62,7 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
-const getDefaultPeriod = (
+export const getDefaultPeriod = (
   schedule: "weekly" | "biweekly" | "semimonthly" | "monthly",
 ) => {
   const today = new Date();
@@ -109,7 +112,7 @@ const getDefaultPeriod = (
   };
 };
 
-const getCategoryForPerson = (
+export const getCategoryForPerson = (
   person?: Partial<Person> | null,
 ): PayrollRun["category"] => {
   if (!person) return "hourly";
@@ -614,6 +617,18 @@ const PreviewPanel = () => {
   );
 };
 
+const CreateToolbar = () => {
+  const navigate = useNavigate();
+  return (
+    <FormToolbar>
+      <SaveButton />
+      <Button type="button" variant="ghost" onClick={() => navigate("/payroll_runs")}>
+        Cancel
+      </Button>
+    </FormToolbar>
+  );
+};
+
 const PayrollRunsCreateForm = () => {
   const config = useConfigurationContext();
   const [searchParams] = useSearchParams();
@@ -655,6 +670,7 @@ const PayrollRunsCreateForm = () => {
     >
       <SimpleForm
         className="max-w-none"
+        toolbar={<CreateToolbar />}
         defaultValues={{
           org_id: 1,
           payroll_scope: getPayrollScopeFromSearch(searchParams),

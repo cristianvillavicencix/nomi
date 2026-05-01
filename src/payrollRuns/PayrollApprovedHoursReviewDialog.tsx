@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
 import type { Identifier } from "ra-core";
-import { EditBase, Form, useGetList, useNotify, useRefresh } from "ra-core";
-import { Link } from "react-router";
-import { AlertTriangle } from "lucide-react";
+import {
+  EditBase,
+  Form,
+  useCreatePath,
+  useDataProvider,
+  useGetList,
+  useGetOne,
+  useNotify,
+  useRedirect,
+  useRefresh,
+} from "ra-core";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { SaveButton } from "@/components/admin/form";
 import { TimeEntriesForm } from "@/timeEntries/TimeEntriesForm";
 import { Button } from "@/components/ui/button";
@@ -24,7 +33,11 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { TimeEntry } from "@/components/atomic-crm/types";
+import type { Person, TimeEntry } from "@/components/atomic-crm/types";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { getCompanyPaySchedule } from "@/payroll/rules";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { getCategoryForPerson, getDefaultPeriod } from "./PayrollRunsCreate";
 import { splitPendingPayrollEntryHours } from "./pendingPayrollEntryHours";
 
 export type PayrollReviewTarget = {
@@ -111,10 +124,84 @@ export function PayrollApprovedHoursReviewDialog({
   const personName = target?.name ?? "";
 
   const [editEntryId, setEditEntryId] = useState<Identifier | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const config = useConfigurationContext();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const redirect = useRedirect();
+  const createPath = useCreatePath();
+  const notify = useNotify();
+
+  const { data: employee } = useGetOne<Person>(
+    "people",
+    { id: personId ?? "" },
+    { enabled: open && personId != null },
+  );
 
   useEffect(() => {
     if (target == null) setEditEntryId(null);
   }, [target]);
+
+  const handleCreate = async () => {
+    if (!personId) return;
+    setCreating(true);
+    try {
+      const defaultSchedule = getCompanyPaySchedule(config.payrollSettings);
+      const schedule = employee?.pay_schedule ?? defaultSchedule;
+      const category = getCategoryForPerson(employee);
+
+      // Use the actual entry dates so generatePayrollRun finds them
+      const dates = entries
+        .map((e) => e.date)
+        .filter(Boolean)
+        .sort() as string[];
+      const fallback = getDefaultPeriod(schedule);
+      const periodStart = dates[0] ?? fallback.pay_period_start;
+      const periodEnd = dates[dates.length - 1] ?? fallback.pay_period_end;
+
+      const result = await dataProvider.create("payroll_runs", {
+        data: {
+          org_id: 1,
+          employee_id: personId,
+          category,
+          pay_schedule: schedule,
+          pay_period_start: periodStart,
+          pay_period_end: periodEnd,
+          payday: periodEnd,
+          status: "draft",
+          created_by: "Current User",
+        },
+      });
+
+      const id =
+        result?.data?.id ?? (result as { id?: string | number })?.id;
+      if (id == null) return;
+
+      try {
+        const n = await dataProvider.generatePayrollRun(id);
+        notify(
+          typeof n === "number" && n > 0
+            ? `Corrida creada con ${n} líneas. Revisa los totales y aprueba cuando esté lista.`
+            : "Corrida creada. Revisa las líneas en la siguiente pantalla.",
+          { type: "success" },
+        );
+      } catch {
+        notify(
+          'Corrida guardada. Usa "Build payroll lines" para incluir las horas.',
+          { type: "warning" },
+        );
+      }
+
+      onOpenChange(false);
+      redirect(createPath({ resource: "payroll_runs", id, type: "show" }));
+    } catch {
+      notify("Error al crear la corrida. Inténtalo de nuevo.", {
+        type: "error",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const { data: entries = [], isPending: entriesLoading } =
     useGetList<TimeEntry>(
@@ -130,11 +217,6 @@ export function PayrollApprovedHoursReviewDialog({
       },
       { enabled: open && personId != null, staleTime: 10_000 },
     );
-
-  const payrollHref =
-    personId != null
-      ? `/payroll_runs/create?employee_id=${personId}`
-      : "/payroll_runs/create";
 
   return (
     <>
@@ -229,10 +311,15 @@ export function PayrollApprovedHoursReviewDialog({
 
           <DialogFooter className="flex-col gap-3 border-t px-6 py-4 sm:items-stretch sm:justify-between">
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <Button asChild className="w-full sm:w-auto">
-                <Link to={payrollHref} onClick={() => onOpenChange(false)}>
-                  Crear corrida de nómina
-                </Link>
+              <Button
+                className="w-full sm:w-auto"
+                disabled={creating || entriesLoading || entries.length === 0}
+                onClick={handleCreate}
+              >
+                {creating && (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                )}
+                {creating ? "Creando corrida…" : "Crear corrida de nómina"}
               </Button>
               <Button
                 type="button"
