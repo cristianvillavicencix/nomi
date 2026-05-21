@@ -89,7 +89,9 @@ const looksLikeUuid = (value: string) =>
     value,
   );
 
-const resolveOrganizationMemberId = async (id: Identifier): Promise<Identifier> => {
+const resolveOrganizationMemberId = async (
+  id: Identifier,
+): Promise<Identifier> => {
   if (typeof id !== "string" || !looksLikeUuid(id)) {
     return id;
   }
@@ -223,6 +225,23 @@ const normalizeContactData = <
   phone_jsonb: normalizePhoneEntries(data.phone_jsonb),
 });
 
+const getOneFromResourceMaybeSingle = async (
+  resource: string,
+  id: Identifier,
+) => {
+  const { data, error } = await supabase
+    .from(resource)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
 const dataProviderWithCustomMethods = {
   ...baseDataProvider,
   async create(resource: string, params: any) {
@@ -289,24 +308,24 @@ const dataProviderWithCustomMethods = {
     }
 
     if (resource === "companies") {
-      try {
-        return await baseDataProvider.getOne("companies_summary", params);
-      } catch (error: any) {
-        if (error?.status === 406) {
-          return baseDataProvider.getOne("companies", params);
-        }
-        throw error;
+      const summaryRecord = await getOneFromResourceMaybeSingle(
+        "companies_summary",
+        params.id,
+      );
+      if (summaryRecord) {
+        return { data: summaryRecord };
       }
+      return baseDataProvider.getOne("companies", params);
     }
     if (resource === "contacts") {
-      try {
-        return await baseDataProvider.getOne("contacts_summary", params);
-      } catch (error: any) {
-        if (error?.status === 406) {
-          return baseDataProvider.getOne("contacts", params);
-        }
-        throw error;
+      const summaryRecord = await getOneFromResourceMaybeSingle(
+        "contacts_summary",
+        params.id,
+      );
+      if (summaryRecord) {
+        return { data: summaryRecord };
       }
+      return baseDataProvider.getOne("contacts", params);
     }
 
     return baseDataProvider.getOne(resource, params);
@@ -377,7 +396,9 @@ const dataProviderWithCustomMethods = {
       email: normalizeEmailValue(body.email, "email")!,
       roles: Array.isArray(body.roles) ? Array.from(new Set(body.roles)) : [],
     };
-    const { data, error } = await invokeEdgeFunction<{ data: OrganizationMember }>("users", {
+    const { data, error } = await invokeEdgeFunction<{
+      data: OrganizationMember;
+    }>("users", {
       method: "POST",
       body: normalizedBody,
     });
@@ -582,20 +603,21 @@ const dataProviderWithCustomMethods = {
     orgId: number;
     returnPath?: string;
   }) {
-    const { data, error } = await invokeEdgeFunction<{ url?: string; id?: string }>(
-      "stripe-billing",
-      {
-        method: "POST",
-        body: {
-          action: "create_checkout",
-          org_id: params.orgId,
-          return_path: params.returnPath ?? "/sas",
-        },
+    const { data, error } = await invokeEdgeFunction<{
+      url?: string;
+      id?: string;
+    }>("stripe-billing", {
+      method: "POST",
+      body: {
+        action: "create_checkout",
+        org_id: params.orgId,
+        return_path: params.returnPath ?? "/sas",
       },
-    );
+    });
     if (error) {
       throw new Error(
-        (error as { message?: string }).message ?? "Failed to start Stripe checkout",
+        (error as { message?: string }).message ??
+          "Failed to start Stripe checkout",
       );
     }
     if (data?.url && typeof window !== "undefined") {
@@ -617,7 +639,8 @@ const dataProviderWithCustomMethods = {
     );
     if (error) {
       throw new Error(
-        (error as { message?: string }).message ?? "Failed to open billing portal",
+        (error as { message?: string }).message ??
+          "Failed to open billing portal",
       );
     }
     if (data?.url && typeof window !== "undefined") {
@@ -636,7 +659,8 @@ const dataProviderWithCustomMethods = {
     });
     if (error) {
       throw new Error(
-        (error as { message?: string }).message ?? "Failed to sync seats to Stripe",
+        (error as { message?: string }).message ??
+          "Failed to sync seats to Stripe",
       );
     }
     return data;
@@ -656,7 +680,8 @@ const dataProviderWithCustomMethods = {
     });
     if (error) {
       throw new Error(
-        (error as { message?: string }).message ?? "Failed to add a seat in Stripe",
+        (error as { message?: string }).message ??
+          "Failed to add a seat in Stripe",
       );
     }
     return data;

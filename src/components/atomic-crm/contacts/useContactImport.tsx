@@ -113,7 +113,7 @@ export function useContactImport() {
               { email: email_other, type: "Other" },
             ]
               .map((entry) => {
-                const trimmedEmail = entry.email?.trim();
+                const trimmedEmail = asTrimmedString(entry.email);
                 if (!trimmedEmail) return null;
                 if (!isValidEmail(trimmedEmail)) {
                   throw new Error(`Invalid email: ${trimmedEmail}`);
@@ -127,7 +127,7 @@ export function useContactImport() {
               { number: phone_other, type: "Other" },
             ]
               .map((entry) => {
-                const trimmedNumber = entry.number?.trim();
+                const trimmedNumber = asTrimmedString(entry.number);
                 if (!trimmedNumber) return null;
                 const normalizedPhone = normalizeUsPhoneToE164(trimmedNumber);
                 if (!normalizedPhone) {
@@ -136,8 +136,9 @@ export function useContactImport() {
                 return { ...entry, number: normalizedPhone };
               })
               .filter((entry) => entry != null);
-            const company = companyName?.trim()
-              ? companies.get(companyName.trim())
+            const normalizedCompanyName = asTrimmedString(companyName);
+            const company = normalizedCompanyName
+              ? companies.get(normalizedCompanyName)
               : undefined;
             const tagList = parseTags(tagNames)
               .map((name) => tags.get(name))
@@ -220,8 +221,13 @@ const fetchRecordsWithCache = async function <T>(
   }, new Map<string, T>());
 };
 
-const parseTags = (tags: string) =>
-  tags
-    ?.split(",")
-    ?.map((tag: string) => tag.trim())
-    ?.filter((tag: string) => tag) ?? [];
+const parseTags = (tags: unknown) =>
+  asTrimmedString(tags)
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag);
+
+const asTrimmedString = (value: unknown): string => {
+  if (value == null) return "";
+  return String(value).trim();
+};

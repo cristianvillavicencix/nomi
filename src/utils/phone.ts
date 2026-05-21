@@ -4,7 +4,12 @@ export const extractDigits = (input: string): string =>
   (input ?? "").replace(/\D/g, "");
 
 export const normalizeUsPhoneToE164 = (input: string): string | null => {
-  const digits = extractDigits(input);
+  // Ignore extensions like "Ext 2", "x123", or "extension 45".
+  const withoutExtension = (input ?? "").replace(
+    /(?:\s|,|;)*(?:ext(?:ension)?\.?|x)\s*\d+\s*$/i,
+    "",
+  );
+  const digits = extractDigits(withoutExtension);
 
   if (digits.length === 10) {
     return `+1${digits}`;
@@ -38,4 +43,3 @@ export const getPhoneHref = (input: string): string | null => {
   const normalized = normalizeUsPhoneToE164(input);
   return normalized ? `tel:${normalized}` : null;
 };
-
