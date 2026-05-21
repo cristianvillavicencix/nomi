@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useGetList } from 'ra-core';
+import { Printer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ReportDateFilters } from './ReportFilters';
 
@@ -27,12 +29,18 @@ export const SalesCommissionsReportPage = ({
 
   return (
     <div className="space-y-4">
-      {!embedded ? (
-        <h1 className="text-2xl font-semibold">
-          Sales Commissions by Salesperson
-        </h1>
-      ) : null}
-      <ReportDateFilters from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
+      <div className="flex items-center justify-between print:hidden">
+        {!embedded ? (
+          <h1 className="text-2xl font-semibold">Sales Commissions by Salesperson</h1>
+        ) : <span />}
+        <Button variant="outline" size="sm" onClick={() => window.print()}>
+          <Printer className="mr-2 h-4 w-4" />
+          Print / PDF
+        </Button>
+      </div>
+      <div className="print:hidden">
+        <ReportDateFilters from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
+      </div>
       <Card>
         <CardContent className="pt-6 overflow-x-auto">
           <table className="w-full text-sm">

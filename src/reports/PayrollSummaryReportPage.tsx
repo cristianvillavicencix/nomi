@@ -29,20 +29,19 @@ export const PayrollSummaryReportPage = ({
 
   return (
     <div className="space-y-4">
-      {!embedded ? (
-        <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
+        {!embedded ? (
           <h1 className="text-2xl font-semibold">Payroll Summary by Period</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-            className="print:hidden"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Print / PDF
-          </Button>
-        </div>
-      ) : null}
+        ) : <span />}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.print()}
+        >
+          <Printer className="mr-2 h-4 w-4" />
+          Print / PDF
+        </Button>
+      </div>
       <div className="print:hidden">
         <ReportDateFilters from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
       </div>
