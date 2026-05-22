@@ -56,6 +56,14 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/tasks/taskUserCompletion.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/tasks/taskTiming.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/tasks/taskStats.ts",
           "type": "registry:component"
         },
