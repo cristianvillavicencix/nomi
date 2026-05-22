@@ -445,27 +445,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       params.personId,
     );
   },
-  signUp: async ({
-    email,
-    password,
-    first_name,
-    last_name,
-    company_name: _company_name,
-  }: SignUpData): Promise<{ id: string; email: string; password: string }> => {
-    const normalizedEmail = normalizeEmailValue(email, "email")!;
-    const user = await baseDataProvider.create("organization_members", {
-      data: {
-        email: normalizedEmail,
-        first_name,
-        last_name,
-      },
-    });
-
-    return {
-      ...user.data,
-      email: normalizedEmail,
-      password,
-    };
+  signUp: async (_data: SignUpData): Promise<{ id: string; email: string; password: string }> => {
+    throw new Error(
+      "El registro público está deshabilitado. Pide a tu administrador una invitación.",
+    );
   },
   organizationMemberCreate: async ({ ...data }: OrganizationMemberFormData): Promise<OrganizationMember> => {
     const response = await dataProvider.create("organization_members", {

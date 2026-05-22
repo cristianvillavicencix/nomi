@@ -109,7 +109,7 @@ function isPublicAuthRoute(): boolean {
   const segment =
     (s: "sign-up" | "set-password" | "forgot-password") =>
     path === `/${s}` || path.endsWith(`/${s}`) || hash.includes(`#/${s}`);
-  return segment("set-password") || segment("forgot-password") || segment("sign-up");
+  return segment("set-password") || segment("forgot-password");
 }
 
 /** `/sas/*` (consola Nomi) o path legado/typo; no exige ficha de `organization_members`. */

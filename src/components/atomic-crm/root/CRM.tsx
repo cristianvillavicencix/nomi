@@ -27,8 +27,6 @@ import deals from "../deals";
 import { DesktopLayout } from "../layout/DesktopLayout";
 import { MobileLayout } from "../layout/MobileLayout";
 import { withLbsMessagesProvider } from "@/lbs/messages/withLbsMessagesProvider";
-import { SignupPage } from "../login/SignupPage";
-import { ConfirmationRequired } from "../login/ConfirmationRequired";
 import { ImportPage } from "../misc/ImportPage";
 import {
   authProvider as defaultAuthProvider,
@@ -283,11 +281,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
       {...props}
     >
       <CustomRoutes noLayout>
-        <Route path={SignupPage.path} element={<SignupPage />} />
-        <Route
-          path={ConfirmationRequired.path}
-          element={<ConfirmationRequired />}
-        />
+        <Route path="/sign-up/*" element={<Navigate to="/login" replace />} />
         <Route path={SetPasswordPage.path} element={<SetPasswordPage />} />
         <Route
           path={ForgotPasswordPage.path}
@@ -583,11 +577,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
         {...props}
       >
         <CustomRoutes noLayout>
-          <Route path={SignupPage.path} element={<SignupPage />} />
-          <Route
-            path={ConfirmationRequired.path}
-            element={<ConfirmationRequired />}
-          />
+          <Route path="/sign-up/*" element={<Navigate to="/login" replace />} />
           <Route path={SetPasswordPage.path} element={<SetPasswordPage />} />
           <Route
             path={ForgotPasswordPage.path}

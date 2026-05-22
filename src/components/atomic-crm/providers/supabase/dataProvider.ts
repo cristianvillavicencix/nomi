@@ -390,64 +390,10 @@ const dataProviderWithCustomMethods = {
     return baseDataProvider.getOne(resource, params);
   },
 
-  async signUp({
-    email,
-    password,
-    first_name,
-    last_name,
-    company_name,
-  }: SignUpData) {
-    const normalizedEmail = normalizeEmailValue(email, "email");
-    const trimmedCompany = String(company_name ?? "").trim();
-    if (trimmedCompany.length < 2) {
-      throw new Error(
-        "Escribe el nombre de tu empresa o equipo (mínimo 2 caracteres).",
-      );
-    }
-    const response = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password,
-      options: {
-        data: {
-          first_name,
-          last_name,
-          company_name: trimmedCompany,
-        },
-      },
-    });
-
-    if (response.error) {
-      console.error("signUp.error", response.error);
-      const e = response.error;
-      const msg = (e.message ?? "").toLowerCase();
-      const code = (e as { code?: string }).code;
-      if (
-        code === "user_already_exists" ||
-        code === "email_address_not_available" ||
-        msg.includes("already registered") ||
-        msg.includes("already been registered") ||
-        msg.includes("user already")
-      ) {
-        throw new Error(
-          "Este correo ya está registrado. Inicia sesión o usa «Olvidé mi contraseña» en el inicio de sesión.",
-        );
-      }
-      throw new Error(e.message || "No se pudo crear la cuenta.");
-    }
-
-    if (!response.data?.user) {
-      console.error("signUp.error: no user");
-      throw new Error("No se pudo crear la cuenta.");
-    }
-
-    // Update the is initialized cache
-    getIsInitialized._is_initialized_cache = true;
-
-    return {
-      id: response.data.user.id,
-      email: normalizedEmail!,
-      password,
-    };
+  async signUp(_data: SignUpData) {
+    throw new Error(
+      "El registro público está deshabilitado. Pide a tu administrador una invitación desde Configuración → Usuarios.",
+    );
   },
   async organizationMemberCreate(body: OrganizationMemberFormData) {
     const { password: _password, ...rest } = body;
