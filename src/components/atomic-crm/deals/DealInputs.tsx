@@ -25,6 +25,8 @@ import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { isLbsMode } from "@/lbs/productMode";
+import { LbsDealInputs } from "@/lbs/deals/LbsDealInputs";
 
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput";
 import { contactOptionText } from "../misc/ContactOption";
@@ -282,6 +284,10 @@ const AddressAutocompleteInput = ({
 };
 
 export const DealInputs = () => {
+  if (isLbsMode()) {
+    return <LbsDealInputs />;
+  }
+
   const isMobile = useIsMobile();
   const { control, setValue } = useFormContext<Deal & Record<string, unknown>>();
   const contactId = useWatch({ control, name: "contact_id" });

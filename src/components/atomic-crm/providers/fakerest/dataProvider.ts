@@ -29,6 +29,16 @@ import { withCurrentProductName } from "../../root/defaultConfiguration";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getActivityLog } from "../commons/activity";
+import { syncTaskAssignees, createTaskTagNotifications } from "../../tasks/taskAssignments";
+import { syncTaskParticipants } from "../../tasks/taskParticipants";
+import { getTaskAssignmentPayload } from "../../tasks/persistTaskAssignmentSideEffects";
+import { enrichTasksWithLegacyMentions } from "../../tasks/enrichTasksWithLegacyMentions";
+import { normalizeTaskCreateData } from "../../tasks/taskConstants";
+import type { GetScopedTasksParams } from "../../tasks/scopedTasks";
+import {
+  collectMyProjectDealIds,
+  filterScopedTasks,
+} from "../../tasks/scopedTasksFilter";
 import { getCompanyAvatar } from "../commons/getCompanyAvatar";
 import { getContactAvatar } from "../commons/getContactAvatar";
 import { mergeContacts } from "../commons/mergeContacts";
@@ -41,11 +51,52 @@ import { buildReceiptNumber, normalizeLoanPayload } from "@/loans/helpers";
 import { canApprovePayroll } from "@/payroll/permissions";
 import { canMutateCrmResource } from "../commons/crmPermissions";
 import type { CrmDataProvider } from "../types";
+import {
+  parseCustomFormSchema,
+  validateCustomFormValues,
+} from "@/lbs/web-forms/customFormSchema";
 import { authProvider, USER_STORAGE_KEY } from "./authProvider";
 import generateData from "./dataGenerator";
-import { withSupabaseFilterAdapter } from "./internal/supabaseAdapter";
+import { enrichCompanySummary } from "@/lbs/clients/clientProfile";
+import {
+  buildCompanyPayloadFromUpsert,
+  buildContactPayloadFromUpsert,
+  splitClientFullName,
+  type LbsClientUpsertInput,
+  type LbsClientUpsertResult,
+} from "@/lbs/clients/lbsClientUpsert";
 
 const baseDataProvider = fakeRestDataProvider(generateData(), true, 300);
+
+const enrichCompaniesWithPrimaryContact = async (companies: Company[]) => {
+  const { data: contacts } = await baseDataProvider.getList<Contact>("contacts", {
+    pagination: { page: 1, perPage: 10000 },
+    sort: { field: "id", order: "ASC" },
+  });
+
+  return companies.map((company) => enrichCompanySummary(company, contacts));
+};
+
+const enrichContactsWithCompanyMeta = async (contacts: Contact[]) => {
+  const { data: companies } = await baseDataProvider.getList<Company>("companies", {
+    pagination: { page: 1, perPage: 10000 },
+    sort: { field: "id", order: "ASC" },
+  });
+
+  return contacts.map((contact) => {
+    const matchedCompany = companies.find(
+      (candidate) => String(candidate.id) === String(contact.company_id),
+    );
+
+    return {
+      ...contact,
+      company_name: matchedCompany?.name ?? contact.company_name,
+      is_primary_contact:
+        matchedCompany?.primary_contact_id != null &&
+        String(matchedCompany.primary_contact_id) === String(contact.id),
+    };
+  });
+};
 
 const TASK_MARKED_AS_DONE = "TASK_MARKED_AS_DONE";
 const TASK_MARKED_AS_UNDONE = "TASK_MARKED_AS_UNDONE";
@@ -197,7 +248,43 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         params.filter as Record<string, unknown>;
       request = { ...params, filter: rest };
     }
-    return baseDataProvider.getList(resource, request);
+    const result = await baseDataProvider.getList(resource, request);
+    if (resource === "companies") {
+      return {
+        ...result,
+        data: await enrichCompaniesWithPrimaryContact(result.data as Company[]),
+      };
+    }
+    if (resource === "contacts") {
+      return {
+        ...result,
+        data: await enrichContactsWithCompanyMeta(result.data as Contact[]),
+      };
+    }
+    if (resource === "tasks") {
+      return {
+        ...result,
+        data: await enrichTasksWithLegacyMentions(result.data as Task[], baseDataProvider),
+      };
+    }
+    return result;
+  },
+  getOne: async (resource, params) => {
+    const result = await baseDataProvider.getOne(resource, params);
+    if (resource === "companies") {
+      const [enriched] = await enrichCompaniesWithPrimaryContact([
+        result.data as Company,
+      ]);
+      return { data: enriched };
+    }
+    if (resource === "tasks") {
+      const [enriched] = await enrichTasksWithLegacyMentions(
+        [result.data as Task],
+        baseDataProvider,
+      );
+      return { data: enriched };
+    }
+    return result;
   },
   create: async (resource: string, params: any) => {
     const userItem = localStorage.getItem(USER_STORAGE_KEY);
@@ -322,6 +409,29 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   getActivityLog: async (companyId?: Identifier) => {
     return getActivityLog(dataProvider, companyId);
   },
+  getScopedTasks: async (params: GetScopedTasksParams) => {
+    const { data: tasks } = await baseDataProvider.getList<Task>("tasks", {
+      pagination: { page: 1, perPage: 5000 },
+      sort: { field: "id", order: "ASC" },
+      filter: {},
+    });
+    return filterScopedTasks(tasks, params);
+  },
+  getMyProjectDealIds: async (params: {
+    organizationMemberId: Identifier;
+    personId?: Identifier | null;
+  }) => {
+    const { data: deals } = await baseDataProvider.getList<Deal>("deals", {
+      pagination: { page: 1, perPage: 5000 },
+      sort: { field: "id", order: "ASC" },
+      filter: {},
+    });
+    return collectMyProjectDealIds(
+      deals,
+      params.organizationMemberId,
+      params.personId,
+    );
+  },
   signUp: async ({
     email,
     password,
@@ -413,6 +523,398 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
   mergeContacts: async (sourceId: Identifier, targetId: Identifier) => {
     return mergeContacts(sourceId, targetId, baseDataProvider);
+  },
+  upsertLbsClient: async (input: LbsClientUpsertInput): Promise<LbsClientUpsertResult> => {
+    const companyName = input.business.name.trim();
+    const { firstName, lastName } = splitClientFullName(input.primary.fullName);
+    let created = false;
+
+    const { data: companies } = await baseDataProvider.getList<Company>("companies", {
+      pagination: { page: 1, perPage: 10000 },
+      sort: { field: "id", order: "ASC" },
+    });
+
+    const existingCompany = input.companyId
+      ? companies.find((company) => String(company.id) === String(input.companyId))
+      : companies.find(
+          (company) => company.name.toLowerCase() === companyName.toLowerCase(),
+        );
+
+    if (input.companyId && !existingCompany) {
+      throw new Error("Client not found");
+    }
+
+    const companyPayload = buildCompanyPayloadFromUpsert(
+      input,
+      existingCompany?.context_links,
+    );
+
+    let companyId: Identifier;
+    if (existingCompany) {
+      const { data: updatedCompany } = await baseDataProvider.update<Company>("companies", {
+        id: existingCompany.id,
+        data: companyPayload,
+        previousData: existingCompany,
+      });
+      companyId = updatedCompany.id;
+    } else {
+      const { data: newCompany } = await baseDataProvider.create<Company>("companies", {
+        data: {
+          sector: "information-technology",
+          ...companyPayload,
+        },
+      });
+      companyId = newCompany.id;
+      created = true;
+    }
+
+    const contactPayload = buildContactPayloadFromUpsert(input, companyId);
+    const { data: contacts } = await baseDataProvider.getList<Contact>("contacts", {
+      pagination: { page: 1, perPage: 10000 },
+      sort: { field: "id", order: "ASC" },
+    });
+
+    const companyContacts = contacts.filter(
+      (candidate) => String(candidate.company_id) === String(companyId),
+    );
+
+    const primaryEmail = input.primary.email?.trim().toLowerCase();
+    let contact =
+      (input.primaryContactId
+        ? companyContacts.find(
+            (candidate) => String(candidate.id) === String(input.primaryContactId),
+          )
+        : undefined) ??
+      (primaryEmail
+        ? companyContacts.find((candidate) =>
+            candidate.email_jsonb?.some(
+              (entry) => entry.email?.trim().toLowerCase() === primaryEmail,
+            ),
+          )
+        : undefined) ??
+      companyContacts.find(
+        (candidate) =>
+          candidate.first_name?.toLowerCase() === firstName.toLowerCase() &&
+          candidate.last_name?.toLowerCase() === (lastName || firstName).toLowerCase(),
+      );
+
+    if (contact) {
+      const { data: updatedContact } = await baseDataProvider.update<Contact>("contacts", {
+        id: contact.id,
+        data: contactPayload,
+        previousData: contact,
+      });
+      contact = updatedContact;
+    } else {
+      const { data: newContact } = await baseDataProvider.create<Contact>("contacts", {
+        data: contactPayload,
+      });
+      contact = newContact;
+    }
+
+    await baseDataProvider.update("companies", {
+      id: companyId,
+      data: { primary_contact_id: contact.id },
+      previousData: existingCompany ?? { id: companyId },
+    });
+
+    return { company_id: companyId, contact_id: contact.id, created };
+  },
+  convertLeadToClient: async ({
+    contactId,
+    companyName,
+  }: {
+    contactId: Identifier;
+    companyName: string;
+  }) => {
+    const trimmedName = companyName.trim();
+    const { data: contact } = await baseDataProvider.getOne<Contact>("contacts", { id: contactId });
+    if (!contact) {
+      throw new Error("Lead not found");
+    }
+
+    const { data: companies } = await baseDataProvider.getList<Company>("companies", {
+      pagination: { page: 1, perPage: 10000 },
+      sort: { field: "id", order: "ASC" },
+    });
+
+    let company =
+      (contact.company_id
+        ? companies.find((candidate) => String(candidate.id) === String(contact.company_id))
+        : undefined) ??
+      companies.find((candidate) => candidate.name.toLowerCase() === trimmedName.toLowerCase());
+
+    if (!company) {
+      const { data: createdCompany } = await baseDataProvider.create<Company>("companies", {
+        data: {
+          name: trimmedName,
+          organization_member_id: contact.organization_member_id,
+          sector: "information-technology",
+        },
+      });
+      company = createdCompany;
+    }
+
+    await baseDataProvider.update("contacts", {
+      id: contactId,
+      data: {
+        company_id: company.id,
+        status: "client",
+      },
+      previousData: contact,
+    });
+
+    if (!company.primary_contact_id) {
+      await baseDataProvider.update("companies", {
+        id: company.id,
+        data: { primary_contact_id: contactId },
+        previousData: company,
+      });
+    }
+
+    return { company_id: company.id, contact_id: contactId };
+  },
+  submitPublicForm: async (payload: {
+    slug: string;
+    companyId?: Identifier | null;
+    contactId?: Identifier | null;
+    dealId?: Identifier | null;
+    data: Record<string, unknown>;
+  }) => {
+    const { data: forms } = await baseDataProvider.getList<import("@/lbs/types").Form>("forms", {
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "id", order: "ASC" },
+    });
+    const form = forms.find((entry) => entry.slug === payload.slug);
+    if (!form || form.active === false) {
+      throw new Error("Form not found");
+    }
+
+    if (payload.slug !== "website-intake") {
+      const schema = parseCustomFormSchema(form.schema);
+      const data = Object.fromEntries(
+        schema.fields.map((field) => [
+          field.key,
+          String(payload.data[field.key] ?? "").trim(),
+        ]),
+      ) as Record<string, string>;
+      const validationError = validateCustomFormValues(schema, data);
+      if (validationError) {
+        throw new Error(validationError);
+      }
+
+      const companyId = payload.companyId ? Number(payload.companyId) : null;
+      const contactId = payload.contactId ? Number(payload.contactId) : null;
+      const dealId = payload.dealId ? Number(payload.dealId) : null;
+
+      await baseDataProvider.create("form_submissions", {
+        data: {
+          form_id: form.id,
+          company_id: companyId,
+          contact_id: contactId,
+          deal_id: dealId,
+          data,
+        },
+      });
+
+      return {
+        company_id: companyId,
+        contact_id: contactId,
+        deal_id: dealId,
+      };
+    }
+
+    const companyId = payload.companyId ? Number(payload.companyId) : null;
+    const contactId = payload.contactId ? Number(payload.contactId) : null;
+    if (!companyId || !contactId) {
+      throw new Error("This form link must include a valid client and contact.");
+    }
+
+    const { data: company } = await baseDataProvider.getOne<Company>("companies", {
+      id: companyId,
+    });
+
+    const { data: deals } = await baseDataProvider.getList<Deal>("deals", {
+      pagination: { page: 1, perPage: 10000 },
+      sort: { field: "id", order: "ASC" },
+    });
+
+    const linkedDeal = payload.dealId
+      ? deals.find((deal) => String(deal.id) === String(payload.dealId))
+      : undefined;
+
+    const existing =
+      linkedDeal ??
+      deals.find(
+        (deal) =>
+          String(deal.company_id) === String(companyId) && deal.category === "website",
+      );
+
+    let dealId: Identifier;
+    let created = false;
+
+    if (existing) {
+      const { data: updated } = await baseDataProvider.update<Deal>("deals", {
+        id: existing.id,
+        data: {
+          contact_id: contactId,
+          contact_ids: [contactId],
+          website_brief: payload.data,
+          description: String(payload.data.client_notes ?? payload.data.notes ?? ""),
+        },
+        previousData: existing,
+      });
+      dealId = updated.id;
+    } else {
+      const { data: createdDeal } = await baseDataProvider.create<Deal>("deals", {
+        data: {
+          name: `${company.name} Website`,
+          company_id: companyId,
+          contact_id: contactId,
+          contact_ids: [contactId],
+          stage: "lead",
+          amount: 0,
+          category: "website",
+          website_brief: payload.data,
+          description: String(payload.data.client_notes ?? payload.data.notes ?? ""),
+          index: 0,
+          pipeline_id: "default",
+        },
+      });
+      dealId = createdDeal.id;
+      created = true;
+    }
+
+    await baseDataProvider.create("form_submissions", {
+      data: {
+        form_id: form.id,
+        company_id: companyId,
+        contact_id: contactId,
+        deal_id: dealId,
+        data: payload.data,
+      },
+    });
+
+    return {
+      company_id: companyId,
+      contact_id: contactId,
+      deal_id: dealId,
+      created,
+    };
+  },
+  getPublicForm: async (payload: { slug: string }) => {
+    const { data: forms } = await baseDataProvider.getList<import("@/lbs/types").Form>("forms", {
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "id", order: "ASC" },
+    });
+    const form = forms.find(
+      (entry) => entry.slug === payload.slug && entry.active !== false,
+    );
+    if (!form) {
+      throw new Error("Form not found");
+    }
+
+    return {
+      name: form.name,
+      description: form.description,
+      slug: form.slug,
+      schema: parseCustomFormSchema(form.schema),
+    };
+  },
+  getPublicDealBrief: async (payload: {
+    dealId: Identifier;
+    companyId: Identifier;
+    contactId: Identifier;
+  }) => {
+    const { data: deal } = await baseDataProvider.getOne<Deal>("deals", {
+      id: payload.dealId,
+    });
+
+    if (
+      String(deal.company_id) !== String(payload.companyId) ||
+      (String(deal.contact_id) !== String(payload.contactId) &&
+        !deal.contact_ids?.map(String).includes(String(payload.contactId)))
+    ) {
+      throw new Error("Project not found");
+    }
+
+    return {
+      project_type: deal.project_type,
+      expected_end_date: deal.expected_end_date,
+      website_brief: (deal.website_brief ?? {}) as Record<string, string | null>,
+    };
+  },
+  getGithubRepoStatus: async (payload: { dealId: Identifier }) => {
+    const { data: deal } = await baseDataProvider.getOne<Deal>("deals", {
+      id: payload.dealId,
+    });
+
+    if (!deal.github_repo?.trim()) {
+      throw new Error("Project has no GitHub repository linked");
+    }
+
+    const slug = deal.github_repo.trim();
+    const now = new Date().toISOString();
+
+    return {
+      slug,
+      repo_url: `https://github.com/${slug}`,
+      default_branch: "main",
+      last_commit: {
+        sha: "abc1234567890abcdef1234567890abcdef12345678",
+        short_sha: "abc1234",
+        message: "Update homepage hero section",
+        author: "LBS Team",
+        date: now,
+        url: `https://github.com/${slug}/commit/abc1234`,
+      },
+      latest_run: {
+        status: "completed",
+        conclusion: "success",
+        workflow_name: "Deploy",
+        updated_at: now,
+        url: `https://github.com/${slug}/actions`,
+      },
+      github_token_configured: true,
+    };
+  },
+  submitProjectResources: async (payload: {
+    dealId: Identifier;
+    companyId?: Identifier | null;
+    contactId?: Identifier | null;
+    items: Array<{
+      category: string;
+      label?: string;
+      name: string;
+      content: string;
+      content_type?: string;
+    }>;
+  }) => {
+    const dealId = Number(payload.dealId);
+    if (!Number.isFinite(dealId)) {
+      throw new Error("Missing deal_id");
+    }
+
+    let count = 0;
+    for (const item of payload.items) {
+      await baseDataProvider.create("deal_resources", {
+        data: {
+          deal_id: dealId,
+          category: item.category,
+          label: item.label?.trim() || null,
+          file: {
+            title: item.name,
+            type: item.content_type || "application/octet-stream",
+            path: `project-resources/${dealId}/${count + 1}-${item.name}`,
+            src: `https://placehold.co/600x400?text=${encodeURIComponent(item.name)}`,
+          },
+          source: "client",
+        },
+      });
+      count += 1;
+    }
+
+    return { deal_id: dealId, count };
   },
   getConfiguration: async (): Promise<ConfigurationContextValue> => {
     const { data } = await baseDataProvider.getOne("configuration", { id: 1 });
@@ -854,6 +1356,80 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     users: [],
     total: 0,
   }),
+  getMessagingSettings: async () => ({
+    org_id: 1,
+    twilio_account_sid: null,
+    twilio_phone_number: null,
+    sms_enabled: false,
+    has_auth_token: false,
+    webhook_url: null,
+  }),
+  updateMessagingSettings: async (params) => ({
+    org_id: 1,
+    twilio_account_sid: params.twilio_account_sid ?? null,
+    twilio_phone_number: params.twilio_phone_number ?? null,
+    sms_enabled: params.sms_enabled === true,
+    has_auth_token: Boolean(params.twilio_auth_token?.trim()),
+    webhook_url: null,
+  }),
+  sendClientSms: async ({ conversationId, body }) => {
+    const { data: conversation } = await baseDataProvider.getOne<import("@/lbs/types").Conversation>(
+      "conversations",
+      { id: conversationId },
+    );
+    const message = await baseDataProvider.create<import("@/lbs/types").ConversationMessage>(
+      "conversation_messages",
+      {
+        data: {
+          conversation_id: conversationId,
+          body,
+          channel: "sms",
+          direction: "outbound",
+          author_member_id: conversation.created_by_member_id ?? null,
+        },
+      },
+    );
+    return message.data;
+  },
+  ensureClientConversation: async ({ contactId, authorMemberId, dealId }) => {
+    const { data: contact } = await baseDataProvider.getOne<import("@/lbs/types").Contact>(
+      "contacts",
+      { id: contactId },
+    );
+    const phone =
+      contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ?? null;
+    const { data: existing = [] } = await baseDataProvider.getList<import("@/lbs/types").Conversation>(
+      "conversations",
+      {
+        filter: phone
+          ? { "type@eq": "client", "external_phone@eq": phone }
+          : { "type@eq": "client", "contact_id@eq": contactId },
+        pagination: { page: 1, perPage: 1 },
+        sort: { field: "id", order: "ASC" },
+      },
+    );
+    if (existing[0]) {
+      return existing[0];
+    }
+    const title =
+      `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+      phone ||
+      "Client SMS";
+    const { data: created } = await baseDataProvider.create<import("@/lbs/types").Conversation>(
+      "conversations",
+      {
+        data: {
+          type: "client",
+          title,
+          contact_id: contactId,
+          external_phone: phone,
+          created_by_member_id: authorMemberId,
+          ...(dealId != null && dealId !== "" ? { deal_id: dealId } : {}),
+        },
+      },
+    );
+    return created;
+  },
 };
 
 const roundMoney = (value: number) =>
@@ -1147,7 +1723,51 @@ export const dataProvider = withLifecycleCallbacks(
     } satisfies ResourceCallbacks<Contact>,
     {
       resource: "tasks",
+      beforeCreate: async (params) => {
+        return {
+          ...params,
+          data: normalizeTaskCreateData(params.data as Record<string, unknown>),
+        };
+      },
+      beforeUpdate: async (params) => {
+        const { data, previousData } = params;
+        if (previousData.done_date !== data.done_date) {
+          taskUpdateType = data.done_date
+            ? TASK_MARKED_AS_DONE
+            : TASK_MARKED_AS_UNDONE;
+        } else {
+          taskUpdateType = TASK_DONE_NOT_CHANGED;
+        }
+        const normalized = normalizeTaskCreateData({
+          ...(previousData as Record<string, unknown>),
+          ...(data as Record<string, unknown>),
+        });
+        return {
+          ...params,
+          data: {
+            ...data,
+            assignee_person_ids: normalized.assignee_person_ids,
+            collaborator_person_ids: normalized.collaborator_person_ids,
+            mentioned_member_ids: normalized.mentioned_member_ids,
+          },
+        };
+      },
       afterCreate: async (result, dataProvider) => {
+        const payload = getTaskAssignmentPayload(result.data);
+        await syncTaskAssignees(
+          dataProvider,
+          result.data.id,
+          payload.assignee_person_ids,
+          payload.collaborator_person_ids,
+        );
+        await syncTaskParticipants(dataProvider, result.data.id, payload);
+        await createTaskTagNotifications(
+          dataProvider,
+          result.data.id,
+          payload.assignee_person_ids,
+          payload.collaborator_person_ids,
+          payload.mentioned_member_ids,
+        );
         // update the task count in the related contact
         const { contact_id } = result.data;
         const { data: contact } = await dataProvider.getOne("contacts", {
@@ -1162,18 +1782,22 @@ export const dataProvider = withLifecycleCallbacks(
         });
         return result;
       },
-      beforeUpdate: async (params) => {
-        const { data, previousData } = params;
-        if (previousData.done_date !== data.done_date) {
-          taskUpdateType = data.done_date
-            ? TASK_MARKED_AS_DONE
-            : TASK_MARKED_AS_UNDONE;
-        } else {
-          taskUpdateType = TASK_DONE_NOT_CHANGED;
-        }
-        return params;
-      },
       afterUpdate: async (result, dataProvider) => {
+        const payload = getTaskAssignmentPayload(result.data);
+        await syncTaskAssignees(
+          dataProvider,
+          result.data.id,
+          payload.assignee_person_ids,
+          payload.collaborator_person_ids,
+        );
+        await syncTaskParticipants(dataProvider, result.data.id, payload);
+        await createTaskTagNotifications(
+          dataProvider,
+          result.data.id,
+          payload.assignee_person_ids,
+          payload.collaborator_person_ids,
+          payload.mentioned_member_ids,
+        );
         // update the contact: if the task is done, decrement the nb tasks, otherwise increment it
         const { contact_id } = result.data;
         const { data: contact } = await dataProvider.getOne("contacts", {

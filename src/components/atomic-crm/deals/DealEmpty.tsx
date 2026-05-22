@@ -1,16 +1,14 @@
 import { useGetList } from "ra-core";
-import { matchPath, useLocation, Link } from "react-router";
+import { Link } from "react-router";
 import type { ReactNode } from "react";
 import { CreateButton } from "@/components/admin/create-button";
 import { Progress } from "@/components/ui/progress";
 
 import useAppBarHeight from "../misc/useAppBarHeight";
 import type { Contact } from "../types";
-import { DealCreate } from "./DealCreate";
+import { ProjectCreateFlow } from "@/lbs/deals/ProjectCreateFlow";
 
 export const DealEmpty = ({ children }: { children?: ReactNode }) => {
-  const location = useLocation();
-  const matchCreate = matchPath("/deals/create", location.pathname);
   const appbarHeight = useAppBarHeight();
 
   // get Contact data
@@ -42,7 +40,7 @@ export const DealEmpty = ({ children }: { children?: ReactNode }) => {
           <div className="flex space-x-8">
             <CreateButton label="Create project" />
           </div>
-          <DealCreate open={!!matchCreate} />
+          <ProjectCreateFlow />
           {children}
         </>
       ) : (

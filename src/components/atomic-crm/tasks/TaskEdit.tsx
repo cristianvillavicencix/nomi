@@ -44,7 +44,7 @@ export const TaskEdit = ({
               <DialogHeader>
                 <DialogTitle>Edit task</DialogTitle>
               </DialogHeader>
-              <TaskFormContent />
+              <TaskFormContent showDealLink={false} />
               <DialogFooter className="w-full sm:justify-between gap-4">
                 <DeleteButton
                   mutationOptions={{

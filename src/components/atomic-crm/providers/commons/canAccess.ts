@@ -1,4 +1,6 @@
 // FIXME: This should be exported from the ra-core package
+import { isLbsMode } from "@/lbs/productMode";
+
 type CanAccessParams<
   RecordType extends Record<string, any> = Record<string, any>,
 > = {
@@ -15,7 +17,12 @@ export type AccessRole =
   | "sales_manager"
   | "manager"
   | "employee"
-  | "user";
+  | "user"
+  | "sales"
+  | "pm"
+  | "designer"
+  | "developer"
+  | "marketing";
 
 export type AccessIdentity = {
   administrator?: boolean;
@@ -89,10 +96,58 @@ export const canAccess = <
   const canAccessSales =
     roles.includes("sales_manager") ||
     roles.includes("manager") ||
-    roles.includes("employee");
+    roles.includes("employee") ||
+    roles.includes("sales") ||
+    roles.includes("pm") ||
+    roles.includes("designer") ||
+    roles.includes("developer") ||
+    roles.includes("marketing");
 
   if (params.resource === "organization_members" || params.resource === "configuration") {
     return false;
+  }
+
+  if (isLbsMode()) {
+    if (
+      params.resource === "payments" ||
+      params.resource === "payment_lines" ||
+      params.resource === "payroll_runs" ||
+      params.resource === "payroll_run_lines" ||
+      params.resource === "employee_loans" ||
+      params.resource === "employee_loan_deductions" ||
+      params.resource === "people" ||
+      params.resource === "time_entries" ||
+      params.resource === "reports"
+    ) {
+      return false;
+    }
+
+    if (
+      params.resource === "deals" ||
+      params.resource === "companies" ||
+      params.resource === "contacts" ||
+      params.resource === "tasks" ||
+      params.resource === "calendar_events" ||
+      params.resource === "task_assignees" ||
+      params.resource === "task_participants" ||
+      params.resource === "task_tag_notifications" ||
+      params.resource === "proposals" ||
+      params.resource === "contracts" ||
+      params.resource === "forms" ||
+      params.resource === "form_submissions" ||
+      params.resource === "tickets" ||
+      params.resource === "ticket_messages" ||
+      params.resource === "conversations" ||
+      params.resource === "conversation_participants" ||
+      params.resource === "conversation_messages" ||
+      params.resource === "proposal_line_items" ||
+      params.resource === "deal_resources" ||
+      params.resource === "deal_access_entries"
+    ) {
+      return canAccessSales;
+    }
+
+    return true;
   }
 
   if (

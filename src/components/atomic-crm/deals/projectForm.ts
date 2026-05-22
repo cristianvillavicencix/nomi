@@ -1,3 +1,7 @@
+import { normalizeGithubRepoInput } from "@/lbs/deals/githubRepo";
+import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
+import { isLbsMode } from "@/lbs/productMode";
+
 type GenericRecord = Record<string, unknown>;
 
 const toNumber = (value: unknown) => {
@@ -61,6 +65,14 @@ export const normalizeProjectPayload = <T extends GenericRecord>(
 
   if (!data.pipeline_id) {
     data.pipeline_id = "default";
+  }
+
+  if (isLbsMode() && typeof data.stage === "string") {
+    data.stage = normalizeLbsProjectStage(data.stage);
+  }
+
+  if (typeof data.github_repo === "string") {
+    data.github_repo = normalizeGithubRepoInput(data.github_repo);
   }
 
   data.salesperson_ids = toNumericArray(data.salesperson_ids);

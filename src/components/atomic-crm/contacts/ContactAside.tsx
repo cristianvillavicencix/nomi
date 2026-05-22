@@ -67,7 +67,7 @@ export const ContactAside = ({ link = "edit" }: { link?: "edit" | "show" }) => {
             />
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 };

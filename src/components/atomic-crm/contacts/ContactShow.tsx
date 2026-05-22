@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import {
   BriefcaseBusiness,
+  CalendarClock,
   CircleDollarSign,
   FileText,
   FolderKanban,
@@ -35,6 +36,7 @@ import { RelativeDate } from "../misc/RelativeDate";
 import { NoteCreate } from "../notes";
 import { Note } from "../notes/Note";
 import type {
+  CalendarEventRecord,
   Company,
   Contact,
   ContactNote,
@@ -43,15 +45,25 @@ import type {
   PaymentLine,
   Task,
 } from "../types";
+import {
+  formatEventTimeLabel,
+  formatRemindBeforeLabel,
+  getCalendarEntryKind,
+} from "@/lbs/calendar/calendarReminderOptions";
+import { getCalendarEventSortDate } from "@/lbs/calendar/ProjectCalendarEventsList";
 import { ContactEditModal } from "./ContactEditModal";
 import { ContactHeader } from "./ContactHeader";
+import { isLbsMode } from "@/lbs/productMode";
+import { getPersonListPath } from "@/lbs/routing";
 
 const CONTACT_TABS = ["activities", "projects", "financials"] as const;
+const LBS_CONTACT_TABS = ["activities", "projects"] as const;
 type ContactTab = (typeof CONTACT_TABS)[number];
 
 type ActivityFeedItem =
   | { id: string; type: "note"; date: string; note: ContactNote }
   | { id: string; type: "task"; date: string; task: Task }
+  | { id: string; type: "calendar_event"; date: string; calendarEvent: CalendarEventRecord }
   | { id: string; type: "created"; date: string };
 
 export const ContactShow = () => {
@@ -89,7 +101,7 @@ const ContactShowContentMobile = () => {
       <MobileHeader>
         <MobileBackButton />
         <div className="flex flex-1 min-w-0">
-          <Link to="/contacts" className="flex-1 min-w-0">
+          <Link to={getPersonListPath(record.status)} className="flex-1 min-w-0">
             <h1 className="truncate text-xl font-semibold">
               <RecordRepresentation />
             </h1>
@@ -113,7 +125,13 @@ const ContactShowContentMobile = () => {
   );
 };
 
-export const ContactShowContent = () => {
+export const ContactShowContent = ({
+  embedded = false,
+  onClose,
+}: {
+  embedded?: boolean;
+  onClose?: () => void;
+} = {}) => {
   const { record, isPending } = useShowContext<Contact>();
   const location = useLocation();
   const [editOpen, setEditOpen] = useState(false);
@@ -121,7 +139,7 @@ export const ContactShowContent = () => {
   if (isPending || !record) return null;
 
   return (
-    <div className="mt-2 mb-2">
+    <div className={embedded ? "mb-0" : "mt-2 mb-2"}>
       <ContactEditModal
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -132,6 +150,8 @@ export const ContactShowContent = () => {
           record={record}
           locationSearch={location.search}
           onEdit={() => setEditOpen(true)}
+          embedded={embedded}
+          onClose={onClose}
         />
         <Card>
           <CardContent>
@@ -146,6 +166,7 @@ export const ContactShowContent = () => {
 const ContactMainTabs = ({ record }: { record: Contact }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = getValidTab(searchParams.get("tab"));
+  const lbsMode = isLbsMode();
   const { total: projectsCount } = useGetList<Deal>(
     "deals",
     {
@@ -166,12 +187,19 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
   return (
     <Tabs value={currentTab} onValueChange={handleTabChange} className="flex min-h-0 w-full flex-col">
       <StickyTabsBar className="pb-2">
-        <TabsList className="grid h-10 w-full grid-cols-3">
+        <TabsList
+          className={cn(
+            "grid h-10 w-full",
+            lbsMode ? "grid-cols-2" : "grid-cols-3",
+          )}
+        >
           <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="projects">
             Projects{typeof projectsCount === "number" ? ` (${projectsCount})` : ""}
           </TabsTrigger>
-          <TabsTrigger value="financials">Financials</TabsTrigger>
+          {!lbsMode ? (
+            <TabsTrigger value="financials">Financials</TabsTrigger>
+          ) : null}
         </TabsList>
       </StickyTabsBar>
 
@@ -184,9 +212,11 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
           <ContactProjectsTab record={record} />
         </TabsContent>
 
-        <TabsContent value="financials" className="pt-2">
-          <ContactFinancialsTab record={record} />
-        </TabsContent>
+        {!lbsMode ? (
+          <TabsContent value="financials" className="pt-2">
+            <ContactFinancialsTab record={record} />
+          </TabsContent>
+        ) : null}
       </ScrollableContentArea>
     </Tabs>
   );
@@ -209,6 +239,16 @@ const ContactActivitiesTab = ({ record }: { record: Contact }) => {
       pagination: { page: 1, perPage: 50 },
     },
   );
+  const { data: calendarEvents = [], isPending: calendarEventsPending } =
+    useGetList<CalendarEventRecord>(
+      "calendar_events",
+      {
+        filter: { "contact_id@eq": record.id },
+        sort: { field: "event_date", order: "DESC" },
+        pagination: { page: 1, perPage: 50 },
+      },
+      { staleTime: 30_000 },
+    );
 
   const events = useMemo<ActivityFeedItem[]>(() => {
     const noteEvents =
@@ -225,6 +265,13 @@ const ContactActivitiesTab = ({ record }: { record: Contact }) => {
         date: task.done_date ?? task.due_date,
         task,
       })) ?? [];
+    const calendarEventItems =
+      calendarEvents.map((calendarEvent) => ({
+        id: `calendar-${calendarEvent.id}`,
+        type: "calendar_event" as const,
+        date: getCalendarEventSortDate(calendarEvent),
+        calendarEvent,
+      })) ?? [];
     const createdEvent: ActivityFeedItem[] = record.first_seen
       ? [
           {
@@ -235,13 +282,13 @@ const ContactActivitiesTab = ({ record }: { record: Contact }) => {
         ]
       : [];
 
-    return [...noteEvents, ...taskEvents, ...createdEvent].sort(
+    return [...noteEvents, ...taskEvents, ...calendarEventItems, ...createdEvent].sort(
       (left, right) =>
         new Date(right.date).getTime() - new Date(left.date).getTime(),
     );
-  }, [notes, record.first_seen, record.id, tasks]);
+  }, [calendarEvents, notes, record.first_seen, record.id, tasks]);
 
-  if (notesPending || tasksPending) {
+  if (notesPending || tasksPending || calendarEventsPending) {
     return <TabEmptyState label="Loading activity..." />;
   }
 
@@ -298,6 +345,53 @@ const ActivityFeedRow = ({ event }: { event: ActivityFeedItem }) => {
                 addSuffix: true,
               })}
             </p>
+          </div>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            <RelativeDate date={event.date} />
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (event.type === "calendar_event") {
+    const timeLabel = formatEventTimeLabel(event.calendarEvent.event_time);
+    const remindLabel = formatRemindBeforeLabel(event.calendarEvent.remind_before_minutes);
+    const entryKind = getCalendarEntryKind(event.calendarEvent);
+    const entryLabel =
+      entryKind === "activity"
+        ? "Activity"
+        : entryKind === "scheduled_task"
+          ? "Assigned task"
+          : "Calendar event";
+
+    return (
+      <div className="rounded-lg border border-border p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <CalendarClock className="size-4" />
+              {event.calendarEvent.completed_at ? `${entryLabel} done` : entryLabel}
+            </div>
+            <p className="text-sm font-medium">{event.calendarEvent.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {[
+                new Date(event.calendarEvent.event_date).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }),
+                timeLabel,
+                remindLabel,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+            {event.calendarEvent.description ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {event.calendarEvent.description}
+              </p>
+            ) : null}
           </div>
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             <RelativeDate date={event.date} />
@@ -633,10 +727,13 @@ const TabEmptyState = ({ label }: { label: string }) => (
   </div>
 );
 
-const getValidTab = (value: string | null): ContactTab =>
-  CONTACT_TABS.includes(value as ContactTab)
-    ? (value as ContactTab)
-    : "activities";
+const getValidTab = (value: string | null): ContactTab => {
+  const tabs = isLbsMode() ? LBS_CONTACT_TABS : CONTACT_TABS;
+  if (value != null && (tabs as readonly string[]).includes(value)) {
+    return value as ContactTab;
+  }
+  return "activities";
+};
 
 const formatCurrency = (value: number | null | undefined) =>
   Number(value ?? 0).toLocaleString("en-US", {

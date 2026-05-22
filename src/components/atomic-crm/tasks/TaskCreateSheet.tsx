@@ -10,6 +10,7 @@ import {
 import { CreateSheet } from "../misc/CreateSheet";
 import { foreignKeyMapping } from "../notes/foreignKeyMapping";
 import { TaskFormContent } from "./TaskFormContent";
+import { normalizeTaskCreateData } from "./taskConstants";
 
 export interface TaskCreateSheetProps {
   open: boolean;
@@ -66,19 +67,17 @@ export const TaskCreateSheet = ({
       }
       redirect={false}
       record={{
-        type: "None",
+        type: "none",
         contact_id,
+        deal_id: null,
         due_date: new Date().toISOString().slice(0, 10),
         organization_member_id: identity.id,
+        assignee_person_ids: [],
+        collaborator_person_ids: [],
+        priority: "normal",
+        internal: false,
       }}
-      transform={(data) => {
-        const dueDate = new Date(data.due_date);
-        dueDate.setHours(0, 0, 0, 0);
-        return {
-          ...data,
-          due_date: dueDate.toISOString(),
-        };
-      }}
+      transform={normalizeTaskCreateData}
       mutationOptions={{
         onSuccess: handleSuccess,
       }}

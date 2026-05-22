@@ -12,6 +12,8 @@ import {
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CRMUserMenuItems } from "./UserMenuItems";
+import { isLbsMode } from "@/lbs/productMode";
+import { LBS_NAV_ITEMS } from "@/lbs/navigation";
 
 const TIME_AND_PAY_PATHS = new Set([
   "/time_entries",
@@ -61,6 +63,42 @@ const Header = () => {
     typeof currentPath === "string" && TIME_AND_PAY_PATHS.has(currentPath)
       ? currentPath
       : null;
+
+  if (isLbsMode()) {
+    return (
+      <header className="bg-secondary">
+        <div className="px-4">
+          <div className="flex justify-between items-center flex-1">
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-secondary-foreground no-underline"
+            >
+              <img className="[.light_&]:hidden h-6" src={darkModeLogo} alt={title} />
+              <img className="[.dark_&]:hidden h-6" src={lightModeLogo} alt={title} />
+              <h1 className="text-xl font-semibold">{title}</h1>
+            </Link>
+            <nav className="flex flex-wrap">
+              {LBS_NAV_ITEMS.map((item) => (
+                <NavigationTab
+                  key={item.to}
+                  label={item.label}
+                  to={item.to}
+                  isActive={!!matchPath(item.activePattern, location.pathname)}
+                />
+              ))}
+            </nav>
+            <div className="flex items-center">
+              <ThemeModeToggle />
+              <RefreshButton />
+              <UserMenu>
+                <CRMUserMenuItems />
+              </UserMenu>
+            </div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="bg-secondary">

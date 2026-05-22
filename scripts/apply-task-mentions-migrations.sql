@@ -1,0 +1,4 @@
+-- Task @ mentions: apply manually in Supabase Dashboard → SQL Editor
+-- 1. Paste and run: supabase/migrations/20260629140000_task_assignees.sql
+-- 2. Paste and run: supabase/migrations/20260629150000_task_mention_members_and_legacy_migration.sql
+-- 3. Dashboard → Project Settings → API → Reload schema cache (or wait ~1 min)

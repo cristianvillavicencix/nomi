@@ -64,12 +64,33 @@ create policy "organizations_update_platform" on public.organizations
   using (public.is_platform_operator())
   with check (public.is_platform_operator());
 
--- 4) Sales directory for platform: see all org members (support / billing), OR existing same-org access.
-drop policy if exists "sales_select_platform" on public.sales;
-
-create policy "sales_select_platform" on public.sales
-  for select to authenticated
-  using (public.is_platform_operator());
+-- 4) Membership directory for platform: see all org members (support / billing).
+-- Remote DBs may already have organization_members if sales was renamed out-of-band.
+do $$
+begin
+  if exists (
+    select 1
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'sales'
+  ) then
+    drop policy if exists "sales_select_platform" on public.sales;
+    create policy "sales_select_platform" on public.sales
+      for select to authenticated
+      using (public.is_platform_operator());
+  elsif exists (
+    select 1
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'organization_members'
+  ) then
+    drop policy if exists "sales_select_platform" on public.organization_members;
+    drop policy if exists "organization_members_select_platform" on public.organization_members;
+    create policy "organization_members_select_platform" on public.organization_members
+      for select to authenticated
+      using (public.is_platform_operator());
+  end if;
+end $$;
 
 -- First operator (run in SQL editor, replace email):
 -- insert into public.platform_operators (user_id)

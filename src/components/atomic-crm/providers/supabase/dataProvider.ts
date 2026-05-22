@@ -20,13 +20,27 @@ import type {
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { withCurrentProductName } from "../../root/defaultConfiguration";
 import { getActivityLog } from "../commons/activity";
+import {
+  persistTaskAssignmentSideEffects,
+  prepareTaskWriteData,
+} from "../../tasks/persistTaskAssignmentSideEffects";
+import { prepareCalendarEventWriteData } from "@/lbs/calendar/calendarEventWriteData";
+import type { GetScopedTasksParams } from "../../tasks/scopedTasks";
+import { collectMyProjectDealIds } from "../../tasks/scopedTasksFilter";
+import type { Task } from "../../types";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getIsInitialized } from "./authProvider";
 import { supabase } from "./supabase";
 import { canApprovePayroll } from "@/payroll/permissions";
 import { canMutateCrmResource } from "../commons/crmPermissions";
-import { normalizeLoanPayload } from "@/loans/helpers";
+import {
+  buildCompanyPayloadFromUpsert,
+  buildContactPayloadFromUpsert,
+  splitClientFullName,
+  type LbsClientUpsertInput,
+  type LbsClientUpsertResult,
+} from "@/lbs/clients/lbsClientUpsert";
 
 if (import.meta.env.VITE_SUPABASE_URL === undefined) {
   throw new Error("Please set the VITE_SUPABASE_URL environment variable");
@@ -531,6 +545,511 @@ const dataProviderWithCustomMethods = {
 
     return data;
   },
+  async acceptProposal({ id }: { id: Identifier }) {
+    const { data, error } = await invokeEdgeFunction<{ deal_id: number; proposal_id: number }>(
+      "accept_proposal",
+      {
+        method: "POST",
+        body: { proposal_id: id },
+      },
+    );
+
+    if (error || !data?.deal_id) {
+      console.error("accept_proposal.error", error);
+      throw new Error("Failed to accept proposal");
+    }
+
+    return data;
+  },
+  async upsertLbsClient(input: LbsClientUpsertInput): Promise<LbsClientUpsertResult> {
+    const memberId = await resolveOrganizationMemberId(input.organizationMemberId);
+    const { data: member, error: memberError } = await supabase
+      .from("organization_members")
+      .select("id, org_id")
+      .eq("id", memberId)
+      .single();
+
+    if (memberError || !member?.org_id) {
+      throw new Error("Organization member not found");
+    }
+
+    const companyName = input.business.name.trim();
+    const { firstName, lastName } = splitClientFullName(input.primary.fullName);
+    let created = false;
+
+    type ExistingCompany = {
+      id: Identifier;
+      context_links: string[] | null;
+      primary_contact_id: Identifier | null;
+    };
+
+    let existingCompany: ExistingCompany | null = null;
+
+    if (input.companyId) {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, context_links, primary_contact_id")
+        .eq("id", input.companyId)
+        .eq("org_id", member.org_id)
+        .maybeSingle();
+
+      if (error || !data?.id) {
+        throw new Error("Client not found");
+      }
+      existingCompany = data as ExistingCompany;
+    } else {
+      const { data } = await supabase
+        .from("companies")
+        .select("id, context_links, primary_contact_id")
+        .eq("org_id", member.org_id)
+        .ilike("name", companyName)
+        .limit(1)
+        .maybeSingle();
+
+      existingCompany = (data as ExistingCompany | null) ?? null;
+    }
+
+    const companyPayload = buildCompanyPayloadFromUpsert(
+      input,
+      existingCompany?.context_links ?? undefined,
+    );
+
+    let companyId: Identifier;
+    if (existingCompany?.id) {
+      const { data: updatedCompany, error: updateCompanyError } = await supabase
+        .from("companies")
+        .update(companyPayload)
+        .eq("id", existingCompany.id)
+        .select("id")
+        .single();
+
+      if (updateCompanyError || !updatedCompany) {
+        throw new Error("Failed to update client company");
+      }
+      companyId = updatedCompany.id;
+    } else {
+      const { data: newCompany, error: createCompanyError } = await supabase
+        .from("companies")
+        .insert({
+          org_id: member.org_id,
+          sector: "information-technology",
+          ...companyPayload,
+        })
+        .select("id")
+        .single();
+
+      if (createCompanyError || !newCompany) {
+        throw new Error("Failed to create client company");
+      }
+      companyId = newCompany.id;
+      created = true;
+    }
+
+    const contactPayload = buildContactPayloadFromUpsert(input, companyId);
+    let contactId: Identifier | undefined;
+
+    const resolvePrimaryContactId = async () => {
+      if (input.primaryContactId) {
+        const { data: existingPrimary } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("id", input.primaryContactId)
+          .eq("company_id", companyId)
+          .maybeSingle();
+
+        if (existingPrimary?.id) {
+          const { data: updatedContact, error: updateContactError } = await supabase
+            .from("contacts")
+            .update(contactPayload)
+            .eq("id", existingPrimary.id)
+            .select("id")
+            .single();
+
+          if (updateContactError || !updatedContact) {
+            throw new Error("Failed to update primary contact");
+          }
+          return updatedContact.id as Identifier;
+        }
+      }
+
+      const primaryEmail = input.primary.email?.trim().toLowerCase();
+      if (primaryEmail) {
+        const { data: contactsByCompany } = await supabase
+          .from("contacts")
+          .select("id, email_jsonb")
+          .eq("company_id", companyId);
+
+        const matchedByEmail = contactsByCompany?.find((contact) =>
+          (contact.email_jsonb as { email?: string }[] | null)?.some(
+            (entry) => entry.email?.trim().toLowerCase() === primaryEmail,
+          ),
+        );
+
+        if (matchedByEmail?.id) {
+          const { data: updatedContact, error: updateContactError } = await supabase
+            .from("contacts")
+            .update(contactPayload)
+            .eq("id", matchedByEmail.id)
+            .select("id")
+            .single();
+
+          if (updateContactError || !updatedContact) {
+            throw new Error("Failed to update primary contact");
+          }
+          return updatedContact.id as Identifier;
+        }
+      }
+
+      const { data: existingByName } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("company_id", companyId)
+        .ilike("first_name", firstName)
+        .ilike("last_name", lastName || firstName)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingByName?.id) {
+        const { data: updatedContact, error: updateContactError } = await supabase
+          .from("contacts")
+          .update(contactPayload)
+          .eq("id", existingByName.id)
+          .select("id")
+          .single();
+
+        if (updateContactError || !updatedContact) {
+          throw new Error("Failed to update primary contact");
+        }
+        return updatedContact.id as Identifier;
+      }
+
+      const { data: newContact, error: createContactError } = await supabase
+        .from("contacts")
+        .insert({
+          org_id: member.org_id,
+          ...contactPayload,
+        })
+        .select("id")
+        .single();
+
+      if (createContactError || !newContact) {
+        throw new Error("Failed to create primary contact");
+      }
+      return newContact.id as Identifier;
+    };
+
+    contactId = await resolvePrimaryContactId();
+
+    const { error: primaryLinkError } = await supabase
+      .from("companies")
+      .update({ primary_contact_id: contactId })
+      .eq("id", companyId);
+
+    if (primaryLinkError) {
+      throw new Error("Failed to link primary contact");
+    }
+
+    return { company_id: companyId, contact_id: contactId, created };
+  },
+  async convertLeadToClient({
+    contactId,
+    companyName,
+  }: {
+    contactId: Identifier;
+    companyName: string;
+  }) {
+    const trimmedName = companyName.trim();
+    if (trimmedName.length < 2) {
+      throw new Error("Company name must be at least 2 characters");
+    }
+
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name, organization_member_id, company_id, org_id")
+      .eq("id", contactId)
+      .single();
+
+    if (contactError || !contact) {
+      throw new Error("Lead not found");
+    }
+
+    let companyId = contact.company_id as Identifier | null;
+
+    if (companyId) {
+      const { data: existingCompany } = await supabase
+        .from("companies")
+        .select("id, primary_contact_id")
+        .eq("id", companyId)
+        .single();
+
+      if (existingCompany?.id) {
+        companyId = existingCompany.id;
+      } else {
+        companyId = null;
+      }
+    }
+
+    if (!companyId) {
+      const orgId = contact.org_id;
+      const { data: existingByName } = orgId
+        ? await supabase
+            .from("companies")
+            .select("id, primary_contact_id")
+            .eq("org_id", orgId)
+            .ilike("name", trimmedName)
+            .limit(1)
+            .maybeSingle()
+        : { data: null };
+
+      if (existingByName?.id) {
+        companyId = existingByName.id;
+      } else {
+        const { data: company, error: companyError } = await supabase
+          .from("companies")
+          .insert({
+            name: trimmedName,
+            organization_member_id: contact.organization_member_id,
+            org_id: contact.org_id,
+            sector: "information-technology",
+          })
+          .select("id, primary_contact_id")
+          .single();
+
+        if (companyError || !company) {
+          throw new Error("Failed to create client company");
+        }
+        companyId = company.id;
+      }
+    }
+
+    const { data: companyRecord } = await supabase
+      .from("companies")
+      .select("primary_contact_id")
+      .eq("id", companyId)
+      .single();
+
+    const { error: updateError } = await supabase
+      .from("contacts")
+      .update({
+        company_id: companyId,
+        status: "client",
+      })
+      .eq("id", contactId);
+
+    if (updateError) {
+      throw new Error("Failed to convert lead");
+    }
+
+    if (!companyRecord?.primary_contact_id) {
+      await supabase
+        .from("companies")
+        .update({ primary_contact_id: contactId })
+        .eq("id", companyId);
+    }
+
+    return { company_id: companyId, contact_id: contactId };
+  },
+  async processWebsiteIntake(payload: {
+    formId: Identifier;
+    data: Record<string, unknown>;
+    companyName?: string;
+    contactEmail?: string;
+    contactFirstName?: string;
+    contactLastName?: string;
+    contactPhone?: string;
+    website?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipcode?: string;
+    country?: string;
+    attachments?: Array<{
+      name: string;
+      content: string;
+      content_type?: string;
+    }>;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      company_id: number;
+      contact_id: number;
+      deal_id: number;
+      created?: boolean;
+    }>("process_website_intake", {
+      method: "POST",
+      body: {
+        form_id: payload.formId,
+        data: payload.data,
+        company_name: payload.companyName,
+        contact_email: payload.contactEmail,
+        contact_first_name: payload.contactFirstName,
+        contact_last_name: payload.contactLastName,
+        contact_phone: payload.contactPhone,
+        website: payload.website,
+        address: payload.address,
+        city: payload.city,
+        state: payload.state,
+        zipcode: payload.zipcode,
+        country: payload.country,
+        attachments: payload.attachments,
+      },
+    });
+
+    if (error || !data) {
+      console.error("process_website_intake.error", error);
+      throw new Error("Failed to process website intake");
+    }
+
+    return data;
+  },
+  async submitPublicForm(payload: {
+    slug: string;
+    companyId?: string | number | null;
+    contactId?: string | number | null;
+    dealId?: string | number | null;
+    data: Record<string, unknown>;
+  }) {
+    const { data, error } = await supabase.functions.invoke<{
+      company_id: number;
+      contact_id: number;
+      deal_id: number;
+      created?: boolean;
+    }>("submit_public_form", {
+      body: {
+        slug: payload.slug,
+        company_id: payload.companyId ? Number(payload.companyId) : undefined,
+        contact_id: payload.contactId ? Number(payload.contactId) : undefined,
+        deal_id: payload.dealId ? Number(payload.dealId) : undefined,
+        data: payload.data,
+      },
+      headers: {
+        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+      },
+    });
+
+    if (error || !data) {
+      console.error("submit_public_form.error", error);
+      throw new Error("Failed to submit form");
+    }
+
+    return data;
+  },
+  async getPublicForm(payload: { slug: string }) {
+    const { data, error } = await supabase.functions.invoke<{
+      name: string;
+      description?: string | null;
+      slug: string;
+      schema?: Record<string, unknown>;
+    }>("get_public_form", {
+      body: {
+        slug: payload.slug,
+      },
+      headers: {
+        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+      },
+    });
+
+    if (error || !data) {
+      console.error("get_public_form.error", error);
+      throw new Error("Form not found");
+    }
+
+    return data;
+  },
+  async getPublicDealBrief(payload: {
+    dealId: string | number;
+    companyId: string | number;
+    contactId: string | number;
+  }) {
+    const { data, error } = await supabase.functions.invoke<{
+      project_type?: string | null;
+      expected_end_date?: string | null;
+      website_brief?: Record<string, string | null>;
+    }>("get_public_deal_brief", {
+      body: {
+        deal_id: Number(payload.dealId),
+        company_id: Number(payload.companyId),
+        contact_id: Number(payload.contactId),
+      },
+      headers: {
+        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+      },
+    });
+
+    if (error || !data) {
+      console.error("get_public_deal_brief.error", error);
+      throw new Error("Failed to load project brief");
+    }
+
+    return data;
+  },
+  async getGithubRepoStatus(payload: { dealId: Identifier }) {
+    const { data, error } = await invokeEdgeFunction<{
+      slug: string;
+      repo_url: string | null;
+      default_branch: string | null;
+      last_commit: {
+        sha: string;
+        short_sha: string;
+        message: string;
+        author: string;
+        date: string | null;
+        url: string;
+      } | null;
+      latest_run: {
+        status: string | null;
+        conclusion: string | null;
+        workflow_name: string | null;
+        updated_at: string | null;
+        url: string | null;
+      } | null;
+      github_token_configured: boolean;
+      error?: string | null;
+    }>("get_github_repo_status", {
+      method: "POST",
+      body: { deal_id: Number(payload.dealId) },
+    });
+
+    if (error || !data) {
+      console.error("get_github_repo_status.error", error);
+      throw new Error("Failed to load GitHub repository status");
+    }
+
+    return data;
+  },
+  async submitProjectResources(payload: {
+    dealId: string | number;
+    companyId?: string | number | null;
+    contactId?: string | number | null;
+    items: Array<{
+      category: string;
+      label?: string;
+      name: string;
+      content: string;
+      content_type?: string;
+    }>;
+  }) {
+    const { data, error } = await supabase.functions.invoke<{
+      deal_id: number;
+      count: number;
+    }>("submit_project_resources", {
+      body: {
+        deal_id: Number(payload.dealId),
+        company_id: payload.companyId ? Number(payload.companyId) : undefined,
+        contact_id: payload.contactId ? Number(payload.contactId) : undefined,
+        items: payload.items,
+      },
+      headers: {
+        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+      },
+    });
+
+    if (error || !data) {
+      console.error("submit_project_resources.error", error);
+      throw new Error("Failed to upload project resources");
+    }
+
+    return data;
+  },
   /**
    * Usa el cliente de Supabase con `.maybeSingle()` en lugar de `getOne` del data provider.
    * Sin sesión, RLS no devuelve filas: PostgREST respondía 406 (Accept object+json) al esperar
@@ -704,6 +1223,249 @@ const dataProviderWithCustomMethods = {
     }
     return data ?? { users: [], total: 0 };
   },
+  async getScopedTasks(params: GetScopedTasksParams) {
+    let query = supabase.from("tasks").select("*", { count: "exact" });
+
+    if (params.status === "open") {
+      query = query.is("done_date", null);
+    } else {
+      query = query.not("done_date", "is", null);
+    }
+
+    if (params.typeFilter && params.typeFilter !== "all") {
+      query = query.eq("type", params.typeFilter);
+    }
+    if (params.priorityFilter && params.priorityFilter !== "all") {
+      query = query.eq("priority", params.priorityFilter);
+    }
+    if (params.projectId != null && params.projectId !== "") {
+      query = query.eq("deal_id", params.projectId);
+    }
+
+    if (params.scope === "mine") {
+      const orParts = [`organization_member_id.eq.${params.organizationMemberId}`];
+      orParts.push(`mentioned_member_ids.cs.{${params.organizationMemberId}}`);
+      if (params.personId != null) {
+        orParts.push(`assignee_person_ids.cs.{${params.personId}}`);
+        orParts.push(`collaborator_person_ids.cs.{${params.personId}}`);
+      }
+      query = query.or(orParts.join(","));
+    } else if (params.scope === "my_projects") {
+      const dealIds = (params.projectDealIds ?? [])
+        .map(Number)
+        .filter(Number.isFinite);
+      if (dealIds.length === 0) {
+        return { data: [], total: 0 };
+      }
+      query = query.in("deal_id", dealIds);
+    }
+
+    const sortField = params.sort?.field ?? "due_date";
+    const ascending = params.sort?.order !== "DESC";
+    query = query.order(sortField, { ascending, nullsFirst: false });
+
+    const page = params.pagination?.page ?? 1;
+    const perPage = params.pagination?.perPage ?? 200;
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+    if (error) {
+      console.error("getScopedTasks.error", error);
+      throw new Error("Failed to load tasks");
+    }
+
+    return {
+      data: (data ?? []) as Task[],
+      total: count ?? 0,
+    };
+  },
+  async getMyProjectDealIds(params: {
+    organizationMemberId: Identifier;
+    personId?: Identifier | null;
+  }) {
+    const { data: deals, error } = await supabase
+      .from("deals")
+      .select("id, organization_member_id, salesperson_ids");
+
+    if (error) {
+      console.error("getMyProjectDealIds.error", error);
+      throw new Error("Failed to load projects");
+    }
+
+    return collectMyProjectDealIds(
+      deals ?? [],
+      params.organizationMemberId,
+      params.personId,
+    );
+  },
+  async getMessagingSettings() {
+    const { data, error } = await invokeEdgeFunction<import("@/lbs/types").MessagingSettingsPublic>(
+      "messaging_settings",
+      {
+        method: "POST",
+        body: { action: "get" },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to load messaging settings",
+      );
+    }
+    if (!data) {
+      throw new Error("Failed to load messaging settings");
+    }
+    return data;
+  },
+  async updateMessagingSettings(params: {
+    twilio_account_sid?: string | null;
+    twilio_auth_token?: string | null;
+    twilio_phone_number?: string | null;
+    sms_enabled?: boolean;
+  }) {
+    const { data, error } = await invokeEdgeFunction<import("@/lbs/types").MessagingSettingsPublic>(
+      "messaging_settings",
+      {
+        method: "POST",
+        body: {
+          action: "update",
+          ...params,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to save messaging settings",
+      );
+    }
+    if (!data) {
+      throw new Error("Failed to save messaging settings");
+    }
+    return data;
+  },
+  async sendClientSms(params: { conversationId: Identifier; body: string }) {
+    const { data, error } = await invokeEdgeFunction<{
+      message?: import("@/lbs/types").ConversationMessage;
+    }>("send_client_sms", {
+      method: "POST",
+      body: {
+        conversation_id: params.conversationId,
+        body: params.body,
+      },
+    });
+    if (error) {
+      const response = (error as { context?: Response }).context;
+      if (response) {
+        try {
+          const payload = (await response.clone().json()) as { message?: string };
+          if (payload?.message) {
+            throw new Error(payload.message);
+          }
+        } catch (parseError) {
+          if (parseError instanceof Error && parseError.message !== "Failed to send SMS") {
+            throw parseError;
+          }
+        }
+      }
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to send SMS",
+      );
+    }
+    return data?.message ?? null;
+  },
+  async ensureClientConversation(params: {
+    contactId: Identifier;
+    authorMemberId: Identifier;
+    dealId?: Identifier | null;
+  }) {
+    const authorMemberId = await resolveOrganizationMemberId(params.authorMemberId);
+
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name, phone_jsonb")
+      .eq("id", params.contactId)
+      .maybeSingle();
+
+    if (contactError || !contact?.id) {
+      throw new Error("Contact not found");
+    }
+
+    const phoneJsonb = contact.phone_jsonb as PhoneNumberAndType[] | null | undefined;
+    let externalPhone: string | null = null;
+    for (const entry of phoneJsonb ?? []) {
+      const normalized = normalizeUsPhoneToE164(entry.number ?? "");
+      if (normalized) {
+        externalPhone = normalized;
+        break;
+      }
+    }
+
+    if (!externalPhone) {
+      throw new Error("This contact has no valid phone number");
+    }
+
+    const findExisting = async () => {
+      const { data, error } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("type", "client")
+        .eq("external_phone", externalPhone)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(error.message ?? "Failed to load client conversation");
+      }
+
+      return data;
+    };
+
+    const existing = await findExisting();
+    if (existing) {
+      return existing as import("@/lbs/types").Conversation;
+    }
+
+    const title =
+      `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+      externalPhone;
+
+    const payload: Record<string, unknown> = {
+      type: "client",
+      title,
+      contact_id: contact.id,
+      external_phone: externalPhone,
+      created_by_member_id: authorMemberId,
+    };
+
+    if (params.dealId != null && params.dealId !== "") {
+      const { data: deal } = await supabase
+        .from("deals")
+        .select("id")
+        .eq("id", params.dealId)
+        .maybeSingle();
+      if (deal?.id) {
+        payload.deal_id = deal.id;
+      }
+    }
+
+    const { data: created, error: createError } = await supabase
+      .from("conversations")
+      .insert(payload)
+      .select("*")
+      .single();
+
+    if (createError) {
+      if (createError.code === "23505") {
+        const retry = await findExisting();
+        if (retry) {
+          return retry as import("@/lbs/types").Conversation;
+        }
+      }
+      throw new Error(createError.message ?? "Failed to create client conversation");
+    }
+
+    return created as import("@/lbs/types").Conversation;
+  },
 } satisfies DataProvider;
 
 export type CrmDataProvider = typeof dataProviderWithCustomMethods;
@@ -718,6 +1480,16 @@ const processConfigLogo = async (logo: any): Promise<string> => {
 };
 
 const lifeCycleCallbacks: ResourceCallbacks[] = [
+  {
+    resource: "conversations",
+    beforeCreate: async (params) => {
+      const data = { ...(params.data as Record<string, unknown>) };
+      if (data.type === "client") {
+        delete data.deal_id;
+      }
+      return { ...params, data };
+    },
+  },
   {
     resource: "configuration",
     beforeUpdate: async (params) => {
@@ -836,6 +1608,8 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
         "zipcode",
         "city",
         "state_abbr",
+        "primary_contact_first_name",
+        "primary_contact_last_name",
       ])(params);
     },
     beforeCreate: async (params) => {
@@ -910,6 +1684,60 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
         "company_name",
       ])(params);
     },
+  },
+  {
+    resource: "tasks",
+    beforeCreate: async (params) => {
+      return {
+        ...params,
+        data: prepareTaskWriteData(params.data as Record<string, unknown>),
+      };
+    },
+    beforeUpdate: async (params) => {
+      const merged = {
+        ...(params.previousData as Record<string, unknown>),
+        ...(params.data as Record<string, unknown>),
+      };
+      const writeData = prepareTaskWriteData(merged);
+      return {
+        ...params,
+        data: {
+          ...params.data,
+          ...writeData,
+        },
+      };
+    },
+    afterCreate: async (result, dataProvider) => {
+      await persistTaskAssignmentSideEffects(
+        dataProvider,
+        result.data.id,
+        result.data as Record<string, unknown>,
+      );
+      return result;
+    },
+    afterUpdate: async (result, dataProvider) => {
+      await persistTaskAssignmentSideEffects(
+        dataProvider,
+        result.data.id,
+        result.data as Record<string, unknown>,
+        result.data as Record<string, unknown>,
+      );
+      return result;
+    },
+  },
+  {
+    resource: "calendar_events",
+    beforeCreate: async (params) => ({
+      ...params,
+      data: prepareCalendarEventWriteData(params.data as Record<string, unknown>),
+    }),
+    beforeUpdate: async (params) => ({
+      ...params,
+      data: prepareCalendarEventWriteData({
+        ...(params.previousData as Record<string, unknown>),
+        ...(params.data as Record<string, unknown>),
+      }),
+    }),
   },
 ];
 

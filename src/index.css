@@ -262,3 +262,8 @@ input[type="time"] {
     page-break-inside: avoid;
   }
 }
+
+html.nomi-form-embed,
+html.nomi-form-embed body {
+  background: transparent;
+}

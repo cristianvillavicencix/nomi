@@ -19,3 +19,16 @@ export async function getCompanyAvatar(record: Partial<Company>): Promise<{
     title: "Company favicon",
   };
 }
+
+export const getCompanyFaviconSrc = (record: Partial<Company>): string | undefined => {
+  if (record.logo?.src) {
+    return record.logo.src;
+  }
+  if (!record.website?.trim()) {
+    return undefined;
+  }
+  const websiteUrlWithoutScheme = record.website
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
+  return `https://favicon.show/${websiteUrlWithoutScheme}`;
+};

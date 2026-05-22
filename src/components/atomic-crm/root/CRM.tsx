@@ -64,6 +64,13 @@ import { i18nProvider } from "./i18nProvider";
 import { StartPage } from "../login/StartPage.tsx";
 import { useIsMobile } from "@/hooks/use-mobile.ts";
 import { MobileTasksList } from "../tasks/MobileTasksList.tsx";
+import tasks from "../tasks";
+import { renderLbsCustomRoutes, renderLbsPublicFormRoute } from "@/lbs/LbsCustomRoutes";
+import { isLbsMode } from "@/lbs/productMode";
+import proposals from "@/lbs/proposals";
+import contracts from "@/lbs/contracts";
+import webForms from "@/lbs/web-forms";
+import tickets from "@/lbs/tickets";
 import { ContactListMobile } from "../contacts/ContactList.tsx";
 import { ContactShow } from "../contacts/ContactShow.tsx";
 import { CompanyShow } from "../companies/CompanyShow.tsx";
@@ -267,15 +274,29 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           element={<ForgotPasswordPage />}
         />
         <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
-        <Route path="/platafform" element={<Navigate to="/sas" replace />} />
-        <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
-        <Route path="/platform" element={<Navigate to="/sas" replace />} />
-        <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
-        <Route path="/sas/*" element={<PlatformApp />}>
-          <Route index element={<Navigate to="/sas/empresas" replace />} />
-          <Route path="empresas" element={<PlatformEmpresasPage />} />
-          <Route path="empresas/:id" element={<PlatformEmpresaDetailPage />} />
-        </Route>
+        {isLbsMode() ? (
+          <>
+            <Route path="/platafform" element={<Navigate to="/" replace />} />
+            <Route path="/platafform/*" element={<Navigate to="/" replace />} />
+            <Route path="/platform" element={<Navigate to="/" replace />} />
+            <Route path="/platform/*" element={<Navigate to="/" replace />} />
+            <Route path="/sas" element={<Navigate to="/" replace />} />
+            <Route path="/sas/*" element={<Navigate to="/" replace />} />
+            {renderLbsPublicFormRoute()}
+          </>
+        ) : (
+          <>
+            <Route path="/platafform" element={<Navigate to="/sas" replace />} />
+            <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
+            <Route path="/platform" element={<Navigate to="/sas" replace />} />
+            <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
+            <Route path="/sas/*" element={<PlatformApp />}>
+              <Route index element={<Navigate to="/sas/empresas" replace />} />
+              <Route path="empresas" element={<PlatformEmpresasPage />} />
+              <Route path="empresas/:id" element={<PlatformEmpresaDetailPage />} />
+            </Route>
+          </>
+        )}
       </CustomRoutes>
 
       <CustomRoutes>
@@ -288,103 +309,118 @@ const DesktopAdmin = (props: CoreAdminProps) => {
             </ProtectedRoute>
           }
         />
-        <Route path={ImportPage.path} element={<ImportPage />} />
         <Route
-          path="/contacts/:id/show"
+          path={ImportPage.path}
           element={
-            <ProtectedRoute resource="contacts" action="list">
-              <ContactQuickViewPage />
-            </ProtectedRoute>
+            isLbsMode() ? <Navigate to="/" replace /> : <ImportPage />
           }
         />
-        <Route
-          path="/companies/:id/show"
-          element={
-            <ProtectedRoute resource="companies" action="list">
-              <CompanyQuickViewPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/companies/:id/show/:tab"
-          element={
-            <ProtectedRoute resource="companies" action="list">
-              <CompanyQuickViewPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/employees"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="employee" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/employees/:id"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="employee" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/employees/:id/:tab"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="employee" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/salespeople"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="salesperson" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/salespeople/:id"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="salesperson" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/salespeople/:id/:tab"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="salesperson" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/subcontractors"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="subcontractor" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/subcontractors/:id"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="subcontractor" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/people/subcontractors/:id/:tab"
-          element={
-            <ProtectedRoute resource="people" action="list">
-              <PeopleQuickViewPage type="subcontractor" />
-            </ProtectedRoute>
-          }
-        />
+        {!isLbsMode() ? (
+          <Route
+            path="/contacts/:id/show"
+            element={
+              <ProtectedRoute resource="contacts" action="list">
+                <ContactQuickViewPage />
+              </ProtectedRoute>
+            }
+          />
+        ) : null}
+        {!isLbsMode() ? (
+          <>
+            <Route
+              path="/companies/:id/show"
+              element={
+                <ProtectedRoute resource="companies" action="list">
+                  <CompanyQuickViewPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/companies/:id/show/:tab"
+              element={
+                <ProtectedRoute resource="companies" action="list">
+                  <CompanyQuickViewPage />
+                </ProtectedRoute>
+              }
+            />
+          </>
+        ) : null}
+        {!isLbsMode() ? (
+          <>
+            <Route
+              path="/people/employees"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="employee" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people/employees/:id"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="employee" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people/employees/:id/:tab"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="employee" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people/salespeople"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="salesperson" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people/salespeople/:id"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="salesperson" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people/salespeople/:id/:tab"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="salesperson" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people/subcontractors"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="subcontractor" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people/subcontractors/:id"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="subcontractor" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people/subcontractors/:id/:tab"
+              element={
+                <ProtectedRoute resource="people" action="list">
+                  <PeopleQuickViewPage type="subcontractor" />
+                </ProtectedRoute>
+              }
+            />
+          </>
+        ) : null}
         <Route
           path="/reports"
           element={
@@ -426,17 +462,48 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           }
         />
         <Route path="/projects" element={<Navigate to="/deals" replace />} />
+        {renderLbsCustomRoutes({ ProtectedRoute })}
+        {isLbsMode() ? (
+          <>
+            <Route path="/time_entries/*" element={<Navigate to="/" replace />} />
+            <Route path="/payroll_runs/*" element={<Navigate to="/" replace />} />
+            <Route path="/payments/*" element={<Navigate to="/" replace />} />
+            <Route path="/employee_loans/*" element={<Navigate to="/" replace />} />
+            <Route path="/people/*" element={<Navigate to="/" replace />} />
+            <Route path="/reports/*" element={<Navigate to="/" replace />} />
+          </>
+        ) : null}
       </CustomRoutes>
       <Resource name="deals" {...deals} />
-      <Resource name="people" {...people} />
-      <Resource name="time_entries" {...timeEntries} />
-      <Resource name="payments" {...payments} />
-      <Resource name="payment_lines" />
-      <Resource name="payroll_runs" {...payrollRuns} />
-      <Resource name="payroll_run_lines" />
-      <Resource name="employee_loans" {...loans} />
-      <Resource name="employee_loan_deductions" />
-      <Resource name="employee_pto_adjustments" />
+      {!isLbsMode() ? (
+        <>
+          <Resource name="people" {...people} />
+          <Resource name="time_entries" {...timeEntries} />
+          <Resource name="payments" {...payments} />
+          <Resource name="payment_lines" />
+          <Resource name="payroll_runs" {...payrollRuns} />
+          <Resource name="payroll_run_lines" />
+          <Resource name="employee_loans" {...loans} />
+          <Resource name="employee_loan_deductions" />
+          <Resource name="employee_pto_adjustments" />
+        </>
+      ) : null}
+      {isLbsMode() ? (
+        <>
+          <Resource name="proposals" {...proposals} />
+          <Resource name="contracts" {...contracts} />
+          <Resource name="forms" {...webForms} />
+          <Resource name="form_submissions" />
+          <Resource name="tickets" {...tickets} />
+          <Resource name="ticket_messages" />
+          <Resource name="conversations" />
+          <Resource name="conversation_participants" />
+          <Resource name="conversation_messages" />
+          <Resource name="deal_resources" />
+          <Resource name="deal_access_entries" />
+          <Resource name="proposal_line_items" />
+        </>
+      ) : null}
       <Resource name="contacts" {...contacts} />
       <Resource name="companies" {...companies} />
       <Resource name="contact_notes" />
@@ -446,7 +513,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
       <Resource name="deal_change_orders" />
       <Resource name="deal_commissions" />
       <Resource name="deal_client_payments" />
-      <Resource name="tasks" />
+      <Resource name="tasks" {...tasks} />
       <Resource name="organization_members" {...organizationMembers} />
       <Resource name="tags" />
     </Admin>
@@ -514,15 +581,29 @@ const MobileAdmin = (props: CoreAdminProps) => {
             element={<ForgotPasswordPage />}
           />
           <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
-          <Route path="/platafform" element={<Navigate to="/sas" replace />} />
-          <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
-          <Route path="/platform" element={<Navigate to="/sas" replace />} />
-          <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
-<Route path="/sas/*" element={<PlatformApp />}>
-            <Route index element={<Navigate to="/sas/empresas" replace />} />
-            <Route path="empresas" element={<PlatformEmpresasPage />} />
-            <Route path="empresas/:id" element={<PlatformEmpresaDetailPage />} />
-        </Route>
+          {isLbsMode() ? (
+            <>
+              <Route path="/platafform" element={<Navigate to="/" replace />} />
+              <Route path="/platafform/*" element={<Navigate to="/" replace />} />
+              <Route path="/platform" element={<Navigate to="/" replace />} />
+              <Route path="/platform/*" element={<Navigate to="/" replace />} />
+              <Route path="/sas" element={<Navigate to="/" replace />} />
+              <Route path="/sas/*" element={<Navigate to="/" replace />} />
+              {renderLbsPublicFormRoute()}
+            </>
+          ) : (
+            <>
+              <Route path="/platafform" element={<Navigate to="/sas" replace />} />
+              <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
+              <Route path="/platform" element={<Navigate to="/sas" replace />} />
+              <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
+              <Route path="/sas/*" element={<PlatformApp />}>
+                <Route index element={<Navigate to="/sas/empresas" replace />} />
+                <Route path="empresas" element={<PlatformEmpresasPage />} />
+                <Route path="empresas/:id" element={<PlatformEmpresaDetailPage />} />
+              </Route>
+            </>
+          )}
         </CustomRoutes>
         <Resource
           name="contacts"

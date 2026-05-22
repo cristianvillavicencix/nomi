@@ -28,8 +28,10 @@ import {
 import type { DealPipeline, DealPipelineStage } from "../types";
 import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import { UsersSettingsSection } from "./UsersSettingsSection";
+import { MessagingSettingsSection } from "@/lbs/settings/MessagingSettingsSection";
+import { isLbsMode } from "@/lbs/productMode";
 
-const SETTINGS_TAB_IDS = [
+const CONTRACTOR_SETTINGS_TAB_IDS = [
   "general",
   "users",
   "payments",
@@ -37,16 +39,38 @@ const SETTINGS_TAB_IDS = [
   "notes",
   "tasks",
 ] as const;
+
+const LBS_SETTINGS_TAB_IDS = [
+  "general",
+  "users",
+  "messaging",
+  "projects",
+  "notes",
+  "tasks",
+] as const;
+
+const SETTINGS_TAB_IDS = isLbsMode()
+  ? LBS_SETTINGS_TAB_IDS
+  : CONTRACTOR_SETTINGS_TAB_IDS;
 type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];
 
-const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = [
-  { id: "general", label: "General" },
-  { id: "users", label: "Users & roles" },
-  { id: "payments", label: "Payments" },
-  { id: "projects", label: "Projects" },
-  { id: "notes", label: "Notes" },
-  { id: "tasks", label: "Tasks" },
-];
+const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = isLbsMode()
+  ? [
+      { id: "general", label: "Company Settings" },
+      { id: "users", label: "Users & Team Roles" },
+      { id: "messaging", label: "Messaging" },
+      { id: "projects", label: "Project Stages" },
+      { id: "notes", label: "Lead Statuses" },
+      { id: "tasks", label: "Task Types" },
+    ]
+  : [
+      { id: "general", label: "General" },
+      { id: "users", label: "Users & roles" },
+      { id: "payments", label: "Payments" },
+      { id: "projects", label: "Projects" },
+      { id: "notes", label: "Notes" },
+      { id: "tasks", label: "Tasks" },
+    ];
 
 const isSettingsTabId = (value: string | null): value is SettingsTabId =>
   value != null && (SETTINGS_TAB_IDS as readonly string[]).includes(value);
@@ -390,7 +414,8 @@ const SettingsFormFields = () => {
 
       {activeTab === "general" ? <SettingsGeneralTab /> : null}
       {activeTab === "users" ? <UsersSettingsSection /> : null}
-      {activeTab === "payments" ? (
+      {activeTab === "messaging" && isLbsMode() ? <MessagingSettingsSection /> : null}
+      {activeTab === "payments" && !isLbsMode() ? (
         <div className="space-y-8 max-w-6xl">
             <h2 className="text-sm font-medium text-muted-foreground">Pay schedule &amp; methods</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -500,6 +525,7 @@ const SettingsFormFields = () => {
         </div>
       ) : null}
 
+      {activeTab !== "users" && activeTab !== "messaging" ? (
       <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex w-full min-w-0 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <Button
@@ -546,6 +572,7 @@ const SettingsFormFields = () => {
             </div>
           </div>
         </div>
+      ) : null}
     </div>
   );
 };

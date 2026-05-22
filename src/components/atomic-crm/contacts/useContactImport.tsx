@@ -25,6 +25,8 @@ export type ContactImportSchema = {
   status: string;
   tags: string;
   linkedin_url: string;
+  lead_source?: string;
+  interested_service?: string;
 };
 
 export function useContactImport() {
@@ -98,6 +100,8 @@ export function useContactImport() {
             phone_work,
             phone_home,
             phone_other,
+            lead_source,
+            interested_service,
             background,
             first_seen,
             last_seen,
@@ -152,6 +156,8 @@ export function useContactImport() {
                 title,
                 email_jsonb,
                 phone_jsonb,
+                lead_source,
+                interested_service,
                 background,
                 first_seen: first_seen
                   ? new Date(first_seen).toISOString()

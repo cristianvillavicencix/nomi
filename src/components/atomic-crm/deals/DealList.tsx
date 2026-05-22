@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   useDataProvider,
@@ -24,16 +24,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { useConfigurationContext } from "../root/ConfigurationContext";
-import { useConfigurationUpdater } from "../root/ConfigurationContext";
+import { useConfigurationContext, useConfigurationUpdater } from "../root/ConfigurationContext";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
+import { isLbsMode } from "@/lbs/productMode";
 import { DealArchivedList } from "./DealArchivedList";
-import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
 import { DealListContent } from "./DealListContent";
 import { DealTableView } from "./DealTableView";
 import { DealShow } from "./DealShow";
+import { ProjectCreateFlow } from "@/lbs/deals/ProjectCreateFlow";
 import { getDefaultPipeline, getPipelineById } from "./pipelines";
 import { useDealsViewPreference } from "./useDealsViewPreference";
 
@@ -109,7 +109,7 @@ const DealLayout = () => {
         <DealTableView />
       )}
       <DealArchivedList />
-      <DealCreate open={!!matchCreate} />
+      <ProjectCreateFlow />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />
     </div>
   );
@@ -118,7 +118,7 @@ const DealLayout = () => {
 const DealActions = () => {
   const config = useConfigurationContext();
   const { data: identity } = useGetIdentity();
-  const [manageOpen, setManageOpen] = useState(false);
+  const lbsMode = isLbsMode();
   const { view, setView } = useDealsViewPreference();
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
   const selectedPipelineId =
@@ -144,17 +144,14 @@ const DealActions = () => {
       >
         <div className="flex min-w-max items-center gap-2">
           <ProjectSearchField />
-          <PipelineSelect />
-          <OnlyMineSwitch />
-          {canManageSales ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setManageOpen(true)}
-            >
-              Manage Stages
-            </Button>
+          {!lbsMode ? (
+            <>
+              <PipelineSelect />
+              <OnlyMineSwitch />
+              {canManageSales ? (
+                <ManageStagesButton pipelineId={selectedPipelineId} />
+              ) : null}
+            </>
           ) : null}
         </div>
         <div className="flex min-w-max items-center gap-2">
@@ -193,18 +190,33 @@ const DealActions = () => {
           ) : null}
           <ModuleInfoPopover
             title="Projects"
-            description="Pipeline control for every project, from lead to close."
+            description="Pipeline control for every project, from setup to delivered."
           />
         </div>
       </TopToolbar>
-      {canManageSales ? (
-        <ManageStagesDialog
-          open={manageOpen}
-          onOpenChange={setManageOpen}
-          pipelineId={selectedPipelineId}
-        />
-      ) : null}
     </div>
+  );
+};
+
+const ManageStagesButton = ({ pipelineId }: { pipelineId: string }) => {
+  const [manageOpen, setManageOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setManageOpen(true)}
+      >
+        Manage Stages
+      </Button>
+      <ManageStagesDialog
+        open={manageOpen}
+        onOpenChange={setManageOpen}
+        pipelineId={pipelineId}
+      />
+    </>
   );
 };
 

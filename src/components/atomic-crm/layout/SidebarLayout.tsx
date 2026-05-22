@@ -41,6 +41,8 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
+import { isLbsMode } from "@/lbs/productMode";
+import { LBS_NAV_ITEMS } from "@/lbs/navigation";
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();
   const activeTheme = theme === "dark" ? "dark" : "light";
@@ -186,7 +188,76 @@ const SidebarNavigation = () => {
   });
 
 
-  const isActive = (pattern: string) => !!matchPath(pattern, location.pathname);
+  const isActive = (pattern: string) => {
+    if (pattern === "/") {
+      return location.pathname === "/";
+    }
+    return !!matchPath(pattern, location.pathname);
+  };
+
+  if (isLbsMode()) {
+    return (
+      <Sidebar variant="floating" collapsible="icon" className="print:hidden">
+        <SidebarHeader className="px-2 pt-2 pb-0">
+          <div className="relative">
+            <SidebarMenu className="group-data-[collapsible=icon]:hidden">
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="h-auto py-2 pr-8">
+                  <Link to="/" className="gap-2">
+                    <img
+                      className="[.light_&]:hidden h-6"
+                      src={darkModeLogo}
+                      alt={title}
+                    />
+                    <img
+                      className="[.dark_&]:hidden h-6"
+                      src={lightModeLogo}
+                      alt={title}
+                    />
+                    <span className="text-base font-semibold truncate">{title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+            <SidebarTrigger
+              className="absolute top-1.5 right-1.5 opacity-100 transition-opacity group-data-[collapsible=icon]:hidden"
+              variant="ghost"
+              size="icon"
+            />
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+            <SidebarMenu>
+              {LBS_NAV_ITEMS.filter((item) =>
+                item.resource
+                  ? canAccess(identity as any, {
+                      resource: item.resource,
+                      action: item.action ?? "list",
+                    })
+                  : true,
+              ).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <SidebarItem
+                    key={item.to}
+                    to={item.to}
+                    label={item.label}
+                    icon={<Icon className="h-4 w-4" />}
+                    active={isActive(item.activePattern)}
+                  />
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="p-2 group-data-[collapsible=icon]:p-1">
+          <SidebarFooterControls />
+        </SidebarFooter>
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar variant="floating" collapsible="icon" className="print:hidden">

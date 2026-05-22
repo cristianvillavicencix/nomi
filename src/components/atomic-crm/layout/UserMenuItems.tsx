@@ -12,16 +12,36 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ImportPage } from "../misc/ImportPage";
 import { useNavigationLayoutPreference } from "./navigationLayoutPreference";
+import { isLbsMode } from "@/lbs/productMode";
+import { LBS_USER_MENU_NAV_ITEMS } from "@/lbs/navigation";
 
 export const CRMUserMenuItems = () => (
   <>
     <ProfileMenu />
-    <CanAccess resource="configuration" action="edit">
-      <SettingsMenu />
-    </CanAccess>
+    {!isLbsMode() ? (
+      <CanAccess resource="configuration" action="edit">
+        <SettingsMenu />
+      </CanAccess>
+    ) : (
+      <>
+        {LBS_USER_MENU_NAV_ITEMS.map((item) => (
+          <CanAccess
+            key={item.to}
+            resource={item.resource!}
+            action={item.action ?? "list"}
+          >
+            <LbsUserNavMenuItem item={item} />
+          </CanAccess>
+        ))}
+      </>
+    )}
     <NavigationLayoutMenu />
-    <DropdownMenuSeparator />
-    <ImportFromJsonMenuItem />
+    {!isLbsMode() ? (
+      <>
+        <DropdownMenuSeparator />
+        <ImportFromJsonMenuItem />
+      </>
+    ) : null}
   </>
 );
 
@@ -81,6 +101,28 @@ const SettingsMenu = () => {
     <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
       <Link to="/settings" className="flex items-center gap-2">
         <Settings /> Settings
+      </Link>
+    </DropdownMenuItem>
+  );
+};
+
+const LbsUserNavMenuItem = ({
+  item,
+}: {
+  item: (typeof LBS_USER_MENU_NAV_ITEMS)[number];
+}) => {
+  const userMenuContext = useUserMenu();
+  if (!userMenuContext) {
+    throw new Error("<LbsUserNavMenuItem> must be used inside <UserMenu>");
+  }
+
+  const Icon = item.icon;
+
+  return (
+    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
+      <Link to={item.to} className="flex items-center gap-2">
+        <Icon className="size-4" />
+        {item.label}
       </Link>
     </DropdownMenuItem>
   );

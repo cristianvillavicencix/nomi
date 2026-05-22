@@ -1,5 +1,7 @@
 import type { DealPipelineStage } from "../types";
 import type { Deal } from "../types";
+import { isLbsMode } from "@/lbs/productMode";
+import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
 
 export type DealsByStage = Record<Deal["stage"], Deal[]>;
 
@@ -10,11 +12,14 @@ export const getDealsByStage = (
   if (!stages?.length) return {};
   const dealsByStage: Record<Deal["stage"], Deal[]> = unorderedDeals.reduce(
     (acc, deal) => {
+      const normalizedStage = isLbsMode()
+        ? normalizeLbsProjectStage(deal.stage)
+        : deal.stage;
       // if deal has a stage that does not exist in configuration, assign it to the first stage
-      const stage = stages.find((s) => s.id === deal.stage)
-        ? deal.stage
+      const stage = stages.find((s) => s.id === normalizedStage)
+        ? normalizedStage
         : stages[0].id;
-      acc[stage].push(deal);
+      acc[stage].push({ ...deal, stage: normalizedStage });
       return acc;
     },
     stages.reduce(

@@ -11,17 +11,23 @@ import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { AddTask } from "../tasks/AddTask";
 import { TagsListEdit } from "./TagsListEdit";
 import { Avatar } from "./Avatar";
+import { ConvertLeadButton } from "@/lbs/leads/ConvertLeadButton";
+import { getClientShowPath } from "@/lbs/routing";
 
 export const ContactHeader = ({
   record,
   locationSearch,
   onEdit,
   isMobile = false,
+  embedded = false,
+  onClose,
 }: {
   record: Contact;
   locationSearch: string;
   onEdit: () => void;
   isMobile?: boolean;
+  embedded?: boolean;
+  onClose?: () => void;
 }) => {
   const location = useLocation();
   const { data: identity } = useGetIdentity();
@@ -50,11 +56,11 @@ export const ContactHeader = ({
           <Avatar />
           <div className="min-w-0 space-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h1 className="truncate text-2xl font-semibold">
+              <h1 className={cn("truncate font-semibold", embedded ? "text-xl" : "text-2xl")}>
                 {record.first_name} {record.last_name}
               </h1>
               <Badge variant="secondary">{statusLabel}</Badge>
-              <TagsListEdit hideButton />
+              {!embedded ? <TagsListEdit hideButton /> : null}
             </div>
 
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -62,13 +68,17 @@ export const ContactHeader = ({
                 {record.title || "Contact"}
                 {record.company_id != null && " at "}
                 {record.company_id != null ? (
-                  <Link
-                    to={`/companies/${record.company_id}/show`}
-                    state={{ from: `${location.pathname}${locationSearch}` }}
-                    className="link-action"
-                  >
-                    {record.company_name ?? "Company"}
-                  </Link>
+                  embedded ? (
+                    <span>{record.company_name ?? "Client"}</span>
+                  ) : (
+                    <Link
+                      to={getClientShowPath(record.company_id)}
+                      state={{ from: `${location.pathname}${locationSearch}` }}
+                      className="link-action"
+                    >
+                      {record.company_name ?? "Client"}
+                    </Link>
+                  )
                 ) : null}
               </span>
               <span className="inline-flex items-center gap-2">
@@ -118,9 +128,17 @@ export const ContactHeader = ({
         >
           {canManageSales ? (
             <>
-              <TagsListEdit buttonOnly />
-              <AddTask display="chip" />
-              <Button onClick={onEdit}>Edit Profile</Button>
+              {!embedded ? <ConvertLeadButton record={record} /> : null}
+              {!embedded ? <TagsListEdit buttonOnly /> : null}
+              {!embedded ? <AddTask display="chip" /> : null}
+              <Button onClick={onEdit} size={embedded ? "sm" : "default"} variant="outline">
+                Edit
+              </Button>
+              {embedded && onClose ? (
+                <Button onClick={onClose} size="sm" variant="ghost">
+                  Close
+                </Button>
+              ) : null}
             </>
           ) : null}
         </div>

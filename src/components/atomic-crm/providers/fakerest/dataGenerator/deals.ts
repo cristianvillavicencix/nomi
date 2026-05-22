@@ -25,6 +25,10 @@ export const generateDeals = (db: Db): Deal[] => {
       add(new Date(created_at), { months: 6 }),
     ).toISOString();
 
+    const repoSlug =
+      company.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
+      `project-${id}`;
+
     return {
       id,
       name: lowercaseName[0].toUpperCase() + lowercaseName.slice(1),
@@ -40,6 +44,7 @@ export const generateDeals = (db: Db): Deal[] => {
       expected_closing_date,
       organization_member_id: company.organization_member_id,
       index: 0,
+      github_repo: id % 3 === 0 ? `lbs-web/${repoSlug}` : undefined,
     };
   });
   // compute index based on stage

@@ -13,17 +13,68 @@ drop trigger if exists set_deal_notes_sales_id_trigger on public.deal_notes;
 
 drop function if exists public.set_sales_id_default() cascade;
 
-alter table public.companies rename column sales_id to organization_member_id;
-alter table public.contacts rename column sales_id to organization_member_id;
-alter table public.contact_notes rename column sales_id to organization_member_id;
-alter table public.deal_notes rename column sales_id to organization_member_id;
-alter table public.deals rename column sales_id to organization_member_id;
-alter table public.tasks rename column sales_id to organization_member_id;
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'companies' and column_name = 'sales_id'
+  ) then
+    alter table public.companies rename column sales_id to organization_member_id;
+  end if;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'contacts' and column_name = 'sales_id'
+  ) then
+    alter table public.contacts rename column sales_id to organization_member_id;
+  end if;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'contact_notes' and column_name = 'sales_id'
+  ) then
+    alter table public.contact_notes rename column sales_id to organization_member_id;
+  end if;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'deal_notes' and column_name = 'sales_id'
+  ) then
+    alter table public.deal_notes rename column sales_id to organization_member_id;
+  end if;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'deals' and column_name = 'sales_id'
+  ) then
+    alter table public.deals rename column sales_id to organization_member_id;
+  end if;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'tasks' and column_name = 'sales_id'
+  ) then
+    alter table public.tasks rename column sales_id to organization_member_id;
+  end if;
+end $$;
 
-alter table public.sales rename to organization_members;
+do $$
+begin
+  if exists (
+    select 1 from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'sales'
+  ) then
+    alter table public.sales rename to organization_members;
+  end if;
+end $$;
 
-alter table public.organization_members
-  rename constraint sales_pkey to organization_members_pkey;
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'sales_pkey'
+      and conrelid = 'public.organization_members'::regclass
+  ) then
+    alter table public.organization_members
+      rename constraint sales_pkey to organization_members_pkey;
+  end if;
+end $$;
 
 alter index if exists public.uq__sales__user_id rename to uq__organization_members__user_id;
 alter index if exists public.sales_one_administrator_per_org_idx
@@ -83,6 +134,9 @@ $$;
 drop policy if exists "sales_select_platform" on public.organization_members;
 drop policy if exists "sales_select_same_org" on public.organization_members;
 drop policy if exists "sales_update_same_org" on public.organization_members;
+drop policy if exists "organization_members_select_platform" on public.organization_members;
+drop policy if exists "organization_members_select_same_org" on public.organization_members;
+drop policy if exists "organization_members_update_same_org" on public.organization_members;
 
 create policy "organization_members_select_platform" on public.organization_members
   for select to authenticated
@@ -190,31 +244,37 @@ begin
 end;
 $$;
 
+drop trigger if exists set_task_organization_member_id_trigger on public.tasks;
 create trigger set_task_organization_member_id_trigger
   before insert on public.tasks
   for each row
   execute function public.set_organization_member_id_default();
 
+drop trigger if exists set_contact_organization_member_id_trigger on public.contacts;
 create trigger set_contact_organization_member_id_trigger
   before insert on public.contacts
   for each row
   execute function public.set_organization_member_id_default();
 
+drop trigger if exists set_contact_notes_organization_member_id_trigger on public.contact_notes;
 create trigger set_contact_notes_organization_member_id_trigger
   before insert on public.contact_notes
   for each row
   execute function public.set_organization_member_id_default();
 
+drop trigger if exists set_company_organization_member_id_trigger on public.companies;
 create trigger set_company_organization_member_id_trigger
   before insert on public.companies
   for each row
   execute function public.set_organization_member_id_default();
 
+drop trigger if exists set_deal_organization_member_id_trigger on public.deals;
 create trigger set_deal_organization_member_id_trigger
   before insert on public.deals
   for each row
   execute function public.set_organization_member_id_default();
 
+drop trigger if exists set_deal_notes_organization_member_id_trigger on public.deal_notes;
 create trigger set_deal_notes_organization_member_id_trigger
   before insert on public.deal_notes
   for each row
@@ -228,7 +288,7 @@ from (
   from public.organization_members
   limit 1
 ) as sub;
-create view public.contacts_summary
+create or replace view public.contacts_summary
 with (security_invoker = true)
 as
 select

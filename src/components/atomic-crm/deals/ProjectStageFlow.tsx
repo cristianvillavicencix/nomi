@@ -6,6 +6,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { DealPipelineStage } from "../types";
+import { cn } from "@/lib/utils";
 
 type StageVisualState = "completed" | "active" | "pending";
 
@@ -69,10 +70,12 @@ export const ProjectStageFlow = ({
   stages,
   currentStage,
   onStageChange,
+  className,
 }: {
   stages: DealPipelineStage[];
   currentStage?: string;
   onStageChange?: (stageId: string) => void;
+  className?: string;
 }) => {
   if (!stages.length) return null;
 
@@ -93,7 +96,7 @@ export const ProjectStageFlow = ({
   }, [activeStageId]);
 
   return (
-    <div className="mb-4 w-full rounded-xl bg-card p-2.5">
+    <div className={cn("mb-4 w-full rounded-xl bg-card p-2.5", className)}>
       <div className="overflow-x-auto pb-0.5">
         <div className="flex min-w-[680px] w-full items-stretch">
           <TooltipProvider>

@@ -78,6 +78,19 @@ import { DealsExplorerPanel } from "./DealsExplorerPanel";
 import { getPipelineStages, getStageColor, getStageLabel } from "./pipelines";
 import { ProjectStageFlow } from "./ProjectStageFlow";
 import { calculateHours, splitRegularOvertimeHours } from "@/timeEntries/helpers";
+import { isLbsMode } from "@/lbs/productMode";
+import { DealProjectTabs } from "@/lbs/deals/DealProjectTabs";
+import { LbsProjectOverviewTab } from "@/lbs/deals/LbsProjectOverviewTab";
+import { LbsDealHeaderOverview } from "@/lbs/deals/LbsDealHeaderOverview";
+import { LbsProjectDeliveryUrgency } from "@/lbs/deals/LbsProjectDeliveryUrgency";
+import {
+  createBriefGapTasksForDeal,
+  createStageTasksForDeal,
+  getStageTasksCreatedMessage,
+} from "@/lbs/deals/dealStageTaskTemplates";
+import { getBriefStageAdvanceCheck } from "@/lbs/deals/projectBriefProgress";
+import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
+import type { LbsDeal } from "@/lbs/types";
 
 export const DealShow = ({ id }: { id?: string }) => {
   const [layoutMode] = useNavigationLayoutPreference();
@@ -103,6 +116,7 @@ const DealShowContent = () => {
   const config = useConfigurationContext();
   const record = useRecordContext<Deal>();
   const { data: identity } = useGetIdentity();
+  const dataProvider = useDataProvider();
   const notify = useNotify();
   const refresh = useRefresh();
   const [update, { isPending: isUpdatingStage }] = useUpdate();
@@ -377,6 +391,16 @@ const DealShowContent = () => {
   const handleStageChange = (stageId: string) => {
     if (isUpdatingStage || stageId === record.stage) return;
 
+    if (isLbsMode()) {
+      const briefCheck = getBriefStageAdvanceCheck(record as LbsDeal, stageId);
+      if (!briefCheck.allowed) {
+        notify(briefCheck.message, { type: "warning" });
+        return;
+      }
+    }
+
+    const previousStage = record.stage;
+
     update(
       "deals",
       {
@@ -386,9 +410,40 @@ const DealShowContent = () => {
         meta: { identity },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           notify("Project stage updated", { type: "info", undoable: false });
           refresh();
+          if (isLbsMode() && identity?.id) {
+            try {
+              const count = await createStageTasksForDeal({
+                dataProvider,
+                deal: record as LbsDeal,
+                newStage: stageId,
+                previousStage,
+                organizationMemberId: identity.id,
+              });
+              const message = getStageTasksCreatedMessage(stageId, count);
+              if (message) notify(message, { type: "info" });
+
+              if (normalizeLbsProjectStage(stageId) === "setup") {
+                const briefTaskCount = await createBriefGapTasksForDeal({
+                  dataProvider,
+                  deal: record as LbsDeal,
+                  organizationMemberId: identity.id,
+                });
+                if (briefTaskCount > 0) {
+                  notify(
+                    `${briefTaskCount} brief follow-up task${briefTaskCount === 1 ? "" : "s"} added`,
+                    { type: "info" },
+                  );
+                }
+              }
+            } catch {
+              notify("Stage updated, but task templates could not be created", {
+                type: "warning",
+              });
+            }
+          }
         },
         onError: () => {
           notify("Error: stage was not updated", { type: "error" });
@@ -421,17 +476,35 @@ const DealShowContent = () => {
             </Link>
           </Button>
         </div>
-        <div className="mb-6 flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <ReferenceField source="company_id" reference="companies" link="show">
-              <CompanyAvatar />
-            </ReferenceField>
-            <div className="space-y-1">
-              <h2 className="text-2xl font-semibold">{record.name}</h2>
-              <DealHeaderMeta record={record} />
-            </div>
+        <div
+          className={cn(
+            "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+            isLbsMode() ? "mb-3" : "mb-6",
+          )}
+        >
+          <div className="min-w-0 flex-1">
+            {isLbsMode() ? (
+              <LbsDealHeaderOverview record={record} />
+            ) : (
+              <div className="flex items-center gap-4">
+                <ReferenceField source="company_id" reference="companies" link="show">
+                  <CompanyAvatar />
+                </ReferenceField>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h2 className="text-2xl font-semibold">{record.name}</h2>
+                  <DealHeaderMeta record={record} />
+                </div>
+              </div>
+            )}
           </div>
-          <div className={`flex gap-2 ${record.archived_at ? "" : "pr-12"}`}>
+          <div
+            className={cn(
+              "flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end",
+              record.archived_at ? "" : "sm:pr-12",
+            )}
+          >
+            {isLbsMode() ? <LbsProjectDeliveryUrgency record={record} /> : null}
+            <div className="flex gap-2">
             {record.archived_at && canManageSales ? (
               <>
                 <UnarchiveButton record={record} />
@@ -444,14 +517,21 @@ const DealShowContent = () => {
                 <EditButton />
               </>
             ) : null}
+            </div>
           </div>
         </div>
         <ProjectStageFlow
           stages={pipelineStages}
           currentStage={record.stage}
           onStageChange={handleStageChange}
+          className={isLbsMode() ? "mb-1.5 rounded-b-none pb-2" : undefined}
         />
 
+        {isLbsMode() ? (
+          <DealProjectTabs record={record}>
+            <LbsProjectOverviewTab record={record} />
+          </DealProjectTabs>
+        ) : (
         <Tabs value={currentTab} onValueChange={onTabChange} className="w-full">
           <StickyTabsBar className="pb-0.5">
             <div className="overflow-x-auto">
@@ -585,6 +665,7 @@ const DealShowContent = () => {
             {visitedTabs.has("notes") ? <DealNotesTab /> : null}
           </TabsContent>
         </Tabs>
+        )}
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
 import { isLinkedinUrl } from "../misc/isLinkedInUrl";
 import { useConfigurationContext } from "../root/ConfigurationContext";
+import { isLbsMode } from "@/lbs/productMode";
 import type { OrganizationMember } from "../types";
 
 export const ContactInputs = () => {
@@ -173,6 +174,16 @@ const ContactManagementInputs = () => {
         }))}
         validate={required()}
       />
+      {isLbsMode() ? (
+        <>
+          <TextInput source="lead_source" label="Lead source" helperText={false} />
+          <TextInput
+            source="interested_service"
+            label="Service interested in"
+            helperText={false}
+          />
+        </>
+      ) : null}
       <ReferenceInput
         reference="organization_members"
         source="organization_member_id"

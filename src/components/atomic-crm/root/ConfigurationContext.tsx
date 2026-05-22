@@ -10,6 +10,8 @@ import type {
 } from "../types";
 import { defaultConfiguration, withCurrentProductName } from "./defaultConfiguration";
 import { type PayrollSettings } from "@/payroll/rules";
+import { isLbsMode } from "@/lbs/productMode";
+import { hasLegacyProjectPipeline } from "@/lbs/deals/lbsProjectConstants";
 
 export const CONFIGURATION_STORE_KEY = "app.configuration";
 
@@ -134,7 +136,14 @@ export const useConfigurationContext = () => {
       ...defaultConfiguration,
       ...config,
     });
-    const dealPipelines = normalizeDealPipelines(merged);
+    let dealPipelines = normalizeDealPipelines(merged);
+    if (isLbsMode()) {
+      const defaultPipeline = getDefaultPipeline(dealPipelines);
+      const stageIds = defaultPipeline?.stages.map((stage) => stage.id) ?? [];
+      if (hasLegacyProjectPipeline(stageIds)) {
+        dealPipelines = defaultConfiguration.dealPipelines;
+      }
+    }
     const defaultPipeline = getDefaultPipeline(dealPipelines);
     const defaultStages = defaultPipeline?.stages ?? [];
 
@@ -142,7 +151,9 @@ export const useConfigurationContext = () => {
       ...merged,
       dealPipelines,
       dealStages: toLegacyDealStages(defaultStages),
-      dealPipelineStatuses: toLegacyPipelineStatuses(defaultStages),
+      dealPipelineStatuses: isLbsMode()
+        ? defaultConfiguration.dealPipelineStatuses
+        : toLegacyPipelineStatuses(defaultStages),
     };
   }, [config]);
 };

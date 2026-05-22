@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 
 import type { Contact } from "../types";
+import { getClientShowPath, getPersonShowPath } from "@/lbs/routing";
 import { Avatar } from "./Avatar";
 import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
 
@@ -155,6 +156,8 @@ export const ContactListContent = () => {
   );
 };
 
+const getContactRowPath = (contact: Contact) => getPersonShowPath(contact);
+
 const ContactItemContent = ({
   contact,
   handleToggleItem,
@@ -166,9 +169,9 @@ const ContactItemContent = ({
   const navigate = useNavigate();
   const location = useLocation();
   const companyPath = contact.company_id
-    ? `/companies/${contact.company_id}/show`
+    ? getClientShowPath(contact.company_id)
     : null;
-  const contactPath = `/contacts/${contact.id}/show`;
+  const contactPath = getContactRowPath(contact);
   const companyLabel = contact.company_name ?? "—";
   const email = getPrimaryEmail(contact);
   const emailHref = mailtoHref(email);
@@ -312,7 +315,7 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const companyPath = contact.company_id
-    ? `/companies/${contact.company_id}/show`
+    ? getClientShowPath(contact.company_id)
     : null;
   const companyLabel = contact.company_name ?? "—";
   const email = getPrimaryEmail(contact);
@@ -321,7 +324,7 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => {
   return (
     <div
       className="flex flex-row gap-4 items-center py-2 hover:bg-muted transition-colors cursor-pointer"
-      onClick={() => navigate(`/contacts/${contact.id}/show`)}
+      onClick={() => navigate(getContactRowPath(contact))}
     >
       <Avatar />
       <div className="flex flex-col grow justify-between">

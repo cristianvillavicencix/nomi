@@ -90,6 +90,7 @@ const getMutationPermission = (
     resource === "deal_notes" ||
     resource === "contact_notes" ||
     resource === "tasks" ||
+    resource === "calendar_events" ||
     resource === "deal_subcontractor_entries" ||
     resource === "deal_expenses" ||
     resource === "deal_change_orders" ||

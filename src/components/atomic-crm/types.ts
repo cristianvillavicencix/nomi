@@ -96,6 +96,14 @@ export type Company = {
   context_links?: string[];
   nb_contacts?: number;
   nb_deals?: number;
+  primary_contact_id?: Identifier | null;
+  primary_contact_first_name?: string | null;
+  primary_contact_last_name?: string | null;
+  primary_contact_status?: string | null;
+  primary_contact_email_jsonb?: EmailAndType[] | null;
+  primary_contact_phone_jsonb?: PhoneNumberAndType[] | null;
+  primary_contact_lead_source?: string | null;
+  primary_contact_interested_service?: string | null;
 } & Pick<RaRecord, "id">;
 
 export type EmailAndType = {
@@ -126,8 +134,11 @@ export type Contact = {
   status: string;
   background: string;
   phone_jsonb: PhoneNumberAndType[];
+  lead_source?: string | null;
+  interested_service?: string | null;
   nb_tasks?: number;
   company_name?: string;
+  is_primary_contact?: boolean;
 } & Pick<RaRecord, "id">;
 
 export type ContactNote = {
@@ -159,6 +170,7 @@ export type Deal = {
   project_address?: string | null;
   project_place_id?: string | null;
   project_address_meta?: Record<string, unknown> | null;
+  website_brief?: Record<string, string | null | undefined>;
   salesperson_ids?: Identifier[];
   subcontractor_ids?: Identifier[];
   worker_ids?: Identifier[];
@@ -166,6 +178,7 @@ export type Deal = {
   expected_end_date?: string | null;
   actual_completion_date?: string | null;
   estimated_completion_time?: string | null;
+  github_repo?: string | null;
   created_at: string;
   updated_at: string;
   archived_at?: string;
@@ -193,11 +206,58 @@ export type Tag = {
 
 export type Task = {
   contact_id: Identifier;
+  deal_id?: Identifier | null;
   type: string;
   text: string;
   due_date: string;
   done_date?: string | null;
   organization_member_id?: Identifier;
+  assignee_person_ids?: Identifier[];
+  collaborator_person_ids?: Identifier[];
+  mentioned_member_ids?: Identifier[];
+  priority?: string;
+  internal?: boolean;
+} & Pick<RaRecord, "id">;
+
+export type TaskAssignee = {
+  task_id: Identifier;
+  person_id: Identifier;
+  role: "assignee" | "collaborator" | "watcher";
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type TaskParticipant = {
+  task_id: Identifier;
+  person_id?: Identifier | null;
+  organization_member_id?: Identifier | null;
+  completed_at?: string | null;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type TaskTagNotification = {
+  task_id: Identifier;
+  person_id?: Identifier | null;
+  recipient_organization_member_id: Identifier;
+  read_at?: string | null;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type CalendarEventRecord = {
+  title: string;
+  event_date: string;
+  event_time?: string | null;
+  duration_minutes?: number | null;
+  remind_before_minutes?: number | null;
+  description?: string | null;
+  meeting_url?: string | null;
+  deal_id?: Identifier | null;
+  person_id?: Identifier | null;
+  contact_id?: Identifier | null;
+  company_id?: Identifier | null;
+  organization_member_id?: Identifier | null;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 } & Pick<RaRecord, "id">;
 
 export type Person = {

@@ -1,0 +1,153 @@
+import type { User } from "jsr:@supabase/supabase-js@2";
+import { supabaseAdmin } from "./supabaseAdmin.ts";
+import { getUserOrganizationMember } from "./getUserOrganizationMember.ts";
+import { normalizeUsPhoneToE164 } from "./phone.ts";
+
+export type MessagingSettingsPublic = {
+  org_id: number;
+  twilio_account_sid: string | null;
+  twilio_phone_number: string | null;
+  sms_enabled: boolean;
+  has_auth_token: boolean;
+  webhook_url: string | null;
+};
+
+export type MessagingSettingsSecrets = {
+  org_id: number;
+  twilio_account_sid: string | null;
+  twilio_auth_token: string | null;
+  twilio_phone_number: string | null;
+  sms_enabled: boolean;
+};
+
+const getWebhookUrl = () => {
+  const base = Deno.env.get("SUPABASE_URL");
+  if (!base) return null;
+  return `${base}/functions/v1/twilio_inbound_sms`;
+};
+
+export async function assertOrgAdministrator(user: User, orgId: number) {
+  const member = await getUserOrganizationMember(user);
+  if (!member?.administrator) {
+    throw new Error("Only administrators can manage messaging settings");
+  }
+  if (Number(member.org_id) !== orgId) {
+    throw new Error("Organization mismatch");
+  }
+  return member;
+}
+
+export async function getMessagingSettingsPublic(
+  orgId: number,
+): Promise<MessagingSettingsPublic> {
+  const { data, error } = await supabaseAdmin
+    .from("organization_messaging_settings")
+    .select(
+      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token",
+    )
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to load messaging settings");
+  }
+
+  return {
+    org_id: orgId,
+    twilio_account_sid: data?.twilio_account_sid ?? null,
+    twilio_phone_number: data?.twilio_phone_number ?? null,
+    sms_enabled: data?.sms_enabled === true,
+    has_auth_token: Boolean(data?.twilio_auth_token?.trim()),
+    webhook_url: getWebhookUrl(),
+  };
+}
+
+export async function getMessagingSettingsSecrets(
+  orgId: number,
+): Promise<MessagingSettingsSecrets | null> {
+  const { data, error } = await supabaseAdmin
+    .from("organization_messaging_settings")
+    .select("*")
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to load messaging settings");
+  }
+
+  if (!data) return null;
+
+  return {
+    org_id: Number(data.org_id),
+    twilio_account_sid: data.twilio_account_sid ?? null,
+    twilio_auth_token: data.twilio_auth_token ?? null,
+    twilio_phone_number: data.twilio_phone_number ?? null,
+    sms_enabled: data.sms_enabled === true,
+  };
+}
+
+export async function findOrgByTwilioPhone(toPhone: string) {
+  const normalized = normalizeUsPhoneToE164(toPhone) ?? toPhone.trim();
+  if (!normalized) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from("organization_messaging_settings")
+    .select("*")
+    .eq("sms_enabled", true)
+    .not("twilio_phone_number", "is", null);
+
+  if (error || !data?.length) return null;
+
+  return (
+    data.find((row) => {
+      const stored = row.twilio_phone_number;
+      if (typeof stored !== "string") return false;
+      const storedNormalized = normalizeUsPhoneToE164(stored) ?? stored.trim();
+      return storedNormalized === normalized;
+    }) ?? null
+  );
+}
+
+export async function upsertMessagingSettings(
+  orgId: number,
+  input: {
+    twilio_account_sid?: string | null;
+    twilio_auth_token?: string | null;
+    twilio_phone_number?: string | null;
+    sms_enabled?: boolean;
+    keepExistingToken?: boolean;
+  },
+) {
+  const existing = await getMessagingSettingsSecrets(orgId);
+
+  const accountSid = input.twilio_account_sid?.trim() || null;
+  const phoneRaw = input.twilio_phone_number?.trim() || null;
+  const phoneNumber = phoneRaw ? normalizeUsPhoneToE164(phoneRaw) : null;
+  if (phoneRaw && !phoneNumber) {
+    throw new Error("Invalid Twilio phone number. Use 10 digits.");
+  }
+
+  let authToken = input.twilio_auth_token?.trim() || null;
+  if (input.keepExistingToken && !authToken) {
+    authToken = existing?.twilio_auth_token ?? null;
+  }
+
+  const payload = {
+    org_id: orgId,
+    twilio_account_sid: accountSid,
+    twilio_auth_token: authToken,
+    twilio_phone_number: phoneNumber,
+    sms_enabled: input.sms_enabled === true,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabaseAdmin
+    .from("organization_messaging_settings")
+    .upsert(payload, { onConflict: "org_id" });
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to save messaging settings");
+  }
+
+  return getMessagingSettingsPublic(orgId);
+}

@@ -1,10 +1,25 @@
 import type { ConfigurationContextValue } from "./ConfigurationContext";
 import { defaultPayrollSettings } from "@/payroll/rules";
+import { isLbsMode } from "@/lbs/productMode";
+import {
+  buildLbsDealPipelines,
+  lbsProjectStages,
+  LBS_WON_PIPELINE_STATUSES,
+} from "@/lbs/deals/lbsProjectConstants";
 
-export const defaultDarkModeLogo = "./logos/logo_atomic_crm_dark.svg";
-export const defaultLightModeLogo = "./logos/logo_atomic_crm_light.svg";
+/** Logo paths must be root-absolute; `./logos/...` breaks on nested routes like `/contacts/1/show`. */
+export const normalizeLogoUrl = (url?: string | null): string => {
+  if (!url?.trim()) return "";
+  if (url.startsWith("./")) {
+    return `/${url.slice(2)}`;
+  }
+  return url;
+};
 
-export const defaultTitle = "Nomi CRM";
+export const defaultDarkModeLogo = "/logos/logo_atomic_crm_dark.svg";
+export const defaultLightModeLogo = "/logos/logo_atomic_crm_light.svg";
+
+export const defaultTitle = isLbsMode() ? "LBS CRM" : "Nomi CRM";
 
 /** Older deployments may still store this as `title` / `companyLegalName` in `configuration.config`. */
 export const LEGACY_DEFAULT_APP_TITLE = "Atomic CRM";
@@ -14,7 +29,12 @@ export const LEGACY_DEFAULT_APP_TITLE = "Atomic CRM";
  * (including new signups and invites) see the current branding.
  */
 export function withCurrentProductName<
-  T extends { title?: string; companyLegalName?: string },
+  T extends {
+    title?: string;
+    companyLegalName?: string;
+    darkModeLogo?: string;
+    lightModeLogo?: string;
+  },
 >(config: T): T {
   const out: T = { ...config };
   if (out.title === LEGACY_DEFAULT_APP_TITLE) {
@@ -22,6 +42,12 @@ export function withCurrentProductName<
   }
   if (out.companyLegalName === LEGACY_DEFAULT_APP_TITLE) {
     out.companyLegalName = defaultTitle;
+  }
+  if (out.darkModeLogo) {
+    out.darkModeLogo = normalizeLogoUrl(out.darkModeLogo);
+  }
+  if (out.lightModeLogo) {
+    out.lightModeLogo = normalizeLogoUrl(out.lightModeLogo);
   }
   return out;
 }
@@ -46,7 +72,7 @@ export const defaultCompanySectors = [
   { value: "utilities", label: "Utilities" },
 ];
 
-export const defaultDealStages = [
+export const contractorDealStages = [
   { value: "approved", label: "Approved" },
   { value: "scheduled", label: "Scheduled" },
   { value: "in_progress", label: "In Progress" },
@@ -56,41 +82,71 @@ export const defaultDealStages = [
   { value: "closed", label: "Closed" },
 ];
 
-export const defaultDealPipelineStatuses = ["completed", "closed"];
+export const lbsDealStages = lbsProjectStages;
 
-export const defaultDealPipelines = [
-  {
-    id: "default",
-    label: "Default Board",
-    order: 1,
-    isDefault: true,
-    stages: defaultDealStages.map((stage, index) => ({
-      id: stage.value,
-      label: stage.label,
-      color:
-        stage.value === "completed"
-          ? "#16a34a"
-          : stage.value === "closed"
-            ? "#0f766e"
-            : "#64748b",
-      order: index + 1,
-      pipelineId: "default",
-      isDefault: stage.value === "approved",
-    })),
-  },
-];
+export const defaultDealStages = isLbsMode() ? lbsDealStages : contractorDealStages;
 
-export const defaultDealCategories = [
-  { value: "retail", label: "Retail" },
-  { value: "insurance", label: "Insurance" },
-];
+export const defaultDealPipelineStatuses = isLbsMode()
+  ? LBS_WON_PIPELINE_STATUSES
+  : ["completed", "closed"];
 
-export const defaultNoteStatuses = [
+export const defaultDealPipelines = isLbsMode()
+  ? buildLbsDealPipelines()
+  : [
+      {
+        id: "default",
+        label: "Default Board",
+        order: 1,
+        isDefault: true,
+        stages: contractorDealStages.map((stage, index) => ({
+          id: stage.value,
+          label: stage.label,
+          color:
+            stage.value === "completed"
+              ? "#16a34a"
+              : stage.value === "closed"
+                ? "#0f766e"
+                : "#64748b",
+          order: index + 1,
+          pipelineId: "default",
+          isDefault: stage.value === "approved",
+        })),
+      },
+    ];
+
+export const defaultDealCategories = isLbsMode()
+  ? [
+      { value: "website", label: "Website" },
+      { value: "seo", label: "SEO" },
+      { value: "google-ads", label: "Google Ads" },
+      { value: "maintenance", label: "Maintenance" },
+    ]
+  : [
+      { value: "retail", label: "Retail" },
+      { value: "insurance", label: "Insurance" },
+    ];
+
+export const contractorNoteStatuses = [
   { value: "cold", label: "Cold", color: "#7dbde8" },
   { value: "warm", label: "Warm", color: "#e8cb7d" },
   { value: "hot", label: "Hot", color: "#e88b7d" },
   { value: "in-contract", label: "In Contract", color: "#a4e87d" },
 ];
+
+export const lbsNoteStatuses = [
+  { value: "new", label: "New", color: "#7dbde8" },
+  { value: "contacted", label: "Contacted", color: "#94a3b8" },
+  { value: "qualified", label: "Qualified", color: "#e8cb7d" },
+  { value: "proposal-sent", label: "Proposal Sent", color: "#c084fc" },
+  { value: "won", label: "Won", color: "#16a34a" },
+  { value: "lost", label: "Lost", color: "#ef4444" },
+  { value: "client", label: "Client", color: "#a4e87d" },
+  ...contractorNoteStatuses,
+];
+
+export const defaultNoteStatuses = isLbsMode()
+  ? lbsNoteStatuses
+  : contractorNoteStatuses;
 
 export const defaultTaskTypes = [
   { value: "none", label: "None" },
@@ -103,6 +159,20 @@ export const defaultTaskTypes = [
   { value: "ship", label: "Ship" },
   { value: "call", label: "Call" },
 ];
+
+export const lbsTaskTypes = [
+  { value: "none", label: "General" },
+  { value: "brief-review", label: "Brief review" },
+  { value: "design-approval", label: "Design approval" },
+  { value: "content-request", label: "Content request" },
+  { value: "client-follow-up", label: "Client follow-up" },
+  { value: "launch", label: "Launch" },
+  { value: "internal", label: "Internal" },
+  { value: "call", label: "Call" },
+  { value: "meeting", label: "Meeting" },
+];
+
+export const configuredTaskTypes = isLbsMode() ? lbsTaskTypes : defaultTaskTypes;
 
 export const defaultConfiguration: ConfigurationContextValue = {
   companySectors: defaultCompanySectors,
@@ -126,7 +196,7 @@ export const defaultConfiguration: ConfigurationContextValue = {
   dealPipelines: defaultDealPipelines,
   projectsView: "board",
   noteStatuses: defaultNoteStatuses,
-  taskTypes: defaultTaskTypes,
+  taskTypes: configuredTaskTypes,
   title: defaultTitle,
   darkModeLogo: defaultDarkModeLogo,
   lightModeLogo: defaultLightModeLogo,

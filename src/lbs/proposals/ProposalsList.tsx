@@ -1,0 +1,119 @@
+import { useGetIdentity, useListContext } from "ra-core";
+import { useNavigate } from "react-router";
+import { CreateButton } from "@/components/admin/create-button";
+import { DataTable } from "@/components/admin/data-table";
+import { List } from "@/components/admin/list";
+import { ListPagination } from "@/components/admin/list-pagination";
+import { ReferenceField } from "@/components/admin/reference-field";
+import { SortButton } from "@/components/admin/sort-button";
+import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
+import type { Proposal } from "@/lbs/types";
+import { Badge } from "@/components/ui/badge";
+
+const formatMoney = (value?: number | null) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    Number(value ?? 0),
+  );
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "—";
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+export const ProposalsList = () => {
+  const { identity } = useGetIdentity();
+  if (!identity) return null;
+
+  return (
+    <List
+      resource="proposals"
+      title="Proposals"
+      disableBreadcrumb
+      perPage={25}
+      sort={{ field: "updated_at", order: "DESC" }}
+      actions={<ProposalsListActions />}
+      pagination={<ListPagination rowsPerPageOptions={[10, 25, 50]} />}
+    >
+      <ProposalsListLayout />
+    </List>
+  );
+};
+
+const ProposalsListActions = () => (
+  <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
+    <SortButton fields={["title", "status", "amount", "valid_until", "updated_at"]} />
+    <CreateButton label="New proposal" />
+    <ModuleInfoPopover
+      title={LBS_PLACEHOLDER_MODULES.proposals.title}
+      description={LBS_PLACEHOLDER_MODULES.proposals.description}
+    />
+  </TopToolbar>
+);
+
+const ProposalsListLayout = () => {
+  const { data, isPending, filterValues } = useListContext<Proposal>();
+  const navigate = useNavigate();
+  const hasFilters = filterValues && Object.keys(filterValues).length > 0;
+
+  if (isPending) return null;
+
+  if (!data?.length && !hasFilters) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        No proposals yet. Create one to send a quote to a client.
+      </p>
+    );
+  }
+
+  return (
+    <DataTable
+      rowClick={(id) => navigate(`/proposals/${id}/show`)}
+      rowClassName={() => "[&_td]:py-2.5"}
+    >
+      <DataTable.Col source="title" label="Title" />
+      <DataTable.Col
+        source="status"
+        label="Status"
+        render={(record: Proposal) => (
+          <Badge variant="outline" className="capitalize">
+            {record.status?.replace(/-/g, " ") ?? "draft"}
+          </Badge>
+        )}
+      />
+      <DataTable.Col
+        source="amount"
+        label="Amount"
+        render={(record: Proposal) => formatMoney(record.amount)}
+      />
+      <DataTable.Col
+        source="company_id"
+        label="Client"
+        render={(record: Proposal) =>
+          record.company_id ? (
+            <ReferenceField
+              source="company_id"
+              reference="companies"
+              record={record}
+              link={(id) => `/clients/${id}/show`}
+            />
+          ) : (
+            "—"
+          )
+        }
+      />
+      <DataTable.Col
+        source="valid_until"
+        label="Valid until"
+        render={(record: Proposal) => formatDate(record.valid_until)}
+      />
+    </DataTable>
+  );
+};

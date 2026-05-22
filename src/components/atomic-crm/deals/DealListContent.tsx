@@ -1,6 +1,13 @@
 import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd";
 import isEqual from "lodash/isEqual";
-import { useDataProvider, useGetIdentity, useListContext, type DataProvider } from "ra-core";
+import {
+  useDataProvider,
+  useGetIdentity,
+  useListContext,
+  useNotify,
+  type DataProvider,
+  type Identifier,
+} from "ra-core";
 import { useEffect, useMemo, useState } from "react";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -9,6 +16,12 @@ import { DealColumn } from "./DealColumn";
 import { getPipelineStages } from "./pipelines";
 import type { DealsByStage } from "./stages";
 import { getDealsByStage } from "./stages";
+import { isLbsMode } from "@/lbs/productMode";
+import {
+  createStageTasksForDeal,
+  getStageTasksCreatedMessage,
+} from "@/lbs/deals/dealStageTaskTemplates";
+import type { LbsDeal } from "@/lbs/types";
 
 export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
   const config = useConfigurationContext();
@@ -19,6 +32,7 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
   const { data: unorderedDeals, isPending, refetch } = useListContext<Deal>();
   const dataProvider = useDataProvider();
   const { data: identity } = useGetIdentity();
+  const notify = useNotify();
 
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>(
     getDealsByStage([], stages),
@@ -74,9 +88,33 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
     );
 
     // persist the changes
-    updateDealStage(sourceDeal, destinationDeal, dataProvider).then(() => {
-      refetch();
-    });
+    updateDealStage(sourceDeal, destinationDeal, dataProvider, identity?.id).then(
+      async ({ stageChanged, newStage }) => {
+        refetch();
+        if (
+          isLbsMode() &&
+          stageChanged &&
+          newStage &&
+          identity?.id
+        ) {
+          try {
+            const count = await createStageTasksForDeal({
+              dataProvider,
+              deal: sourceDeal as LbsDeal,
+              newStage,
+              previousStage: source.stage,
+              organizationMemberId: identity.id,
+            });
+            const message = getStageTasksCreatedMessage(newStage, count);
+            if (message) notify(message, { type: "info" });
+          } catch {
+            notify("Project moved, but task templates could not be created", {
+              type: "warning",
+            });
+          }
+        }
+      },
+    );
   };
 
   return (
@@ -138,8 +176,10 @@ const updateDealStage = async (
     index?: number; // undefined if dropped after the last item
   },
   dataProvider: DataProvider,
-) => {
+  identityId?: Identifier,
+): Promise<{ stageChanged: boolean; newStage?: string }> => {
   const pipelineId = source.pipeline_id || "default";
+  const identity = identityId ? { id: identityId } : undefined;
   if (source.stage === destination.stage) {
     // moving deal inside the same column
     // Fetch all the deals in this stage (because the list may be filtered, but we need to update even non-filtered deals)
@@ -207,6 +247,7 @@ const updateDealStage = async (
         }),
       ]);
     }
+    return { stageChanged: false };
   } else {
     // moving deal across columns
     // Fetch all the deals in both stages (because the list may be filtered, but we need to update even non-filtered deals)
@@ -259,5 +300,6 @@ const updateDealStage = async (
         meta: { identity },
       }),
     ]);
+    return { stageChanged: true, newStage: destination.stage };
   }
 };

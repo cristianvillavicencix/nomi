@@ -8,28 +8,47 @@ import {
   useRedirect,
   type GetListResult,
 } from "ra-core";
+import { useSearchParams } from "react-router";
 import { Create } from "@/components/admin/create";
 import { SaveButton } from "@/components/admin/form";
 import { FormToolbar } from "@/components/admin/simple-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { isLbsMode } from "@/lbs/productMode";
+import {
+  LBS_DEFAULT_PROJECT_CATEGORY,
+  LBS_DEFAULT_PROJECT_STAGE,
+  LBS_DEFAULT_PROJECT_TYPE,
+} from "@/lbs/deals/lbsProjectConstants";
+import { emptyWebsiteBriefValues } from "@/lbs/deals/websiteBriefSchema";
 
 import type { Deal } from "../types";
 import { DealInputs } from "./DealInputs";
 import { syncProjectAssignments } from "./projectAssignments";
 import { normalizeProjectPayload } from "./projectForm";
 
-export const DealCreate = ({ open }: { open: boolean }) => {
+export const DealCreate = ({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose?: () => void;
+}) => {
   const redirect = useRedirect();
   const dataProvider = useDataProvider();
   const notify = useNotify();
   const { data: allDeals } = useListContext<Deal>();
 
   const handleClose = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
     redirect("/deals");
   };
 
   const queryClient = useQueryClient();
+  const lbsMode = isLbsMode();
 
   const onSuccess = async (deal: Deal) => {
     try {
@@ -46,7 +65,11 @@ export const DealCreate = ({ open }: { open: boolean }) => {
     }
 
     if (!allDeals) {
-      redirect("/deals");
+      if (onClose) {
+        onClose();
+      } else {
+        redirect("/deals");
+      }
       return;
     }
     // increase the index of all deals in the same stage as the new deal
@@ -85,17 +108,26 @@ export const DealCreate = ({ open }: { open: boolean }) => {
       },
       { updatedAt: now },
     );
-    redirect("/deals");
+    if (onClose) {
+      onClose();
+    } else {
+      redirect("/deals");
+    }
   };
 
   const { identity } = useGetIdentity();
+  const [searchParams] = useSearchParams();
+  const presetCompanyId = searchParams.get("company_id");
+  const presetContactId = searchParams.get("contact_id");
 
   return (
-    <Dialog open={open} onOpenChange={() => handleClose()}>
+    <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
       <DialogContent className="lg:max-w-4xl overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
         <DialogTitle className="text-2xl font-semibold">New Project</DialogTitle>
         <DialogDescription>
-          Create and configure a construction project with contact, address, stage, and assignments.
+          {lbsMode
+            ? "Set up a website or digital marketing project with service details, budget, and goals."
+            : "Create and configure a construction project with contact, address, stage, and assignments."}
         </DialogDescription>
         <Create
           resource="deals"
@@ -106,14 +138,17 @@ export const DealCreate = ({ open }: { open: boolean }) => {
           <Form
             defaultValues={{
               organization_member_id: identity?.id,
-              category: "retail",
-              stage: "lead",
-              project_type: "roofing",
-              estimated_value: 0,
+              category: lbsMode ? LBS_DEFAULT_PROJECT_CATEGORY : "retail",
+              stage: lbsMode ? LBS_DEFAULT_PROJECT_STAGE : "lead",
+              project_type: lbsMode ? LBS_DEFAULT_PROJECT_TYPE : "roofing",
+              estimated_value: lbsMode ? undefined : 0,
+              amount: lbsMode ? undefined : 0,
               notes: "",
               project_address: "",
-              contact_id: null,
-              contact_ids: [],
+              website_brief: lbsMode ? emptyWebsiteBriefValues() : undefined,
+              company_id: presetCompanyId ? Number(presetCompanyId) : null,
+              contact_id: presetContactId ? Number(presetContactId) : null,
+              contact_ids: presetContactId ? [Number(presetContactId)] : [],
               salesperson_ids: [],
               subcontractor_ids: [],
               index: 0,

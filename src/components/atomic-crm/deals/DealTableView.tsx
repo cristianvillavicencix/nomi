@@ -34,8 +34,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { isLbsMode } from "@/lbs/productMode";
+import { ProjectDeliveryCountdownText } from "@/lbs/deals/ProjectDeliveryCountdownText";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import type { Company, Contact, Deal, OrganizationMember } from "../types";
+import type { Company, Contact, Deal, OrganizationMember, Person } from "../types";
+import { ProjectAssignedAvatars } from "@/lbs/deals/ProjectAssignedAvatars";
 import { getStageColor, getStageLabel } from "./pipelines";
 
 type SortField = "stage" | "amount" | "updated_at" | "created_at";
@@ -52,6 +55,7 @@ export const DealTableView = () => {
   const notify = useNotify();
   const refresh = useRefresh();
   const config = useConfigurationContext();
+  const lbsMode = isLbsMode();
   const { data: deals = [], isPending } = useListContext<Deal>();
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("DESC");
@@ -88,6 +92,17 @@ export const DealTableView = () => {
       ),
     [deals],
   );
+  const peopleIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          deals.flatMap((deal) =>
+            Array.isArray(deal.salesperson_ids) ? deal.salesperson_ids : [],
+          ),
+        ),
+      ),
+    [deals],
+  );
 
   const { data: companies = [] } = useGetMany<Company>(
     "companies",
@@ -104,6 +119,11 @@ export const DealTableView = () => {
     { ids: salesIds },
     { enabled: salesIds.length > 0 },
   );
+  const { data: people = [] } = useGetMany<Person>(
+    "people",
+    { ids: peopleIds },
+    { enabled: lbsMode && peopleIds.length > 0 },
+  );
 
   const companiesById = useMemo(
     () => Object.fromEntries(companies.map((company) => [company.id, company])),
@@ -114,8 +134,12 @@ export const DealTableView = () => {
     [contacts],
   );
   const salesById = useMemo(
-    () => Object.fromEntries(sales.map((sale) => [sale.id, sale])),
+    () => Object.fromEntries(sales.map((sale) => [String(sale.id), sale])),
     [sales],
+  );
+  const peopleById = useMemo(
+    () => Object.fromEntries(people.map((person) => [String(person.id), person])),
+    [people],
   );
   const sortedDeals = useMemo(() => {
     const records = [...deals];
@@ -226,13 +250,14 @@ export const DealTableView = () => {
               sortOrder={sortOrder}
               onSort={handleSort}
             />
+            <TableHead className={cn("min-w-[120px]", !lbsMode && "hidden")}>Days left</TableHead>
             <SortableHead
               label="Value"
               field="amount"
               sortField={sortField}
               sortOrder={sortOrder}
               onSort={handleSort}
-              className="text-right"
+              className={cn("text-right", lbsMode && "hidden")}
             />
             <TableHead>Assigned</TableHead>
             <SortableHead
@@ -260,7 +285,6 @@ export const DealTableView = () => {
             const primaryContact = deal.contact_ids?.[0]
               ? contactsById[deal.contact_ids[0]]
               : undefined;
-            const assignedSale = salesById[deal.organization_member_id];
 
             return (
               <TableRow
@@ -321,17 +345,19 @@ export const DealTableView = () => {
                     {getStageLabel(config, deal.stage, deal.pipeline_id)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className={cn("min-w-[120px] whitespace-normal", !lbsMode && "hidden")}>
+                  <ProjectDeliveryCountdownText record={deal} />
+                </TableCell>
+                <TableCell className={cn("text-right", lbsMode && "hidden")}>
                   {currencyFormatter.format(Number(deal.amount ?? 0))}
                 </TableCell>
                 <TableCell className="max-w-[180px]">
-                  <span className="block truncate">
-                    {assignedSale
-                      ? [assignedSale.first_name, assignedSale.last_name]
-                          .filter(Boolean)
-                          .join(" ")
-                      : "—"}
-                  </span>
+                  <ProjectAssignedAvatars
+                    deal={deal}
+                    peopleById={peopleById}
+                    membersById={salesById}
+                    onClick={stopPropagation}
+                  />
                 </TableCell>
                 <TableCell className="hidden xl:table-cell">
                   {formatDate(deal.updated_at)}

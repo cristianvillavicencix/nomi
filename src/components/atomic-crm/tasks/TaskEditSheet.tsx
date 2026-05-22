@@ -2,6 +2,7 @@ import { DeleteButton, ReferenceField } from "@/components/admin";
 import { type Identifier, RecordRepresentation } from "ra-core";
 import { EditSheet } from "../misc/EditSheet";
 import { TaskFormContent } from "./TaskFormContent";
+import { isLbsMode } from "@/lbs/productMode";
 
 export interface TaskEditSheetProps {
   open: boolean;
@@ -19,7 +20,10 @@ export const TaskEditSheet = ({
       resource="tasks"
       id={taskId}
       title={
-        <ReferenceField
+        isLbsMode() ? (
+          <h1 className="text-xl font-semibold truncate pr-10">Edit task</h1>
+        ) : (
+          <ReferenceField
           source="contact_id"
           reference="contacts"
           render={({ referenceRecord }) => (
@@ -37,6 +41,7 @@ export const TaskEditSheet = ({
             </h1>
           )}
         />
+        )
       }
       redirect={false}
       open={open}
@@ -52,7 +57,7 @@ export const TaskEditSheet = ({
         />
       }
     >
-      <TaskFormContent />
+      <TaskFormContent showDealLink={false} />
     </EditSheet>
   );
 };
