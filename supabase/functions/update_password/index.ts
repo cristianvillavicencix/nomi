@@ -8,29 +8,30 @@ function getSetPasswordRedirectUrl(req: Request) {
   const origin =
     req.headers.get("origin") ??
     Deno.env.get("BILLING_PUBLIC_SITE_URL") ??
-    "http://localhost:5173";
+    "https://www.nomicrm.com";
 
   return new URL("/set-password", origin).toString();
 }
 
-async function updatePassword(req: Request, user: any) {
-  const { data, error } = await supabaseAdmin.auth.resetPasswordForEmail(
-    user.email,
-    { redirectTo: getSetPasswordRedirectUrl(req) },
-  );
-
-  if (!data || error) {
-    return createErrorResponse(500, "Internal Server Error");
+async function updatePassword(req: Request, user: { email?: string }) {
+  const email = user.email?.trim();
+  if (!email) {
+    return createErrorResponse(400, "User email is missing");
   }
 
-  return new Response(
-    JSON.stringify({
-      data,
-    }),
-    {
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    },
-  );
+  const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+    redirectTo: getSetPasswordRedirectUrl(req),
+  });
+
+  if (error) {
+    console.error("update_password resetPasswordForEmail", error);
+    const status = error.status === 429 ? 429 : 400;
+    return createErrorResponse(status, error.message);
+  }
+
+  return new Response(JSON.stringify({ data: true }), {
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
 }
 
 Deno.serve(async (req: Request) =>

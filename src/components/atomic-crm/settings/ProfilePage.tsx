@@ -16,6 +16,16 @@ import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -23,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import ImageEditorField from "../misc/ImageEditorField";
+import { supabase } from "../providers/supabase/supabase";
 import type { CrmDataProvider } from "../providers/types";
 import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 
@@ -83,24 +94,10 @@ const ProfileForm = ({
   const { identity, refetch } = useGetIdentity();
   const { isDirty } = useFormState();
   const dataProvider = useDataProvider<CrmDataProvider>();
-
-  const { mutate: updatePassword } = useMutation({
-    mutationKey: ["updatePassword"],
-    mutationFn: async () => {
-      if (!identity) {
-        throw new Error("Record not found");
-      }
-      return dataProvider.updatePassword(identity.id);
-    },
-    onSuccess: () => {
-      notify("A reset password email has been sent to your email address");
-    },
-    onError: (e) => {
-      notify(`${e}`, {
-        type: "error",
-      });
-    },
-  });
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   const { mutate: mutateSale } = useMutation({
     mutationKey: ["signup"],
@@ -120,8 +117,42 @@ const ProfileForm = ({
   });
   if (!identity) return null;
 
+  const resetPasswordForm = () => {
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
   const handleClickOpenPasswordChange = () => {
-    updatePassword();
+    resetPasswordForm();
+    setPasswordDialogOpen(true);
+  };
+
+  const handlePasswordChange = async () => {
+    if (newPassword.length < 6) {
+      notify("Password must be at least 6 characters", { type: "warning" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      notify("Passwords do not match", { type: "warning" });
+      return;
+    }
+
+    try {
+      setPasswordSaving(true);
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        throw error;
+      }
+      setPasswordDialogOpen(false);
+      resetPasswordForm();
+      notify("Your password has been updated");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update password";
+      notify(message, { type: "error" });
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   const handleAvatarUpdate = async (values: any) => {
@@ -182,6 +213,64 @@ const ProfileForm = ({
           </div>
         </CardContent>
       </Card>
+      <Dialog
+        open={passwordDialogOpen}
+        onOpenChange={(open) => {
+          setPasswordDialogOpen(open);
+          if (!open) {
+            resetPasswordForm();
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change password</DialogTitle>
+            <DialogDescription>
+              Enter a new password for your account. You stay signed in after
+              saving.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="profile-new-password">New password</Label>
+              <Input
+                id="profile-new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="profile-confirm-password">Confirm password</Label>
+              <Input
+                id="profile-confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPasswordDialogOpen(false)}
+              disabled={passwordSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePasswordChange}
+              disabled={passwordSaving}
+            >
+              Save password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {import.meta.env.VITE_INBOUND_EMAIL && (
         <Card>
           <CardContent>

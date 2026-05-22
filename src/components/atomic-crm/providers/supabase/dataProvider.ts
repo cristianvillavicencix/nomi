@@ -534,9 +534,18 @@ const dataProviderWithCustomMethods = {
       },
     );
 
-    if (!passwordUpdated || error) {
+    if (error) {
       console.error("update_password.error", error);
-      throw new Error("Failed to update password");
+      const errorDetails = await (async () => {
+        try {
+          return (await error?.context?.json()) ?? {};
+        } catch {
+          return {};
+        }
+      })();
+      throw new Error(
+        errorDetails?.message || "Failed to send password reset email",
+      );
     }
 
     return passwordUpdated;
