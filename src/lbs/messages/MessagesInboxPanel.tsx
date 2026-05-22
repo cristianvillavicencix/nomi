@@ -3,6 +3,7 @@ import { useGetList, useNotify, useRefresh } from "ra-core";
 import { MessageSquare, Search, UserPlus } from "lucide-react";
 import type { Identifier } from "ra-core";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import type {
   Contact,
   Conversation,
@@ -11,7 +12,6 @@ import type {
   OrganizationMember,
 } from "@/lbs/types";
 import { ConversationListItem } from "@/lbs/messages/ConversationListItem";
-import { NewDirectMessageButton } from "@/lbs/messages/NewDirectMessageDialog";
 import {
   contactAlreadyHasClientConversation,
   contactHasSmsPhone,
@@ -19,7 +19,9 @@ import {
   getContactPhoneLabel,
 } from "@/lbs/messages/messageContactUtils";
 import { getInitials } from "@/lbs/messages/conversationDisplay";
-import { useOpenClientSms } from "@/lbs/messages/useClientSms";
+import { useMessagesQuickAccess } from "@/lbs/messages/messagesQuickAccessContext";
+import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
+import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
 import { cn } from "@/lib/utils";
 
 const MessageSearchContactItem = ({
@@ -68,8 +70,8 @@ export const MessagesInboxPanel = ({
   currentMemberId,
   selectedConversationId,
   onSelectConversation,
-  onConversationCreated,
   isPending,
+  compact = false,
 }: {
   conversations: Conversation[];
   deals: LbsDeal[];
@@ -79,12 +81,13 @@ export const MessagesInboxPanel = ({
   currentMemberId?: Identifier;
   selectedConversationId?: Identifier | null;
   onSelectConversation: (conversation: Conversation) => void;
-  onConversationCreated: (conversation: Conversation) => void;
   isPending: boolean;
+  compact?: boolean;
 }) => {
   const notify = useNotify();
   const refresh = useRefresh();
-  const { openClientSms } = useOpenClientSms();
+  const { openSms } = useMessagesQuickAccess();
+  const { totalUnread: totalUnreadCount, isConversationUnread } = useMessagesUnreadCounts();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [startingContactId, setStartingContactId] = useState<Identifier | null>(null);
@@ -150,9 +153,8 @@ export const MessagesInboxPanel = ({
   const handleStartClientSms = async (contact: Contact) => {
     setStartingContactId(contact.id);
     try {
-      const conversation = await openClientSms(contact);
+      await openSms(contact);
       refresh();
-      onConversationCreated(conversation);
       setQuery("");
       setDebouncedQuery("");
     } catch (error) {
@@ -172,16 +174,22 @@ export const MessagesInboxPanel = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-muted/20">
-      <div className="border-b bg-background px-4 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold">Messages</h1>
+      <div className={cn("border-b bg-background px-4", compact ? "py-3" : "py-4")}>
+        <div>
+          <h1 className={cn("font-semibold", compact ? "text-base" : "text-lg")}>
+            {compact ? "Inbox" : "Messages"}
+            {totalUnreadCount > 0 ? (
+              <Badge variant="default" className="ml-2 rounded-full px-2 py-0 text-[11px]">
+                {formatUnreadBadgeCount(totalUnreadCount)}
+              </Badge>
+            ) : null}
+          </h1>
+          {!compact ? (
             <p className="text-xs text-muted-foreground">Team chats, projects, and client SMS</p>
-          </div>
-          <NewDirectMessageButton onConversationCreated={onConversationCreated} />
+          ) : null}
         </div>
 
-        <div className="relative mt-3">
+        <div className={cn("relative", compact ? "mt-2" : "mt-3")}>
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
@@ -208,6 +216,7 @@ export const MessagesInboxPanel = ({
                     members={members}
                     contacts={contacts}
                     currentMemberId={currentMemberId}
+                    isUnread={isConversationUnread(conversation)}
                   />
                 ))}
               </div>
@@ -220,7 +229,7 @@ export const MessagesInboxPanel = ({
                 <p className="mt-1 text-sm text-muted-foreground">
                   {hasSearch
                     ? "Check the contacts below to start a new SMS."
-                    : "Search for a client or start a direct message with your team."}
+                    : "Search for a client to start a new SMS."}
                 </p>
               </div>
             ) : null}

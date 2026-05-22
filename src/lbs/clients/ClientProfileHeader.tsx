@@ -34,6 +34,7 @@ import {
 import { ClientExtraEmailsIndicator } from "@/lbs/clients/ClientExtraEmailsIndicator";
 import { ClientNewMenu } from "@/lbs/clients/ClientNewMenu";
 import { ClientSocialLinksDisplay } from "@/lbs/clients/ClientSocialLinksDisplay";
+import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
 import { getClientEditPath, getClientsListPath } from "@/lbs/routing";
 import type { Contact } from "@/components/atomic-crm/types";
 
@@ -195,12 +196,14 @@ export const ClientProfileHeader = ({ record, onAddContact }: ClientProfileHeade
           </div>
 
           <div className="flex shrink-0 items-center gap-2 lg:justify-end">
+            <OpenClientSmsButton contact={primaryContact} />
             <Button asChild variant="outline" size="sm">
               <Link to={getClientEditPath(record.id)}>Edit</Link>
             </Button>
             <ClientNewMenu
               companyId={record.id}
               primaryContactId={record.primary_contact_id}
+              primaryContact={primaryContact}
               onAddContact={onAddContact}
               size="icon"
             />

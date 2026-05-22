@@ -120,6 +120,7 @@ export async function insertSmsMessage(params: {
   direction: "inbound" | "outbound";
   authorMemberId?: number | null;
   externalId?: string | null;
+  mediaUrl?: string | null;
 }) {
   const { data, error } = await supabaseAdmin
     .from("conversation_messages")
@@ -130,6 +131,7 @@ export async function insertSmsMessage(params: {
       direction: params.direction,
       author_member_id: params.authorMemberId ?? null,
       external_id: params.externalId ?? null,
+      media_url: params.mediaUrl ?? null,
     })
     .select("*")
     .single();

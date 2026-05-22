@@ -873,3 +873,11 @@ create policy "conversation_participants_access" on public.conversation_particip
         )
     )
   );
+
+-- === 20260629310000_conversation_messages_realtime.sql ===
+-- Realtime filters on non-PK columns require FULL replica identity.
+alter table public.conversation_messages replica identity full;
+
+-- === 20260629320000_conversation_messages_media.sql ===
+alter table public.conversation_messages
+  add column if not exists media_url text;

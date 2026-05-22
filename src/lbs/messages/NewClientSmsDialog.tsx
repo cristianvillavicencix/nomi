@@ -11,7 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Contact, Conversation } from "@/lbs/types";
-import { useOpenClientSms } from "@/lbs/messages/useClientSms";
+import { useMessagesQuickAccess } from "@/lbs/messages/MessagesQuickAccessProvider";
+import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 
 const getContactLabel = (contact: Contact) =>
@@ -37,7 +38,7 @@ export const NewClientSmsDialog = ({
   const [isCreating, setIsCreating] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const { openClientSms } = useOpenClientSms();
+  const { openSms } = useMessagesQuickAccess();
 
   useEffect(() => {
     if (!open) {
@@ -77,8 +78,7 @@ export const NewClientSmsDialog = ({
 
     setIsCreating(true);
     try {
-      const conversation = await openClientSms(contact);
-      onConversationCreated(conversation);
+      await openSms(contact);
       onOpenChange(false);
       setSelectedContactId(null);
     } finally {

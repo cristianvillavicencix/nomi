@@ -1,6 +1,7 @@
 import {
   FileText,
   FolderKanban,
+  MessageSquare,
   Plus,
   Ticket,
   UserPlus,
@@ -18,18 +19,40 @@ import {
   getClientDealCreatePath,
   getClientProposalCreatePath,
 } from "@/lbs/routing";
+import type { Contact } from "@/lbs/types";
+import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
+import { useMessagesQuickAccess } from "@/lbs/messages/MessagesQuickAccessProvider";
+import { useMessagingEnabled } from "@/lbs/messages/useMessagingEnabled";
 
 type ClientNewMenuProps = {
   companyId: Identifier;
   primaryContactId?: Identifier | null;
+  primaryContact?: Contact | null;
   onAddContact: () => void;
   align?: "start" | "end";
   size?: "sm" | "icon";
 };
 
+const TextClientMenuItem = ({ contact }: { contact: Contact }) => {
+  const { smsEnabled } = useMessagingEnabled();
+  const { openSms, isOpening } = useMessagesQuickAccess();
+
+  if (!smsEnabled || !contactHasSmsPhone(contact)) {
+    return null;
+  }
+
+  return (
+    <DropdownMenuItem disabled={isOpening} onClick={() => void openSms(contact)}>
+      <MessageSquare className="size-4" />
+      Text client
+    </DropdownMenuItem>
+  );
+};
+
 export const ClientNewMenu = ({
   companyId,
   primaryContactId,
+  primaryContact,
   onAddContact,
   align = "end",
   size = "sm",
@@ -55,6 +78,7 @@ export const ClientNewMenu = ({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align}>
+        {primaryContact ? <TextClientMenuItem contact={primaryContact} /> : null}
         <DropdownMenuItem onClick={onAddContact}>
           <UserPlus className="size-4" />
           Add contact

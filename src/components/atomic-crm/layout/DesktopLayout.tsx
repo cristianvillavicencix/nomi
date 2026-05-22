@@ -12,4 +12,3 @@ export const DesktopLayout = ({ children }: { children: ReactNode }) => {
 
   return <Layout>{children}</Layout>;
 };
-

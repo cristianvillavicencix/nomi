@@ -7,6 +7,7 @@ import type {
   OrganizationMember,
 } from "@/lbs/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { getConversationDisplay, formatConversationListTime } from "@/lbs/messages/conversationDisplay";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ export const ConversationListItem = ({
   members,
   contacts = [],
   currentMemberId,
+  isUnread = false,
 }: {
   conversation: Conversation;
   isActive: boolean;
@@ -28,6 +30,7 @@ export const ConversationListItem = ({
   members: OrganizationMember[];
   contacts?: Contact[];
   currentMemberId?: Identifier;
+  isUnread?: boolean;
 }) => {
   const display = getConversationDisplay({
     conversation,
@@ -45,6 +48,7 @@ export const ConversationListItem = ({
       className={cn(
         "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
         isActive ? "bg-primary/10" : "hover:bg-muted/60",
+        isUnread && !isActive && "bg-primary/5",
       )}
       onClick={() => onSelect(conversation)}
     >
@@ -57,10 +61,17 @@ export const ConversationListItem = ({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate font-medium">{display.title}</span>
-          {timeLabel ? (
-            <span className="shrink-0 text-[11px] text-muted-foreground">{timeLabel}</span>
-          ) : null}
+          <span className={cn("truncate", isUnread && "font-semibold")}>{display.title}</span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {isUnread ? (
+              <Badge variant="default" className="h-5 min-w-5 rounded-full px-1.5 text-[10px]">
+                1
+              </Badge>
+            ) : null}
+            {timeLabel ? (
+              <span className="text-[11px] text-muted-foreground">{timeLabel}</span>
+            ) : null}
+          </div>
         </div>
         <div className="mt-0.5 flex items-center gap-2">
           <span className="truncate text-sm text-muted-foreground">{display.preview}</span>

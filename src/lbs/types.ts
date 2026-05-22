@@ -166,8 +166,14 @@ export type ConversationMessage = {
   channel?: MessageChannel;
   direction?: MessageDirection;
   external_id?: string | null;
+  media_url?: string | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
+
+export type ClientSmsDraft = {
+  contact: Contact;
+  dealId?: Identifier | null;
+};
 
 export type MessagingSettingsPublic = {
   org_id: number;

@@ -83,11 +83,12 @@ export const getConversationDisplay = ({
       (conversation.external_phone
         ? formatUsPhoneDisplayFromAny(conversation.external_phone)
         : "Client SMS");
+    const companyName = contact?.company_name?.trim();
 
     return {
       title,
       initials: getInitials(title),
-      preview: conversation.last_message_at ? "SMS thread" : "Start texting this client",
+      preview: companyName || "Client",
       typeLabel,
       activityAt,
       dealHref:

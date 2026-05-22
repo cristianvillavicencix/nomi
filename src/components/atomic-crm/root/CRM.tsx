@@ -25,6 +25,7 @@ import { MobileDashboard } from "../dashboard/MobileDashboard";
 import deals from "../deals";
 import { DesktopLayout } from "../layout/DesktopLayout";
 import { MobileLayout } from "../layout/MobileLayout";
+import { withLbsMessagesProvider } from "@/lbs/messages/withLbsMessagesProvider";
 import { SignupPage } from "../login/SignupPage";
 import { ConfirmationRequired } from "../login/ConfirmationRequired";
 import { ImportPage } from "../misc/ImportPage";
@@ -261,7 +262,7 @@ export const CRM = ({
 
 const DesktopAdmin = (props: CoreAdminProps) => {
   return (
-    <Admin layout={DesktopLayout} dashboard={Dashboard} {...props}>
+    <Admin layout={withLbsMessagesProvider(DesktopLayout)} dashboard={Dashboard} {...props}>
       <CustomRoutes noLayout>
         <Route path={SignupPage.path} element={<SignupPage />} />
         <Route
@@ -565,7 +566,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
     >
       <Admin
         queryClient={queryClient}
-        layout={MobileLayout}
+        layout={withLbsMessagesProvider(MobileLayout)}
         dashboard={MobileDashboard}
         {...props}
       >

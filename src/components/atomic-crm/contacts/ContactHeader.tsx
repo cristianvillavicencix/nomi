@@ -13,6 +13,8 @@ import { TagsListEdit } from "./TagsListEdit";
 import { Avatar } from "./Avatar";
 import { ConvertLeadButton } from "@/lbs/leads/ConvertLeadButton";
 import { getClientShowPath } from "@/lbs/routing";
+import { isLbsMode } from "@/lbs/productMode";
+import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
 
 export const ContactHeader = ({
   record,
@@ -131,6 +133,7 @@ export const ContactHeader = ({
               {!embedded ? <ConvertLeadButton record={record} /> : null}
               {!embedded ? <TagsListEdit buttonOnly /> : null}
               {!embedded ? <AddTask display="chip" /> : null}
+              {isLbsMode() ? <OpenClientSmsButton contact={record} /> : null}
               <Button onClick={onEdit} size={embedded ? "sm" : "default"} variant="outline">
                 Edit
               </Button>

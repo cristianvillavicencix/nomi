@@ -11,6 +11,7 @@ import type {
   OrganizationMember,
 } from "@/lbs/types";
 import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
+import { cn } from "@/lib/utils";
 
 export const ConversationChatHeader = ({
   conversation,
@@ -21,6 +22,7 @@ export const ConversationChatHeader = ({
   currentMemberId,
   onBack,
   showBackButton = false,
+  compact = false,
 }: {
   conversation: Conversation;
   deals: LbsDeal[];
@@ -30,6 +32,7 @@ export const ConversationChatHeader = ({
   currentMemberId?: Identifier;
   onBack?: () => void;
   showBackButton?: boolean;
+  compact?: boolean;
 }) => {
   const display = getConversationDisplay({
     conversation,
@@ -41,7 +44,7 @@ export const ConversationChatHeader = ({
   });
 
   return (
-    <div className="flex items-center gap-3 border-b bg-background px-4 py-3">
+    <div className={cn("flex items-center gap-3 border-b bg-background px-4", compact ? "py-2" : "py-3")}>
       {showBackButton ? (
         <Button
           type="button"

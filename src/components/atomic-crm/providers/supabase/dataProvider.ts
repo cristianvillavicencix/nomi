@@ -1344,14 +1344,28 @@ const dataProviderWithCustomMethods = {
     }
     return data;
   },
-  async sendClientSms(params: { conversationId: Identifier; body: string }) {
+  async sendClientSms(params: {
+    conversationId?: Identifier;
+    contactId?: Identifier;
+    dealId?: Identifier | null;
+    body: string;
+    mediaUrls?: string[];
+  }) {
     const { data, error } = await invokeEdgeFunction<{
       message?: import("@/lbs/types").ConversationMessage;
+      conversation?: import("@/lbs/types").Conversation;
     }>("send_client_sms", {
       method: "POST",
       body: {
-        conversation_id: params.conversationId,
+        conversation_id:
+          params.conversationId != null ? Number(params.conversationId) : undefined,
+        contact_id: params.contactId != null ? Number(params.contactId) : undefined,
+        deal_id:
+          params.dealId != null && params.dealId !== ""
+            ? Number(params.dealId)
+            : undefined,
         body: params.body,
+        media_urls: params.mediaUrls,
       },
     });
     if (error) {
@@ -1372,7 +1386,45 @@ const dataProviderWithCustomMethods = {
         (error as { message?: string }).message ?? "Failed to send SMS",
       );
     }
-    return data?.message ?? null;
+    return { message: data?.message ?? null, conversation: data?.conversation ?? null };
+  },
+  async findClientConversationForContact(contactId: Identifier) {
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("id, phone_jsonb")
+      .eq("id", contactId)
+      .maybeSingle();
+
+    if (contactError || !contact?.id) {
+      return null;
+    }
+
+    const phoneJsonb = contact.phone_jsonb as PhoneNumberAndType[] | null | undefined;
+    let externalPhone: string | null = null;
+    for (const entry of phoneJsonb ?? []) {
+      const normalized = normalizeUsPhoneToE164(entry.number ?? "");
+      if (normalized) {
+        externalPhone = normalized;
+        break;
+      }
+    }
+
+    if (!externalPhone) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("type", "client")
+      .eq("external_phone", externalPhone)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message ?? "Failed to load client conversation");
+    }
+
+    return (data as import("@/lbs/types").Conversation | null) ?? null;
   },
   async ensureClientConversation(params: {
     contactId: Identifier;

@@ -4,6 +4,7 @@ export async function sendTwilioSms(params: {
   from: string;
   to: string;
   body: string;
+  mediaUrls?: string[];
 }) {
   const url =
     `https://api.twilio.com/2010-04-01/Accounts/${params.accountSid}/Messages.json`;
@@ -12,8 +13,14 @@ export async function sendTwilioSms(params: {
   const form = new URLSearchParams({
     To: params.to,
     From: params.from,
-    Body: params.body,
+    Body: params.body.trim() || " ",
   });
+
+  for (const mediaUrl of params.mediaUrls ?? []) {
+    if (mediaUrl.trim()) {
+      form.append("MediaUrl", mediaUrl.trim());
+    }
+  }
 
   const response = await fetch(url, {
     method: "POST",

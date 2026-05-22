@@ -7,6 +7,10 @@ import {
   insertSmsMessage,
 } from "../_shared/messagingConversations.ts";
 import { validateTwilioSignatureForRequest } from "../_shared/twilio.ts";
+import {
+  extractTwilioMediaUrls,
+  mirrorTwilioMediaToStorage,
+} from "../_shared/twilioMedia.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 
 /** Twilio expects TwiML; plain text (e.g. "OK") can be sent back to the sender as an SMS. */
@@ -38,10 +42,11 @@ Deno.serve(async (req) => {
     const params = await parseFormBody(req);
     const fromPhone = params.From?.trim();
     const toPhone = params.To?.trim();
-    const body = params.Body?.trim();
+    const body = params.Body?.trim() ?? "";
     const messageSid = params.MessageSid?.trim();
+    const mediaUrls = extractTwilioMediaUrls(params);
 
-    if (!fromPhone || !toPhone || !body) {
+    if (!fromPhone || !toPhone || (!body && mediaUrls.length === 0)) {
       return createErrorResponse(400, "Missing Twilio payload fields");
     }
 
@@ -100,11 +105,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    let storedMediaUrl: string | null = null;
+    if (mediaUrls[0]) {
+      const accountSidForMedia =
+        accountSid && storedAccountSid && accountSid === storedAccountSid
+          ? accountSid
+          : storedAccountSid;
+      if (accountSidForMedia) {
+        storedMediaUrl = await mirrorTwilioMediaToStorage({
+          accountSid: accountSidForMedia,
+          authToken,
+          mediaUrl: mediaUrls[0],
+        });
+      }
+    }
+
+    const messageBody =
+      body ||
+      (mediaUrls.some((url) => /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url))
+        ? "Photo"
+        : "Attachment");
+
     await insertSmsMessage({
       conversationId: Number(conversation.id),
-      body,
+      body: messageBody,
       direction: "inbound",
       externalId: messageSid ?? null,
+      mediaUrl: storedMediaUrl,
     });
 
     return emptyTwimlResponse();

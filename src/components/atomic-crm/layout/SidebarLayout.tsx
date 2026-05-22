@@ -19,6 +19,7 @@ import { useTheme } from "@/components/admin/use-theme";
 import { Error } from "@/components/admin/error";
 import { Notification } from "@/components/admin/notification";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -43,6 +44,8 @@ import { CRMUserMenuItems } from "./UserMenuItems";
 import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
 import { isLbsMode } from "@/lbs/productMode";
 import { LBS_NAV_ITEMS } from "@/lbs/navigation";
+import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
+import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();
   const activeTheme = theme === "dark" ? "dark" : "light";
@@ -160,6 +163,7 @@ const SidebarFooterControls = () => {
 const SidebarNavigation = () => {
   const location = useLocation();
   const { data: identity } = useGetIdentity();
+  const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
   const canViewSales = canAccess(identity as any, {
     action: "list",
@@ -246,6 +250,9 @@ const SidebarNavigation = () => {
                     label={item.label}
                     icon={<Icon className="h-4 w-4" />}
                     active={isActive(item.activePattern)}
+                    badgeCount={
+                      item.to === "/messages" ? messagesUnreadCount : 0
+                    }
                   />
                 );
               })}
@@ -423,17 +430,27 @@ const SidebarItem = ({
   label,
   icon,
   active,
+  badgeCount = 0,
 }: {
   to: string;
   label: string;
   icon: ReactNode;
   active: boolean;
+  badgeCount?: number;
 }) => (
   <SidebarMenuItem>
     <SidebarMenuButton asChild isActive={active}>
-      <Link to={to} state={{ _scrollToTop: true }}>
+      <Link to={to} state={{ _scrollToTop: true }} className="relative">
         {icon}
-        {label}
+        <span className="truncate">{label}</span>
+        {badgeCount > 0 ? (
+          <Badge
+            variant="default"
+            className="ml-auto rounded-full px-1.5 py-0 text-[10px] group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0.5 group-data-[collapsible=icon]:right-0.5 group-data-[collapsible=icon]:ml-0"
+          >
+            {formatUnreadBadgeCount(badgeCount)}
+          </Badge>
+        ) : null}
       </Link>
     </SidebarMenuButton>
   </SidebarMenuItem>

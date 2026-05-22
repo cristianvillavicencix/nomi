@@ -82,6 +82,7 @@ import { isLbsMode } from "@/lbs/productMode";
 import { DealProjectTabs } from "@/lbs/deals/DealProjectTabs";
 import { LbsProjectOverviewTab } from "@/lbs/deals/LbsProjectOverviewTab";
 import { LbsDealHeaderOverview } from "@/lbs/deals/LbsDealHeaderOverview";
+import { DealClientSmsButton } from "@/lbs/deals/DealClientSmsButton";
 import { LbsProjectDeliveryUrgency } from "@/lbs/deals/LbsProjectDeliveryUrgency";
 import {
   createBriefGapTasksForDeal,
@@ -505,6 +506,7 @@ const DealShowContent = () => {
           >
             {isLbsMode() ? <LbsProjectDeliveryUrgency record={record} /> : null}
             <div className="flex gap-2">
+            {isLbsMode() ? <DealClientSmsButton record={record} /> : null}
             {record.archived_at && canManageSales ? (
               <>
                 <UnarchiveButton record={record} />

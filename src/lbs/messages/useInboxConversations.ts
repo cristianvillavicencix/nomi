@@ -9,7 +9,8 @@ import type {
 } from "@/lbs/types";
 import { sortConversationsByActivity } from "@/lbs/messages/conversationUtils";
 
-export const useInboxConversations = () => {
+export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
+  const enabled = options.enabled ?? true;
   const { identity } = useGetIdentity();
 
   const { data: participations = [], isPending: isParticipantsPending } =
@@ -20,7 +21,7 @@ export const useInboxConversations = () => {
         pagination: { page: 1, perPage: 200 },
         sort: { field: "id", order: "DESC" },
       },
-      { enabled: !!identity?.id, staleTime: 15_000 },
+      { enabled: enabled && !!identity?.id, staleTime: 15_000 },
     );
 
   const { data: projectConversations = [], isPending: isProjectsPending } =
@@ -31,7 +32,7 @@ export const useInboxConversations = () => {
         pagination: { page: 1, perPage: 200 },
         sort: { field: "updated_at", order: "DESC" },
       },
-      { staleTime: 15_000 },
+      { enabled, staleTime: 15_000 },
     );
 
   const { data: clientConversations = [], isPending: isClientsPending } =
@@ -42,7 +43,7 @@ export const useInboxConversations = () => {
         pagination: { page: 1, perPage: 200 },
         sort: { field: "updated_at", order: "DESC" },
       },
-      { staleTime: 15_000 },
+      { enabled, staleTime: 15_000 },
     );
 
   const conversationIds = useMemo(() => {
@@ -57,7 +58,7 @@ export const useInboxConversations = () => {
     useGetMany<Conversation>(
       "conversations",
       { ids: conversationIds },
-      { enabled: conversationIds.length > 0, staleTime: 15_000 },
+      { enabled: enabled && conversationIds.length > 0, staleTime: 15_000 },
     );
 
   const participantConversationIds = useMemo(
@@ -68,12 +69,16 @@ export const useInboxConversations = () => {
   const visibleConversations = useMemo(
     () =>
       sortConversationsByActivity(
-        conversations.filter(
-          (conversation) =>
+        conversations.filter((conversation) => {
+          if (conversation.type === "client" && !conversation.last_message_at) {
+            return false;
+          }
+          return (
             conversation.type === "project" ||
             conversation.type === "client" ||
-            participantConversationIds.has(String(conversation.id)),
-        ),
+            participantConversationIds.has(String(conversation.id))
+          );
+        }),
       ),
     [conversations, participantConversationIds],
   );
@@ -93,7 +98,7 @@ export const useInboxConversations = () => {
   const { data: deals = [] } = useGetMany<LbsDeal>(
     "deals",
     { ids: dealIds },
-    { enabled: dealIds.length > 0, staleTime: 60_000 },
+    { enabled: enabled && dealIds.length > 0, staleTime: 60_000 },
   );
 
   const dmConversationIds = useMemo(
@@ -113,7 +118,7 @@ export const useInboxConversations = () => {
           : {},
       pagination: { page: 1, perPage: 500 },
     },
-    { enabled: dmConversationIds.length > 0, staleTime: 30_000 },
+    { enabled: enabled && dmConversationIds.length > 0, staleTime: 30_000 },
   );
 
   const memberIds = useMemo(
@@ -131,7 +136,7 @@ export const useInboxConversations = () => {
   const { data: members = [] } = useGetMany<OrganizationMember>(
     "organization_members",
     { ids: memberIds },
-    { enabled: memberIds.length > 0, staleTime: 60_000 },
+    { enabled: enabled && memberIds.length > 0, staleTime: 60_000 },
   );
 
   const contactIds = useMemo(
@@ -149,7 +154,7 @@ export const useInboxConversations = () => {
   const { data: contacts = [] } = useGetMany<Contact>(
     "contacts",
     { ids: contactIds },
-    { enabled: contactIds.length > 0, staleTime: 60_000 },
+    { enabled: enabled && contactIds.length > 0, staleTime: 60_000 },
   );
 
   return {

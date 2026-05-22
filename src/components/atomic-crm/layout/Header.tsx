@@ -14,6 +14,9 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { isLbsMode } from "@/lbs/productMode";
 import { LBS_NAV_ITEMS } from "@/lbs/navigation";
+import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
+import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
+import { Badge } from "@/components/ui/badge";
 
 const TIME_AND_PAY_PATHS = new Set([
   "/time_entries",
@@ -33,6 +36,7 @@ const TIME_AND_PAY_NAV = [
 
 const Header = () => {
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
+  const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
   const location = useLocation();
   let currentPath: string | boolean = "/";
   if (matchPath("/", location.pathname)) {
@@ -84,6 +88,7 @@ const Header = () => {
                   label={item.label}
                   to={item.to}
                   isActive={!!matchPath(item.activePattern, location.pathname)}
+                  badgeCount={item.to === "/messages" ? messagesUnreadCount : 0}
                 />
               ))}
             </nav>
@@ -177,20 +182,27 @@ const NavigationTab = ({
   label,
   to,
   isActive,
+  badgeCount = 0,
 }: {
   label: string;
   to: string;
   isActive: boolean;
+  badgeCount?: number;
 }) => (
   <Link
     to={to}
-    className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+    className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
       isActive
         ? "text-secondary-foreground border-secondary-foreground"
         : "text-secondary-foreground/70 border-transparent hover:text-secondary-foreground/80"
     }`}
   >
     {label}
+    {badgeCount > 0 ? (
+      <Badge variant="secondary" className="rounded-full px-1.5 py-0 text-[10px]">
+        {formatUnreadBadgeCount(badgeCount)}
+      </Badge>
+    ) : null}
   </Link>
 );
 

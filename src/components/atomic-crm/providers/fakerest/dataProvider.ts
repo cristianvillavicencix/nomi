@@ -1372,24 +1372,57 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     has_auth_token: Boolean(params.twilio_auth_token?.trim()),
     webhook_url: null,
   }),
-  sendClientSms: async ({ conversationId, body }) => {
-    const { data: conversation } = await baseDataProvider.getOne<import("@/lbs/types").Conversation>(
-      "conversations",
-      { id: conversationId },
-    );
+  sendClientSms: async ({ conversationId, contactId, dealId, body, mediaUrls }) => {
+    let conversation: import("@/lbs/types").Conversation;
+    if (conversationId) {
+      const { data } = await baseDataProvider.getOne<import("@/lbs/types").Conversation>(
+        "conversations",
+        { id: conversationId },
+      );
+      conversation = data;
+    } else if (contactId) {
+      conversation = await dataProviderWithCustomMethod.ensureClientConversation({
+        contactId,
+        authorMemberId: 1,
+        dealId,
+      });
+    } else {
+      throw new Error("conversation_id or contact_id is required");
+    }
+
     const message = await baseDataProvider.create<import("@/lbs/types").ConversationMessage>(
       "conversation_messages",
       {
         data: {
-          conversation_id: conversationId,
-          body,
+          conversation_id: conversation.id,
+          body: body?.trim() || (mediaUrls?.length ? "Photo" : ""),
           channel: "sms",
           direction: "outbound",
           author_member_id: conversation.created_by_member_id ?? null,
+          media_url: mediaUrls?.[0] ?? null,
         },
       },
     );
-    return message.data;
+    return { message: message.data, conversation };
+  },
+  findClientConversationForContact: async (contactId) => {
+    const { data: contact } = await baseDataProvider.getOne<import("@/lbs/types").Contact>(
+      "contacts",
+      { id: contactId },
+    );
+    const phone =
+      contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ?? null;
+    const { data: existing = [] } = await baseDataProvider.getList<import("@/lbs/types").Conversation>(
+      "conversations",
+      {
+        filter: phone
+          ? { "type@eq": "client", "external_phone@eq": phone }
+          : { "type@eq": "client", "contact_id@eq": contactId },
+        pagination: { page: 1, perPage: 1 },
+        sort: { field: "id", order: "ASC" },
+      },
+    );
+    return existing[0] ?? null;
   },
   ensureClientConversation: async ({ contactId, authorMemberId, dealId }) => {
     const { data: contact } = await baseDataProvider.getOne<import("@/lbs/types").Contact>(

@@ -25,6 +25,7 @@ import {
   getProjectTasksProgress,
 } from "@/lbs/deals/projectTabProgress";
 import { ProjectResourcesTab } from "@/lbs/deals/ProjectResourcesTab";
+import { ProjectSecurityTab } from "@/lbs/deals/ProjectSecurityTab";
 import { ProjectTeamChat } from "@/lbs/messages/ProjectTeamChat";
 import {
   formatTabCount,

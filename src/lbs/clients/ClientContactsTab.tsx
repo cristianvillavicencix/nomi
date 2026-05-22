@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Star, Trash, UserRound } from "lucide-react";
+import { MoreHorizontal, MessageSquare, Pencil, Star, Trash, UserRound } from "lucide-react";
 import {
   useDelete,
   useGetList,
@@ -38,6 +38,9 @@ import {
   getContactFullName,
   getContactPhone,
 } from "@/lbs/clients/clientShowUtils";
+import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
+import { useMessagesQuickAccess } from "@/lbs/messages/MessagesQuickAccessProvider";
+import { useMessagingEnabled } from "@/lbs/messages/useMessagingEnabled";
 
 type ClientContactsTabProps = {
   companyId: Company["id"];
@@ -66,6 +69,8 @@ export const ClientContactsTab = ({
   const [editContactId, setEditContactId] = useState<Identifier | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
+  const { smsEnabled } = useMessagingEnabled();
+  const { openSms, isOpening: isOpeningSms } = useMessagesQuickAccess();
 
   const openContact = (contactId: Identifier) => {
     setSelectedContactId(contactId);
@@ -190,6 +195,15 @@ export const ClientContactsTab = ({
                             <Pencil className="size-4" />
                             Edit
                           </DropdownMenuItem>
+                          {smsEnabled && contactHasSmsPhone(contact) ? (
+                            <DropdownMenuItem
+                              disabled={isOpeningSms}
+                              onClick={() => void openSms(contact)}
+                            >
+                              <MessageSquare className="size-4" />
+                              Send SMS
+                            </DropdownMenuItem>
+                          ) : null}
                           {!isPrimary ? (
                             <DropdownMenuItem
                               disabled={isUpdatingPrimary}

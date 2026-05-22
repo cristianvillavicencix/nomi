@@ -9,6 +9,7 @@ import { MobileNavigation } from "./MobileNavigation";
 
 export const MobileLayout = ({ children }: { children: ReactNode }) => {
   useConfigurationLoader();
+
   return (
     <>
       <ErrorBoundary FallbackComponent={Error}>
