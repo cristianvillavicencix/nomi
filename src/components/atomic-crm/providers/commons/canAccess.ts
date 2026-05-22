@@ -1,8 +1,12 @@
 // FIXME: This should be exported from the ra-core package
 import { isLbsMode } from "@/lbs/productMode";
+import {
+  getCapabilityForResourceAction,
+  hasCapability,
+  resolveEffectivePermissions,
+} from "@/lib/permissions/permissionCatalog";
 import type { MemberModulePermissions } from "../../types";
 import {
-  canAccessResourceWithModules,
   legacyRoleFinance,
   legacyRolePeople,
   legacyRoleSales,
@@ -88,25 +92,66 @@ export const hasAnyRole = (
   return expectedRoles.some((role) => roles.includes(role));
 };
 
+const LBS_DENIED_RESOURCES = new Set([
+  "payments",
+  "payment_lines",
+  "payroll_runs",
+  "payroll_run_lines",
+  "employee_loans",
+  "employee_loan_deductions",
+  "people",
+  "time_entries",
+]);
+
+const canAccessViaCatalog = (
+  identity: AccessIdentity | null | undefined,
+  resource: string,
+  action: string,
+): boolean | null => {
+  if (!identity || typeof identity !== "object") return false;
+  const capId = getCapabilityForResourceAction(resource, action);
+  if (!capId) return null;
+  const perms = resolveEffectivePermissions(identity);
+  return hasCapability(perms, capId, {
+    administrator: identity.administrator,
+  });
+};
+
 export const canAccess = <
   RecordType extends Record<string, any> = Record<string, any>,
 >(
-  identity: string | AccessIdentity,
+  identity: string | AccessIdentity | null | undefined,
   params: CanAccessParams<RecordType>,
 ) => {
+  if (identity == null) return false;
+
+  if (typeof identity === "object" && identity.administrator === true) {
+    return true;
+  }
+
+  if (isLbsMode()) {
+    if (LBS_DENIED_RESOURCES.has(params.resource)) {
+      return false;
+    }
+    if (params.resource === "reports") {
+      const hit = canAccessViaCatalog(identity, "reports", params.action);
+      return hit ?? false;
+    }
+    const catalogHit = canAccessViaCatalog(
+      identity,
+      params.resource,
+      params.action,
+    );
+    if (catalogHit != null) {
+      return catalogHit;
+    }
+    return true;
+  }
+
   const roles = getAccessRoles(identity);
 
   if (roles.includes("admin")) {
     return true;
-  }
-
-  if (typeof identity === "object" && identity.module_permissions != null) {
-    return canAccessResourceWithModules(
-      params.resource,
-      identity as AccessIdentity,
-      isLbsMode(),
-      params.action,
-    );
   }
 
   const canAccessFinance = legacyRoleFinance(roles);
@@ -115,49 +160,6 @@ export const canAccess = <
 
   if (params.resource === "organization_members" || params.resource === "configuration") {
     return false;
-  }
-
-  if (isLbsMode()) {
-    if (
-      params.resource === "payments" ||
-      params.resource === "payment_lines" ||
-      params.resource === "payroll_runs" ||
-      params.resource === "payroll_run_lines" ||
-      params.resource === "employee_loans" ||
-      params.resource === "employee_loan_deductions" ||
-      params.resource === "people" ||
-      params.resource === "time_entries" ||
-      params.resource === "reports"
-    ) {
-      return false;
-    }
-
-    if (
-      params.resource === "deals" ||
-      params.resource === "companies" ||
-      params.resource === "contacts" ||
-      params.resource === "tasks" ||
-      params.resource === "calendar_events" ||
-      params.resource === "task_assignees" ||
-      params.resource === "task_participants" ||
-      params.resource === "task_tag_notifications" ||
-      params.resource === "proposals" ||
-      params.resource === "contracts" ||
-      params.resource === "forms" ||
-      params.resource === "form_submissions" ||
-      params.resource === "tickets" ||
-      params.resource === "ticket_messages" ||
-      params.resource === "conversations" ||
-      params.resource === "conversation_participants" ||
-      params.resource === "conversation_messages" ||
-      params.resource === "proposal_line_items" ||
-      params.resource === "deal_resources" ||
-      params.resource === "deal_access_entries"
-    ) {
-      return canAccessSales;
-    }
-
-    return true;
   }
 
   if (

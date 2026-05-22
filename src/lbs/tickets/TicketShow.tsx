@@ -5,6 +5,7 @@ import { ReferenceManyField } from "@/components/admin/reference-many-field";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddTask } from "@/components/atomic-crm/tasks/AddTask";
+import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
 import type { Ticket, TicketMessage } from "@/lbs/types";
 import { TicketReplyForm } from "@/lbs/tickets/TicketReplyForm";
 
@@ -36,12 +37,19 @@ const TicketShowContent = () => {
       <div>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">{record.subject}</h1>
-          <AddTask
-            display="chip"
-            contactId={record.contact_id ?? undefined}
-            dealId={record.deal_id ?? undefined}
-            selectContact={!record.contact_id}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <ShareRecordModal
+              resourceType="tickets"
+              resourceId={record.id}
+              orgId={record.org_id}
+            />
+            <AddTask
+              display="chip"
+              contactId={record.contact_id ?? undefined}
+              dealId={record.deal_id ?? undefined}
+              selectContact={!record.contact_id}
+            />
+          </div>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
           <Badge variant="outline" className="capitalize">

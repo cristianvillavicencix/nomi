@@ -17,8 +17,8 @@ const MODULE_KEYS = [
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
-/** Module keys plus dotted capability ids (e.g. messaging.send). */
-export type ModulePermissionRecord = Record<string, boolean>;
+/** Module keys plus dotted capability ids (e.g. messaging.send) and _role_preset. */
+export type ModulePermissionRecord = Record<string, boolean | string>;
 
 export function deriveModuleFlagsFromCapabilities(
   stored: Record<string, unknown>,
@@ -45,7 +45,7 @@ export function normalizeModulePermissions(
   if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
     const o = raw as Record<string, unknown>;
     for (const [key, val] of Object.entries(o)) {
-      if (typeof val === "boolean") out[key] = val;
+      if (typeof val === "boolean" || typeof val === "string") out[key] = val;
     }
   }
 

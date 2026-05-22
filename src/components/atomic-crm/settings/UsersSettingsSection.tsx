@@ -33,9 +33,15 @@ import { inviteBillingSeatGateDisabled } from "@/platform/inviteBillingGate";
 const SKIP_INVITE_SEAT_BILLING = inviteBillingSeatGateDisabled();
 import type { AccessIdentity } from "../providers/commons/canAccess";
 import {
+  applyRolePresetToPermissions,
   deriveRolesFromModulePermissions,
   resolveEffectiveModules,
 } from "../providers/commons/memberModuleAccess";
+import {
+  getStoredRolePreset,
+  ROLE_PRESETS,
+  type RoleSlug,
+} from "@/lib/permissions/permissionCatalog";
 import type { CrmDataProvider } from "../providers/types";
 import type {
   MemberModuleKey,
@@ -113,17 +119,44 @@ const UserModulesInput = ({ disabled }: { disabled: boolean }) => {
     ...(typeof field.value === "object" && field.value !== null
       ? field.value
       : {}),
-  } satisfies Record<string, boolean>;
+  } satisfies Record<string, boolean | string>;
+
+  const activePreset = getStoredRolePreset(caps);
 
   const setCapability = (id: string, checked: boolean) => {
     const next = { ...caps, [id]: checked };
-    field.onChange(collapsePermissionsForSave(next));
+    field.onChange(collapsePermissionsForSave(next, activePreset));
+  };
+
+  const applyPreset = (role: RoleSlug) => {
+    const next = applyRolePresetToPermissions(role);
+    field.onChange(collapsePermissionsForSave(next, role));
   };
 
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium">Workspace areas</p>
+        <p className="text-sm font-medium">Role preset</p>
+        <p className="text-xs text-muted-foreground">
+          Start from a standard role, then fine-tune individual permissions below.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {(Object.keys(ROLE_PRESETS) as RoleSlug[]).map((slug) => (
+          <Button
+            key={slug}
+            type="button"
+            size="sm"
+            variant={activePreset === slug ? "default" : "outline"}
+            disabled={disabled}
+            onClick={() => applyPreset(slug)}
+          >
+            {ROLE_PRESETS[slug].label}
+          </Button>
+        ))}
+      </div>
+      <div>
+        <p className="text-sm font-medium">Workspace permissions</p>
         <p className="text-xs text-muted-foreground">
           Each area has its own permissions. Turn switches on for what this
           person can use.
@@ -141,7 +174,7 @@ const UserModulesInput = ({ disabled }: { disabled: boolean }) => {
           </thead>
           <tbody>
             {groups.map((group) => (
-              <Fragment key={group.moduleKey}>
+              <Fragment key={group.area}>
                 <tr className="border-b border-border/40 bg-muted/30">
                   <td
                     colSpan={2}
@@ -160,7 +193,7 @@ const UserModulesInput = ({ disabled }: { disabled: boolean }) => {
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <Switch
-                        checked={!!caps[item.id]}
+                        checked={caps[item.id] === true}
                         disabled={disabled}
                         onCheckedChange={(checked) =>
                           setCapability(item.id, checked)
@@ -281,10 +314,9 @@ const UserDialog = ({
             module_permissions: null,
           };
 
-    const effectiveMods = resolveEffectiveModules(identityDraft);
     const expandedPermissions = expandPermissionsForForm(
       memberForForm?.module_permissions ?? null,
-      effectiveMods,
+      identityDraft,
     );
 
     return {
@@ -294,8 +326,8 @@ const UserDialog = ({
       email: memberForForm?.email ?? "",
       administrator: identityDraft.administrator ?? false,
       roles: deriveRolesFromModulePermissions(
-        effectiveMods,
-        identityDraft.administrator,
+        collapsePermissionsForSave(expandedPermissions),
+        identityDraft.administrator ?? false,
       ),
       module_permissions: expandedPermissions,
       disabled: memberForForm?.disabled ?? false,
@@ -398,14 +430,40 @@ const ModuleBadges = ({ sale }: { sale: OrganizationMember }) => {
     );
   }
 
+  const preset = getStoredRolePreset(sale.module_permissions ?? undefined);
+  if (preset) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        {ROLE_PRESETS[preset].label}
+      </span>
+    );
+  }
+
+  const perms = sale.module_permissions;
+  const activeAreas = getModuleAreas().filter((area) =>
+    area.items.some((item) => perms?.[item.id] === true),
+  );
+  if (activeAreas.length > 0) {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {activeAreas.map((area) => (
+          <span key={area.area} className="rounded-full border px-2 py-0.5 text-xs">
+            {area.label}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
   const mods = resolveEffectiveModules({
     administrator: !!sale.administrator,
     roles: sale.roles,
     module_permissions: sale.module_permissions ?? null,
   });
 
-  const visibleKeys = getModuleAreas().map((area) => area.moduleKey);
-  const activeKeys = visibleKeys.filter((k) => mods[k]);
+  const activeKeys = (Object.keys(MODULE_SUMMARY_LABELS) as MemberModuleKey[]).filter(
+    (k) => mods[k],
+  );
   if (!activeKeys.length) {
     return (
       <span className="text-xs text-muted-foreground">No modules resolved</span>

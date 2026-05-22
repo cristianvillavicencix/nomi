@@ -9,6 +9,22 @@ import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { findDealLabel } from "../deals/deal";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
+
+const DealPipelineSecondary = ({ deal }: { deal: Deal }) => {
+  const { dealStages } = useConfigurationContext();
+  const canViewAmounts = useCanViewAmounts();
+  const amountPart = canViewAmounts
+    ? deal.amount.toLocaleString("en-US", {
+        notation: "compact",
+        style: "currency",
+        currency: "USD",
+        currencyDisplay: "narrowSymbol",
+        minimumSignificantDigits: 3,
+      })
+    : "—";
+  return `${amountPart} , ${findDealLabel(dealStages, deal.stage)}`;
+};
 
 /**
  * This component displays the projects pipeline for the current user.
@@ -63,15 +79,7 @@ export const DealsPipeline = () => {
           total={total}
           isPending={isPending}
           primaryText={(deal) => deal.name}
-          secondaryText={(deal) =>
-            `${deal.amount.toLocaleString("en-US", {
-              notation: "compact",
-              style: "currency",
-              currency: "USD",
-              currencyDisplay: "narrowSymbol",
-              minimumSignificantDigits: 3,
-            })} , ${findDealLabel(dealStages, deal.stage)}`
-          }
+          secondaryText={(deal) => <DealPipelineSecondary deal={deal} />}
           leftAvatar={(deal) => (
             <ReferenceField
               source="company_id"

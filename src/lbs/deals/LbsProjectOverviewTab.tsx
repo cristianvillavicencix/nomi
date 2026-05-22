@@ -21,18 +21,8 @@ import {
 import { getProjectBriefProgress } from "@/lbs/deals/projectBriefProgress";
 import { ProjectCalendarEventsList } from "@/lbs/calendar/ProjectCalendarEventsList";
 import { ProjectGithubLink } from "@/lbs/deals/ProjectGithubLink";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
-
-const formatMoney = (value?: number | null) => {
-  if (value == null) return "—";
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(parsed);
-};
 
 const getProjectTypeLabel = (value?: string | null) =>
   lbsProjectTypeChoices.find((choice) => choice.value === value)?.label ??
@@ -94,7 +84,9 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
             <OverviewField label="Service type">
               {getProjectTypeLabel(record.project_type ?? record.category)}
             </OverviewField>
-            <OverviewField label="Budget">{formatMoney(record.amount)}</OverviewField>
+            <OverviewField label="Budget">
+              <MoneyText value={record.amount} />
+            </OverviewField>
             <OverviewField label="Delivery date">
               {deliveryDateLabel ?? "—"}
             </OverviewField>

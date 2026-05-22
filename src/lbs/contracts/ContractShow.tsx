@@ -1,6 +1,7 @@
 import { ShowBase, useShowContext } from "ra-core";
 import { useParams } from "react-router";
 import { ReferenceField } from "@/components/admin/reference-field";
+import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Contract } from "@/lbs/types";
@@ -34,11 +35,18 @@ const ContractShowContent = () => {
 
   return (
     <div className="mt-2 space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">{record.title}</h1>
-        <Badge variant="outline" className="mt-2 capitalize">
-          {record.status?.replace(/-/g, " ") ?? "draft"}
-        </Badge>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">{record.title}</h1>
+          <Badge variant="outline" className="mt-2 capitalize">
+            {record.status?.replace(/-/g, " ") ?? "draft"}
+          </Badge>
+        </div>
+        <ShareRecordModal
+          resourceType="contracts"
+          resourceId={record.id}
+          orgId={record.org_id}
+        />
       </div>
 
       <Card>

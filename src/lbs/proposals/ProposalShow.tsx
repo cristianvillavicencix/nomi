@@ -10,15 +10,12 @@ import {
 import { useNavigate, useParams } from "react-router";
 import { ReferenceField } from "@/components/admin/reference-field";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { Proposal, ProposalLineItem } from "@/lbs/types";
-
-const formatMoney = (value?: number | null) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    Number(value ?? 0),
-  );
 
 const formatDate = (value?: string | null) => {
   if (!value) return "—";
@@ -98,18 +95,22 @@ const ProposalShowContent = () => {
               {record.status?.replace(/-/g, " ") ?? "draft"}
             </Badge>
             <span className="text-sm text-muted-foreground">
-              {formatMoney(record.amount)}
+              <MoneyText value={record.amount} />
             </span>
           </div>
         </div>
-        {canAccept ? (
-          <Button
-            onClick={() => acceptProposal()}
-            disabled={isAccepting}
-          >
-            Accept proposal
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <ShareRecordModal
+            resourceType="proposals"
+            resourceId={record.id}
+            orgId={record.org_id}
+          />
+          {canAccept ? (
+            <Button onClick={() => acceptProposal()} disabled={isAccepting}>
+              Accept proposal
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <Card>
@@ -173,7 +174,7 @@ const ProposalShowContent = () => {
                 >
                   <span>{item.description}</span>
                   <span className="text-muted-foreground">
-                    {item.quantity ?? 1} × {formatMoney(item.unit_price)}
+                    {item.quantity ?? 1} × <MoneyText value={item.unit_price} />
                   </span>
                 </li>
               ))}

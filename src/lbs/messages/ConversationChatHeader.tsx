@@ -11,6 +11,7 @@ import type {
   OrganizationMember,
 } from "@/lbs/types";
 import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
+import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
 import { cn } from "@/lib/utils";
 
 export const ConversationChatHeader = ({
@@ -83,6 +84,13 @@ export const ConversationChatHeader = ({
           </Link>
         </Button>
       ) : null}
+
+      <ShareRecordModal
+        resourceType="conversations"
+        resourceId={conversation.id}
+        orgId={conversation.org_id}
+        label="Share"
+      />
     </div>
   );
 };

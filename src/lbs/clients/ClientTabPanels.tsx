@@ -27,7 +27,8 @@ import { useConfigurationContext } from "@/components/atomic-crm/root/Configurat
 import type { Company, ContactNote, Deal } from "@/components/atomic-crm/types";
 import type { Contract, FormSubmission, Proposal, Ticket } from "@/lbs/types";
 import { ClientTabEmpty } from "@/lbs/clients/ClientContactsTab";
-import { formatDateTime, formatMoney } from "@/lbs/clients/clientShowUtils";
+import { formatDateTime, formatTabCount } from "@/lbs/clients/clientShowUtils";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 
 const TabLoading = () => (
   <div className="space-y-2">
@@ -80,7 +81,7 @@ export const ClientProjectsTab = ({ companyId }: { companyId: Company["id"] }) =
                 {findDealLabel(dealStages, deal.stage)}
               </TableCell>
               <TableCell className="hidden md:table-cell text-muted-foreground">
-                {formatMoney(deal.amount)}
+                <MoneyText value={deal.amount} />
               </TableCell>
               <TableCell className="hidden lg:table-cell text-muted-foreground">
                 {formatDateTime(deal.updated_at)}
@@ -143,7 +144,11 @@ export const ClientProposalsTab = ({ companyId }: { companyId: Company["id"] }) 
                 )}
               </TableCell>
               <TableCell className="text-right text-muted-foreground">
-                {proposal.amount != null ? formatMoney(proposal.amount) : "—"}
+                {proposal.amount != null ? (
+                  <MoneyText value={proposal.amount} />
+                ) : (
+                  "—"
+                )}
               </TableCell>
             </TableRow>
           ))}

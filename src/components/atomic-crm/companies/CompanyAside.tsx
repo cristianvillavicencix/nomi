@@ -13,6 +13,7 @@ import { mapsHref } from "@/lib/linking";
 
 import { AsideSection } from "../misc/AsideSection";
 import { useConfigurationContext } from "../root/ConfigurationContext";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import { OrganizationMemberName } from "../organizationMembers/OrganizationMemberName";
 import type { Company } from "../types";
 import { sizes } from "./sizes";
@@ -104,6 +105,7 @@ export const CompanyInfo = ({ record }: { record: Company }) => {
 
 export const ContextInfo = ({ record }: { record: Company }) => {
   const { companySectors } = useConfigurationContext();
+  const canViewAmounts = useCanViewAmounts();
   if (!record.revenue && !record.id) {
     return null;
   }
@@ -120,11 +122,12 @@ export const ContextInfo = ({ record }: { record: Company }) => {
           Size: <SelectField source="size" choices={sizes} />
         </span>
       )}
-      {record.revenue && (
+      {record.revenue && canViewAmounts ? (
         <span>
           Revenue: <TextField source="revenue" />
         </span>
-      )}
+      ) : null}
+      {record.revenue && !canViewAmounts ? <span>Revenue: —</span> : null}
       {record.tax_identifier && (
         <span>
           Tax Identifier: <TextField source="tax_identifier" />

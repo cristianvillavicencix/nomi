@@ -16,7 +16,7 @@ import {
   Trash,
 } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -349,7 +349,7 @@ export const DealTableView = () => {
                   <ProjectDeliveryCountdownText record={deal} />
                 </TableCell>
                 <TableCell className={cn("text-right", lbsMode && "hidden")}>
-                  {currencyFormatter.format(Number(deal.amount ?? 0))}
+                  <MoneyText value={deal.amount} />
                 </TableCell>
                 <TableCell className="max-w-[180px]">
                   <ProjectAssignedAvatars

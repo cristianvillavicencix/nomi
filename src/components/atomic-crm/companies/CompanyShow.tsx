@@ -34,6 +34,7 @@ import { Status } from "../misc/Status";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Contact, Deal } from "../types";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import {
   ScrollableContentArea,
   StickyTabsBar,
@@ -305,6 +306,36 @@ const CreateRelatedContactButton = () => {
   );
 };
 
+const DealCompanyListMeta = ({
+  deal,
+  dealStages,
+  dealCategories,
+}: {
+  deal: Deal;
+  dealStages: ReturnType<typeof useConfigurationContext>["dealStages"];
+  dealCategories: ReturnType<typeof useConfigurationContext>["dealCategories"];
+}) => {
+  const canViewAmounts = useCanViewAmounts();
+  const amountPart = canViewAmounts
+    ? deal.amount.toLocaleString("en-US", {
+        notation: "compact",
+        style: "currency",
+        currency: "USD",
+        currencyDisplay: "narrowSymbol",
+        minimumSignificantDigits: 3,
+      })
+    : "—";
+
+  return (
+    <>
+      {findDealLabel(dealStages, deal.stage)}, {amountPart}
+      {deal.category
+        ? `, ${dealCategories.find((c) => c.value === deal.category)?.label ?? deal.category}`
+        : ""}
+    </>
+  );
+};
+
 const ProjectsIterator = () => {
   const { data: deals, error, isPending } = useListContext<Deal>();
   const { dealStages, dealCategories } = useConfigurationContext();
@@ -323,17 +354,11 @@ const ProjectsIterator = () => {
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{deal.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  {findDealLabel(dealStages, deal.stage)},{" "}
-                  {deal.amount.toLocaleString("en-US", {
-                    notation: "compact",
-                    style: "currency",
-                    currency: "USD",
-                    currencyDisplay: "narrowSymbol",
-                    minimumSignificantDigits: 3,
-                  })}
-                  {deal.category
-                    ? `, ${dealCategories.find((c) => c.value === deal.category)?.label ?? deal.category}`
-                    : ""}
+                  <DealCompanyListMeta
+                    deal={deal}
+                    dealStages={dealStages}
+                    dealCategories={dealCategories}
+                  />
                 </div>
               </div>
               <div className="text-right">

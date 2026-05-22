@@ -1,80 +1,31 @@
 import { isLbsMode } from "@/lbs/productMode";
+import {
+  CAPABILITIES,
+  collapsePermissionsForSave as collapseCatalogPermissions,
+  getCapabilitiesGroupedByArea,
+  getStoredRolePreset,
+  inferLegacyRolePreset,
+  permissionsMapFromRolePreset,
+  ROLE_PRESET_KEY,
+  type RoleSlug,
+} from "@/lib/permissions/permissionCatalog";
 import type { MemberModuleKey, MemberModulePermissions } from "../types";
 
 export type WorkspacePermissionItem = {
   id: string;
   label: string;
+  scopeable?: boolean;
 };
 
 export type WorkspacePermissionGroup = {
-  moduleKey: MemberModuleKey;
+  area: string;
   label: string;
   items: WorkspacePermissionItem[];
 };
 
-const WORKSPACE_PERMISSION_GROUPS: WorkspacePermissionGroup[] = [
+const CONTRACTOR_GROUPS: WorkspacePermissionGroup[] = [
   {
-    moduleKey: "crm",
-    label: "CRM",
-    items: [
-      { id: "crm.contacts", label: "Contacts & companies" },
-      { id: "crm.pipeline", label: "Pipeline & projects" },
-      { id: "crm.tasks", label: "Tasks" },
-      { id: "crm.notes", label: "Notes & activity" },
-      { id: "crm.upload_images", label: "Upload images & files" },
-    ],
-  },
-  {
-    moduleKey: "proposals",
-    label: "Proposals",
-    items: [
-      { id: "proposals.documents", label: "Proposals & contracts" },
-      { id: "proposals.line_items", label: "Line items" },
-    ],
-  },
-  {
-    moduleKey: "forms",
-    label: "Forms",
-    items: [
-      { id: "forms.manage", label: "Create & edit forms" },
-      { id: "forms.submissions", label: "View submissions" },
-    ],
-  },
-  {
-    moduleKey: "support",
-    label: "Support",
-    items: [
-      { id: "support.tickets", label: "Tickets" },
-      { id: "support.messages", label: "Ticket messages" },
-    ],
-  },
-  {
-    moduleKey: "messaging",
-    label: "Messaging",
-    items: [
-      { id: "messaging.conversations", label: "Conversations" },
-      { id: "messaging.send", label: "Send messages" },
-    ],
-  },
-  {
-    moduleKey: "deal_operations",
-    label: "Deal operations",
-    items: [
-      { id: "deal_operations.resources", label: "Resources & scheduling" },
-      { id: "deal_operations.subcontractors", label: "Subcontractors" },
-    ],
-  },
-  {
-    moduleKey: "deal_financials",
-    label: "Deal financials",
-    items: [
-      { id: "deal_financials.expenses", label: "Expenses" },
-      { id: "deal_financials.change_orders", label: "Change orders" },
-      { id: "deal_financials.collections", label: "Client collections" },
-    ],
-  },
-  {
-    moduleKey: "payroll",
+    area: "payroll",
     label: "Payroll",
     items: [
       { id: "payroll.runs", label: "Pay runs & payouts" },
@@ -82,7 +33,7 @@ const WORKSPACE_PERMISSION_GROUPS: WorkspacePermissionGroup[] = [
     ],
   },
   {
-    moduleKey: "people",
+    area: "people",
     label: "People",
     items: [
       { id: "people.directory", label: "Employee directory" },
@@ -90,39 +41,27 @@ const WORKSPACE_PERMISSION_GROUPS: WorkspacePermissionGroup[] = [
     ],
   },
   {
-    moduleKey: "time",
+    area: "time",
     label: "Time",
     items: [{ id: "time.entries", label: "Time entries" }],
   },
-  {
-    moduleKey: "reports",
-    label: "Reports",
-    items: [{ id: "reports.workspace", label: "Reports workspace" }],
-  },
-  {
-    moduleKey: "view_amounts",
-    label: "Amount visibility",
-    items: [{ id: "view_amounts.show", label: "Show dollar amounts" }],
-  },
 ];
 
-const LBS_MODULE_KEYS = new Set<MemberModuleKey>([
-  "crm",
-  "proposals",
-  "forms",
-  "support",
-  "messaging",
-  "deal_operations",
-  "deal_financials",
-  "view_amounts",
-]);
+const lbsGroupsFromCatalog = (): WorkspacePermissionGroup[] =>
+  getCapabilitiesGroupedByArea().map(({ area, items }) => ({
+    area,
+    label: area,
+    items: items.map((cap) => ({
+      id: cap.id,
+      label: cap.label,
+      scopeable: cap.scopeable,
+    })),
+  }));
 
 export const getWorkspacePermissionGroups = (): WorkspacePermissionGroup[] =>
   isLbsMode()
-    ? WORKSPACE_PERMISSION_GROUPS.filter((group) =>
-        LBS_MODULE_KEYS.has(group.moduleKey),
-      )
-    : WORKSPACE_PERMISSION_GROUPS;
+    ? lbsGroupsFromCatalog()
+    : [...lbsGroupsFromCatalog(), ...CONTRACTOR_GROUPS];
 
 export function deriveModuleFlagsFromCapabilities(
   stored: Record<string, unknown> | null | undefined,
@@ -130,63 +69,100 @@ export function deriveModuleFlagsFromCapabilities(
   const flags: Partial<Record<MemberModuleKey, boolean>> = {};
   if (!stored || typeof stored !== "object") return flags;
 
-  for (const group of getWorkspacePermissionGroups()) {
-    const anyChild = group.items.some((item) => stored[item.id] === true);
-    if (anyChild || stored[group.moduleKey] === true) {
-      flags[group.moduleKey] = true;
+  const modulePrefixes: Record<MemberModuleKey, string> = {
+    crm: "crm.",
+    proposals: "proposals.",
+    forms: "forms.",
+    support: "support.",
+    messaging: "messaging.",
+    deal_operations: "deal_operations.",
+    deal_financials: "deal_financials.",
+    payroll: "payroll.",
+    people: "people.",
+    time: "time.",
+    reports: "reports.",
+    view_amounts: "view_amounts.",
+  };
+
+  for (const [modKey, prefix] of Object.entries(modulePrefixes) as Array<
+    [MemberModuleKey, string]
+  >) {
+    const anyChild = Object.entries(stored).some(
+      ([key, value]) => key.startsWith(prefix) && value === true,
+    );
+    if (anyChild || stored[modKey] === true) {
+      flags[modKey] = true;
     }
   }
   return flags;
 }
 
-/** Flat map for the permission tree form (module keys + capability ids). */
 export function expandPermissionsForForm(
   stored: MemberModulePermissions | null | undefined,
-  effectiveModules: Required<Record<MemberModuleKey, boolean>>,
-): Record<string, boolean> {
-  const out: Record<string, boolean> = {};
+  identity?: {
+    administrator?: boolean;
+    roles?: unknown;
+    module_permissions?: MemberModulePermissions | null;
+  },
+): Record<string, boolean | string> {
+  const preset =
+    getStoredRolePreset(stored) ??
+    (identity ? inferLegacyRolePreset(identity) : ("user" as RoleSlug));
+  const base = permissionsMapFromRolePreset(preset);
 
-  for (const group of getWorkspacePermissionGroups()) {
-    const hasStoredChildren = group.items.some(
-      (item) =>
-        stored != null &&
-        typeof stored === "object" &&
-        typeof stored[item.id] === "boolean",
-    );
-
-    for (const item of group.items) {
-      if (
-        stored != null &&
-        typeof stored === "object" &&
-        typeof stored[item.id] === "boolean"
-      ) {
-        out[item.id] = stored[item.id] as boolean;
-      } else if (hasStoredChildren) {
-        out[item.id] = false;
-      } else {
-        out[item.id] = effectiveModules[group.moduleKey];
+  if (stored != null && typeof stored === "object") {
+    for (const cap of CAPABILITIES) {
+      if (typeof stored[cap.id] === "boolean") {
+        base[cap.id] = stored[cap.id] as boolean;
       }
     }
-
-    out[group.moduleKey] = effectiveModules[group.moduleKey];
-  }
-
-  return out;
-}
-
-/** Persist capability ids and synced module keys for RLS. */
-export function collapsePermissionsForSave(
-  caps: Record<string, boolean> | null | undefined,
-): MemberModulePermissions {
-  const out: MemberModulePermissions = {};
-
-  for (const group of getWorkspacePermissionGroups()) {
-    for (const item of group.items) {
-      out[item.id] = caps?.[item.id] === true;
+    if (typeof stored[ROLE_PRESET_KEY] === "string") {
+      base[ROLE_PRESET_KEY] = stored[ROLE_PRESET_KEY];
     }
-    const anyChild = group.items.some((item) => out[item.id] === true);
-    out[group.moduleKey] = anyChild;
+  }
+
+  if (!isLbsMode()) {
+    for (const group of CONTRACTOR_GROUPS) {
+      for (const item of group.items) {
+        if (typeof stored?.[item.id] === "boolean") {
+          base[item.id] = stored[item.id] as boolean;
+        }
+      }
+    }
+  }
+
+  return base;
+}
+
+export function collapsePermissionsForSave(
+  caps: Record<string, boolean | string | undefined> | null | undefined,
+  rolePreset?: RoleSlug | null,
+): MemberModulePermissions {
+  const preset =
+    rolePreset ??
+    (typeof caps?.[ROLE_PRESET_KEY] === "string"
+      ? (caps[ROLE_PRESET_KEY] as RoleSlug)
+      : null);
+
+  const out = collapseCatalogPermissions(caps, preset) as MemberModulePermissions;
+
+  if (!isLbsMode()) {
+    for (const group of CONTRACTOR_GROUPS) {
+      for (const item of group.items) {
+        out[item.id] = caps?.[item.id] === true;
+      }
+    }
+  }
+
+  for (const [modKey, enabled] of Object.entries(
+    deriveModuleFlagsFromCapabilities(out as Record<string, unknown>),
+  )) {
+    if (enabled === true) {
+      out[modKey as MemberModuleKey] = true;
+    }
   }
 
   return out;
 }
+
+export { ROLE_PRESET_KEY, ROLE_PRESETS, type RoleSlug } from "@/lib/permissions/permissionCatalog";

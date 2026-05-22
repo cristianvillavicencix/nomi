@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useSearchParams } from "react-router";
 import { useGetList } from "ra-core";
@@ -23,11 +23,11 @@ import {
 } from "@/lbs/clients/ClientTabPanels";
 import {
   FINANCIAL_SECTIONS,
-  formatMoney,
   formatTabCount,
   getValidFinancialSection,
   type FinancialSection,
 } from "@/lbs/clients/clientShowUtils";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 
 const TabLoading = () => (
   <div className="space-y-2">
@@ -188,10 +188,10 @@ const ClientFinancialSummary = ({ companyId }: { companyId: Company["id"] }) => 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Contracted" value={formatMoney(totalContracted)} />
-        <SummaryCard label="Collected" value={formatMoney(totalCollected)} />
-        <SummaryCard label="Pending payments" value={formatMoney(totalPending)} />
-        <SummaryCard label="Balance" value={formatMoney(balance)} />
+        <SummaryCard label="Contracted" value={<MoneyText value={totalContracted} />} />
+        <SummaryCard label="Collected" value={<MoneyText value={totalCollected} />} />
+        <SummaryCard label="Pending payments" value={<MoneyText value={totalPending} />} />
+        <SummaryCard label="Balance" value={<MoneyText value={balance} />} />
       </div>
       {openProposals.length > 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -283,7 +283,7 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
                 )}
               </TableCell>
               <TableCell className="text-right font-medium">
-                {formatMoney(payment.amount)}
+                <MoneyText value={payment.amount} />
               </TableCell>
               <TableCell className="hidden sm:table-cell capitalize text-muted-foreground">
                 {payment.payment_method?.replace(/_/g, " ") || "—"}
@@ -304,7 +304,7 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
   );
 };
 
-const SummaryCard = ({ label, value }: { label: string; value: string }) => (
+const SummaryCard = ({ label, value }: { label: string; value: ReactNode }) => (
   <Card>
     <CardContent className="p-4">
       <div className="text-sm text-muted-foreground">{label}</div>

@@ -1,9 +1,9 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { useRedirect, RecordContextProvider } from "ra-core";
 import { ReferenceField } from "@/components/admin/reference-field";
-import { NumberField } from "@/components/admin/number-field";
 import { SelectField } from "@/components/admin/select-field";
 import { Card, CardContent } from "@/components/ui/card";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 
 import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -74,16 +74,7 @@ export const DealCardContent = ({
               </ReferenceField>
             </div>
             <p className="text-xs text-muted-foreground">
-              <NumberField
-                source="amount"
-                options={{
-                  notation: "compact",
-                  style: "currency",
-                  currency: "USD",
-                  currencyDisplay: "narrowSymbol",
-                  minimumSignificantDigits: 3,
-                }}
-              />
+              <MoneyText value={deal.amount} />
               {deal.category && ", "}
               <SelectField
                 source="category"

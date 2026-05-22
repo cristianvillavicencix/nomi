@@ -44,11 +44,7 @@ import type {
 } from "@/lbs/types";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router";
-
-const formatMoney = (value?: number | null) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    Number(value ?? 0),
-  );
+import { MoneyText } from "@/lib/permissions/MoneyText";
 
 const tabLabel = (label: string, count?: number) => `${label}${formatTabCount(count)}`;
 
@@ -249,7 +245,9 @@ const DealOverviewFallback = ({ record }: { record: LbsDeal }) => {
       </div>
       <div>
         <div className="text-sm text-muted-foreground">Amount</div>
-        <div className="font-medium">{formatMoney(record.amount)}</div>
+        <div className="font-medium">
+          <MoneyText value={record.amount} />
+        </div>
       </div>
       {record.description ? (
         <div className="sm:col-span-2">

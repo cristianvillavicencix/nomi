@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { canAccess } from "../providers/commons/canAccess";
+import { hasMemberCapability } from "../providers/commons/memberModuleAccess";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { CRMUserMenuItems } from "./UserMenuItems";
@@ -235,12 +236,14 @@ const SidebarNavigation = () => {
             <SidebarGroupLabel>Workspace</SidebarGroupLabel>
             <SidebarMenu>
               {LBS_NAV_ITEMS.filter((item) =>
-                item.resource
-                  ? canAccess(identity as any, {
-                      resource: item.resource,
-                      action: item.action ?? "list",
-                    })
-                  : true,
+                item.capability
+                  ? hasMemberCapability(identity as any, item.capability)
+                  : item.resource
+                    ? canAccess(identity as any, {
+                        resource: item.resource,
+                        action: item.action ?? "list",
+                      })
+                    : true,
               ).map((item) => {
                 const Icon = item.icon;
                 return (

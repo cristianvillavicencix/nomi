@@ -82,6 +82,8 @@ import { isLbsMode } from "@/lbs/productMode";
 import { DealProjectTabs } from "@/lbs/deals/DealProjectTabs";
 import { LbsProjectOverviewTab } from "@/lbs/deals/LbsProjectOverviewTab";
 import { LbsDealHeaderOverview } from "@/lbs/deals/LbsDealHeaderOverview";
+import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
+import { useSyncAmountVisibility, formatMoneyMasked } from "@/lib/permissions/useMaskedAmount";
 import { DealClientSmsButton } from "@/lbs/deals/DealClientSmsButton";
 import { LbsProjectDeliveryUrgency } from "@/lbs/deals/LbsProjectDeliveryUrgency";
 import {
@@ -114,6 +116,7 @@ export const DealShow = ({ id }: { id?: string }) => {
 };
 
 const DealShowContent = () => {
+  useSyncAmountVisibility();
   const config = useConfigurationContext();
   const record = useRecordContext<Deal>();
   const { data: identity } = useGetIdentity();
@@ -507,6 +510,13 @@ const DealShowContent = () => {
             {isLbsMode() ? <LbsProjectDeliveryUrgency record={record} /> : null}
             <div className="flex gap-2">
             {isLbsMode() ? <DealClientSmsButton record={record} /> : null}
+            {isLbsMode() ? (
+              <ShareRecordModal
+                resourceType="deals"
+                resourceId={record.id}
+                orgId={(record as { org_id?: number }).org_id}
+              />
+            ) : null}
             {record.archived_at && canManageSales ? (
               <>
                 <UnarchiveButton record={record} />
@@ -5164,11 +5174,7 @@ const InlineFormCard = ({
   </div>
 );
 
-const toCurrency = (value: number) =>
-  Number(value ?? 0).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
+const toCurrency = (value: number) => formatMoneyMasked(value);
 
 const toDateLabel = (date?: string | null) => {
   if (!date) return "—";

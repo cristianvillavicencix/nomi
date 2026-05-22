@@ -1,3 +1,9 @@
+import { isLbsMode } from "@/lbs/productMode";
+import {
+  getCapabilityForResourceAction,
+  hasCapability,
+  resolveEffectivePermissions,
+} from "@/lib/permissions/permissionCatalog";
 import { getAccessRoles, type AccessIdentity, type AccessRole } from "./canAccess";
 import { resolveEffectiveModules } from "./memberModuleAccess";
 
@@ -19,6 +25,12 @@ export type CrmMutationAction = "create" | "update" | "delete";
 const hasRole = (roles: AccessRole[], expected: AccessRole[]) =>
   expected.some((role) => roles.includes(role));
 
+const MUTATION_ACTION_TO_CAPABILITY_ACTION: Record<CrmMutationAction, string> = {
+  create: "create",
+  update: "edit",
+  delete: "delete",
+};
+
 const DEAL_FIN_RESOURCES = new Set([
   "deal_expenses",
   "deal_change_orders",
@@ -31,24 +43,33 @@ const DEAL_OPS_RESOURCES = new Set([
   "deal_access_entries",
 ]);
 
-function salesBand(m: ReturnType<typeof resolveEffectiveModules>) {
-  return (
-    m.crm ||
-    m.proposals ||
-    m.forms ||
-    m.support ||
-    m.messaging ||
-    m.deal_operations ||
-    m.deal_financials
-  );
+function canMutateViaCatalog(
+  identity: AccessIdentity,
+  resource: string,
+  action: CrmMutationAction,
+): boolean | null {
+  const capAction = MUTATION_ACTION_TO_CAPABILITY_ACTION[action];
+  const capId = getCapabilityForResourceAction(resource, capAction);
+  if (!capId) return null;
+  const perms = resolveEffectivePermissions(identity);
+  return hasCapability(perms, capId, { administrator: identity.administrator });
 }
 
-function modulesAllowMutation(
+function modulesAllowMutationLegacy(
   identity: AccessIdentity,
   permission: CrmPermission,
   resource?: string,
 ) {
   const mods = resolveEffectiveModules(identity);
+  const salesBand =
+    mods.crm ||
+    mods.proposals ||
+    mods.forms ||
+    mods.support ||
+    mods.messaging ||
+    mods.deal_operations ||
+    mods.deal_financials;
+
   switch (permission) {
     case "payments.view":
     case "payments.manage":
@@ -68,12 +89,12 @@ function modulesAllowMutation(
     case "sales.view":
     case "sales.manage": {
       if (resource && DEAL_FIN_RESOURCES.has(resource)) {
-        return mods.deal_financials && salesBand(mods);
+        return mods.deal_financials && salesBand;
       }
       if (resource && DEAL_OPS_RESOURCES.has(resource)) {
-        return mods.deal_operations && (mods.crm || salesBand(mods));
+        return mods.deal_operations && (mods.crm || salesBand);
       }
-      return salesBand(mods);
+      return salesBand;
     }
     default:
       return false;
@@ -95,8 +116,20 @@ export const canUseCrmPermission = (
 
   const idObj =
     identity && typeof identity === "object" ? (identity as AccessIdentity) : undefined;
+
+  if (idObj && isLbsMode() && mutationResource) {
+    const action =
+      permission === "sales.manage" || permission === "people.manage" ? "edit" : "list";
+    const catalogHit = canMutateViaCatalog(
+      idObj,
+      mutationResource,
+      action as CrmMutationAction,
+    );
+    if (catalogHit != null) return catalogHit;
+  }
+
   if (idObj?.module_permissions != null) {
-    return modulesAllowMutation(idObj, permission, mutationResource);
+    return modulesAllowMutationLegacy(idObj, permission, mutationResource);
   }
 
   const roles = getAccessRoles(identity);
@@ -156,6 +189,17 @@ const getMutationPermission = (
     return "hours.manage";
   }
 
+  if (resource === "configuration") {
+    return null;
+  }
+
+  if (isLbsMode()) {
+    if (getCapabilityForResourceAction(resource, MUTATION_ACTION_TO_CAPABILITY_ACTION[action])) {
+      return "sales.manage";
+    }
+    return null;
+  }
+
   if (
     resource === "organization_members" ||
     resource === "deals" ||
@@ -195,10 +239,26 @@ export const canMutateCrmResource = ({
   ) {
     return true;
   }
-  // Matches RLS on public.configuration — only admins can insert/update rows.
+
   if (resource === "configuration") {
+    if (isLbsMode() && identity && typeof identity === "object") {
+      const perms = resolveEffectivePermissions(identity as AccessIdentity);
+      return hasCapability(perms, "admin.settings.manage", {
+        administrator: (identity as AccessIdentity).administrator,
+      });
+    }
     return false;
   }
+
+  if (isLbsMode() && identity && typeof identity === "object") {
+    const catalogHit = canMutateViaCatalog(
+      identity as AccessIdentity,
+      resource,
+      action,
+    );
+    if (catalogHit != null) return catalogHit;
+  }
+
   const permission = getMutationPermission(resource, action, data);
   if (!permission) return true;
   return canUseCrmPermission(identity, permission, resource);

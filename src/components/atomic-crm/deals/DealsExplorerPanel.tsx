@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Contact, Deal, OrganizationMember } from "../types";
 import { getStageColor, getStageLabel } from "./pipelines";
@@ -210,7 +211,7 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
                       In charge: {managerName}
                     </div>
                     <div className="text-xs font-medium shrink-0">
-                      {currencyFormatter.format(Number(deal.amount || 0))}
+                      <MoneyText value={deal.amount} />
                     </div>
                   </div>
                 </Link>

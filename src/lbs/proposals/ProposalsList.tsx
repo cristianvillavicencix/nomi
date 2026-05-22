@@ -11,14 +11,9 @@ import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopo
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Proposal } from "@/lbs/types";
 import { Badge } from "@/components/ui/badge";
-
-const formatMoney = (value?: number | null) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    Number(value ?? 0),
-  );
+import { MoneyText } from "@/lib/permissions/MoneyText";
 
 const formatDate = (value?: string | null) => {
-  if (!value) return "—";
   const date = new Date(`${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-US", {
@@ -91,7 +86,7 @@ const ProposalsListLayout = () => {
       <DataTable.Col
         source="amount"
         label="Amount"
-        render={(record: Proposal) => formatMoney(record.amount)}
+        render={(record: Proposal) => <MoneyText value={record.amount} />}
       />
       <DataTable.Col
         source="company_id"

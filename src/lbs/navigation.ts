@@ -20,6 +20,7 @@ export type LbsNavItem = {
   label: string;
   icon: LucideIcon;
   activePattern: string;
+  capability?: string;
   resource?: string;
   action?: string;
 };
@@ -30,6 +31,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Dashboard",
     icon: Home,
     activePattern: "/",
+    capability: "crm.pipeline.view",
     resource: "deals",
     action: "list",
   },
@@ -38,6 +40,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Leads",
     icon: UserPlus,
     activePattern: "/leads/*",
+    capability: "crm.contacts.view",
     resource: "contacts",
     action: "list",
   },
@@ -46,6 +49,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Clients",
     icon: Building2,
     activePattern: "/clients/*",
+    capability: "crm.companies.view",
     resource: "companies",
     action: "list",
   },
@@ -54,6 +58,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Projects",
     icon: FolderKanban,
     activePattern: "/deals/*",
+    capability: "crm.pipeline.view",
     resource: "deals",
     action: "list",
   },
@@ -62,7 +67,8 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Calendar",
     icon: CalendarDays,
     activePattern: "/calendar/*",
-    resource: "tasks",
+    capability: "calendar.view",
+    resource: "calendar_events",
     action: "list",
   },
   {
@@ -70,6 +76,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Meetings",
     icon: Video,
     activePattern: "/meetings/*",
+    capability: "meetings.view",
     resource: "tasks",
     action: "list",
   },
@@ -78,6 +85,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Messages",
     icon: MessageSquare,
     activePattern: "/messages/*",
+    capability: "messaging.conversations.view",
     resource: "conversations",
     action: "list",
   },
@@ -86,6 +94,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Tasks",
     icon: ListChecks,
     activePattern: "/tasks/*",
+    capability: "crm.tasks.view",
     resource: "tasks",
     action: "list",
   },
@@ -94,6 +103,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Proposals",
     icon: FileText,
     activePattern: "/proposals/*",
+    capability: "proposals.view",
     resource: "proposals",
     action: "list",
   },
@@ -102,6 +112,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Contracts",
     icon: FileSignature,
     activePattern: "/contracts/*",
+    capability: "contracts.view",
     resource: "contracts",
     action: "list",
   },
@@ -110,6 +121,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     label: "Web Forms",
     icon: FormInput,
     activePattern: "/web-forms/*",
+    capability: "forms.manage",
     resource: "forms",
     action: "list",
   },
@@ -121,6 +133,7 @@ export const LBS_USER_MENU_NAV_ITEMS: LbsNavItem[] = [
     label: "Tickets",
     icon: Ticket,
     activePattern: "/tickets/*",
+    capability: "support.tickets.view",
     resource: "tickets",
     action: "list",
   },
@@ -129,8 +142,8 @@ export const LBS_USER_MENU_NAV_ITEMS: LbsNavItem[] = [
     label: "Settings",
     icon: Settings,
     activePattern: "/settings/*",
-    resource: "configuration",
-    action: "edit",
+    resource: "organization_members",
+    action: "list",
   },
 ];
 

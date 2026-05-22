@@ -137,7 +137,7 @@ const getCurrentMutationIdentity = async () => {
 
   const { data: member } = await supabase
     .from("organization_members")
-    .select("id, administrator, roles")
+    .select("id, administrator, roles, module_permissions")
     .eq("user_id", authUserId)
     .single();
 
@@ -148,6 +148,7 @@ const getCurrentMutationIdentity = async () => {
     administrator: member.administrator === true,
     role: member.administrator ? "admin" : (member.roles?.[0] ?? "user"),
     roles: member.roles ?? (member.administrator ? ["admin"] : []),
+    module_permissions: member.module_permissions ?? null,
   };
 };
 
@@ -168,7 +169,7 @@ const assertMutationAllowed = async (
       data,
     })
   ) {
-    throw new Error(`Not authorized to ${action} ${resource}`);
+    throw new Error("No tienes permiso para esta acción");
   }
 
   return identity;
