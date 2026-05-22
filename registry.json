@@ -232,6 +232,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/settings/workspacePermissionTree.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/settings/tenantBrandingFlags.ts",
           "type": "registry:component"
         },
@@ -273,6 +277,10 @@
         },
         {
           "path": "src/components/atomic-crm/providers/types.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/providers/queryInvalidation.ts",
           "type": "registry:component"
         },
         {
@@ -373,6 +381,10 @@
         },
         {
           "path": "src/components/atomic-crm/providers/fakerest/dataGenerator/companies.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/providers/commons/useMemberCapability.ts",
           "type": "registry:component"
         },
         {
