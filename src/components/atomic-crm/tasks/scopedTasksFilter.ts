@@ -1,5 +1,5 @@
 import type { Identifier } from "ra-core";
-import type { Task } from "@/components/atomic-crm/types";
+import type { Task, TaskParticipant } from "@/components/atomic-crm/types";
 import type {
   GetScopedTasksParams,
   GetScopedTasksResult,
@@ -8,16 +8,38 @@ import {
   taskMatchesMineScope,
   taskMatchesProjectScope,
 } from "@/components/atomic-crm/tasks/scopedTasks";
-import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
+import {
+  isTaskDoneForUser,
+  isTaskOpenForUser,
+  scopeUsesUserCompletionFilter,
+} from "@/components/atomic-crm/tasks/taskUserCompletion";
 
 export const filterScopedTasks = (
   tasks: Task[],
   params: GetScopedTasksParams,
+  participantsByTaskId: Record<string, TaskParticipant[]> = {},
 ): GetScopedTasksResult => {
-  const statusFilter = TASK_STATUS_FILTERS[params.status];
+  const usesUserCompletion = scopeUsesUserCompletionFilter(params.scope);
 
   let filtered = tasks.filter((task) => {
-    if ("done_date@is" in statusFilter) {
+    const participants = participantsByTaskId[String(task.id)] ?? [];
+    if (usesUserCompletion) {
+      return params.status === "open"
+        ? isTaskOpenForUser(
+            task,
+            participants,
+            params.organizationMemberId,
+            params.personId,
+          )
+        : isTaskDoneForUser(
+            task,
+            participants,
+            params.organizationMemberId,
+            params.personId,
+          );
+    }
+
+    if (params.status === "open") {
       return task.done_date == null;
     }
     return task.done_date != null;

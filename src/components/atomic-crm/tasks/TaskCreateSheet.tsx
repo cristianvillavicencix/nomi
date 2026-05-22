@@ -68,7 +68,7 @@ export const TaskCreateSheet = ({
       redirect={false}
       record={{
         type: "none",
-        contact_id,
+        ...(contact_id != null ? { contact_id } : {}),
         deal_id: null,
         due_date: new Date().toISOString().slice(0, 10),
         organization_member_id: identity.id,

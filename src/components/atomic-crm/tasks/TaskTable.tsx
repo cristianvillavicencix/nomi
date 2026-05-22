@@ -45,22 +45,29 @@ import {
   getTaskPriorityClassName,
   getTaskPriorityLabel,
   sortTasksByPriorityAndDue,
+  type TaskStatusFilter,
 } from "@/components/atomic-crm/tasks/taskConstants";
 import { isTaskOverdue } from "@/components/atomic-crm/tasks/taskStats";
 import { TaskDescriptionCell } from "@/components/atomic-crm/tasks/TaskDescriptionCell";
 import { TaskParticipantProgress } from "@/components/atomic-crm/tasks/TaskParticipantProgress";
 import { useTaskCompletionToggle } from "@/components/atomic-crm/tasks/useTaskCompletionToggle";
 import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
+import {
+  getOpenTaskAgeLabel,
+  getUserCompletionDurationLabel,
+} from "@/components/atomic-crm/tasks/taskTiming";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isLbsMode } from "@/lbs/productMode";
 
 export const TaskTable = ({
   tasks,
+  status = "open",
   showContact = false,
   showProject = false,
   emptyMessage = "No tasks yet.",
 }: {
   tasks: TaskRecord[];
+  status?: TaskStatusFilter;
   showContact?: boolean;
   showProject?: boolean;
   emptyMessage?: string;
@@ -84,6 +91,9 @@ export const TaskTable = ({
               <TableHead className="w-10" />
               <TableHead>Description</TableHead>
               <TableHead className="w-[120px] whitespace-nowrap">Due</TableHead>
+              <TableHead className="w-[120px] whitespace-nowrap">
+                {status === "done" ? "Completed in" : "Open for"}
+              </TableHead>
               <TableHead className="w-[120px]">Assigned</TableHead>
               <TableHead className="w-[100px]">Priority</TableHead>
               <TableHead className="w-[72px] text-right">Actions</TableHead>
@@ -96,6 +106,7 @@ export const TaskTable = ({
                 task={task}
                 isMobile={isMobile}
                 variant="simple"
+                status={status}
                 participants={participantsByTaskId[String(task.id)] ?? []}
               />
             ))}
@@ -116,6 +127,9 @@ export const TaskTable = ({
             {showProject ? <TableHead>Project</TableHead> : null}
             {showContact ? <TableHead>Contact</TableHead> : null}
             <TableHead>Due</TableHead>
+            <TableHead className="hidden md:table-cell whitespace-nowrap">
+              {status === "done" ? "Completed in" : "Open for"}
+            </TableHead>
             <TableHead className="hidden md:table-cell">Assigned</TableHead>
             <TableHead className="hidden lg:table-cell">Priority</TableHead>
             <TableHead className="w-[72px] text-right">Actions</TableHead>
@@ -130,6 +144,7 @@ export const TaskTable = ({
               showProject={showProject}
               isMobile={isMobile}
               variant="default"
+              status={status}
               participants={participantsByTaskId[String(task.id)] ?? []}
             />
           ))}
@@ -145,6 +160,7 @@ const TaskTableRow = ({
   showProject = false,
   isMobile,
   variant,
+  status = "open",
   participants = [],
 }: {
   task: TaskRecord;
@@ -152,6 +168,7 @@ const TaskTableRow = ({
   showProject?: boolean;
   isMobile: boolean;
   variant: "simple" | "default";
+  status?: TaskStatusFilter;
   participants?: TaskParticipant[];
 }) => {
   const { taskTypes } = useConfigurationContext();
@@ -163,13 +180,24 @@ const TaskTableRow = ({
     toggle,
     checkboxChecked,
     checkboxDisabled,
-    requiresAllParticipants,
+    usesParticipantCompletion,
+    currentParticipant,
     isPending: isUpdatePending,
   } = useTaskCompletionToggle(task, participants);
 
   const typeLabel =
     taskTypes.find((entry) => entry.value === task.type)?.label ?? task.type;
   const isFullyDone = Boolean(task.done_date);
+  const isDoneForUser = usesParticipantCompletion ? checkboxChecked : isFullyDone;
+  const timingLabel =
+    status === "done"
+      ? getUserCompletionDurationLabel(task, currentParticipant) ??
+        (isFullyDone && task.done_date
+          ? getUserCompletionDurationLabel(task, {
+              completed_at: task.done_date,
+            } as TaskParticipant)
+          : null)
+      : getOpenTaskAgeLabel(task);
   const isSimple = variant === "simple";
 
   const handleDelete = async () => {
@@ -204,14 +232,14 @@ const TaskTableRow = ({
 
   return (
     <>
-      <TableRow className={isFullyDone ? "opacity-70" : undefined}>
+      <TableRow className={isDoneForUser ? "opacity-70" : undefined}>
         <TableCell className="align-top">
           <Checkbox
             checked={checkboxChecked}
             disabled={checkboxDisabled}
             onCheckedChange={toggle}
             aria-label={
-              requiresAllParticipants
+              usesParticipantCompletion
                 ? checkboxChecked
                   ? "Mark my part open"
                   : "Mark my part done"
@@ -225,7 +253,7 @@ const TaskTableRow = ({
 
         {!isSimple ? (
           <TableCell className="max-w-[140px] whitespace-nowrap align-top">
-            <div className={isFullyDone ? "line-through" : undefined}>
+            <div className={isDoneForUser ? "line-through" : undefined}>
               {task.type && task.type !== "none" ? (
                 <Badge variant="outline">{typeLabel}</Badge>
               ) : (
@@ -243,10 +271,10 @@ const TaskTableRow = ({
         <TableCell className={isSimple ? "max-w-[360px] align-top" : "max-w-[280px] align-top"}>
           <TaskDescriptionCell
             text={task.text}
-            isDone={isFullyDone}
+            isDone={isDoneForUser}
             useMentions={isSimple}
             footer={
-              requiresAllParticipants ? (
+              usesParticipantCompletion && participants.length > 1 ? (
                 <TaskParticipantProgress participants={participants} />
               ) : null
             }
@@ -301,12 +329,16 @@ const TaskTableRow = ({
           </span>
         </TableCell>
 
+        <TableCell className="whitespace-nowrap text-sm align-top text-muted-foreground">
+          {timingLabel ?? "—"}
+        </TableCell>
+
         <TableCell
           className={`text-sm text-muted-foreground align-top ${isSimple ? "" : "hidden md:table-cell"}`}
         >
           <div className="flex flex-col gap-1">
             {assignedCell}
-            {!isSimple && requiresAllParticipants ? (
+            {!isSimple && usesParticipantCompletion && participants.length > 1 ? (
               <TaskParticipantProgress participants={participants} />
             ) : null}
           </div>

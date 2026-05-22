@@ -57,10 +57,25 @@ export const normalizeTaskCreateData = (data: Record<string, unknown>) => {
   const collaboratorPersonIds = toNumericIdArray(
     withMentions.collaborator_person_ids,
   ).filter((id) => !assigneeSet.has(id));
-  const mentionedMemberIds = toNumericIdArray(withMentions.mentioned_member_ids);
+  let mentionedMemberIds = toNumericIdArray(withMentions.mentioned_member_ids);
+  const organizationMemberId = Number(withMentions.organization_member_id);
+
+  const rawContactId = withMentions.contact_id;
+  const contact_id =
+    rawContactId === "" || rawContactId == null ? null : rawContactId;
+
+  if (
+    assigneePersonIds.length === 0 &&
+    collaboratorPersonIds.length === 0 &&
+    mentionedMemberIds.length === 0 &&
+    Number.isFinite(organizationMemberId)
+  ) {
+    mentionedMemberIds = [organizationMemberId];
+  }
 
   return {
     ...withMentions,
+    contact_id,
     type: withMentions.type || "none",
     priority: withMentions.priority || "normal",
     internal: Boolean(withMentions.internal),

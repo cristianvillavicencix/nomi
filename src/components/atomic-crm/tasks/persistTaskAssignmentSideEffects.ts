@@ -77,7 +77,12 @@ export const persistTaskAssignmentSideEffects = async (
       payload.assignee_person_ids,
       payload.collaborator_person_ids,
     );
-    await syncTaskParticipants(dataProvider, taskId, payload);
+    await syncTaskParticipants(
+      dataProvider,
+      taskId,
+      payload,
+      task.organization_member_id as Identifier | null | undefined,
+    );
     await createTaskTagNotifications(
       dataProvider,
       taskId,

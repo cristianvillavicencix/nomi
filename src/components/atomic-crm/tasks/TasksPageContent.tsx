@@ -90,6 +90,7 @@ export const TasksPageContent = () => {
 
       <TaskTable
         tasks={tasks}
+        status={status}
         showContact={!lbsMode}
         showProject={lbsMode && projectId == null}
         emptyMessage={

@@ -4,9 +4,9 @@ import type { Task, TaskParticipant } from "@/components/atomic-crm/types";
 import {
   findCurrentUserParticipant,
   recomputeTaskDoneDate,
-  taskRequiresAllParticipantsComplete,
   toggleTaskParticipantCompletion,
 } from "@/components/atomic-crm/tasks/taskParticipants";
+import { taskUsesParticipantCompletion } from "@/components/atomic-crm/tasks/taskUserCompletion";
 import { useCurrentMemberPerson } from "@/components/atomic-crm/tasks/useCurrentMemberPerson";
 
 export const useTaskCompletionToggle = (
@@ -19,21 +19,21 @@ export const useTaskCompletionToggle = (
   const [update, { isPending }] = useUpdate();
   const { identity, personId } = useCurrentMemberPerson();
 
-  const requiresAllParticipants = taskRequiresAllParticipantsComplete(task);
-  const currentParticipant =
-    requiresAllParticipants && participants.length > 0
-      ? findCurrentUserParticipant(participants, personId, identity?.id)
-      : undefined;
+  const usesParticipantCompletion = taskUsesParticipantCompletion(participants);
+  const currentParticipant = usesParticipantCompletion
+    ? findCurrentUserParticipant(participants, personId, identity?.id)
+    : undefined;
   const isDone = Boolean(task.done_date);
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    await queryClient.invalidateQueries({ queryKey: ["scopedTasks"] });
     await queryClient.invalidateQueries({ queryKey: ["task_participants"] });
   };
 
   const toggle = async () => {
     try {
-      if (requiresAllParticipants && participants.length > 0) {
+      if (usesParticipantCompletion) {
         if (!currentParticipant) {
           notify("Only tagged people can mark their part on this task.", {
             type: "warning",
@@ -68,19 +68,19 @@ export const useTaskCompletionToggle = (
     }
   };
 
-  const checkboxChecked = requiresAllParticipants
+  const checkboxChecked = usesParticipantCompletion
     ? Boolean(currentParticipant?.completed_at)
     : isDone;
 
   const checkboxDisabled =
     isPending ||
-    (requiresAllParticipants && participants.length > 0 && !currentParticipant);
+    (usesParticipantCompletion && !currentParticipant);
 
   return {
     toggle,
     checkboxChecked,
     checkboxDisabled,
-    requiresAllParticipants,
+    usesParticipantCompletion,
     currentParticipant,
     isPending,
   };
@@ -121,6 +121,7 @@ export const useMarkAllParticipantsComplete = (
 
       await recomputeTaskDoneDate(dataProvider, task, completedParticipants);
       await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      await queryClient.invalidateQueries({ queryKey: ["scopedTasks"] });
       await queryClient.invalidateQueries({ queryKey: ["task_participants"] });
     } catch {
       notify("Failed to mark task complete", { type: "error" });

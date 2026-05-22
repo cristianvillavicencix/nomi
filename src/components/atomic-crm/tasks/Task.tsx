@@ -62,13 +62,14 @@ export const Task = ({
     toggle,
     checkboxChecked,
     checkboxDisabled,
-    requiresAllParticipants,
+    usesParticipantCompletion,
     isPending: isCompletionPending,
   } = useTaskCompletionToggle(task, participants);
 
   const [openEdit, setOpenEdit] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isFullyDone = Boolean(task.done_date);
+  const isDoneForUser = usesParticipantCompletion ? checkboxChecked : isFullyDone;
 
   const handleCloseEdit = () => {
     setOpenEdit(false);
@@ -108,7 +109,7 @@ export const Task = ({
             disabled={checkboxDisabled || isCompletionPending}
             className="mt-1"
           />
-          <div className={`flex-grow ${isFullyDone ? "line-through" : ""}`}>
+          <div className={`flex-grow ${isDoneForUser ? "line-through" : ""}`}>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               {task.type && task.type !== "none" ? (
                 <span className="font-semibold">{typeLabel}</span>
@@ -130,7 +131,7 @@ export const Task = ({
             <div className="text-sm">
               {isLbsMode() ? <TaskMentionText text={task.text} /> : task.text}
             </div>
-            {requiresAllParticipants ? (
+            {usesParticipantCompletion && participants.length > 1 ? (
               <div className="mt-1">
                 <TaskParticipantProgress participants={participants} />
               </div>

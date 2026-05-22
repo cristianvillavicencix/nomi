@@ -1,4 +1,5 @@
 import type { DataProvider, Identifier } from "ra-core";
+import type { TaskTagNotification } from "@/components/atomic-crm/types";
 
 export type TaskAssigneeRole = "assignee" | "collaborator" | "watcher";
 
@@ -95,6 +96,23 @@ export const createTaskTagNotifications = async (
   const personIds = [...assignees, ...collaborators];
   const memberIds = toNumericIds(mentionedMemberIds);
 
+  const { data: existing = [] } = await dataProvider.getList<TaskTagNotification>(
+    "task_tag_notifications",
+    {
+      filter: { "task_id@eq": taskId },
+      pagination: { page: 1, perPage: 500 },
+      sort: { field: "id", order: "ASC" },
+    },
+  );
+
+  const existingKeys = new Set(
+    existing.map((entry) =>
+      entry.person_id != null
+        ? `person:${entry.person_id}:${entry.recipient_organization_member_id}`
+        : `member:${entry.recipient_organization_member_id}`,
+    ),
+  );
+
   const [{ data: people }, { data: members }] = await Promise.all([
     personIds.length > 0
       ? dataProvider.getList<{ id: Identifier; email?: string | null }>("people", {
@@ -125,6 +143,9 @@ export const createTaskTagNotifications = async (
     );
     if (!recipient) return [];
 
+    const key = `person:${person.id}:${recipient.id}`;
+    if (existingKeys.has(key)) return [];
+
     return [
       dataProvider.create("task_tag_notifications", {
         data: {
@@ -141,6 +162,9 @@ export const createTaskTagNotifications = async (
       (member) => !member.disabled && String(member.id) === String(memberId),
     );
     if (!recipient) return;
+
+    const key = `member:${recipient.id}`;
+    if (existingKeys.has(key)) return;
 
     notifications.push(
       dataProvider.create("task_tag_notifications", {

@@ -23,6 +23,7 @@ import type {
   OrganizationMemberFormData,
   SignUpData,
   Task,
+  TaskParticipant,
 } from "../../types";
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { withCurrentProductName } from "../../root/defaultConfiguration";
@@ -39,6 +40,7 @@ import {
   collectMyProjectDealIds,
   filterScopedTasks,
 } from "../../tasks/scopedTasksFilter";
+import { groupTaskParticipantsByTaskId } from "../../tasks/taskUserCompletion";
 import { getCompanyAvatar } from "../commons/getCompanyAvatar";
 import { getContactAvatar } from "../commons/getContactAvatar";
 import { mergeContacts } from "../commons/mergeContacts";
@@ -410,12 +412,23 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     return getActivityLog(dataProvider, companyId);
   },
   getScopedTasks: async (params: GetScopedTasksParams) => {
-    const { data: tasks } = await baseDataProvider.getList<Task>("tasks", {
-      pagination: { page: 1, perPage: 5000 },
-      sort: { field: "id", order: "ASC" },
-      filter: {},
-    });
-    return filterScopedTasks(tasks, params);
+    const [{ data: tasks }, { data: participants }] = await Promise.all([
+      baseDataProvider.getList<Task>("tasks", {
+        pagination: { page: 1, perPage: 5000 },
+        sort: { field: "id", order: "ASC" },
+        filter: {},
+      }),
+      baseDataProvider.getList<TaskParticipant>("task_participants", {
+        pagination: { page: 1, perPage: 5000 },
+        sort: { field: "id", order: "ASC" },
+        filter: {},
+      }),
+    ]);
+    return filterScopedTasks(
+      tasks,
+      params,
+      groupTaskParticipantsByTaskId(participants),
+    );
   },
   getMyProjectDealIds: async (params: {
     organizationMemberId: Identifier;
@@ -1793,7 +1806,12 @@ export const dataProvider = withLifecycleCallbacks(
           payload.assignee_person_ids,
           payload.collaborator_person_ids,
         );
-        await syncTaskParticipants(dataProvider, result.data.id, payload);
+        await syncTaskParticipants(
+          dataProvider,
+          result.data.id,
+          payload,
+          result.data.organization_member_id as Identifier | null | undefined,
+        );
         await createTaskTagNotifications(
           dataProvider,
           result.data.id,
@@ -1823,7 +1841,12 @@ export const dataProvider = withLifecycleCallbacks(
           payload.assignee_person_ids,
           payload.collaborator_person_ids,
         );
-        await syncTaskParticipants(dataProvider, result.data.id, payload);
+        await syncTaskParticipants(
+          dataProvider,
+          result.data.id,
+          payload,
+          result.data.organization_member_id as Identifier | null | undefined,
+        );
         await createTaskTagNotifications(
           dataProvider,
           result.data.id,

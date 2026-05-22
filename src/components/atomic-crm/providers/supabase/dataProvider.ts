@@ -26,7 +26,12 @@ import {
 } from "../../tasks/persistTaskAssignmentSideEffects";
 import { prepareCalendarEventWriteData } from "@/lbs/calendar/calendarEventWriteData";
 import type { GetScopedTasksParams } from "../../tasks/scopedTasks";
-import { collectMyProjectDealIds } from "../../tasks/scopedTasksFilter";
+import { collectMyProjectDealIds, filterScopedTasks } from "../../tasks/scopedTasksFilter";
+import {
+  groupTaskParticipantsByTaskId,
+  scopeUsesUserCompletionFilter,
+} from "../../tasks/taskUserCompletion";
+import type { TaskParticipant } from "../../types";
 import type { Task } from "../../types";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
@@ -1278,12 +1283,15 @@ const dataProviderWithCustomMethods = {
     return data ?? { users: [], total: 0 };
   },
   async getScopedTasks(params: GetScopedTasksParams) {
+    const usesUserCompletion = scopeUsesUserCompletionFilter(params.scope);
     let query = supabase.from("tasks").select("*", { count: "exact" });
 
-    if (params.status === "open") {
-      query = query.is("done_date", null);
-    } else {
-      query = query.not("done_date", "is", null);
+    if (!usesUserCompletion) {
+      if (params.status === "open") {
+        query = query.is("done_date", null);
+      } else {
+        query = query.not("done_date", "is", null);
+      }
     }
 
     if (params.typeFilter && params.typeFilter !== "all") {
@@ -1320,21 +1328,46 @@ const dataProviderWithCustomMethods = {
     const ascending = params.sort?.order !== "DESC";
     query = query.order(sortField, { ascending, nullsFirst: false });
 
-    const page = params.pagination?.page ?? 1;
-    const perPage = params.pagination?.perPage ?? 200;
-    const from = (page - 1) * perPage;
-    const to = from + perPage - 1;
-    query = query.range(from, to);
+    if (!usesUserCompletion) {
+      const page = params.pagination?.page ?? 1;
+      const perPage = params.pagination?.perPage ?? 200;
+      const from = (page - 1) * perPage;
+      const to = from + perPage - 1;
+      query = query.range(from, to);
+    }
 
-    const { data, count, error } = await query;
+    const { data: rawTasks, count, error } = await query;
     if (error) {
       console.error("getScopedTasks.error", error);
       throw new Error("Failed to load tasks");
     }
 
+    let tasks = (rawTasks ?? []) as Task[];
+    let participantsByTaskId: Record<string, TaskParticipant[]> = {};
+
+    if (usesUserCompletion && tasks.length > 0) {
+      const taskIds = tasks.map((task) => task.id);
+      const { data: participants, error: participantsError } = await supabase
+        .from("task_participants")
+        .select("*")
+        .in("task_id", taskIds);
+
+      if (participantsError) {
+        console.error("getScopedTasks.participants.error", participantsError);
+        throw new Error("Failed to load task participants");
+      }
+
+      participantsByTaskId = groupTaskParticipantsByTaskId(
+        (participants ?? []) as TaskParticipant[],
+      );
+
+      const filtered = filterScopedTasks(tasks, params, participantsByTaskId);
+      return filtered;
+    }
+
     return {
-      data: (data ?? []) as Task[],
-      total: count ?? 0,
+      data: tasks,
+      total: count ?? tasks.length,
     };
   },
   async getMyProjectDealIds(params: {

@@ -139,7 +139,7 @@ export const AddTask = ({
           resource="tasks"
         record={{
           type: "none",
-          contact_id: resolvedContactId,
+          ...(resolvedContactId != null ? { contact_id: resolvedContactId } : {}),
           deal_id: dealId ?? null,
           due_date: defaultDueDate,
           organization_member_id: identity.id,

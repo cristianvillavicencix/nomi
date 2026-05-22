@@ -229,12 +229,13 @@ export type Tag = {
 };
 
 export type Task = {
-  contact_id: Identifier;
+  contact_id?: Identifier | null;
   deal_id?: Identifier | null;
   type: string;
   text: string;
   due_date: string;
   done_date?: string | null;
+  created_at?: string;
   organization_member_id?: Identifier;
   assignee_person_ids?: Identifier[];
   collaborator_person_ids?: Identifier[];

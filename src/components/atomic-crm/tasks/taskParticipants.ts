@@ -16,6 +16,7 @@ const participantKey = (participant: {
 
 export const buildDesiredTaskParticipants = (
   payload: TaskAssignmentPayload,
+  ownerOrganizationMemberId?: Identifier | null,
 ): DesiredTaskParticipant[] => {
   const personIds = Array.from(
     new Set([
@@ -23,8 +24,17 @@ export const buildDesiredTaskParticipants = (
       ...payload.collaborator_person_ids,
     ]),
   );
-  const memberIds = payload.mentioned_member_ids.filter(
-    (memberId) => Number.isFinite(Number(memberId)),
+  const memberIds = Array.from(
+    new Set(
+      [
+        ...payload.mentioned_member_ids.filter((memberId) =>
+          Number.isFinite(Number(memberId)),
+        ),
+        ...(ownerOrganizationMemberId != null
+          ? [Number(ownerOrganizationMemberId)]
+          : []),
+      ].filter(Number.isFinite),
+    ),
   );
 
   const participants: DesiredTaskParticipant[] = personIds.map((personId) => ({
@@ -61,8 +71,12 @@ export const syncTaskParticipants = async (
   dataProvider: DataProvider,
   taskId: Identifier,
   payload: TaskAssignmentPayload,
+  ownerOrganizationMemberId?: Identifier | null,
 ) => {
-  const desired = buildDesiredTaskParticipants(payload);
+  const desired = buildDesiredTaskParticipants(
+    payload,
+    ownerOrganizationMemberId,
+  );
   const desiredKeys = new Set(desired.map((entry) => participantKey(entry)));
 
   const { data: existing = [] } = await dataProvider.getList<TaskParticipant>(
@@ -110,7 +124,14 @@ export const recomputeTaskDoneDate = async (
   const allComplete =
     participants.length > 0 &&
     participants.every((entry) => Boolean(entry.completed_at));
-  const nextDoneDate = allComplete ? task.done_date ?? new Date().toISOString() : null;
+  const latestCompletion = participants
+    .map((entry) => entry.completed_at)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  const nextDoneDate = allComplete
+    ? latestCompletion ?? task.done_date ?? new Date().toISOString()
+    : null;
 
   if (Boolean(task.done_date) === Boolean(nextDoneDate)) {
     return task;
