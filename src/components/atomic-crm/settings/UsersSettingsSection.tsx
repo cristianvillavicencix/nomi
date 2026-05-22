@@ -6,6 +6,7 @@ import {
   useDataProvider,
   useGetIdentity,
   useGetList,
+  useGetOne,
   useNotify,
   useRefresh,
 } from "ra-core";
@@ -254,13 +255,25 @@ const UserDialog = ({
   const { data: identity } = useGetIdentity();
 
   const sale = state?.mode === "edit" ? state.sale : undefined;
+  const editMemberId = sale?.id;
+
+  const { data: freshMember, isFetching: isFetchingMember } =
+    useGetOne<OrganizationMember>(
+      "organization_members",
+      { id: editMemberId! },
+      { enabled: open && editMemberId != null },
+    );
+
+  const memberForForm =
+    state?.mode === "edit" ? (freshMember ?? sale) : undefined;
+
   const defaultValues = useMemo<UserFormValues>(() => {
     const identityDraft: AccessIdentity =
-      sale != null
+      memberForForm != null
         ? {
-            administrator: !!sale.administrator,
-            roles: sale.roles,
-            module_permissions: sale.module_permissions ?? null,
+            administrator: !!memberForForm.administrator,
+            roles: memberForForm.roles,
+            module_permissions: memberForForm.module_permissions ?? null,
           }
         : {
             administrator: false,
@@ -270,25 +283,25 @@ const UserDialog = ({
 
     const effectiveMods = resolveEffectiveModules(identityDraft);
     const expandedPermissions = expandPermissionsForForm(
-      sale?.module_permissions ?? null,
+      memberForForm?.module_permissions ?? null,
       effectiveMods,
     );
 
     return {
-      id: sale?.id,
-      first_name: sale?.first_name ?? "",
-      last_name: sale?.last_name ?? "",
-      email: sale?.email ?? "",
+      id: memberForForm?.id,
+      first_name: memberForForm?.first_name ?? "",
+      last_name: memberForForm?.last_name ?? "",
+      email: memberForForm?.email ?? "",
       administrator: identityDraft.administrator ?? false,
       roles: deriveRolesFromModulePermissions(
         effectiveMods,
         identityDraft.administrator,
       ),
       module_permissions: expandedPermissions,
-      disabled: sale?.disabled ?? false,
-      avatar: sale?.avatar ?? null,
+      disabled: memberForForm?.disabled ?? false,
+      avatar: memberForForm?.avatar ?? null,
     };
-  }, [sale]);
+  }, [memberForForm]);
 
   const disableAdministrator =
     existingAdminId != null &&
@@ -343,6 +356,11 @@ const UserDialog = ({
           ) : null}
         </DialogHeader>
         <Form
+          key={
+            state.mode === "edit"
+              ? `edit-${String(memberForForm?.id ?? sale?.id ?? "")}-${isFetchingMember ? "loading" : "ready"}`
+              : "create"
+          }
           defaultValues={defaultValues}
           onSubmit={(values) => mutate(values as UserFormValues)}
           className="space-y-5"

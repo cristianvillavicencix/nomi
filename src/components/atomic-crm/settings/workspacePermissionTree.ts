@@ -179,17 +179,13 @@ export function collapsePermissionsForSave(
   caps: Record<string, boolean> | null | undefined,
 ): MemberModulePermissions {
   const out: MemberModulePermissions = {};
-  if (!caps || typeof caps !== "object") return out;
-
-  for (const [key, value] of Object.entries(caps)) {
-    if (typeof value === "boolean") {
-      out[key] = value;
-    }
-  }
 
   for (const group of getWorkspacePermissionGroups()) {
-    const anyChild = group.items.some((item) => caps[item.id] === true);
-    out[group.moduleKey] = anyChild || caps[group.moduleKey] === true;
+    for (const item of group.items) {
+      out[item.id] = caps?.[item.id] === true;
+    }
+    const anyChild = group.items.some((item) => out[item.id] === true);
+    out[group.moduleKey] = anyChild;
   }
 
   return out;
