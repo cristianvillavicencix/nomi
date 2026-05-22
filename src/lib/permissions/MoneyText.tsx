@@ -4,10 +4,12 @@ import { useMaskedAmount } from "./useMaskedAmount";
 type MoneyTextProps = {
   value: number | null | undefined;
   className?: string;
+  /** Compact currency (e.g. board column totals). */
+  compact?: boolean;
 };
 
-export const MoneyText = ({ value, className }: MoneyTextProps) => {
-  const text = useMaskedAmount(value);
+export const MoneyText = ({ value, className, compact }: MoneyTextProps) => {
+  const text = useMaskedAmount(value, { compact });
   return <span className={className}>{text}</span>;
 };
 

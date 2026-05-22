@@ -9,8 +9,10 @@ import {
   getStoredRolePreset,
   hasCapability,
   inferLegacyRolePreset,
+  isScopedWorkspaceUser,
   permissionsMapFromRolePreset,
   resolveEffectivePermissions,
+  SCOPED_TO_PROJECTS_KEY,
   type RoleSlug,
 } from "@/lib/permissions/permissionCatalog";
 import { deriveModuleFlagsFromCapabilities } from "../../settings/workspacePermissionTree";
@@ -116,6 +118,9 @@ export function resolveEffectiveModules(
 export function canViewMonetaryAmounts(
   identity: AccessIdentity | string | null | undefined,
 ): boolean {
+  if (!identity || typeof identity !== "object") return false;
+  if (identity.administrator === true) return true;
+  if (isScopedWorkspaceUser(identity)) return false;
   return hasMemberCapability(identity, "view_amounts.show");
 }
 
@@ -193,5 +198,9 @@ export function legacyRoleSales(roles: AccessRole[]): boolean {
 }
 
 export function applyRolePresetToPermissions(role: RoleSlug): Record<string, boolean | string> {
-  return permissionsMapFromRolePreset(role);
+  const base = permissionsMapFromRolePreset(role);
+  if (role === "user") {
+    base[SCOPED_TO_PROJECTS_KEY] = true;
+  }
+  return base;
 }

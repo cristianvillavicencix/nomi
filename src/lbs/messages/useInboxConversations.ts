@@ -1,5 +1,11 @@
 import { useMemo } from "react";
-import { useGetIdentity, useGetList, useGetMany, type Identifier } from "ra-core";
+import {
+  useDataProvider,
+  useGetIdentity,
+  useGetList,
+  useGetMany,
+  type Identifier,
+} from "ra-core";
 import type {
   Contact,
   Conversation,
@@ -8,10 +14,34 @@ import type {
   OrganizationMember,
 } from "@/lbs/types";
 import { sortConversationsByActivity } from "@/lbs/messages/conversationUtils";
+import {
+  buildAssignedProjectDealIdSet,
+  filterConversationsForAssignedProjects,
+  shouldScopeMessagingToAssignedProjects,
+} from "@/lbs/messages/scopedMessaging";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { useQuery } from "@tanstack/react-query";
 
 export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
   const enabled = options.enabled ?? true;
   const { identity } = useGetIdentity();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const scopeToProjects = shouldScopeMessagingToAssignedProjects(identity);
+
+  const {
+    data: allowedDealIds,
+    isPending: isAssignedDealsPending,
+  } = useQuery({
+    queryKey: ["messaging-assigned-deal-ids", identity?.id, scopeToProjects],
+    enabled: enabled && scopeToProjects && identity?.id != null,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const dealIds = await dataProvider.getMyProjectDealIds({
+        organizationMemberId: identity!.id,
+      });
+      return new Set(dealIds.map(String));
+    },
+  });
 
   const { data: participations = [], isPending: isParticipantsPending } =
     useGetList<ConversationParticipant>(
@@ -67,8 +97,8 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
   );
 
   const visibleConversations = useMemo(
-    () =>
-      sortConversationsByActivity(
+    () => {
+      const base = sortConversationsByActivity(
         conversations.filter((conversation) => {
           if (conversation.type === "client" && !conversation.last_message_at) {
             return false;
@@ -79,8 +109,22 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
             participantConversationIds.has(String(conversation.id))
           );
         }),
-      ),
-    [conversations, participantConversationIds],
+      );
+      if (!scopeToProjects) {
+        return base;
+      }
+      if (isAssignedDealsPending) {
+        return base.filter((conversation) => conversation.type === "team_dm");
+      }
+      return filterConversationsForAssignedProjects(base, allowedDealIds ?? new Set());
+    },
+    [
+      allowedDealIds,
+      conversations,
+      isAssignedDealsPending,
+      participantConversationIds,
+      scopeToProjects,
+    ],
   );
 
   const dealIds = useMemo(

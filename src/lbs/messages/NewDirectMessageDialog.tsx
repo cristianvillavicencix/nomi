@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import {
+  useDataProvider,
   useGetIdentity,
   useGetList,
   useGetMany,
   type Identifier,
 } from "ra-core";
+import { useQuery } from "@tanstack/react-query";
 import { MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +16,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Conversation, OrganizationMember } from "@/lbs/types";
+import type { Conversation, LbsDeal, OrganizationMember } from "@/lbs/types";
 import { useOpenDirectMessage } from "@/lbs/messages/useDirectMessage";
+import {
+  buildAssignedProjectDealIdSet,
+  collectCoworkerMemberIdsFromDeals,
+  shouldScopeMessagingToAssignedProjects,
+} from "@/lbs/messages/scopedMessaging";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 
 export const NewDirectMessageDialog = ({
   open,
@@ -27,6 +35,8 @@ export const NewDirectMessageDialog = ({
   onConversationCreated: (conversation: Conversation) => void;
 }) => {
   const { identity } = useGetIdentity();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const scopeToProjects = shouldScopeMessagingToAssignedProjects(identity);
   const [selectedMemberId, setSelectedMemberId] = useState<Identifier | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { openDirectMessage } = useOpenDirectMessage();
@@ -40,9 +50,36 @@ export const NewDirectMessageDialog = ({
     { enabled: open, staleTime: 60_000 },
   );
 
+  const { data: scopedDeals = [] } = useQuery({
+    queryKey: ["dm-coworker-deals", identity?.id, scopeToProjects],
+    enabled: open && scopeToProjects && identity?.id != null,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const dealIds = await dataProvider.getMyProjectDealIds({
+        organizationMemberId: identity!.id,
+      });
+      if (dealIds.length === 0) return [] as LbsDeal[];
+      const { data } = await dataProvider.getMany<LbsDeal>("deals", {
+        ids: dealIds,
+      });
+      return data ?? [];
+    },
+  });
+
+  const allowedCoworkerIds = useMemo(() => {
+    if (!scopeToProjects || !identity?.id) return null;
+    const dealIds = buildAssignedProjectDealIdSet(scopedDeals, identity.id);
+    return collectCoworkerMemberIdsFromDeals(scopedDeals, dealIds, identity.id);
+  }, [identity?.id, scopeToProjects, scopedDeals]);
+
   const teammates = useMemo(
-    () => members.filter((member) => String(member.id) !== String(identity?.id)),
-    [identity?.id, members],
+    () =>
+      members.filter((member) => {
+        if (String(member.id) === String(identity?.id)) return false;
+        if (!allowedCoworkerIds) return true;
+        return allowedCoworkerIds.has(String(member.id));
+      }),
+    [allowedCoworkerIds, identity?.id, members],
   );
 
   const handleCreate = async () => {
@@ -69,10 +106,17 @@ export const NewDirectMessageDialog = ({
           <DialogTitle>New message</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Choose a teammate to start a direct conversation.
+          {scopeToProjects
+            ? "Choose a teammate from one of your assigned projects."
+            : "Choose a teammate to start a direct conversation."}
         </p>
         <div className="max-h-72 space-y-1 overflow-y-auto rounded-xl border bg-muted/20 p-1">
-          {teammates.map((member) => {
+          {teammates.length === 0 ? (
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+              No teammates on your assigned projects yet.
+            </p>
+          ) : (
+            teammates.map((member) => {
             const label =
               `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim() ||
               member.email ||
@@ -99,7 +143,8 @@ export const NewDirectMessageDialog = ({
                 <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
               </button>
             );
-          })}
+          })
+          )}
         </div>
         <DialogFooter>
           <Button

@@ -23,32 +23,8 @@ export type WorkspacePermissionGroup = {
   items: WorkspacePermissionItem[];
 };
 
-const CONTRACTOR_GROUPS: WorkspacePermissionGroup[] = [
-  {
-    area: "payroll",
-    label: "Payroll",
-    items: [
-      { id: "payroll.runs", label: "Pay runs & payouts" },
-      { id: "payroll.loans", label: "Loans & deductions" },
-    ],
-  },
-  {
-    area: "people",
-    label: "People",
-    items: [
-      { id: "people.directory", label: "Employee directory" },
-      { id: "people.adjustments", label: "PTO & adjustments" },
-    ],
-  },
-  {
-    area: "time",
-    label: "Time",
-    items: [{ id: "time.entries", label: "Time entries" }],
-  },
-];
-
-const lbsGroupsFromCatalog = (): WorkspacePermissionGroup[] =>
-  getCapabilitiesGroupedByArea().map(({ area, items }) => ({
+export const getWorkspacePermissionGroups = (): WorkspacePermissionGroup[] => {
+  const groups = getCapabilitiesGroupedByArea().map(({ area, items }) => ({
     area,
     label: area,
     items: items.map((cap) => ({
@@ -57,11 +33,13 @@ const lbsGroupsFromCatalog = (): WorkspacePermissionGroup[] =>
       scopeable: cap.scopeable,
     })),
   }));
-
-export const getWorkspacePermissionGroups = (): WorkspacePermissionGroup[] =>
-  isLbsMode()
-    ? lbsGroupsFromCatalog()
-    : [...lbsGroupsFromCatalog(), ...CONTRACTOR_GROUPS];
+  if (isLbsMode()) {
+    return groups.filter(
+      (group) => !["People", "Time", "Payroll"].includes(group.label),
+    );
+  }
+  return groups;
+};
 
 export function deriveModuleFlagsFromCapabilities(
   stored: Record<string, unknown> | null | undefined,
@@ -121,16 +99,6 @@ export function expandPermissionsForForm(
     }
   }
 
-  if (!isLbsMode()) {
-    for (const group of CONTRACTOR_GROUPS) {
-      for (const item of group.items) {
-        if (typeof stored?.[item.id] === "boolean") {
-          base[item.id] = stored[item.id] as boolean;
-        }
-      }
-    }
-  }
-
   return base;
 }
 
@@ -145,14 +113,6 @@ export function collapsePermissionsForSave(
       : null);
 
   const out = collapseCatalogPermissions(caps, preset) as MemberModulePermissions;
-
-  if (!isLbsMode()) {
-    for (const group of CONTRACTOR_GROUPS) {
-      for (const item of group.items) {
-        out[item.id] = caps?.[item.id] === true;
-      }
-    }
-  }
 
   for (const [modKey, enabled] of Object.entries(
     deriveModuleFlagsFromCapabilities(out as Record<string, unknown>),

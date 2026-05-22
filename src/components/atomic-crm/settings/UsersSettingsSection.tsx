@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit, Loader2, Plus } from "lucide-react";
+import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import {
   Form,
   required,
@@ -13,11 +13,9 @@ import {
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, Fragment } from "react";
 import { useController, useFormContext } from "react-hook-form";
 import { useSearchParams } from "react-router";
-import { BooleanInput } from "@/components/admin/boolean-input";
 import { EmailInput } from "@/components/admin/email-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -39,9 +37,19 @@ import {
 } from "../providers/commons/memberModuleAccess";
 import {
   getStoredRolePreset,
+  getStoredRolePresetKey,
   ROLE_PRESETS,
   type RoleSlug,
 } from "@/lib/permissions/permissionCatalog";
+import {
+  applyCustomPresetToPermissions,
+  customPresetSlugFromKey,
+  getPresetDisplayLabel,
+  listSelectablePresetKeys,
+  parseOrgRbacConfig,
+  type OrgRbacConfig,
+} from "@/lib/permissions/orgRolePresets";
+import { NewRolePresetDialog } from "./NewRolePresetDialog";
 import type { CrmDataProvider } from "../providers/types";
 import type {
   MemberModuleKey,
@@ -108,11 +116,26 @@ type UserDialogState =
 
 type UserFormValues = OrganizationMemberFormData & { id?: number | string };
 
-const UserModulesInput = ({ disabled }: { disabled: boolean }) => {
+const UserModulesInput = ({
+  orgRbacConfig,
+  disableAdministrator,
+  isEditingSelf,
+}: {
+  orgRbacConfig: OrgRbacConfig;
+  disableAdministrator: boolean;
+  isEditingSelf: boolean;
+}) => {
   const { field } = useController<UserFormValues>({
     name: "module_permissions",
     defaultValue: {},
   });
+  const { field: administratorField } = useController<UserFormValues>({
+    name: "administrator",
+    defaultValue: false,
+  });
+
+  const administrator = administratorField.value === true;
+  const canSetAdministrator = !disableAdministrator && !isEditingSelf;
 
   const groups = getWorkspacePermissionGroups();
   const caps = {
@@ -121,91 +144,193 @@ const UserModulesInput = ({ disabled }: { disabled: boolean }) => {
       : {}),
   } satisfies Record<string, boolean | string>;
 
-  const activePreset = getStoredRolePreset(caps);
+  const activePreset = administrator ? null : getStoredRolePresetKey(caps);
 
   const setCapability = (id: string, checked: boolean) => {
     const next = { ...caps, [id]: checked };
-    field.onChange(collapsePermissionsForSave(next, activePreset));
+    field.onChange(collapsePermissionsForSave(next, getStoredRolePreset(next)));
   };
 
-  const applyPreset = (role: RoleSlug) => {
-    const next = applyRolePresetToPermissions(role);
-    field.onChange(collapsePermissionsForSave(next, role));
+  const applyPreset = (presetKey: string) => {
+    administratorField.onChange(false);
+    const customSlug = customPresetSlugFromKey(presetKey);
+    if (customSlug) {
+      const template = orgRbacConfig.customPresets?.[customSlug];
+      if (!template) return;
+      field.onChange(collapsePermissionsForSave(applyCustomPresetToPermissions(customSlug, template)));
+      return;
+    }
+    const next = applyRolePresetToPermissions(presetKey as RoleSlug);
+    field.onChange(collapsePermissionsForSave(next, presetKey as RoleSlug));
   };
+
+  const selectAdministrator = () => {
+    if (!canSetAdministrator) return;
+    administratorField.onChange(true);
+  };
+
+  const presetKeys = listSelectablePresetKeys(orgRbacConfig);
 
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium">Role preset</p>
+        <p className="text-sm font-medium">Role & access</p>
         <p className="text-xs text-muted-foreground">
-          Start from a standard role, then fine-tune individual permissions below.
+          Pick a role preset. Fine-tune individual permissions below when needed.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {(Object.keys(ROLE_PRESETS) as RoleSlug[]).map((slug) => (
+        {administrator && !canSetAdministrator ? (
+          <Button type="button" size="sm" variant="default" disabled>
+            Administrator
+          </Button>
+        ) : null}
+        {canSetAdministrator ? (
           <Button
-            key={slug}
             type="button"
             size="sm"
-            variant={activePreset === slug ? "default" : "outline"}
-            disabled={disabled}
-            onClick={() => applyPreset(slug)}
+            variant={administrator ? "default" : "outline"}
+            onClick={selectAdministrator}
           >
-            {ROLE_PRESETS[slug].label}
+            Administrator
+          </Button>
+        ) : null}
+        {presetKeys.map((presetKey) => (
+          <Button
+            key={presetKey}
+            type="button"
+            size="sm"
+            variant={!administrator && activePreset === presetKey ? "default" : "outline"}
+            disabled={administrator}
+            onClick={() => applyPreset(presetKey)}
+          >
+            {getPresetDisplayLabel(presetKey, orgRbacConfig)}
           </Button>
         ))}
       </div>
-      <div>
-        <p className="text-sm font-medium">Workspace permissions</p>
+      {administrator ? (
         <p className="text-xs text-muted-foreground">
-          Each area has its own permissions. Turn switches on for what this
-          person can use.
+          Workspace administrators have full access to every area.
         </p>
-      </div>
-      <div className="overflow-hidden rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/20 text-left text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">Permission</th>
-              <th className="w-24 px-4 py-2.5 text-right font-medium">
-                Access
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.map((group) => (
-              <Fragment key={group.area}>
-                <tr className="border-b border-border/40 bg-muted/30">
-                  <td
-                    colSpan={2}
-                    className="px-4 py-2.5 text-sm font-semibold tracking-tight"
-                  >
-                    {group.label}
-                  </td>
+      ) : (
+        <>
+          <div>
+            <p className="text-sm font-medium">Workspace permissions</p>
+            <p className="text-xs text-muted-foreground">
+              Optional overrides on top of the selected role preset.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-lg border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/20 text-left text-muted-foreground">
+                  <th className="px-4 py-2.5 font-medium">Permission</th>
+                  <th className="w-24 px-4 py-2.5 text-right font-medium">
+                    Access
+                  </th>
                 </tr>
-                {group.items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-border/40 last:border-0"
-                  >
-                    <td className="px-4 py-2.5 pl-10 text-muted-foreground">
-                      {item.label}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Switch
-                        checked={caps[item.id] === true}
-                        disabled={disabled}
-                        onCheckedChange={(checked) =>
-                          setCapability(item.id, checked)
-                        }
-                      />
-                    </td>
-                  </tr>
+              </thead>
+              <tbody>
+                {groups.map((group) => (
+                  <Fragment key={group.area}>
+                    <tr className="border-b border-border/40 bg-muted/30">
+                      <td
+                        colSpan={2}
+                        className="px-4 py-2.5 text-sm font-semibold tracking-tight"
+                      >
+                        {group.label}
+                      </td>
+                    </tr>
+                    {group.items.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="border-b border-border/40 last:border-0"
+                      >
+                        <td className="px-4 py-2.5 pl-10 text-muted-foreground">
+                          {item.label}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <Switch
+                            checked={caps[item.id] === true}
+                            onCheckedChange={(checked) =>
+                              setCapability(item.id, checked)
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const UserDialogFooter = ({
+  mode,
+  isEditingSelf,
+  isPending,
+  isRemoving,
+  onCancel,
+  onRemove,
+}: {
+  mode: "create" | "edit";
+  isEditingSelf: boolean;
+  isPending: boolean;
+  isRemoving: boolean;
+  onCancel: () => void;
+  onRemove: () => void;
+}) => {
+  const { field: disabledField } = useController<UserFormValues>({
+    name: "disabled",
+    defaultValue: false,
+  });
+
+  return (
+    <div className="flex flex-col-reverse gap-3 border-t border-border/40 pt-4 sm:flex-row sm:items-center sm:justify-between">
+      {mode === "edit" ? (
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={onRemove}
+          disabled={isEditingSelf || isPending || isRemoving}
+        >
+          {isRemoving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="mr-2 h-4 w-4" />
+          )}
+          Remove user
+        </Button>
+      ) : (
+        <div className="hidden sm:block" />
+      )}
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {mode === "edit" ? (
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Switch
+              checked={disabledField.value === true}
+              disabled={isEditingSelf || isPending || isRemoving}
+              onCheckedChange={disabledField.onChange}
+            />
+            Disabled
+          </label>
+        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isPending || isRemoving}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isPending || isRemoving}>
+          {mode === "edit" ? "Save" : "Send invitation"}
+        </Button>
       </div>
     </div>
   );
@@ -215,13 +340,14 @@ const UserFormFields = ({
   mode,
   disableAdministrator,
   currentIdentityId,
+  orgRbacConfig,
 }: {
   mode: "create" | "edit";
   disableAdministrator: boolean;
   currentIdentityId?: string | number;
+  orgRbacConfig: OrgRbacConfig;
 }) => {
   const { watch } = useFormContext<UserFormValues>();
-  const administrator = watch("administrator");
   const currentId = watch("id");
   const isEditingSelf =
     currentId != null && String(currentId) === String(currentIdentityId ?? "");
@@ -246,27 +372,12 @@ const UserFormFields = ({
           We&apos;ll email them an invitation link so they can choose their own password before signing in.
         </p>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <BooleanInput
-          source="administrator"
-          helperText={false}
-          readOnly={disableAdministrator || isEditingSelf}
-        />
-        <BooleanInput
-          source="disabled"
-          helperText={false}
-          readOnly={isEditingSelf}
-        />
-      </div>
 
-      <Separator />
-
-      <UserModulesInput disabled={administrator} />
-      <p className="text-xs text-muted-foreground">
-        {administrator
-          ? "Administrators can use every area of the workspace."
-          : "Turn on each area this person should see — CRM, messaging, payroll, and the rest."}
-      </p>
+      <UserModulesInput
+        orgRbacConfig={orgRbacConfig}
+        disableAdministrator={disableAdministrator}
+        isEditingSelf={isEditingSelf}
+      />
     </div>
   );
 };
@@ -276,11 +387,13 @@ const UserDialog = ({
   onOpenChange,
   state,
   existingAdminId,
+  orgRbacConfig,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   state: UserDialogState | null;
   existingAdminId?: number | string;
+  orgRbacConfig: OrgRbacConfig;
 }) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
@@ -339,6 +452,29 @@ const UserDialog = ({
     existingAdminId != null &&
     (state?.mode === "create" ||
       (sale != null && String(existingAdminId) !== String(sale.id)));
+
+  const isEditingSelf =
+    sale != null && String(sale.id) === String(identity?.id ?? "");
+
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+
+  const { mutate: removeUser, isPending: isRemoving } = useMutation({
+    mutationFn: async () => {
+      if (!sale) throw new Error("User not found");
+      return dataProvider.organizationMemberUpdate(sale.id, { disabled: true });
+    },
+    onSuccess: () => {
+      notify(`${sale?.first_name ?? "User"} no longer has access`, {
+        type: "success",
+      });
+      setRemoveConfirmOpen(false);
+      onOpenChange(false);
+      refresh();
+    },
+    onError: (error: Error) => {
+      notify(error.message || "Could not remove user", { type: "error" });
+    },
+  });
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (values: UserFormValues) => {
@@ -401,22 +537,52 @@ const UserDialog = ({
             mode={state.mode}
             disableAdministrator={disableAdministrator}
             currentIdentityId={identity?.id}
+            orgRbacConfig={orgRbacConfig}
           />
+          <UserDialogFooter
+            mode={state.mode}
+            isEditingSelf={isEditingSelf}
+            isPending={isPending}
+            isRemoving={isRemoving}
+            onCancel={() => onOpenChange(false)}
+            onRemove={() => setRemoveConfirmOpen(true)}
+          />
+        </Form>
+      </DialogContent>
+
+      <Dialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove user access?</DialogTitle>
+            <DialogDescription>
+              {sale
+                ? `${sale.first_name} ${sale.last_name} will be disabled and cannot sign in. Their CRM data is kept; you can re-enable access later with the Disabled switch.`
+                : "This user will lose access to the workspace."}
+            </DialogDescription>
+          </DialogHeader>
           <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
+              onClick={() => setRemoveConfirmOpen(false)}
+              disabled={isRemoving}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {state.mode === "edit" ? "Save" : "Send invitation"}
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => removeUser()}
+              disabled={isRemoving || isEditingSelf}
+            >
+              {isRemoving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Remove user
             </Button>
           </div>
-        </Form>
-      </DialogContent>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
@@ -508,6 +674,7 @@ export const UsersSettingsSection = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialogState, setDialogState] = useState<UserDialogState | null>(null);
+  const [newRolePresetOpen, setNewRolePresetOpen] = useState(false);
   const [seatGateOpen, setSeatGateOpen] = useState(false);
   const [seatGateKind, setSeatGateKind] = useState<"plan" | "seats" | null>(
     null,
@@ -535,7 +702,7 @@ export const UsersSettingsSection = () => {
       const { data, error } = await supabase
         .from("organizations")
         .select(
-          "id, name, billable_seat_count, stripe_subscription_id, billing_status, price_per_seat_usd_monthly, stripe_customer_id",
+          "id, name, billable_seat_count, stripe_subscription_id, billing_status, price_per_seat_usd_monthly, stripe_customer_id, rbac_config",
         )
         .limit(1)
         .maybeSingle();
@@ -545,6 +712,14 @@ export const UsersSettingsSection = () => {
       return data;
     },
   });
+
+  const [orgRbacConfig, setOrgRbacConfig] = useState<OrgRbacConfig>(() =>
+    parseOrgRbacConfig(orgRow?.rbac_config),
+  );
+
+  useEffect(() => {
+    setOrgRbacConfig(parseOrgRbacConfig(orgRow?.rbac_config));
+  }, [orgRow?.rbac_config]);
 
   const dataProvider = useDataProvider<CrmDataProvider>();
 
@@ -937,15 +1112,25 @@ export const UsersSettingsSection = () => {
             />
           </div>
           {isOrgAdmin ? (
-            <Button
-              type="button"
-              className="shrink-0 self-start"
-              onClick={onClickNewUser}
-              disabled={orgLoading}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New user
-            </Button>
+            <div className="flex shrink-0 flex-wrap gap-2 self-start">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setNewRolePresetOpen(true)}
+                disabled={orgLoading}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                New role
+              </Button>
+              <Button
+                type="button"
+                onClick={onClickNewUser}
+                disabled={orgLoading}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                New user
+              </Button>
+            </div>
           ) : null}
         </div>
         <div className="space-y-6">
@@ -1053,6 +1238,14 @@ export const UsersSettingsSection = () => {
         </DialogContent>
       </Dialog>
 
+      <NewRolePresetDialog
+        open={newRolePresetOpen}
+        onOpenChange={setNewRolePresetOpen}
+        orgId={orgId}
+        rbacConfig={orgRbacConfig}
+        onSaved={setOrgRbacConfig}
+      />
+
       <UserDialog
         open={dialogState != null}
         onOpenChange={(open) => {
@@ -1060,6 +1253,7 @@ export const UsersSettingsSection = () => {
         }}
         state={dialogState}
         existingAdminId={existingAdmin?.id}
+        orgRbacConfig={orgRbacConfig}
       />
     </>
   );

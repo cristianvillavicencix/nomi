@@ -51,7 +51,7 @@ export const ShareRecordModal = ({
 
   const canManageSharing = hasMemberCapability(
     identity as Parameters<typeof hasMemberCapability>[0],
-    "admin.users.manage",
+    "records.share",
   );
 
   const { data: members = [] } = useGetList<OrganizationMember>(

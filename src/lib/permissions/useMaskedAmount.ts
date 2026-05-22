@@ -1,6 +1,6 @@
 import { useGetIdentity } from "ra-core";
 import { useQuery } from "@tanstack/react-query";
-import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
+import { canViewMonetaryAmounts } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 
 const formatUsd = (value: number) =>
@@ -12,7 +12,9 @@ let amountVisibilityRef = { current: true };
 
 export function useCanViewAmounts(): boolean {
   const { data: identity } = useGetIdentity();
-  return hasMemberCapability(identity as Parameters<typeof hasMemberCapability>[0], "view_amounts.show");
+  return canViewMonetaryAmounts(
+    identity as Parameters<typeof canViewMonetaryAmounts>[0],
+  );
 }
 
 /** Keeps DealShow's module-level `toCurrency` in sync with the signed-in user. */
@@ -29,10 +31,22 @@ export function useFormatMoney() {
   return (value: number | null | undefined) => maskAmountIfNeeded(value, canView);
 }
 
-export function useMaskedAmount(value: number | null | undefined): string {
+export function useMaskedAmount(
+  value: number | null | undefined,
+  options?: { compact?: boolean },
+): string {
   const canView = useCanViewAmounts();
   if (!canView) return "—";
   if (value == null || Number.isNaN(value)) return "—";
+  if (options?.compact) {
+    return value.toLocaleString("en-US", {
+      notation: "compact",
+      style: "currency",
+      currency: "USD",
+      currencyDisplay: "narrowSymbol",
+      minimumSignificantDigits: 3,
+    });
+  }
   return formatUsd(value);
 }
 

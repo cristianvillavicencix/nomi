@@ -6,6 +6,8 @@
 export type RoleSlug = "super_admin" | "admin" | "user" | "read_only";
 
 export const ROLE_PRESET_KEY = "_role_preset";
+export const CUSTOM_ROLE_PRESET_PREFIX = "custom:";
+export const SCOPED_TO_PROJECTS_KEY = "_scoped_to_projects";
 
 export interface Capability {
   id: string;
@@ -46,41 +48,43 @@ function presetFromMatrix(
 
 const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: boolean; matrix: RoleMatrix }> = [
   // Area 1 — CRM
-  { id: "crm.contacts.view", area: "CRM", label: "View contacts & leads", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "crm.contacts.create", area: "CRM", label: "Create contacts & leads", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
-  { id: "crm.contacts.edit", area: "CRM", label: "Edit contacts & leads", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "crm.contacts.view", area: "CRM", label: "View contacts & leads", matrix: { super_admin: true, admin: true, user: false, read_only: true } },
+  { id: "crm.contacts.create", area: "CRM", label: "Create contacts & leads", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "crm.contacts.edit", area: "CRM", label: "Edit contacts & leads", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "crm.contacts.delete", area: "CRM", label: "Delete contacts & leads", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
-  { id: "crm.companies.view", area: "CRM", label: "View clients & companies", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "crm.companies.create", area: "CRM", label: "Create clients & companies", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
-  { id: "crm.companies.edit", area: "CRM", label: "Edit clients & companies", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "crm.companies.view", area: "CRM", label: "View clients & companies", matrix: { super_admin: true, admin: true, user: false, read_only: true } },
+  { id: "crm.companies.create", area: "CRM", label: "Create clients & companies", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "crm.companies.edit", area: "CRM", label: "Edit clients & companies", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "crm.companies.delete", area: "CRM", label: "Delete clients & companies", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "crm.pipeline.view", area: "CRM", label: "View projects & pipeline", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   { id: "crm.pipeline.create", area: "CRM", label: "Create projects", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "crm.pipeline.edit", area: "CRM", label: "Edit projects", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "crm.pipeline.delete", area: "CRM", label: "Delete / archive projects", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "crm.upload_images", area: "CRM", label: "Upload images & attachments", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   // Area 2 — Tasks, Notes, Calendar
   { id: "crm.tasks.view", area: "Tasks & calendar", label: "View tasks", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "crm.tasks.create", area: "Tasks & calendar", label: "Create tasks", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "crm.tasks.edit", area: "Tasks & calendar", label: "Edit tasks", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
+  { id: "crm.tasks.create", area: "Tasks & calendar", label: "Create tasks", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "crm.tasks.edit", area: "Tasks & calendar", label: "Edit tasks", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "crm.tasks.delete", area: "Tasks & calendar", label: "Delete tasks", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "crm.notes.view", area: "Tasks & calendar", label: "View notes", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "crm.notes.create", area: "Tasks & calendar", label: "Create notes", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "crm.notes.edit", area: "Tasks & calendar", label: "Edit notes", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
+  { id: "crm.notes.create", area: "Tasks & calendar", label: "Create notes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "crm.notes.edit", area: "Tasks & calendar", label: "Edit notes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "crm.notes.delete", area: "Tasks & calendar", label: "Delete notes", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "calendar.view", area: "Tasks & calendar", label: "View calendar", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   { id: "calendar.manage", area: "Tasks & calendar", label: "Manage calendar events", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "meetings.view", area: "Tasks & calendar", label: "View meetings", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
+  { id: "meetings.manage", area: "Tasks & calendar", label: "Schedule & edit meetings", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   // Area 3 — Messaging
   { id: "messaging.conversations.view", area: "Messaging", label: "View conversations", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   { id: "messaging.send", area: "Messaging", label: "Send messages", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "messaging.settings.manage", area: "Messaging", label: "Messaging settings (Twilio)", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   // Area 4 — Proposals & Contracts
-  { id: "proposals.view", area: "Proposals & contracts", label: "View proposals", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: false } },
-  { id: "proposals.create", area: "Proposals & contracts", label: "Create proposals", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
-  { id: "proposals.edit", area: "Proposals & contracts", label: "Edit proposals", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "proposals.view", area: "Proposals & contracts", label: "View proposals", scopeable: true, matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "proposals.create", area: "Proposals & contracts", label: "Create proposals", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "proposals.edit", area: "Proposals & contracts", label: "Edit proposals", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "proposals.send", area: "Proposals & contracts", label: "Send proposals", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "proposals.delete", area: "Proposals & contracts", label: "Delete proposals", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
-  { id: "contracts.view", area: "Proposals & contracts", label: "View contracts", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "contracts.view", area: "Proposals & contracts", label: "View contracts", scopeable: true, matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "contracts.create", area: "Proposals & contracts", label: "Create contracts", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "contracts.edit", area: "Proposals & contracts", label: "Edit contracts", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "contracts.delete", area: "Proposals & contracts", label: "Delete contracts", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
@@ -107,9 +111,23 @@ const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: 
   { id: "deal_financials.collections.manage", area: "Financials", label: "Manage client collections", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "deal_financials.commissions.view", area: "Financials", label: "View commissions", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "deal_financials.commissions.manage", area: "Financials", label: "Manage commissions", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
-  // Area 8 — Admin
-  { id: "admin.users.manage", area: "Administration", label: "Manage users & sharing", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
-  { id: "admin.settings.manage", area: "Administration", label: "Workspace settings & billing", matrix: { super_admin: true, admin: false, user: false, read_only: false } },
+  // Area 8 — People / Time / Payroll (contractor mode; hidden from LBS nav unless enabled)
+  { id: "people.view", area: "People", label: "View employee directory", matrix: { super_admin: true, admin: true, user: false, read_only: true } },
+  { id: "people.manage", area: "People", label: "Manage employees", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "people.adjustments.manage", area: "People", label: "Manage PTO & adjustments", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "time.entries.view", area: "Time", label: "View time entries", matrix: { super_admin: true, admin: true, user: false, read_only: true } },
+  { id: "time.entries.manage", area: "Time", label: "Manage time entries", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "time.entries.approve", area: "Time", label: "Approve time entries", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "payroll.view", area: "Payroll", label: "View pay runs & payments", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "payroll.manage", area: "Payroll", label: "Manage pay runs", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "payroll.approve", area: "Payroll", label: "Approve pay runs", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "payroll.pay", area: "Payroll", label: "Mark payments as paid", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "payroll.loans.manage", area: "Payroll", label: "Manage loans & deductions", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  // Area 9 — Admin
+  { id: "records.share", area: "Administration", label: "Share records with teammates", scopeable: true, matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "admin.users.manage", area: "Administration", label: "Manage users & invites", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "admin.settings.manage", area: "Administration", label: "Workspace settings (pipelines, tags)", matrix: { super_admin: true, admin: false, user: false, read_only: false } },
+  { id: "admin.billing.manage", area: "Administration", label: "Billing & subscriptions", matrix: { super_admin: true, admin: false, user: false, read_only: false } },
   { id: "reports.view", area: "Administration", label: "View reports", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
 ];
 
@@ -130,13 +148,28 @@ const ROLE_DESCRIPTIONS: Record<RoleSlug, { label: string; description: string }
   },
   user: {
     label: "User",
-    description: "Daily operations on assigned records; no financial amounts",
+    description:
+      "Assigned projects only — tasks, calendar, and messaging on those projects; no leads, clients, proposals, or amounts",
   },
   read_only: {
     label: "Read-only",
-    description: "View essential CRM data only",
+    description: "View-only access to CRM data; no edits, messages, or amounts",
   },
 };
+
+const WRITE_CAPABILITY_SUFFIXES = [
+  ".create",
+  ".edit",
+  ".delete",
+  ".manage",
+  ".send",
+  ".approve",
+  ".pay",
+] as const;
+
+export function isWriteCapability(capId: string): boolean {
+  return WRITE_CAPABILITY_SUFFIXES.some((suffix) => capId.endsWith(suffix));
+}
 
 export const ROLE_PRESETS: Record<RoleSlug, RolePreset> = (
   ["super_admin", "admin", "user", "read_only"] as RoleSlug[]
@@ -152,6 +185,41 @@ export const ROLE_PRESETS: Record<RoleSlug, RolePreset> = (
   },
   {} as Record<RoleSlug, RolePreset>,
 );
+
+export function isBuiltInRolePreset(value: string): value is RoleSlug {
+  return value in ROLE_PRESETS;
+}
+
+export function isCustomRolePreset(value: string): boolean {
+  return value.startsWith(CUSTOM_ROLE_PRESET_PREFIX);
+}
+
+export function getStoredRolePresetKey(
+  perms: Record<string, boolean | string | undefined> | null | undefined,
+): string | null {
+  if (!perms || typeof perms !== "object") return null;
+  const raw = perms[ROLE_PRESET_KEY];
+  if (typeof raw !== "string") return null;
+  if (isBuiltInRolePreset(raw) || isCustomRolePreset(raw)) return raw;
+  return null;
+}
+
+export function isScopedWorkspaceUser(
+  identity: {
+    administrator?: boolean;
+    roles?: unknown;
+    module_permissions?: Record<string, boolean | string | undefined> | null;
+  } | null | undefined,
+): boolean {
+  if (!identity || typeof identity !== "object" || identity.administrator === true) {
+    return false;
+  }
+  const stored = identity.module_permissions;
+  if (stored && stored[SCOPED_TO_PROJECTS_KEY] === true) return true;
+  const presetKey =
+    getStoredRolePresetKey(stored) ?? inferLegacyRolePreset(identity);
+  return presetKey === "user";
+}
 
 export const RESOURCE_ACTION_TO_CAPABILITY: Record<
   string,
@@ -343,6 +411,55 @@ export const RESOURCE_ACTION_TO_CAPABILITY: Record<
     list: "reports.view",
     show: "reports.view",
   },
+  record_shares: {
+    list: "records.share",
+    show: "records.share",
+    create: "records.share",
+    edit: "records.share",
+    delete: "records.share",
+  },
+  people: {
+    list: "people.view",
+    show: "people.view",
+    create: "people.manage",
+    edit: "people.manage",
+    delete: "people.manage",
+  },
+  time_entries: {
+    list: "time.entries.view",
+    show: "time.entries.view",
+    create: "time.entries.manage",
+    edit: "time.entries.manage",
+    delete: "time.entries.manage",
+  },
+  payments: {
+    list: "payroll.view",
+    show: "payroll.view",
+    create: "payroll.manage",
+    edit: "payroll.manage",
+    delete: "payroll.manage",
+  },
+  payroll_runs: {
+    list: "payroll.view",
+    show: "payroll.view",
+    create: "payroll.manage",
+    edit: "payroll.manage",
+    delete: "payroll.manage",
+  },
+  employee_loans: {
+    list: "payroll.loans.manage",
+    show: "payroll.loans.manage",
+    create: "payroll.loans.manage",
+    edit: "payroll.loans.manage",
+    delete: "payroll.loans.manage",
+  },
+  employee_pto_adjustments: {
+    list: "people.adjustments.manage",
+    show: "people.adjustments.manage",
+    create: "people.adjustments.manage",
+    edit: "people.adjustments.manage",
+    delete: "people.adjustments.manage",
+  },
 };
 
 export function getCapabilityForResourceAction(
@@ -383,6 +500,8 @@ export function collapsePermissionsForSave(
       : null);
   if (preset && preset in ROLE_PRESETS) {
     out[ROLE_PRESET_KEY] = preset;
+  } else if (typeof caps?.[ROLE_PRESET_KEY] === "string" && isCustomRolePreset(caps[ROLE_PRESET_KEY])) {
+    out[ROLE_PRESET_KEY] = caps[ROLE_PRESET_KEY] as string;
   }
   return out;
 }
@@ -390,11 +509,8 @@ export function collapsePermissionsForSave(
 export function getStoredRolePreset(
   perms: Record<string, boolean | string | undefined> | null | undefined,
 ): RoleSlug | null {
-  if (!perms || typeof perms !== "object") return null;
-  const raw = perms[ROLE_PRESET_KEY];
-  if (typeof raw === "string" && raw in ROLE_PRESETS) {
-    return raw as RoleSlug;
-  }
+  const key = getStoredRolePresetKey(perms);
+  if (key && isBuiltInRolePreset(key)) return key;
   return null;
 }
 
@@ -414,10 +530,13 @@ export function resolveEffectivePermissions(
 
   const stored = identity.module_permissions;
   if (stored != null && typeof stored === "object" && !Array.isArray(stored)) {
-    const preset = getStoredRolePreset(stored);
-    const out: Record<string, boolean | string> = preset
-      ? { ...permissionsMapFromRolePreset(preset) }
-      : {};
+    const presetKey = getStoredRolePresetKey(stored);
+    const out: Record<string, boolean | string> =
+      presetKey && isBuiltInRolePreset(presetKey)
+        ? { ...permissionsMapFromRolePreset(presetKey) }
+        : presetKey && isCustomRolePreset(presetKey)
+          ? { [ROLE_PRESET_KEY]: presetKey }
+          : {};
     for (const id of CAPABILITY_IDS) {
       if (typeof stored[id] === "boolean") {
         out[id] = stored[id];
@@ -428,10 +547,62 @@ export function resolveEffectivePermissions(
     if (typeof stored[ROLE_PRESET_KEY] === "string") {
       out[ROLE_PRESET_KEY] = stored[ROLE_PRESET_KEY];
     }
+    const effectivePreset =
+      getStoredRolePreset(out) ??
+      getStoredRolePreset(stored) ??
+      inferLegacyRolePreset(identity);
+    if (effectivePreset === "user" || effectivePreset === "read_only") {
+      out["view_amounts.show"] = false;
+    }
+    if (effectivePreset === "read_only") {
+      for (const id of CAPABILITY_IDS) {
+        if (isWriteCapability(id)) {
+          out[id] = false;
+        }
+      }
+      out["messaging.send"] = false;
+      out["crm.upload_images"] = false;
+      out["proposals.view"] = false;
+      out["contracts.view"] = false;
+      out["reports.view"] = false;
+    }
+    if (effectivePreset === "user") {
+      for (const id of [
+        "crm.contacts.view",
+        "crm.contacts.create",
+        "crm.contacts.edit",
+        "crm.companies.view",
+        "crm.companies.create",
+        "crm.companies.edit",
+        "proposals.view",
+        "proposals.create",
+        "proposals.edit",
+        "contracts.view",
+        "records.share",
+        "people.view",
+        "people.manage",
+        "people.adjustments.manage",
+        "time.entries.view",
+        "time.entries.manage",
+        "time.entries.approve",
+        "payroll.view",
+        "payroll.manage",
+        "payroll.approve",
+        "payroll.pay",
+        "payroll.loans.manage",
+      ]) {
+        out[id] = false;
+      }
+    }
     return out;
   }
 
-  return permissionsMapFromRolePreset(inferLegacyRolePreset(identity));
+  const legacyPreset = inferLegacyRolePreset(identity);
+  const out = permissionsMapFromRolePreset(legacyPreset);
+  if (legacyPreset === "user" || legacyPreset === "read_only") {
+    out["view_amounts.show"] = false;
+  }
+  return out;
 }
 
 export function hasCapability(

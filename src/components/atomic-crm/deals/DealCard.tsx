@@ -4,6 +4,7 @@ import { ReferenceField } from "@/components/admin/reference-field";
 import { SelectField } from "@/components/admin/select-field";
 import { Card, CardContent } from "@/components/ui/card";
 import { MoneyText } from "@/lib/permissions/MoneyText";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 
 import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -32,6 +33,7 @@ export const DealCardContent = ({
 }) => {
   const { dealCategories } = useConfigurationContext();
   const redirect = useRedirect();
+  const canViewAmounts = useCanViewAmounts();
   const handleClick = () => {
     redirect(`/deals/${deal.id}/show`, undefined, undefined, undefined, {
       _scrollToTop: false,
@@ -73,16 +75,24 @@ export const DealCardContent = ({
                 <CompanyAvatar width={20} height={20} />
               </ReferenceField>
             </div>
-            <p className="text-xs text-muted-foreground">
-              <MoneyText value={deal.amount} />
-              {deal.category && ", "}
-              <SelectField
-                source="category"
-                choices={dealCategories}
-                optionText="label"
-                optionValue="value"
-              />
-            </p>
+            {(canViewAmounts || deal.category) && (
+              <p className="text-xs text-muted-foreground">
+                {canViewAmounts && (
+                  <>
+                    <MoneyText value={deal.amount} />
+                    {deal.category && ", "}
+                  </>
+                )}
+                {deal.category && (
+                  <SelectField
+                    source="category"
+                    choices={dealCategories}
+                    optionText="label"
+                    optionValue="value"
+                  />
+                )}
+              </p>
+            )}
           </CardContent>
         </Card>
       </RecordContextProvider>

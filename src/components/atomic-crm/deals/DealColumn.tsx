@@ -1,5 +1,7 @@
 import { Droppable } from "@hello-pangea/dnd";
 
+import { MoneyText } from "@/lib/permissions/MoneyText";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { getStageColor, getStageLabel } from "./pipelines";
@@ -14,9 +16,13 @@ export const DealColumn = ({
   deals: Deal[];
   pipelineId: string;
 }) => {
-  const totalAmount = deals.reduce((sum, deal) => sum + deal.amount, 0);
+  const totalAmount = deals.reduce(
+    (sum, deal) => sum + Number(deal.amount ?? 0),
+    0,
+  );
 
   const config = useConfigurationContext();
+  const canViewAmounts = useCanViewAmounts();
   const stageColor = getStageColor(config, stage, pipelineId);
   return (
     <div className="flex-1 pb-8">
@@ -28,15 +34,11 @@ export const DealColumn = ({
           />
           {getStageLabel(config, stage, pipelineId)}
         </h3>
-        <p className="text-sm text-muted-foreground">
-          {totalAmount.toLocaleString("en-US", {
-            notation: "compact",
-            style: "currency",
-            currency: "USD",
-            currencyDisplay: "narrowSymbol",
-            minimumSignificantDigits: 3,
-          })}
-        </p>
+        {canViewAmounts && (
+          <p className="text-sm text-muted-foreground">
+            <MoneyText value={totalAmount} compact />
+          </p>
+        )}
       </div>
       <Droppable droppableId={stage}>
         {(droppableProvided, snapshot) => (
