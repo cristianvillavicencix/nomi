@@ -4,6 +4,7 @@
  * When set (object) → frontend uses modules; `roles[]` is auto-synced server-side for Postgres RLS.
  */
 import type { AccessIdentity, AccessRole } from "./canAccess";
+import { getWorkspacePermissionGroups } from "../../settings/workspacePermissionTree";
 import type { MemberModuleKey, MemberModulePermissions } from "../../types";
 import { MEMBER_MODULE_KEYS } from "../../types";
 /** Default form / new user: safe minimum (administrator flag still grants full access in app). */
@@ -125,7 +126,82 @@ function mergeStored(
       base[k] = (stored as Record<MemberModuleKey, boolean>)[k] ?? false;
     }
   }
+  for (const [k, v] of Object.entries(
+    deriveModuleFlagsFromStoredCapabilities(
+      stored as Record<string, unknown>,
+    ),
+  )) {
+    if (v === true) {
+      base[k as MemberModuleKey] = true;
+    }
+  }
   return base;
+}
+
+function deriveModuleFlagsFromStoredCapabilities(
+  stored: Record<string, unknown>,
+): Partial<Record<MemberModuleKey, boolean>> {
+  const flags: Partial<Record<MemberModuleKey, boolean>> = {};
+  for (const modKey of MEMBER_MODULE_KEYS) {
+    const prefix = `${modKey}.`;
+    const anyChild = Object.entries(stored).some(
+      ([key, value]) => key.startsWith(prefix) && value === true,
+    );
+    if (anyChild || stored[modKey] === true) {
+      flags[modKey] = true;
+    }
+  }
+  return flags;
+}
+
+const WRITE_ACTIONS = new Set(["create", "edit", "delete", "write"]);
+
+function capabilityForResourceAction(
+  resource: string,
+  action: string,
+): string | null {
+  if (!WRITE_ACTIONS.has(action)) return null;
+  if (
+    resource === "conversation_messages" ||
+    resource === "conversations" ||
+    resource === "conversation_participants"
+  ) {
+    return "messaging.send";
+  }
+  return null;
+}
+
+/** Whether a granular capability (e.g. messaging.send) is enabled for this member. */
+export function hasMemberCapability(
+  identity: AccessIdentity | string | null | undefined,
+  capabilityId: string,
+): boolean {
+  if (!identity || typeof identity !== "object") return false;
+  if (identity.administrator === true) return true;
+
+  const group = getWorkspacePermissionGroups().find((entry) =>
+    entry.items.some((item) => item.id === capabilityId),
+  );
+  if (!group) return true;
+
+  const modules = resolveEffectiveModules(identity);
+  if (!modules[group.moduleKey]) return false;
+
+  const stored = identity.module_permissions;
+  if (stored == null || typeof stored !== "object") {
+    return modules[group.moduleKey];
+  }
+
+  if (typeof stored[capabilityId] === "boolean") {
+    return stored[capabilityId] as boolean;
+  }
+
+  const hasGranular = group.items.some(
+    (item) => typeof stored[item.id] === "boolean",
+  );
+  if (hasGranular) return false;
+
+  return modules[group.moduleKey];
 }
 
 /** Effective flags for routing + CRM permission checks. */
@@ -268,11 +344,19 @@ export function canAccessResourceWithModules(
   resource: string,
   identity: AccessIdentity,
   isLbs: boolean,
+  action = "list",
 ): boolean {
   const mods = resolveEffectiveModules(identity);
   const hit = isLbs
     ? moduleAllowsLbsResource(resource, mods)
     : moduleAllowsContractorResource(resource, mods);
+  if (hit === false) return false;
+
+  const writeCapability = capabilityForResourceAction(resource, action);
+  if (writeCapability != null) {
+    return hasMemberCapability(identity, writeCapability);
+  }
+
   if (hit != null) return hit;
   return true;
 }

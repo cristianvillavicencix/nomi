@@ -13,7 +13,18 @@ import {
   SmsMessageMedia,
 } from "@/lbs/messages/ClientSmsComposer";
 import { getContactDisplayName } from "@/lbs/messages/messageContactUtils";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { cn } from "@/lib/utils";
+
+const SEND_MESSAGES_CAPABILITY = "messaging.send";
+
+const SendDisabledNotice = () => (
+  <p className="text-center text-sm text-muted-foreground">
+    You don&apos;t have permission to send messages. Ask an administrator to
+    enable <span className="text-foreground">Send messages</span> in Settings →
+    Users.
+  </p>
+);
 
 const MessageBubble = ({
   message,
@@ -83,6 +94,7 @@ export const ConversationThread = ({
   const [body, setBody] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const [create, { isPending }] = useCreate();
+  const canSendMessages = useMemberCapability(SEND_MESSAGES_CAPABILITY);
   const { messages, isPending: isLoadingMessages, refetch } = useConversationMessages(
     conversation?.id,
   );
@@ -129,6 +141,11 @@ export const ConversationThread = ({
       return;
     }
 
+    if (!canSendMessages) {
+      notify("You don't have permission to send messages.", { type: "warning" });
+      return;
+    }
+
     if (!conversation) return;
 
     create(
@@ -149,7 +166,9 @@ export const ConversationThread = ({
           markConversationRead?.(conversation.id, sentAt);
         },
         onError: () => {
-          notify("Failed to send message", { type: "error" });
+          notify("Failed to send message. You may not have permission to send messages.", {
+            type: "error",
+          });
         },
       },
     );
@@ -200,6 +219,7 @@ export const ConversationThread = ({
           contact={composerContact ?? clientSmsDraft?.contact}
           dealId={clientSmsDraft?.dealId ?? conversation?.deal_id}
           conversationId={conversation?.id}
+          disabled={!canSendMessages}
           onSent={({ conversation: nextConversation, message }) => {
             onClientSmsSent?.(nextConversation);
             if (message && nextConversation?.id != null) {
@@ -208,7 +228,7 @@ export const ConversationThread = ({
           }}
         />
         </div>
-      ) : (
+      ) : canSendMessages ? (
         <form
           onSubmit={handleSubmit}
           className="mt-auto shrink-0 border-t border-border/40 bg-background px-4 pt-5 pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
@@ -231,6 +251,10 @@ export const ConversationThread = ({
             </Button>
           </div>
         </form>
+      ) : (
+        <div className="mt-auto shrink-0 border-t border-border/40 px-4 py-4">
+          <SendDisabledNotice />
+        </div>
       )}
     </div>
   );

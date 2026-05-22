@@ -3,6 +3,7 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { UserMiddleware } from "../_shared/authentication.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
+import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
 import {
   assertMemberCanAccessConversation,
@@ -37,6 +38,13 @@ Deno.serve((req: Request) =>
       const memberId = member?.id != null ? Number(member.id) : null;
       if (!orgId || !memberId) {
         return createErrorResponse(403, "Organization not found");
+      }
+
+      if (!hasMemberCapability(member, "messaging.send")) {
+        return createErrorResponse(
+          403,
+          "You don't have permission to send messages.",
+        );
       }
 
       try {

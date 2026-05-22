@@ -36,7 +36,8 @@ export const MEMBER_MODULE_KEYS = [
 export type MemberModuleKey = (typeof MEMBER_MODULE_KEYS)[number];
 
 /** Stored in organization_members.module_permissions (JSON); drives UI + synced roles[]. */
-export type MemberModulePermissions = Partial<Record<MemberModuleKey, boolean>>;
+export type MemberModulePermissions = Partial<Record<MemberModuleKey, boolean>> &
+  Record<string, boolean | undefined>;
 
 export type OrganizationMemberFormData = {
   avatar?: RAFile | null;

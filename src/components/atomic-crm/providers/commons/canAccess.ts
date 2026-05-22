@@ -101,7 +101,12 @@ export const canAccess = <
   }
 
   if (typeof identity === "object" && identity.module_permissions != null) {
-    return canAccessResourceWithModules(params.resource, identity as AccessIdentity, isLbsMode());
+    return canAccessResourceWithModules(
+      params.resource,
+      identity as AccessIdentity,
+      isLbsMode(),
+      params.action,
+    );
   }
 
   const canAccessFinance = legacyRoleFinance(roles);

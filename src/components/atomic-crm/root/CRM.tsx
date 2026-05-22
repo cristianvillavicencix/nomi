@@ -10,9 +10,10 @@ import { browserReactRouterProvider } from "@/lib/browserReactRouterProvider";
 import { useEffect, useMemo } from "react";
 import { Route } from "react-router";
 import { Navigate } from "react-router";
-import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { createCrmQueryClient } from "@/lib/queryCache";
+import { registerCrmQueryClient } from "@/components/atomic-crm/providers/queryInvalidation";
 import { Admin } from "@/components/admin/admin";
 import { ForgotPasswordPage } from "@/components/supabase/forgot-password-page";
 import { SetPasswordPage } from "@/components/supabase/set-password-page";
@@ -260,9 +261,27 @@ export const CRM = ({
   );
 };
 
+const useCrmQueryClient = () => {
+  const queryClient = useMemo(() => createCrmQueryClient(), []);
+
+  useEffect(() => {
+    registerCrmQueryClient(queryClient);
+    return () => registerCrmQueryClient(null);
+  }, [queryClient]);
+
+  return queryClient;
+};
+
 const DesktopAdmin = (props: CoreAdminProps) => {
+  const queryClient = useCrmQueryClient();
+
   return (
-    <Admin layout={withLbsMessagesProvider(DesktopLayout)} dashboard={Dashboard} {...props}>
+    <Admin
+      queryClient={queryClient}
+      layout={withLbsMessagesProvider(DesktopLayout)}
+      dashboard={Dashboard}
+      {...props}
+    >
       <CustomRoutes noLayout>
         <Route path={SignupPage.path} element={<SignupPage />} />
         <Route
@@ -544,17 +563,7 @@ const ProtectedRoute = ({
 };
 
 const MobileAdmin = (props: CoreAdminProps) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        gcTime: 1000 * 60 * 60 * 24, // 24 hours
-        networkMode: "offlineFirst",
-      },
-      mutations: {
-        networkMode: "offlineFirst",
-      },
-    },
-  });
+  const queryClient = useCrmQueryClient();
   const asyncStoragePersister = createAsyncStoragePersister({
     storage: localStorage,
   });
@@ -562,7 +571,10 @@ const MobileAdmin = (props: CoreAdminProps) => {
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister: asyncStoragePersister }}
+      persistOptions={{
+        persister: asyncStoragePersister,
+        maxAge: 1000 * 60 * 60 * 4,
+      }}
     >
       <Admin
         queryClient={queryClient}

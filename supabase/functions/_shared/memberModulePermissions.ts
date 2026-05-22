@@ -15,23 +15,91 @@ const MODULE_KEYS = [
   "view_amounts",
 ] as const;
 
-export type ModulePermissionRecord = Record<
-  (typeof MODULE_KEYS)[number],
-  boolean
->;
+export type ModuleKey = (typeof MODULE_KEYS)[number];
+
+/** Module keys plus dotted capability ids (e.g. messaging.send). */
+export type ModulePermissionRecord = Record<string, boolean>;
+
+export function deriveModuleFlagsFromCapabilities(
+  stored: Record<string, unknown>,
+): Partial<Record<ModuleKey, boolean>> {
+  const flags: Partial<Record<ModuleKey, boolean>> = {};
+  for (const modKey of MODULE_KEYS) {
+    const prefix = `${modKey}.`;
+    const anyChild = Object.entries(stored).some(
+      ([key, value]) => key.startsWith(prefix) && value === true,
+    );
+    if (anyChild || stored[modKey] === true) {
+      flags[modKey] = true;
+    }
+  }
+  return flags;
+}
 
 export function normalizeModulePermissions(
   raw: unknown,
 ): ModulePermissionRecord {
-  const out = {} as ModulePermissionRecord;
+  const out: ModulePermissionRecord = {};
   for (const k of MODULE_KEYS) out[k] = false;
+
   if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
     const o = raw as Record<string, unknown>;
-    for (const k of MODULE_KEYS) {
-      if (typeof o[k] === "boolean") out[k] = o[k];
+    for (const [key, val] of Object.entries(o)) {
+      if (typeof val === "boolean") out[key] = val;
     }
   }
+
+  for (const [modKey, enabled] of Object.entries(
+    deriveModuleFlagsFromCapabilities(out),
+  )) {
+    if (enabled === true) {
+      out[modKey] = true;
+    }
+  }
+
   return out;
+}
+
+export function hasMemberCapability(
+  member: {
+    administrator?: boolean | null;
+    module_permissions?: unknown;
+  } | null | undefined,
+  capabilityId: string,
+): boolean {
+  if (!member) return false;
+  if (member.administrator === true) return true;
+
+  const stored =
+    member.module_permissions != null &&
+    typeof member.module_permissions === "object" &&
+    !Array.isArray(member.module_permissions)
+      ? (member.module_permissions as Record<string, unknown>)
+      : null;
+
+  const modKey = capabilityId.split(".")[0] as ModuleKey;
+  const modulePrefix = `${modKey}.`;
+
+  const moduleEnabled =
+    stored?.[modKey] === true ||
+    Object.entries(stored ?? {}).some(
+      ([key, value]) => key.startsWith(modulePrefix) && value === true,
+    );
+
+  if (!moduleEnabled) return false;
+
+  if (stored == null) return true;
+
+  if (typeof stored[capabilityId] === "boolean") {
+    return stored[capabilityId] as boolean;
+  }
+
+  const hasGranular = Object.keys(stored).some((key) =>
+    key.startsWith(modulePrefix),
+  );
+  if (hasGranular) return false;
+
+  return stored[modKey] === true;
 }
 
 export function hasAnyOperationalModule(mod: ModulePermissionRecord): boolean {

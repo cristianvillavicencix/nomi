@@ -49,7 +49,6 @@ import {
 } from "@/components/atomic-crm/tasks/taskConstants";
 import { isTaskOverdue } from "@/components/atomic-crm/tasks/taskStats";
 import { TaskDescriptionCell } from "@/components/atomic-crm/tasks/TaskDescriptionCell";
-import { TaskParticipantProgress } from "@/components/atomic-crm/tasks/TaskParticipantProgress";
 import { useTaskCompletionToggle } from "@/components/atomic-crm/tasks/useTaskCompletionToggle";
 import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
 import {
@@ -218,7 +217,7 @@ const TaskTableRow = ({
     (task.assignee_person_ids?.length ?? 0) > 0 ||
     (task.collaborator_person_ids?.length ?? 0) > 0 ||
     (task.mentioned_member_ids?.length ?? 0) > 0 ? (
-      <TaskAssignedAvatars task={task} />
+      <TaskAssignedAvatars task={task} participants={participants} />
     ) : (
       <ReferenceField
         source="organization_member_id"
@@ -273,11 +272,6 @@ const TaskTableRow = ({
             text={task.text}
             isDone={isDoneForUser}
             useMentions={isSimple}
-            footer={
-              usesParticipantCompletion && participants.length > 1 ? (
-                <TaskParticipantProgress participants={participants} />
-              ) : null
-            }
           />
         </TableCell>
 
@@ -336,12 +330,7 @@ const TaskTableRow = ({
         <TableCell
           className={`text-sm text-muted-foreground align-top ${isSimple ? "" : "hidden md:table-cell"}`}
         >
-          <div className="flex flex-col gap-1">
-            {assignedCell}
-            {!isSimple && usesParticipantCompletion && participants.length > 1 ? (
-              <TaskParticipantProgress participants={participants} />
-            ) : null}
-          </div>
+          {assignedCell}
         </TableCell>
 
         <TableCell className={`align-top ${isSimple ? "" : "hidden lg:table-cell"}`}>

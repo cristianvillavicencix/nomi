@@ -23,7 +23,9 @@ import { getActivityLog } from "../commons/activity";
 import {
   persistTaskAssignmentSideEffects,
   prepareTaskWriteData,
+  taskAssignmentFieldsChanged,
 } from "../../tasks/persistTaskAssignmentSideEffects";
+import { invalidateResourceQueries } from "../queryInvalidation";
 import { prepareCalendarEventWriteData } from "@/lbs/calendar/calendarEventWriteData";
 import type { GetScopedTasksParams } from "../../tasks/scopedTasks";
 import { collectMyProjectDealIds, filterScopedTasks } from "../../tasks/scopedTasksFilter";
@@ -1641,6 +1643,14 @@ const processConfigLogo = async (logo: any): Promise<string> => {
   return logo?.src ?? "";
 };
 
+const taskUpdateContextById = new Map<
+  string,
+  {
+    previous: Record<string, unknown>;
+    skipSideEffects: boolean;
+  }
+>();
+
 const lifeCycleCallbacks: ResourceCallbacks[] = [
   {
     resource: "conversations",
@@ -1861,6 +1871,13 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
         ...(params.data as Record<string, unknown>),
       };
       const writeData = prepareTaskWriteData(merged);
+      taskUpdateContextById.set(String(params.id), {
+        previous: (params.previousData ?? merged) as Record<string, unknown>,
+        skipSideEffects: Boolean(
+          (params.meta as { skipTaskAssignmentSideEffects?: boolean } | undefined)
+            ?.skipTaskAssignmentSideEffects,
+        ),
+      });
       return {
         ...params,
         data: {
@@ -1878,11 +1895,28 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       return result;
     },
     afterUpdate: async (result, dataProvider) => {
+      const context = taskUpdateContextById.get(String(result.data.id));
+      taskUpdateContextById.delete(String(result.data.id));
+
+      if (context?.skipSideEffects) {
+        return result;
+      }
+
+      if (
+        context?.previous &&
+        !taskAssignmentFieldsChanged(
+          context.previous,
+          result.data as Record<string, unknown>,
+        )
+      ) {
+        return result;
+      }
+
       await persistTaskAssignmentSideEffects(
         dataProvider,
         result.data.id,
         result.data as Record<string, unknown>,
-        result.data as Record<string, unknown>,
+        context?.previous,
       );
       return result;
     },
@@ -1905,10 +1939,49 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   },
 ];
 
-export const dataProvider = withLifecycleCallbacks(
-  dataProviderWithCustomMethods,
-  lifeCycleCallbacks,
-) as CrmDataProvider;
+const wrapDataProviderWithQueryInvalidation = (
+  provider: CrmDataProvider,
+): CrmDataProvider => {
+  const invalidate = (resource: string) => {
+    void invalidateResourceQueries(resource);
+  };
+
+  return {
+    ...provider,
+    async create(resource, params) {
+      const result = await provider.create(resource, params);
+      invalidate(resource);
+      return result;
+    },
+    async update(resource, params) {
+      const result = await provider.update(resource, params);
+      invalidate(resource);
+      return result;
+    },
+    async updateMany(resource, params) {
+      const result = await provider.updateMany(resource, params);
+      invalidate(resource);
+      return result;
+    },
+    async delete(resource, params) {
+      const result = await provider.delete(resource, params);
+      invalidate(resource);
+      return result;
+    },
+    async deleteMany(resource, params) {
+      const result = await provider.deleteMany(resource, params);
+      invalidate(resource);
+      return result;
+    },
+  };
+};
+
+export const dataProvider = wrapDataProviderWithQueryInvalidation(
+  withLifecycleCallbacks(
+    dataProviderWithCustomMethods,
+    lifeCycleCallbacks,
+  ) as CrmDataProvider,
+);
 
 const applyFullTextSearch =
   (columns: string[], options: { useContactFtsColumns?: boolean } = {}) =>

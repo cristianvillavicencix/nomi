@@ -115,7 +115,7 @@ export const createTaskTagNotifications = async (
 
   const [{ data: people }, { data: members }] = await Promise.all([
     personIds.length > 0
-      ? dataProvider.getList<{ id: Identifier; email?: string | null }>("people", {
+      ? dataProvider.getList<{ id: Identifier; email?: string | null; org_id?: Identifier | null }>("people", {
           filter: { "id@in": `(${personIds.join(",")})` },
           pagination: { page: 1, perPage: personIds.length },
           sort: { field: "id", order: "ASC" },
@@ -177,5 +177,5 @@ export const createTaskTagNotifications = async (
     );
   });
 
-  await Promise.all(notifications);
+  await Promise.allSettled(notifications);
 };

@@ -57,7 +57,7 @@ type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];
 const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = isLbsMode()
   ? [
       { id: "general", label: "Company Settings" },
-      { id: "users", label: "Users & Team Roles" },
+      { id: "users", label: "Users" },
       { id: "messaging", label: "Messaging" },
       { id: "projects", label: "Project Stages" },
       { id: "notes", label: "Lead Statuses" },
@@ -65,7 +65,7 @@ const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = isLbsMode()
     ]
   : [
       { id: "general", label: "General" },
-      { id: "users", label: "Users & access" },
+      { id: "users", label: "Users" },
       { id: "payments", label: "Payments" },
       { id: "projects", label: "Projects" },
       { id: "notes", label: "Notes" },
@@ -321,7 +321,8 @@ const SettingsFormFields = () => {
   const dealPipelines: DealPipeline[] = watch("dealPipelines") ?? [];
 
   const tabParam = searchParams.get("tab");
-  const normalizedTab = tabParam === "plans" ? "users" : tabParam;
+  const normalizedTab =
+    tabParam === "plans" || tabParam === "roles" ? "users" : tabParam;
   const activeTab: SettingsTabId = isSettingsTabId(normalizedTab)
     ? normalizedTab
     : "general";
@@ -342,7 +343,9 @@ const SettingsFormFields = () => {
   );
 
   useLayoutEffect(() => {
-    if (searchParams.get("tab") !== "plans") return;
+    if (searchParams.get("tab") !== "plans" && searchParams.get("tab") !== "roles") {
+      return;
+    }
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);

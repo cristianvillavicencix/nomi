@@ -181,6 +181,9 @@ export const authProvider: AuthProvider = {
         administrator: sale.administrator,
         role: sale.administrator ? "admin" : "user",
         roles: sale.roles ?? [],
+        module_permissions:
+          (sale.module_permissions as MemberModulePermissions | null | undefined) ??
+          null,
       },
       params,
     );

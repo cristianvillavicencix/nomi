@@ -25,7 +25,6 @@ import {
   getTaskPriorityLabel,
 } from "@/components/atomic-crm/tasks/taskConstants";
 import { TaskMentionText } from "@/components/atomic-crm/tasks/TaskMentionText";
-import { TaskParticipantProgress } from "@/components/atomic-crm/tasks/TaskParticipantProgress";
 import { useTaskCompletionToggle } from "@/components/atomic-crm/tasks/useTaskCompletionToggle";
 import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -131,11 +130,6 @@ export const Task = ({
             <div className="text-sm">
               {isLbsMode() ? <TaskMentionText text={task.text} /> : task.text}
             </div>
-            {usesParticipantCompletion && participants.length > 1 ? (
-              <div className="mt-1">
-                <TaskParticipantProgress participants={participants} />
-              </div>
-            ) : null}
             <div className="text-sm text-muted-foreground">
               due&nbsp;
               <DateField source="due_date" record={task} />
@@ -147,7 +141,7 @@ export const Task = ({
                     (task.collaborator_person_ids?.length ?? 0) > 0 ||
                     (task.mentioned_member_ids?.length ?? 0) > 0) ? (
                     <span className="inline-flex align-middle">
-                      <TaskAssignedAvatars task={task} />
+                      <TaskAssignedAvatars task={task} participants={participants} />
                     </span>
                   ) : (
                     <ReferenceField

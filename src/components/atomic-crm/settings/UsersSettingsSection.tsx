@@ -9,20 +9,15 @@ import {
   useNotify,
   useRefresh,
 } from "ra-core";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, Fragment } from "react";
 import { useController, useFormContext } from "react-hook-form";
 import { useSearchParams } from "react-router";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { EmailInput } from "@/components/admin/email-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +33,6 @@ const SKIP_INVITE_SEAT_BILLING = inviteBillingSeatGateDisabled();
 import type { AccessIdentity } from "../providers/commons/canAccess";
 import {
   deriveRolesFromModulePermissions,
-  defaultModulePermissionsObject,
   resolveEffectiveModules,
 } from "../providers/commons/memberModuleAccess";
 import type { CrmDataProvider } from "../providers/types";
@@ -47,7 +41,11 @@ import type {
   OrganizationMember,
   OrganizationMemberFormData,
 } from "../types";
-import { MEMBER_MODULE_KEYS } from "../types";
+import {
+  collapsePermissionsForSave,
+  expandPermissionsForForm,
+  getWorkspacePermissionGroups,
+} from "./workspacePermissionTree";
 
 const BILLING_ALLOWS_SEATS = new Set([
   "active",
@@ -95,76 +93,7 @@ const MODULE_SUMMARY_LABELS: Record<MemberModuleKey, string> = {
   view_amounts: "Amount visibility",
 };
 
-const MODULE_SETTINGS_CHOICES: {
-  key: MemberModuleKey;
-  label: string;
-  description: string;
-}[] = [
-  {
-    key: "crm",
-    label: "CRM",
-    description:
-      "Contacts, companies, tasks, pipeline, and baseline deal views.",
-  },
-  {
-    key: "proposals",
-    label: "Proposals & contracts",
-    description: "Proposals, contract documents, and line items tied to CRM.",
-  },
-  {
-    key: "forms",
-    label: "Forms",
-    description: "Hosted forms and form submissions.",
-  },
-  {
-    key: "support",
-    label: "Support",
-    description: "Tickets and inbound support threads.",
-  },
-  {
-    key: "messaging",
-    label: "Messaging",
-    description: "Internal conversations workspace.",
-  },
-  {
-    key: "deal_operations",
-    label: "Deal operations",
-    description:
-      "Resources, subcontractors, scheduling — without financial ledgers.",
-  },
-  {
-    key: "deal_financials",
-    label: "Deal financial data",
-    description:
-      "Expenses, change orders, commissions, and posted client collections.",
-  },
-  {
-    key: "payroll",
-    label: "Payroll",
-    description: "Pay runs, payouts, deductions, loans.",
-  },
-  {
-    key: "people",
-    label: "People / HR records",
-    description: "Directory, employment, adjustments.",
-  },
-  {
-    key: "time",
-    label: "Time tracking",
-    description: "Time entries tied to payroll or projects.",
-  },
-  {
-    key: "reports",
-    label: "Reports workspace",
-    description: "Cross-cutting reporting across enabled areas.",
-  },
-  {
-    key: "view_amounts",
-    label: "Show dollar amounts",
-    description:
-      "Unmask amounts in CRM and deals wherever they appear (financial columns, cards).",
-  },
-];
+const getModuleAreas = () => getWorkspacePermissionGroups();
 
 type UserDialogState =
   | { mode: "create" }
@@ -175,53 +104,74 @@ type UserFormValues = OrganizationMemberFormData & { id?: number | string };
 const UserModulesInput = ({ disabled }: { disabled: boolean }) => {
   const { field } = useController<UserFormValues>({
     name: "module_permissions",
-    defaultValue: defaultModulePermissionsObject(),
+    defaultValue: {},
   });
 
-  const mod = {
-    ...defaultModulePermissionsObject(),
+  const groups = getWorkspacePermissionGroups();
+  const caps = {
     ...(typeof field.value === "object" && field.value !== null
       ? field.value
       : {}),
-  } satisfies Record<MemberModuleKey, boolean>;
+  } satisfies Record<string, boolean>;
 
-  const toggle = (key: MemberModuleKey, checked: boolean) => {
-    field.onChange({
-      ...defaultModulePermissionsObject(),
-      ...mod,
-      [key]: checked,
-    });
+  const setCapability = (id: string, checked: boolean) => {
+    const next = { ...caps, [id]: checked };
+    field.onChange(collapsePermissionsForSave(next));
   };
 
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium">Access by area</p>
+        <p className="text-sm font-medium">Workspace areas</p>
         <p className="text-xs text-muted-foreground">
-          Turn sections of the workspace on per person. Payroll and HR routes
-          still mirror into legacy database roles for reports and policies —
-          administrators always have everything.
+          Each area has its own permissions. Turn switches on for what this
+          person can use.
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {MODULE_SETTINGS_CHOICES.map((row) => (
-          <label
-            key={row.key}
-            className="flex items-start gap-3 rounded-lg border p-3 text-sm"
-          >
-            <Checkbox
-              checked={mod[row.key]}
-              disabled={disabled}
-              onCheckedChange={(checked) => toggle(row.key, checked === true)}
-            />
-            <span className="space-y-1">
-              <span className="block font-medium">{row.label}</span>
-              <span className="block text-xs text-muted-foreground">
-                {row.description}
-              </span>
-            </span>
-          </label>
-        ))}
+      <div className="overflow-hidden rounded-lg border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/20 text-left text-muted-foreground">
+              <th className="px-4 py-2.5 font-medium">Permission</th>
+              <th className="w-24 px-4 py-2.5 text-right font-medium">
+                Access
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((group) => (
+              <Fragment key={group.moduleKey}>
+                <tr className="border-b border-border/40 bg-muted/30">
+                  <td
+                    colSpan={2}
+                    className="px-4 py-2.5 text-sm font-semibold tracking-tight"
+                  >
+                    {group.label}
+                  </td>
+                </tr>
+                {group.items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-b border-border/40 last:border-0"
+                  >
+                    <td className="px-4 py-2.5 pl-10 text-muted-foreground">
+                      {item.label}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Switch
+                        checked={!!caps[item.id]}
+                        disabled={disabled}
+                        onCheckedChange={(checked) =>
+                          setCapability(item.id, checked)
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -274,11 +224,14 @@ const UserFormFields = ({
           readOnly={isEditingSelf}
         />
       </div>
+
+      <Separator />
+
       <UserModulesInput disabled={administrator} />
       <p className="text-xs text-muted-foreground">
         {administrator
-          ? "Administrator bypasses module switches and retains full access."
-          : "Pick modules that match each teammate's responsibilities. Legacy role tags update automatically behind the scenes."}
+          ? "Administrators can use every area of the workspace."
+          : "Turn on each area this person should see — CRM, messaging, payroll, and the rest."}
       </p>
     </div>
   );
@@ -316,6 +269,10 @@ const UserDialog = ({
           };
 
     const effectiveMods = resolveEffectiveModules(identityDraft);
+    const expandedPermissions = expandPermissionsForForm(
+      sale?.module_permissions ?? null,
+      effectiveMods,
+    );
 
     return {
       id: sale?.id,
@@ -327,7 +284,7 @@ const UserDialog = ({
         effectiveMods,
         identityDraft.administrator,
       ),
-      module_permissions: effectiveMods,
+      module_permissions: expandedPermissions,
       disabled: sale?.disabled ?? false,
       avatar: sale?.avatar ?? null,
     };
@@ -340,15 +297,16 @@ const UserDialog = ({
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (values: UserFormValues) => {
+      const modulePermissions = values.administrator
+        ? null
+        : collapsePermissionsForSave(values.module_permissions ?? {});
       const payload: OrganizationMemberFormData = {
         ...values,
         roles: deriveRolesFromModulePermissions(
-          values.administrator ? {} : (values.module_permissions ?? {}),
+          modulePermissions ?? {},
           values.administrator,
         ),
-        module_permissions: values.administrator
-          ? null
-          : values.module_permissions,
+        module_permissions: modulePermissions,
       };
       if (state?.mode === "edit" && sale) {
         return dataProvider.organizationMemberUpdate(sale.id, payload);
@@ -373,11 +331,16 @@ const UserDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {state.mode === "edit" ? "Edit user" : "New user"}
+            {state.mode === "edit" ? "User & access" : "New user"}
           </DialogTitle>
+          {state.mode === "edit" && sale ? (
+            <DialogDescription>
+              Profile details and which workspace areas {sale.first_name} can use.
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
         <Form
           defaultValues={defaultValues}
@@ -423,7 +386,8 @@ const ModuleBadges = ({ sale }: { sale: OrganizationMember }) => {
     module_permissions: sale.module_permissions ?? null,
   });
 
-  const activeKeys = MEMBER_MODULE_KEYS.filter((k) => mods[k]);
+  const visibleKeys = getModuleAreas().map((area) => area.moduleKey);
+  const activeKeys = visibleKeys.filter((k) => mods[k]);
   if (!activeKeys.length) {
     return (
       <span className="text-xs text-muted-foreground">No modules resolved</span>
@@ -450,9 +414,8 @@ const SectionIntro = ({
 }) =>
   internalOnly ? (
     <p className="text-sm text-muted-foreground">
-      Company administrators invite teammates here. Use the module checklist to
-      grant payroll, HR, CRM, and sales access without handing every person full
-      administrator privileges.
+      Invite teammates and choose which workspace areas each person can use —
+      CRM, messaging, payroll, and more — from one place.
     </p>
   ) : (
     <p className="text-sm text-muted-foreground">
@@ -671,6 +634,16 @@ export const UsersSettingsSection = () => {
 
   const existingAdmin = users.find((user) => user.administrator);
 
+  const openUserEditor = (sale: OrganizationMember) => {
+    if (!isOrgAdmin) {
+      notify("Only a company administrator can edit users.", {
+        type: "warning",
+      });
+      return;
+    }
+    setDialogState({ mode: "edit", sale });
+  };
+
   const onClickNewUser = () => {
     if (!isOrgAdmin) {
       notify(
@@ -728,7 +701,7 @@ export const UsersSettingsSection = () => {
               <tr className="border-b border-border/60 text-left text-muted-foreground">
                 <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">Access</th>
-                <th className="px-4 py-3">Modules</th>
+                <th className="px-4 py-3">Areas</th>
                 {SKIP_INVITE_SEAT_BILLING ? null : (
                   <th className="px-4 py-3">Seat / month</th>
                 )}
@@ -740,7 +713,10 @@ export const UsersSettingsSection = () => {
               {users.map((sale) => (
                 <tr
                   key={sale.id}
-                  className="border-b border-border/40 last:border-0 transition-colors hover:bg-muted/20"
+                  className={`border-b border-border/40 last:border-0 transition-colors hover:bg-muted/20 ${
+                    isOrgAdmin ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => openUserEditor(sale)}
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium">
@@ -781,7 +757,10 @@ export const UsersSettingsSection = () => {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setDialogState({ mode: "edit", sale })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openUserEditor(sale);
+                      }}
                     >
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
@@ -875,9 +854,7 @@ export const UsersSettingsSection = () => {
       <div className="space-y-8 max-w-6xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 space-y-2">
-            <h2 className="text-base font-semibold tracking-tight">
-              Users &amp; access
-            </h2>
+            <h2 className="text-base font-semibold tracking-tight">Users</h2>
             <SectionIntro
               internalOnly={SKIP_INVITE_SEAT_BILLING}
               priceUsd={priceUsd}
@@ -945,8 +922,7 @@ export const UsersSettingsSection = () => {
               {!isOrgAdmin ? (
                 <span className="block">
                   Your workspace administrator must add seats in{" "}
-                  <strong>Settings → Users &amp; access</strong> before you can
-                  invite.
+                  <strong>Settings → Users</strong> before you can invite.
                 </span>
               ) : null}
             </DialogDescription>

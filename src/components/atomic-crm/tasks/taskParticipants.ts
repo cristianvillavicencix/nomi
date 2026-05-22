@@ -60,12 +60,25 @@ export const getTaskParticipantCount = (task: Task) => {
 export const taskRequiresAllParticipantsComplete = (task: Task) =>
   getTaskParticipantCount(task) > 1;
 
-export const getTaskParticipantProgress = (
+export const isParticipantComplete = (
   participants: TaskParticipant[],
-) => {
-  const completed = participants.filter((entry) => entry.completed_at).length;
-  return { completed, total: participants.length };
-};
+  target: { personId?: Identifier; memberId?: Identifier },
+) =>
+  participants.some((entry) => {
+    if (!entry.completed_at) return false;
+    if (
+      target.personId != null &&
+      entry.person_id != null &&
+      String(entry.person_id) === String(target.personId)
+    ) {
+      return true;
+    }
+    return (
+      target.memberId != null &&
+      entry.organization_member_id != null &&
+      String(entry.organization_member_id) === String(target.memberId)
+    );
+  });
 
 export const syncTaskParticipants = async (
   dataProvider: DataProvider,
@@ -141,6 +154,7 @@ export const recomputeTaskDoneDate = async (
     id: task.id,
     data: { done_date: nextDoneDate },
     previousData: task,
+    meta: { skipTaskAssignmentSideEffects: true },
   });
 
   return updated;

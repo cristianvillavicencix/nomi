@@ -43,6 +43,18 @@ export const ClientSmsComposer = ({
     (body.trim().length > 0 || pendingFiles.length > 0) &&
     (conversationId != null || contact?.id != null);
 
+  if (disabled) {
+    return (
+      <div className="border-t border-border/40 px-4 py-4 bg-background">
+        <p className="text-center text-sm text-muted-foreground">
+          You don&apos;t have permission to send messages. Ask an administrator
+          to enable <span className="text-foreground">Send messages</span> in
+          Settings → Users.
+        </p>
+      </div>
+    );
+  }
+
   const addPendingFile = (file: File) => {
     const id = crypto.randomUUID();
     const previewUrl = file.type.startsWith("image/")

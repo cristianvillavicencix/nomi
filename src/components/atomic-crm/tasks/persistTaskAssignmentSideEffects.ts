@@ -17,6 +17,27 @@ export type TaskAssignmentPayload = {
   mentioned_member_ids: number[];
 };
 
+export const TASK_ASSIGNMENT_FIELD_KEYS = [
+  "text",
+  "assignee_person_ids",
+  "collaborator_person_ids",
+  "mentioned_member_ids",
+  "organization_member_id",
+] as const;
+
+export const taskAssignmentFieldsChanged = (
+  previous: Record<string, unknown> | undefined,
+  current: Record<string, unknown>,
+) => {
+  if (!previous) return true;
+
+  return TASK_ASSIGNMENT_FIELD_KEYS.some(
+    (key) =>
+      JSON.stringify(previous[key] ?? null) !==
+      JSON.stringify(current[key] ?? null),
+  );
+};
+
 export const getTaskAssignmentPayload = (
   task: Record<string, unknown>,
 ): TaskAssignmentPayload => {
@@ -54,6 +75,13 @@ export const persistTaskAssignmentSideEffects = async (
   task: Record<string, unknown>,
   previousData?: Record<string, unknown>,
 ) => {
+  if (
+    previousData &&
+    !taskAssignmentFieldsChanged(previousData, task)
+  ) {
+    return;
+  }
+
   const payload = getTaskAssignmentPayload(task);
 
   try {
@@ -65,6 +93,7 @@ export const persistTaskAssignmentSideEffects = async (
         mentioned_member_ids: payload.mentioned_member_ids,
       },
       previousData: previousData ?? task,
+      meta: { skipTaskAssignmentSideEffects: true },
     });
   } catch (error) {
     console.warn("Task assignment columns are not available yet. Apply DB migrations.", error);
@@ -83,6 +112,11 @@ export const persistTaskAssignmentSideEffects = async (
       payload,
       task.organization_member_id as Identifier | null | undefined,
     );
+  } catch (error) {
+    console.warn("Task assignment sync failed. Apply DB migrations.", error);
+  }
+
+  try {
     await createTaskTagNotifications(
       dataProvider,
       taskId,
@@ -91,6 +125,6 @@ export const persistTaskAssignmentSideEffects = async (
       payload.mentioned_member_ids,
     );
   } catch (error) {
-    console.warn("Task assignment sync failed. Apply DB migrations.", error);
+    console.warn("Task tag notifications failed.", error);
   }
 };

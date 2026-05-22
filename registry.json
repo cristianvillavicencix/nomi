@@ -136,10 +136,6 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/tasks/TaskParticipantProgress.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/tasks/TaskNotificationsBanner.tsx",
           "type": "registry:component"
         },
