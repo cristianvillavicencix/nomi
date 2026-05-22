@@ -10,7 +10,12 @@ export const getConversationReadAt = (
   const participant = participations.find(
     (entry) => String(entry.conversation_id) === String(conversationId),
   );
-  return participant?.last_read_at ?? localReadMap[String(conversationId)] ?? null;
+  const fromParticipant = participant?.last_read_at ?? null;
+  const fromLocal = localReadMap[String(conversationId)] ?? null;
+  if (!fromParticipant && !fromLocal) return null;
+  if (!fromParticipant) return fromLocal;
+  if (!fromLocal) return fromParticipant;
+  return Date.parse(fromParticipant) >= Date.parse(fromLocal) ? fromParticipant : fromLocal;
 };
 
 export const isConversationUnread = (

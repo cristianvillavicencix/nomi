@@ -185,8 +185,8 @@ export const MessagesDock = () => {
     >
       <div className="pointer-events-auto flex flex-col items-end gap-3">
         {isDockOpen ? (
-          <div className="flex h-[min(560px,calc(100vh-6rem))] w-[min(920px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl">
-            <div className="flex items-center justify-between gap-3 border-b bg-muted/20 px-4 py-2.5">
+          <div className="flex h-[min(560px,calc(100vh-6rem))] w-[min(920px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border/50 bg-background shadow-xl">
+            <div className="flex items-center justify-between gap-3 border-b border-border/40 bg-background px-4 py-2.5">
               <div className="flex min-w-0 items-center gap-2">
                 <MessageSquare className="size-4 shrink-0 text-primary" />
                 <div className="min-w-0">

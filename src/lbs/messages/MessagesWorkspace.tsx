@@ -58,8 +58,8 @@ export const MessagesWorkspace = ({
     <div className={cn("flex min-h-0 flex-1 overflow-hidden bg-background", className)}>
       <aside
         className={cn(
-          "flex min-h-0 flex-col border-r bg-muted/10",
-          compact ? "w-[280px] shrink-0" : "w-full md:w-[340px] lg:w-[360px]",
+          "flex min-h-0 flex-col border-r border-border/40 bg-background",
+          compact ? "w-[280px] shrink-0" : "w-full md:w-[300px] lg:w-[min(340px,32vw)]",
           !showInbox && "hidden md:flex",
         )}
       >
@@ -79,7 +79,7 @@ export const MessagesWorkspace = ({
 
       <main
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col bg-muted/10",
+          "flex min-h-0 min-w-0 flex-1 flex-col bg-background",
           !showChat && "hidden md:flex",
         )}
       >
@@ -98,7 +98,7 @@ export const MessagesWorkspace = ({
                 compact={compact}
               />
             ) : clientSmsDraft ? (
-              <div className={cn("border-b bg-background px-4", compact ? "py-2" : "py-3")}>
+              <div className={cn("border-b border-border/40 bg-background px-4", compact ? "py-2.5" : "py-3")}>
                 <div className="truncate font-semibold">
                   {getContactDisplayName(clientSmsDraft.contact)}
                 </div>
@@ -107,7 +107,7 @@ export const MessagesWorkspace = ({
                 </div>
               </div>
             ) : null}
-            <div className="min-h-0 flex-1 px-3 pb-3 pt-2">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               <ConversationThread
                 conversation={activeConversation}
                 clientSmsDraft={clientSmsDraft}
@@ -118,9 +118,7 @@ export const MessagesWorkspace = ({
           </>
         ) : (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-            <div className="rounded-full bg-muted p-4">
-              <MessageSquare className="size-8 text-muted-foreground" />
-            </div>
+            <MessageSquare className="size-9 text-muted-foreground/50" />
             <p className="mt-4 text-base font-medium">Select a conversation</p>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
               Pick a chat on the left or search for a client to start an SMS.

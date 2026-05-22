@@ -40,7 +40,7 @@ const MessageSearchContactItem = ({
       type="button"
       disabled={disabled}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/60",
+        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted/35",
         disabled && "opacity-60",
       )}
       onClick={() => onSelect(contact)}
@@ -173,8 +173,8 @@ export const MessagesInboxPanel = ({
     debouncedQuery.length > 0 && (isSearchingContacts || newSmsContacts.length > 0);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-muted/20">
-      <div className={cn("border-b bg-background px-4", compact ? "py-3" : "py-4")}>
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      <div className={cn("border-b border-border/40 px-4", compact ? "py-3" : "py-4")}>
         <div>
           <h1 className={cn("font-semibold", compact ? "text-base" : "text-lg")}>
             {compact ? "Inbox" : "Messages"}
@@ -195,12 +195,12 @@ export const MessagesInboxPanel = ({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search conversations or clients..."
-            className="bg-muted/40 pl-9"
+            className="border-border/60 bg-muted/30 pl-9 shadow-none rounded-full"
           />
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
         {isPending ? null : (
           <>
             {filteredConversations.length > 0 ? (
@@ -235,7 +235,7 @@ export const MessagesInboxPanel = ({
             ) : null}
 
             {showContactsSection ? (
-              <div className={cn(filteredConversations.length > 0 && "mt-4 border-t pt-3")}>
+              <div className={cn(filteredConversations.length > 0 && "mt-4 border-t border-border/40 pt-3")}>
                 <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <UserPlus className="size-3.5" />
                   Start SMS with a contact

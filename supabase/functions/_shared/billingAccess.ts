@@ -1,6 +1,7 @@
 import type { User } from "jsr:@supabase/supabase-js@2";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { getUserOrganizationMember } from "./getUserOrganizationMember.ts";
+import { inviteBillingSeatGateDisabled } from "./inviteBillingGate.ts";
 import { getStripe } from "./stripeClient.ts";
 
 export async function isPlatformOperator(userId: string) {
@@ -64,9 +65,14 @@ const BILLING_ALLOWS_SEATS = new Set([
 
 /**
  * Blocks inviting a user when there is no paid plan or when licensed seats (Stripe quantity)
- * are all in use. Skipped if STRIPE_SECRET_KEY is not set (local dev without billing).
+ * are all in use.
+ * Skipped when `SKIP_USER_INVITE_BILLING` is truthy (internal; Stripe may stay configured),
+ * or if STRIPE_SECRET_KEY is not set (local dev without billing).
  */
 export async function assertSeatsAllowNewInvite(orgId: number) {
+  if (inviteBillingSeatGateDisabled()) {
+    return;
+  }
   if (!Deno.env.get("STRIPE_SECRET_KEY")) {
     return;
   }

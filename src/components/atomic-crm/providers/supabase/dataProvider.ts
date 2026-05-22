@@ -256,6 +256,31 @@ const getOneFromResourceMaybeSingle = async (
   return data;
 };
 
+/**
+ * PostgREST returns 406 (object+json coercion) when an update matches 0 rows under RLS.
+ * Use `.maybeSingle()` plus a clear server message instead of relying on react-admin PATCH.
+ */
+const patchSingletonConfigurationRow = async (config: ConfigurationContextValue) => {
+  const { data, error } = await supabase
+    .from("configuration")
+    .update({ config })
+    .eq("id", 1)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error("configuration.update", error);
+    throw new Error(error.message || "Failed to save configuration");
+  }
+  if (data == null) {
+    throw new Error(
+      "Could not save workspace settings. You must be a company administrator to edit configuration.",
+    );
+  }
+
+  return data;
+};
+
 const dataProviderWithCustomMethods = {
   ...baseDataProvider,
   async create(resource: string, params: any) {
@@ -270,6 +295,16 @@ const dataProviderWithCustomMethods = {
       !canApprovePayroll(params?.meta?.identity ?? identity)
     ) {
       throw new Error("Only owner/admin/accountant can approve time entries");
+    }
+
+    if (resource === "configuration") {
+      const nested = params?.data?.config;
+      const nextConfig =
+        nested != null && typeof nested === "object"
+          ? (nested as ConfigurationContextValue)
+          : (params?.data as ConfigurationContextValue);
+      const data = await patchSingletonConfigurationRow(nextConfig);
+      return { data };
     }
 
     return baseDataProvider.update(resource, params);
@@ -1070,12 +1105,8 @@ const dataProviderWithCustomMethods = {
   async updateConfiguration(
     config: ConfigurationContextValue,
   ): Promise<ConfigurationContextValue> {
-    const { data } = await baseDataProvider.update("configuration", {
-      id: 1,
-      data: { config },
-      previousData: { id: 1 },
-    });
-    return data.config as ConfigurationContextValue;
+    const row = await patchSingletonConfigurationRow(config);
+    return row.config as ConfigurationContextValue;
   },
   async generatePaymentLines(paymentId: Identifier): Promise<number> {
     const { data, error } = await supabase.rpc("generate_payment_lines", {

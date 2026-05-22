@@ -46,9 +46,9 @@ export const ConversationListItem = ({
     <button
       type="button"
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-        isActive ? "bg-primary/10" : "hover:bg-muted/60",
-        isUnread && !isActive && "bg-primary/5",
+        "flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors",
+        isActive ? "bg-muted/50" : "hover:bg-muted/35",
+        isUnread && !isActive && "bg-muted/25",
       )}
       onClick={() => onSelect(conversation)}
     >

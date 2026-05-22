@@ -44,7 +44,12 @@ export const ConversationChatHeader = ({
   });
 
   return (
-    <div className={cn("flex items-center gap-3 border-b bg-background px-4", compact ? "py-2" : "py-3")}>
+    <div
+      className={cn(
+        "flex items-center gap-3 border-b border-border/40 bg-background px-4",
+        compact ? "py-2.5" : "py-3",
+      )}
+    >
       {showBackButton ? (
         <Button
           type="button"

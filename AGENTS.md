@@ -178,6 +178,23 @@ Import `test-data/contacts.csv` via the Contacts page → Import button.
 - Storage (attachments): http://localhost:54323/project/default/storage/buckets/attachments
 - Inbucket (email testing): http://localhost:54324/
 
+### Internal installs without per-seat invite billing
+
+To keep Stripe (Checkout, webhooks, etc.) wired for future use **but stop blocking new users** behind subscription or seat counts:
+
+1. Set **`SKIP_USER_INVITE_BILLING=1`** (or `true` / `yes` / `on`) in Supabase **Edge Function** secrets for the **`users`** function.
+2. Set **`VITE_SKIP_USER_INVITE_BILLING=1`** in the Vite frontend build env so Settings → Users does not open subscribe/add-seat dialogs.
+
+Redeploy the `users` function and rebuild/redeploy the app after changing these. To enforce paid seats again, remove both flags.
+
+Secrets on the hosted project cannot be set from this repo; from the CLI (with Supabase CLI linked), run:
+
+```bash
+supabase secrets set SKIP_USER_INVITE_BILLING=1 --project-ref <your-project-ref>
+```
+
+Or set **SKIP_USER_INVITE_BILLING** = `1` under **Dashboard → Edge Functions → `users` → Secrets**. For local `supabase functions serve`, see `supabase/functions/.env` (tracked in git as `!supabase/functions/.env`). The frontend picks up **`VITE_SKIP_USER_INVITE_BILLING`** from `.env.development` during `make start` — add the same variable to your production host/Vite env when you deploy builds.
+
 ## Important Notes
 
 - The codebase is intentionally small (~15,000 LOC in `src/components/atomic-crm`) for easy customization

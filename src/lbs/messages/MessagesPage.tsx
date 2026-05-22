@@ -65,8 +65,9 @@ export const MessagesPage = () => {
 
   return (
     <PageLayout>
-      <ScrollableContentArea className="px-4 pb-4 md:px-6">
-        <div className="mx-auto flex h-[calc(100vh-7rem)] max-w-6xl overflow-hidden rounded-2xl border bg-background shadow-sm">
+      <ScrollableContentArea className="px-0 pb-2 md:px-3">
+        {/* Full-width split view: no nested card/frame around chat */}
+        <div className="mx-auto flex h-[calc(100vh-7rem)] w-full max-w-[1400px] overflow-hidden px-2 md:px-4">
           <MessagesWorkspace
             conversations={conversations}
             deals={deals}

@@ -12,6 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { DEFAULT_SEAT_USD_PER_MONTH } from "@/platform/billingDefaults";
+import { inviteBillingSeatGateDisabled } from "@/platform/inviteBillingGate";
+
+const SKIP_INVITE_SEAT_BILLING = inviteBillingSeatGateDisabled();
 import type { CrmDataProvider } from "../providers/types";
 import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 
@@ -265,14 +268,20 @@ const RoleBadges = ({ sale }: { sale: OrganizationMember }) => {
   );
 };
 
-const SectionIntro = ({ priceUsd }: { priceUsd: number }) => (
-  <p className="text-sm text-muted-foreground">
-    Each active person needs a paid seat. When you add someone new and you need another seat, this screen
-    walks you to pay, then you can finish the invite. Price:{" "}
-    <span className="text-foreground font-medium">{formatUsd(priceUsd)}</span> / user / month in Stripe
-    (billed for licensed seats).
-  </p>
-);
+const SectionIntro = ({ internalOnly, priceUsd }: { internalOnly: boolean; priceUsd: number }) =>
+  internalOnly ? (
+    <p className="text-sm text-muted-foreground">
+      Company administrators invite teammates here. Use roles below to grant payroll, HR, CRM and other
+      permissions without making everyone an administrator.
+    </p>
+  ) : (
+    <p className="text-sm text-muted-foreground">
+      Each active person needs a paid seat. When you add someone new and you need another seat, this screen
+      walks you to pay, then you can finish the invite. Price:{" "}
+      <span className="text-foreground font-medium">{formatUsd(priceUsd)}</span> / user / month in Stripe
+      (billed for licensed seats).
+    </p>
+  );
 
 export const UsersSettingsSection = () => {
   const notify = useNotify();
@@ -324,12 +333,14 @@ export const UsersSettingsSection = () => {
   const perUserLabel = formatUsd(priceUsd) + " / user / month";
 
   const needsActivePlan = useMemo(() => {
+    if (SKIP_INVITE_SEAT_BILLING) return false;
     if (orgRow == null) return false;
     const s = (orgRow.billing_status ?? "none").trim();
     return !orgRow.stripe_subscription_id || !BILLING_ALLOWS_SEATS.has(s);
   }, [orgRow]);
 
   const atLicensedSeatLimit = useMemo(() => {
+    if (SKIP_INVITE_SEAT_BILLING) return false;
     if (orgRow == null || orgRow.billable_seat_count == null) return false;
     return activeUserCount >= orgRow.billable_seat_count;
   }, [orgRow, activeUserCount]);
@@ -443,7 +454,12 @@ export const UsersSettingsSection = () => {
 
   const onClickNewUser = () => {
     if (!isOrgAdmin) {
-      notify("Only a company administrator can invite new users and manage seats.", { type: "warning" });
+      notify(
+        SKIP_INVITE_SEAT_BILLING
+          ? "Only a company administrator can invite new users."
+          : "Only a company administrator can invite new users and manage seats.",
+        { type: "warning" },
+      );
       return;
     }
     if (orgRow == null) {
@@ -491,7 +507,7 @@ export const UsersSettingsSection = () => {
                 <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">Access</th>
                 <th className="px-4 py-3">Roles</th>
-                <th className="px-4 py-3">Seat / month</th>
+                {SKIP_INVITE_SEAT_BILLING ? null : <th className="px-4 py-3">Seat / month</th>}
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
@@ -517,9 +533,11 @@ export const UsersSettingsSection = () => {
                   <td className="px-4 py-3">
                     <RoleBadges sale={sale} />
                   </td>
-                  <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
-                    {licensed != null && orgRow ? formatUsd(priceUsd) + " /user/mo" : "—"}
-                  </td>
+                  {SKIP_INVITE_SEAT_BILLING ? null : (
+                    <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
+                      {licensed != null && orgRow ? formatUsd(priceUsd) + " /user/mo" : "—"}
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <span className="text-xs text-muted-foreground">
                       {sale.disabled ? "Disabled" : "Active"}
@@ -551,7 +569,7 @@ export const UsersSettingsSection = () => {
   );
 
   const billingStrip =
-    isOrgAdmin && !orgLoading && orgRow ? (
+    SKIP_INVITE_SEAT_BILLING ? null : isOrgAdmin && !orgLoading && orgRow ? (
       <div className="rounded-lg bg-muted/25 p-4 text-sm sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
@@ -591,11 +609,11 @@ export const UsersSettingsSection = () => {
           </div>
         </div>
       </div>
-    ) : !isOrgAdmin ? (
+    ) : !isOrgAdmin && !SKIP_INVITE_SEAT_BILLING ? (
       <p className="text-xs text-muted-foreground">
         Workspace billing and seats are only shown to a company <span className="text-foreground">administrator</span>.
       </p>
-    ) : orgLoading ? (
+    ) : orgLoading && !SKIP_INVITE_SEAT_BILLING ? (
       <p className="text-sm text-muted-foreground flex items-center gap-2">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading billing…
@@ -611,7 +629,7 @@ export const UsersSettingsSection = () => {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 space-y-2">
             <h2 className="text-base font-semibold tracking-tight">Users &amp; roles</h2>
-            <SectionIntro priceUsd={priceUsd} />
+            <SectionIntro internalOnly={SKIP_INVITE_SEAT_BILLING} priceUsd={priceUsd} />
           </div>
           {isOrgAdmin ? (
             <Button type="button" className="shrink-0 self-start" onClick={onClickNewUser} disabled={orgLoading}>

@@ -127,7 +127,7 @@ export const ClientSmsComposer = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border-t bg-background px-3 py-3">
+    <form onSubmit={handleSubmit} className="space-y-2 border-t border-border/40 px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] bg-background">
       {pendingFiles.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {pendingFiles.map((pending) => (
@@ -158,7 +158,7 @@ export const ClientSmsComposer = ({
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-2 rounded-[1.35rem] border border-border/60 bg-muted/25 px-2 py-2 pr-3 dark:bg-muted/20">
         <input
           ref={fileInputRef}
           type="file"
@@ -197,7 +197,7 @@ export const ClientSmsComposer = ({
           onChange={(event) => setBody(event.target.value)}
           onPaste={handlePaste}
           placeholder="Write an SMS… paste text, photos, or form links"
-          className="min-h-[44px] max-h-32 resize-none rounded-2xl bg-muted/40 px-4 py-3"
+          className="min-h-[44px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none focus-visible:ring-0"
           rows={1}
           disabled={disabled || isSending}
           onKeyDown={(event) => {

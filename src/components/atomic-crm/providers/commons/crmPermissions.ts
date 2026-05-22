@@ -121,6 +121,10 @@ export const canMutateCrmResource = ({
   ) {
     return true;
   }
+  // Matches RLS on public.configuration — only admins can insert/update rows.
+  if (resource === "configuration") {
+    return false;
+  }
   const permission = getMutationPermission(resource, action, data);
   if (!permission) return true;
   return canUseCrmPermission(identity, permission);

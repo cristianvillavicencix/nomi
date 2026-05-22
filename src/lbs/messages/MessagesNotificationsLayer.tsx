@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
-import { useGetIdentity } from "ra-core";
+import { useGetIdentity, useNotify } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import type { Conversation, ConversationMessage } from "@/lbs/types";
+import type { Conversation, ConversationMessage, ConversationParticipant } from "@/lbs/types";
 import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
 import {
   MessagesIncomingBannerStack,
   type IncomingMessageNotification,
 } from "@/lbs/messages/MessagesIncomingBanner";
 import { playMessageNotificationSound } from "@/lbs/messages/messageNotificationSound";
-import { getLocalLastReadMap } from "@/lbs/messages/messagesReadStorage";
+import { getConversationReadAt } from "@/lbs/messages/messagesUnreadUtils";
+import { showMessagingDesktopNotification } from "@/lbs/messages/messagingDesktopNotifications";
 import { useInboxConversations } from "@/lbs/messages/useInboxConversations";
 import { useMessagesInboxRealtime } from "@/lbs/messages/useMessagesInboxRealtime";
 import { useMessagesQuickAccess } from "@/lbs/messages/messagesQuickAccessContext";
@@ -52,14 +53,20 @@ const shouldNotifyForMessage = (
 export const MessagesNotificationsLayer = () => {
   const location = useLocation();
   const { identity } = useGetIdentity();
+  const notify = useNotify();
   const { activeConversationId, focusConversation, openInbox, viewConversation } =
     useMessagesQuickAccess();
   const [incomingNotifications, setIncomingNotifications] = useState<
     IncomingMessageNotification[]
   >([]);
 
-  const { conversations, deals, dmParticipants, members, contacts } =
+  const { conversations, deals, dmParticipants, members, contacts, participations } =
     useInboxConversations();
+
+  const participationsRef = useRef<ConversationParticipant[]>(participations);
+  useEffect(() => {
+    participationsRef.current = participations;
+  }, [participations]);
 
   useMessagesInboxRealtime(true);
 
@@ -84,7 +91,9 @@ export const MessagesNotificationsLayer = () => {
   );
 
   const pushNotification = useCallback(
-    (message: ConversationMessage) => {
+    (
+      message: ConversationMessage,
+    ) => {
       const conversation = conversationsById[String(message.conversation_id)];
       const display = conversation
         ? getConversationDisplay({
@@ -112,8 +121,35 @@ export const MessagesNotificationsLayer = () => {
       });
 
       playMessageNotificationSound();
+
+      /** In-app toast: every route unless user is already on /messages viewing this same thread (banner still shows). Hidden tab → always toast. */
+      const onMessagesRoute = location.pathname.startsWith("/messages");
+      if (
+        !onMessagesRoute ||
+        typeof document === "undefined" ||
+        document.visibilityState !== "visible" ||
+        String(activeConversationId ?? "") !== String(message.conversation_id)
+      ) {
+        notify(`${notification.title}: ${notification.preview}`, { type: "info" });
+      }
+
+      showMessagingDesktopNotification({
+        title: notification.title,
+        body: notification.preview,
+        tag: notification.conversationId,
+      });
     },
-    [contacts, conversationsById, deals, dmParticipants, identity?.id, members],
+    [
+      activeConversationId,
+      contacts,
+      conversationsById,
+      deals,
+      dmParticipants,
+      identity?.id,
+      location.pathname,
+      members,
+      notify,
+    ],
   );
 
   useEffect(() => {
@@ -130,8 +166,10 @@ export const MessagesNotificationsLayer = () => {
           const message = payload.new as ConversationMessage | undefined;
           if (!message?.conversation_id) return;
 
-          const readAt =
-            getLocalLastReadMap()[String(message.conversation_id)] ?? null;
+          const readAt = getConversationReadAt(
+            message.conversation_id,
+            participationsRef.current,
+          );
 
           if (
             !shouldNotifyForMessage(

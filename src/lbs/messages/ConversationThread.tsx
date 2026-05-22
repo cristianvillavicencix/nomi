@@ -27,13 +27,13 @@ const MessageBubble = ({
   const inboundClient = isClientSms && message.direction === "inbound";
 
   return (
-    <div className={cn("flex px-1", isOwn ? "justify-end" : "justify-start")}>
+    <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[min(78%,520px)] rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+          "max-w-[min(78%,560px)] rounded-2xl px-3.5 py-2.5 text-[15px] leading-snug",
           isOwn
             ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md border bg-background",
+            : "rounded-bl-md bg-muted/50 text-foreground dark:bg-muted/30",
         )}
       >
         {message.media_url ? (
@@ -145,6 +145,8 @@ export const ConversationThread = ({
       {
         onSuccess: () => {
           setBody("");
+          const sentAt = new Date().toISOString();
+          markConversationRead?.(conversation.id, sentAt);
         },
         onError: () => {
           notify("Failed to send message", { type: "error" });
@@ -159,8 +161,8 @@ export const ConversationThread = ({
   const draftCompany = clientSmsDraft?.contact.company_name?.trim();
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-xl border bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.02),transparent_55%)]">
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4">
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {isDraftOnly ? (
           <div className="flex h-full min-h-[220px] flex-col items-center justify-center px-4 text-center">
             <p className="text-sm font-medium">{draftLabel}</p>
@@ -193,7 +195,8 @@ export const ConversationThread = ({
       </div>
 
       {isClientSms ? (
-        <ClientSmsComposer
+        <div className="mt-auto shrink-0 bg-background">
+          <ClientSmsComposer
           contact={composerContact ?? clientSmsDraft?.contact}
           dealId={clientSmsDraft?.dealId ?? conversation?.deal_id}
           conversationId={conversation?.id}
@@ -204,26 +207,29 @@ export const ConversationThread = ({
             }
           }}
         />
+        </div>
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="flex items-center gap-2 border-t bg-background px-3 py-3"
+          className="mt-auto shrink-0 border-t border-border/40 bg-background px-4 pt-5 pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
         >
-          <Input
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            placeholder="Write a message..."
-            className="h-11 rounded-full bg-muted/40 px-4"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            className="size-11 shrink-0 rounded-full"
-            disabled={isPending || !body.trim()}
-            aria-label="Send message"
-          >
-            <Send className="size-4" />
-          </Button>
+          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/25 px-1 py-1 pl-4 shadow-none dark:bg-muted/20">
+            <Input
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              placeholder="Write a message…"
+              className="h-10 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              className="size-9 shrink-0 rounded-full"
+              disabled={isPending || !body.trim()}
+              aria-label="Send message"
+            >
+              <Send className="size-4" />
+            </Button>
+          </div>
         </form>
       )}
     </div>

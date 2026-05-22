@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { MessagingSettingsPublic } from "@/lbs/types";
+import { DesktopMessageAlertsSection } from "@/lbs/settings/DesktopMessageAlertsSection";
 
 export const MessagingSettingsSection = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -19,6 +19,7 @@ export const MessagingSettingsSection = () => {
   const { data, isPending, error } = useQuery({
     queryKey: ["messaging-settings"],
     queryFn: () => dataProvider.getMessagingSettings(),
+    enabled: isAdmin,
   });
 
   const [accountSid, setAccountSid] = useState("");
@@ -73,117 +74,111 @@ export const MessagingSettingsSection = () => {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="max-w-3xl rounded-xl border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-        Only administrators can configure Twilio SMS.
-      </div>
-    );
-  }
-
-  if (isPending) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        Loading messaging settings…
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-3xl rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-6 text-sm text-destructive">
-        Could not load messaging settings. Apply the latest database migration and deploy edge
-        functions.
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-3xl space-y-8">
-      <div>
-        <h2 className="text-sm font-medium text-muted-foreground">Twilio SMS</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Connect your Twilio number to send and receive SMS with clients from Messages.
-        </p>
-      </div>
+      <DesktopMessageAlertsSection />
 
-      <div className="grid gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="twilio-account-sid">Account SID</Label>
-          <Input
-            id="twilio-account-sid"
-            value={accountSid}
-            onChange={(event) => setAccountSid(event.target.value)}
-            placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-            autoComplete="off"
-          />
+      {!isAdmin ? (
+        <div className="rounded-xl border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+          Only administrators can configure Twilio SMS.
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="twilio-auth-token">Auth token</Label>
-          <Input
-            id="twilio-auth-token"
-            type="password"
-            value={authToken}
-            onChange={(event) => setAuthToken(event.target.value)}
-            placeholder={data?.has_auth_token ? "••••••••••••••••" : "Your Twilio auth token"}
-            autoComplete="new-password"
-          />
-          <p className="text-xs text-muted-foreground">{configuredHint}</p>
+      ) : isPending ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Loading messaging settings…
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="twilio-phone-number">Twilio phone number</Label>
-          <Input
-            id="twilio-phone-number"
-            value={phoneNumber}
-            onChange={(event) => setPhoneNumber(event.target.value)}
-            placeholder="(555) 123-4567"
-            autoComplete="off"
-          />
+      ) : error ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-6 text-sm text-destructive">
+          Could not load messaging settings. Apply the latest database migration and deploy edge
+          functions.
         </div>
+      ) : (
+        <>
+          <div>
+            <h2 className="text-sm font-medium text-muted-foreground">Twilio SMS</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Connect your Twilio number to send and receive SMS with clients from Messages.
+            </p>
+          </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox checked={smsEnabled} onCheckedChange={(checked) => setSmsEnabled(checked === true)} />
-          Enable SMS messaging
-        </label>
-      </div>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="twilio-account-sid">Account SID</Label>
+              <Input
+                id="twilio-account-sid"
+                value={accountSid}
+                onChange={(event) => setAccountSid(event.target.value)}
+                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                autoComplete="off"
+              />
+            </div>
 
-      <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
-        <Label>Inbound webhook URL</Label>
-        <p className="text-sm text-muted-foreground">
-          Paste this URL in Twilio → Phone Numbers → your number → Messaging → &quot;A message
-          comes in&quot; (HTTP POST). Do not use a Messaging Service on the number, or configure
-          the same URL on the service&apos;s inbound webhook.
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Input readOnly value={webhookUrl} className="font-mono text-xs" />
-          <Button type="button" variant="outline" onClick={() => void copyWebhook()}>
-            <Copy className="size-4" />
-            Copy
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Optional: set <code className="rounded bg-muted px-1">TWILIO_WEBHOOK_URL</code> in Supabase
-          if Twilio signature validation fails behind proxies.
-        </p>
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor="twilio-auth-token">Auth token</Label>
+              <Input
+                id="twilio-auth-token"
+                type="password"
+                value={authToken}
+                onChange={(event) => setAuthToken(event.target.value)}
+                placeholder={data?.has_auth_token ? "••••••••••••••••" : "Your Twilio auth token"}
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-muted-foreground">{configuredHint}</p>
+            </div>
 
-      <div>
-        <Button
-          type="button"
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
-        >
-          {saveMutation.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Save className="size-4" />
-          )}
-          Save messaging settings
-        </Button>
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor="twilio-phone-number">Twilio phone number</Label>
+              <Input
+                id="twilio-phone-number"
+                value={phoneNumber}
+                onChange={(event) => setPhoneNumber(event.target.value)}
+                placeholder="(555) 123-4567"
+                autoComplete="off"
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={smsEnabled} onCheckedChange={(checked) => setSmsEnabled(checked === true)} />
+              Enable SMS messaging
+            </label>
+          </div>
+
+          <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
+            <Label>Inbound webhook URL</Label>
+            <p className="text-sm text-muted-foreground">
+              Paste this URL in Twilio → Phone Numbers → your number → Messaging → &quot;A message
+              comes in&quot; (HTTP POST). Do not use a Messaging Service on the number, or configure
+              the same URL on the service&apos;s inbound webhook.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input readOnly value={webhookUrl} className="font-mono text-xs" />
+              <Button type="button" variant="outline" onClick={() => void copyWebhook()}>
+                <Copy className="size-4" />
+                Copy
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Optional: set <code className="rounded bg-muted px-1">TWILIO_WEBHOOK_URL</code> in
+              Supabase if Twilio signature validation fails behind proxies.
+            </p>
+          </div>
+
+          <div>
+            <Button
+              type="button"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+            >
+              {saveMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Save className="size-4" />
+              )}
+              Save messaging settings
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

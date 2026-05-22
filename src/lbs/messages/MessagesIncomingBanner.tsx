@@ -30,7 +30,7 @@ export const MessagesIncomingBannerStack = ({
   if (notifications.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-3 z-[100] flex flex-col items-center gap-2 px-4 sm:top-4">
+    <div className="pointer-events-none fixed inset-x-0 top-3 z-[10050] flex flex-col items-center gap-2 px-4 sm:top-4">
       {notifications.map((notification, index) => (
         <div
           key={notification.id}
