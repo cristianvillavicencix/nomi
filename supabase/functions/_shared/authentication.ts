@@ -3,8 +3,12 @@ import * as jose from "jsr:@panva/jose@6";
 import { createClient, type User } from "jsr:@supabase/supabase-js@2";
 import { createErrorResponse } from "./utils.ts";
 
-const SUPABASE_JWT_ISSUER =
-  Deno.env.get("SB_JWT_ISSUER") ?? Deno.env.get("SUPABASE_URL") + "/auth/v1";
+/**
+ * Must match the `iss` claim on Supabase Auth access tokens (always the project's API origin).
+ * Do NOT use `SB_JWT_ISSUER` here: that value is often set to http://127.0.0.1:54321/auth/v1 for
+ * local tooling and, if copied into hosted Edge secrets, breaks JWT verification with 401.
+ */
+const SUPABASE_JWT_ISSUER = `${(Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "")}/auth/v1`;
 const SUPABASE_PUBLISHABLE_KEY =
   Deno.env.get("SB_PUBLISHABLE_KEY") ??
   Deno.env.get("PUBLISHABLE_KEY") ??

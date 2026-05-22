@@ -1,5 +1,12 @@
 // FIXME: This should be exported from the ra-core package
 import { isLbsMode } from "@/lbs/productMode";
+import type { MemberModulePermissions } from "../../types";
+import {
+  canAccessResourceWithModules,
+  legacyRoleFinance,
+  legacyRolePeople,
+  legacyRoleSales,
+} from "./memberModuleAccess";
 
 type CanAccessParams<
   RecordType extends Record<string, any> = Record<string, any>,
@@ -28,6 +35,8 @@ export type AccessIdentity = {
   administrator?: boolean;
   role?: string | null;
   roles?: unknown;
+  /** When set, fine-grained modules apply; roles[] is synced for RLS. */
+  module_permissions?: MemberModulePermissions | null;
   user_metadata?: {
     role?: string | null;
     roles?: unknown;
@@ -91,17 +100,13 @@ export const canAccess = <
     return true;
   }
 
-  const canAccessFinance = roles.includes("accountant") || roles.includes("payroll_manager");
-  const canAccessPeople = roles.includes("hr");
-  const canAccessSales =
-    roles.includes("sales_manager") ||
-    roles.includes("manager") ||
-    roles.includes("employee") ||
-    roles.includes("sales") ||
-    roles.includes("pm") ||
-    roles.includes("designer") ||
-    roles.includes("developer") ||
-    roles.includes("marketing");
+  if (typeof identity === "object" && identity.module_permissions != null) {
+    return canAccessResourceWithModules(params.resource, identity as AccessIdentity, isLbsMode());
+  }
+
+  const canAccessFinance = legacyRoleFinance(roles);
+  const canAccessPeople = legacyRolePeople(roles);
+  const canAccessSales = legacyRoleSales(roles);
 
   if (params.resource === "organization_members" || params.resource === "configuration") {
     return false;

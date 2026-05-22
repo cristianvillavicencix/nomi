@@ -3,6 +3,7 @@ import { supabaseAuthProvider } from "ra-supabase-core";
 
 import { isPlatformConsolePath } from "@/platform/platformConsolePaths";
 import { canAccess } from "../commons/canAccess";
+import type { MemberModulePermissions } from "../../types";
 import { supabase } from "./supabase";
 
 const baseAuthProvider = supabaseAuthProvider(supabase, {
@@ -20,6 +21,8 @@ const baseAuthProvider = supabaseAuthProvider(supabase, {
       administrator: sale.administrator === true,
       role: sale.administrator ? 'admin' : sale.roles?.[0] ?? 'user',
       roles: sale.roles ?? (sale.administrator ? ['admin'] : []),
+      module_permissions:
+        (sale.module_permissions as MemberModulePermissions | null | undefined) ?? null,
     };
   },
 });
@@ -64,7 +67,7 @@ const fetchSale = async () => {
 
   const { data: dataSale, error: errorSale } = await supabase
     .from("organization_members")
-    .select("id, first_name, last_name, avatar, administrator, roles")
+    .select("id, first_name, last_name, avatar, administrator, roles, module_permissions")
     .match({ user_id: dataSession?.session?.user.id })
     .single();
 

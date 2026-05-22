@@ -36,22 +36,29 @@ export const ForgotPasswordPage = () => {
         email: values.email,
         redirectTo: getSetPasswordRedirectUrl(),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; status?: number };
+      const status = err?.status;
+      const message = err?.message ?? "";
+      const rateLimited =
+        status === 429 ||
+        message.includes("429") ||
+        /too many requests/i.test(message);
+
       notify(
-        typeof error === "string"
-          ? error
-          : typeof error === "undefined" || !error.message
-            ? "ra.auth.sign_in_error"
-            : error.message,
+        rateLimited
+          ? "Too many reset emails were requested. Wait about an hour, then check spam for an earlier message before trying again."
+          : typeof error === "string"
+            ? error
+            : message || "ra.auth.sign_in_error",
         {
           type: "warning",
           messageArgs: {
-            _:
-              typeof error === "string"
+            _: rateLimited
+              ? "Too many reset emails were requested. Wait about an hour, then check spam for an earlier message before trying again."
+              : typeof error === "string"
                 ? error
-                : error && error.message
-                  ? error.message
-                  : undefined,
+                : message || undefined,
           },
         },
       );

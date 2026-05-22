@@ -5,6 +5,12 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { assertSeatsAllowNewInvite } from "../_shared/billingAccess.ts";
+import {
+  deriveRolesFromModules,
+  hasAnyOperationalModule,
+  normalizeModulePermissions,
+  type ModulePermissionRecord,
+} from "../_shared/memberModulePermissions.ts";
 
 const ALLOWED_ROLES = [
   "admin",
@@ -21,7 +27,11 @@ function normalizeRoles(input: unknown, administrator: boolean) {
   const normalized = Array.from(
     new Set(
       incoming
-        .map((role) => String(role ?? "").trim().toLowerCase())
+        .map((role) =>
+          String(role ?? "")
+            .trim()
+            .toLowerCase(),
+        )
         .filter((role): role is (typeof ALLOWED_ROLES)[number] =>
           ALLOWED_ROLES.includes(role as (typeof ALLOWED_ROLES)[number]),
         ),
@@ -66,7 +76,9 @@ async function assertSingleAdministrator(
 
   const otherAdmin = (data ?? []).find((sale) => sale.user_id !== user_id);
   if (otherAdmin) {
-    throw new Error("Only one administrator user is allowed in this organization");
+    throw new Error(
+      "Only one administrator user is allowed in this organization",
+    );
   }
 }
 
@@ -77,20 +89,49 @@ async function updateSaleDisabled(user_id: string, disabled: boolean) {
     .eq("user_id", user_id);
 }
 
-async function updateSaleAdministrator(
+async function persistMemberAccess(
   user_id: string,
-  administrator: boolean,
-  roles?: string[],
+  opts: {
+    administrator: boolean;
+    roles?: unknown;
+    module_permissions?: unknown;
+    enforceModuleChoice?: boolean;
+  },
 ) {
+  const {
+    administrator,
+    roles: rolesInput,
+    module_permissions: modRaw,
+    enforceModuleChoice,
+  } = opts;
+
+  const patch: Record<string, unknown> = { administrator };
+
+  if (administrator) {
+    patch.roles = normalizeRoles(rolesInput, true);
+    patch.module_permissions = null;
+  } else if (modRaw !== undefined) {
+    const mod = normalizeModulePermissions(modRaw);
+    if (enforceModuleChoice && !hasAnyOperationalModule(mod)) {
+      throw new Error(
+        "Select at least one access area for this user, or assign Administrator.",
+      );
+    }
+    patch.roles = normalizeRoles(deriveRolesFromModules(mod), false);
+    patch.module_permissions = mod;
+  } else {
+    patch.roles = normalizeRoles(rolesInput, false);
+  }
+
   const { data: sales, error: salesError } = await supabaseAdmin
     .from("organization_members")
-    .update({ administrator, roles: normalizeRoles(roles, administrator) })
+    .update(patch)
     .eq("user_id", user_id)
     .select("*");
 
   if (!sales?.length || salesError) {
-    console.error("Error updating user:", salesError);
-    throw salesError ?? new Error("Failed to update sale");
+    console.error("Error updating member access:", salesError);
+    throw salesError ?? new Error("Failed to update organization member");
   }
   return sales.at(0);
 }
@@ -100,20 +141,33 @@ async function createSale(
   org_id: number,
   data: {
     email: string;
-    password: string;
     first_name: string;
     last_name: string;
     disabled: boolean;
     administrator: boolean;
     roles?: string[];
+    module_permissions?: ModulePermissionRecord | null;
   },
 ) {
-  const { password: _password, ...rest } = data;
+  const rest = data;
+
+  const modulePermissionsStored = rest.administrator
+    ? null
+    : normalizeModulePermissions(data.module_permissions ?? {});
+  const rolesFinal = rest.administrator
+    ? normalizeRoles(data.roles, true)
+    : normalizeRoles(deriveRolesFromModules(modulePermissionsStored), false);
+
   const { data: sales, error: salesError } = await supabaseAdmin
     .from("organization_members")
     .insert({
-      ...rest,
-      roles: normalizeRoles(data.roles, data.administrator),
+      email: rest.email,
+      first_name: rest.first_name,
+      last_name: rest.last_name,
+      disabled: rest.disabled ?? false,
+      administrator: rest.administrator,
+      roles: rolesFinal,
+      module_permissions: modulePermissionsStored,
       user_id,
       org_id,
     })
@@ -182,16 +236,105 @@ async function updateSaleProfile(
   return sale;
 }
 
-async function inviteUser(req: Request, currentOrgMember: any) {
-  const {
+function isAuthEmailAlreadyUsed(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  const msg = (error.message ?? "").toLowerCase();
+  return (
+    error.code === "email_exists" ||
+    msg.includes("already been registered") ||
+    msg.includes("already registered") ||
+    msg.includes("user already")
+  );
+}
+
+async function finalizeInvitedMember(
+  user_id: string,
+  opts: {
+    disabled: boolean;
+    administrator: boolean;
+    roles?: unknown;
+    validatedModules?: ModulePermissionRecord;
+  },
+) {
+  const { disabled, administrator, roles, validatedModules } = opts;
+  await updateSaleDisabled(user_id, disabled);
+  return await persistMemberAccess(user_id, {
+    administrator,
+    roles,
+    module_permissions: administrator ? undefined : validatedModules,
+    enforceModuleChoice: !administrator,
+  });
+}
+
+function normalizeInviteEmail(email: unknown): string {
+  return String(email ?? "").trim().toLowerCase();
+}
+
+function getSetPasswordRedirectUrl(req: Request) {
+  const origin =
+    req.headers.get("origin") ??
+    Deno.env.get("BILLING_PUBLIC_SITE_URL") ??
+    "https://www.nomicrm.com";
+  return new URL("/set-password", origin).toString();
+}
+
+async function getOrgMemberByEmail(email: string, org_id: number) {
+  const { data, error } = await supabaseAdmin
+    .from("organization_members")
+    .select("*")
+    .eq("org_id", org_id)
+    .ilike("email", email)
+    .maybeSingle();
+  if (error) {
+    console.error("getOrgMemberByEmail", error);
+    throw error;
+  }
+  return data;
+}
+
+async function sendInviteOrSetPasswordEmail(
+  email: string,
+  metadata: Record<string, string>,
+  redirectTo: string,
+) {
+  const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
     email,
-    password,
+    {
+      data: metadata,
+      redirectTo,
+    },
+  );
+  if (!inviteError) return null;
+
+  if (!isAuthEmailAlreadyUsed(inviteError)) {
+    console.error("sendInviteOrSetPasswordEmail invite", inviteError);
+    return inviteError;
+  }
+
+  // Auth user already exists (pending invite or old signup) — send set-password mail.
+  const { error: recoveryError } = await supabaseAdmin.auth.resetPasswordForEmail(
+    email,
+    { redirectTo },
+  );
+  if (recoveryError) {
+    console.error("sendInviteOrSetPasswordEmail recovery", recoveryError);
+    return recoveryError;
+  }
+  return null;
+}
+
+async function inviteUser(req: Request, currentOrgMember: any) {
+  const body = await req.json();
+  const {
+    email: rawEmail,
     first_name,
     last_name,
     disabled,
     administrator,
     roles,
-  } = await req.json();
+    module_permissions,
+  } = body;
+  const email = normalizeInviteEmail(rawEmail);
 
   if (!currentOrgMember.administrator) {
     return createErrorResponse(401, "Not Authorized");
@@ -199,22 +342,15 @@ async function inviteUser(req: Request, currentOrgMember: any) {
 
   const orgId = saleOrgId(currentOrgMember);
 
-  try {
-    await assertSeatsAllowNewInvite(orgId);
-  } catch (e) {
-    const msg = (e as Error).message;
-    if (msg.startsWith("SUBSCRIBE_FIRST:")) {
-      return createErrorResponse(400, msg.replace(/^SUBSCRIBE_FIRST:\s*/, ""), {
-        code: "SUBSCRIBE_FIRST",
-      });
+  let validatedModules: ModulePermissionRecord | undefined;
+  if (!administrator) {
+    validatedModules = normalizeModulePermissions(module_permissions);
+    if (!hasAnyOperationalModule(validatedModules)) {
+      return createErrorResponse(
+        400,
+        "Select at least one access area for this user, or assign Administrator.",
+      );
     }
-    if (msg.startsWith("SEAT_LIMIT:")) {
-      return createErrorResponse(400, msg.replace(/^SEAT_LIMIT:\s*/, ""), { code: "SEAT_LIMIT" });
-    }
-    if (msg === "Organization not found") {
-      return createErrorResponse(404, msg);
-    }
-    return createErrorResponse(500, msg);
   }
 
   try {
@@ -223,63 +359,73 @@ async function inviteUser(req: Request, currentOrgMember: any) {
     return createErrorResponse(400, (error as Error).message);
   }
 
-  const { data, error: userError } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    user_metadata: {
-      first_name,
-      last_name,
-      org_id: String(orgId),
-    },
-  });
+  const inviteMetadata = {
+    first_name,
+    last_name,
+    org_id: String(orgId),
+  };
+  const setPasswordRedirect = getSetPasswordRedirectUrl(req);
 
-  let user = data?.user;
+  let existingInOrg: Awaited<ReturnType<typeof getOrgMemberByEmail>> = null;
+  try {
+    existingInOrg = await getOrgMemberByEmail(email, orgId);
+  } catch {
+    return createErrorResponse(500, "Internal Server Error");
+  }
 
-  if (!user && userError?.code === "email_exists") {
-    // This may happen if users cleared their database but not the users
-    // We have to create the sale directly
-    const { data, error } = await supabaseAdmin.rpc("get_user_id_by_email", {
-      email,
-    });
-
-    if (!data || error) {
-      console.error(
-        `Error inviting user: error=${error ?? "could not fetch users for email"}`,
+  if (existingInOrg) {
+    try {
+      await assertSingleAdministrator(
+        existingInOrg.user_id,
+        administrator,
+        orgId,
       );
+    } catch (error) {
+      return createErrorResponse(400, (error as Error).message);
+    }
+
+    const { data: authData, error: authLookupError } =
+      await supabaseAdmin.auth.admin.getUserById(existingInOrg.user_id);
+    if (authLookupError || !authData?.user) {
+      console.error("inviteUser existing member auth lookup", authLookupError);
       return createErrorResponse(500, "Internal Server Error");
     }
 
-    user = data[0];
-    try {
-      const { data: existingSale, error: salesError } = await supabaseAdmin
-        .from("organization_members")
-        .select("*")
-        .eq("user_id", user.id);
-      if (salesError) {
-        return createErrorResponse(salesError.status, salesError.message, {
-          code: salesError.code,
-        });
-      }
-      if (existingSale.length > 0) {
-        return createErrorResponse(
-          400,
-          "A sales for this email already exists",
-        );
-      }
+    if (authData.user.email_confirmed_at) {
+      return createErrorResponse(
+        400,
+        "This person is already on your team. Use Edit on the user list to change their access.",
+        { code: "MEMBER_ALREADY_ACTIVE" },
+      );
+    }
 
-      const sale = await createSale(user.id, orgId, {
+    try {
+      await updateSaleProfile(existingInOrg.id, {
         email,
-        password,
         first_name,
         last_name,
+      });
+      const saleRow = await finalizeInvitedMember(existingInOrg.user_id, {
         disabled,
         administrator,
         roles,
+        validatedModules,
       });
+      const resendError = await sendInviteOrSetPasswordEmail(
+        email,
+        inviteMetadata,
+        setPasswordRedirect,
+      );
+      if (resendError) {
+        return createErrorResponse(
+          500,
+          "User updated but the invitation email could not be sent. Try again in a moment.",
+        );
+      }
 
       return new Response(
         JSON.stringify({
-          data: sale,
+          data: saleRow,
         }),
         {
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -294,39 +440,190 @@ async function inviteUser(req: Request, currentOrgMember: any) {
         },
       );
     }
-  } else {
-    if (userError) {
-      console.error(`Error inviting user: user_error=${userError}`);
-      return createErrorResponse(userError.status, userError.message, {
-        code: userError.code,
-      });
-    }
-    if (!data?.user) {
-      console.error("Error inviting user: undefined user");
-      return createErrorResponse(500, "Internal Server Error");
-    }
-    const { error: emailError } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        data: {
-          first_name,
-          last_name,
-          org_id: String(orgId),
-        },
-      });
-
-    if (emailError) {
-      console.error(`Error inviting user, email_error=${emailError}`);
-      return createErrorResponse(500, "Failed to send invitation mail");
-    }
   }
 
   try {
-    await updateSaleDisabled(user.id, disabled);
-    const sale = await updateSaleAdministrator(user.id, administrator, roles);
+    await assertSeatsAllowNewInvite(orgId);
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (msg.startsWith("SUBSCRIBE_FIRST:")) {
+      return createErrorResponse(400, msg.replace(/^SUBSCRIBE_FIRST:\s*/, ""), {
+        code: "SUBSCRIBE_FIRST",
+      });
+    }
+    if (msg.startsWith("SEAT_LIMIT:")) {
+      return createErrorResponse(400, msg.replace(/^SEAT_LIMIT:\s*/, ""), {
+        code: "SEAT_LIMIT",
+      });
+    }
+    if (msg === "Organization not found") {
+      return createErrorResponse(404, msg);
+    }
+    return createErrorResponse(500, msg);
+  }
+
+  const { data: inviteData, error: inviteError } =
+    await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: inviteMetadata,
+      redirectTo: setPasswordRedirect,
+    });
+
+  let user = inviteData?.user;
+
+  if (inviteError) {
+    if (!isAuthEmailAlreadyUsed(inviteError)) {
+      console.error(`Error inviting user: invite_error=${inviteError}`);
+      return createErrorResponse(
+        inviteError.status ?? 500,
+        inviteError.message || "Failed to send invitation mail",
+        { code: inviteError.code },
+      );
+    }
+
+    const { data: existingAuthRows, error: lookupError } =
+      await supabaseAdmin.rpc("get_user_id_by_email", { email });
+
+    if (!existingAuthRows?.length || lookupError) {
+      console.error(
+        `Error inviting user: error=${lookupError ?? "could not fetch users for email"}`,
+      );
+      return createErrorResponse(500, "Internal Server Error");
+    }
+
+    user = existingAuthRows[0];
+
+    try {
+      const { data: existingSale, error: salesError } = await supabaseAdmin
+        .from("organization_members")
+        .select("*")
+        .eq("user_id", user.id);
+      if (salesError) {
+        return createErrorResponse(salesError.status, salesError.message, {
+          code: salesError.code,
+        });
+      }
+      if (existingSale.length > 0) {
+        const existing = existingSale[0];
+        if (saleOrgId(existing) === orgId) {
+          try {
+            await assertSingleAdministrator(user.id, administrator, orgId);
+            await updateSaleProfile(existing.id, {
+              email,
+              first_name,
+              last_name,
+            });
+            const saleRow = await finalizeInvitedMember(user.id, {
+              disabled,
+              administrator,
+              roles,
+              validatedModules,
+            });
+            const mailError = await sendInviteOrSetPasswordEmail(
+              email,
+              inviteMetadata,
+              setPasswordRedirect,
+            );
+            if (mailError) {
+              return createErrorResponse(
+                500,
+                "User updated but the invitation email could not be sent. Try again in a moment.",
+              );
+            }
+            return new Response(
+              JSON.stringify({ data: saleRow }),
+              {
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              },
+            );
+          } catch (error) {
+            return createErrorResponse(
+              (error as any).status ?? 500,
+              (error as Error).message,
+              { code: (error as any).code },
+            );
+          }
+        }
+
+        const { data: otherOrg } = await supabaseAdmin
+          .from("organizations")
+          .select("name")
+          .eq("id", saleOrgId(existing))
+          .maybeSingle();
+        const otherOrgName = otherOrg?.name?.trim() || "another workspace";
+        const { data: authRow } = await supabaseAdmin.auth.admin.getUserById(
+          user.id,
+        );
+        const companyName = String(
+          authRow?.user?.user_metadata?.company_name ?? "",
+        ).trim();
+        const signupHint = companyName
+          ? ` They may have registered on the sign-up page with company “${companyName}” instead of using your invitation.`
+          : "";
+
+        return createErrorResponse(
+          400,
+          `This email is already linked to “${otherOrgName}”.${signupHint} Use a different email, or remove that account before inviting again.`,
+          { code: "MEMBER_OTHER_WORKSPACE" },
+        );
+      }
+
+      const saleRow = await createSale(user.id, orgId, {
+        email,
+        first_name,
+        last_name,
+        disabled,
+        administrator,
+        roles,
+        module_permissions: administrator ? null : validatedModules!,
+      });
+
+      const mailError = await sendInviteOrSetPasswordEmail(
+        email,
+        inviteMetadata,
+        setPasswordRedirect,
+      );
+      if (mailError) {
+        return createErrorResponse(
+          500,
+          "User was added but the invitation email could not be sent. Try again in a moment.",
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          data: saleRow,
+        }),
+        {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    } catch (error) {
+      return createErrorResponse(
+        (error as any).status ?? 500,
+        (error as Error).message,
+        {
+          code: (error as any).code,
+        },
+      );
+    }
+  }
+
+  if (!user) {
+    console.error("Error inviting user: undefined user after invite");
+    return createErrorResponse(500, "Internal Server Error");
+  }
+
+  try {
+    const saleRow = await finalizeInvitedMember(user.id, {
+      disabled,
+      administrator,
+      roles,
+      validatedModules,
+    });
 
     return new Response(
       JSON.stringify({
-        data: sale,
+        data: saleRow,
       }),
       {
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -335,7 +632,9 @@ async function inviteUser(req: Request, currentOrgMember: any) {
   } catch (e) {
     console.error("Error patching sale:", e);
     const msg = (e as Error)?.message ?? "";
-    const isAdminConflict = msg.includes("Only one administrator user is allowed");
+    const isAdminConflict = msg.includes(
+      "Only one administrator user is allowed",
+    );
     return createErrorResponse(
       isAdminConflict ? 400 : 500,
       (e as Error).message || "Internal Server Error",
@@ -345,6 +644,10 @@ async function inviteUser(req: Request, currentOrgMember: any) {
 
 async function patchUser(req: Request, currentOrgMember: any) {
   const body = await req.json();
+  const hasModulePayload = Object.prototype.hasOwnProperty.call(
+    body,
+    "module_permissions",
+  );
   const {
     organization_member_id,
     email,
@@ -428,16 +731,31 @@ async function patchUser(req: Request, currentOrgMember: any) {
   }
 
   try {
+    const nextAdministrator =
+      typeof body.administrator === "boolean"
+        ? body.administrator
+        : Boolean(sale.administrator);
+
     await assertSingleAdministrator(
       data.user.id,
-      administrator,
+      nextAdministrator,
       saleOrgId(sale),
     );
     await updateSaleDisabled(data.user.id, disabled);
-    const sale = await updateSaleAdministrator(data.user.id, administrator, roles);
+
+    const updatedMember = await persistMemberAccess(data.user.id, {
+      administrator: nextAdministrator,
+      roles,
+      module_permissions: hasModulePayload
+        ? body.module_permissions
+        : undefined,
+      enforceModuleChoice: Boolean(
+        hasModulePayload && nextAdministrator !== true,
+      ),
+    });
     return new Response(
       JSON.stringify({
-        data: sale,
+        data: updatedMember,
       }),
       {
         headers: {
@@ -449,7 +767,9 @@ async function patchUser(req: Request, currentOrgMember: any) {
   } catch (e) {
     console.error("Error patching sale:", e);
     const msg = (e as Error)?.message ?? "";
-    const isAdminConflict = msg.includes("Only one administrator user is allowed");
+    const isAdminConflict = msg.includes(
+      "Only one administrator user is allowed",
+    );
     return createErrorResponse(
       isAdminConflict ? 400 : 500,
       (e as Error).message || "Internal Server Error",
@@ -463,7 +783,10 @@ Deno.serve(async (req: Request) =>
       UserMiddleware(req, async (req, user) => {
         const currentOrgMember = await getUserOrganizationMember(user);
         if (!currentOrgMember) {
-          return createErrorResponse(401, "Unauthorized");
+          return createErrorResponse(
+            403,
+            "No hay un perfil de miembro vinculado a esta cuenta. Inicia sesión con un usuario de tu organización o pide a un administrador que te invite de nuevo.",
+          );
         }
 
         if (req.method === "POST") {

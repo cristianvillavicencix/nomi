@@ -18,6 +18,26 @@ export type SignUpData = {
   company_name: string;
 };
 
+export const MEMBER_MODULE_KEYS = [
+  "crm",
+  "proposals",
+  "forms",
+  "support",
+  "messaging",
+  "deal_operations",
+  "deal_financials",
+  "payroll",
+  "people",
+  "time",
+  "reports",
+  "view_amounts",
+] as const;
+
+export type MemberModuleKey = (typeof MEMBER_MODULE_KEYS)[number];
+
+/** Stored in organization_members.module_permissions (JSON); drives UI + synced roles[]. */
+export type MemberModulePermissions = Partial<Record<MemberModuleKey, boolean>>;
+
 export type OrganizationMemberFormData = {
   avatar?: RAFile | null;
   email: string;
@@ -25,7 +45,9 @@ export type OrganizationMemberFormData = {
   first_name: string;
   last_name: string;
   administrator: boolean;
+  /** Legacy; synced from modules when module_permissions is set. */
   roles?: string[];
+  module_permissions?: MemberModulePermissions | null;
   disabled: boolean;
 };
 
@@ -57,6 +79,8 @@ export type OrganizationMember = {
   org_id?: number;
   administrator: boolean;
   roles?: string[];
+  /** Non-null ⇒ use module switches; backend mirrors roles[] for RLS. */
+  module_permissions?: MemberModulePermissions | null;
   avatar?: RAFile;
   disabled?: boolean;
   user_id: string;

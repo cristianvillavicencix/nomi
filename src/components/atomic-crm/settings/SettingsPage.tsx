@@ -65,7 +65,7 @@ const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = isLbsMode()
     ]
   : [
       { id: "general", label: "General" },
-      { id: "users", label: "Users & roles" },
+      { id: "users", label: "Users & access" },
       { id: "payments", label: "Payments" },
       { id: "projects", label: "Projects" },
       { id: "notes", label: "Notes" },
@@ -148,7 +148,10 @@ const transformFormValues = (
       companyCountry: data.companyCountry,
       companyPhone: data.companyPhone,
       companyEmail: data.companyEmail,
-      companyWebsite: typeof data.companyWebsite === "string" ? data.companyWebsite.trim() : "",
+      companyWebsite:
+        typeof data.companyWebsite === "string"
+          ? data.companyWebsite.trim()
+          : "",
       companyRepresentativeName: data.companyRepresentativeName,
       companyRepresentativeTitle: data.companyRepresentativeTitle,
       primaryBusinessSector:
@@ -161,23 +164,22 @@ const transformFormValues = (
       dealCategories: ensureValues(data.dealCategories),
       taskTypes: ensureValues(data.taskTypes),
       dealPipelines: (data.dealPipelines ?? []).map(
-      (pipeline: DealPipeline, pipelineIndex: number) => ({
-        ...pipeline,
-        id: pipeline.id || `pipeline-${pipelineIndex + 1}`,
-        order: pipeline.order ?? pipelineIndex + 1,
-        stages: (pipeline.stages ?? []).map(
-          (stage: DealPipelineStage, stageIndex: number) => ({
-            ...stage,
-            id: stage.id || toSlug(stage.label || `stage-${stageIndex + 1}`),
-            label: stage.label || `Stage ${stageIndex + 1}`,
-            color: stage.color || "#64748b",
-            order: stage.order ?? stageIndex + 1,
-            pipelineId:
-              pipeline.id || `pipeline-${pipelineIndex + 1}`,
-          }),
-        ),
-      }),
-    ),
+        (pipeline: DealPipeline, pipelineIndex: number) => ({
+          ...pipeline,
+          id: pipeline.id || `pipeline-${pipelineIndex + 1}`,
+          order: pipeline.order ?? pipelineIndex + 1,
+          stages: (pipeline.stages ?? []).map(
+            (stage: DealPipelineStage, stageIndex: number) => ({
+              ...stage,
+              id: stage.id || toSlug(stage.label || `stage-${stageIndex + 1}`),
+              label: stage.label || `Stage ${stageIndex + 1}`,
+              color: stage.color || "#64748b",
+              order: stage.order ?? stageIndex + 1,
+              pipelineId: pipeline.id || `pipeline-${pipelineIndex + 1}`,
+            }),
+          ),
+        }),
+      ),
       dealStages: ensureValues(data.dealStages),
       dealPipelineStatuses: data.dealPipelineStatuses,
       noteStatuses: ensureValues(data.noteStatuses),
@@ -204,7 +206,8 @@ const transformFormValues = (
           data.payrollSettings?.usFederalHolidaysEnabled ?? true,
         ),
         customHolidays: data.payrollSettings?.customHolidays ?? [],
-        defaultPaySchedule: data.payrollSettings?.defaultPaySchedule ?? "biweekly",
+        defaultPaySchedule:
+          data.payrollSettings?.defaultPaySchedule ?? "biweekly",
         companyPaySchedule:
           data.payrollSettings?.companyPaySchedule ??
           data.payrollSettings?.defaultPaySchedule ??
@@ -215,7 +218,9 @@ const transformFormValues = (
         biweeklyAnchorDate:
           data.payrollSettings?.biweeklyAnchorDate ?? "2026-01-02",
         monthlyPayRule: data.payrollSettings?.monthlyPayRule ?? "end_of_month",
-        monthlyDayOfMonth: Number(data.payrollSettings?.monthlyDayOfMonth ?? 30),
+        monthlyDayOfMonth: Number(
+          data.payrollSettings?.monthlyDayOfMonth ?? 30,
+        ),
         payday: data.payrollSettings?.payday ?? "Friday",
         payPeriodStartDay: Number(data.payrollSettings?.payPeriodStartDay ?? 1),
         payPeriodEndDay: Number(data.payrollSettings?.payPeriodEndDay ?? 14),
@@ -317,7 +322,9 @@ const SettingsFormFields = () => {
 
   const tabParam = searchParams.get("tab");
   const normalizedTab = tabParam === "plans" ? "users" : tabParam;
-  const activeTab: SettingsTabId = isSettingsTabId(normalizedTab) ? normalizedTab : "general";
+  const activeTab: SettingsTabId = isSettingsTabId(normalizedTab)
+    ? normalizedTab
+    : "general";
 
   const setSettingsTab = useCallback(
     (id: SettingsTabId) => {
@@ -369,17 +376,25 @@ const SettingsFormFields = () => {
     (categories: { value: string; label: string }[] | undefined) => {
       if (!categories) return undefined;
 
-      const normalized = categories.map((item) => item.value || toSlug(item.label));
-      const duplicateValues = normalized.filter((value, index) => normalized.indexOf(value) !== index);
+      const normalized = categories.map(
+        (item) => item.value || toSlug(item.label),
+      );
+      const duplicateValues = normalized.filter(
+        (value, index) => normalized.indexOf(value) !== index,
+      );
       if (duplicateValues.length > 0) {
         return `Duplicate categories: ${[...new Set(duplicateValues)].join(", ")}`;
       }
 
       const initialValues = new Set(
-        (config.dealCategories ?? []).map((item) => item.value || toSlug(item.label)),
+        (config.dealCategories ?? []).map(
+          (item) => item.value || toSlug(item.label),
+        ),
       );
       const currentValues = new Set(normalized);
-      const removedInitialValues = [...initialValues].filter((value) => !currentValues.has(value));
+      const removedInitialValues = [...initialValues].filter(
+        (value) => !currentValues.has(value),
+      );
 
       // Allow saving unrelated sections (e.g. Branding) when categories haven't been removed.
       if (removedInitialValues.length === 0) return undefined;
@@ -414,120 +429,178 @@ const SettingsFormFields = () => {
 
       {activeTab === "general" ? <SettingsGeneralTab /> : null}
       {activeTab === "users" ? <UsersSettingsSection /> : null}
-      {activeTab === "messaging" && isLbsMode() ? <MessagingSettingsSection /> : null}
+      {activeTab === "messaging" && isLbsMode() ? (
+        <MessagingSettingsSection />
+      ) : null}
       {activeTab === "payments" && !isLbsMode() ? (
         <div className="space-y-8 max-w-6xl">
-            <h2 className="text-sm font-medium text-muted-foreground">Pay schedule &amp; methods</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <SelectInput
-                source="payrollSettings.companyPaySchedule"
-                choices={[
-                  { id: "weekly", name: "Weekly" },
-                  { id: "biweekly", name: "Biweekly" },
-                  { id: "semimonthly", name: "Semi-monthly" },
-                  { id: "monthly", name: "Monthly" },
-                ]}
-                label="Payroll frequency"
-              />
-              <SelectInput
-                source="payrollSettings.defaultPaymentMethod"
-                choices={[
-                  { id: "cash", name: "Cash" },
-                  { id: "check", name: "Check" },
-                  { id: "zelle", name: "Zelle" },
-                  { id: "bank_deposit", name: "Bank deposit" },
-                ]}
-                label="Default payment method"
-              />
-            </div>
-            <h2 className="text-sm font-medium text-muted-foreground">Pay timing</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <TextInput source="payrollSettings.weeklyPayday" label="Weekly payday" />
-              <TextInput source="payrollSettings.biweeklyAnchorDate" label="Biweekly anchor (YYYY-MM-DD)" />
-              <SelectInput
-                source="payrollSettings.monthlyPayRule"
-                label="Monthly rule"
-                choices={[
-                  { id: "end_of_month", name: "End of month" },
-                  { id: "day_of_month", name: "Day of month" },
-                ]}
-              />
-              <NumberInput source="payrollSettings.monthlyDayOfMonth" label="Monthly day" />
-              <NumberInput source="payrollSettings.payPeriodStartDay" label="Period start day" />
-              <NumberInput source="payrollSettings.payPeriodEndDay" label="Period end day" />
-              <TextInput source="payrollSettings.payday" label="Payday (legacy label)" />
-            </div>
-            <h2 className="text-sm font-medium text-muted-foreground">Overtime</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <BooleanInput source="payrollSettings.overtimeEnabledGlobally" label="Overtime on" />
-              <NumberInput source="payrollSettings.overtimeWeeklyThreshold" label="Weekly OT threshold" />
-              <NumberInput source="payrollSettings.defaultOvertimeMultiplier" label="OT multiplier" />
-              <NumberInput
-                source="payrollSettings.defaultHoursPerWeekReference"
-                label="Default hours / week"
-              />
-            </div>
-            <h2 className="text-sm font-medium text-muted-foreground">Time entry</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <NumberInput source="payrollSettings.lunchAutoSuggestHours" label="Lunch after (h)" />
-              <NumberInput source="payrollSettings.lunchAutoSuggestMinutes" label="Lunch (min)" />
-              <BooleanInput source="payrollSettings.usFederalHolidaysEnabled" label="US federal holidays" />
-            </div>
-            <h2 className="text-sm font-medium text-muted-foreground">Holidays</h2>
-            <ArrayInput source="payrollSettings.customHolidays" label={false} helperText={false}>
-              <SimpleFormIterator inline disableReordering>
-                <TextInput source="date" label="Date (YYYY-MM-DD)" />
-                <TextInput source="label" label="Label" />
-              </SimpleFormIterator>
-            </ArrayInput>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Pay schedule &amp; methods
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <SelectInput
+              source="payrollSettings.companyPaySchedule"
+              choices={[
+                { id: "weekly", name: "Weekly" },
+                { id: "biweekly", name: "Biweekly" },
+                { id: "semimonthly", name: "Semi-monthly" },
+                { id: "monthly", name: "Monthly" },
+              ]}
+              label="Payroll frequency"
+            />
+            <SelectInput
+              source="payrollSettings.defaultPaymentMethod"
+              choices={[
+                { id: "cash", name: "Cash" },
+                { id: "check", name: "Check" },
+                { id: "zelle", name: "Zelle" },
+                { id: "bank_deposit", name: "Bank deposit" },
+              ]}
+              label="Default payment method"
+            />
+          </div>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Pay timing
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <TextInput
+              source="payrollSettings.weeklyPayday"
+              label="Weekly payday"
+            />
+            <TextInput
+              source="payrollSettings.biweeklyAnchorDate"
+              label="Biweekly anchor (YYYY-MM-DD)"
+            />
+            <SelectInput
+              source="payrollSettings.monthlyPayRule"
+              label="Monthly rule"
+              choices={[
+                { id: "end_of_month", name: "End of month" },
+                { id: "day_of_month", name: "Day of month" },
+              ]}
+            />
+            <NumberInput
+              source="payrollSettings.monthlyDayOfMonth"
+              label="Monthly day"
+            />
+            <NumberInput
+              source="payrollSettings.payPeriodStartDay"
+              label="Period start day"
+            />
+            <NumberInput
+              source="payrollSettings.payPeriodEndDay"
+              label="Period end day"
+            />
+            <TextInput
+              source="payrollSettings.payday"
+              label="Payday (legacy label)"
+            />
+          </div>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Overtime
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <BooleanInput
+              source="payrollSettings.overtimeEnabledGlobally"
+              label="Overtime on"
+            />
+            <NumberInput
+              source="payrollSettings.overtimeWeeklyThreshold"
+              label="Weekly OT threshold"
+            />
+            <NumberInput
+              source="payrollSettings.defaultOvertimeMultiplier"
+              label="OT multiplier"
+            />
+            <NumberInput
+              source="payrollSettings.defaultHoursPerWeekReference"
+              label="Default hours / week"
+            />
+          </div>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Time entry
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <NumberInput
+              source="payrollSettings.lunchAutoSuggestHours"
+              label="Lunch after (h)"
+            />
+            <NumberInput
+              source="payrollSettings.lunchAutoSuggestMinutes"
+              label="Lunch (min)"
+            />
+            <BooleanInput
+              source="payrollSettings.usFederalHolidaysEnabled"
+              label="US federal holidays"
+            />
+          </div>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Holidays
+          </h2>
+          <ArrayInput
+            source="payrollSettings.customHolidays"
+            label={false}
+            helperText={false}
+          >
+            <SimpleFormIterator inline disableReordering>
+              <TextInput source="date" label="Date (YYYY-MM-DD)" />
+              <TextInput source="label" label="Label" />
+            </SimpleFormIterator>
+          </ArrayInput>
         </div>
       ) : null}
       {activeTab === "projects" ? (
         <div className="space-y-6 max-w-6xl">
-            <PipelinesEditor
-              pipelines={dealPipelines}
-              onChange={(pipelines) => setValue("dealPipelines", pipelines)}
-              deals={deals}
-            />
-            <Separator />
-            <h2 className="text-sm font-medium text-muted-foreground">Categories</h2>
-            <ArrayInput
-              source="dealCategories"
-              label={false}
-              helperText={false}
-              validate={validateDealCategories}
-            >
-              <SimpleFormIterator disableReordering disableClear>
-                <TextInput source="label" label={false} />
-              </SimpleFormIterator>
-            </ArrayInput>
+          <PipelinesEditor
+            pipelines={dealPipelines}
+            onChange={(pipelines) => setValue("dealPipelines", pipelines)}
+            deals={deals}
+          />
+          <Separator />
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Categories
+          </h2>
+          <ArrayInput
+            source="dealCategories"
+            label={false}
+            helperText={false}
+            validate={validateDealCategories}
+          >
+            <SimpleFormIterator disableReordering disableClear>
+              <TextInput source="label" label={false} />
+            </SimpleFormIterator>
+          </ArrayInput>
         </div>
       ) : null}
       {activeTab === "notes" ? (
         <div className="space-y-4 max-w-4xl">
-            <h2 className="text-sm font-medium text-muted-foreground">Note statuses</h2>
-            <ArrayInput source="noteStatuses" label={false} helperText={false}>
-              <SimpleFormIterator inline disableReordering disableClear>
-                <TextInput source="label" label={false} className="flex-1" />
-                <ColorInput source="color" />
-              </SimpleFormIterator>
-            </ArrayInput>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Note statuses
+          </h2>
+          <ArrayInput source="noteStatuses" label={false} helperText={false}>
+            <SimpleFormIterator inline disableReordering disableClear>
+              <TextInput source="label" label={false} className="flex-1" />
+              <ColorInput source="color" />
+            </SimpleFormIterator>
+          </ArrayInput>
         </div>
       ) : null}
       {activeTab === "tasks" ? (
         <div className="space-y-4 max-w-4xl">
-            <h2 className="text-sm font-medium text-muted-foreground">Task types</h2>
-            <ArrayInput source="taskTypes" label={false} helperText={false}>
-              <SimpleFormIterator disableReordering disableClear>
-                <TextInput source="label" label={false} />
-              </SimpleFormIterator>
-            </ArrayInput>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Task types
+          </h2>
+          <ArrayInput source="taskTypes" label={false} helperText={false}>
+            <SimpleFormIterator disableReordering disableClear>
+              <TextInput source="label" label={false} />
+            </SimpleFormIterator>
+          </ArrayInput>
         </div>
       ) : null}
 
       {activeTab !== "users" && activeTab !== "messaging" ? (
-      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex w-full min-w-0 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="flex w-full min-w-0 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <Button
               type="button"
               variant="ghost"
@@ -626,14 +699,18 @@ const PipelinesEditor = ({
   const deletePipeline = () => {
     if (!selectedPipeline) return;
     if (pipelines.length <= 1) return;
-    const next = pipelines.filter((pipeline) => pipeline.id !== selectedPipeline.id);
+    const next = pipelines.filter(
+      (pipeline) => pipeline.id !== selectedPipeline.id,
+    );
     onChange(next);
     setSelectedPipelineId(next[0].id);
   };
 
   const movePipeline = (direction: "up" | "down") => {
     if (!selectedPipeline) return;
-    const index = pipelines.findIndex((pipeline) => pipeline.id === selectedPipeline.id);
+    const index = pipelines.findIndex(
+      (pipeline) => pipeline.id === selectedPipeline.id,
+    );
     const nextIndex = direction === "up" ? index - 1 : index + 1;
     if (index < 0 || nextIndex < 0 || nextIndex >= pipelines.length) return;
     const reordered = [...pipelines];
@@ -729,7 +806,9 @@ const PipelinesEditor = ({
           variant="outline"
           onClick={() => movePipeline("up")}
           disabled={
-            pipelines.findIndex((pipeline) => pipeline.id === selectedPipeline?.id) <= 0
+            pipelines.findIndex(
+              (pipeline) => pipeline.id === selectedPipeline?.id,
+            ) <= 0
           }
         >
           Move Up
@@ -740,7 +819,9 @@ const PipelinesEditor = ({
           variant="outline"
           onClick={() => movePipeline("down")}
           disabled={
-            pipelines.findIndex((pipeline) => pipeline.id === selectedPipeline?.id) >=
+            pipelines.findIndex(
+              (pipeline) => pipeline.id === selectedPipeline?.id,
+            ) >=
             pipelines.length - 1
           }
         >
@@ -796,7 +877,9 @@ const PipelinesEditor = ({
             <input
               type="color"
               value={stage.color || "#64748b"}
-              onChange={(event) => updateStage(stage.id, { color: event.target.value })}
+              onChange={(event) =>
+                updateStage(stage.id, { color: event.target.value })
+              }
               className="h-9 w-10 rounded-md border border-input bg-background p-1"
             />
             <div className="flex gap-1">

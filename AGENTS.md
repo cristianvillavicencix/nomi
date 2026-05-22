@@ -195,6 +195,8 @@ supabase secrets set SKIP_USER_INVITE_BILLING=1 --project-ref <your-project-ref>
 
 Or set **SKIP_USER_INVITE_BILLING** = `1` under **Dashboard → Edge Functions → `users` → Secrets**. For local `supabase functions serve`, see `supabase/functions/.env` (tracked in git as `!supabase/functions/.env`). The frontend picks up **`VITE_SKIP_USER_INVITE_BILLING`** from `.env.development` during `make start` — add the same variable to your production host/Vite env when you deploy builds.
 
+**JWT / Edge Functions (`users` POST 401):** Do **not** set **`SB_JWT_ISSUER`** in hosted secrets to `http://127.0.0.1:54321/auth/v1` — that mirrors local dev only and breaks `AuthMiddleware` JWT verification against production tokens. Omit `SB_JWT_ISSUER` in production or point it only at tooling that truly needs it. Issuer verification uses **`SUPABASE_URL` + `/auth/v1`** (see `supabase/functions/_shared/authentication.ts`).
+
 ## Important Notes
 
 - The codebase is intentionally small (~15,000 LOC in `src/components/atomic-crm`) for easy customization

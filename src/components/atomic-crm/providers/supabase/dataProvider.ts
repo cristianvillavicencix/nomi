@@ -260,7 +260,9 @@ const getOneFromResourceMaybeSingle = async (
  * PostgREST returns 406 (object+json coercion) when an update matches 0 rows under RLS.
  * Use `.maybeSingle()` plus a clear server message instead of relying on react-admin PATCH.
  */
-const patchSingletonConfigurationRow = async (config: ConfigurationContextValue) => {
+const patchSingletonConfigurationRow = async (
+  config: ConfigurationContextValue,
+) => {
   const { data, error } = await supabase
     .from("configuration")
     .update({ config })
@@ -440,8 +442,9 @@ const dataProviderWithCustomMethods = {
     };
   },
   async organizationMemberCreate(body: OrganizationMemberFormData) {
+    const { password: _password, ...rest } = body;
     const normalizedBody = {
-      ...body,
+      ...rest,
       email: normalizeEmailValue(body.email, "email")!,
       roles: Array.isArray(body.roles) ? Array.from(new Set(body.roles)) : [],
     };
@@ -477,6 +480,7 @@ const dataProviderWithCustomMethods = {
       last_name,
       administrator,
       roles,
+      module_permissions,
       avatar,
       disabled,
     } = data;
@@ -497,6 +501,7 @@ const dataProviderWithCustomMethods = {
         last_name,
         administrator,
         roles: Array.isArray(roles) ? Array.from(new Set(roles)) : undefined,
+        ...(module_permissions !== undefined ? { module_permissions } : {}),
         disabled,
         avatar: persistedAvatar,
       },
@@ -581,13 +586,13 @@ const dataProviderWithCustomMethods = {
     return data;
   },
   async acceptProposal({ id }: { id: Identifier }) {
-    const { data, error } = await invokeEdgeFunction<{ deal_id: number; proposal_id: number }>(
-      "accept_proposal",
-      {
-        method: "POST",
-        body: { proposal_id: id },
-      },
-    );
+    const { data, error } = await invokeEdgeFunction<{
+      deal_id: number;
+      proposal_id: number;
+    }>("accept_proposal", {
+      method: "POST",
+      body: { proposal_id: id },
+    });
 
     if (error || !data?.deal_id) {
       console.error("accept_proposal.error", error);
@@ -596,8 +601,12 @@ const dataProviderWithCustomMethods = {
 
     return data;
   },
-  async upsertLbsClient(input: LbsClientUpsertInput): Promise<LbsClientUpsertResult> {
-    const memberId = await resolveOrganizationMemberId(input.organizationMemberId);
+  async upsertLbsClient(
+    input: LbsClientUpsertInput,
+  ): Promise<LbsClientUpsertResult> {
+    const memberId = await resolveOrganizationMemberId(
+      input.organizationMemberId,
+    );
     const { data: member, error: memberError } = await supabase
       .from("organization_members")
       .select("id, org_id")
@@ -693,12 +702,13 @@ const dataProviderWithCustomMethods = {
           .maybeSingle();
 
         if (existingPrimary?.id) {
-          const { data: updatedContact, error: updateContactError } = await supabase
-            .from("contacts")
-            .update(contactPayload)
-            .eq("id", existingPrimary.id)
-            .select("id")
-            .single();
+          const { data: updatedContact, error: updateContactError } =
+            await supabase
+              .from("contacts")
+              .update(contactPayload)
+              .eq("id", existingPrimary.id)
+              .select("id")
+              .single();
 
           if (updateContactError || !updatedContact) {
             throw new Error("Failed to update primary contact");
@@ -721,12 +731,13 @@ const dataProviderWithCustomMethods = {
         );
 
         if (matchedByEmail?.id) {
-          const { data: updatedContact, error: updateContactError } = await supabase
-            .from("contacts")
-            .update(contactPayload)
-            .eq("id", matchedByEmail.id)
-            .select("id")
-            .single();
+          const { data: updatedContact, error: updateContactError } =
+            await supabase
+              .from("contacts")
+              .update(contactPayload)
+              .eq("id", matchedByEmail.id)
+              .select("id")
+              .single();
 
           if (updateContactError || !updatedContact) {
             throw new Error("Failed to update primary contact");
@@ -745,12 +756,13 @@ const dataProviderWithCustomMethods = {
         .maybeSingle();
 
       if (existingByName?.id) {
-        const { data: updatedContact, error: updateContactError } = await supabase
-          .from("contacts")
-          .update(contactPayload)
-          .eq("id", existingByName.id)
-          .select("id")
-          .single();
+        const { data: updatedContact, error: updateContactError } =
+          await supabase
+            .from("contacts")
+            .update(contactPayload)
+            .eq("id", existingByName.id)
+            .select("id")
+            .single();
 
         if (updateContactError || !updatedContact) {
           throw new Error("Failed to update primary contact");
@@ -800,7 +812,9 @@ const dataProviderWithCustomMethods = {
 
     const { data: contact, error: contactError } = await supabase
       .from("contacts")
-      .select("id, first_name, last_name, organization_member_id, company_id, org_id")
+      .select(
+        "id, first_name, last_name, organization_member_id, company_id, org_id",
+      )
       .eq("id", contactId)
       .single();
 
@@ -1274,7 +1288,9 @@ const dataProviderWithCustomMethods = {
     }
 
     if (params.scope === "mine") {
-      const orParts = [`organization_member_id.eq.${params.organizationMemberId}`];
+      const orParts = [
+        `organization_member_id.eq.${params.organizationMemberId}`,
+      ];
       orParts.push(`mentioned_member_ids.cs.{${params.organizationMemberId}}`);
       if (params.personId != null) {
         orParts.push(`assignee_person_ids.cs.{${params.personId}}`);
@@ -1332,16 +1348,16 @@ const dataProviderWithCustomMethods = {
     );
   },
   async getMessagingSettings() {
-    const { data, error } = await invokeEdgeFunction<import("@/lbs/types").MessagingSettingsPublic>(
-      "messaging_settings",
-      {
-        method: "POST",
-        body: { action: "get" },
-      },
-    );
+    const { data, error } = await invokeEdgeFunction<
+      import("@/lbs/types").MessagingSettingsPublic
+    >("messaging_settings", {
+      method: "POST",
+      body: { action: "get" },
+    });
     if (error) {
       throw new Error(
-        (error as { message?: string }).message ?? "Failed to load messaging settings",
+        (error as { message?: string }).message ??
+          "Failed to load messaging settings",
       );
     }
     if (!data) {
@@ -1355,19 +1371,19 @@ const dataProviderWithCustomMethods = {
     twilio_phone_number?: string | null;
     sms_enabled?: boolean;
   }) {
-    const { data, error } = await invokeEdgeFunction<import("@/lbs/types").MessagingSettingsPublic>(
-      "messaging_settings",
-      {
-        method: "POST",
-        body: {
-          action: "update",
-          ...params,
-        },
+    const { data, error } = await invokeEdgeFunction<
+      import("@/lbs/types").MessagingSettingsPublic
+    >("messaging_settings", {
+      method: "POST",
+      body: {
+        action: "update",
+        ...params,
       },
-    );
+    });
     if (error) {
       throw new Error(
-        (error as { message?: string }).message ?? "Failed to save messaging settings",
+        (error as { message?: string }).message ??
+          "Failed to save messaging settings",
       );
     }
     if (!data) {
@@ -1389,8 +1405,11 @@ const dataProviderWithCustomMethods = {
       method: "POST",
       body: {
         conversation_id:
-          params.conversationId != null ? Number(params.conversationId) : undefined,
-        contact_id: params.contactId != null ? Number(params.contactId) : undefined,
+          params.conversationId != null
+            ? Number(params.conversationId)
+            : undefined,
+        contact_id:
+          params.contactId != null ? Number(params.contactId) : undefined,
         deal_id:
           params.dealId != null && params.dealId !== ""
             ? Number(params.dealId)
@@ -1403,12 +1422,17 @@ const dataProviderWithCustomMethods = {
       const response = (error as { context?: Response }).context;
       if (response) {
         try {
-          const payload = (await response.clone().json()) as { message?: string };
+          const payload = (await response.clone().json()) as {
+            message?: string;
+          };
           if (payload?.message) {
             throw new Error(payload.message);
           }
         } catch (parseError) {
-          if (parseError instanceof Error && parseError.message !== "Failed to send SMS") {
+          if (
+            parseError instanceof Error &&
+            parseError.message !== "Failed to send SMS"
+          ) {
             throw parseError;
           }
         }
@@ -1417,7 +1441,10 @@ const dataProviderWithCustomMethods = {
         (error as { message?: string }).message ?? "Failed to send SMS",
       );
     }
-    return { message: data?.message ?? null, conversation: data?.conversation ?? null };
+    return {
+      message: data?.message ?? null,
+      conversation: data?.conversation ?? null,
+    };
   },
   async findClientConversationForContact(contactId: Identifier) {
     const { data: contact, error: contactError } = await supabase
@@ -1430,7 +1457,10 @@ const dataProviderWithCustomMethods = {
       return null;
     }
 
-    const phoneJsonb = contact.phone_jsonb as PhoneNumberAndType[] | null | undefined;
+    const phoneJsonb = contact.phone_jsonb as
+      | PhoneNumberAndType[]
+      | null
+      | undefined;
     let externalPhone: string | null = null;
     for (const entry of phoneJsonb ?? []) {
       const normalized = normalizeUsPhoneToE164(entry.number ?? "");
@@ -1462,7 +1492,9 @@ const dataProviderWithCustomMethods = {
     authorMemberId: Identifier;
     dealId?: Identifier | null;
   }) {
-    const authorMemberId = await resolveOrganizationMemberId(params.authorMemberId);
+    const authorMemberId = await resolveOrganizationMemberId(
+      params.authorMemberId,
+    );
 
     const { data: contact, error: contactError } = await supabase
       .from("contacts")
@@ -1474,7 +1506,10 @@ const dataProviderWithCustomMethods = {
       throw new Error("Contact not found");
     }
 
-    const phoneJsonb = contact.phone_jsonb as PhoneNumberAndType[] | null | undefined;
+    const phoneJsonb = contact.phone_jsonb as
+      | PhoneNumberAndType[]
+      | null
+      | undefined;
     let externalPhone: string | null = null;
     for (const entry of phoneJsonb ?? []) {
       const normalized = normalizeUsPhoneToE164(entry.number ?? "");
@@ -1544,7 +1579,9 @@ const dataProviderWithCustomMethods = {
           return retry as import("@/lbs/types").Conversation;
         }
       }
-      throw new Error(createError.message ?? "Failed to create client conversation");
+      throw new Error(
+        createError.message ?? "Failed to create client conversation",
+      );
     }
 
     return created as import("@/lbs/types").Conversation;
@@ -1812,7 +1849,9 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
     resource: "calendar_events",
     beforeCreate: async (params) => ({
       ...params,
-      data: prepareCalendarEventWriteData(params.data as Record<string, unknown>),
+      data: prepareCalendarEventWriteData(
+        params.data as Record<string, unknown>,
+      ),
     }),
     beforeUpdate: async (params) => ({
       ...params,
