@@ -1,24 +1,38 @@
 import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { isLbsMode } from "@/lbs/productMode";
 
-const ProjectShowPage = lazy(() =>
+const ShowFallback = () => <Skeleton className="h-96 w-full rounded-xl" />;
+
+const LbsProjectShowPage = lazy(() =>
   import("@/lbs/projects/ProjectShowPage").then((m) => ({
     default: m.ProjectShowPage,
   })),
 );
 
-const ContractorDealShow = lazy(() =>
-  import("@/contractor/deals/ContractorDealShow").then((m) => ({
-    default: m.ContractorDealShow,
-  })),
-);
+const isContractorBuild =
+  import.meta.env.VITE_PRODUCT_MODE === "contractor";
 
-const ShowFallback = () => <Skeleton className="h-96 w-full rounded-xl" />;
+const ContractorDealShow = isContractorBuild
+  ? lazy(() =>
+      import("@/contractor/deals/ContractorDealShow").then((m) => ({
+        default: m.ContractorDealShow,
+      })),
+    )
+  : null;
 
-/** Routes LBS agency projects vs contractor deal show (lazy-loaded). */
-export const DealShow = ({ id }: { id?: string }) => (
-  <Suspense fallback={<ShowFallback />}>
-    {isLbsMode() ? <ProjectShowPage id={id} /> : <ContractorDealShow id={id} />}
-  </Suspense>
-);
+/** Routes LBS agency projects vs contractor deal show (build-specific lazy chunk). */
+export const DealShow = ({ id }: { id?: string }) => {
+  if (isContractorBuild && ContractorDealShow) {
+    return (
+      <Suspense fallback={<ShowFallback />}>
+        <ContractorDealShow id={id} />
+      </Suspense>
+    );
+  }
+
+  return (
+    <Suspense fallback={<ShowFallback />}>
+      <LbsProjectShowPage id={id} />
+    </Suspense>
+  );
+};
