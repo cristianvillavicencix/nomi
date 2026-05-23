@@ -67,11 +67,11 @@ export const getProjectDeliveryCountdown = (
   deliveryDate?: string | null,
   options?: { stage?: string; actualCompletionDate?: string | null },
 ): { label: string; status: ProjectDeliveryStatus } | null => {
-  if (options?.stage === "delivered") {
+  if (options?.stage === "delivered" || options?.stage === "launched") {
     const completedOn = formatProjectDeliveryDate(options.actualCompletionDate);
     return completedOn
-      ? { label: `Delivered ${completedOn}`, status: "delivered" }
-      : { label: "Delivered", status: "delivered" };
+      ? { label: `Launched ${completedOn}`, status: "delivered" }
+      : { label: "Launched", status: "delivered" };
   }
 
   const days = getDaysUntilDelivery(deliveryDate);
