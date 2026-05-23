@@ -1,17 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router";
-import { useGetIdentity, useNotify } from "ra-core";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useGetIdentity } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import type {
-  Conversation,
-  ConversationMessage,
-} from "@/lbs/types";
+import type { ConversationMessage } from "@/lbs/types";
 import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
 import { buildMessagePreview } from "@/lbs/messages/conversationUtils";
-import {
-  MessagesIncomingBannerStack,
-  type IncomingMessageNotification,
-} from "@/lbs/messages/MessagesIncomingBanner";
 import { playMessageNotificationSound } from "@/lbs/messages/messageNotificationSound";
 import { showMessagingDesktopNotification } from "@/lbs/messages/messagingDesktopNotifications";
 import { useInboxConversations } from "@/lbs/messages/useInboxConversations";
@@ -19,7 +11,6 @@ import { useMessagesInboxRealtime } from "@/lbs/messages/useMessagesInboxRealtim
 import { useMessagesQuickAccess } from "@/lbs/messages/messagesQuickAccessContext";
 
 type NotifyDecision = {
-  toast: boolean;
   sound: boolean;
   os: boolean;
 };
@@ -70,40 +61,22 @@ const shouldNotifyForMessage = (
 
   if (isActiveThread) {
     return {
-      toast: false,
       sound: !tabVisible,
       os: !tabVisible,
     };
   }
 
   return {
-    toast: true,
     sound: true,
     os: !tabVisible,
   };
 };
 
 export const MessagesNotificationsLayer = () => {
-  const location = useLocation();
   const { identity } = useGetIdentity();
-  const notify = useNotify();
-  const {
-    activeConversationId,
-    focusConversation,
-    openInbox,
-    viewConversation,
-  } = useMessagesQuickAccess();
-  const [incomingNotifications, setIncomingNotifications] = useState<
-    IncomingMessageNotification[]
-  >([]);
-
-  const {
-    conversations,
-    deals,
-    dmParticipants,
-    members,
-    contacts,
-  } = useInboxConversations();
+  const { activeConversationId } = useMessagesQuickAccess();
+  const { conversations, deals, dmParticipants, members, contacts } =
+    useInboxConversations();
 
   const notifiedMessageIdsRef = useRef(new Set<string>());
 
@@ -113,15 +86,6 @@ export const MessagesNotificationsLayer = () => {
 
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId;
-  }, [activeConversationId]);
-
-  useEffect(() => {
-    if (!activeConversationId) return;
-    setIncomingNotifications((current) =>
-      current.filter(
-        (entry) => entry.conversationId !== String(activeConversationId),
-      ),
-    );
   }, [activeConversationId]);
 
   const conversationsById = useMemo(
@@ -146,35 +110,18 @@ export const MessagesNotificationsLayer = () => {
           })
         : null;
 
-      const notification: IncomingMessageNotification = {
-        id: String(message.id),
-        conversationId: String(message.conversation_id),
-        title: display?.title ?? "New message",
-        preview: buildMessagePreview(message),
-      };
-
-      setIncomingNotifications((current) => {
-        if (current.some((entry) => entry.id === notification.id)) {
-          return current;
-        }
-        return [notification, ...current].slice(0, 4);
-      });
+      const title = display?.title ?? "New message";
+      const preview = buildMessagePreview(message);
 
       if (decision.sound) {
         playMessageNotificationSound();
       }
 
-      if (decision.toast) {
-        notify(`${notification.title}: ${notification.preview}`, {
-          type: "info",
-        });
-      }
-
       if (decision.os) {
         showMessagingDesktopNotification({
-          title: notification.title,
-          body: notification.preview,
-          tag: notification.id,
+          title,
+          body: preview,
+          tag: String(message.id),
         });
       }
     },
@@ -185,7 +132,6 @@ export const MessagesNotificationsLayer = () => {
       dmParticipants,
       identity?.id,
       members,
-      notify,
     ],
   );
 
@@ -221,40 +167,5 @@ export const MessagesNotificationsLayer = () => {
     };
   }, [identity?.id, pushNotification]);
 
-  const dismissNotification = useCallback((id: string) => {
-    setIncomingNotifications((current) =>
-      current.filter((entry) => entry.id !== id),
-    );
-  }, []);
-
-  const openNotification = useCallback(
-    (notification: IncomingMessageNotification) => {
-      const conversation = conversationsById[notification.conversationId];
-      if (!conversation) return;
-
-      dismissNotification(notification.id);
-      viewConversation(conversation as Conversation);
-      focusConversation(conversation as Conversation);
-
-      if (!location.pathname.startsWith("/messages")) {
-        openInbox();
-      }
-    },
-    [
-      conversationsById,
-      dismissNotification,
-      focusConversation,
-      location.pathname,
-      openInbox,
-      viewConversation,
-    ],
-  );
-
-  return (
-    <MessagesIncomingBannerStack
-      notifications={incomingNotifications}
-      onDismiss={dismissNotification}
-      onOpen={openNotification}
-    />
-  );
+  return null;
 };

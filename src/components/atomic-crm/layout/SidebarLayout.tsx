@@ -450,7 +450,7 @@ const SidebarItem = ({
         {badgeCount > 0 ? (
           <Badge
             variant="default"
-            className="ml-auto rounded-full px-1.5 py-0 text-[10px] group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0.5 group-data-[collapsible=icon]:right-0.5 group-data-[collapsible=icon]:ml-0"
+            className="ml-auto rounded-full border-0 bg-blue-500 px-1.5 py-0 text-[10px] text-white group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0.5 group-data-[collapsible=icon]:right-0.5 group-data-[collapsible=icon]:ml-0"
           >
             {formatUnreadBadgeCount(badgeCount)}
           </Badge>
