@@ -26,6 +26,35 @@ const getWebhookUrl = () => {
   return `${base}/functions/v1/twilio_inbound_sms`;
 };
 
+const getPgcryptoKey = () => Deno.env.get("PGCRYPTO_KEY")?.trim() ?? "";
+
+const resolveTwilioAuthToken = async (
+  orgId: number,
+  row: {
+    twilio_auth_token?: string | null;
+    twilio_auth_token_encrypted?: string | null;
+  },
+) => {
+  const legacy = row.twilio_auth_token?.trim();
+  if (row.twilio_auth_token_encrypted?.trim()) {
+    const key = getPgcryptoKey();
+    if (!key) {
+      throw new Error("PGCRYPTO_KEY is not configured for Twilio token decryption");
+    }
+    const { data, error } = await supabaseAdmin.rpc("get_twilio_auth_token", {
+      p_org_id: orgId,
+      p_key: key,
+    });
+    if (error) {
+      throw new Error(error.message ?? "Failed to decrypt Twilio auth token");
+    }
+    if (typeof data === "string" && data.trim()) {
+      return data.trim();
+    }
+  }
+  return legacy ?? null;
+};
+
 export async function assertOrgAdministrator(user: User, orgId: number) {
   const member = await getUserOrganizationMember(user);
   if (!member?.administrator) {
@@ -43,7 +72,7 @@ export async function getMessagingSettingsPublic(
   const { data, error } = await supabaseAdmin
     .from("organization_messaging_settings")
     .select(
-      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token",
+      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted",
     )
     .eq("org_id", orgId)
     .maybeSingle();
@@ -57,7 +86,9 @@ export async function getMessagingSettingsPublic(
     twilio_account_sid: data?.twilio_account_sid ?? null,
     twilio_phone_number: data?.twilio_phone_number ?? null,
     sms_enabled: data?.sms_enabled === true,
-    has_auth_token: Boolean(data?.twilio_auth_token?.trim()),
+    has_auth_token: Boolean(
+      data?.twilio_auth_token_encrypted?.trim() || data?.twilio_auth_token?.trim(),
+    ),
     webhook_url: getWebhookUrl(),
   };
 }
@@ -77,10 +108,12 @@ export async function getMessagingSettingsSecrets(
 
   if (!data) return null;
 
+  const authToken = await resolveTwilioAuthToken(orgId, data);
+
   return {
     org_id: Number(data.org_id),
     twilio_account_sid: data.twilio_account_sid ?? null,
-    twilio_auth_token: data.twilio_auth_token ?? null,
+    twilio_auth_token: authToken,
     twilio_phone_number: data.twilio_phone_number ?? null,
     sms_enabled: data.sms_enabled === true,
   };
@@ -135,7 +168,7 @@ export async function upsertMessagingSettings(
   const payload = {
     org_id: orgId,
     twilio_account_sid: accountSid,
-    twilio_auth_token: authToken,
+    twilio_auth_token: null,
     twilio_phone_number: phoneNumber,
     sms_enabled: input.sms_enabled === true,
     updated_at: new Date().toISOString(),
@@ -147,6 +180,21 @@ export async function upsertMessagingSettings(
 
   if (error) {
     throw new Error(error.message ?? "Failed to save messaging settings");
+  }
+
+  if (authToken) {
+    const key = getPgcryptoKey();
+    if (!key) {
+      throw new Error("PGCRYPTO_KEY is not configured");
+    }
+    const { error: encryptError } = await supabaseAdmin.rpc("set_twilio_auth_token", {
+      p_org_id: orgId,
+      p_token: authToken,
+      p_key: key,
+    });
+    if (encryptError) {
+      throw new Error(encryptError.message ?? "Failed to encrypt Twilio auth token");
+    }
   }
 
   return getMessagingSettingsPublic(orgId);
