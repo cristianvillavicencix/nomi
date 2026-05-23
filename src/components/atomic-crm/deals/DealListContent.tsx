@@ -5,14 +5,16 @@ import {
   useGetIdentity,
   useListContext,
   useNotify,
-  type DataProvider,
-  type Identifier,
 } from "ra-core";
 import { useEffect, useMemo, useState } from "react";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { DealColumn } from "./DealColumn";
+import {
+  updateDealStage,
+  updateDealStageLocal,
+} from "./dealStageMutations";
 import { getPipelineStages } from "./pipelines";
 import type { DealsByStage } from "./stages";
 import { getDealsByStage } from "./stages";
@@ -37,6 +39,7 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
   const dataProvider = useDataProvider();
   const { data: identity } = useGetIdentity();
   const notify = useNotify();
+  const [isDragging, setIsDragging] = useState(false);
 
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>(
     getDealsByStage([], stages),
@@ -58,6 +61,7 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
   if (isPending) return null;
 
   const onDragEnd: OnDragEndResponder = (result) => {
+    setIsDragging(false);
     const { destination, source } = result;
 
     if (!destination) {
@@ -74,14 +78,12 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
     const sourceStage = source.droppableId;
     const destinationStage = destination.droppableId;
     const sourceDeal = dealsByStage[sourceStage][source.index]!;
-    const destinationDeal = dealsByStage[destinationStage][
-      destination.index
-    ] ?? {
+    const destinationDeal = dealsByStage[destinationStage][destination.index] ?? {
       stage: destinationStage,
-      index: undefined, // undefined if dropped after the last item
+      index: undefined,
     };
+    const previousState = dealsByStage;
 
-    // compute local state change synchronously
     setDealsByStage(
       updateDealStageLocal(
         sourceDeal,
@@ -91,231 +93,73 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
       ),
     );
 
-    // persist the changes
-    updateDealStage(
+    void updateDealStage(
       sourceDeal,
       destinationDeal,
       dataProvider,
       identity?.id,
-    ).then(async ({ stageChanged, newStage }) => {
-      refetch();
-      if (isLbsMode() && stageChanged && newStage && identity?.id) {
-        try {
-          const count = await createStageTasksForDeal({
-            dataProvider,
-            deal: sourceDeal as LbsDeal,
-            newStage,
-            previousStage: sourceStage,
-            organizationMemberId: identity.id,
-          });
-          const message = getStageTasksCreatedMessage(newStage, count);
-          if (message) notify(message, { type: "info" });
-        } catch {
-          notify("Project moved, but task templates could not be created", {
-            type: "warning",
-          });
-        }
+    )
+      .then(async ({ stageChanged, newStage }) => {
+        refetch();
+        if (isLbsMode() && stageChanged && newStage && identity?.id) {
+          try {
+            const count = await createStageTasksForDeal({
+              dataProvider,
+              deal: sourceDeal as LbsDeal,
+              newStage,
+              previousStage: sourceStage,
+              organizationMemberId: identity.id,
+            });
+            const message = getStageTasksCreatedMessage(newStage, count);
+            if (message) notify(message, { type: "info" });
+          } catch {
+            notify("Project moved, but task templates could not be created", {
+              type: "warning",
+            });
+          }
 
-        try {
-          const commissionCount = await ensureCommissionsForWonDeal({
-            dataProvider,
-            deal: { ...(sourceDeal as LbsDeal), stage: newStage },
-          });
-          const commissionMessage =
-            getCommissionAutomationMessage(commissionCount);
-          if (commissionMessage) notify(commissionMessage, { type: "info" });
-        } catch {
-          notify("Project moved, but commissions could not be created", {
-            type: "warning",
-          });
+          try {
+            const commissionCount = await ensureCommissionsForWonDeal({
+              dataProvider,
+              deal: { ...(sourceDeal as LbsDeal), stage: newStage },
+            });
+            const commissionMessage =
+              getCommissionAutomationMessage(commissionCount);
+            if (commissionMessage) notify(commissionMessage, { type: "info" });
+          } catch {
+            notify("Project moved, but commissions could not be created", {
+              type: "warning",
+            });
+          }
         }
-      }
-    });
+      })
+      .catch((error: unknown) => {
+        setDealsByStage(previousState);
+        const message =
+          error instanceof Error ? error.message : "Failed to update project";
+        notify(`Failed to update project: ${message}`, {
+          type: "error",
+          multiLine: true,
+        });
+      });
   };
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex gap-4">
+    <DragDropContext
+      onDragStart={() => setIsDragging(true)}
+      onDragEnd={onDragEnd}
+    >
+      <div className="flex gap-4 overflow-x-auto pb-2">
         {stages.map((stage) => (
           <DealColumn
             stage={stage.id}
             deals={dealsByStage[stage.id]}
             key={stage.id}
             pipelineId={pipelineId}
+            isDragging={isDragging}
           />
         ))}
       </div>
     </DragDropContext>
   );
-};
-
-const updateDealStageLocal = (
-  sourceDeal: Deal,
-  source: { stage: string; index: number },
-  destination: {
-    stage: string;
-    index?: number; // undefined if dropped after the last item
-  },
-  dealsByStage: DealsByStage,
-) => {
-  if (source.stage === destination.stage) {
-    // moving deal inside the same column
-    const column = dealsByStage[source.stage];
-    column.splice(source.index, 1);
-    column.splice(destination.index ?? column.length + 1, 0, sourceDeal);
-    return {
-      ...dealsByStage,
-      [destination.stage]: column,
-    };
-  } else {
-    // moving deal across columns
-    const sourceColumn = dealsByStage[source.stage];
-    const destinationColumn = dealsByStage[destination.stage];
-    sourceColumn.splice(source.index, 1);
-    destinationColumn.splice(
-      destination.index ?? destinationColumn.length + 1,
-      0,
-      sourceDeal,
-    );
-    return {
-      ...dealsByStage,
-      [source.stage]: sourceColumn,
-      [destination.stage]: destinationColumn,
-    };
-  }
-};
-
-const updateDealStage = async (
-  source: Deal,
-  destination: {
-    stage: string;
-    index?: number; // undefined if dropped after the last item
-  },
-  dataProvider: DataProvider,
-  identityId?: Identifier,
-): Promise<{ stageChanged: boolean; newStage?: string }> => {
-  const pipelineId = source.pipeline_id || "default";
-  const identity = identityId ? { id: identityId } : undefined;
-  if (source.stage === destination.stage) {
-    // moving deal inside the same column
-    // Fetch all the deals in this stage (because the list may be filtered, but we need to update even non-filtered deals)
-    const { data: columnDeals } = await dataProvider.getList("deals", {
-      sort: { field: "index", order: "ASC" },
-      pagination: { page: 1, perPage: 100 },
-      filter: { stage: source.stage, pipeline_id: pipelineId },
-    });
-    const destinationIndex = destination.index ?? columnDeals.length + 1;
-
-    if (source.index > destinationIndex) {
-      // deal moved up, eg
-      // dest   src
-      //  <------
-      // [4, 7, 23, 5]
-      await Promise.all([
-        // for all deals between destinationIndex and source.index, increase the index
-        ...columnDeals
-          .filter(
-            (deal) =>
-              deal.index >= destinationIndex && deal.index < source.index,
-          )
-          .map((deal) =>
-            dataProvider.update("deals", {
-              id: deal.id,
-              data: { index: deal.index + 1 },
-              previousData: deal,
-              meta: { identity },
-            }),
-          ),
-        // for the deal that was moved, update its index
-        dataProvider.update("deals", {
-          id: source.id,
-          data: { index: destinationIndex },
-          previousData: source,
-          meta: { identity },
-        }),
-      ]);
-    } else {
-      // deal moved down, e.g
-      // src   dest
-      //  ------>
-      // [4, 7, 23, 5]
-      await Promise.all([
-        // for all deals between source.index and destinationIndex, decrease the index
-        ...columnDeals
-          .filter(
-            (deal) =>
-              deal.index <= destinationIndex && deal.index > source.index,
-          )
-          .map((deal) =>
-            dataProvider.update("deals", {
-              id: deal.id,
-              data: { index: deal.index - 1 },
-              previousData: deal,
-              meta: { identity },
-            }),
-          ),
-        // for the deal that was moved, update its index
-        dataProvider.update("deals", {
-          id: source.id,
-          data: { index: destinationIndex },
-          previousData: source,
-          meta: { identity },
-        }),
-      ]);
-    }
-    return { stageChanged: false };
-  } else {
-    // moving deal across columns
-    // Fetch all the deals in both stages (because the list may be filtered, but we need to update even non-filtered deals)
-    const [{ data: sourceDeals }, { data: destinationDeals }] =
-      await Promise.all([
-        dataProvider.getList("deals", {
-          sort: { field: "index", order: "ASC" },
-          pagination: { page: 1, perPage: 100 },
-          filter: { stage: source.stage, pipeline_id: pipelineId },
-        }),
-        dataProvider.getList("deals", {
-          sort: { field: "index", order: "ASC" },
-          pagination: { page: 1, perPage: 100 },
-          filter: { stage: destination.stage, pipeline_id: pipelineId },
-        }),
-      ]);
-    const destinationIndex = destination.index ?? destinationDeals.length + 1;
-
-    await Promise.all([
-      // decrease index on the deals after the source index in the source columns
-      ...sourceDeals
-        .filter((deal) => deal.index > source.index)
-        .map((deal) =>
-          dataProvider.update("deals", {
-            id: deal.id,
-            data: { index: deal.index - 1 },
-            previousData: deal,
-            meta: { identity },
-          }),
-        ),
-      // increase index on the deals after the destination index in the destination columns
-      ...destinationDeals
-        .filter((deal) => deal.index >= destinationIndex)
-        .map((deal) =>
-          dataProvider.update("deals", {
-            id: deal.id,
-            data: { index: deal.index + 1 },
-            previousData: deal,
-            meta: { identity },
-          }),
-        ),
-      // change the dragged deal to take the destination index and column
-      dataProvider.update("deals", {
-        id: source.id,
-        data: {
-          index: destinationIndex,
-          stage: destination.stage,
-        },
-        previousData: source,
-        meta: { identity },
-      }),
-    ]);
-    return { stageChanged: true, newStage: destination.stage };
-  }
 };

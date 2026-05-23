@@ -45,6 +45,7 @@ import { DealListContent } from "./DealListContent";
 import { DealTableView } from "./DealTableView";
 import { DealShow } from "./DealShow";
 import { ProjectCreateFlow } from "@/lbs/deals/ProjectCreateFlow";
+import { LbsDealBoardContent } from "@/lbs/deals/LbsDealBoardContent";
 import { getDefaultPipeline, getPipelineById } from "./pipelines";
 import { useDealsViewPreference } from "./useDealsViewPreference";
 
@@ -93,6 +94,7 @@ const DealLayout = () => {
   const matchCreate = matchPath("/deals/create", location.pathname);
   const matchEdit = matchPath("/deals/:id", location.pathname);
   const { view } = useDealsViewPreference();
+  const lbsMode = isLbsMode();
 
   const { data, isPending, filterValues } = useListContext();
   const config = useConfigurationContext();
@@ -103,6 +105,18 @@ const DealLayout = () => {
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
 
   if (isPending) return null;
+
+  if (view === "board" && lbsMode) {
+    return (
+      <div className="w-full">
+        <LbsDealBoardContent pipelineId={selectedPipelineId} />
+        <DealArchivedList />
+        <ProjectCreateFlow />
+        <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />
+      </div>
+    );
+  }
+
   if (!data?.length && !hasFilters && view === "board")
     return (
       <>
