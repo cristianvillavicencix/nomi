@@ -17,6 +17,9 @@ export type LbsDeal = Deal & {
   delivery_status?: string | null;
   accepted_proposal_id?: Identifier | null;
   priority?: "low" | "normal" | "high" | "urgent";
+  tech_stack?: string[];
+  staging_url?: string | null;
+  production_url?: string | null;
 };
 
 export type Proposal = {
@@ -252,3 +255,101 @@ export type MessagingSettingsPublic = {
   auto_acknowledge_enabled?: boolean;
   auto_acknowledge_message?: string | null;
 };
+
+export type DealLaunchChecklistItem = {
+  org_id: number;
+  deal_id: Identifier;
+  category: string;
+  label: string;
+  description?: string | null;
+  is_required?: boolean;
+  is_completed?: boolean;
+  completed_at?: string | null;
+  completed_by_member_id?: Identifier | null;
+  order_index?: number;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type LaunchChecklistTemplate = {
+  org_id: number;
+  project_type?: string | null;
+  category: string;
+  label: string;
+  description?: string | null;
+  is_required?: boolean;
+  order_index?: number;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type DealMilestone = {
+  org_id: number;
+  deal_id: Identifier;
+  title: string;
+  description?: string | null;
+  start_date?: string | null;
+  due_date?: string | null;
+  completed_at?: string | null;
+  order_index?: number;
+  depends_on_milestone_id?: Identifier | null;
+  color?: string;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type MaintenanceRetainer = {
+  org_id: number;
+  deal_id: Identifier;
+  monthly_hours_included: number;
+  monthly_amount: number;
+  billing_day: number;
+  start_date: string;
+  end_date?: string | null;
+  active?: boolean;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type MaintenanceHoursLog = {
+  org_id: number;
+  retainer_id: Identifier;
+  member_id?: Identifier | null;
+  hours_worked: number;
+  description: string;
+  worked_date: string;
+  billing_period: string;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ClientPortalAccount = {
+  org_id: number;
+  contact_id: Identifier;
+  user_id?: string | null;
+  email: string;
+  invitation_token?: string | null;
+  invitation_sent_at?: string | null;
+  invitation_accepted_at?: string | null;
+  last_login_at?: string | null;
+  active?: boolean;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ClientPortalDealAccess = {
+  portal_account_id: Identifier;
+  deal_id: Identifier;
+  org_id: number;
+  granted_at?: string;
+  granted_by_member_id?: Identifier | null;
+} & Pick<RaRecord, "id">;
+
+export type DealApproval = {
+  org_id: number;
+  deal_id: Identifier;
+  resource_type: string;
+  resource_url?: string | null;
+  title: string;
+  description?: string | null;
+  status: string;
+  requested_by_member_id?: Identifier | null;
+  responded_at?: string | null;
+  response_comment?: string | null;
+  created_at?: string;
+  expires_at?: string | null;
+} & Pick<RaRecord, "id">;

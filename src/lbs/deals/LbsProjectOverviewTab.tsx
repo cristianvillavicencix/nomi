@@ -22,6 +22,7 @@ import { getProjectBriefProgress } from "@/lbs/deals/projectBriefProgress";
 import { ProjectCalendarEventsList } from "@/lbs/calendar/ProjectCalendarEventsList";
 import { ProjectGithubLink } from "@/lbs/deals/ProjectGithubLink";
 import { ProfitSummaryCard } from "@/lbs/projects/financials/ProfitSummaryCard";
+import { ProjectDeploymentCard } from "@/lbs/projects/ProjectDeploymentCard";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
@@ -144,6 +145,8 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
               </span>
             </OverviewField>
           ) : null}
+
+          <ProjectDeploymentCard record={record} />
         </div>
 
         <div className="rounded-lg border p-4 lg:sticky lg:top-4 space-y-6">
