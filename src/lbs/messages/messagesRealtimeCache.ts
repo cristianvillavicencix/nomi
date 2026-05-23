@@ -152,4 +152,7 @@ export const appendConversationMessageToCache = (
 export const refreshConversationLists = (queryClient: QueryClient) => {
   void queryClient.invalidateQueries({ queryKey: ["conversations"] });
   void queryClient.invalidateQueries({ queryKey: ["conversation_messages"] });
+  void queryClient.invalidateQueries({
+    queryKey: ["conversations-unread-counts"],
+  });
 };

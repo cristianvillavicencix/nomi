@@ -210,6 +210,7 @@ export const MessagesInbox = (props: {
           selectedConversationId={props.selectedConversationId}
           onSelectConversation={props.onSelectConversation}
           isConversationUnread={unread.isConversationUnread}
+          getUnreadCount={unread.getUnreadCount}
           onLoadMore={props.onLoadMore}
           hasMore={props.hasMoreConversations}
           loadingMore={props.loadingMoreConversations}

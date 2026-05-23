@@ -21,6 +21,7 @@ export const InboxList = ({
   selectedConversationId,
   onSelectConversation,
   isConversationUnread,
+  getUnreadCount,
   onLoadMore,
   hasMore,
   loadingMore,
@@ -34,6 +35,7 @@ export const InboxList = ({
   selectedConversationId?: Identifier | null;
   onSelectConversation: (conversation: Conversation) => void;
   isConversationUnread: (conversation: Conversation) => boolean;
+  getUnreadCount?: (conversation: Conversation) => number;
   onLoadMore?: () => void;
   hasMore?: boolean;
   loadingMore?: boolean;
@@ -80,7 +82,10 @@ export const InboxList = ({
                 members={members}
                 contacts={contacts}
                 currentMemberId={currentMemberId}
-                isUnread={isConversationUnread(conversation)}
+                unreadCount={
+                  getUnreadCount?.(conversation) ??
+                  (isConversationUnread(conversation) ? 1 : 0)
+                }
               />
             </div>
           );

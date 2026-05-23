@@ -112,5 +112,8 @@ export const persistConversationRead = async ({
   await queryClient.invalidateQueries({
     queryKey: ["conversation_participants"],
   });
+  void queryClient.invalidateQueries({
+    queryKey: ["conversations-unread-counts"],
+  });
   return true;
 };

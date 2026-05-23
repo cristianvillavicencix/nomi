@@ -7,11 +7,11 @@ import type {
   OrganizationMember,
 } from "@/lbs/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   getConversationDisplay,
   formatConversationListTime,
 } from "@/lbs/messages/conversationDisplay";
+import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
 import { cn } from "@/lib/utils";
 
 export const ConversationListItem = ({
@@ -23,7 +23,7 @@ export const ConversationListItem = ({
   members,
   contacts = [],
   currentMemberId,
-  isUnread = false,
+  unreadCount = 0,
 }: {
   conversation: Conversation;
   isActive: boolean;
@@ -33,7 +33,7 @@ export const ConversationListItem = ({
   members: OrganizationMember[];
   contacts?: Contact[];
   currentMemberId?: Identifier;
-  isUnread?: boolean;
+  unreadCount?: number;
 }) => {
   const display = getConversationDisplay({
     conversation,
@@ -44,6 +44,7 @@ export const ConversationListItem = ({
     currentMemberId,
   });
   const timeLabel = formatConversationListTime(display.activityAt);
+  const hasUnread = unreadCount > 0;
 
   return (
     <button
@@ -51,7 +52,7 @@ export const ConversationListItem = ({
       className={cn(
         "flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors",
         isActive ? "bg-muted/50" : "hover:bg-muted/35",
-        isUnread && !isActive && "bg-muted/25",
+        hasUnread && !isActive && "bg-muted/25",
       )}
       onClick={() => onSelect(conversation)}
     >
@@ -66,17 +67,17 @@ export const ConversationListItem = ({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <span className={cn("truncate", isUnread && "font-semibold")}>
+          <span className={cn("truncate", hasUnread && "font-semibold")}>
             {display.title}
           </span>
           <div className="flex shrink-0 items-center gap-1.5">
-            {isUnread ? (
-              <Badge
-                variant="default"
-                className="h-5 min-w-5 rounded-full px-1.5 text-[10px]"
+            {hasUnread ? (
+              <span
+                className="min-w-[20px] rounded-full bg-muted px-1.5 py-0.5 text-center text-xs font-medium text-muted-foreground"
+                aria-label={`${unreadCount} unread messages`}
               >
-                1
-              </Badge>
+                {formatUnreadBadgeCount(unreadCount)}
+              </span>
             ) : null}
             {timeLabel ? (
               <span className="text-[11px] text-muted-foreground">
@@ -88,7 +89,7 @@ export const ConversationListItem = ({
         <p
           className={cn(
             "mt-0.5 truncate text-sm text-muted-foreground",
-            isUnread && "text-foreground/80",
+            hasUnread && "text-foreground/80",
           )}
         >
           {display.preview}
