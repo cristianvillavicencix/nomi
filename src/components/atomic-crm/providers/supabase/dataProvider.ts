@@ -1388,6 +1388,9 @@ const dataProviderWithCustomMethods = {
     dealId?: Identifier | null;
     body: string;
     mediaUrls?: string[];
+    isInternalNote?: boolean;
+    templateId?: Identifier;
+    replyToMessageId?: Identifier | null;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       message?: import("@/lbs/types").ConversationMessage;
@@ -1407,6 +1410,13 @@ const dataProviderWithCustomMethods = {
             : undefined,
         body: params.body,
         media_urls: params.mediaUrls,
+        is_internal_note: params.isInternalNote === true,
+        template_id:
+          params.templateId != null ? Number(params.templateId) : undefined,
+        reply_to_message_id:
+          params.replyToMessageId != null
+            ? Number(params.replyToMessageId)
+            : undefined,
       },
     });
     if (error) {

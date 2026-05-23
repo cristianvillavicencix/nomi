@@ -5,7 +5,8 @@ import type { ClientSmsDraft, Contact, Conversation, ConversationParticipant, Lb
 import { getContactDisplayName } from "@/lbs/messages/messageContactUtils";
 import { ConversationThread } from "@/lbs/messages/ConversationThread";
 import { ConversationChatHeader } from "@/lbs/messages/ConversationChatHeader";
-import { MessagesInboxPanel } from "@/lbs/messages/MessagesInboxPanel";
+import { MessagesInbox } from "@/lbs/messages/inbox/MessagesInbox";
+import { ContextPanel } from "@/lbs/messages/context/ContextPanel";
 
 export const MessagesWorkspace = ({
   conversations,
@@ -63,7 +64,7 @@ export const MessagesWorkspace = ({
           !showInbox && "hidden md:flex",
         )}
       >
-        <MessagesInboxPanel
+        <MessagesInbox
           conversations={conversations}
           deals={deals}
           dmParticipants={dmParticipants}
@@ -126,6 +127,16 @@ export const MessagesWorkspace = ({
           </div>
         )}
       </main>
+
+      <ContextPanel
+        conversation={activeConversation}
+        contact={activeContact}
+        deal={
+          activeConversation?.deal_id != null
+            ? deals.find((entry) => String(entry.id) === String(activeConversation.deal_id))
+            : undefined
+        }
+      />
     </div>
   );
 };

@@ -10,7 +10,7 @@ type MessageListCache = {
 };
 
 const CONVERSATION_MESSAGES_LIST_PARAMS = {
-  pagination: { page: 1, perPage: 300 },
+  pagination: { page: 1, perPage: 50 },
   sort: { field: "created_at", order: "ASC" as const },
 };
 

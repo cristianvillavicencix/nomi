@@ -147,6 +147,13 @@ export type Conversation = {
   external_phone?: string | null;
   dm_key?: string | null;
   last_message_at?: string | null;
+  assignee_member_id?: Identifier | null;
+  status?: "open" | "pending" | "closed" | "urgent";
+  tags?: string[];
+  priority?: "low" | "normal" | "high" | "urgent";
+  first_response_at?: string | null;
+  closed_at?: string | null;
+  closed_by_member_id?: Identifier | null;
   created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;
@@ -167,6 +174,44 @@ export type ConversationMessage = {
   direction?: MessageDirection;
   external_id?: string | null;
   media_url?: string | null;
+  is_internal_note?: boolean;
+  reply_to_message_id?: Identifier | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type MessageTemplate = {
+  org_id: number;
+  name: string;
+  category?: string | null;
+  language: "en" | "es";
+  body: string;
+  variables?: string[];
+  channels?: string[];
+  created_by_member_id?: Identifier | null;
+  is_archived?: boolean;
+  use_count?: number;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type VoiceCall = {
+  org_id: number;
+  external_id?: string | null;
+  direction: "inbound" | "outbound";
+  status: string;
+  from_number?: string | null;
+  to_number?: string | null;
+  contact_id?: Identifier | null;
+  deal_id?: Identifier | null;
+  member_id?: Identifier | null;
+  conversation_id?: Identifier | null;
+  duration_seconds?: number | null;
+  recording_url?: string | null;
+  recording_enabled?: boolean;
+  started_at?: string | null;
+  ended_at?: string | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
 

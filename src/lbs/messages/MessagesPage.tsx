@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import { MessageSquare, Settings2 } from "lucide-react";
+import { Link } from "react-router";
 import { useGetIdentity } from "ra-core";
+import { Button } from "@/components/ui/button";
 import { PageLayout, ScrollableContentArea } from "@/components/atomic-crm/layout/page-shell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Conversation } from "@/lbs/types";
@@ -66,8 +69,19 @@ export const MessagesPage = () => {
   return (
     <PageLayout>
       <ScrollableContentArea className="px-0 pb-2 md:px-3">
-        {/* Full-width split view: no nested card/frame around chat */}
-        <div className="mx-auto flex h-[calc(100vh-7rem)] w-full max-w-[1400px] overflow-hidden px-2 md:px-4">
+        <div className="mx-auto flex h-[calc(100vh-7rem)] w-full max-w-[1600px] flex-col overflow-hidden px-2 md:px-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-border/40 py-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="size-5 text-muted-foreground" />
+              <h1 className="text-lg font-semibold">Messages</h1>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/settings?section=messaging">
+                <Settings2 className="mr-2 size-4" />
+                Communications
+              </Link>
+            </Button>
+          </div>
           <MessagesWorkspace
             conversations={conversations}
             deals={deals}
@@ -83,7 +97,7 @@ export const MessagesPage = () => {
             isMobile={isMobile}
             showMobileChat={mobileShowChat}
             onMobileBack={() => setMobileShowChat(false)}
-            className="h-full"
+            className="min-h-0 flex-1"
           />
         </div>
       </ScrollableContentArea>

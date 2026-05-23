@@ -8,8 +8,7 @@ import {
 } from "ra-core";
 import type { ConversationParticipant, ConversationType } from "@/lbs/types";
 
-const usesParticipantReadTracking = (type?: ConversationType | null) =>
-  type === "team_dm";
+const usesParticipantReadTracking = (_type?: ConversationType | null) => true;
 
 export const useMarkConversationRead = (
   conversationId: Identifier | null | undefined,

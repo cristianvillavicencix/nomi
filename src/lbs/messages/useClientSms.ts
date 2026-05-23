@@ -37,6 +37,9 @@ export const useSendClientSms = () => {
       dealId?: Identifier | null;
       body: string;
       mediaUrls?: string[];
+      isInternalNote?: boolean;
+      templateId?: Identifier;
+      replyToMessageId?: Identifier | null;
     }) => {
       const result = await dataProvider.sendClientSms({
         conversationId: params.conversationId,
@@ -44,6 +47,9 @@ export const useSendClientSms = () => {
         dealId: params.dealId,
         body: params.body,
         mediaUrls: params.mediaUrls,
+        isInternalNote: params.isInternalNote,
+        templateId: params.templateId,
+        replyToMessageId: params.replyToMessageId,
       });
 
       const message = result.message as ConversationMessage | null;

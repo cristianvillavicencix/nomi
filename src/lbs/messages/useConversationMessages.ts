@@ -20,7 +20,7 @@ export const useConversationMessages = (
     "conversation_messages",
     {
       filter: conversationId ? { "conversation_id@eq": conversationId } : {},
-      pagination: { page: 1, perPage: 300 },
+      pagination: { page: 1, perPage: 50 },
       sort: { field: "created_at", order: "ASC" },
     },
     { enabled: conversationId != null, staleTime: 5_000 },

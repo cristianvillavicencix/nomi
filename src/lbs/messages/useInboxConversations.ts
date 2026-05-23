@@ -48,7 +48,7 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
       "conversation_participants",
       {
         filter: identity?.id ? { "member_id@eq": identity.id } : {},
-        pagination: { page: 1, perPage: 200 },
+        pagination: { page: 1, perPage: 30 },
         sort: { field: "id", order: "DESC" },
       },
       { enabled: enabled && !!identity?.id, staleTime: 15_000 },
@@ -59,7 +59,7 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
       "conversations",
       {
         filter: { "type@eq": "project" },
-        pagination: { page: 1, perPage: 200 },
+        pagination: { page: 1, perPage: 30 },
         sort: { field: "updated_at", order: "DESC" },
       },
       { enabled, staleTime: 15_000 },
@@ -70,7 +70,7 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
       "conversations",
       {
         filter: { "type@eq": "client" },
-        pagination: { page: 1, perPage: 200 },
+        pagination: { page: 1, perPage: 30 },
         sort: { field: "updated_at", order: "DESC" },
       },
       { enabled, staleTime: 15_000 },

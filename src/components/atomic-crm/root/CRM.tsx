@@ -513,6 +513,8 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="conversations" />
           <Resource name="conversation_participants" />
           <Resource name="conversation_messages" />
+          <Resource name="message_templates" />
+          <Resource name="voice_calls" />
           <Resource name="deal_resources" />
           <Resource name="deal_access_entries" />
           <Resource name="proposal_line_items" />

@@ -27,9 +27,12 @@ import { WebFormEdit } from "@/lbs/web-forms/WebFormEdit";
 import { WebFormCreate } from "@/lbs/web-forms/WebFormCreate";
 import { TicketsList } from "@/lbs/tickets/TicketsList";
 import { TicketShow } from "@/lbs/tickets/TicketShow";
+import { lazy, Suspense } from "react";
 import { CalendarPage } from "@/lbs/calendar/CalendarPage";
 import { MeetingsPage } from "@/lbs/meetings/MeetingsPage";
-import { MessagesPage } from "@/lbs/messages/MessagesPage";
+const MessagesPage = lazy(() =>
+  import("@/lbs/messages/MessagesPage").then((module) => ({ default: module.MessagesPage })),
+);
 import {
   CompanyToClientEditRedirect,
   CompanyToClientShowRedirect,
@@ -95,7 +98,9 @@ export const renderLbsCustomRoutes = ({
         path="/messages"
         element={
           <ProtectedRoute resource="conversations" action="list">
-            <MessagesPage />
+            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading messages…</div>}>
+              <MessagesPage />
+            </Suspense>
           </ProtectedRoute>
         }
       />

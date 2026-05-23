@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Contact, Conversation, ConversationMessage } from "@/lbs/types";
 import { SmsWebFormPicker } from "@/lbs/messages/SmsWebFormPicker";
+import { cn } from "@/lib/utils";
 import { isImageMediaUrl, getMediaFileName, downloadMediaUrl, uploadSmsMedia } from "@/lbs/messages/smsMediaUpload";
 import { useResolvedMediaUrl } from "@/lbs/messages/useResolvedMediaUrl";
-import { useSendClientSms } from "@/lbs/messages/useClientSms";
+import { InternalNoteToggle } from "@/lbs/messages/composer/InternalNoteToggle";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 
 type PendingAttachment = {
   id: string;
@@ -38,6 +40,8 @@ export const ClientSmsComposer = ({
   const [body, setBody] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isInternalNote, setIsInternalNote] = useState(false);
+  const canWriteInternalNotes = useMemberCapability("messaging.internal_notes.write");
 
   const canSend =
     !disabled &&
@@ -111,6 +115,7 @@ export const ClientSmsComposer = ({
         dealId,
         body: body.trim(),
         mediaUrls: uploadedUrls,
+        isInternalNote,
       });
 
       if (!result.conversation || !result.message) {
@@ -141,7 +146,20 @@ export const ClientSmsComposer = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border-t border-border/40 px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] bg-background">
+    <form
+      onSubmit={handleSubmit}
+      className={cn(
+        "space-y-2 border-t border-border/40 px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] bg-background",
+        isInternalNote && "bg-amber-50/40 dark:bg-amber-500/5",
+      )}
+    >
+      {canWriteInternalNotes ? (
+        <InternalNoteToggle
+          checked={isInternalNote}
+          onCheckedChange={setIsInternalNote}
+          disabled={disabled || isSending}
+        />
+      ) : null}
       {pendingFiles.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {pendingFiles.map((pending) => (

@@ -42,11 +42,18 @@ const MessageBubble = ({
       <div
         className={cn(
           "max-w-[min(78%,560px)] rounded-2xl px-3.5 py-2.5 text-[15px] leading-snug",
-          isOwn
+          message.is_internal_note
+            ? "rounded-bl-md border border-amber-300/60 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-50"
+            : isOwn
             ? "rounded-br-md bg-primary text-primary-foreground"
             : "rounded-bl-md bg-muted/50 text-foreground dark:bg-muted/30",
         )}
       >
+        {message.is_internal_note ? (
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800/80 dark:text-amber-200/80">
+            Internal — client cannot see this
+          </div>
+        ) : null}
         {message.media_url ? (
           <SmsMessageMedia
             url={message.media_url}
