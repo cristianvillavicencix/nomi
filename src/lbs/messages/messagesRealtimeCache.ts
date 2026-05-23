@@ -39,15 +39,26 @@ const mergeMessageIntoList = (
   if (!old) {
     return { data: [message], total: 1 };
   }
-  if (old.data.some((entry) => String(entry.id) === String(message.id))) {
-    return old;
+
+  const messageId = String(message.id);
+  const existingIndex = old.data.findIndex(
+    (entry) => String(entry.id) === messageId,
+  );
+
+  if (existingIndex >= 0) {
+    const nextData = [...old.data];
+    nextData[existingIndex] = { ...nextData[existingIndex], ...message };
+    return { ...old, data: nextData };
   }
+
   return {
     ...old,
     data: [...old.data, message],
     total: old.total + 1,
   };
 };
+
+export { mergeMessageIntoList };
 
 export const appendConversationMessageToCache = (
   queryClient: QueryClient,
