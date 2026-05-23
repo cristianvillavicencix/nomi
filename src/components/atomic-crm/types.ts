@@ -726,6 +726,19 @@ export type DealPipeline = {
   stages: DealPipelineStage[];
 };
 
+export type OrganizationPipelineStage = {
+  id: Identifier;
+  org_id: Identifier;
+  pipeline_id: string;
+  key: string;
+  label: string;
+  color: string;
+  order_index: number;
+  is_won: boolean;
+  is_lost: boolean;
+  created_at?: string;
+};
+
 export interface NoteStatus extends LabeledValue {
   color: string;
 }

@@ -10,6 +10,7 @@ import type {
   ContactNote,
   Deal,
   DealNote,
+  DealPipeline,
   PhoneNumberAndType,
   RAFile,
   OrganizationMember,
@@ -1086,6 +1087,68 @@ const dataProviderWithCustomMethods = {
   ): Promise<ConfigurationContextValue> {
     const row = await patchSingletonConfigurationRow(config);
     return row.config as ConfigurationContextValue;
+  },
+  async syncOrganizationPipelineStages(
+    pipelines: DealPipeline[],
+  ): Promise<void> {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authUserId = sessionData.session?.user?.id;
+    if (!authUserId) {
+      throw new Error("Not authenticated");
+    }
+
+    const { data: member, error: memberError } = await supabase
+      .from("organization_members")
+      .select("id, org_id")
+      .eq("user_id", authUserId)
+      .single();
+
+    if (memberError || !member?.org_id) {
+      throw new Error("Organization member not found");
+    }
+
+    for (const pipeline of pipelines) {
+      const { error: deleteError } = await supabase
+        .from("organization_pipeline_stages")
+        .delete()
+        .eq("org_id", member.org_id)
+        .eq("pipeline_id", pipeline.id);
+
+      if (deleteError) {
+        console.error("syncOrganizationPipelineStages.delete", deleteError);
+        throw new Error("Failed to reset pipeline stages");
+      }
+
+      const rows = pipeline.stages.map((stage, index) => {
+        const label = stage.label.toLowerCase();
+        return {
+          org_id: member.org_id,
+          pipeline_id: pipeline.id,
+          key: stage.id,
+          label: stage.label,
+          color: stage.color || "#64748b",
+          order_index: stage.order ?? index + 1,
+          is_won:
+            stage.id === "won" ||
+            stage.id === "closed_won" ||
+            label.includes("won"),
+          is_lost: stage.id === "closed_lost" || label.includes("closed lost"),
+        };
+      });
+
+      if (rows.length === 0) continue;
+
+      const { error: insertError } = await supabase
+        .from("organization_pipeline_stages")
+        .insert(rows);
+
+      if (insertError) {
+        console.error("syncOrganizationPipelineStages.insert", insertError);
+        throw new Error("Failed to save pipeline stages");
+      }
+    }
+
+    invalidateResourceQueries("organization_pipeline_stages");
   },
   async generatePaymentLines(paymentId: Identifier): Promise<number> {
     const { data, error } = await supabase.rpc("generate_payment_lines", {

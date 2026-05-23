@@ -1,7 +1,8 @@
 import { RotateCcw, Save } from "lucide-react";
 import type { RaRecord } from "ra-core";
-import { EditBase, Form, useGetList, useInput, useNotify } from "ra-core";
+import { EditBase, Form, useDataProvider, useGetList, useInput, useNotify } from "ra-core";
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { isTenantBrandingEditorVisible } from "./tenantBrandingFlags";
 import { useSearchParams } from "react-router";
 import { useFormContext } from "react-hook-form";
@@ -30,6 +31,7 @@ import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import { UsersSettingsSection } from "./UsersSettingsSection";
 import { MessagingSettingsSection } from "@/lbs/settings/MessagingSettingsSection";
 import { isLbsMode } from "@/lbs/productMode";
+import { useLbsPipelineConfig } from "@/lbs/deals/useLbsPipelineConfig";
 
 const CONTRACTOR_SETTINGS_TAB_IDS = [
   "general",
@@ -231,7 +233,10 @@ const transformFormValues = (
 
 const SettingsPageContent = () => {
   const currentConfig = useConfigurationContext();
+  const lbsConfig = useLbsPipelineConfig();
   const updateConfiguration = useConfigurationUpdater();
+  const dataProvider = useDataProvider();
+  const queryClient = useQueryClient();
   const notify = useNotify();
   const transform = useCallback(
     (data: Record<string, any>) => transformFormValues(data, currentConfig),
@@ -246,8 +251,22 @@ const SettingsPageContent = () => {
       redirect={false}
       transform={transform}
       mutationOptions={{
-        onSuccess: (data: any) => {
+        onSuccess: async (data: any) => {
           updateConfiguration(data.config);
+          if (isLbsMode()) {
+            try {
+              await dataProvider.syncOrganizationPipelineStages(
+                data.config.dealPipelines ?? [],
+              );
+              await queryClient.invalidateQueries({
+                queryKey: ["organization_pipeline_stages"],
+              });
+            } catch {
+              notify("Settings saved, but pipeline stages failed to sync", {
+                type: "warning",
+              });
+            }
+          }
           notify("Configuration saved successfully");
         },
         onError: () => {
@@ -255,7 +274,7 @@ const SettingsPageContent = () => {
         },
       }}
     >
-      <SettingsForm />
+      <SettingsForm config={isLbsMode() ? lbsConfig : currentConfig} />
     </EditBase>
   );
 };
@@ -264,8 +283,11 @@ export const SettingsPage = () => <SettingsPageContent />;
 
 SettingsPage.path = "/settings";
 
-const SettingsForm = () => {
-  const config = useConfigurationContext();
+const SettingsForm = ({
+  config,
+}: {
+  config: ConfigurationContextValue;
+}) => {
 
   const defaultValues = useMemo(
     () => ({

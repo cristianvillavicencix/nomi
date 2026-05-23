@@ -1012,6 +1012,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     });
     return config;
   },
+  syncOrganizationPipelineStages: async () => undefined,
   generatePaymentLines: async (paymentId: Identifier): Promise<number> => {
     const { data: payment } = await dataProvider.getOne<any>("payments", {
       id: paymentId,
