@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import {
   useCreate,
+  useDataProvider,
   useDelete,
   useGetList,
   useNotify,
+  useRefresh,
   useUpdate,
   type Identifier,
 } from "ra-core";
+import { useQuery } from "@tanstack/react-query";
 import {
   Copy,
   ExternalLink,
@@ -16,6 +19,7 @@ import {
   Loader2,
   Pencil,
   Plus,
+  ShieldAlert,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,6 +59,7 @@ import {
   isSupabaseSchemaMissingError,
   supabaseTableQueryOptions,
 } from "@/lbs/deals/supabaseSchemaErrors";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { DealAccessEntry, LbsDeal } from "@/lbs/types";
 
 const copyToClipboard = async (
@@ -64,15 +69,6 @@ const copyToClipboard = async (
   if (!value.trim()) return;
   await navigator.clipboard.writeText(value.trim());
   notify("Copied to clipboard", { type: "info" });
-};
-
-const formatAccessEntryForCopy = (entry: DealAccessEntry) => {
-  const lines = [`Label: ${entry.label}`];
-  if (entry.url?.trim()) lines.push(`URL: ${entry.url.trim()}`);
-  if (entry.username?.trim()) lines.push(`Username: ${entry.username.trim()}`);
-  if (entry.password?.trim()) lines.push(`Password: ${entry.password.trim()}`);
-  if (entry.notes?.trim()) lines.push(`Notes: ${entry.notes.trim()}`);
-  return lines.join("\n");
 };
 
 const AccessEntryRow = ({
@@ -87,8 +83,88 @@ const AccessEntryRow = ({
   isDeleting: boolean;
 }) => {
   const notify = useNotify();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const [revealedPassword, setRevealedPassword] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
   const href = normalizeAccessUrl(entry.url);
+  const hasPassword = entry.has_password === true;
+
+  const revealPassword = async () => {
+    if (revealedPassword != null) {
+      setShowPassword(true);
+      return;
+    }
+    setIsRevealing(true);
+    try {
+      const password = await dataProvider.getAccessEntryPassword(entry.id);
+      setRevealedPassword(password);
+      setShowPassword(Boolean(password));
+      if (!password) {
+        notify("No password stored for this entry", { type: "warning" });
+      }
+    } catch {
+      notify("Failed to reveal password", { type: "error" });
+    } finally {
+      setIsRevealing(false);
+    }
+  };
+
+  const hidePassword = () => {
+    setShowPassword(false);
+  };
+
+  const copyPassword = async () => {
+    let password = revealedPassword;
+    if (password == null && hasPassword) {
+      setIsRevealing(true);
+      try {
+        password = await dataProvider.getAccessEntryPassword(entry.id);
+        setRevealedPassword(password);
+      } catch {
+        notify("Failed to copy password", { type: "error" });
+        return;
+      } finally {
+        setIsRevealing(false);
+      }
+    }
+    if (!password?.trim()) return;
+    await copyToClipboard(password, notify);
+    try {
+      await dataProvider.logAccessEntryAudit(entry.id, "copied");
+    } catch {
+      // Non-blocking: clipboard copy already succeeded.
+    }
+  };
+
+  const copyAll = async () => {
+    const lines = [`Label: ${entry.label}`];
+    if (entry.url?.trim()) lines.push(`URL: ${entry.url.trim()}`);
+    if (entry.username?.trim()) lines.push(`Username: ${entry.username.trim()}`);
+    if (hasPassword) {
+      let password = revealedPassword;
+      if (password == null) {
+        try {
+          password = await dataProvider.getAccessEntryPassword(entry.id);
+          setRevealedPassword(password);
+        } catch {
+          notify("Failed to copy credentials", { type: "error" });
+          return;
+        }
+      }
+      if (password?.trim()) lines.push(`Password: ${password.trim()}`);
+    }
+    if (entry.notes?.trim()) lines.push(`Notes: ${entry.notes.trim()}`);
+    await navigator.clipboard.writeText(lines.join("\n"));
+    notify("All credentials copied", { type: "info" });
+    if (hasPassword) {
+      try {
+        await dataProvider.logAccessEntryAudit(entry.id, "copied");
+      } catch {
+        // Non-blocking.
+      }
+    }
+  };
 
   return (
     <TableRow>
@@ -131,31 +207,41 @@ const AccessEntryRow = ({
         )}
       </TableCell>
       <TableCell className="max-w-[180px]">
-        {entry.password?.trim() ? (
+        {hasPassword ? (
           <div className="flex items-center gap-1">
             <code className="truncate text-xs">
-              {showPassword ? entry.password : "••••••••"}
+              {showPassword && revealedPassword
+                ? revealedPassword
+                : "••••••••"}
             </code>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="size-7 shrink-0"
-              onClick={() => setShowPassword((current) => !current)}
+              disabled={isRevealing}
+              onClick={() =>
+                showPassword ? hidePassword() : void revealPassword()
+              }
             >
-              {showPassword ? (
+              {isRevealing ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : showPassword ? (
                 <EyeOff className="size-3.5" />
               ) : (
                 <Eye className="size-3.5" />
               )}
-              <span className="sr-only">Toggle password visibility</span>
+              <span className="sr-only">
+                {showPassword ? "Hide password" : "Reveal password"}
+              </span>
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="size-7 shrink-0"
-              onClick={() => copyToClipboard(entry.password ?? "", notify)}
+              disabled={isRevealing}
+              onClick={() => void copyPassword()}
             >
               <Copy className="size-3.5" />
               <span className="sr-only">Copy password</span>
@@ -172,12 +258,7 @@ const AccessEntryRow = ({
             variant="ghost"
             size="icon"
             className="size-8"
-            onClick={async () => {
-              const text = formatAccessEntryForCopy(entry);
-              if (!text.trim()) return;
-              await navigator.clipboard.writeText(text);
-              notify("All credentials copied", { type: "info" });
-            }}
+            onClick={() => void copyAll()}
             title="Copy all credentials"
           >
             <Copy className="size-4" />
@@ -222,6 +303,7 @@ const AccessEntryDialog = ({
   onClose,
   onSave,
   isSaving,
+  isEditing,
 }: {
   open: boolean;
   title: string;
@@ -230,6 +312,7 @@ const AccessEntryDialog = ({
   onClose: () => void;
   onSave: () => void;
   isSaving: boolean;
+  isEditing: boolean;
 }) => {
   const presetMatch = PROJECT_ACCESS_PRESETS.includes(
     values.label as (typeof PROJECT_ACCESS_PRESETS)[number],
@@ -304,12 +387,15 @@ const AccessEntryDialog = ({
               <Label htmlFor="access-password">Password</Label>
               <Input
                 id="access-password"
-                type="text"
+                type="password"
+                autoComplete="new-password"
                 value={values.password}
                 onChange={(event) =>
                   onChange({ ...values, password: event.target.value })
                 }
-                placeholder="••••••••"
+                placeholder={
+                  isEditing ? "Leave blank to keep unchanged" : "••••••••"
+                }
               />
             </div>
           </div>
@@ -346,6 +432,8 @@ const AccessEntryDialog = ({
 
 export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   const notify = useNotify();
+  const refresh = useRefresh();
+  const dataProvider = useDataProvider<CrmDataProvider>();
   const [create, { isPending: isCreating }] = useCreate();
   const [update, { isPending: isUpdating }] = useUpdate();
   const [deleteOne, { isPending: isDeleting }] = useDelete();
@@ -355,6 +443,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     emptyDealAccessFormValues(),
   );
   const [deletingId, setDeletingId] = useState<Identifier | null>(null);
+  const [isMigratingLegacy, setIsMigratingLegacy] = useState(false);
 
   const {
     data: entries = [],
@@ -370,6 +459,13 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     },
     { staleTime: 15_000, ...supabaseTableQueryOptions("deal_access_entries") },
   );
+
+  const { data: legacyCount = 0, refetch: refetchLegacyCount } = useQuery({
+    queryKey: ["legacy-access-entry-password-count"],
+    queryFn: () => dataProvider.getLegacyAccessEntryPasswordCount(),
+    staleTime: 60_000,
+    retry: false,
+  });
 
   const editingEntry = useMemo(
     () => entries.find((entry) => entry.id === editingId) ?? null,
@@ -388,7 +484,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       label: entry.label ?? "",
       url: entry.url ?? "",
       username: entry.username ?? "",
-      password: entry.password ?? "",
+      password: "",
       notes: entry.notes ?? "",
     });
     setDialogOpen(true);
@@ -406,11 +502,11 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       return;
     }
 
+    const passwordProvided = values.password.trim().length > 0;
     const payload = {
       label: values.label.trim(),
       url: values.url.trim() || null,
       username: values.username.trim() || null,
-      password: values.password.trim() || null,
       notes: values.notes.trim() || null,
       updated_at: new Date().toISOString(),
     };
@@ -426,9 +522,15 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
           },
           { returnPromise: true },
         );
+        if (passwordProvided) {
+          await dataProvider.setAccessEntryPassword(
+            editingEntry.id,
+            values.password.trim(),
+          );
+        }
         notify("Access updated");
       } else {
-        await create(
+        const created = await create(
           "deal_access_entries",
           {
             data: {
@@ -438,9 +540,25 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
           },
           { returnPromise: true },
         );
+        const entryId = created?.id;
+        if (entryId != null && passwordProvided) {
+          await dataProvider.setAccessEntryPassword(
+            entryId,
+            values.password.trim(),
+          );
+        }
+        if (entryId != null) {
+          try {
+            await dataProvider.logAccessEntryAudit(entryId, "created");
+          } catch {
+            // Non-blocking.
+          }
+        }
         notify("Access saved");
       }
       closeDialog();
+      refresh();
+      void refetchLegacyCount();
     } catch (saveError) {
       if (isSupabaseSchemaMissingError(saveError, "deal_access_entries")) {
         notify(getSupabaseSchemaMissingMessage("deal_access_entries"), {
@@ -455,16 +573,42 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   const handleDelete = async (entry: DealAccessEntry) => {
     setDeletingId(entry.id);
     try {
+      try {
+        await dataProvider.logAccessEntryAudit(entry.id, "deleted");
+      } catch {
+        // Non-blocking.
+      }
       await deleteOne(
         "deal_access_entries",
         { id: entry.id, previousData: entry },
         { returnPromise: true },
       );
       notify("Access removed");
+      refresh();
+      void refetchLegacyCount();
     } catch {
       notify("Failed to remove access", { type: "error" });
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleMigrateLegacy = async () => {
+    setIsMigratingLegacy(true);
+    try {
+      const migrated = await dataProvider.migrateLegacyAccessEntryPasswords();
+      notify(
+        migrated > 0
+          ? `Encrypted ${migrated} legacy credential${migrated === 1 ? "" : "s"}`
+          : "No legacy credentials needed migration",
+        { type: "success" },
+      );
+      refresh();
+      void refetchLegacyCount();
+    } catch {
+      notify("Failed to migrate legacy credentials", { type: "error" });
+    } finally {
+      setIsMigratingLegacy(false);
     }
   };
 
@@ -491,12 +635,37 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
 
   return (
     <div className="space-y-6">
+      {legacyCount > 0 ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2 min-w-0">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+            <p>
+              {legacyCount} credential{legacyCount === 1 ? "" : "s"} still
+              stored in legacy plain-text format. Encrypt them now.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="shrink-0"
+            disabled={isMigratingLegacy}
+            onClick={() => void handleMigrateLegacy()}
+          >
+            {isMigratingLegacy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : null}
+            Encrypt now
+          </Button>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 rounded-lg border border-amber-200/80 bg-amber-50/70 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
         <div className="flex items-start gap-2 min-w-0">
           <KeyRound className="mt-0.5 size-4 shrink-0" />
           <p>
-            Only your team can see these credentials. Avoid sharing this tab
-            with clients.
+            Only your team can see these credentials. Passwords are encrypted
+            and revealed on demand with an audit trail.
           </p>
         </div>
         <Button type="button" onClick={openCreate} className="shrink-0">
@@ -547,8 +716,9 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
         values={values}
         onChange={setValues}
         onClose={closeDialog}
-        onSave={handleSave}
+        onSave={() => void handleSave()}
         isSaving={isCreating || isUpdating}
+        isEditing={Boolean(editingEntry)}
       />
     </div>
   );

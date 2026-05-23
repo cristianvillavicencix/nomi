@@ -1409,6 +1409,103 @@ const dataProviderWithCustomMethods = {
     }
     return data;
   },
+  async getAccessEntryPassword(entryId: Identifier) {
+    const { data, error } = await invokeEdgeFunction<{ password?: string | null }>(
+      "access_entry_password",
+      {
+        method: "POST",
+        body: {
+          action: "get",
+          entry_id: Number(entryId),
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to reveal access entry password",
+      );
+    }
+    return data?.password ?? null;
+  },
+  async setAccessEntryPassword(entryId: Identifier, password: string | null) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
+      "access_entry_password",
+      {
+        method: "POST",
+        body: {
+          action: "set",
+          entry_id: Number(entryId),
+          password,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to save access entry password",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Failed to save access entry password");
+    }
+    return data;
+  },
+  async logAccessEntryAudit(
+    entryId: Identifier,
+    auditAction: "viewed" | "copied" | "created" | "updated" | "deleted",
+  ) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
+      "access_entry_password",
+      {
+        method: "POST",
+        body: {
+          action: "audit",
+          entry_id: Number(entryId),
+          audit_action: auditAction,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to log credential access",
+      );
+    }
+    return data;
+  },
+  async getLegacyAccessEntryPasswordCount() {
+    const { data, error } = await invokeEdgeFunction<{ count?: number }>(
+      "access_entry_password",
+      {
+        method: "POST",
+        body: { action: "legacy_count" },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to check legacy credentials",
+      );
+    }
+    return data?.count ?? 0;
+  },
+  async migrateLegacyAccessEntryPasswords() {
+    const { data, error } = await invokeEdgeFunction<{ migrated?: number }>(
+      "access_entry_password",
+      {
+        method: "POST",
+        body: { action: "migrate_legacy" },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to migrate legacy credentials",
+      );
+    }
+    return data?.migrated ?? 0;
+  },
   async sendClientSms(params: {
     conversationId?: Identifier;
     contactId?: Identifier;
