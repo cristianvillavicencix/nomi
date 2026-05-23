@@ -7,6 +7,7 @@ import { MessagesWorkspace } from "@/lbs/messages/MessagesWorkspace";
 import { INBOX_PAGE_SIZE } from "@/lbs/messages/inbox/MessagesInbox";
 import { useInboxConversations } from "@/lbs/messages/useInboxConversations";
 import { useMessagesQuickAccess } from "@/lbs/messages/messagesQuickAccessContext";
+import { requestMessagingDesktopNotifications } from "@/lbs/messages/messagingDesktopNotifications";
 
 export const MessagesPage = () => {
   const isMobile = useIsMobile();
@@ -28,6 +29,15 @@ export const MessagesPage = () => {
 
   const { conversations, deals, dmParticipants, members, contacts, isPending } =
     useInboxConversations({ pageSize: inboxPageSize });
+
+  useEffect(() => {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "default") return;
+    const timer = window.setTimeout(() => {
+      void requestMessagingDesktopNotifications();
+    }, 2000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (!focusedConversation) return;
