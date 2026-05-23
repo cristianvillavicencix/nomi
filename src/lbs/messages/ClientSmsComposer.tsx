@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { isImageMediaUrl, getMediaFileName, downloadMediaUrl, uploadSmsMedia } from "@/lbs/messages/smsMediaUpload";
 import { useResolvedMediaUrl } from "@/lbs/messages/useResolvedMediaUrl";
 import { InternalNoteToggle } from "@/lbs/messages/composer/InternalNoteToggle";
+import { useSendClientSms } from "@/lbs/messages/useClientSms";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 
 type PendingAttachment = {
@@ -21,12 +22,14 @@ export const ClientSmsComposer = ({
   contact,
   dealId,
   conversationId,
+  replyToMessageId,
   onSent,
   disabled,
 }: {
   contact?: Contact | null;
   dealId?: Identifier | null;
   conversationId?: Identifier | null;
+  replyToMessageId?: Identifier | null;
   onSent?: (result: {
     conversation: Conversation;
     message: ConversationMessage;
@@ -116,6 +119,7 @@ export const ClientSmsComposer = ({
         body: body.trim(),
         mediaUrls: uploadedUrls,
         isInternalNote,
+        replyToMessageId,
       });
 
       if (!result.conversation || !result.message) {
@@ -245,7 +249,7 @@ export const ClientSmsComposer = ({
           size="icon"
           className="size-11 shrink-0 rounded-full"
           disabled={!canSend}
-          aria-label="Send SMS"
+          aria-label={isInternalNote ? "Add internal note" : "Send SMS"}
         >
           <Send className="size-4" />
         </Button>

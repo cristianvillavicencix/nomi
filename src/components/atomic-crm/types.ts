@@ -196,6 +196,13 @@ export type Deal = {
   project_place_id?: string | null;
   project_address_meta?: Record<string, unknown> | null;
   website_brief?: Record<string, string | null | undefined>;
+  website_content?: Record<string, unknown>;
+  /** LBS agency: opportunity | delivery | closed */
+  lifecycle_phase?: "opportunity" | "delivery" | "closed";
+  /** LBS agency: operational sub-status (design, dev, review, launch, …) */
+  delivery_status?: string | null;
+  accepted_proposal_id?: Identifier | null;
+  priority?: "low" | "normal" | "high" | "urgent";
   salesperson_ids?: Identifier[];
   subcontractor_ids?: Identifier[];
   worker_ids?: Identifier[];

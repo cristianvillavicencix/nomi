@@ -4,6 +4,7 @@ import { useGetIdentity, useNotify } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { Conversation, ConversationMessage, ConversationParticipant } from "@/lbs/types";
 import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
+import { buildMessagePreview } from "@/lbs/messages/conversationUtils";
 import {
   MessagesIncomingBannerStack,
   type IncomingMessageNotification,
@@ -14,13 +15,6 @@ import { showMessagingDesktopNotification } from "@/lbs/messages/messagingDeskto
 import { useInboxConversations } from "@/lbs/messages/useInboxConversations";
 import { useMessagesInboxRealtime } from "@/lbs/messages/useMessagesInboxRealtime";
 import { useMessagesQuickAccess } from "@/lbs/messages/messagesQuickAccessContext";
-
-const buildMessagePreview = (message: ConversationMessage) => {
-  if (message.media_url) {
-    return message.body?.trim() || "Sent an attachment";
-  }
-  return message.body?.trim() || "New message";
-};
 
 const shouldNotifyForMessage = (
   message: ConversationMessage,

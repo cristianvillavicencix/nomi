@@ -84,6 +84,7 @@ export type ProjectResourceFile = {
   type: string;
   path: string;
   src: string;
+  bucket?: string;
 };
 
 export type ProjectResourceUploadItem = {

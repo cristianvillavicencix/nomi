@@ -1,14 +1,18 @@
 export const lbsProjectTypeChoices = [
-  { value: "new-website", label: "New website" },
-  { value: "redesign", label: "Website redesign" },
-  { value: "landing-page", label: "Landing page" },
-  { value: "ecommerce", label: "E-commerce" },
+  { value: "website", label: "Website" },
   { value: "seo", label: "SEO / local SEO" },
   { value: "google-ads", label: "Google Ads campaign" },
   { value: "social-media", label: "Social media management" },
   { value: "branding", label: "Branding / identity" },
-  { value: "maintenance", label: "Website maintenance" },
-  { value: "email-marketing", label: "Email marketing" },
+  { value: "automation", label: "Automation" },
+  { value: "crm-setup", label: "CRM Setup" },
+  { value: "maintenance", label: "Maintenance / Hosting" },
+  // Legacy values still stored on older records — normalized via normalizeAgencyProjectType
+  { value: "new-website", label: "New website (legacy)" },
+  { value: "redesign", label: "Website redesign (legacy)" },
+  { value: "landing-page", label: "Landing page (legacy)" },
+  { value: "ecommerce", label: "E-commerce (legacy)" },
+  { value: "email-marketing", label: "Email marketing (legacy)" },
 ];
 
 /**
@@ -110,14 +114,20 @@ export const getLbsProjectStageLabel = (value?: string | null) => {
 };
 
 export const LBS_DEFAULT_PROJECT_CATEGORY = "website";
-export const LBS_DEFAULT_PROJECT_TYPE = "new-website";
+export const LBS_DEFAULT_PROJECT_TYPE = "website";
 export const LBS_DEFAULT_PROJECT_STAGE = "setup";
 
 export const LBS_WON_PIPELINE_STATUSES = ["delivered"];
 
 export type LbsProjectScopeMode = "pages" | "single" | "deliverables";
 
-const LBS_PAGE_PROJECT_TYPES = new Set(["new-website", "redesign", "ecommerce"]);
+const LBS_PAGE_PROJECT_TYPES = new Set([
+  "website",
+  "new-website",
+  "redesign",
+  "ecommerce",
+  "crm-setup",
+]);
 const LBS_DELIVERABLES_PROJECT_TYPES = new Set([
   "seo",
   "google-ads",
@@ -125,6 +135,7 @@ const LBS_DELIVERABLES_PROJECT_TYPES = new Set([
   "email-marketing",
   "branding",
   "maintenance",
+  "automation",
 ]);
 
 export const getLbsProjectScopeMode = (

@@ -38,9 +38,43 @@ export const ProjectAssignedAvatars = ({
   onClick,
 }: ProjectAssignedAvatarsProps) => {
   const lbsMode = isLbsMode();
-  const peopleIds = Array.isArray(deal.salesperson_ids)
+  const assignedIds = Array.isArray(deal.salesperson_ids)
     ? deal.salesperson_ids.map(String).filter(Boolean)
     : [];
+
+  if (lbsMode && assignedIds.length > 0) {
+    const assignedMembers = assignedIds
+      .map((id) => membersById[id])
+      .filter((member): member is OrganizationMember => Boolean(member));
+
+    if (assignedMembers.length > 0) {
+      return (
+        <div className="flex items-center">
+          <div className="flex -space-x-2">
+            {assignedMembers.map((member) => (
+              <Link
+                key={String(member.id)}
+                to={`/organization_members/${member.id}`}
+                title={getMemberName(member)}
+                aria-label={getMemberName(member)}
+                className="rounded-full ring-2 ring-background transition-transform hover:z-10 hover:scale-105"
+                onClick={onClick}
+              >
+                <Avatar className="size-7">
+                  <AvatarImage src={member.avatar?.src ?? undefined} alt={getMemberName(member)} />
+                  <AvatarFallback className="bg-muted text-[10px] font-medium">
+                    {getMemberInitials(member)}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            ))}
+          </div>
+        </div>
+      );
+    }
+  }
+
+  const peopleIds = assignedIds;
   const assignedPeople = peopleIds
     .map((id) => peopleById[id])
     .filter((person): person is Person => Boolean(person));

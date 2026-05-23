@@ -13,7 +13,7 @@ import { ReferenceInput } from "@/components/admin/reference-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import type { Contact, Deal, Person } from "@/components/atomic-crm/types";
+import type { Contact, Deal, OrganizationMember } from "@/components/atomic-crm/types";
 import { AutocompleteCompanyInput } from "@/components/atomic-crm/companies/AutocompleteCompanyInput";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LbsProjectClientFields } from "@/lbs/deals/LbsProjectClientFields";
@@ -34,16 +34,17 @@ import {
   lbsProjectStages,
   lbsProjectTypeChoices,
 } from "@/lbs/deals/lbsProjectConstants";
+import { LBS_PROJECT_PRIORITIES } from "@/lbs/deals/lbsAgencyProjectModel";
 
 const toNumber = (value: unknown): number | null => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const getPersonOptionText = (person?: Partial<Person>) => {
-  if (!person) return "";
-  const fullName = [person.first_name, person.last_name].filter(Boolean).join(" ");
-  if (person.email) return `${fullName} (${person.email})`;
+const getMemberOptionText = (member?: Partial<OrganizationMember>) => {
+  if (!member) return "";
+  const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ");
+  if (member.email) return `${fullName} (${member.email})`;
   return fullName;
 };
 
@@ -107,7 +108,8 @@ const FormSection = ({
   </>
 );
 
-export const LbsDealInputs = () => {
+export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 | 3 | 4 } = {}) => {
+  const showStep = (step: 1 | 2 | 3 | 4) => !createStep || createStep === step;
   const isMobile = useIsMobile();
   const { dealCategories } = useConfigurationContext();
   const { control, setValue, getValues } = useFormContext<Deal & Record<string, unknown>>();
@@ -242,6 +244,7 @@ export const LbsDealInputs = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      {showStep(1) ? (
       <FormSection title="Project overview" showDivider={false}>
         <div className={`grid gap-4 ${gridClass}`}>
           <TextInput
@@ -271,11 +274,16 @@ export const LbsDealInputs = () => {
               </ReferenceInput>
             </>
           )}
-        </div>
-      </FormSection>
-
-      <FormSection title="Service & budget">
-        <div className={`grid gap-4 ${gridClass}`}>
+          {isLbsMode() ? (
+            <ReferenceInput source="accepted_proposal_id" reference="proposals">
+              <AutocompleteInput
+                label="Accepted proposal (optional)"
+                optionText="title"
+                helperText={false}
+                filterToQuery={(searchText) => ({ q: searchText })}
+              />
+            </ReferenceInput>
+          ) : null}
           <SelectInput
             source="category"
             label="Service category"
@@ -297,14 +305,13 @@ export const LbsDealInputs = () => {
             placeholder="Select or type a service"
             helperText={false}
           />
-          <NumberInput
-            source="estimated_value"
-            label="Project budget (USD)"
-            helperText={false}
-            validate={optionalPositiveCurrency}
-            min={0}
-            step={0.01}
-          />
+        </div>
+      </FormSection>
+      ) : null}
+
+      {showStep(2) ? (
+      <FormSection title="Timeline & team">
+        <div className={`grid gap-4 ${gridClass}`}>
           <SelectInput
             source="stage"
             label="Project stage"
@@ -314,10 +321,27 @@ export const LbsDealInputs = () => {
             helperText={false}
             validate={required()}
           />
+          <SelectInput
+            source="priority"
+            label="Priority"
+            choices={LBS_PROJECT_PRIORITIES}
+            optionText="label"
+            optionValue="value"
+            helperText={false}
+          />
+          <DateInput source="start_date" label="Start date" helperText={false} />
           <DateInput
             source="expected_end_date"
             label="Delivery date"
             helperText={false}
+          />
+          <NumberInput
+            source="estimated_value"
+            label="Project budget (USD)"
+            helperText={false}
+            validate={optionalPositiveCurrency}
+            min={0}
+            step={0.01}
           />
           <TextInput
             source="github_repo"
@@ -326,34 +350,36 @@ export const LbsDealInputs = () => {
             placeholder="lbs-web/acme-roofing"
             validate={optionalGithubRepo}
           />
-        </div>
-      </FormSection>
-
-      <FormSection title="Project brief" showDivider={false}>
-        <WebsiteBriefFormSections
-          gridClass={`grid gap-4 ${gridClass}`}
-          validateUrl={optionalUrl}
-          showSecurityHint={false}
-        />
-        <div className={`grid gap-4 ${gridClass} mt-4`}>
           <div className={isMobile ? undefined : "md:col-span-2"}>
             <ReferenceArrayInput
               source="salesperson_ids"
-              reference="people"
-              filter={{ "type@eq": "salesperson" }}
+              reference="organization_members"
+              filter={{ "disabled@neq": true }}
             >
               <AutocompleteArrayInput
                 label="Assign team"
-                optionText={getPersonOptionText}
+                optionText={getMemberOptionText}
                 helperText={false}
-                placeholder="Select account managers"
+                placeholder="Select team members"
                 filterToQuery={(searchText) => ({ q: searchText })}
               />
             </ReferenceArrayInput>
           </div>
         </div>
       </FormSection>
+      ) : null}
 
+      {showStep(3) ? (
+      <FormSection title="Project brief" showDivider={false}>
+        <WebsiteBriefFormSections
+          gridClass={`grid gap-4 ${gridClass}`}
+          validateUrl={optionalUrl}
+          showSecurityHint={false}
+        />
+      </FormSection>
+      ) : null}
+
+      {showStep(4) ? (
       <FormSection title="Notes">
         <TextInput
           source="notes"
@@ -364,6 +390,7 @@ export const LbsDealInputs = () => {
           placeholder="Discovery notes, client requests, or next steps"
         />
       </FormSection>
+      ) : null}
     </div>
   );
 };

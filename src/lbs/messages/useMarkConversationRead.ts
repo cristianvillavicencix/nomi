@@ -1,25 +1,22 @@
 import { useEffect, useRef } from "react";
-import {
-  useCreate,
-  useGetIdentity,
-  useGetList,
-  useUpdate,
-  type Identifier,
-} from "ra-core";
+import { useDataProvider, useGetIdentity, useGetList, type Identifier } from "ra-core";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ConversationParticipant, ConversationType } from "@/lbs/types";
-
-const usesParticipantReadTracking = (_type?: ConversationType | null) => true;
+import {
+  isReadThrough,
+  persistConversationRead,
+} from "@/lbs/messages/persistConversationRead";
 
 export const useMarkConversationRead = (
   conversationId: Identifier | null | undefined,
-  conversationType?: ConversationType | null,
+  _conversationType?: ConversationType | null,
+  readAt?: string | null,
 ) => {
-  const tracksRead = usesParticipantReadTracking(conversationType);
+  const queryClient = useQueryClient();
+  const dataProvider = useDataProvider();
   const { identity } = useGetIdentity();
   const memberId = identity?.id;
-  const [update] = useUpdate();
-  const [create] = useCreate();
-  const createAttemptKeyRef = useRef<string | null>(null);
+  const inFlightRef = useRef<string | null>(null);
 
   const { data: participants = [] } = useGetList<ConversationParticipant>(
     "conversation_participants",
@@ -34,70 +31,42 @@ export const useMarkConversationRead = (
       pagination: { page: 1, perPage: 1 },
     },
     {
-      enabled: tracksRead && conversationId != null && memberId != null,
-      staleTime: 30_000,
+      enabled: conversationId != null && memberId != null,
+      staleTime: 15_000,
     },
   );
 
   const participant = participants[0];
-  const participantId = participant?.id;
   const lastReadAt = participant?.last_read_at;
 
   useEffect(() => {
-    if (!tracksRead || !conversationId || !memberId) {
-      createAttemptKeyRef.current = null;
+    if (!conversationId || !memberId) {
+      inFlightRef.current = null;
       return;
     }
 
-    const now = new Date().toISOString();
-    const conversationKey = String(conversationId);
+    const effectiveReadAt = readAt ?? new Date().toISOString();
 
-    if (!participantId) {
-      if (createAttemptKeyRef.current === conversationKey) {
-        return;
+    if (isReadThrough(lastReadAt, effectiveReadAt)) {
+      return;
+    }
+
+    const inFlightKey = `${conversationId}:${effectiveReadAt}`;
+    if (inFlightRef.current === inFlightKey) {
+      return;
+    }
+    inFlightRef.current = inFlightKey;
+
+    void persistConversationRead({
+      dataProvider,
+      queryClient,
+      conversationId,
+      memberId,
+      readAt: effectiveReadAt,
+    }).finally(() => {
+      if (inFlightRef.current === inFlightKey) {
+        inFlightRef.current = null;
       }
-      createAttemptKeyRef.current = conversationKey;
-      create(
-        "conversation_participants",
-        {
-          data: {
-            conversation_id: conversationId,
-            member_id: memberId,
-            last_read_at: now,
-          },
-        },
-        {
-          onError: () => {
-            createAttemptKeyRef.current = null;
-          },
-        },
-      );
-      return;
-    }
-
-    createAttemptKeyRef.current = null;
-
-    if (lastReadAt && Date.now() - Date.parse(lastReadAt) < 30_000) {
-      return;
-    }
-
-    update(
-      "conversation_participants",
-      {
-        id: participantId,
-        data: { last_read_at: now },
-        previousData: participant,
-      },
-      { mutationMode: "optimistic" },
-    );
-  }, [
-    tracksRead,
-    conversationId,
-    create,
-    memberId,
-    participantId,
-    lastReadAt,
-    participant,
-    update,
-  ]);
+    });
+  }, [conversationId, dataProvider, lastReadAt, memberId, queryClient, readAt]);
 };

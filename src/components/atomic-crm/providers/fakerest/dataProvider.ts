@@ -1367,7 +1367,12 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     sms_enabled: params.sms_enabled === true,
     has_auth_token: Boolean(params.twilio_auth_token?.trim()),
     webhook_url: null,
+    business_hours: params.business_hours ?? null,
+    out_of_hours_message: params.out_of_hours_message ?? null,
+    auto_acknowledge_enabled: params.auto_acknowledge_enabled ?? false,
+    auto_acknowledge_message: params.auto_acknowledge_message ?? null,
   }),
+  sendTestSms: async () => ({ ok: true }),
   sendClientSms: async ({ conversationId, contactId, dealId, body, mediaUrls }) => {
     let conversation: import("@/lbs/types").Conversation;
     if (conversationId) {

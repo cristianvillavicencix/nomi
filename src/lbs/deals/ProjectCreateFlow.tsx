@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGetOne, useRedirect } from "ra-core";
 import { matchPath, useLocation, useSearchParams } from "react-router";
-import { DealCreate } from "@/components/atomic-crm/deals/DealCreate";
+import { AgencyProjectCreateForm } from "@/lbs/projects/AgencyProjectCreateForm";
 import { NewProjectChooserDialog } from "@/lbs/deals/NewProjectChooserDialog";
 import { SendProjectWebFormDialog } from "@/lbs/deals/SendProjectWebFormDialog";
 
@@ -94,7 +94,7 @@ export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
         onWebForm={goToWebForm}
         onClose={handleChooserClose}
       />
-      {step === "manual" ? <DealCreate open onClose={closeAll} /> : null}
+      {step === "manual" ? <AgencyProjectCreateForm open onClose={closeAll} /> : null}
       {step === "web-form" ? (
         <SendProjectWebFormDialog
           open

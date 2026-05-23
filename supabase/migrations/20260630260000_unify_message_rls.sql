@@ -45,7 +45,11 @@ as $$
   end;
 $$;
 
-create or replace function public.user_can_access_conversation(p_conversation_id bigint)
+drop policy if exists "conversation_messages_access" on public.conversation_messages;
+
+drop function if exists public.user_can_access_conversation(bigint);
+
+create function public.user_can_access_conversation(p_conversation_id bigint)
 returns boolean
 language sql
 stable
@@ -54,6 +58,20 @@ set search_path = public
 as $$
   select public.can_view_conversation(p_conversation_id);
 $$;
+
+create policy "conversation_messages_access" on public.conversation_messages
+  for all to authenticated
+  using (public.user_can_access_conversation(conversation_id))
+  with check (
+    public.user_can_access_conversation(conversation_id)
+    and (
+      author_member_id is null
+      or (
+        author_member_id = public.current_user_member_id()
+        and public.current_member_has_capability('messaging.send')
+      )
+    )
+  );
 
 grant execute on function public.can_view_conversation(bigint) to authenticated;
 grant execute on function public.user_can_access_conversation(bigint) to authenticated;

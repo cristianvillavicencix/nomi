@@ -16,9 +16,14 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { isLbsMode } from "@/lbs/productMode";
 import {
+  LBS_DEFAULT_AGENCY_PROJECT_TYPE,
+  LBS_DEFAULT_AGENCY_STAGE,
+  LBS_DEFAULT_DELIVERY_STATUS,
+  LBS_DEFAULT_LIFECYCLE_PHASE,
+  LBS_DEFAULT_PROJECT_PRIORITY,
+} from "@/lbs/deals/lbsAgencyProjectModel";
+import {
   LBS_DEFAULT_PROJECT_CATEGORY,
-  LBS_DEFAULT_PROJECT_STAGE,
-  LBS_DEFAULT_PROJECT_TYPE,
 } from "@/lbs/deals/lbsProjectConstants";
 import { emptyWebsiteBriefValues } from "@/lbs/deals/websiteBriefSchema";
 
@@ -139,12 +144,15 @@ export const DealCreate = ({
             defaultValues={{
               organization_member_id: identity?.id,
               category: lbsMode ? LBS_DEFAULT_PROJECT_CATEGORY : "retail",
-              stage: lbsMode ? LBS_DEFAULT_PROJECT_STAGE : "lead",
-              project_type: lbsMode ? LBS_DEFAULT_PROJECT_TYPE : "roofing",
+              stage: lbsMode ? LBS_DEFAULT_AGENCY_STAGE : "lead",
+              project_type: lbsMode ? LBS_DEFAULT_AGENCY_PROJECT_TYPE : "roofing",
+              lifecycle_phase: lbsMode ? LBS_DEFAULT_LIFECYCLE_PHASE : undefined,
+              delivery_status: lbsMode ? LBS_DEFAULT_DELIVERY_STATUS : undefined,
+              priority: lbsMode ? LBS_DEFAULT_PROJECT_PRIORITY : undefined,
               estimated_value: lbsMode ? undefined : 0,
               amount: lbsMode ? undefined : 0,
               notes: "",
-              project_address: "",
+              project_address: lbsMode ? undefined : "",
               website_brief: lbsMode ? emptyWebsiteBriefValues() : undefined,
               company_id: presetCompanyId ? Number(presetCompanyId) : null,
               contact_id: presetContactId ? Number(presetContactId) : null,

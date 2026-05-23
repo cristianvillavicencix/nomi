@@ -19,6 +19,9 @@ type SubmitProjectResourcesBody = {
   items?: ResourceUploadItem[];
 };
 
+const PROJECT_FILES_BUCKET = "project-files";
+const LEGACY_BUCKET = "attachments";
+
 const ALLOWED_CATEGORIES = new Set([
   "logo",
   "service-photo",
@@ -29,8 +32,18 @@ const ALLOWED_CATEGORIES = new Set([
   "other",
 ]);
 
+const inferMimeKind = (mime: string): string => {
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.includes("pdf") || mime.includes("document") || mime.includes("text")) {
+    return "document";
+  }
+  return "other";
+};
+
 const uploadResourceFile = async (
   dealId: number,
+  orgId: number | string | null | undefined,
   attachment: ResourceUploadItem,
 ) => {
   const { name, content, content_type: contentType } = attachment;
@@ -41,25 +54,47 @@ const uploadResourceFile = async (
 
   const fileParts = name.split(".");
   const fileExt = fileParts.length > 1 ? `.${fileParts.pop()}` : "";
-  const fileName = `project-resources/${dealId}/${crypto.randomUUID()}${fileExt}`;
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from("attachments")
-    .upload(fileName, decodedContent, {
-      contentType: contentType || "application/octet-stream",
-    });
+  const orgSegment = orgId != null ? String(orgId) : "unknown";
+  const privatePath = `${orgSegment}/${dealId}/${crypto.randomUUID()}${fileExt}`;
+  const mime = contentType || "application/octet-stream";
 
-  if (uploadError) {
-    console.error("submit_project_resources.uploadError", uploadError);
+  const privateUpload = await supabaseAdmin.storage
+    .from(PROJECT_FILES_BUCKET)
+    .upload(privatePath, decodedContent, { contentType: mime });
+
+  if (!privateUpload.error) {
+    return {
+      title: name,
+      type: mime,
+      path: privatePath,
+      src: "",
+      bucket: PROJECT_FILES_BUCKET,
+    };
+  }
+
+  console.warn(
+    "submit_project_resources.privateUploadFallback",
+    privateUpload.error.message,
+  );
+
+  const legacyPath = `project-resources/${dealId}/${crypto.randomUUID()}${fileExt}`;
+  const legacyUpload = await supabaseAdmin.storage
+    .from(LEGACY_BUCKET)
+    .upload(legacyPath, decodedContent, { contentType: mime });
+
+  if (legacyUpload.error) {
+    console.error("submit_project_resources.uploadError", legacyUpload.error);
     return null;
   }
 
-  const { data } = supabaseAdmin.storage.from("attachments").getPublicUrl(fileName);
+  const { data } = supabaseAdmin.storage.from(LEGACY_BUCKET).getPublicUrl(legacyPath);
 
   return {
     title: name,
-    type: contentType || "application/octet-stream",
-    path: fileName,
+    type: mime,
+    path: legacyPath,
     src: data.publicUrl,
+    bucket: LEGACY_BUCKET,
   };
 };
 
@@ -113,7 +148,7 @@ Deno.serve(
           continue;
         }
 
-        const file = await uploadResourceFile(dealId, item);
+        const file = await uploadResourceFile(dealId, deal.org_id, item);
         if (!file) continue;
 
         rows.push({
@@ -123,6 +158,8 @@ Deno.serve(
           label: String(item.label ?? "").trim() || null,
           file,
           source: "client",
+          visibility: "client",
+          mime_kind: inferMimeKind(String(file.type ?? "")),
           organization_member_id: deal.organization_member_id,
         });
       }

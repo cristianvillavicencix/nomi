@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { Identifier } from "ra-core";
-import type { ConversationMessage } from "@/lbs/types";
+import type { Conversation, ConversationMessage } from "@/lbs/types";
+import { buildMessagePreview } from "@/lbs/messages/conversationUtils";
 
 type MessageListCache = {
   data: ConversationMessage[];
@@ -60,6 +61,37 @@ const mergeMessageIntoList = (
 
 export { mergeMessageIntoList };
 
+const patchConversationInList = (
+  conversation: Conversation,
+  message: ConversationMessage,
+): Conversation => ({
+  ...conversation,
+  last_message_at: message.created_at ?? conversation.last_message_at,
+  last_message_preview: buildMessagePreview(message),
+});
+
+const touchConversationLists = (
+  queryClient: QueryClient,
+  message: ConversationMessage,
+) => {
+  if (message.conversation_id == null) return;
+  const conversationId = String(message.conversation_id);
+
+  queryClient.setQueriesData<{ data: Conversation[] }>(
+    { queryKey: ["conversations"] },
+    (old) => {
+      if (!old?.data?.length) return old;
+      let changed = false;
+      const data = old.data.map((conversation) => {
+        if (String(conversation.id) !== conversationId) return conversation;
+        changed = true;
+        return patchConversationInList(conversation, message);
+      });
+      return changed ? { ...old, data } : old;
+    },
+  );
+};
+
 export const appendConversationMessageToCache = (
   queryClient: QueryClient,
   message: ConversationMessage,
@@ -81,6 +113,8 @@ export const appendConversationMessageToCache = (
     },
     (old) => mergeMessageIntoList(old, message),
   );
+
+  touchConversationLists(queryClient, message);
 };
 
 export const refreshConversationLists = (queryClient: QueryClient) => {

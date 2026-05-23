@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useCreate, useGetIdentity, useNotify } from "ra-core";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCreate, useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,14 +29,10 @@ const SendDisabledNotice = () => (
 const MessageBubble = ({
   message,
   isOwn,
-  isClientSms,
 }: {
   message: ConversationMessage;
   isOwn: boolean;
-  isClientSms: boolean;
 }) => {
-  const inboundClient = isClientSms && message.direction === "inbound";
-
   return (
     <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
       <div
@@ -65,17 +61,11 @@ const MessageBubble = ({
         ) : null}
         <div
           className={cn(
-            "mt-1 flex items-center gap-2 text-[10px]",
+            "mt-1 text-[10px]",
             isOwn ? "text-primary-foreground/70" : "text-muted-foreground",
           )}
         >
-          {isClientSms ? (
-            <span className="rounded-full bg-muted/80 px-1.5 py-0.5 font-medium uppercase tracking-wide">
-              SMS
-            </span>
-          ) : null}
-          <span>{formatMessageTime(message.created_at)}</span>
-          {inboundClient ? <span>Client</span> : null}
+          {formatMessageTime(message.created_at)}
         </div>
       </div>
     </div>
@@ -99,41 +89,48 @@ export const ConversationThread = ({
   const notify = useNotify();
   const messagesQuickAccess = useMessagesQuickAccessOptional();
   const [body, setBody] = useState("");
+  const [replyToMessageId, setReplyToMessageId] = useState<Identifier | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const [create, { isPending }] = useCreate();
   const canSendMessages = useMemberCapability(SEND_MESSAGES_CAPABILITY);
-  const { messages, isPending: isLoadingMessages, refetch } = useConversationMessages(
+  const { messages, isPending: isLoadingMessages, refetch, loadOlder, hasMoreOlder, loadingOlder } = useConversationMessages(
     conversation?.id,
   );
 
   const markConversationRead = messagesQuickAccess?.markConversationRead;
-
-  useMarkConversationRead(conversation?.id, conversation?.type);
-
   const latestMessage = messages[messages.length - 1];
-  useEffect(() => {
-    if (!conversation?.id || !latestMessage || !markConversationRead) return;
-    const readAt = latestMessage.created_at ?? conversation.last_message_at;
-    if (!readAt) return;
-    markConversationRead(conversation.id, readAt);
-  }, [
+
+  useMarkConversationRead(
     conversation?.id,
-    conversation?.last_message_at,
-    latestMessage?.created_at,
-    latestMessage?.id,
-    markConversationRead,
-  ]);
+    conversation?.type,
+    latestMessage?.created_at ?? conversation?.last_message_at,
+  );
 
   const isClientSms = conversation?.type === "client" || !!clientSmsDraft;
   const isDraftOnly = !conversation && !!clientSmsDraft;
 
   useEffect(() => {
     setBody("");
+    setReplyToMessageId(null);
   }, [conversation?.id, clientSmsDraft?.contact.id]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, conversation?.id, clientSmsDraft?.contact.id]);
+  useLayoutEffect(() => {
+    if (!conversation && !clientSmsDraft) return;
+    if (isLoadingMessages && messages.length === 0) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    container.scrollTop = container.scrollHeight;
+  }, [
+    messages.length,
+    conversation?.id,
+    clientSmsDraft?.contact.id,
+    isLoadingMessages,
+    conversation,
+    clientSmsDraft,
+  ]);
 
   if (!conversation && !clientSmsDraft) {
     return null;
@@ -188,7 +185,23 @@ export const ConversationThread = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <div
+        ref={scrollContainerRef}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
+      >
+        {hasMoreOlder ? (
+          <div className="flex justify-center pb-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={loadingOlder}
+              onClick={() => void loadOlder()}
+            >
+              {loadingOlder ? "Loading…" : "Load older messages"}
+            </Button>
+          </div>
+        ) : null}
         {isDraftOnly ? (
           <div className="flex h-full min-h-[220px] flex-col items-center justify-center px-4 text-center">
             <p className="text-sm font-medium">{draftLabel}</p>
@@ -213,7 +226,6 @@ export const ConversationThread = ({
                   ? message.direction === "outbound"
                   : String(message.author_member_id) === String(identity?.id)
               }
-              isClientSms={isClientSms}
             />
           ))
         )}
@@ -226,6 +238,7 @@ export const ConversationThread = ({
           contact={composerContact ?? clientSmsDraft?.contact}
           dealId={clientSmsDraft?.dealId ?? conversation?.deal_id}
           conversationId={conversation?.id}
+          replyToMessageId={replyToMessageId}
           disabled={!canSendMessages}
           onSent={({ conversation: nextConversation, message }) => {
             onClientSmsSent?.(nextConversation);

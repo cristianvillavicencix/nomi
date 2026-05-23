@@ -5,16 +5,17 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation } from "react-router";
-import { useNotify, type Identifier } from "ra-core";
+import { useDataProvider, useGetIdentity, useNotify, type Identifier } from "ra-core";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ClientSmsDraft, Contact, Conversation } from "@/lbs/types";
 import { MessagesDock } from "@/lbs/messages/MessagesDock";
 import { MessagesNotificationsLayer } from "@/lbs/messages/MessagesNotificationsLayer";
+import { persistConversationRead } from "@/lbs/messages/persistConversationRead";
 import { useOpenClientSms } from "@/lbs/messages/useClientSms";
 import {
   MessagesQuickAccessContext,
   type MessagesQuickAccessContextValue,
 } from "@/lbs/messages/messagesQuickAccessContext";
-import { setLocalLastRead, getLocalLastReadMap } from "@/lbs/messages/messagesReadStorage";
 
 export {
   useMessagesQuickAccess,
@@ -24,24 +25,30 @@ export {
 export const MessagesQuickAccessProvider = ({ children }: { children: ReactNode }) => {
   const notify = useNotify();
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const dataProvider = useDataProvider();
+  const { identity } = useGetIdentity();
   const { findClientConversation } = useOpenClientSms();
   const [isOpening, setIsOpening] = useState(false);
   const [isDockOpen, setIsDockOpen] = useState(false);
   const [focusedConversation, setFocusedConversation] = useState<Conversation | null>(null);
   const [draftSms, setDraftSms] = useState<ClientSmsDraft | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<Identifier | null>(null);
-  const [localReadVersion, setLocalReadVersion] = useState(0);
 
-  const markConversationRead = useCallback((conversationId: Identifier, readAt?: string) => {
-    const nextReadAt = readAt ?? new Date().toISOString();
-    const key = String(conversationId);
-    const currentReadAt = getLocalLastReadMap()[key];
-    if (currentReadAt && Date.parse(nextReadAt) <= Date.parse(currentReadAt)) {
-      return;
-    }
-    setLocalLastRead(conversationId, nextReadAt);
-    setLocalReadVersion((current) => current + 1);
-  }, []);
+  const markConversationRead = useCallback(
+    (conversationId: Identifier, readAt?: string) => {
+      if (!identity?.id) return;
+      const timestamp = readAt ?? new Date().toISOString();
+      void persistConversationRead({
+        dataProvider,
+        queryClient,
+        conversationId,
+        memberId: identity.id,
+        readAt: timestamp,
+      });
+    },
+    [dataProvider, identity?.id, queryClient],
+  );
 
   const viewConversation = useCallback(
     (conversation: Conversation) => {
@@ -132,7 +139,6 @@ export const MessagesQuickAccessProvider = ({ children }: { children: ReactNode 
       openInbox,
       closeInbox,
       toggleInbox,
-      localReadVersion,
     }),
     [
       activeConversationId,
@@ -144,7 +150,6 @@ export const MessagesQuickAccessProvider = ({ children }: { children: ReactNode 
       focusedConversation,
       isDockOpen,
       isOpening,
-      localReadVersion,
       markConversationRead,
       openInbox,
       openSms,

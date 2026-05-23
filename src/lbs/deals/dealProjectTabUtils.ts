@@ -1,11 +1,15 @@
 export const LBS_PROJECT_TABS = [
   "overview",
+  "scope",
   "website-brief",
+  "content",
   "resources",
-  "security",
   "tasks",
-  "tickets",
+  "schedule",
   "messages",
+  "payments",
+  "activity",
+  "settings",
 ] as const;
 
 export type LbsProjectTab = (typeof LBS_PROJECT_TABS)[number];
@@ -14,10 +18,13 @@ export type LbsProjectTab = (typeof LBS_PROJECT_TABS)[number];
 const LEGACY_TAB_MAP: Record<string, LbsProjectTab> = {
   files: "resources",
   documents: "resources",
-  proposals: "resources",
-  contracts: "resources",
+  assets: "resources",
+  proposals: "scope",
+  contracts: "scope",
   "web-forms": "resources",
-  activity: "overview",
+  activity: "activity",
+  security: "settings",
+  tickets: "activity",
 };
 
 export const getValidProjectTab = (value: string | null): LbsProjectTab => {

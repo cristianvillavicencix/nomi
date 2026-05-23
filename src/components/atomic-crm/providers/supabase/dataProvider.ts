@@ -1361,6 +1361,10 @@ const dataProviderWithCustomMethods = {
     twilio_auth_token?: string | null;
     twilio_phone_number?: string | null;
     sms_enabled?: boolean;
+    business_hours?: import("@/lbs/types").BusinessHoursConfig | null;
+    out_of_hours_message?: string | null;
+    auto_acknowledge_enabled?: boolean;
+    auto_acknowledge_message?: string | null;
   }) {
     const { data, error } = await invokeEdgeFunction<
       import("@/lbs/types").MessagingSettingsPublic
@@ -1379,6 +1383,24 @@ const dataProviderWithCustomMethods = {
     }
     if (!data) {
       throw new Error("Failed to save messaging settings");
+    }
+    return data;
+  },
+  async sendTestSms(testPhone: string) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>("messaging_settings", {
+      method: "POST",
+      body: {
+        action: "test_sms",
+        test_phone: testPhone,
+      },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to send test SMS",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Failed to send test SMS");
     }
     return data;
   },

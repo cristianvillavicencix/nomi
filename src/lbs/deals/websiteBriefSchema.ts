@@ -558,4 +558,72 @@ export const WEBSITE_INTAKE_FIELDS = getAllBriefFieldKeys()
 
 export const emptyWebsiteIntakeValues = emptyWebsiteBriefValues;
 
+export type WebsiteBriefApproval = {
+  section_id: string;
+  status?: "draft" | "client_review" | "approved" | "revision_requested";
+  approved_at?: string | null;
+  approved_by_member_id?: number | null;
+  revision_requested_at?: string | null;
+  revision_notes?: string | null;
+};
+
+export type WebsiteBriefWithApprovals = Record<string, string | null | undefined> & {
+  _approvals?: WebsiteBriefApproval[];
+};
+
+export const parseBriefApprovals = (brief: unknown): WebsiteBriefApproval[] => {
+  if (!brief || typeof brief !== "object") return [];
+  const raw = (brief as WebsiteBriefWithApprovals)._approvals;
+  return Array.isArray(raw) ? raw : [];
+};
+
+export const getBriefSectionApproval = (
+  brief: WebsiteBriefWithApprovals,
+  sectionId: string,
+): WebsiteBriefApproval | undefined =>
+  parseBriefApprovals(brief).find((entry) => entry.section_id === sectionId);
+
+export const approveBriefSection = (
+  brief: WebsiteBriefWithApprovals,
+  sectionId: string,
+  memberId?: number | null,
+): WebsiteBriefWithApprovals => {
+  const approvals = parseBriefApprovals(brief).filter((entry) => entry.section_id !== sectionId);
+  return {
+    ...brief,
+    _approvals: [
+      ...approvals,
+      {
+        section_id: sectionId,
+        status: "approved",
+        approved_at: new Date().toISOString(),
+        approved_by_member_id: memberId ?? null,
+        revision_requested_at: null,
+        revision_notes: null,
+      },
+    ],
+  };
+};
+
+export const requestBriefSectionRevision = (
+  brief: WebsiteBriefWithApprovals,
+  sectionId: string,
+  notes: string,
+): WebsiteBriefWithApprovals => {
+  const approvals = parseBriefApprovals(brief).filter((entry) => entry.section_id !== sectionId);
+  return {
+    ...brief,
+    _approvals: [
+      ...approvals,
+      {
+        section_id: sectionId,
+        status: "revision_requested",
+        revision_requested_at: new Date().toISOString(),
+        revision_notes: notes,
+        approved_at: null,
+      },
+    ],
+  };
+};
+
 export { lbsProjectTypeChoices };

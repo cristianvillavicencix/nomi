@@ -73,19 +73,14 @@ export const ConversationListItem = ({
             ) : null}
           </div>
         </div>
-        <div className="mt-0.5 flex items-center gap-2">
-          <span className="truncate text-sm text-muted-foreground">{display.preview}</span>
-          {conversation.type === "project" ? (
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Team
-            </span>
-          ) : null}
-          {conversation.type === "client" ? (
-            <span className="shrink-0 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-              SMS
-            </span>
-          ) : null}
-        </div>
+        <p
+          className={cn(
+            "mt-0.5 truncate text-sm text-muted-foreground",
+            isUnread && "text-foreground/80",
+          )}
+        >
+          {display.preview}
+        </p>
       </div>
     </button>
   );

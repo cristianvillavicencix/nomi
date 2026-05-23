@@ -4,9 +4,15 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { findOrgByTwilioPhone, getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
 import {
   ensureClientConversation,
+  findContactByPhone,
   insertSmsMessage,
 } from "../_shared/messagingConversations.ts";
 import { validateTwilioSignatureForRequest } from "../_shared/twilio.ts";
+import { sendTwilioSms } from "../_shared/twilio.ts";
+import {
+  expandAutoAckMessage,
+  isWithinBusinessHours,
+} from "../_shared/businessHours.ts";
 import {
   extractTwilioMediaUrls,
   mirrorTwilioMediaToStorage,
@@ -124,6 +130,53 @@ Deno.serve(async (req) => {
       externalId: messageSid ?? null,
       mediaUrl: storedMediaUrl,
     });
+
+    const fullSettings = await supabaseAdmin
+      .from("organization_messaging_settings")
+      .select(
+        "auto_acknowledge_enabled, auto_acknowledge_message, out_of_hours_message, business_hours, twilio_account_sid, twilio_phone_number",
+      )
+      .eq("org_id", orgSettings.org_id)
+      .maybeSingle();
+
+    const withinHours = isWithinBusinessHours(
+      fullSettings.data?.business_hours as Record<string, { open?: string; close?: string; closed?: boolean }> | null,
+    );
+
+    let autoReply: string | null = null;
+    if (!withinHours && fullSettings.data?.out_of_hours_message?.trim()) {
+      autoReply = fullSettings.data.out_of_hours_message.trim();
+    } else if (
+      fullSettings.data?.auto_acknowledge_enabled &&
+      fullSettings.data.auto_acknowledge_message?.trim()
+    ) {
+      autoReply = fullSettings.data.auto_acknowledge_message.trim();
+    }
+
+    if (autoReply && storedAccountSid && authToken && toPhone) {
+      const contact = await findContactByPhone(Number(orgSettings.org_id), fromPhone);
+      const clientName = contact
+        ? `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim()
+        : "";
+      const replyBody = expandAutoAckMessage(autoReply, {
+        client_name: clientName,
+        contact_name: clientName,
+      });
+      if (replyBody.trim()) {
+        await sendTwilioSms({
+          accountSid: storedAccountSid,
+          authToken,
+          from: toPhone,
+          to: fromPhone,
+          body: replyBody,
+        });
+        await insertSmsMessage({
+          conversationId: Number(conversation.id),
+          body: replyBody,
+          direction: "outbound",
+        });
+      }
+    }
 
     return emptyTwimlResponse();
   } catch (error) {

@@ -69,6 +69,9 @@ export const getConversationDisplay = ({
 }): ConversationDisplay => {
   const typeLabel = getConversationTypeLabel(conversation.type);
   const activityAt = conversation.last_message_at ?? conversation.updated_at;
+  const messagePreview =
+    conversation.last_message_preview?.trim() ||
+    (conversation.last_message_at ? "New message" : null);
 
   if (conversation.type === "client") {
     const contact =
@@ -88,7 +91,7 @@ export const getConversationDisplay = ({
     return {
       title,
       initials: getInitials(title),
-      preview: companyName || "Client",
+      preview: messagePreview || companyName || "No messages yet",
       typeLabel,
       activityAt,
       dealHref:
@@ -110,7 +113,7 @@ export const getConversationDisplay = ({
     return {
       title,
       initials: getInitials(title),
-      preview: conversation.last_message_at ? "Team chat" : "Start the project conversation",
+      preview: messagePreview || "Start the project conversation",
       typeLabel,
       activityAt,
       dealHref:
@@ -141,7 +144,7 @@ export const getConversationDisplay = ({
   return {
     title: title || "Direct message",
     initials: getInitials(title || "DM"),
-    preview: conversation.last_message_at ? "Direct message" : "Say hello",
+    preview: messagePreview || "Say hello",
     typeLabel,
     activityAt,
     memberAvatarSrc: otherMember?.avatar?.src ?? null,

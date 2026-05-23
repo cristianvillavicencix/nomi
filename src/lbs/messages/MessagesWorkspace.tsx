@@ -1,12 +1,20 @@
 import { MessageSquare } from "lucide-react";
+import { useState } from "react";
 import type { Identifier } from "ra-core";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { ClientSmsDraft, Contact, Conversation, ConversationParticipant, LbsDeal, OrganizationMember } from "@/lbs/types";
 import { getContactDisplayName } from "@/lbs/messages/messageContactUtils";
 import { ConversationThread } from "@/lbs/messages/ConversationThread";
 import { ConversationChatHeader } from "@/lbs/messages/ConversationChatHeader";
 import { MessagesInbox } from "@/lbs/messages/inbox/MessagesInbox";
-import { ContextPanel } from "@/lbs/messages/context/ContextPanel";
+import { ContextPanel, ContextPanelContent } from "@/lbs/messages/context/ContextPanel";
+import { useMessagesContextPanel } from "@/lbs/messages/context/useMessagesContextPanel";
 
 export const MessagesWorkspace = ({
   conversations,
@@ -25,6 +33,9 @@ export const MessagesWorkspace = ({
   onMobileBack,
   isMobile = false,
   className,
+  onLoadMoreInbox,
+  hasMoreInbox,
+  loadingMoreInbox,
 }: {
   conversations: Conversation[];
   deals: LbsDeal[];
@@ -42,7 +53,12 @@ export const MessagesWorkspace = ({
   onMobileBack?: () => void;
   isMobile?: boolean;
   className?: string;
+  onLoadMoreInbox?: () => void;
+  hasMoreInbox?: boolean;
+  loadingMoreInbox?: boolean;
 }) => {
+  const { open: contextOpen, toggle: toggleContext, close: closeContext } = useMessagesContextPanel();
+  const [mobileContextOpen, setMobileContextOpen] = useState(false);
   const showInbox = !isMobile || !showMobileChat;
   const showChat = !isMobile || showMobileChat || !!clientSmsDraft;
   const activeConversation = selectedConversation;
@@ -55,12 +71,25 @@ export const MessagesWorkspace = ({
         )
       : undefined);
 
+  const activeDeal =
+    activeConversation?.deal_id != null
+      ? deals.find((entry) => String(entry.id) === String(activeConversation.deal_id))
+      : undefined;
+
+  const handleToggleContext = () => {
+    if (isMobile) {
+      setMobileContextOpen(true);
+      return;
+    }
+    toggleContext();
+  };
+
   return (
     <div className={cn("flex min-h-0 flex-1 overflow-hidden bg-background", className)}>
       <aside
         className={cn(
-          "flex min-h-0 flex-col border-r border-border/40 bg-background",
-          compact ? "w-[280px] shrink-0" : "w-full md:w-[300px] lg:w-[min(340px,32vw)]",
+          "flex min-h-0 flex-col border-r border-border/30 bg-muted/5",
+          compact ? "w-[300px] shrink-0" : "w-full shrink-0 md:w-[320px] lg:w-[360px] xl:w-[400px]",
           !showInbox && "hidden md:flex",
         )}
       >
@@ -75,12 +104,16 @@ export const MessagesWorkspace = ({
           onSelectConversation={onSelectConversation}
           isPending={isPending}
           compact={compact}
+          onLoadMore={onLoadMoreInbox}
+          hasMoreConversations={hasMoreInbox}
+          loadingMoreConversations={loadingMoreInbox}
         />
       </aside>
 
       <main
         className={cn(
           "flex min-h-0 min-w-0 flex-1 flex-col bg-background",
+          contextOpen && "lg:border-r lg:border-border/30",
           !showChat && "hidden md:flex",
         )}
       >
@@ -97,6 +130,8 @@ export const MessagesWorkspace = ({
                 showBackButton={isMobile}
                 onBack={onMobileBack}
                 compact={compact}
+                contextOpen={isMobile ? mobileContextOpen : contextOpen}
+                onToggleContext={handleToggleContext}
               />
             ) : clientSmsDraft ? (
               <div className={cn("border-b border-border/40 bg-background px-4", compact ? "py-2.5" : "py-3")}>
@@ -131,12 +166,25 @@ export const MessagesWorkspace = ({
       <ContextPanel
         conversation={activeConversation}
         contact={activeContact}
-        deal={
-          activeConversation?.deal_id != null
-            ? deals.find((entry) => String(entry.id) === String(activeConversation.deal_id))
-            : undefined
-        }
+        deal={activeDeal}
+        open={contextOpen}
+        onClose={closeContext}
       />
+
+      <Sheet open={mobileContextOpen} onOpenChange={setMobileContextOpen}>
+        <SheetContent side="right" className="w-[min(100vw,360px)] p-0">
+          <SheetHeader className="border-b border-border/40 px-4 py-3 text-left">
+            <SheetTitle>Details</SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto">
+            <ContextPanelContent
+              conversation={activeConversation}
+              contact={activeContact}
+              deal={activeDeal}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

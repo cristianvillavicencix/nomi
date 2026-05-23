@@ -22,8 +22,11 @@ import {
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useQuery } from "@tanstack/react-query";
 
-export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
+export const useInboxConversations = (
+  options: { enabled?: boolean; pageSize?: number } = {},
+) => {
   const enabled = options.enabled ?? true;
+  const pageSize = options.pageSize ?? 30;
   const { identity } = useGetIdentity();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const scopeToProjects = shouldScopeMessagingToAssignedProjects(identity);
@@ -48,7 +51,7 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
       "conversation_participants",
       {
         filter: identity?.id ? { "member_id@eq": identity.id } : {},
-        pagination: { page: 1, perPage: 30 },
+        pagination: { page: 1, perPage: 500 },
         sort: { field: "id", order: "DESC" },
       },
       { enabled: enabled && !!identity?.id, staleTime: 15_000 },
@@ -59,7 +62,7 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
       "conversations",
       {
         filter: { "type@eq": "project" },
-        pagination: { page: 1, perPage: 30 },
+        pagination: { page: 1, perPage: pageSize },
         sort: { field: "updated_at", order: "DESC" },
       },
       { enabled, staleTime: 15_000 },
@@ -70,7 +73,7 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
       "conversations",
       {
         filter: { "type@eq": "client" },
-        pagination: { page: 1, perPage: 30 },
+        pagination: { page: 1, perPage: pageSize },
         sort: { field: "updated_at", order: "DESC" },
       },
       { enabled, staleTime: 15_000 },
@@ -100,7 +103,7 @@ export const useInboxConversations = (options: { enabled?: boolean } = {}) => {
     () => {
       const base = sortConversationsByActivity(
         conversations.filter((conversation) => {
-          if (conversation.type === "client" && !conversation.last_message_at) {
+          if (!conversation.last_message_at) {
             return false;
           }
           return (

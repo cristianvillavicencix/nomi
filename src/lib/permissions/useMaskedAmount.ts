@@ -2,11 +2,9 @@ import { useGetIdentity } from "ra-core";
 import { useQuery } from "@tanstack/react-query";
 import { canViewMonetaryAmounts } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { formatUsd, maskAmountIfNeeded } from "@/lib/permissions/amountMasking";
 
-const formatUsd = (value: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    value,
-  );
+export { formatUsd, maskAmountIfNeeded };
 
 let amountVisibilityRef = { current: true };
 
@@ -47,15 +45,6 @@ export function useMaskedAmount(
       minimumSignificantDigits: 3,
     });
   }
-  return formatUsd(value);
-}
-
-export function maskAmountIfNeeded(
-  value: number | null | undefined,
-  canViewAmounts: boolean,
-): string {
-  if (!canViewAmounts) return "—";
-  if (value == null || Number.isNaN(value)) return "—";
   return formatUsd(value);
 }
 

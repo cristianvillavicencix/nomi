@@ -18,7 +18,6 @@ export type MessagesQuickAccessContextValue = {
   openInbox: () => void;
   closeInbox: () => void;
   toggleInbox: () => void;
-  localReadVersion: number;
 };
 
 export const MessagesQuickAccessContext =

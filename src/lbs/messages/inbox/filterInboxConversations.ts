@@ -10,10 +10,9 @@ export const filterInboxConversations = (
   options: {
     currentMemberId?: Identifier;
     participations: ConversationParticipant[];
-    localReadMap: Record<string, string>;
   },
 ) => {
-  const { currentMemberId, participations, localReadMap } = options;
+  const { currentMemberId, participations } = options;
   const query = filters.query.trim().toLowerCase();
 
   return conversations.filter((conversation) => {
@@ -30,10 +29,7 @@ export const filterInboxConversations = (
         String(conversation.created_by_member_id) === String(currentMemberId);
       if (!isAssignee && !isCreator) return false;
     }
-    if (
-      tab === "unread" &&
-      !isConversationUnread(conversation, participations, localReadMap)
-    ) {
+    if (tab === "unread" && !isConversationUnread(conversation, participations)) {
       return false;
     }
 

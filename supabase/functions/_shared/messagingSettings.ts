@@ -10,6 +10,10 @@ export type MessagingSettingsPublic = {
   sms_enabled: boolean;
   has_auth_token: boolean;
   webhook_url: string | null;
+  business_hours?: Record<string, { open?: string | null; close?: string | null; closed?: boolean }> | null;
+  out_of_hours_message?: string | null;
+  auto_acknowledge_enabled?: boolean;
+  auto_acknowledge_message?: string | null;
 };
 
 export type MessagingSettingsSecrets = {
@@ -72,7 +76,7 @@ export async function getMessagingSettingsPublic(
   const { data, error } = await supabaseAdmin
     .from("organization_messaging_settings")
     .select(
-      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted",
+      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted, business_hours, out_of_hours_message, auto_acknowledge_enabled, auto_acknowledge_message",
     )
     .eq("org_id", orgId)
     .maybeSingle();
@@ -90,6 +94,10 @@ export async function getMessagingSettingsPublic(
       data?.twilio_auth_token_encrypted?.trim() || data?.twilio_auth_token?.trim(),
     ),
     webhook_url: getWebhookUrl(),
+    business_hours: (data?.business_hours as MessagingSettingsPublic["business_hours"]) ?? null,
+    out_of_hours_message: data?.out_of_hours_message ?? null,
+    auto_acknowledge_enabled: data?.auto_acknowledge_enabled === true,
+    auto_acknowledge_message: data?.auto_acknowledge_message ?? null,
   };
 }
 
@@ -149,6 +157,10 @@ export async function upsertMessagingSettings(
     twilio_phone_number?: string | null;
     sms_enabled?: boolean;
     keepExistingToken?: boolean;
+    business_hours?: MessagingSettingsPublic["business_hours"];
+    out_of_hours_message?: string | null;
+    auto_acknowledge_enabled?: boolean;
+    auto_acknowledge_message?: string | null;
   },
 ) {
   const existing = await getMessagingSettingsSecrets(orgId);
@@ -171,6 +183,10 @@ export async function upsertMessagingSettings(
     twilio_auth_token: null,
     twilio_phone_number: phoneNumber,
     sms_enabled: input.sms_enabled === true,
+    business_hours: input.business_hours ?? undefined,
+    out_of_hours_message: input.out_of_hours_message ?? undefined,
+    auto_acknowledge_enabled: input.auto_acknowledge_enabled ?? undefined,
+    auto_acknowledge_message: input.auto_acknowledge_message ?? undefined,
     updated_at: new Date().toISOString(),
   };
 

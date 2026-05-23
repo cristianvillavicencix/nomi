@@ -54,8 +54,14 @@ Deno.serve(
           contact_ids: contactIds,
           stage: "setup",
           amount: proposal.amount ?? 0,
+          estimated_value: proposal.amount ?? 0,
           description: proposal.notes ?? "",
           category: "website",
+          project_type: "website",
+          lifecycle_phase: "delivery",
+          delivery_status: "planning",
+          accepted_proposal_id: proposalId,
+          priority: "normal",
         })
         .select("id")
         .single();

@@ -462,17 +462,33 @@ const SidebarItem = ({
 export const SidebarLayout = ({ children }: { children: ReactNode }) => {
   useConfigurationLoader();
   const matchDealShow = useMatch("/deals/:id/show");
+  const matchMessages = useMatch("/messages");
   const currentDealId = matchDealShow?.params.id;
+  const isMessagesShell = Boolean(matchMessages);
 
   return (
     <SidebarProvider className="h-svh overflow-hidden print:h-auto print:overflow-visible">
       <SidebarNavigation />
       <main className="ml-auto flex h-svh min-h-0 w-full max-w-full flex-col overflow-hidden peer-data-[state=collapsed]:w-[calc(100%-var(--sidebar-width-icon)-1rem)] peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))] sm:transition-[width] sm:duration-200 sm:ease-linear print:h-auto print:w-full print:overflow-visible">
-        <div className="flex min-h-0 flex-1 gap-4 px-4 pt-4 pb-2 print:block print:px-0 print:pt-0 print:pb-0">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
+            isMessagesShell
+              ? "gap-2 p-2 pl-1"
+              : "gap-4 px-4 pt-4 pb-2",
+          )}
+        >
           {currentDealId ? (
             <DealsExplorerPanel currentDealId={currentDealId} />
           ) : null}
-          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+          <div
+            className={cn(
+              "min-h-0 min-w-0 flex-1",
+              isMessagesShell
+                ? "overflow-hidden"
+                : "overflow-y-auto overscroll-contain pr-1",
+            )}
+          >
             <ErrorBoundary FallbackComponent={Error}>
               <Suspense
                 fallback={<Skeleton className="h-12 w-12 rounded-full" />}

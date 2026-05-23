@@ -24,19 +24,17 @@ export async function findContactByPhone(orgId: number, externalPhone: string) {
   const normalized = normalizeUsPhoneToE164(externalPhone);
   if (!normalized) return null;
 
-  const { data, error } = await supabaseAdmin
-    .from("contacts")
-    .select("id, first_name, last_name, phone_jsonb, company_id")
-    .eq("org_id", orgId);
+  const { data, error } = await supabaseAdmin.rpc("find_contact_by_phone", {
+    p_org_id: orgId,
+    p_phone: normalized,
+  });
 
   if (error) {
-    throw new Error(error.message ?? "Failed to load contacts");
+    throw new Error(error.message ?? "Failed to find contact by phone");
   }
 
-  return (
-    data?.find((contact) => contactHasPhone(contact.phone_jsonb, normalized)) ??
-    null
-  );
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ?? null;
 }
 
 export async function ensureClientConversation(params: {
@@ -112,6 +110,32 @@ export async function ensureClientConversation(params: {
   }
 
   return data;
+}
+
+export async function deleteConversationIfEmpty(conversationId: number) {
+  const { count, error: countError } = await supabaseAdmin
+    .from("conversation_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("conversation_id", conversationId);
+
+  if (countError) {
+    throw new Error(countError.message ?? "Failed to inspect conversation messages");
+  }
+
+  if ((count ?? 0) > 0) {
+    return false;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("conversations")
+    .delete()
+    .eq("id", conversationId);
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to delete empty conversation");
+  }
+
+  return true;
 }
 
 export async function insertSmsMessage(params: {

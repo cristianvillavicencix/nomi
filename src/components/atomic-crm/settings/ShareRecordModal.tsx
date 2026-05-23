@@ -29,6 +29,9 @@ type ShareRecordModalProps = {
   resourceId: number | string;
   orgId?: number | string | null;
   label?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 };
 
 type RecordShareRow = {
@@ -41,8 +44,13 @@ export const ShareRecordModal = ({
   resourceId,
   orgId,
   label = "Share with…",
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
 }: ShareRecordModalProps) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const notify = useNotify();
   const queryClient = useQueryClient();
   const { data: identity } = useGetIdentity();
@@ -135,10 +143,12 @@ export const ShareRecordModal = ({
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Share2 className="mr-2 h-4 w-4" />
-        {label}
-      </Button>
+      {!hideTrigger ? (
+        <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <Share2 className="mr-2 h-4 w-4" />
+          {label}
+        </Button>
+      ) : null}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

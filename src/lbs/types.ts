@@ -12,6 +12,11 @@ export type {
 
 export type LbsDeal = Deal & {
   website_brief?: Record<string, string | null | undefined>;
+  website_content?: Record<string, unknown>;
+  lifecycle_phase?: "opportunity" | "delivery" | "closed";
+  delivery_status?: string | null;
+  accepted_proposal_id?: Identifier | null;
+  priority?: "low" | "normal" | "high" | "urgent";
 };
 
 export type Proposal = {
@@ -113,8 +118,11 @@ export type DealResource = {
     type: string;
     path: string;
     src: string;
+    bucket?: string;
   };
   source?: "team" | "client" | string;
+  visibility?: "internal" | "client" | "public" | string;
+  mime_kind?: string | null;
   organization_member_id?: Identifier | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
@@ -147,6 +155,7 @@ export type Conversation = {
   external_phone?: string | null;
   dm_key?: string | null;
   last_message_at?: string | null;
+  last_message_preview?: string | null;
   assignee_member_id?: Identifier | null;
   status?: "open" | "pending" | "closed" | "urgent";
   tags?: string[];
@@ -220,6 +229,14 @@ export type ClientSmsDraft = {
   dealId?: Identifier | null;
 };
 
+export type BusinessHoursDay = {
+  open?: string | null;
+  close?: string | null;
+  closed?: boolean;
+};
+
+export type BusinessHoursConfig = Record<string, BusinessHoursDay>;
+
 export type MessagingSettingsPublic = {
   org_id: number;
   twilio_account_sid: string | null;
@@ -227,4 +244,8 @@ export type MessagingSettingsPublic = {
   sms_enabled: boolean;
   has_auth_token: boolean;
   webhook_url: string | null;
+  business_hours?: BusinessHoursConfig | null;
+  out_of_hours_message?: string | null;
+  auto_acknowledge_enabled?: boolean;
+  auto_acknowledge_message?: string | null;
 };

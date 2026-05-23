@@ -7,6 +7,7 @@ import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
 import {
   assertMemberCanAccessConversation,
+  deleteConversationIfEmpty,
   ensureClientConversation,
   insertSmsMessage,
   touchConversationFirstResponse,
@@ -102,8 +103,17 @@ Deno.serve((req: Request) =>
           last_name?: string | null;
         } | null = null;
         let dealName: string | null = null;
+        let pendingNewConversation: {
+          orgId: number;
+          externalPhone: string;
+          contactId: number;
+          dealId: number | null;
+          createdByMemberId: number;
+          title: string;
+        } | null = null;
+        const hasExistingConversation = Number.isFinite(conversationId);
 
-        if (Number.isFinite(conversationId)) {
+        if (hasExistingConversation) {
           await assertMemberCanAccessConversation(memberId, orgId, conversationId);
           const { data: phoneRow, error: phoneError } = await supabaseAdmin
             .from("conversations")
@@ -167,11 +177,8 @@ Deno.serve((req: Request) =>
             throw new Error("This contact has no valid phone number");
           }
 
-          const title =
-            `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
-            normalizedPhone;
-
-          const conversation = await ensureClientConversation({
+          externalPhone = normalizedPhone;
+          pendingNewConversation = {
             orgId,
             externalPhone: normalizedPhone,
             contactId: contact.id,
@@ -180,11 +187,10 @@ Deno.serve((req: Request) =>
                 ? Number(payload.deal_id)
                 : null,
             createdByMemberId: memberId,
-            title,
-          });
-
-          conversationId = Number(conversation.id);
-          externalPhone = conversation.external_phone ?? normalizedPhone;
+            title:
+              `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+              normalizedPhone,
+          };
         }
 
         if (body.includes("{{")) {
@@ -199,6 +205,10 @@ Deno.serve((req: Request) =>
         let externalId: string | null = null;
 
         if (!isInternalNote) {
+          if (!externalPhone) {
+            throw new Error("Client phone number is missing");
+          }
+
           const settings = await getMessagingSettingsSecrets(orgId);
           if (!settings?.sms_enabled) {
             throw new Error("SMS is disabled in Settings → Communications");
@@ -217,11 +227,21 @@ Deno.serve((req: Request) =>
             accountSid,
             authToken,
             from: fromNumber,
-            to: externalPhone!,
+            to: externalPhone,
             body,
             mediaUrls: twilioMediaUrls,
           });
           externalId = twilioResponse.sid ?? null;
+        }
+
+        if (!hasExistingConversation) {
+          if (!pendingNewConversation) {
+            throw new Error("conversation_id or contact_id is required");
+          }
+
+          const conversation = await ensureClientConversation(pendingNewConversation);
+          conversationId = Number(conversation.id);
+          externalPhone = conversation.external_phone ?? pendingNewConversation.externalPhone;
         }
 
         const messageBody =
@@ -230,16 +250,22 @@ Deno.serve((req: Request) =>
             ? "Photo"
             : "Attachment");
 
-        const message = await insertSmsMessage({
-          conversationId,
-          body: messageBody,
-          direction: "outbound",
-          authorMemberId: memberId,
-          externalId,
-          mediaUrl: mediaUrls[0] ?? null,
-          isInternalNote,
-          replyToMessageId,
-        });
+        let message;
+        try {
+          message = await insertSmsMessage({
+            conversationId,
+            body: messageBody,
+            direction: "outbound",
+            authorMemberId: memberId,
+            externalId,
+            mediaUrl: mediaUrls[0] ?? null,
+            isInternalNote,
+            replyToMessageId,
+          });
+        } catch (error) {
+          await deleteConversationIfEmpty(conversationId);
+          throw error;
+        }
 
         if (!isInternalNote) {
           await touchConversationFirstResponse(

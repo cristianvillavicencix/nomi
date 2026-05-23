@@ -11,6 +11,20 @@ export const getConversationTypeLabel = (type: ConversationType) => {
   return type;
 };
 
+export const buildMessagePreview = (message: {
+  body?: string | null;
+  media_url?: string | null;
+  is_internal_note?: boolean | null;
+}) => {
+  if (message.is_internal_note) {
+    return message.body?.trim() || "Internal note";
+  }
+  if (message.media_url) {
+    return message.body?.trim() || "Sent an attachment";
+  }
+  return message.body?.trim() || "New message";
+};
+
 export const formatMessageTime = (value?: string | null) => {
   if (!value) return "";
   const date = new Date(value);

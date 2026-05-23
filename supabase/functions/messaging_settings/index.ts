@@ -5,16 +5,24 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import {
   assertOrgAdministrator,
   getMessagingSettingsPublic,
+  getMessagingSettingsSecrets,
   upsertMessagingSettings,
 } from "../_shared/messagingSettings.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
+import { sendTwilioSms } from "../_shared/twilio.ts";
+import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
 
 type SettingsBody = {
-  action?: "get" | "update";
+  action?: "get" | "update" | "test_sms";
   twilio_account_sid?: string | null;
   twilio_auth_token?: string | null;
   twilio_phone_number?: string | null;
   sms_enabled?: boolean;
+  business_hours?: Record<string, { open?: string | null; close?: string | null; closed?: boolean }> | null;
+  out_of_hours_message?: string | null;
+  auto_acknowledge_enabled?: boolean;
+  auto_acknowledge_message?: string | null;
+  test_phone?: string | null;
 };
 
 Deno.serve((req: Request) =>
@@ -45,6 +53,31 @@ Deno.serve((req: Request) =>
           });
         }
 
+        if (action === "test_sms") {
+          await assertOrgAdministrator(user, orgId);
+          const settings = await getMessagingSettingsSecrets(orgId);
+          if (!settings?.sms_enabled) {
+            throw new Error("SMS is not enabled");
+          }
+          const accountSid = settings.twilio_account_sid?.trim();
+          const authToken = settings.twilio_auth_token?.trim();
+          const fromNumber = settings.twilio_phone_number?.trim();
+          const toNumber = normalizeUsPhoneToE164(body.test_phone?.trim() ?? "");
+          if (!accountSid || !authToken || !fromNumber || !toNumber) {
+            throw new Error("Twilio credentials or test phone number are missing");
+          }
+          await sendTwilioSms({
+            accountSid,
+            authToken,
+            from: fromNumber,
+            to: toNumber,
+            body: "Nomi CRM test SMS — your Twilio integration is working.",
+          });
+          return new Response(JSON.stringify({ ok: true }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+
         if (action !== "update") {
           return createErrorResponse(400, "Invalid action");
         }
@@ -57,6 +90,10 @@ Deno.serve((req: Request) =>
           twilio_phone_number: body.twilio_phone_number ?? null,
           sms_enabled: body.sms_enabled === true,
           keepExistingToken: !body.twilio_auth_token?.trim(),
+          business_hours: body.business_hours ?? undefined,
+          out_of_hours_message: body.out_of_hours_message ?? undefined,
+          auto_acknowledge_enabled: body.auto_acknowledge_enabled ?? undefined,
+          auto_acknowledge_message: body.auto_acknowledge_message ?? undefined,
         });
 
         return new Response(JSON.stringify(settings), {

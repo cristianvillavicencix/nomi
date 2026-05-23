@@ -518,17 +518,21 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="deal_resources" />
           <Resource name="deal_access_entries" />
           <Resource name="proposal_line_items" />
+          <Resource name="deal_client_payments" />
         </>
       ) : null}
       <Resource name="contacts" {...contacts} />
       <Resource name="companies" {...companies} />
       <Resource name="contact_notes" />
       <Resource name="deal_notes" />
-      <Resource name="deal_subcontractor_entries" />
-      <Resource name="deal_expenses" />
-      <Resource name="deal_change_orders" />
-      <Resource name="deal_commissions" />
-      <Resource name="deal_client_payments" />
+      {!isLbsMode() ? (
+        <>
+          <Resource name="deal_subcontractor_entries" />
+          <Resource name="deal_expenses" />
+          <Resource name="deal_change_orders" />
+          <Resource name="deal_commissions" />
+        </>
+      ) : null}
       <Resource name="tasks" {...tasks} />
       <Resource name="organization_members" {...organizationMembers} />
       <Resource name="tags" />

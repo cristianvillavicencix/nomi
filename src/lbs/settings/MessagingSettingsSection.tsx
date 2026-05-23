@@ -10,6 +10,8 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { DesktopMessageAlertsSection } from "@/lbs/settings/DesktopMessageAlertsSection";
 import { WhatsAppSettingsCard } from "@/lbs/settings/communications/WhatsAppSettingsCard";
 import { VoiceSettingsCard } from "@/lbs/settings/communications/VoiceSettingsCard";
+import { BusinessHoursSettingsCard } from "@/lbs/settings/communications/BusinessHoursSettingsCard";
+import { TestSmsButton } from "@/lbs/settings/communications/TestSmsButton";
 
 export const MessagingSettingsSection = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -55,6 +57,23 @@ export const MessagingSettingsSection = () => {
         mutationError instanceof Error
           ? mutationError.message
           : "Failed to save messaging settings",
+        { type: "error" },
+      );
+    },
+  });
+
+  const businessHoursMutation = useMutation({
+    mutationFn: (payload: Parameters<CrmDataProvider["updateMessagingSettings"]>[0]) =>
+      dataProvider.updateMessagingSettings(payload),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(["messaging-settings"], saved);
+      notify("Business hours saved", { type: "success" });
+    },
+    onError: (mutationError) => {
+      notify(
+        mutationError instanceof Error
+          ? mutationError.message
+          : "Failed to save business hours",
         { type: "error" },
       );
     },
@@ -179,6 +198,16 @@ export const MessagingSettingsSection = () => {
               Save messaging settings
             </Button>
           </div>
+
+          <TestSmsButton disabled={!smsEnabled || saveMutation.isPending} />
+
+          {data ? (
+            <BusinessHoursSettingsCard
+              settings={data}
+              saving={businessHoursMutation.isPending}
+              onSave={(payload) => businessHoursMutation.mutate(payload)}
+            />
+          ) : null}
         </>
       )}
 

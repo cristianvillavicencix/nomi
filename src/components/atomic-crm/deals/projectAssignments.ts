@@ -1,4 +1,5 @@
 import type { DataProvider, Identifier } from "ra-core";
+import { isLbsMode } from "@/lbs/productMode";
 
 const toNumericIds = (value: unknown): number[] => {
   if (!Array.isArray(value)) return [];
@@ -45,6 +46,11 @@ export const syncProjectAssignments = async (
   salespersonIds: unknown,
   subcontractorIds: unknown,
 ) => {
+  // LBS stores org member ids in deals.salesperson_ids[] — no people junction.
+  if (isLbsMode()) {
+    return;
+  }
+
   await Promise.all([
     syncManyToMany(dataProvider, "deal_salespersons", dealId, salespersonIds),
     syncManyToMany(
