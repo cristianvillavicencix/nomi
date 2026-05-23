@@ -5,10 +5,11 @@ import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { ConversationMessage } from "@/lbs/types";
 import {
   appendConversationMessageToCache,
+  CONVERSATION_MESSAGES_PAGE_SIZE,
   refreshConversationLists,
 } from "@/lbs/messages/messagesRealtimeCache";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = CONVERSATION_MESSAGES_PAGE_SIZE;
 
 export const useConversationMessages = (
   conversationId: Identifier | null | undefined,

@@ -3,6 +3,8 @@ import type { Identifier } from "ra-core";
 import type { Conversation, ConversationMessage } from "@/lbs/types";
 import { buildMessagePreview } from "@/lbs/messages/conversationUtils";
 
+export const CONVERSATION_MESSAGES_PAGE_SIZE = 50;
+
 type MessageListCache = {
   data: ConversationMessage[];
   total: number;
@@ -11,8 +13,8 @@ type MessageListCache = {
 };
 
 const CONVERSATION_MESSAGES_LIST_PARAMS = {
-  pagination: { page: 1, perPage: 50 },
-  sort: { field: "created_at", order: "ASC" as const },
+  pagination: { page: 1, perPage: CONVERSATION_MESSAGES_PAGE_SIZE },
+  sort: { field: "created_at", order: "DESC" as const },
 };
 
 export const getConversationMessagesQueryKey = (conversationId: Identifier) =>
@@ -31,6 +33,15 @@ const getConversationFilterId = (queryKey: readonly unknown[]) => {
   const params = queryKey[2] as { filter?: Record<string, unknown> };
   const filterId = params?.filter?.["conversation_id@eq"];
   return filterId == null ? null : String(filterId);
+};
+
+const getManyIncludesConversation = (
+  queryKey: readonly unknown[],
+  conversationId: string,
+) => {
+  if (queryKey.length < 3) return false;
+  const params = queryKey[2] as { ids?: string[] } | undefined;
+  return params?.ids?.some((id) => String(id) === conversationId) ?? false;
 };
 
 const mergeMessageIntoList = (
@@ -54,7 +65,7 @@ const mergeMessageIntoList = (
 
   return {
     ...old,
-    data: [...old.data, message],
+    data: [message, ...old.data],
     total: old.total + 1,
   };
 };
@@ -90,6 +101,24 @@ const touchConversationLists = (
       return changed ? { ...old, data } : old;
     },
   );
+
+  queryClient.setQueriesData<Conversation[]>(
+    {
+      queryKey: ["conversations", "getMany"],
+      predicate: (query) =>
+        getManyIncludesConversation(query.queryKey, conversationId),
+    },
+    (old) => {
+      if (!old?.length) return old;
+      let changed = false;
+      const data = old.map((conversation) => {
+        if (String(conversation.id) !== conversationId) return conversation;
+        changed = true;
+        return patchConversationInList(conversation, message);
+      });
+      return changed ? data : old;
+    },
+  );
 };
 
 export const appendConversationMessageToCache = (
@@ -119,4 +148,5 @@ export const appendConversationMessageToCache = (
 
 export const refreshConversationLists = (queryClient: QueryClient) => {
   void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+  void queryClient.invalidateQueries({ queryKey: ["conversation_messages"] });
 };
