@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
   useDataProvider,
   useGetIdentity,
@@ -14,7 +14,7 @@ import {
 } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientSmsDraft, Contact, Conversation } from "@/lbs/types";
-import { MessagesDock } from "@/lbs/messages/MessagesDock";
+import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 import { MessagesNotificationsLayer } from "@/lbs/messages/MessagesNotificationsLayer";
 import { persistConversationRead } from "@/lbs/messages/persistConversationRead";
 import { useOpenClientSms } from "@/lbs/messages/useClientSms";
@@ -36,6 +36,7 @@ export const MessagesQuickAccessProvider = ({
 }) => {
   const notify = useNotify();
   const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const dataProvider = useDataProvider();
   const { identity } = useGetIdentity();
@@ -82,10 +83,12 @@ export const MessagesQuickAccessProvider = ({
       setActiveConversationId((current) =>
         String(current) === String(conversation.id) ? current : conversation.id,
       );
-      markConversationRead(
-        conversation.id,
-        conversation.last_message_at ?? new Date().toISOString(),
-      );
+      const readAt = conversation.last_message_at
+        ? new Date(
+            Math.max(Date.parse(conversation.last_message_at), Date.now()),
+          ).toISOString()
+        : new Date().toISOString();
+      markConversationRead(conversation.id, readAt);
     },
     [markConversationRead],
   );
@@ -114,7 +117,7 @@ export const MessagesQuickAccessProvider = ({
       setFocusedConversation(null);
 
       if (!location.pathname.startsWith("/messages")) {
-        setIsDockOpen(true);
+        navigate("/messages");
       }
 
       try {
@@ -138,12 +141,12 @@ export const MessagesQuickAccessProvider = ({
         setIsOpening(false);
       }
     },
-    [findClientConversation, location.pathname, notify, viewConversation],
+    [findClientConversation, location.pathname, navigate, notify, viewConversation],
   );
 
   const openInbox = useCallback(() => {
-    setIsDockOpen(true);
-  }, []);
+    navigate("/messages");
+  }, [navigate]);
 
   const closeInbox = useCallback(() => {
     setIsDockOpen(false);
@@ -193,8 +196,8 @@ export const MessagesQuickAccessProvider = ({
   return (
     <MessagesQuickAccessContext.Provider value={value}>
       {children}
+      <GlobalMessagesBadge className="fixed top-3 right-3 z-50 print:hidden" />
       <MessagesNotificationsLayer />
-      <MessagesDock />
     </MessagesQuickAccessContext.Provider>
   );
 };

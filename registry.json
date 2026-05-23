@@ -672,6 +672,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/layout/GlobalMessagesBadge.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/layout/FormToolbar.tsx",
           "type": "registry:component"
         },
