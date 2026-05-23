@@ -10,6 +10,7 @@ import {
 } from "@/lbs/deals/lbsAgencyProjectModel";
 import { getLbsProjectStageLabel } from "@/lbs/deals/lbsProjectConstants";
 import { ProjectSecurityTab } from "@/lbs/deals/ProjectSecurityTab";
+import { ClientPortalSection } from "@/lbs/portal/ClientPortalSection";
 import type { LbsDeal } from "@/lbs/types";
 
 export const ProjectSettingsTab = ({ record }: { record: LbsDeal }) => (
@@ -86,6 +87,8 @@ export const ProjectSettingsTab = ({ record }: { record: LbsDeal }) => (
         </p>
       </CardContent>
     </Card>
+
+    <ClientPortalSection record={record} />
 
     <div>
       <h3 className="mb-3 text-base font-semibold">Credentials & access</h3>
