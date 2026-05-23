@@ -14,7 +14,6 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { isLbsMode } from "@/lbs/productMode";
 import { LBS_NAV_ITEMS } from "@/lbs/navigation";
-import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 
 const TIME_AND_PAY_PATHS = new Set([
   "/time_entries",
@@ -97,7 +96,6 @@ const Header = () => {
               ))}
             </nav>
             <div className="flex items-center gap-2">
-              <GlobalMessagesBadge />
               <ThemeModeToggle />
               <RefreshButton />
               <UserMenu>
@@ -171,7 +169,6 @@ const Header = () => {
             </nav>
           </div>
           <div className="flex items-center gap-2">
-            <GlobalMessagesBadge />
             <ThemeModeToggle />
             <RefreshButton />
             <UserMenu>
