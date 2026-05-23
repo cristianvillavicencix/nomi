@@ -10,22 +10,26 @@ import {
 } from "@/components/atomic-crm/layout/page-shell";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { getAccessRoles } from "@/components/atomic-crm/providers/commons/canAccess";
+import { isLbsMode } from "@/lbs/productMode";
 import { LaborCostByPersonReportPage } from "./LaborCostByPersonReportPage";
 import { PayrollSummaryReportPage } from "./PayrollSummaryReportPage";
 import { ProjectProfitabilityReportPage } from "./ProjectProfitabilityReportPage";
 import { SalesCommissionsReportPage } from "./SalesCommissionsReportPage";
+import { WebAgencyMetricsReportPage } from "./WebAgencyMetricsReportPage";
 
 export type ReportTab =
   | "project-profitability"
   | "payroll-summary"
   | "labor-cost-by-person"
-  | "sales-commissions";
+  | "sales-commissions"
+  | "web-agency-metrics";
 
 export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: identity } = useGetIdentity();
   const roles = getAccessRoles(identity as any);
+  const lbsMode = isLbsMode();
   const canViewFinanceReports =
     roles.includes("admin") ||
     roles.includes("accountant") ||
@@ -33,14 +37,26 @@ export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
   const canViewPeopleReports = canViewFinanceReports || roles.includes("hr");
   const canViewSalesReports =
     roles.includes("admin") || roles.includes("sales_manager");
-  const availableTabs: ReportTab[] = [
-    ...(canViewSalesReports ? (["project-profitability"] as ReportTab[]) : []),
-    ...(canViewFinanceReports ? (["payroll-summary"] as ReportTab[]) : []),
-    ...(canViewPeopleReports ? (["labor-cost-by-person"] as ReportTab[]) : []),
-    ...(canViewSalesReports ? (["sales-commissions"] as ReportTab[]) : []),
-  ];
+  const canViewLbsReports =
+    roles.includes("admin") ||
+    roles.includes("sales_manager") ||
+    roles.includes("user");
+
+  const availableTabs: ReportTab[] = lbsMode
+    ? canViewLbsReports
+      ? ["web-agency-metrics"]
+      : []
+    : [
+        ...(canViewSalesReports ? (["project-profitability"] as ReportTab[]) : []),
+        ...(canViewFinanceReports ? (["payroll-summary"] as ReportTab[]) : []),
+        ...(canViewPeopleReports ? (["labor-cost-by-person"] as ReportTab[]) : []),
+        ...(canViewSalesReports ? (["sales-commissions"] as ReportTab[]) : []),
+      ];
 
   const getTabFromPath = (): ReportTab => {
+    if (location.pathname.includes("/reports/web-agency-metrics")) {
+      return "web-agency-metrics";
+    }
     if (location.pathname.includes("/reports/payroll-summary")) {
       return "payroll-summary";
     }
@@ -50,10 +66,11 @@ export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
     if (location.pathname.includes("/reports/sales-commissions")) {
       return "sales-commissions";
     }
+    if (lbsMode) return "web-agency-metrics";
     return initialTab ?? "project-profitability";
   };
 
-  const fallbackTab = availableTabs[0] ?? "project-profitability";
+  const fallbackTab = availableTabs[0] ?? "web-agency-metrics";
   const [tab, setTab] = useState<ReportTab>(getTabFromPath());
 
   useEffect(() => {
@@ -81,6 +98,24 @@ export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
     setTab(nextTab);
     navigate(`/reports/${nextTab}`);
   };
+
+  if (lbsMode) {
+    return (
+      <PageLayout>
+        <StickyPageHeader className="pb-2">
+          <div className="flex items-center justify-end">
+            <ModuleInfoPopover
+              title="Reports"
+              description="Win rate, closed deals, and revenue trends for your web agency pipeline."
+            />
+          </div>
+        </StickyPageHeader>
+        <ScrollableContentArea>
+          <WebAgencyMetricsReportPage embedded />
+        </ScrollableContentArea>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>

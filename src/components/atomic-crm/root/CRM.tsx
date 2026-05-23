@@ -68,6 +68,7 @@ import {
   renderLbsPublicFormRoute,
 } from "@/lbs/LbsCustomRoutes";
 import { isLbsMode } from "@/lbs/productMode";
+import { ClientPortalPage } from "@/lbs/portal/ClientPortalPage";
 import proposals from "@/lbs/proposals";
 import contracts from "@/lbs/contracts";
 import webForms from "@/lbs/web-forms";
@@ -298,6 +299,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
             <Route path="/sas" element={<Navigate to="/" replace />} />
             <Route path="/sas/*" element={<Navigate to="/" replace />} />
             {renderLbsPublicFormRoute()}
+            <Route path="/portal" element={<ClientPortalPage />} />
           </>
         ) : (
           <>
@@ -480,6 +482,14 @@ const DesktopAdmin = (props: CoreAdminProps) => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/reports/web-agency-metrics"
+          element={
+            <ProtectedRoute resource="reports" action="list">
+              <ReportsPage initialTab="web-agency-metrics" />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/projects" element={<Navigate to="/deals" replace />} />
         {renderLbsCustomRoutes({ ProtectedRoute })}
         {isLbsMode() ? (
@@ -498,7 +508,6 @@ const DesktopAdmin = (props: CoreAdminProps) => {
               element={<Navigate to="/" replace />}
             />
             <Route path="/people/*" element={<Navigate to="/" replace />} />
-            <Route path="/reports/*" element={<Navigate to="/" replace />} />
           </>
         ) : null}
       </CustomRoutes>
@@ -537,6 +546,15 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="proposal_line_items" />
           <Resource name="deal_client_payments" />
           <Resource name="organization_pipeline_stages" />
+          <Resource name="deal_launch_checklist_items" />
+          <Resource name="launch_checklist_templates" />
+          <Resource name="deal_milestones" />
+          <Resource name="maintenance_retainers" />
+          <Resource name="maintenance_hours_log" />
+          <Resource name="client_portal_accounts" />
+          <Resource name="client_portal_deal_access" />
+          <Resource name="deal_approvals" />
+          <Resource name="report_web_agency_metrics" />
         </>
       ) : null}
       <Resource name="contacts" {...contacts} />
