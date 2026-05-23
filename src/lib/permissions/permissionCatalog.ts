@@ -77,7 +77,16 @@ const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: 
   // Area 3 — Messaging
   { id: "messaging.conversations.view", area: "Messaging", label: "View conversations", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   { id: "messaging.send", area: "Messaging", label: "Send messages", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
-  { id: "messaging.settings.manage", area: "Messaging", label: "Messaging settings (Twilio)", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "messaging.internal_notes.write", area: "Messaging", label: "Write internal notes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "messaging.templates.view", area: "Messaging", label: "View message templates", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
+  { id: "messaging.templates.manage", area: "Messaging", label: "Manage message templates", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "messaging.assign", area: "Messaging", label: "Assign conversations", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "messaging.status.change", area: "Messaging", label: "Change conversation status", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "messaging.settings.manage", area: "Messaging", label: "Configure communications (Twilio, WhatsApp, Voice)", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  // Area 3b — Voice (shell)
+  { id: "voice.calls.view", area: "Voice", label: "View call history", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
+  { id: "voice.calls.make", area: "Voice", label: "Make calls", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "voice.recordings.access", area: "Voice", label: "Access call recordings", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   // Area 4 — Proposals & Contracts
   { id: "proposals.view", area: "Proposals & contracts", label: "View proposals", scopeable: true, matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "proposals.create", area: "Proposals & contracts", label: "Create proposals", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
@@ -294,6 +303,20 @@ export const RESOURCE_ACTION_TO_CAPABILITY: Record<
     create: "messaging.send",
     edit: "messaging.send",
     delete: "messaging.send",
+  },
+  message_templates: {
+    list: "messaging.templates.view",
+    show: "messaging.templates.view",
+    create: "messaging.templates.manage",
+    edit: "messaging.templates.manage",
+    delete: "messaging.templates.manage",
+  },
+  voice_calls: {
+    list: "voice.calls.view",
+    show: "voice.calls.view",
+    create: "voice.calls.make",
+    edit: "voice.calls.make",
+    delete: "voice.calls.make",
   },
   proposals: {
     list: "proposals.view",
