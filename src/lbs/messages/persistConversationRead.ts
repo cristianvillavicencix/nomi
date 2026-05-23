@@ -10,6 +10,48 @@ export const isReadThrough = (
   return Date.parse(targetAt) <= Date.parse(readAt);
 };
 
+const patchParticipantReadAtInCache = (
+  queryClient: QueryClient,
+  conversationId: Identifier,
+  memberId: Identifier,
+  readAt: string,
+) => {
+  queryClient.setQueriesData<{ data: ConversationParticipant[] }>(
+    { queryKey: ["conversation_participants", "getList"] },
+    (old) => {
+      if (!old?.data) return old;
+
+      const existingIndex = old.data.findIndex(
+        (entry) =>
+          String(entry.conversation_id) === String(conversationId) &&
+          String(entry.member_id) === String(memberId),
+      );
+
+      if (existingIndex >= 0) {
+        const nextData = [...old.data];
+        nextData[existingIndex] = {
+          ...nextData[existingIndex],
+          last_read_at: readAt,
+        };
+        return { ...old, data: nextData };
+      }
+
+      return {
+        ...old,
+        data: [
+          ...old.data,
+          {
+            id: `optimistic-read-${conversationId}-${memberId}`,
+            conversation_id: conversationId,
+            member_id: memberId,
+            last_read_at: readAt,
+          } as ConversationParticipant,
+        ],
+      };
+    },
+  );
+};
+
 export const persistConversationRead = async ({
   dataProvider,
   queryClient,
@@ -23,6 +65,13 @@ export const persistConversationRead = async ({
   memberId: Identifier;
   readAt: string;
 }) => {
+  patchParticipantReadAtInCache(
+    queryClient,
+    conversationId,
+    memberId,
+    readAt,
+  );
+
   const { data: participants } =
     await dataProvider.getList<ConversationParticipant>(
       "conversation_participants",
