@@ -21,6 +21,10 @@ import {
   createStageTasksForDeal,
   getStageTasksCreatedMessage,
 } from "@/lbs/deals/dealStageTaskTemplates";
+import {
+  ensureCommissionsForWonDeal,
+  getCommissionAutomationMessage,
+} from "@/lbs/deals/dealCommissionAutomation";
 import type { LbsDeal } from "@/lbs/types";
 
 export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
@@ -101,13 +105,27 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
             dataProvider,
             deal: sourceDeal as LbsDeal,
             newStage,
-            previousStage: source.stage,
+            previousStage: sourceStage,
             organizationMemberId: identity.id,
           });
           const message = getStageTasksCreatedMessage(newStage, count);
           if (message) notify(message, { type: "info" });
         } catch {
           notify("Project moved, but task templates could not be created", {
+            type: "warning",
+          });
+        }
+
+        try {
+          const commissionCount = await ensureCommissionsForWonDeal({
+            dataProvider,
+            deal: { ...(sourceDeal as LbsDeal), stage: newStage },
+          });
+          const commissionMessage =
+            getCommissionAutomationMessage(commissionCount);
+          if (commissionMessage) notify(commissionMessage, { type: "info" });
+        } catch {
+          notify("Project moved, but commissions could not be created", {
             type: "warning",
           });
         }
