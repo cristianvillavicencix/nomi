@@ -15,7 +15,10 @@ type AccessEntryPasswordBody = {
 };
 
 const publishableKey =
-  Deno.env.get("SB_PUBLISHABLE_KEY") ?? Deno.env.get("PUBLISHABLE_KEY") ?? "";
+  Deno.env.get("SB_PUBLISHABLE_KEY") ??
+  Deno.env.get("PUBLISHABLE_KEY") ??
+  Deno.env.get("SUPABASE_ANON_KEY") ??
+  "";
 
 const getPgcryptoKey = () => {
   const key = Deno.env.get("PGCRYPTO_KEY")?.trim();
