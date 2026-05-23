@@ -25,6 +25,7 @@ import {
 } from "@/lbs/deals/projectTabProgress";
 import { ProjectResourcesTab } from "@/lbs/deals/ProjectResourcesTab";
 import { LbsProjectOverviewTab } from "@/lbs/deals/LbsProjectOverviewTab";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import {
   formatTabCount,
   getValidProjectTab,
@@ -69,6 +70,21 @@ const ProjectSettingsTab = lazy(() =>
 const ProjectMessagesTab = lazy(() =>
   import("@/lbs/projects/tabs/ProjectMessagesTab").then((m) => ({
     default: m.ProjectMessagesTab,
+  })),
+);
+const ProjectExpensesTab = lazy(() =>
+  import("@/lbs/projects/financials/ExpensesTab").then((m) => ({
+    default: m.ExpensesTab,
+  })),
+);
+const ProjectChangeOrdersTab = lazy(() =>
+  import("@/lbs/projects/financials/ChangeOrdersTab").then((m) => ({
+    default: m.ChangeOrdersTab,
+  })),
+);
+const ProjectCommissionsTab = lazy(() =>
+  import("@/lbs/projects/financials/CommissionsTab").then((m) => ({
+    default: m.CommissionsTab,
   })),
 );
 
@@ -132,6 +148,16 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   const briefProgress = useMemo(
     () => getProjectBriefProgress(record),
     [record],
+  );
+  const canViewExpenses = useMemberCapability("deal_financials.expenses.view");
+  const canViewChangeOrders = useMemberCapability(
+    "deal_financials.change_orders.view",
+  );
+  const canViewPayments = useMemberCapability(
+    "deal_financials.collections.view",
+  );
+  const canViewCommissions = useMemberCapability(
+    "deal_financials.commissions.view",
   );
   const resourcesProgress = useMemo(
     () =>
@@ -201,9 +227,26 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                 <TabsTrigger value="messages" className="shrink-0">
                   Messages
                 </TabsTrigger>
-                <TabsTrigger value="payments" className="shrink-0">
-                  Payments
-                </TabsTrigger>
+                {canViewExpenses ? (
+                  <TabsTrigger value="expenses" className="shrink-0">
+                    Expenses
+                  </TabsTrigger>
+                ) : null}
+                {canViewChangeOrders ? (
+                  <TabsTrigger value="change_orders" className="shrink-0">
+                    Change orders
+                  </TabsTrigger>
+                ) : null}
+                {canViewPayments ? (
+                  <TabsTrigger value="payments" className="shrink-0">
+                    Payments
+                  </TabsTrigger>
+                ) : null}
+                {canViewCommissions ? (
+                  <TabsTrigger value="commissions" className="shrink-0">
+                    Commissions
+                  </TabsTrigger>
+                ) : null}
                 <TabsTrigger value="activity" className="shrink-0">
                   Activity
                 </TabsTrigger>
@@ -253,13 +296,42 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   </Suspense>
                 ) : null}
               </TabsContent>
-              <TabsContent value="payments" className="pt-4">
-                {showTab("payments") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <ProjectPaymentsTab record={record} />
-                  </Suspense>
-                ) : null}
-              </TabsContent>
+              {canViewExpenses ? (
+                <TabsContent value="expenses" className="pt-4">
+                  {showTab("expenses") ? (
+                    <Suspense fallback={<TabFallback />}>
+                      <ProjectExpensesTab record={record} />
+                    </Suspense>
+                  ) : null}
+                </TabsContent>
+              ) : null}
+              {canViewChangeOrders ? (
+                <TabsContent value="change_orders" className="pt-4">
+                  {showTab("change_orders") ? (
+                    <Suspense fallback={<TabFallback />}>
+                      <ProjectChangeOrdersTab record={record} />
+                    </Suspense>
+                  ) : null}
+                </TabsContent>
+              ) : null}
+              {canViewPayments ? (
+                <TabsContent value="payments" className="pt-4">
+                  {showTab("payments") ? (
+                    <Suspense fallback={<TabFallback />}>
+                      <ProjectPaymentsTab record={record} />
+                    </Suspense>
+                  ) : null}
+                </TabsContent>
+              ) : null}
+              {canViewCommissions ? (
+                <TabsContent value="commissions" className="pt-4">
+                  {showTab("commissions") ? (
+                    <Suspense fallback={<TabFallback />}>
+                      <ProjectCommissionsTab record={record} />
+                    </Suspense>
+                  ) : null}
+                </TabsContent>
+              ) : null}
               <TabsContent value="activity" className="pt-4">
                 {showTab("activity") ? (
                   <Suspense fallback={<TabFallback />}>

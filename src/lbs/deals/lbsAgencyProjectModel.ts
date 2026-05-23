@@ -146,9 +146,6 @@ export const LBS_CONTRACTOR_DEAL_FIELDS = [
 /** Child resources contractor-only — hide from LBS resource registry (Fase 9). */
 export const LBS_CONTRACTOR_DEAL_RESOURCES = [
   "deal_subcontractor_entries",
-  "deal_expenses",
-  "deal_change_orders",
-  "deal_commissions",
   "deal_cost_entries",
   "deal_workers",
   "deal_subcontractors",
