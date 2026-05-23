@@ -121,6 +121,8 @@ export async function insertSmsMessage(params: {
   authorMemberId?: number | null;
   externalId?: string | null;
   mediaUrl?: string | null;
+  isInternalNote?: boolean;
+  replyToMessageId?: number | null;
 }) {
   const { data, error } = await supabaseAdmin
     .from("conversation_messages")
@@ -132,6 +134,8 @@ export async function insertSmsMessage(params: {
       author_member_id: params.authorMemberId ?? null,
       external_id: params.externalId ?? null,
       media_url: params.mediaUrl ?? null,
+      is_internal_note: params.isInternalNote === true,
+      reply_to_message_id: params.replyToMessageId ?? null,
     })
     .select("*")
     .single();
@@ -141,6 +145,17 @@ export async function insertSmsMessage(params: {
   }
 
   return data;
+}
+
+export async function touchConversationFirstResponse(
+  conversationId: number,
+  respondedAt: string,
+) {
+  await supabaseAdmin
+    .from("conversations")
+    .update({ first_response_at: respondedAt })
+    .eq("id", conversationId)
+    .is("first_response_at", null);
 }
 
 export async function assertMemberCanAccessConversation(

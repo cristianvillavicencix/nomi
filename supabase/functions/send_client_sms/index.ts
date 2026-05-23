@@ -9,7 +9,9 @@ import {
   assertMemberCanAccessConversation,
   ensureClientConversation,
   insertSmsMessage,
+  touchConversationFirstResponse,
 } from "../_shared/messagingConversations.ts";
+import { expandTemplateVariables, sanitizeMessageBody } from "../_shared/messagingUtils.ts";
 import { sendTwilioSms } from "../_shared/twilio.ts";
 import { resolveTwilioMediaUrls } from "../_shared/twilioMedia.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
@@ -21,6 +23,9 @@ type SendBody = {
   deal_id?: number | null;
   body?: string;
   media_urls?: string[];
+  is_internal_note?: boolean;
+  template_id?: number;
+  reply_to_message_id?: number | null;
 };
 
 Deno.serve((req: Request) =>
@@ -41,56 +46,92 @@ Deno.serve((req: Request) =>
         return createErrorResponse(403, "Organization not found");
       }
 
-      if (!hasMemberCapability(member, "messaging.send")) {
-        return createErrorResponse(
-          403,
-          "You don't have permission to send messages.",
-        );
-      }
-
       try {
         const payload = (await req.json()) as SendBody;
-        const body = payload.body?.trim() ?? "";
+        const isInternalNote = payload.is_internal_note === true;
+
+        if (isInternalNote) {
+          if (!hasMemberCapability(member, "messaging.internal_notes.write")) {
+            return createErrorResponse(
+              403,
+              "You don't have permission to write internal notes.",
+            );
+          }
+        } else if (!hasMemberCapability(member, "messaging.send")) {
+          return createErrorResponse(
+            403,
+            "You don't have permission to send messages.",
+          );
+        }
+
+        let body = payload.body?.trim() ?? "";
         const mediaUrls = (payload.media_urls ?? [])
           .map((url) => url.trim())
           .filter(Boolean);
+        const replyToMessageId =
+          payload.reply_to_message_id != null &&
+          Number.isFinite(Number(payload.reply_to_message_id))
+            ? Number(payload.reply_to_message_id)
+            : null;
+
+        if (Number.isFinite(Number(payload.template_id))) {
+          const { data: template, error: templateError } = await supabaseAdmin
+            .from("message_templates")
+            .select("body, org_id")
+            .eq("id", Number(payload.template_id))
+            .eq("org_id", orgId)
+            .maybeSingle();
+          if (templateError || !template?.body) {
+            throw new Error("Template not found");
+          }
+          body = template.body;
+        }
+
+        if (body) {
+          body = sanitizeMessageBody(body);
+        }
 
         if (!body && mediaUrls.length === 0) {
           throw new Error("Message text or an attachment is required");
         }
 
-        const settings = await getMessagingSettingsSecrets(orgId);
-        if (!settings?.sms_enabled) {
-          throw new Error("SMS is disabled in Settings → Messaging");
-        }
-
-        const accountSid = settings.twilio_account_sid?.trim();
-        const authToken = settings.twilio_auth_token?.trim();
-        const fromNumber = settings.twilio_phone_number?.trim();
-
-        if (!accountSid || !authToken || !fromNumber) {
-          throw new Error("Twilio is not fully configured in Settings → Messaging");
-        }
-
         let conversationId = Number(payload.conversation_id);
         let externalPhone: string | null = null;
+        let contactRecord: {
+          first_name?: string | null;
+          last_name?: string | null;
+        } | null = null;
+        let dealName: string | null = null;
 
         if (Number.isFinite(conversationId)) {
-          const conversation = await assertMemberCanAccessConversation(
-            memberId,
-            orgId,
-            conversationId,
-          );
+          await assertMemberCanAccessConversation(memberId, orgId, conversationId);
           const { data: phoneRow, error: phoneError } = await supabaseAdmin
             .from("conversations")
-            .select("external_phone")
-            .eq("id", conversation.id)
+            .select("external_phone, contact_id, deal_id")
+            .eq("id", conversationId)
             .single();
 
           if (phoneError || !phoneRow?.external_phone) {
             throw new Error("Client phone number is missing on this conversation");
           }
           externalPhone = phoneRow.external_phone;
+
+          if (phoneRow.contact_id) {
+            const { data: contact } = await supabaseAdmin
+              .from("contacts")
+              .select("first_name, last_name")
+              .eq("id", phoneRow.contact_id)
+              .maybeSingle();
+            contactRecord = contact;
+          }
+          if (phoneRow.deal_id) {
+            const { data: deal } = await supabaseAdmin
+              .from("deals")
+              .select("name")
+              .eq("id", phoneRow.deal_id)
+              .maybeSingle();
+            dealName = deal?.name ?? null;
+          }
         } else {
           const contactId = Number(payload.contact_id);
           if (!Number.isFinite(contactId)) {
@@ -107,6 +148,7 @@ Deno.serve((req: Request) =>
           if (contactError || !contact) {
             throw new Error("Contact not found");
           }
+          contactRecord = contact;
 
           let normalizedPhone: string | null = null;
           for (const entry of contact.phone_jsonb ?? []) {
@@ -145,16 +187,42 @@ Deno.serve((req: Request) =>
           externalPhone = conversation.external_phone ?? normalizedPhone;
         }
 
-        const twilioMediaUrls = await resolveTwilioMediaUrls(mediaUrls);
+        if (body.includes("{{")) {
+          body = expandTemplateVariables(body, {
+            client_name: contactRecord
+              ? `${contactRecord.first_name ?? ""} ${contactRecord.last_name ?? ""}`.trim()
+              : null,
+            project_name: dealName,
+          });
+        }
 
-        const twilioResponse = await sendTwilioSms({
-          accountSid,
-          authToken,
-          from: fromNumber,
-          to: externalPhone!,
-          body,
-          mediaUrls: twilioMediaUrls,
-        });
+        let externalId: string | null = null;
+
+        if (!isInternalNote) {
+          const settings = await getMessagingSettingsSecrets(orgId);
+          if (!settings?.sms_enabled) {
+            throw new Error("SMS is disabled in Settings → Communications");
+          }
+
+          const accountSid = settings.twilio_account_sid?.trim();
+          const authToken = settings.twilio_auth_token?.trim();
+          const fromNumber = settings.twilio_phone_number?.trim();
+
+          if (!accountSid || !authToken || !fromNumber) {
+            throw new Error("Twilio is not fully configured in Settings → Communications");
+          }
+
+          const twilioMediaUrls = await resolveTwilioMediaUrls(mediaUrls);
+          const twilioResponse = await sendTwilioSms({
+            accountSid,
+            authToken,
+            from: fromNumber,
+            to: externalPhone!,
+            body,
+            mediaUrls: twilioMediaUrls,
+          });
+          externalId = twilioResponse.sid ?? null;
+        }
 
         const messageBody =
           body ||
@@ -167,9 +235,31 @@ Deno.serve((req: Request) =>
           body: messageBody,
           direction: "outbound",
           authorMemberId: memberId,
-          externalId: twilioResponse.sid ?? null,
+          externalId,
           mediaUrl: mediaUrls[0] ?? null,
+          isInternalNote,
+          replyToMessageId,
         });
+
+        if (!isInternalNote) {
+          await touchConversationFirstResponse(
+            conversationId,
+            message.created_at ?? new Date().toISOString(),
+          );
+        }
+
+        if (Number.isFinite(Number(payload.template_id))) {
+          const templateId = Number(payload.template_id);
+          const { data: current } = await supabaseAdmin
+            .from("message_templates")
+            .select("use_count")
+            .eq("id", templateId)
+            .maybeSingle();
+          await supabaseAdmin
+            .from("message_templates")
+            .update({ use_count: (current?.use_count ?? 0) + 1 })
+            .eq("id", templateId);
+        }
 
         const { data: conversation } = await supabaseAdmin
           .from("conversations")
