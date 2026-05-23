@@ -45,6 +45,7 @@ export const ClientSmsComposer = ({
   const { identity } = useGetIdentity();
   const sendClientSms = useSendClientSms();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [body, setBody] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
   const [isSending, setIsSending] = useState(false);
@@ -144,6 +145,9 @@ export const ClientSmsComposer = ({
         conversation: result.conversation,
         message: result.message,
       });
+      window.setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
     } catch (error) {
       notify(error instanceof Error ? error.message : "Failed to send SMS", {
         type: "error",
@@ -240,11 +244,12 @@ export const ClientSmsComposer = ({
         />
 
         <Textarea
+          ref={textareaRef}
           value={body}
           onChange={(event) => setBody(event.target.value)}
           onPaste={handlePaste}
           placeholder="Write an SMS… paste text, photos, or form links"
-          className="min-h-[44px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none focus-visible:ring-0"
+          className="min-h-[44px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none field-sizing-fixed focus-visible:ring-0"
           rows={1}
           disabled={disabled || isSending}
           onKeyDown={(event) => {

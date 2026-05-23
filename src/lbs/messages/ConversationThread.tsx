@@ -99,6 +99,7 @@ export const ConversationThread = ({
   );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const composerInputRef = useRef<HTMLInputElement | null>(null);
   const [create, { isPending }] = useCreate();
   const canSendMessages = useMemberCapability(SEND_MESSAGES_CAPABILITY);
   const {
@@ -182,6 +183,9 @@ export const ConversationThread = ({
           setBody("");
           const sentAt = new Date().toISOString();
           markConversationRead?.(conversation.id, sentAt);
+          window.setTimeout(() => {
+            composerInputRef.current?.focus();
+          }, 0);
         },
         onError: () => {
           notify(
@@ -264,6 +268,12 @@ export const ConversationThread = ({
             disabled={!canSendMessages}
             onSent={({ conversation: nextConversation, message }) => {
               onClientSmsSent?.(nextConversation);
+              if (message?.created_at && nextConversation?.id != null) {
+                markConversationRead?.(
+                  nextConversation.id,
+                  message.created_at,
+                );
+              }
               if (message && nextConversation?.id != null) {
                 void refetch();
               }
@@ -277,6 +287,7 @@ export const ConversationThread = ({
         >
           <div className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/25 px-1 py-1 pl-4 shadow-none dark:bg-muted/20">
             <Input
+              ref={composerInputRef}
               value={body}
               onChange={(event) => setBody(event.target.value)}
               placeholder="Write a message…"
