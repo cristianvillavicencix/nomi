@@ -23,7 +23,7 @@ const ContractorDealShow = isContractorBuild
 /** Routes LBS agency projects vs contractor deal show (build-specific lazy chunk). */
 export const DealShow = ({ id }: { id?: string }) => {
   if (isContractorBuild && ContractorDealShow) {
-    return (
+  return (
       <Suspense fallback={<ShowFallback />}>
         <ContractorDealShow id={id} />
       </Suspense>

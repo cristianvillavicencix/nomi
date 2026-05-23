@@ -1403,21 +1403,41 @@ const dataProviderWithCustomMethods = {
       params.personId,
     );
   },
+  async ensureProjectConversation(params: {
+    dealId: Identifier;
+    title?: string;
+  }) {
+    const { data, error } = await supabase.rpc("ensure_project_conversation", {
+      p_deal_id: params.dealId,
+      p_title: params.title?.trim() || null,
+    });
+
+    if (error) {
+      console.error("ensureProjectConversation.error", error);
+      throw new Error(error.message || "Failed to open project team chat");
+    }
+
+    return data as Identifier;
+  },
   async getMessagingSettings() {
+    const disabledSettings: import("@/lbs/types").MessagingSettingsPublic = {
+      org_id: 0,
+      twilio_account_sid: null,
+      twilio_phone_number: null,
+      sms_enabled: false,
+      has_auth_token: false,
+      webhook_url: null,
+    };
+
     const { data, error } = await invokeEdgeFunction<
       import("@/lbs/types").MessagingSettingsPublic
     >("messaging_settings", {
       method: "POST",
       body: { action: "get" },
     });
-    if (error) {
-      throw new Error(
-        (error as { message?: string }).message ??
-          "Failed to load messaging settings",
-      );
-    }
-    if (!data) {
-      throw new Error("Failed to load messaging settings");
+    if (error || !data) {
+      console.warn("getMessagingSettings.error", error);
+      return disabledSettings;
     }
     return data;
   },

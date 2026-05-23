@@ -1443,6 +1443,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     has_auth_token: false,
     webhook_url: null,
   }),
+  ensureProjectConversation: async ({ dealId }) => dealId,
   updateMessagingSettings: async (params) => ({
     org_id: 1,
     twilio_account_sid: params.twilio_account_sid ?? null,

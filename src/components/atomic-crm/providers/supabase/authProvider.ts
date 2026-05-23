@@ -126,6 +126,29 @@ function isPlatformConsoleAuthRoute(): boolean {
 
 export const authProvider: AuthProvider = {
   ...baseAuthProvider,
+  checkError: async (error) => {
+    // ra-supabase logs out on 403 too; RLS denials are not invalid sessions.
+    if (error?.status === 403) {
+      return;
+    }
+
+    if (
+      error?.status === 400 &&
+      error?.name === "AuthSessionMissingError"
+    ) {
+      return Promise.reject();
+    }
+
+    if (error?.status === 401) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        return;
+      }
+      return Promise.reject();
+    }
+
+    return baseAuthProvider.checkError(error);
+  },
   login: async (params) => {
     if (params.ssoDomain) {
       const { error } = await supabase.auth.signInWithSSO({
@@ -134,9 +157,14 @@ export const authProvider: AuthProvider = {
       if (error) {
         throw error;
       }
+      clearCache();
+      await fetchSale();
       return;
     }
-    return baseAuthProvider.login(params);
+    const result = await baseAuthProvider.login(params);
+    clearCache();
+    await fetchSale();
+    return result;
   },
   logout: async (params) => {
     clearCache();

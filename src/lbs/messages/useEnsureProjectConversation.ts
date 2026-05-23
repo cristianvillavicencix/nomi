@@ -1,19 +1,20 @@
 import { useEffect, useRef } from "react";
 import {
-  useCreate,
+  useDataProvider,
   useGetIdentity,
   useGetList,
   type Identifier,
 } from "ra-core";
-import type { Conversation, ConversationParticipant } from "@/lbs/types";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import type { Conversation } from "@/lbs/types";
 
 export const useEnsureProjectConversation = (
   dealId: Identifier | null | undefined,
   dealTitle: string,
 ) => {
+  const dataProvider = useDataProvider<CrmDataProvider>();
   const { identity } = useGetIdentity();
   const memberId = identity?.id;
-  const [create] = useCreate();
   const isCreatingRef = useRef(false);
 
   const {
@@ -35,21 +36,6 @@ export const useEnsureProjectConversation = (
 
   const conversation = conversations[0] ?? null;
 
-  const { data: participants = [], refetch: refetchParticipants } =
-    useGetList<ConversationParticipant>(
-      "conversation_participants",
-      {
-        filter: conversation
-          ? {
-              "conversation_id@eq": conversation.id,
-              "member_id@eq": memberId,
-            }
-          : {},
-        pagination: { page: 1, perPage: 1 },
-      },
-      { enabled: !!conversation && !!memberId, staleTime: 30_000 },
-    );
-
   useEffect(() => {
     if (
       !dealId ||
@@ -62,81 +48,19 @@ export const useEnsureProjectConversation = (
     }
 
     isCreatingRef.current = true;
-    create(
-      "conversations",
-      {
-        data: {
-          type: "project",
-          deal_id: dealId,
-          title: dealTitle.trim() || "Project team chat",
-          created_by_member_id: memberId,
-        },
-      },
-      {
-        onSuccess: (record) => {
-          create(
-            "conversation_participants",
-            {
-              data: {
-                conversation_id: record.id,
-                member_id: memberId,
-                last_read_at: new Date().toISOString(),
-              },
-            },
-            {
-              onSuccess: () => {
-                void refetch();
-                void refetchParticipants();
-                isCreatingRef.current = false;
-              },
-              onError: () => {
-                isCreatingRef.current = false;
-              },
-            },
-          );
-        },
-        onError: () => {
-          isCreatingRef.current = false;
-          void refetch();
-        },
-      },
-    );
-  }, [
-    conversation,
-    create,
-    dealId,
-    dealTitle,
-    isPending,
-    memberId,
-    refetch,
-    refetchParticipants,
-  ]);
-
-  useEffect(() => {
-    if (!conversation || !memberId || participants.length > 0) return;
-
-    create(
-      "conversation_participants",
-      {
-        data: {
-          conversation_id: conversation.id,
-          member_id: memberId,
-          last_read_at: new Date().toISOString(),
-        },
-      },
-      {
-        onSuccess: () => {
-          void refetchParticipants();
-        },
-      },
-    );
-  }, [
-    conversation,
-    create,
-    memberId,
-    participants.length,
-    refetchParticipants,
-  ]);
+    void dataProvider
+      .ensureProjectConversation({
+        dealId,
+        title: dealTitle.trim() || "Project team chat",
+      })
+      .then(() => refetch())
+      .catch((error) => {
+        console.error("useEnsureProjectConversation", error);
+      })
+      .finally(() => {
+        isCreatingRef.current = false;
+      });
+  }, [conversation, dataProvider, dealId, dealTitle, isPending, memberId, refetch]);
 
   return {
     conversation,

@@ -1,7 +1,8 @@
 // Based on https://github.com/supabase/supabase/blob/master/examples/edge-functions/supabase/functions/_shared/jwt/default.ts
 import * as jose from "jsr:@panva/jose@6";
-import { createClient, type User } from "jsr:@supabase/supabase-js@2";
+import { type User } from "jsr:@supabase/supabase-js@2";
 import { createErrorResponse } from "./utils.ts";
+import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 /**
  * Must match the `iss` claim on Supabase Auth access tokens (always the project's API origin).
@@ -9,11 +10,6 @@ import { createErrorResponse } from "./utils.ts";
  * local tooling and, if copied into hosted Edge secrets, breaks JWT verification with 401.
  */
 const SUPABASE_JWT_ISSUER = `${(Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "")}/auth/v1`;
-const SUPABASE_PUBLISHABLE_KEY =
-  Deno.env.get("SB_PUBLISHABLE_KEY") ??
-  Deno.env.get("PUBLISHABLE_KEY") ??
-  Deno.env.get("SUPABASE_ANON_KEY") ??
-  "";
 
 const SUPABASE_JWT_KEYS = jose.createRemoteJWKSet(
   new URL(Deno.env.get("SUPABASE_URL")! + "/auth/v1/.well-known/jwks.json"),
@@ -70,14 +66,13 @@ export const UserMiddleware = async (
   if (req.method === "OPTIONS") return await next(req);
 
   try {
-    const authHeader = req.headers.get("Authorization")!;
-    const localClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      SUPABASE_PUBLISHABLE_KEY,
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return createErrorResponse(401, "Unauthorized");
+    }
 
-    const { data, error: authError } = await localClient.auth.getUser();
+    const token = authHeader.slice("Bearer ".length);
+    const { data, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (!data?.user || authError) {
       return createErrorResponse(401, "Unauthorized");
     }
