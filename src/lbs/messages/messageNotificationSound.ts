@@ -1,4 +1,5 @@
 let audioContext: AudioContext | null = null;
+let primed = false;
 
 const getAudioContext = () => {
   if (typeof window === "undefined") return null;
@@ -6,6 +7,18 @@ const getAudioContext = () => {
     audioContext = new AudioContext();
   }
   return audioContext;
+};
+
+export const primeAudioContext = () => {
+  if (primed) return;
+  const context = getAudioContext();
+  if (!context) return;
+  void context
+    .resume()
+    .then(() => {
+      primed = true;
+    })
+    .catch(() => {});
 };
 
 export const playMessageNotificationSound = () => {
@@ -27,6 +40,7 @@ export const playMessageNotificationSound = () => {
   };
 
   void context.resume().then(() => {
+    primed = true;
     const now = context.currentTime;
     playTone(880, now, 0.12);
     playTone(1175, now + 0.13, 0.16);

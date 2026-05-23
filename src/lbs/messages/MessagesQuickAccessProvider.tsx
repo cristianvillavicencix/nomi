@@ -1,4 +1,10 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useLocation } from "react-router";
 import {
   useDataProvider,
@@ -12,6 +18,7 @@ import { MessagesDock } from "@/lbs/messages/MessagesDock";
 import { MessagesNotificationsLayer } from "@/lbs/messages/MessagesNotificationsLayer";
 import { persistConversationRead } from "@/lbs/messages/persistConversationRead";
 import { useOpenClientSms } from "@/lbs/messages/useClientSms";
+import { primeAudioContext } from "@/lbs/messages/messageNotificationSound";
 import {
   MessagesQuickAccessContext,
   type MessagesQuickAccessContextValue,
@@ -40,6 +47,20 @@ export const MessagesQuickAccessProvider = ({
   const [draftSms, setDraftSms] = useState<ClientSmsDraft | null>(null);
   const [activeConversationId, setActiveConversationId] =
     useState<Identifier | null>(null);
+
+  useEffect(() => {
+    const handler = () => {
+      primeAudioContext();
+      window.removeEventListener("click", handler);
+      window.removeEventListener("keydown", handler);
+    };
+    window.addEventListener("click", handler);
+    window.addEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("click", handler);
+      window.removeEventListener("keydown", handler);
+    };
+  }, []);
 
   const markConversationRead = useCallback(
     (conversationId: Identifier, readAt?: string) => {
