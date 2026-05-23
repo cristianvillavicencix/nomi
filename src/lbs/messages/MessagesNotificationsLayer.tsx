@@ -5,7 +5,6 @@ import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type {
   Conversation,
   ConversationMessage,
-  ConversationParticipant,
 } from "@/lbs/types";
 import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
 import { buildMessagePreview } from "@/lbs/messages/conversationUtils";
@@ -14,38 +13,74 @@ import {
   type IncomingMessageNotification,
 } from "@/lbs/messages/MessagesIncomingBanner";
 import { playMessageNotificationSound } from "@/lbs/messages/messageNotificationSound";
-import { getConversationReadAt } from "@/lbs/messages/messagesUnreadUtils";
 import { showMessagingDesktopNotification } from "@/lbs/messages/messagingDesktopNotifications";
 import { useInboxConversations } from "@/lbs/messages/useInboxConversations";
 import { useMessagesInboxRealtime } from "@/lbs/messages/useMessagesInboxRealtime";
 import { useMessagesQuickAccess } from "@/lbs/messages/messagesQuickAccessContext";
 
+type NotifyDecision = {
+  toast: boolean;
+  sound: boolean;
+  os: boolean;
+};
+
+const trimNotifiedMessageIds = (notifiedMessageIds: Set<string>) => {
+  if (notifiedMessageIds.size <= 500) return;
+  const recentIds = Array.from(notifiedMessageIds).slice(-100);
+  notifiedMessageIds.clear();
+  recentIds.forEach((id) => notifiedMessageIds.add(id));
+};
+
+const isMessageFromCurrentMember = (
+  message: ConversationMessage,
+  currentMemberId: string | number | null | undefined,
+) =>
+  message.author_member_id != null &&
+  String(message.author_member_id) === String(currentMemberId ?? "");
+
 const shouldNotifyForMessage = (
   message: ConversationMessage,
   currentMemberId: string | number | null | undefined,
   activeConversationId: string | number | null | undefined,
-  readAt?: string | null,
-) => {
-  if (String(message.conversation_id) === String(activeConversationId ?? "")) {
+  notifiedMessageIds: Set<string>,
+): NotifyDecision | false => {
+  const messageId = String(message.id);
+  if (notifiedMessageIds.has(messageId)) return false;
+  notifiedMessageIds.add(messageId);
+  trimNotifiedMessageIds(notifiedMessageIds);
+
+  if (message.channel === "sms") {
+    if (message.direction === "outbound") return false;
+  } else if (message.channel === "internal" || !message.channel) {
+    if (isMessageFromCurrentMember(message, currentMemberId)) return false;
+  } else if (message.direction === "outbound") {
     return false;
   }
 
-  if (message.created_at && readAt) {
-    if (Date.parse(message.created_at) <= Date.parse(readAt)) {
-      return false;
-    }
+  const isActiveThread =
+    String(message.conversation_id) === String(activeConversationId ?? "");
+  const tabVisible =
+    typeof document !== "undefined" &&
+    document.visibilityState === "visible" &&
+    document.hasFocus();
+
+  if (isActiveThread && tabVisible) {
+    return false;
   }
 
-  if (message.channel === "sms") {
-    return message.direction === "inbound";
+  if (isActiveThread) {
+    return {
+      toast: false,
+      sound: !tabVisible,
+      os: !tabVisible,
+    };
   }
 
-  if (message.channel === "internal" || !message.channel) {
-    if (message.author_member_id == null) return true;
-    return String(message.author_member_id) !== String(currentMemberId ?? "");
-  }
-
-  return message.direction === "inbound";
+  return {
+    toast: true,
+    sound: true,
+    os: !tabVisible,
+  };
 };
 
 export const MessagesNotificationsLayer = () => {
@@ -68,13 +103,9 @@ export const MessagesNotificationsLayer = () => {
     dmParticipants,
     members,
     contacts,
-    participations,
   } = useInboxConversations();
 
-  const participationsRef = useRef<ConversationParticipant[]>(participations);
-  useEffect(() => {
-    participationsRef.current = participations;
-  }, [participations]);
+  const notifiedMessageIdsRef = useRef(new Set<string>());
 
   useMessagesInboxRealtime(true);
 
@@ -102,7 +133,7 @@ export const MessagesNotificationsLayer = () => {
   );
 
   const pushNotification = useCallback(
-    (message: ConversationMessage) => {
+    (message: ConversationMessage, decision: NotifyDecision) => {
       const conversation = conversationsById[String(message.conversation_id)];
       const display = conversation
         ? getConversationDisplay({
@@ -129,35 +160,30 @@ export const MessagesNotificationsLayer = () => {
         return [notification, ...current].slice(0, 4);
       });
 
-      playMessageNotificationSound();
+      if (decision.sound) {
+        playMessageNotificationSound();
+      }
 
-      /** In-app toast: every route unless user is already on /messages viewing this same thread (banner still shows). Hidden tab → always toast. */
-      const onMessagesRoute = location.pathname.startsWith("/messages");
-      if (
-        !onMessagesRoute ||
-        typeof document === "undefined" ||
-        document.visibilityState !== "visible" ||
-        String(activeConversationId ?? "") !== String(message.conversation_id)
-      ) {
+      if (decision.toast) {
         notify(`${notification.title}: ${notification.preview}`, {
           type: "info",
         });
       }
 
-      showMessagingDesktopNotification({
-        title: notification.title,
-        body: notification.preview,
-        tag: notification.conversationId,
-      });
+      if (decision.os) {
+        showMessagingDesktopNotification({
+          title: notification.title,
+          body: notification.preview,
+          tag: notification.id,
+        });
+      }
     },
     [
-      activeConversationId,
       contacts,
       conversationsById,
       deals,
       dmParticipants,
       identity?.id,
-      location.pathname,
       members,
       notify,
     ],
@@ -175,24 +201,17 @@ export const MessagesNotificationsLayer = () => {
         },
         (payload) => {
           const message = payload.new as ConversationMessage | undefined;
-          if (!message?.conversation_id) return;
+          if (!message?.conversation_id || message.id == null) return;
 
-          const readAt = getConversationReadAt(
-            message.conversation_id,
-            participationsRef.current,
+          const decision = shouldNotifyForMessage(
+            message,
+            identity?.id,
+            activeConversationIdRef.current,
+            notifiedMessageIdsRef.current,
           );
 
-          if (
-            !shouldNotifyForMessage(
-              message,
-              identity?.id,
-              activeConversationIdRef.current,
-              readAt,
-            )
-          ) {
-            return;
-          }
-          pushNotification(message);
+          if (!decision) return;
+          pushNotification(message, decision);
         },
       )
       .subscribe();
