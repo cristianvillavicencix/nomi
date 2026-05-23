@@ -692,6 +692,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/useDealsRealtime.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/stages.ts",
           "type": "registry:component"
         },
@@ -713,6 +717,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/dealUtils.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/dealStageMutations.ts",
           "type": "registry:component"
         },
         {
@@ -745,6 +753,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/DealList.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/DealInputsContractor.tsx",
           "type": "registry:component"
         },
         {

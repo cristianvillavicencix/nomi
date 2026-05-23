@@ -40,6 +40,10 @@ const syncManyToMany = async (
   );
 };
 
+/**
+ * @deprecated LBS stores assignments in deals.salesperson_ids[]. Contractor mode
+ * still syncs people junction tables via this helper.
+ */
 export const syncProjectAssignments = async (
   dataProvider: DataProvider,
   dealId: Identifier,

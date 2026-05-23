@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import type { Deal } from "@/components/atomic-crm/types";
 import { normalizeProjectPayload } from "@/components/atomic-crm/deals/projectForm";
-import { syncProjectAssignments } from "@/components/atomic-crm/deals/projectAssignments";
 import { LbsDealInputs } from "@/lbs/deals/LbsDealInputs";
 import {
   getAgencyProjectTypeLabel,
@@ -136,17 +135,6 @@ export const AgencyProjectCreateForm = ({
   const presetProposalId = searchParams.get("proposal_id");
 
   const onSuccess = async (deal: Deal) => {
-    try {
-      await syncProjectAssignments(
-        dataProvider,
-        deal.id,
-        deal.salesperson_ids,
-        [],
-      );
-    } catch {
-      notify("Project saved, but team sync had issues", { type: "warning" });
-    }
-
     if (identity?.id) {
       try {
         const count = await runProjectCreateAutomations({

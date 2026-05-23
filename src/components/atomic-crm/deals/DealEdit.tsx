@@ -19,6 +19,7 @@ import type { Deal } from "../types";
 import { DealInputs } from "./DealInputs";
 import { syncProjectAssignments } from "./projectAssignments";
 import { normalizeProjectPayload } from "./projectForm";
+import { isLbsMode } from "@/lbs/productMode";
 
 export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
   const redirect = useRedirect();
@@ -40,20 +41,22 @@ export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
             mutationMode="pessimistic"
             mutationOptions={{
               onSuccess: async (deal: Deal) => {
-                try {
-                  await syncProjectAssignments(
-                    dataProvider,
-                    deal.id,
-                    deal.salesperson_ids,
-                    deal.subcontractor_ids,
-                  );
-                } catch {
-                  notify(
-                    "Project updated, but assignments could not be fully synced",
-                    {
-                      type: "warning",
-                    },
-                  );
+                if (!isLbsMode()) {
+                  try {
+                    await syncProjectAssignments(
+                      dataProvider,
+                      deal.id,
+                      deal.salesperson_ids,
+                      deal.subcontractor_ids,
+                    );
+                  } catch {
+                    notify(
+                      "Project updated, but assignments could not be fully synced",
+                      {
+                        type: "warning",
+                      },
+                    );
+                  }
                 }
                 notify("Project updated");
                 redirect(`/deals/${id}/show`, undefined, undefined, undefined, {

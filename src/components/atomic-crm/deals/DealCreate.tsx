@@ -54,17 +54,19 @@ export const DealCreate = ({
   const lbsMode = isLbsMode();
 
   const onSuccess = async (deal: Deal) => {
-    try {
-      await syncProjectAssignments(
-        dataProvider,
-        deal.id,
-        deal.salesperson_ids,
-        deal.subcontractor_ids,
-      );
-    } catch {
-      notify("Project saved, but assignments could not be fully synced", {
-        type: "warning",
-      });
+    if (!lbsMode) {
+      try {
+        await syncProjectAssignments(
+          dataProvider,
+          deal.id,
+          deal.salesperson_ids,
+          deal.subcontractor_ids,
+        );
+      } catch {
+        notify("Project saved, but assignments could not be fully synced", {
+          type: "warning",
+        });
+      }
     }
 
     if (!allDeals) {
