@@ -14,9 +14,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { isLbsMode } from "@/lbs/productMode";
 import { LBS_NAV_ITEMS } from "@/lbs/navigation";
-import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
-import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
-import { Badge } from "@/components/ui/badge";
+import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 
 const TIME_AND_PAY_PATHS = new Set([
   "/time_entries",
@@ -36,7 +34,6 @@ const TIME_AND_PAY_NAV = [
 
 const Header = () => {
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
-  const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
   const location = useLocation();
   let currentPath: string | boolean = "/";
   if (matchPath("/", location.pathname)) {
@@ -96,11 +93,11 @@ const Header = () => {
                   label={item.label}
                   to={item.to}
                   isActive={!!matchPath(item.activePattern, location.pathname)}
-                  badgeCount={item.to === "/messages" ? messagesUnreadCount : 0}
                 />
               ))}
             </nav>
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
+              <GlobalMessagesBadge />
               <ThemeModeToggle />
               <RefreshButton />
               <UserMenu>
@@ -173,7 +170,8 @@ const Header = () => {
               />
             </nav>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <GlobalMessagesBadge />
             <ThemeModeToggle />
             <RefreshButton />
             <UserMenu>

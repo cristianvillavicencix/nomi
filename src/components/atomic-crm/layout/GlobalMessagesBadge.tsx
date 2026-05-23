@@ -20,7 +20,7 @@ export const GlobalMessagesBadge = ({ className }: { className?: string }) => {
     >
       <MessageSquare className="size-5" />
       <span
-        className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white"
+        className="absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm"
         aria-hidden="true"
       >
         {formatUnreadBadgeCount(totalUnread)}

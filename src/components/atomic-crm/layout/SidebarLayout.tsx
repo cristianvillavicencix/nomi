@@ -45,8 +45,7 @@ import { CRMUserMenuItems } from "./UserMenuItems";
 import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
 import { isLbsMode } from "@/lbs/productMode";
 import { LBS_NAV_ITEMS } from "@/lbs/navigation";
-import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
-import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
+import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();
   const activeTheme = theme === "dark" ? "dark" : "light";
@@ -164,7 +163,6 @@ const SidebarFooterControls = () => {
 const SidebarNavigation = () => {
   const location = useLocation();
   const { data: identity } = useGetIdentity();
-  const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
   const canViewSales = canAccess(identity as any, {
     action: "list",
@@ -254,9 +252,6 @@ const SidebarNavigation = () => {
                     label={item.label}
                     icon={<Icon className="h-4 w-4" />}
                     active={isActive(item.activePattern)}
-                    badgeCount={
-                      item.to === "/messages" ? messagesUnreadCount : 0
-                    }
                   />
                 );
               })}
@@ -497,6 +492,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
           </div>
         </div>
       </main>
+      <GlobalMessagesBadge className="fixed top-3 right-3 z-50 print:hidden" />
       <Notification />
     </SidebarProvider>
   );

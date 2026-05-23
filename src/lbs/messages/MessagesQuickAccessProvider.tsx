@@ -14,7 +14,6 @@ import {
 } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientSmsDraft, Contact, Conversation } from "@/lbs/types";
-import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 import { MessagesNotificationsLayer } from "@/lbs/messages/MessagesNotificationsLayer";
 import { persistConversationRead } from "@/lbs/messages/persistConversationRead";
 import { useOpenClientSms } from "@/lbs/messages/useClientSms";
@@ -196,7 +195,6 @@ export const MessagesQuickAccessProvider = ({
   return (
     <MessagesQuickAccessContext.Provider value={value}>
       {children}
-      <GlobalMessagesBadge className="fixed top-3 right-3 z-50 print:hidden" />
       <MessagesNotificationsLayer />
     </MessagesQuickAccessContext.Provider>
   );

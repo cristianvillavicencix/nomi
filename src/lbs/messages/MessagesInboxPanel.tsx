@@ -3,7 +3,6 @@ import { useGetList, useNotify, useRefresh } from "ra-core";
 import { MessageSquare, Search, UserPlus } from "lucide-react";
 import type { Identifier } from "ra-core";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import type {
   Contact,
   Conversation,
@@ -21,7 +20,6 @@ import {
 import { getInitials } from "@/lbs/messages/conversationDisplay";
 import { useMessagesQuickAccess } from "@/lbs/messages/messagesQuickAccessContext";
 import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
-import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
 import { cn } from "@/lib/utils";
 
 const MessageSearchContactItem = ({
@@ -88,8 +86,7 @@ export const MessagesInboxPanel = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const { openSms } = useMessagesQuickAccess();
-  const { totalUnread: totalUnreadCount, isConversationUnread } =
-    useMessagesUnreadCounts();
+  const { getUnreadCount } = useMessagesUnreadCounts();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [startingContactId, setStartingContactId] = useState<Identifier | null>(
@@ -202,14 +199,6 @@ export const MessagesInboxPanel = ({
             className={cn("font-semibold", compact ? "text-base" : "text-lg")}
           >
             {compact ? "Inbox" : "Messages"}
-            {totalUnreadCount > 0 ? (
-              <Badge
-                variant="default"
-                className="ml-2 rounded-full px-2 py-0 text-[11px]"
-              >
-                {formatUnreadBadgeCount(totalUnreadCount)}
-              </Badge>
-            ) : null}
           </h1>
           {!compact ? (
             <p className="text-xs text-muted-foreground">
@@ -247,7 +236,7 @@ export const MessagesInboxPanel = ({
                     members={members}
                     contacts={contacts}
                     currentMemberId={currentMemberId}
-                    isUnread={isConversationUnread(conversation)}
+                    unreadCount={getUnreadCount(conversation)}
                   />
                 ))}
               </div>
