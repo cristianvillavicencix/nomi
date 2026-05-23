@@ -134,6 +134,7 @@ export type DealAccessEntry = {
   url?: string | null;
   username?: string | null;
   password?: string | null;
+  has_password?: boolean;
   notes?: string | null;
   organization_member_id?: Identifier | null;
   created_at?: string;
