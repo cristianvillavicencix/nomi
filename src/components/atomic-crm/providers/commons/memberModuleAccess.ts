@@ -8,7 +8,6 @@ import {
   CAPABILITY_IDS,
   getStoredRolePreset,
   hasCapability,
-  inferLegacyRolePreset,
   isScopedWorkspaceUser,
   permissionsMapFromRolePreset,
   resolveEffectivePermissions,

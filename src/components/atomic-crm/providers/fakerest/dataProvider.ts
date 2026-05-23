@@ -1316,7 +1316,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       });
 
       let grossPay = compensationResult.grossPay;
-      let baseSalaryAmount = compensationResult.baseAmount ?? 0;
+      const baseSalaryAmount = compensationResult.baseAmount ?? 0;
 
       grossPay = Number(grossPay.toFixed(2));
       if (grossPay <= 0) continue;

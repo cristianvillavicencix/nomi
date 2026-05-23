@@ -474,7 +474,7 @@ const PayrollRunActions = ({
     (record.status === "draft" || record.status === "reviewed");
   const canCancel =
     record.status !== "paid" && record.status !== "cancelled" && !paymentIsPaid;
-  const canCreatePayment =
+  const _canCreatePayment =
     record.status === "approved" && lineCount > 0 && !paymentIsPaid;
   /** One main action: approve (if needed) + create/open payment — not when payment already closed */
   const canApproveAndRegister = lineCount > 0 && !isPayrollClosed;

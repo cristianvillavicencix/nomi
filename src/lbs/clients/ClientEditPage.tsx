@@ -43,7 +43,7 @@ export const ClientEditPage = () => {
   const { data: primaryContact, isPending: contactPending } =
     useGetOne<Contact>(
       "contacts",
-      { id: company?.primary_contact_id! },
+      { id: company?.primary_contact_id ?? 0 },
       { enabled: !!company?.primary_contact_id },
     );
 

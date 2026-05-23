@@ -6,7 +6,7 @@ import { formatUsd, maskAmountIfNeeded } from "@/lib/permissions/amountMasking";
 
 export { formatUsd, maskAmountIfNeeded };
 
-let amountVisibilityRef = { current: true };
+const amountVisibilityRef = { current: true };
 
 export function useCanViewAmounts(): boolean {
   const { data: identity } = useGetIdentity();

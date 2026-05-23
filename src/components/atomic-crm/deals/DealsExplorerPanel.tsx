@@ -96,16 +96,6 @@ export const DealsExplorerPanel = ({
     );
   }, [deals, query]);
 
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-      }),
-    [],
-  );
-
   if (minimized) {
     return (
       <aside className="hidden xl:flex h-full w-12 shrink-0 flex-col bg-transparent items-center py-3">

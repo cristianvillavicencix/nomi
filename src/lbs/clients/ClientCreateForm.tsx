@@ -10,7 +10,6 @@ import {
   leadSourceChoices,
 } from "@/lbs/constants/leadSource";
 import { Separator } from "@/components/ui/separator";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { ClientChannelsInput } from "@/lbs/clients/ClientChannelsInput";
 import { getPrimaryChannelValue } from "@/lbs/clients/clientChannels";
 import type { ClientChannelFormValue } from "@/lbs/clients/clientChannels";

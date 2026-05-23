@@ -1162,7 +1162,7 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
             skipped += 1;
             continue;
           }
-          const { created_at, ...updateData } = payload;
+          const { created_at: _created_at, ...updateData } = payload;
           updates.push({
             id: existing.id,
             previousData: existing,
@@ -1453,7 +1453,7 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
                               day.day_type === "unpaid_leave";
                             const isUnpaidDayOff =
                               day.day_type === "day_off" &&
-                              !Boolean(previewEmployee?.off_days_paid);
+                              !previewEmployee?.off_days_paid;
                             const paidDayDefault = Number(
                               previewEmployee?.paid_day_hours ?? 8,
                             );

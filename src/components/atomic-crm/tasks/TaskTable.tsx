@@ -181,7 +181,6 @@ const TaskTableRow = ({
     checkboxDisabled,
     usesParticipantCompletion,
     currentParticipant,
-    isPending: isUpdatePending,
   } = useTaskCompletionToggle(task, participants);
 
   const typeLabel =

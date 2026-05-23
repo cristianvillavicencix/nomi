@@ -77,10 +77,10 @@ const resolveOptionalLinks = async (
   let resolvedCompanyId: number | null = Number.isFinite(companyId)
     ? companyId
     : null;
-  let resolvedContactId: number | null = Number.isFinite(contactId)
+  const resolvedContactId: number | null = Number.isFinite(contactId)
     ? contactId
     : null;
-  let resolvedDealId: number | null = Number.isFinite(requestedDealId)
+  const resolvedDealId: number | null = Number.isFinite(requestedDealId)
     ? requestedDealId
     : null;
 

@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
-import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
+import { AuthMiddleware } from "../_shared/authentication.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 
 type AcceptProposalBody = {

@@ -34,4 +34,4 @@ const appended = mergeMessageIntoList(first, baseMessage(2, "second"));
 assert.equal(appended.data.length, 2);
 assert.equal(appended.total, 2);
 
-console.log("messagesRealtimeCache tests passed");
+console.warn("messagesRealtimeCache tests passed");

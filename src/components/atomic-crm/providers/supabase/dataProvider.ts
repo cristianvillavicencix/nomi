@@ -656,7 +656,6 @@ const dataProviderWithCustomMethods = {
     }
 
     const contactPayload = buildContactPayloadFromUpsert(input, companyId);
-    let contactId: Identifier | undefined;
 
     const resolvePrimaryContactId = async () => {
       if (input.primaryContactId) {
@@ -751,7 +750,7 @@ const dataProviderWithCustomMethods = {
       return newContact.id as Identifier;
     };
 
-    contactId = await resolvePrimaryContactId();
+    const contactId = await resolvePrimaryContactId();
 
     const { error: primaryLinkError } = await supabase
       .from("companies")
@@ -1294,7 +1293,7 @@ const dataProviderWithCustomMethods = {
       throw new Error("Failed to load tasks");
     }
 
-    let tasks = (rawTasks ?? []) as Task[];
+    const tasks = (rawTasks ?? []) as Task[];
     let participantsByTaskId: Record<string, TaskParticipant[]> = {};
 
     if (usesUserCompletion && tasks.length > 0) {

@@ -3,7 +3,6 @@ import {
   useDataProvider,
   useGetIdentity,
   useGetList,
-  useGetMany,
   type Identifier,
 } from "ra-core";
 import { useQuery } from "@tanstack/react-query";

@@ -61,4 +61,4 @@ const counts = computeUnreadConversationCounts(
 assert.equal(counts.totalUnread, 1);
 assert.equal(counts.unreadByConversationId["1"], true);
 
-console.log("messagesUnreadUtils tests passed");
+console.warn("messagesUnreadUtils tests passed");

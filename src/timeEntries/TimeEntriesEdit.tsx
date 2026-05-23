@@ -45,7 +45,11 @@ const TimeEntriesEditFormBody = () => {
 export const TimeEntriesEdit = () => (
   <Edit
     transform={(data) => {
-      const { day_state, lunch_minutes, ...rest } = data;
+      const {
+        day_state: _day_state,
+        lunch_minutes: _lunch_minutes,
+        ...rest
+      } = data;
       return rest;
     }}
   >

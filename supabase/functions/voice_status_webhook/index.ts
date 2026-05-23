@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.formData();
-  console.log(
+  console.warn(
     "[Voice SHELL] Status callback:",
     Object.fromEntries(body.entries()),
   );

@@ -27,7 +27,7 @@ import { useConfigurationContext } from "@/components/atomic-crm/root/Configurat
 import type { Company, ContactNote, Deal } from "@/components/atomic-crm/types";
 import type { Contract, FormSubmission, Proposal, Ticket } from "@/lbs/types";
 import { ClientTabEmpty } from "@/lbs/clients/ClientContactsTab";
-import { formatDateTime, formatTabCount } from "@/lbs/clients/clientShowUtils";
+import { formatDateTime } from "@/lbs/clients/clientShowUtils";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 
 const TabLoading = () => (

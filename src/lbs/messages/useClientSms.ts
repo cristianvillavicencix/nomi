@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDataProvider, useGetIdentity, type Identifier } from "ra-core";
+import { useDataProvider, type Identifier } from "ra-core";
 import type { Contact, Conversation, ConversationMessage } from "@/lbs/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
@@ -11,7 +11,6 @@ import {
 
 export const useOpenClientSms = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const { identity } = useGetIdentity();
 
   const findClientConversation = useCallback(
     async (contact: Contact): Promise<Conversation | null> => {

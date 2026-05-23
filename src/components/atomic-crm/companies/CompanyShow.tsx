@@ -62,8 +62,6 @@ const CompanyShowContentMobile = () => {
   const { record, isPending } = useShowContext<Company>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { data: identity } = useGetIdentity();
-  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
   if (isPending || !record) return null;
 
   return (
@@ -104,8 +102,7 @@ const CompanyShowContentMobile = () => {
   );
 };
 
-const COMPANY_TABS = ["activity", "contacts", "deals"] as const;
-type CompanyTab = (typeof COMPANY_TABS)[number];
+type CompanyTab = "activity" | "contacts" | "deals";
 
 const getValidCompanyTab = (value?: string | null): CompanyTab =>
   value === "contacts" || value === "deals" ? value : "activity";

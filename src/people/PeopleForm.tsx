@@ -287,7 +287,6 @@ const FormToolbar = () => (
 );
 
 export const PeopleForm = () => {
-  const config = useConfigurationContext();
   const type = useWatch({ name: "type" }) as PersonType | undefined;
   const compensationUnit = useWatch({ name: "compensation_unit" }) as
     | CompensationUnit

@@ -50,12 +50,6 @@ import { getStageColor, getStageLabel } from "./pipelines";
 type SortField = "stage" | "amount" | "updated_at" | "created_at";
 type SortOrder = "ASC" | "DESC";
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
 export const DealTableView = () => {
   const navigate = useNavigate();
   const notify = useNotify();

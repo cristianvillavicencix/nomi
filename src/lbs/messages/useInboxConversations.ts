@@ -15,7 +15,6 @@ import type {
 } from "@/lbs/types";
 import { sortConversationsByActivity } from "@/lbs/messages/conversationUtils";
 import {
-  buildAssignedProjectDealIdSet,
   filterConversationsForAssignedProjects,
   shouldScopeMessagingToAssignedProjects,
 } from "@/lbs/messages/scopedMessaging";

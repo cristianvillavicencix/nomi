@@ -54,7 +54,7 @@ import {
   getLoanStatus,
   getRepaymentSummary,
 } from "@/loans/helpers";
-import { formatRate, getPersonDisplayName } from "./constants";
+import { getPersonDisplayName } from "./constants";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const KNOWN_SPECIALTIES = new Set([
@@ -899,6 +899,36 @@ export const PeopleProfileDetailsContent = ({
     );
   };
 
+  const allowedTabs: TabValue[] = useMemo(() => {
+    if (!record) return ["overview"];
+    const isEmployee = record.type === "employee";
+    const isSalesperson = record.type === "salesperson";
+    const canSeeTimeEntriesAndPayroll =
+      isEmployee || (isSalesperson && record.pay_type !== "commission");
+    if (isEmployee) {
+      return [
+        "overview",
+        "time_entries",
+        "payroll",
+        "pto",
+        "loans",
+        "projects",
+        "activity",
+      ];
+    }
+    if (canSeeTimeEntriesAndPayroll) {
+      return ["overview", "time_entries", "payroll", "projects", "activity"];
+    }
+    return ["overview", "projects", "activity"];
+  }, [record]);
+
+  useEffect(() => {
+    if (isPending || !record || !summary) return;
+    if (!allowedTabs.includes(currentTab)) {
+      handleTabChange("overview");
+    }
+  }, [allowedTabs, currentTab, handleTabChange, isPending, record, summary]);
+
   if (isPending || !record || !summary) return null;
 
   const displayName =
@@ -908,25 +938,6 @@ export const PeopleProfileDetailsContent = ({
   const isSalesperson = record.type === "salesperson";
   const canSeeTimeEntriesAndPayroll =
     isEmployee || (isSalesperson && record.pay_type !== "commission");
-  const allowedTabs: TabValue[] = isEmployee
-    ? [
-        "overview",
-        "time_entries",
-        "payroll",
-        "pto",
-        "loans",
-        "projects",
-        "activity",
-      ]
-    : canSeeTimeEntriesAndPayroll
-      ? ["overview", "time_entries", "payroll", "projects", "activity"]
-      : ["overview", "projects", "activity"];
-
-  useEffect(() => {
-    if (!allowedTabs.includes(currentTab)) {
-      handleTabChange("overview");
-    }
-  }, [allowedTabs, currentTab]);
 
   if (record.type === "subcontractor" && subcontractorSummary) {
     const filteredProjectRows =

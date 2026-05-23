@@ -66,7 +66,17 @@ const getSegmentClipPath = (index: number, total: number) => {
   return "polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%, 18px 50%)";
 };
 
-export const ProjectStageFlow = ({
+export const ProjectStageFlow = (props: {
+  stages: DealPipelineStage[];
+  currentStage?: string;
+  onStageChange?: (stageId: string) => void;
+  className?: string;
+}) => {
+  if (!props.stages.length) return null;
+  return <ProjectStageFlowInner {...props} />;
+};
+
+const ProjectStageFlowInner = ({
   stages,
   currentStage,
   onStageChange,
@@ -77,8 +87,6 @@ export const ProjectStageFlow = ({
   onStageChange?: (stageId: string) => void;
   className?: string;
 }) => {
-  if (!stages.length) return null;
-
   const activeIndex = getActiveIndex(stages, currentStage);
   const interactive = typeof onStageChange === "function";
   const activeStageId = stages[activeIndex]?.id;

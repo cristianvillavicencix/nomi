@@ -72,7 +72,7 @@ export const Task = ({
     setOpenEdit(false);
   };
 
-  const [update, { isPending: isUpdatePending }] = useUpdate();
+  const [update] = useUpdate();
   const { handleDelete } = useDeleteWithUndoController({
     record: task,
     redirect: false,

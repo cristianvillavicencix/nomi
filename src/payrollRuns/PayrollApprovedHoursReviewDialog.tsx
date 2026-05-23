@@ -51,7 +51,11 @@ const formatDayType = (entry: TimeEntry) => {
 };
 
 const timeEntryEditTransform = (data: Record<string, unknown>) => {
-  const { day_state, lunch_minutes, ...rest } = data;
+  const {
+    day_state: _day_state,
+    lunch_minutes: _lunch_minutes,
+    ...rest
+  } = data;
   return rest;
 };
 

@@ -1,10 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useDataProvider,
-  useNotify,
-  useUpdate,
-  type Identifier,
-} from "ra-core";
+import { useDataProvider, useNotify, useUpdate } from "ra-core";
 import type { Task, TaskParticipant } from "@/components/atomic-crm/types";
 import {
   findCurrentUserParticipant,

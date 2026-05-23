@@ -6,7 +6,7 @@ import { normalizePhoneForTel } from "@/lib/linking";
 import type { FieldProps } from "@/lib/field.type";
 
 const PhoneFieldImpl = <
-  RecordType extends Record<string, any> = Record<string, any>,
+  RecordType extends Record<string, unknown> = Record<string, unknown>,
 >(
   inProps: PhoneFieldProps<RecordType>,
 ) => {
@@ -54,7 +54,7 @@ PhoneFieldImpl.displayName = "PhoneFieldImpl";
 export const PhoneField = genericMemo(PhoneFieldImpl);
 
 export interface PhoneFieldProps<
-  RecordType extends Record<string, any> = Record<string, any>,
+  RecordType extends Record<string, unknown> = Record<string, unknown>,
 > extends FieldProps<RecordType>,
     AnchorHTMLAttributes<HTMLAnchorElement> {
   value?: string | null;

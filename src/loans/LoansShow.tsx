@@ -1242,7 +1242,7 @@ const LoanPrintReceipt = ({
   const representativeName =
     config.companyRepresentativeName?.trim() ||
     "______________________________";
-  const representativeTitle =
+  const _representativeTitle =
     config.companyRepresentativeTitle?.trim() || "Authorized Representative";
   const companyPaySchedule = getCompanyPaySchedule(config.payrollSettings);
   const amortizationRows = buildAmortizationSchedule({

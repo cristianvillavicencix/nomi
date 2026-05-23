@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import type { Contact, Conversation } from "@/lbs/types";
 import { useMessagesQuickAccess } from "@/lbs/messages/MessagesQuickAccessProvider";
-import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 
 const getContactLabel = (contact: Contact) =>
@@ -28,7 +27,7 @@ const getContactPhoneLabel = (contact: Contact) => {
 export const NewClientSmsDialog = ({
   open,
   onOpenChange,
-  onConversationCreated,
+  onConversationCreated: _onConversationCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;

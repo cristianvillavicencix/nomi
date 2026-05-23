@@ -298,6 +298,10 @@ export const DealInputs = () => {
     return <LbsDealInputs />;
   }
 
+  return <ContractorDealInputs />;
+};
+
+const ContractorDealInputs = () => {
   const isMobile = useIsMobile();
   const { control, setValue } = useFormContext<
     Deal & Record<string, unknown>

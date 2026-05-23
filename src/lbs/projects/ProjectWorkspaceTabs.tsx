@@ -24,7 +24,6 @@ import {
   getProjectTasksProgress,
 } from "@/lbs/deals/projectTabProgress";
 import { ProjectResourcesTab } from "@/lbs/deals/ProjectResourcesTab";
-import { ProjectTeamChat } from "@/lbs/messages/ProjectTeamChat";
 import { LbsProjectOverviewTab } from "@/lbs/deals/LbsProjectOverviewTab";
 import {
   formatTabCount,
@@ -75,7 +74,7 @@ const ProjectMessagesTab = lazy(() =>
 
 const TabFallback = () => <Skeleton className="h-40 w-full rounded-lg" />;
 
-const tabLabel = (label: string, count?: number) =>
+const _tabLabel = (label: string, count?: number) =>
   `${label}${formatTabCount(count)}`;
 
 const progressTabTriggerClassName =

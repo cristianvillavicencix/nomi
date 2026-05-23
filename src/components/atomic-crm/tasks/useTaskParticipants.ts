@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useGetList, type Identifier } from "ra-core";
-import type { Task, TaskParticipant } from "@/components/atomic-crm/types";
+import type { TaskParticipant } from "@/components/atomic-crm/types";
 
 export const useTaskParticipantsByTaskIds = (taskIds: Identifier[]) => {
   const normalizedTaskIds = useMemo(

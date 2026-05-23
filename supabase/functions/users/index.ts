@@ -651,7 +651,7 @@ async function patchUser(req: Request, currentOrgMember: any) {
     first_name,
     last_name,
     avatar,
-    administrator,
+    administrator: _administrator,
     roles,
     disabled,
   } = body;

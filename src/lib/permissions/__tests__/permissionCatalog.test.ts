@@ -71,4 +71,4 @@ const legacyUserWithAmounts = resolveEffectivePermissions({
 });
 assert.equal(legacyUserWithAmounts["view_amounts.show"], false);
 
-console.log("permissionCatalog.test.ts passed");
+console.warn("permissionCatalog.test.ts passed");

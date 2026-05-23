@@ -1,5 +1,4 @@
 import { useGetList } from "ra-core";
-import type { Identifier } from "ra-core";
 import { SlidersHorizontal } from "lucide-react";
 import type { Deal } from "@/components/atomic-crm/types";
 import { Button } from "@/components/ui/button";

@@ -123,7 +123,6 @@ const DealShowContent = () => {
   const config = useConfigurationContext();
   const record = useRecordContext<Deal>();
   const { data: identity } = useGetIdentity();
-  const dataProvider = useDataProvider();
   const notify = useNotify();
   const refresh = useRefresh();
   const [update, { isPending: isUpdatingStage }] = useUpdate();
@@ -402,7 +401,7 @@ const DealShowContent = () => {
   const handleStageChange = (stageId: string) => {
     if (isUpdatingStage || stageId === record.stage) return;
 
-    const previousStage = record.stage;
+    const _previousStage = record.stage;
 
     update(
       "deals",
@@ -981,7 +980,7 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
     Number(record.original_project_value ?? 0) ||
     Number(record.estimated_value ?? 0) ||
     Number(record.amount ?? 0);
-  const originalProjectValue =
+  const _originalProjectValue =
     Number(record.original_project_value ?? 0) ||
     Number(record.estimated_value ?? 0) ||
     Number(record.amount ?? 0);
@@ -5452,7 +5451,7 @@ const getContactEmail = (contact?: Contact) => {
   return emailEntries[0]?.email || "—";
 };
 
-const getInitials = (value?: string) => {
+const _getInitials = (value?: string) => {
   const parts = String(value ?? "")
     .trim()
     .split(/\s+/)
@@ -5637,7 +5636,7 @@ const clampPercent = (value: number) => {
 const toPercentLabel = (value: number) =>
   `${(Number(value ?? 0) * 100).toFixed(1)}%`;
 
-const SummaryItem = ({
+const _SummaryItem = ({
   label,
   value,
   valueClassName,
