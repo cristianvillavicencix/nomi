@@ -28,10 +28,11 @@ export const ProjectGithubLink = ({
 }) => {
   const label = getGithubRepoLabel(record.github_repo);
   const href = getGithubRepoUrl(record.github_repo);
-  const { data: status, isLoading, isError } = useGithubRepoStatus(
-    record.id,
-    record.github_repo,
-  );
+  const {
+    data: status,
+    isLoading,
+    isError,
+  } = useGithubRepoStatus(record.id, record.github_repo);
 
   const repoUrl = status?.repo_url ?? href;
   const repoLabel = status?.slug ?? label;
@@ -65,7 +66,10 @@ export const ProjectGithubLink = ({
         <TableBody>
           {!label || !href ? (
             <TableRow>
-              <TableCell colSpan={5} className="py-6 text-sm text-muted-foreground">
+              <TableCell
+                colSpan={5}
+                className="py-6 text-sm text-muted-foreground"
+              >
                 No repository linked to this project yet.
                 {showEditLink ? (
                   <>
@@ -114,20 +118,29 @@ export const ProjectGithubLink = ({
                     rel="noopener noreferrer"
                     className="block min-w-0 link-action"
                   >
-                    <span className="font-mono text-xs">{status.last_commit.short_sha}</span>
+                    <span className="font-mono text-xs">
+                      {status.last_commit.short_sha}
+                    </span>
                     <span className="text-muted-foreground"> · </span>
-                    <span className="truncate text-sm">{status.last_commit.message}</span>
+                    <span className="truncate text-sm">
+                      {status.last_commit.message}
+                    </span>
                     <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                       {status.last_commit.author}
                     </span>
                   </a>
                 ) : (
-                  <span className="text-sm text-muted-foreground">No commits found</span>
+                  <span className="text-sm text-muted-foreground">
+                    No commits found
+                  </span>
                 )}
               </TableCell>
               <TableCell>
                 <div className="flex flex-col gap-1">
-                  <Badge variant="secondary" className={cn("w-fit", runClassName)}>
+                  <Badge
+                    variant="secondary"
+                    className={cn("w-fit", runClassName)}
+                  >
                     {runLabel}
                   </Badge>
                   {status?.latest_run?.url ? (

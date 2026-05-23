@@ -75,10 +75,7 @@ export const persistTaskAssignmentSideEffects = async (
   task: Record<string, unknown>,
   previousData?: Record<string, unknown>,
 ) => {
-  if (
-    previousData &&
-    !taskAssignmentFieldsChanged(previousData, task)
-  ) {
+  if (previousData && !taskAssignmentFieldsChanged(previousData, task)) {
     return;
   }
 
@@ -96,7 +93,10 @@ export const persistTaskAssignmentSideEffects = async (
       meta: { skipTaskAssignmentSideEffects: true },
     });
   } catch (error) {
-    console.warn("Task assignment columns are not available yet. Apply DB migrations.", error);
+    console.warn(
+      "Task assignment columns are not available yet. Apply DB migrations.",
+      error,
+    );
   }
 
   try {

@@ -25,7 +25,10 @@ export const CreateTicketButton = ({
   return (
     <Link
       to={`/tickets/create${query ? `?${query}` : ""}`}
-      className={cn(buttonVariants({ variant: "outline", size: "sm" }), className)}
+      className={cn(
+        buttonVariants({ variant: "outline", size: "sm" }),
+        className,
+      )}
     >
       <Plus className="size-4" />
       {label}

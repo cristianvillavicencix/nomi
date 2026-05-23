@@ -1,6 +1,13 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { MoreHorizontal, MessageSquare, Pencil, Star, Trash, UserRound } from "lucide-react";
+import {
+  MoreHorizontal,
+  MessageSquare,
+  Pencil,
+  Star,
+  Trash,
+  UserRound,
+} from "lucide-react";
 import {
   useDelete,
   useGetList,
@@ -64,7 +71,9 @@ export const ClientContactsTab = ({
     },
     { staleTime: 30_000 },
   );
-  const [selectedContactId, setSelectedContactId] = useState<Identifier | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<Identifier | null>(
+    null,
+  );
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editContactId, setEditContactId] = useState<Identifier | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -150,7 +159,8 @@ export const ClientContactsTab = ({
             </TableHeader>
             <TableBody>
               {contacts.map((contact) => {
-                const isPrimary = String(contact.id) === String(primaryContactId);
+                const isPrimary =
+                  String(contact.id) === String(primaryContactId);
                 return (
                   <TableRow key={contact.id}>
                     <TableCell>
@@ -160,7 +170,9 @@ export const ClientContactsTab = ({
                         onClick={() => openContact(contact.id)}
                       >
                         <Avatar record={contact} width={25} />
-                        <span className="font-medium">{getContactFullName(contact)}</span>
+                        <span className="font-medium">
+                          {getContactFullName(contact)}
+                        </span>
                       </button>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">
@@ -170,28 +182,46 @@ export const ClientContactsTab = ({
                       {getContactPhone(contact)}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-muted-foreground">
-                      <span className="break-all">{getContactEmail(contact)}</span>
+                      <span className="break-all">
+                        {getContactEmail(contact)}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      {contact.status ? <Status status={contact.status} /> : "—"}
+                      {contact.status ? (
+                        <Status status={contact.status} />
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell>
-                      {isPrimary ? <Badge variant="secondary">Primary</Badge> : "—"}
+                      {isPrimary ? (
+                        <Badge variant="secondary">Primary</Badge>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                          >
                             <MoreHorizontal className="size-4" />
                             <span className="sr-only">Contact actions</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openContact(contact.id)}>
+                          <DropdownMenuItem
+                            onClick={() => openContact(contact.id)}
+                          >
                             <UserRound className="size-4" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(contact.id)}>
+                          <DropdownMenuItem
+                            onClick={() => openEdit(contact.id)}
+                          >
                             <Pencil className="size-4" />
                             Edit
                           </DropdownMenuItem>

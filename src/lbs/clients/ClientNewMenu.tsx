@@ -42,7 +42,10 @@ const TextClientMenuItem = ({ contact }: { contact: Contact }) => {
   }
 
   return (
-    <DropdownMenuItem disabled={isOpening} onClick={() => void openSms(contact)}>
+    <DropdownMenuItem
+      disabled={isOpening}
+      onClick={() => void openSms(contact)}
+    >
       <MessageSquare className="size-4" />
       Text client
     </DropdownMenuItem>
@@ -78,7 +81,9 @@ export const ClientNewMenu = ({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align}>
-        {primaryContact ? <TextClientMenuItem contact={primaryContact} /> : null}
+        {primaryContact ? (
+          <TextClientMenuItem contact={primaryContact} />
+        ) : null}
         <DropdownMenuItem onClick={onAddContact}>
           <UserPlus className="size-4" />
           Add contact

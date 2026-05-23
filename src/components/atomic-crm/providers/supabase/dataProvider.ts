@@ -28,7 +28,10 @@ import {
 import { invalidateResourceQueries } from "../queryInvalidation";
 import { prepareCalendarEventWriteData } from "@/lbs/calendar/calendarEventWriteData";
 import type { GetScopedTasksParams } from "../../tasks/scopedTasks";
-import { collectMyProjectDealIds, filterScopedTasks } from "../../tasks/scopedTasksFilter";
+import {
+  collectMyProjectDealIds,
+  filterScopedTasks,
+} from "../../tasks/scopedTasksFilter";
 import {
   groupTaskParticipantsByTaskId,
   scopeUsesUserCompletionFilter,
@@ -1387,13 +1390,16 @@ const dataProviderWithCustomMethods = {
     return data;
   },
   async sendTestSms(testPhone: string) {
-    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>("messaging_settings", {
-      method: "POST",
-      body: {
-        action: "test_sms",
-        test_phone: testPhone,
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
+      "messaging_settings",
+      {
+        method: "POST",
+        body: {
+          action: "test_sms",
+          test_phone: testPhone,
+        },
       },
-    });
+    );
     if (error) {
       throw new Error(
         (error as { message?: string }).message ?? "Failed to send test SMS",
@@ -1853,8 +1859,11 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       taskUpdateContextById.set(String(params.id), {
         previous: (params.previousData ?? merged) as Record<string, unknown>,
         skipSideEffects: Boolean(
-          (params.meta as { skipTaskAssignmentSideEffects?: boolean } | undefined)
-            ?.skipTaskAssignmentSideEffects,
+          (
+            params.meta as
+              | { skipTaskAssignmentSideEffects?: boolean }
+              | undefined
+          )?.skipTaskAssignmentSideEffects,
         ),
       });
       return {

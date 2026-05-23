@@ -64,33 +64,41 @@ const LinkedRecordList = <
           ) : null}
         </div>
         {"amount" in item && item.amount != null ? (
-          <div className="mt-3 text-muted-foreground">{formatMoney(item.amount)}</div>
+          <div className="mt-3 text-muted-foreground">
+            {formatMoney(item.amount)}
+          </div>
         ) : null}
       </Link>
     ))}
   </div>
 );
 
-export const ProjectResourceLinkedDocs = ({ dealId }: { dealId: LbsDeal["id"] }) => {
-  const { data: proposals = [], isPending: proposalsPending } = useGetList<Proposal>(
-    "proposals",
-    {
-      filter: { "deal_id@eq": dealId },
-      pagination: { page: 1, perPage: 50 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
+export const ProjectResourceLinkedDocs = ({
+  dealId,
+}: {
+  dealId: LbsDeal["id"];
+}) => {
+  const { data: proposals = [], isPending: proposalsPending } =
+    useGetList<Proposal>(
+      "proposals",
+      {
+        filter: { "deal_id@eq": dealId },
+        pagination: { page: 1, perPage: 50 },
+        sort: { field: "updated_at", order: "DESC" },
+      },
+      { staleTime: 30_000 },
+    );
 
-  const { data: contracts = [], isPending: contractsPending } = useGetList<Contract>(
-    "contracts",
-    {
-      filter: { "deal_id@eq": dealId },
-      pagination: { page: 1, perPage: 50 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
+  const { data: contracts = [], isPending: contractsPending } =
+    useGetList<Contract>(
+      "contracts",
+      {
+        filter: { "deal_id@eq": dealId },
+        pagination: { page: 1, perPage: 50 },
+        sort: { field: "updated_at", order: "DESC" },
+      },
+      { staleTime: 30_000 },
+    );
 
   const { data: submissions = [], isPending: submissionsPending } =
     useGetList<FormSubmission>(
@@ -105,7 +113,11 @@ export const ProjectResourceLinkedDocs = ({ dealId }: { dealId: LbsDeal["id"] })
 
   if (proposalsPending || contractsPending || submissionsPending) return null;
 
-  if (proposals.length === 0 && contracts.length === 0 && submissions.length === 0) {
+  if (
+    proposals.length === 0 &&
+    contracts.length === 0 &&
+    submissions.length === 0
+  ) {
     return null;
   }
 
@@ -136,7 +148,9 @@ export const ProjectResourceLinkedDocs = ({ dealId }: { dealId: LbsDeal["id"] })
               className="flex items-center justify-between rounded-lg border p-4 text-sm hover:bg-muted/50"
             >
               <div>
-                <div className="font-medium">Form submission #{submission.id}</div>
+                <div className="font-medium">
+                  Form submission #{submission.id}
+                </div>
                 <div className="mt-1 text-muted-foreground">
                   {submission.created_at
                     ? new Date(submission.created_at).toLocaleString()

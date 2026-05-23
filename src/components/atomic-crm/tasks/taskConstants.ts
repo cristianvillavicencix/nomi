@@ -38,7 +38,9 @@ export const sortTasksByPriorityAndDue = (tasks: Task[]) =>
       (priorityRank[left.priority ?? "normal"] ?? 1) -
       (priorityRank[right.priority ?? "normal"] ?? 1);
     if (priorityDiff !== 0) return priorityDiff;
-    return new Date(left.due_date).getTime() - new Date(right.due_date).getTime();
+    return (
+      new Date(left.due_date).getTime() - new Date(right.due_date).getTime()
+    );
   });
 
 const toNumericIdArray = (value: unknown): number[] => {

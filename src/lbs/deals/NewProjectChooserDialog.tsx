@@ -27,8 +27,8 @@ export const NewProjectChooserDialog = ({
       <DialogHeader>
         <DialogTitle>New project</DialogTitle>
         <DialogDescription>
-          Create the project yourself or send a web form to the client. When they
-          submit the form, the project is created automatically.
+          Create the project yourself or send a web form to the client. When
+          they submit the form, the project is created automatically.
         </DialogDescription>
       </DialogHeader>
 

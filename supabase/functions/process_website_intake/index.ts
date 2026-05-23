@@ -91,31 +91,43 @@ const parseIntake = (body: WebsiteIntakeBody): ParsedIntake => {
     companyName:
       readString(body.company_name, data.business_name, data.company_name) ||
       "New Client",
-    contactEmail: readString(
-      body.contact_email,
-      data.contact_email,
-      data.email,
-    ).toLowerCase() || undefined,
+    contactEmail:
+      readString(
+        body.contact_email,
+        data.contact_email,
+        data.email,
+      ).toLowerCase() || undefined,
     contactFirstName:
-      readString(body.contact_first_name, data.first_name, data.contact_first_name) ||
-      splitName.firstName,
+      readString(
+        body.contact_first_name,
+        data.first_name,
+        data.contact_first_name,
+      ) || splitName.firstName,
     contactLastName:
-      readString(body.contact_last_name, data.last_name, data.contact_last_name) ||
-      splitName.lastName,
-    contactPhone: readString(
-      body.contact_phone,
-      data.contact_phone,
-      data.phone,
-      data.phone_number,
-    ) || undefined,
-    website: readString(body.website, data.website, data.company_website) || undefined,
+      readString(
+        body.contact_last_name,
+        data.last_name,
+        data.contact_last_name,
+      ) || splitName.lastName,
+    contactPhone:
+      readString(
+        body.contact_phone,
+        data.contact_phone,
+        data.phone,
+        data.phone_number,
+      ) || undefined,
+    website:
+      readString(body.website, data.website, data.company_website) || undefined,
     address: readString(body.address, data.address, data.street) || undefined,
     city: readString(body.city, data.city) || undefined,
     state: readString(body.state, data.state, data.state_abbr) || undefined,
-    zipcode: readString(body.zipcode, data.zipcode, data.postal_code) || undefined,
+    zipcode:
+      readString(body.zipcode, data.zipcode, data.postal_code) || undefined,
     country: readString(body.country, data.country) || undefined,
-    clientNotes: readString(data.client_notes, data.notes, data.description) || undefined,
-    businessEmail: readString(data.business_email, data.company_email) || undefined,
+    clientNotes:
+      readString(data.client_notes, data.notes, data.description) || undefined,
+    businessEmail:
+      readString(data.business_email, data.company_email) || undefined,
     intakeData: data,
   };
 };
@@ -217,7 +229,9 @@ const upsertCompany = async ({
       .from("companies")
       .update(
         Object.fromEntries(
-          Object.entries(companyPatch).filter(([, value]) => value != null && value !== ""),
+          Object.entries(companyPatch).filter(
+            ([, value]) => value != null && value !== "",
+          ),
         ),
       )
       .eq("id", existing.id)
@@ -294,10 +308,14 @@ const upsertContact = async ({
       };
 
       if (intake.contactEmail) {
-        updatePayload.email_jsonb = [{ email: intake.contactEmail, type: "Work" }];
+        updatePayload.email_jsonb = [
+          { email: intake.contactEmail, type: "Work" },
+        ];
       }
       if (intake.contactPhone) {
-        updatePayload.phone_jsonb = [{ number: intake.contactPhone, type: "Work" }];
+        updatePayload.phone_jsonb = [
+          { number: intake.contactPhone, type: "Work" },
+        ];
       }
 
       const { data: contact, error } = await supabaseAdmin
@@ -466,7 +484,9 @@ Deno.serve(
           ? "Website intake form submitted."
           : "Website intake form updated.",
         date: new Date().toISOString(),
-        attachments: uploadedAttachments.length ? uploadedAttachments : undefined,
+        attachments: uploadedAttachments.length
+          ? uploadedAttachments
+          : undefined,
       });
 
       if (dealCreated) {

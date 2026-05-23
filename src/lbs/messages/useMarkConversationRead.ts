@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
-import { useDataProvider, useGetIdentity, useGetList, type Identifier } from "ra-core";
+import {
+  useDataProvider,
+  useGetIdentity,
+  useGetList,
+  type Identifier,
+} from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ConversationParticipant, ConversationType } from "@/lbs/types";
 import {

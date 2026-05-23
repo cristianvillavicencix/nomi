@@ -10,18 +10,20 @@ Deno.serve((req: Request) =>
       return createErrorResponse(405, "Method not allowed");
     }
 
-    return UserMiddleware(req, async () =>
-      new Response(
-        JSON.stringify({
-          error:
-            "WhatsApp Business not configured. Add credentials in Settings → Communications → WhatsApp.",
-          code: "WHATSAPP_NOT_CONFIGURED",
-        }),
-        {
-          status: 503,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        },
-      ),
+    return UserMiddleware(
+      req,
+      async () =>
+        new Response(
+          JSON.stringify({
+            error:
+              "WhatsApp Business not configured. Add credentials in Settings → Communications → WhatsApp.",
+            code: "WHATSAPP_NOT_CONFIGURED",
+          }),
+          {
+            status: 503,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          },
+        ),
     );
   }),
 );

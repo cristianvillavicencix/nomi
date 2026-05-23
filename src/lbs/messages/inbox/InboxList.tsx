@@ -71,7 +71,9 @@ export const InboxList = ({
             >
               <ConversationListItem
                 conversation={conversation}
-                isActive={String(selectedConversationId) === String(conversation.id)}
+                isActive={
+                  String(selectedConversationId) === String(conversation.id)
+                }
                 onSelect={onSelectConversation}
                 deals={deals}
                 dmParticipants={dmParticipants}

@@ -63,7 +63,12 @@ type ContactTab = (typeof CONTACT_TABS)[number];
 type ActivityFeedItem =
   | { id: string; type: "note"; date: string; note: ContactNote }
   | { id: string; type: "task"; date: string; task: Task }
-  | { id: string; type: "calendar_event"; date: string; calendarEvent: CalendarEventRecord }
+  | {
+      id: string;
+      type: "calendar_event";
+      date: string;
+      calendarEvent: CalendarEventRecord;
+    }
   | { id: string; type: "created"; date: string };
 
 export const ContactShow = () => {
@@ -101,7 +106,10 @@ const ContactShowContentMobile = () => {
       <MobileHeader>
         <MobileBackButton />
         <div className="flex flex-1 min-w-0">
-          <Link to={getPersonListPath(record.status)} className="flex-1 min-w-0">
+          <Link
+            to={getPersonListPath(record.status)}
+            className="flex-1 min-w-0"
+          >
             <h1 className="truncate text-xl font-semibold">
               <RecordRepresentation />
             </h1>
@@ -185,7 +193,11 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
   };
 
   return (
-    <Tabs value={currentTab} onValueChange={handleTabChange} className="flex min-h-0 w-full flex-col">
+    <Tabs
+      value={currentTab}
+      onValueChange={handleTabChange}
+      className="flex min-h-0 w-full flex-col"
+    >
       <StickyTabsBar className="pb-2">
         <TabsList
           className={cn(
@@ -195,7 +207,8 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
         >
           <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="projects">
-            Projects{typeof projectsCount === "number" ? ` (${projectsCount})` : ""}
+            Projects
+            {typeof projectsCount === "number" ? ` (${projectsCount})` : ""}
           </TabsTrigger>
           {!lbsMode ? (
             <TabsTrigger value="financials">Financials</TabsTrigger>
@@ -231,14 +244,11 @@ const ContactActivitiesTab = ({ record }: { record: Contact }) => {
       pagination: { page: 1, perPage: 50 },
     },
   );
-  const { data: tasks, isPending: tasksPending } = useGetList<Task>(
-    "tasks",
-    {
-      filter: { "contact_id@eq": record.id },
-      sort: { field: "due_date", order: "DESC" },
-      pagination: { page: 1, perPage: 50 },
-    },
-  );
+  const { data: tasks, isPending: tasksPending } = useGetList<Task>("tasks", {
+    filter: { "contact_id@eq": record.id },
+    sort: { field: "due_date", order: "DESC" },
+    pagination: { page: 1, perPage: 50 },
+  });
   const { data: calendarEvents = [], isPending: calendarEventsPending } =
     useGetList<CalendarEventRecord>(
       "calendar_events",
@@ -282,7 +292,12 @@ const ContactActivitiesTab = ({ record }: { record: Contact }) => {
         ]
       : [];
 
-    return [...noteEvents, ...taskEvents, ...calendarEventItems, ...createdEvent].sort(
+    return [
+      ...noteEvents,
+      ...taskEvents,
+      ...calendarEventItems,
+      ...createdEvent,
+    ].sort(
       (left, right) =>
         new Date(right.date).getTime() - new Date(left.date).getTime(),
     );
@@ -356,7 +371,9 @@ const ActivityFeedRow = ({ event }: { event: ActivityFeedItem }) => {
 
   if (event.type === "calendar_event") {
     const timeLabel = formatEventTimeLabel(event.calendarEvent.event_time);
-    const remindLabel = formatRemindBeforeLabel(event.calendarEvent.remind_before_minutes);
+    const remindLabel = formatRemindBeforeLabel(
+      event.calendarEvent.remind_before_minutes,
+    );
     const entryKind = getCalendarEntryKind(event.calendarEvent);
     const entryLabel =
       entryKind === "activity"
@@ -371,16 +388,21 @@ const ActivityFeedRow = ({ event }: { event: ActivityFeedItem }) => {
           <div className="min-w-0">
             <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <CalendarClock className="size-4" />
-              {event.calendarEvent.completed_at ? `${entryLabel} done` : entryLabel}
+              {event.calendarEvent.completed_at
+                ? `${entryLabel} done`
+                : entryLabel}
             </div>
             <p className="text-sm font-medium">{event.calendarEvent.title}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               {[
-                new Date(event.calendarEvent.event_date).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                }),
+                new Date(event.calendarEvent.event_date).toLocaleDateString(
+                  undefined,
+                  {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  },
+                ),
                 timeLabel,
                 remindLabel,
               ]
@@ -423,7 +445,11 @@ const ActivityFeedRow = ({ event }: { event: ActivityFeedItem }) => {
 };
 
 const ContactProjectsTab = ({ record }: { record: Contact }) => {
-  const { data: deals, isPending, error } = useGetList<Deal>("deals", {
+  const {
+    data: deals,
+    isPending,
+    error,
+  } = useGetList<Deal>("deals", {
     filter: { "contact_ids@cs": `{${record.id}}` },
     sort: { field: "updated_at", order: "DESC" },
     pagination: { page: 1, perPage: 50 },
@@ -440,7 +466,9 @@ const ContactProjectsTab = ({ record }: { record: Contact }) => {
 
   const companiesById = useMemo(
     () =>
-      Object.fromEntries((companies ?? []).map((company) => [company.id, company])),
+      Object.fromEntries(
+        (companies ?? []).map((company) => [company.id, company]),
+      ),
     [companies],
   );
 
@@ -478,13 +506,20 @@ const ContactProjectsTab = ({ record }: { record: Contact }) => {
                 className="border-t border-border hover:bg-muted/30 transition-colors"
               >
                 <td className="px-4 py-3">
-                  <Link to={`/deals/${deal.id}/show`} className="link-action font-medium">
+                  <Link
+                    to={`/deals/${deal.id}/show`}
+                    className="link-action font-medium"
+                  >
                     {deal.name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{deal.stage}</td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {deal.created_at ? new Date(deal.created_at).toLocaleDateString() : "—"}
+                  {deal.stage}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {deal.created_at
+                    ? new Date(deal.created_at).toLocaleDateString()
+                    : "—"}
                 </td>
                 <td className="px-4 py-3">{formatCurrency(deal.amount)}</td>
                 <td className="px-4 py-3 text-muted-foreground">
@@ -523,23 +558,26 @@ const ContactFinancialsTab = ({ record }: { record: Contact }) => {
     pagination: { page: 1, perPage: 100 },
   });
   const dealIds = useMemo(() => (deals ?? []).map((deal) => deal.id), [deals]);
-  const { data: paymentLines, isPending: linesPending } = useGetList<PaymentLine>(
-    "payment_lines",
-    {
-      filter:
-        dealIds.length > 0
-          ? { "project_id@in": `(${dealIds.join(",")})` }
-          : { "project_id@in": "(-1)" },
-      sort: { field: "created_at", order: "DESC" },
-      pagination: { page: 1, perPage: 200 },
-    },
-    { enabled: dealIds.length > 0 },
-  );
+  const { data: paymentLines, isPending: linesPending } =
+    useGetList<PaymentLine>(
+      "payment_lines",
+      {
+        filter:
+          dealIds.length > 0
+            ? { "project_id@in": `(${dealIds.join(",")})` }
+            : { "project_id@in": "(-1)" },
+        sort: { field: "created_at", order: "DESC" },
+        pagination: { page: 1, perPage: 200 },
+      },
+      { enabled: dealIds.length > 0 },
+    );
 
   const paymentIds = useMemo(
     () =>
       Array.from(
-        new Set((paymentLines ?? []).map((line) => line.payment_id).filter(Boolean)),
+        new Set(
+          (paymentLines ?? []).map((line) => line.payment_id).filter(Boolean),
+        ),
       ),
     [paymentLines],
   );
@@ -554,7 +592,10 @@ const ContactFinancialsTab = ({ record }: { record: Contact }) => {
     [deals],
   );
   const paymentsById = useMemo(
-    () => Object.fromEntries((payments ?? []).map((payment) => [payment.id, payment])),
+    () =>
+      Object.fromEntries(
+        (payments ?? []).map((payment) => [payment.id, payment]),
+      ),
     [payments],
   );
 
@@ -581,7 +622,9 @@ const ContactFinancialsTab = ({ record }: { record: Contact }) => {
       };
       existing.amount += Number(line.amount ?? 0);
 
-      const projectName = line.project_id ? dealsById[line.project_id]?.name : undefined;
+      const projectName = line.project_id
+        ? dealsById[line.project_id]?.name
+        : undefined;
       if (projectName && !existing.projectNames.includes(projectName)) {
         existing.projectNames.push(projectName);
       }
@@ -600,7 +643,8 @@ const ContactFinancialsTab = ({ record }: { record: Contact }) => {
   }, [dealsById, paymentLines, paymentsById]);
 
   const totalInvoiced = useMemo(
-    () => (deals ?? []).reduce((sum, deal) => sum + Number(deal.amount ?? 0), 0),
+    () =>
+      (deals ?? []).reduce((sum, deal) => sum + Number(deal.amount ?? 0), 0),
     [deals],
   );
   const totalPaid = useMemo(
@@ -614,7 +658,9 @@ const ContactFinancialsTab = ({ record }: { record: Contact }) => {
   }
 
   if (!dealIds.length) {
-    return <TabEmptyState label="No project financials available for this contact." />;
+    return (
+      <TabEmptyState label="No project financials available for this contact." />
+    );
   }
 
   return (
@@ -653,7 +699,9 @@ const ContactFinancialsTab = ({ record }: { record: Contact }) => {
                 <th className="px-4 py-3 text-left font-medium">Project</th>
                 <th className="px-4 py-3 text-left font-medium">Amount</th>
                 <th className="px-4 py-3 text-left font-medium">Method</th>
-                <th className="px-4 py-3 text-left font-medium">Reference / Notes</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  Reference / Notes
+                </th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
               </tr>
             </thead>
@@ -715,7 +763,9 @@ const SummaryCard = ({
   <div className="rounded-lg border border-border p-4">
     <div className="mb-2 flex items-center gap-2 text-muted-foreground">
       <Icon className="size-4" />
-      <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
+      <span className="text-xs font-medium uppercase tracking-wide">
+        {label}
+      </span>
     </div>
     <div className="text-lg font-semibold">{value}</div>
   </div>

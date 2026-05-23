@@ -32,9 +32,8 @@ const parseCustomFields = (
 ): CustomFormField[] => {
   if (schema?.type === "custom" && Array.isArray(schema.fields)) {
     return schema.fields
-      .filter(
-        (field): field is Record<string, unknown> =>
-          Boolean(field && typeof field === "object"),
+      .filter((field): field is Record<string, unknown> =>
+        Boolean(field && typeof field === "object"),
       )
       .map((field) => ({
         key: String(field.key ?? "").trim(),
@@ -44,9 +43,7 @@ const parseCustomFields = (
       .filter((field) => field.key && field.label);
   }
 
-  return [
-    { key: "message", label: "Message", required: true },
-  ];
+  return [{ key: "message", label: "Message", required: true }];
 };
 
 const normalizeCustomSubmission = (
@@ -326,20 +323,24 @@ Deno.serve(
           resolvedCompanyId &&
           Number(linkedDeal.company_id) !== Number(resolvedCompanyId)
         ) {
-          return createErrorResponse("Project does not belong to this client", 400);
+          return createErrorResponse(
+            "Project does not belong to this client",
+            400,
+          );
         }
 
-        const { data: updatedDeal, error: updateDealError } = await supabaseAdmin
-          .from("deals")
-          .update({
-            contact_id: resolvedContactId,
-            contact_ids: [resolvedContactId],
-            website_brief: intakeData,
-            description: clientNotes,
-          })
-          .eq("id", linkedDeal.id)
-          .select("id")
-          .single();
+        const { data: updatedDeal, error: updateDealError } =
+          await supabaseAdmin
+            .from("deals")
+            .update({
+              contact_id: resolvedContactId,
+              contact_ids: [resolvedContactId],
+              website_brief: intakeData,
+              description: clientNotes,
+            })
+            .eq("id", linkedDeal.id)
+            .select("id")
+            .single();
 
         if (updateDealError || !updatedDeal) {
           throw new Error("Failed to update project");
@@ -356,17 +357,18 @@ Deno.serve(
           .maybeSingle();
 
         if (existingDeal?.id) {
-          const { data: updatedDeal, error: updateDealError } = await supabaseAdmin
-            .from("deals")
-            .update({
-              contact_id: resolvedContactId,
-              contact_ids: [resolvedContactId],
-              website_brief: intakeData,
-              description: clientNotes,
-            })
-            .eq("id", existingDeal.id)
-            .select("id")
-            .single();
+          const { data: updatedDeal, error: updateDealError } =
+            await supabaseAdmin
+              .from("deals")
+              .update({
+                contact_id: resolvedContactId,
+                contact_ids: [resolvedContactId],
+                website_brief: intakeData,
+                description: clientNotes,
+              })
+              .eq("id", existingDeal.id)
+              .select("id")
+              .single();
 
           if (updateDealError || !updatedDeal) {
             throw new Error("Failed to update project");

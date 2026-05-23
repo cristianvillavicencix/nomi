@@ -15,7 +15,11 @@ import { useTaskPreferences } from "@/components/atomic-crm/tasks/useTaskPrefere
 import { isLbsMode } from "@/lbs/productMode";
 
 export const TasksPageContent = () => {
-  const { identity, personId, isPending: isMemberPending } = useCurrentMemberPerson();
+  const {
+    identity,
+    personId,
+    isPending: isMemberPending,
+  } = useCurrentMemberPerson();
   const { taskTypes } = useConfigurationContext();
   const { preferences, setPreferences } = useTaskPreferences();
   const { status, scope, typeFilter, priorityFilter, projectId } = preferences;
@@ -28,20 +32,25 @@ export const TasksPageContent = () => {
       enabled: lbsMode && scope === "my_projects",
     });
 
-  const { data: scopedTasksResult, isPending: isTasksPending } = useScopedTasks({
-    scope,
-    organizationMemberId: identity?.id,
-    personId,
-    projectDealIds,
-    projectId: lbsMode ? projectId : null,
-    status,
-    typeFilter: lbsMode ? "all" : typeFilter,
-    priorityFilter,
-    enabled: scope !== "my_projects" || projectDealIds.length > 0,
-  });
+  const { data: scopedTasksResult, isPending: isTasksPending } = useScopedTasks(
+    {
+      scope,
+      organizationMemberId: identity?.id,
+      personId,
+      projectDealIds,
+      projectId: lbsMode ? projectId : null,
+      status,
+      typeFilter: lbsMode ? "all" : typeFilter,
+      priorityFilter,
+      enabled: scope !== "my_projects" || projectDealIds.length > 0,
+    },
+  );
 
   const tasks = scopedTasksResult?.data ?? [];
-  const isPending = isMemberPending || isTasksPending || (scope === "my_projects" && isProjectsPending);
+  const isPending =
+    isMemberPending ||
+    isTasksPending ||
+    (scope === "my_projects" && isProjectsPending);
 
   const scopeOptions = useMemo(() => {
     const options = [
@@ -49,7 +58,10 @@ export const TasksPageContent = () => {
       { value: "team" as const, label: "All team" },
     ];
     if (lbsMode) {
-      return [...options, { value: "my_projects" as const, label: "My projects" }];
+      return [
+        ...options,
+        { value: "my_projects" as const, label: "My projects" },
+      ];
     }
     return options;
   }, [lbsMode]);
@@ -71,7 +83,9 @@ export const TasksPageContent = () => {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Tabs
           value={status}
-          onValueChange={(value) => setPreferences({ status: value as TaskStatusFilter })}
+          onValueChange={(value) =>
+            setPreferences({ status: value as TaskStatusFilter })
+          }
         >
           <TabsList>
             <TabsTrigger value="open">Open</TabsTrigger>

@@ -1,29 +1,29 @@
-import { useMemo, useState } from 'react';
-import { useGetList } from 'ra-core';
-import { Printer } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ReportDateFilters } from './ReportFilters';
+import { useMemo, useState } from "react";
+import { useGetList } from "ra-core";
+import { Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ReportDateFilters } from "./ReportFilters";
 
 export const LaborCostByPersonReportPage = ({
   embedded = false,
 }: {
   embedded?: boolean;
 }) => {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   const filter = useMemo(
     () => ({
-      ...(from ? { 'period_month@gte': from } : {}),
-      ...(to ? { 'period_month@lte': to } : {}),
+      ...(from ? { "period_month@gte": from } : {}),
+      ...(to ? { "period_month@lte": to } : {}),
     }),
     [from, to],
   );
 
-  const { data } = useGetList('report_labor_cost_by_person', {
+  const { data } = useGetList("report_labor_cost_by_person", {
     pagination: { page: 1, perPage: 200 },
-    sort: { field: 'period_month', order: 'DESC' },
+    sort: { field: "period_month", order: "DESC" },
     filter,
   });
 
@@ -32,14 +32,21 @@ export const LaborCostByPersonReportPage = ({
       <div className="flex items-center justify-between print:hidden">
         {!embedded ? (
           <h1 className="text-2xl font-semibold">Labor Cost by Person</h1>
-        ) : <span />}
+        ) : (
+          <span />
+        )}
         <Button variant="outline" size="sm" onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" />
           Print / PDF
         </Button>
       </div>
       <div className="print:hidden">
-        <ReportDateFilters from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
+        <ReportDateFilters
+          from={from}
+          to={to}
+          onFromChange={setFrom}
+          onToChange={setTo}
+        />
       </div>
       <Card>
         <CardContent className="pt-6 overflow-x-auto">
@@ -60,7 +67,9 @@ export const LaborCostByPersonReportPage = ({
                   <td className="py-2">{row.period_month}</td>
                   <td className="py-2">{row.entries_count}</td>
                   <td className="py-2">{row.total_hours}</td>
-                  <td className="py-2">${Number(row.total_labor_cost ?? 0).toFixed(2)}</td>
+                  <td className="py-2">
+                    ${Number(row.total_labor_cost ?? 0).toFixed(2)}
+                  </td>
                 </tr>
               ))}
             </tbody>

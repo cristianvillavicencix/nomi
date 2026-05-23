@@ -15,7 +15,10 @@ export const useTaskParticipantsByTaskIds = (taskIds: Identifier[]) => {
         normalizedTaskIds.length > 0
           ? { "task_id@in": `(${normalizedTaskIds.join(",")})` }
           : { "task_id@eq": -1 },
-      pagination: { page: 1, perPage: Math.max(normalizedTaskIds.length * 10, 1) },
+      pagination: {
+        page: 1,
+        perPage: Math.max(normalizedTaskIds.length * 10, 1),
+      },
       sort: { field: "id", order: "ASC" },
     },
     { enabled: normalizedTaskIds.length > 0, staleTime: 5_000 },
@@ -25,7 +28,9 @@ export const useTaskParticipantsByTaskIds = (taskIds: Identifier[]) => {
     const grouped: Record<string, TaskParticipant[]> = {};
     participants.forEach((participant) => {
       const key = String(participant.task_id);
-      grouped[key] = grouped[key] ? [...grouped[key], participant] : [participant];
+      grouped[key] = grouped[key]
+        ? [...grouped[key], participant]
+        : [participant];
     });
     return grouped;
   }, [participants]);

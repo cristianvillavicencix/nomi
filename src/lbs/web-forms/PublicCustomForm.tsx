@@ -36,7 +36,11 @@ export const PublicCustomForm = ({ slug }: { slug: string }) => {
     "submitPublicForm" in dataProvider &&
     typeof dataProvider.submitPublicForm === "function";
 
-  const { data: form, isPending, error } = useQuery({
+  const {
+    data: form,
+    isPending,
+    error,
+  } = useQuery({
     queryKey: ["public-form", slug],
     enabled: Boolean(slug && canLoad),
     staleTime: 60_000,
@@ -121,21 +125,28 @@ export const PublicCustomForm = ({ slug }: { slug: string }) => {
       <div className={`${publicFormContentClassName(embedded)} text-center`}>
         <h1 className="text-2xl font-semibold">Thank you</h1>
         <p className="text-sm text-muted-foreground">
-          We received your response. Our team will review it and follow up if needed.
+          We received your response. Our team will review it and follow up if
+          needed.
         </p>
       </div>
     );
   }
 
   const setField = (key: string, next: string) =>
-    setValues((current) => ({ ...emptyCustomFormValues(schema), ...current, [key]: next }));
+    setValues((current) => ({
+      ...emptyCustomFormValues(schema),
+      ...current,
+      [key]: next,
+    }));
 
   return (
     <div className={publicFormContentClassName(embedded)}>
       <div>
         <h1 className="text-2xl font-semibold">{form.name}</h1>
         {form.description ? (
-          <p className="mt-2 text-sm text-muted-foreground">{form.description}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {form.description}
+          </p>
         ) : null}
       </div>
 
@@ -150,7 +161,10 @@ export const PublicCustomForm = ({ slug }: { slug: string }) => {
             return;
           }
 
-          const nextValidationError = validateCustomFormValues(schema, resolvedValues);
+          const nextValidationError = validateCustomFormValues(
+            schema,
+            resolvedValues,
+          );
           if (nextValidationError) {
             setValidationError(nextValidationError);
             return;

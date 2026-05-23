@@ -23,20 +23,24 @@ export const persistConversationRead = async ({
   memberId: Identifier;
   readAt: string;
 }) => {
-  const { data: participants } = await dataProvider.getList<ConversationParticipant>(
-    "conversation_participants",
-    {
-      filter: {
-        "conversation_id@eq": conversationId,
-        "member_id@eq": memberId,
+  const { data: participants } =
+    await dataProvider.getList<ConversationParticipant>(
+      "conversation_participants",
+      {
+        filter: {
+          "conversation_id@eq": conversationId,
+          "member_id@eq": memberId,
+        },
+        pagination: { page: 1, perPage: 1 },
       },
-      pagination: { page: 1, perPage: 1 },
-    },
-  );
+    );
 
   const participant = participants[0];
 
-  if (participant?.last_read_at && isReadThrough(participant.last_read_at, readAt)) {
+  if (
+    participant?.last_read_at &&
+    isReadThrough(participant.last_read_at, readAt)
+  ) {
     return false;
   }
 
@@ -56,6 +60,8 @@ export const persistConversationRead = async ({
     });
   }
 
-  await queryClient.invalidateQueries({ queryKey: ["conversation_participants"] });
+  await queryClient.invalidateQueries({
+    queryKey: ["conversation_participants"],
+  });
   return true;
 };

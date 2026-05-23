@@ -28,7 +28,9 @@ export const PeopleCreate = () => {
       redirect={false}
       mutationOptions={{
         onSuccess: async (data) => {
-          const record = (data as { data?: Record<string, unknown> })?.data ?? (data as Record<string, unknown> | undefined);
+          const record =
+            (data as { data?: Record<string, unknown> })?.data ??
+            (data as Record<string, unknown> | undefined);
           const id = record?.id;
           const orgId = Number(record?.org_id ?? 1);
           if (id != null) {
@@ -41,9 +43,12 @@ export const PeopleCreate = () => {
                   pending,
                   "Current User",
                 );
-                const { data: run } = await dataProvider.create("payroll_runs", {
-                  data: payload,
-                });
+                const { data: run } = await dataProvider.create(
+                  "payroll_runs",
+                  {
+                    data: payload,
+                  },
+                );
                 if (run?.id != null) {
                   await dataProvider.generatePayrollRun(run.id);
                   notify("Saved. Draft payroll is ready in Payroll runs.", {
@@ -74,14 +79,17 @@ export const PeopleCreate = () => {
           compensation_unit: "hour",
           compensation_amount: null,
           overtime_enabled: false,
-          overtime_rate_multiplier:
-            Number(payrollSettings?.defaultOvertimeMultiplier ?? 1.5),
+          overtime_rate_multiplier: Number(
+            payrollSettings?.defaultOvertimeMultiplier ?? 1.5,
+          ),
           lunch_break_deducted: true,
           paid_day_hours: 8,
-          default_hours_per_week:
-            Number(payrollSettings?.defaultHoursPerWeekReference ?? 40),
+          default_hours_per_week: Number(
+            payrollSettings?.defaultHoursPerWeekReference ?? 40,
+          ),
           working_days_per_week: 5,
-          payment_method: payrollSettings?.defaultPaymentMethod ?? "bank_deposit",
+          payment_method:
+            payrollSettings?.defaultPaymentMethod ?? "bank_deposit",
           off_days_paid: false,
           holidays_paid: true,
           sick_days_paid: false,

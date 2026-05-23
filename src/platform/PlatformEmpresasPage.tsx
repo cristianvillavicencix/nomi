@@ -25,7 +25,10 @@ import {
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { OrganizationForPlatform } from "@/components/atomic-crm/types";
 
-export const displayOrgName = (record: { id: unknown; name?: string | null }): string => {
+export const displayOrgName = (record: {
+  id: unknown;
+  name?: string | null;
+}): string => {
   const n = record.name?.trim() ?? "";
   if (n.length > 0) return n;
   return `Organización (id ${String(record.id)})`;
@@ -80,14 +83,18 @@ export const PlatformEmpresasPage = () => {
     mutationFn: async (org: OrganizationForPlatform) => {
       const r = await dataProvider.update("organizations", {
         id: org.id,
-        data: { disabled_at: org.disabled_at ? null : new Date().toISOString() },
+        data: {
+          disabled_at: org.disabled_at ? null : new Date().toISOString(),
+        },
         previousData: org,
       });
       return r.data as OrganizationForPlatform;
     },
     onSuccess: () => {
       notify("Empresa actualizada.", { type: "success" });
-      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["platform", "organizations"],
+      });
     },
     onError: (e) => notify(formatQueryError(e), { type: "error" }),
   });
@@ -99,25 +106,31 @@ export const PlatformEmpresasPage = () => {
     },
     onSuccess: () => {
       notify("Empresa eliminada.", { type: "success" });
-      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["platform", "organizations"],
+      });
     },
     onError: (e) => notify(formatQueryError(e), { type: "error" }),
   });
 
   const rows = orgsQuery.data?.data ?? [];
   const counts = membersQuery.data ?? {};
-  const confirmOrg = confirmDeleteId != null ? rows.find((r) => r.id === confirmDeleteId) : null;
+  const confirmOrg =
+    confirmDeleteId != null ? rows.find((r) => r.id === confirmDeleteId) : null;
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Empresas</h1>
         <p className="text-muted-foreground text-sm">
-          Organizaciones registradas. Clic en una fila para ver el perfil completo.
+          Organizaciones registradas. Clic en una fila para ver el perfil
+          completo.
         </p>
       </div>
 
-      {orgsQuery.isLoading ? <p className="text-sm text-muted-foreground">Cargando…</p> : null}
+      {orgsQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Cargando…</p>
+      ) : null}
       {orgsQuery.isError ? (
         <p className="text-sm text-destructive">
           No se pudo listar organizations: {formatQueryError(orgsQuery.error)}.
@@ -144,8 +157,13 @@ export const PlatformEmpresasPage = () => {
                 className={`cursor-pointer hover:bg-muted/50${row.disabled_at ? " opacity-50" : ""}`}
                 onClick={() => void navigate(`/sas/empresas/${String(row.id)}`)}
               >
-                <TableCell className="font-mono text-xs text-muted-foreground">{String(row.id)}</TableCell>
-                <TableCell className="font-medium max-w-45 truncate" title={displayOrgName(row)}>
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  {String(row.id)}
+                </TableCell>
+                <TableCell
+                  className="font-medium max-w-45 truncate"
+                  title={displayOrgName(row)}
+                >
                   {displayOrgName(row)}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground max-w-40 truncate">
@@ -170,7 +188,11 @@ export const PlatformEmpresasPage = () => {
                       onClick={() => toggleDisableMutation.mutate(row)}
                       disabled={toggleDisableMutation.isPending}
                     >
-                      {row.disabled_at ? <Power className="h-3.5 w-3.5" /> : <PowerOff className="h-3.5 w-3.5" />}
+                      {row.disabled_at ? (
+                        <Power className="h-3.5 w-3.5" />
+                      ) : (
+                        <PowerOff className="h-3.5 w-3.5" />
+                      )}
                     </Button>
                     <Button
                       size="icon"
@@ -187,7 +209,10 @@ export const PlatformEmpresasPage = () => {
             ))}
             {rows.length === 0 && !orgsQuery.isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-sm text-muted-foreground"
+                >
                   No hay empresas todavía.
                 </TableCell>
               </TableRow>
@@ -197,17 +222,25 @@ export const PlatformEmpresasPage = () => {
       </div>
 
       {/* Delete confirmation */}
-      <Dialog open={confirmDeleteId != null} onOpenChange={(o) => { if (!o) setConfirmDeleteId(null); }}>
+      <Dialog
+        open={confirmDeleteId != null}
+        onOpenChange={(o) => {
+          if (!o) setConfirmDeleteId(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>¿Eliminar empresa?</DialogTitle>
             <DialogDescription>
               Esta acción es <strong>irreversible</strong>. Se eliminará{" "}
-              <strong>{confirmOrg ? displayOrgName(confirmOrg) : ""}</strong> y todos sus datos.
+              <strong>{confirmOrg ? displayOrgName(confirmOrg) : ""}</strong> y
+              todos sus datos.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+              Cancelar
+            </Button>
             <Button
               variant="destructive"
               disabled={deleteMutation.isPending}

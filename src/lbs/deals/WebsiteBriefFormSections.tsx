@@ -50,10 +50,19 @@ const BriefFieldInput = ({
   validateUrl?: (url?: string) => string | undefined;
 }) => {
   const source = `website_brief.${field.key}`;
-  const isUrlField = field.key === "existing_website" || field.key === "staging_url";
+  const isUrlField =
+    field.key === "existing_website" || field.key === "staging_url";
 
   return (
-    <div className={field.fullWidth ? (gridClass.includes("1") ? undefined : "md:col-span-2") : undefined}>
+    <div
+      className={
+        field.fullWidth
+          ? gridClass.includes("1")
+            ? undefined
+            : "md:col-span-2"
+          : undefined
+      }
+    >
       <TextInput
         source={source}
         label={field.label}
@@ -86,7 +95,9 @@ export const WebsiteBriefFormSections = ({
   showSecurityHint = true,
   validateUrl,
 }: WebsiteBriefFormSectionsProps) => {
-  const projectType = useWatch({ name: projectTypeSource }) as string | undefined;
+  const projectType = useWatch({ name: projectTypeSource }) as
+    | string
+    | undefined;
   const sections = getVisibleBriefSections(projectType).filter(
     (section) => !onlySectionId || section.id === onlySectionId,
   );
@@ -96,8 +107,13 @@ export const WebsiteBriefFormSections = ({
   return (
     <div className="space-y-2">
       {sections.map((section, index) => {
-        const fields = section.fields.filter((field) => !excluded.has(field.key));
-        if (fields.length === 0 && !(section.id === "scope" && showScopeChecklist)) {
+        const fields = section.fields.filter(
+          (field) => !excluded.has(field.key),
+        );
+        if (
+          fields.length === 0 &&
+          !(section.id === "scope" && showScopeChecklist)
+        ) {
           return null;
         }
 
@@ -109,7 +125,9 @@ export const WebsiteBriefFormSections = ({
             showDivider={index > 0}
           >
             <div className={gridClass}>
-              {section.id === "scope" && showScopeChecklist && scopeMode === "pages" ? (
+              {section.id === "scope" &&
+              showScopeChecklist &&
+              scopeMode === "pages" ? (
                 <div className="md:col-span-2">
                   <ProjectScopeChecklist />
                 </div>
@@ -130,8 +148,9 @@ export const WebsiteBriefFormSections = ({
       {showSecurityHint ? (
         <p className="text-sm text-muted-foreground">
           Store hosting, WordPress, FTP, and other logins in the{" "}
-          <span className="font-medium text-foreground">Security</span> tab. Upload
-          logos and photos in <span className="font-medium text-foreground">Resources</span>.
+          <span className="font-medium text-foreground">Security</span> tab.
+          Upload logos and photos in{" "}
+          <span className="font-medium text-foreground">Resources</span>.
         </p>
       ) : null}
     </div>

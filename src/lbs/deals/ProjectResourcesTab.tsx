@@ -1,6 +1,13 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCreate, useDelete, useGetList, useGetOne, useNotify, type Identifier } from "ra-core";
+import {
+  useCreate,
+  useDelete,
+  useGetList,
+  useGetOne,
+  useNotify,
+  type Identifier,
+} from "ra-core";
 import { ImagePlus, Link2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,7 +39,8 @@ import {
 import type { DealResource, LbsDeal } from "@/lbs/types";
 
 const getContactEmail = (contact?: Contact | null) =>
-  contact?.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() ?? "";
+  contact?.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() ??
+  "";
 
 const getContactName = (contact?: Contact | null) =>
   `${contact?.first_name ?? ""} ${contact?.last_name ?? ""}`.trim();
@@ -45,11 +53,15 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
 
   const [sendOpen, setSendOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ProjectResourceTabCategory>("logo");
-  const [previewResource, setPreviewResource] = useState<DealResource | null>(null);
+  const [activeTab, setActiveTab] =
+    useState<ProjectResourceTabCategory>("logo");
+  const [previewResource, setPreviewResource] = useState<DealResource | null>(
+    null,
+  );
   const [deletingId, setDeletingId] = useState<Identifier | null>(null);
 
-  const [uploadCategory, setUploadCategory] = useState<ProjectResourceTabCategory>("logo");
+  const [uploadCategory, setUploadCategory] =
+    useState<ProjectResourceTabCategory>("logo");
   const [uploadLabel, setUploadLabel] = useState("");
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
 
@@ -78,7 +90,10 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
     { staleTime: 15_000, ...supabaseTableQueryOptions("deal_resources") },
   );
 
-  const grouped = useMemo(() => groupResourcesByTabCategory(resources), [resources]);
+  const grouped = useMemo(
+    () => groupResourcesByTabCategory(resources),
+    [resources],
+  );
   const tabCounts = useMemo(() => getTabCategoryCounts(resources), [resources]);
   const serviceGroups = useMemo(
     () => groupServicePhotosByLabel(resources),
@@ -127,7 +142,9 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
     },
     onError: (error: Error) => {
       if (isSupabaseSchemaMissingError(error, "deal_resources")) {
-        notify(getSupabaseSchemaMissingMessage("deal_resources"), { type: "error" });
+        notify(getSupabaseSchemaMissingMessage("deal_resources"), {
+          type: "error",
+        });
         return;
       }
       notify(error.message || "Failed to upload files", { type: "error" });
@@ -180,11 +197,16 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
         <div>
           <h3 className="text-base font-semibold">Project resources</h3>
           <p className="text-sm text-muted-foreground">
-            Logos, service photos, team images, documents, and other project files.
+            Logos, service photos, team images, documents, and other project
+            files.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => setSendOpen(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSendOpen(true)}
+          >
             <Link2 className="size-4" />
             Request from client
           </Button>
@@ -197,11 +219,17 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
 
       <Tabs
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as ProjectResourceTabCategory)}
+        onValueChange={(value) =>
+          setActiveTab(value as ProjectResourceTabCategory)
+        }
       >
         <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
           {PROJECT_RESOURCE_TAB_CATEGORIES.map((categoryDef) => (
-            <TabsTrigger key={categoryDef.id} value={categoryDef.id} className="shrink-0">
+            <TabsTrigger
+              key={categoryDef.id}
+              value={categoryDef.id}
+              className="shrink-0"
+            >
               {categoryDef.label}
               {formatTabCount(tabCounts[categoryDef.id])}
             </TabsTrigger>
@@ -209,10 +237,21 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
         </TabsList>
 
         {PROJECT_RESOURCE_TAB_CATEGORIES.map((categoryDef) => (
-          <TabsContent key={categoryDef.id} value={categoryDef.id} className="space-y-4 pt-4">
+          <TabsContent
+            key={categoryDef.id}
+            value={categoryDef.id}
+            className="space-y-4 pt-4"
+          >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">{categoryDef.description}</p>
-              <Button type="button" variant="outline" size="sm" onClick={() => openUpload(categoryDef.id)}>
+              <p className="text-sm text-muted-foreground">
+                {categoryDef.description}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => openUpload(categoryDef.id)}
+              >
                 <Upload className="size-4" />
                 Add files
               </Button>
@@ -234,7 +273,8 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                 <div>
                   <h4 className="text-sm font-semibold">Linked records</h4>
                   <p className="text-sm text-muted-foreground">
-                    Proposals, contracts, and form submissions tied to this project.
+                    Proposals, contracts, and form submissions tied to this
+                    project.
                   </p>
                 </div>
                 <ProjectResourceLinkedDocs dealId={record.id} />

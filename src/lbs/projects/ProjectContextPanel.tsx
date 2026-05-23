@@ -2,7 +2,10 @@ import { Link } from "react-router";
 import { useGetList } from "ra-core";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAgencyProjectTypeLabel, getDeliveryStatusLabel } from "@/lbs/deals/lbsAgencyProjectModel";
+import {
+  getAgencyProjectTypeLabel,
+  getDeliveryStatusLabel,
+} from "@/lbs/deals/lbsAgencyProjectModel";
 import { getProjectBriefProgress } from "@/lbs/deals/projectBriefProgress";
 import { getLbsProjectStageLabel } from "@/lbs/deals/lbsProjectConstants";
 import { BriefProgressBar } from "@/lbs/deals/BriefProgressBar";
@@ -40,7 +43,9 @@ export const ProjectContextPanel = ({
         <CardContent className="space-y-3 text-sm">
           <div>
             <div className="text-muted-foreground">Stage</div>
-            <div className="font-medium">{getLbsProjectStageLabel(record.stage)}</div>
+            <div className="font-medium">
+              {getLbsProjectStageLabel(record.stage)}
+            </div>
           </div>
           <div>
             <div className="text-muted-foreground">Status</div>
@@ -50,14 +55,19 @@ export const ProjectContextPanel = ({
           </div>
           <div>
             <div className="text-muted-foreground">Service</div>
-            <div className="font-medium">{getAgencyProjectTypeLabel(record.project_type)}</div>
+            <div className="font-medium">
+              {getAgencyProjectTypeLabel(record.project_type)}
+            </div>
           </div>
           <div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">Brief</span>
               <span>{briefProgress.percent}%</span>
             </div>
-            <BriefProgressBar percent={briefProgress.percent} className="mt-1" />
+            <BriefProgressBar
+              percent={briefProgress.percent}
+              className="mt-1"
+            />
           </div>
           {missingLogo ? (
             <Badge variant="outline" className="text-amber-700">
@@ -65,7 +75,9 @@ export const ProjectContextPanel = ({
             </Badge>
           ) : null}
           {typeof openTasks === "number" && openTasks > 0 ? (
-            <div className="text-muted-foreground">{openTasks} open task{openTasks === 1 ? "" : "s"}</div>
+            <div className="text-muted-foreground">
+              {openTasks} open task{openTasks === 1 ? "" : "s"}
+            </div>
           ) : null}
         </CardContent>
       </Card>
@@ -75,11 +87,18 @@ export const ProjectContextPanel = ({
           <CardTitle className="text-sm">Quick actions</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setSendOpen(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setSendOpen(true)}
+          >
             Request client assets
           </Button>
           <Button asChild type="button" variant="outline" size="sm">
-            <Link to={`/deals/${record.id}/show?tab=messages`}>Open messages</Link>
+            <Link to={`/deals/${record.id}/show?tab=messages`}>
+              Open messages
+            </Link>
           </Button>
         </CardContent>
       </Card>

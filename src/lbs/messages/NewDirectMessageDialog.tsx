@@ -37,7 +37,9 @@ export const NewDirectMessageDialog = ({
   const { identity } = useGetIdentity();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const scopeToProjects = shouldScopeMessagingToAssignedProjects(identity);
-  const [selectedMemberId, setSelectedMemberId] = useState<Identifier | null>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<Identifier | null>(
+    null,
+  );
   const [isCreating, setIsCreating] = useState(false);
   const { openDirectMessage } = useOpenDirectMessage();
 
@@ -117,33 +119,35 @@ export const NewDirectMessageDialog = ({
             </p>
           ) : (
             teammates.map((member) => {
-            const label =
-              `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim() ||
-              member.email ||
-              `Member #${member.id}`;
-            const isSelected = String(member.id) === String(selectedMemberId);
+              const label =
+                `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim() ||
+                member.email ||
+                `Member #${member.id}`;
+              const isSelected = String(member.id) === String(selectedMemberId);
 
-            return (
-              <button
-                key={String(member.id)}
-                type="button"
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-background ${
-                  isSelected ? "bg-background shadow-sm" : ""
-                }`}
-                onClick={() => setSelectedMemberId(member.id)}
-              >
-                <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold">
-                  {label
-                    .split(/\s+/)
-                    .slice(0, 2)
-                    .map((part) => part[0])
-                    .join("")
-                    .toUpperCase()}
-                </span>
-                <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
-              </button>
-            );
-          })
+              return (
+                <button
+                  key={String(member.id)}
+                  type="button"
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-background ${
+                    isSelected ? "bg-background shadow-sm" : ""
+                  }`}
+                  onClick={() => setSelectedMemberId(member.id)}
+                >
+                  <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold">
+                    {label
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")
+                      .toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {label}
+                  </span>
+                </button>
+              );
+            })
           )}
         </div>
         <DialogFooter>

@@ -112,7 +112,8 @@ export const buildCompanyPayloadFromUpsert = (
   input: LbsClientUpsertInput,
   existingLinks?: string[] | null,
 ) => {
-  const billingAddress: LbsBillingAddress | undefined = input.billing.sameAsBusiness
+  const billingAddress: LbsBillingAddress | undefined = input.billing
+    .sameAsBusiness
     ? undefined
     : {
         address: input.billing.address?.trim() || undefined,
@@ -124,7 +125,9 @@ export const buildCompanyPayloadFromUpsert = (
 
   const companyEmails = formValuesToEmailJsonb(input.business.emails);
   const companyPhones = formValuesToPhoneJsonb(input.business.phones);
-  const companySocialLinks = cleanSocialLinksForSave(input.business.socialLinks);
+  const companySocialLinks = cleanSocialLinksForSave(
+    input.business.socialLinks,
+  );
 
   return {
     name: input.business.name.trim(),
@@ -203,12 +206,18 @@ export const clientCreateFormValuesToUpsertInput = (
     address: values.company_same_as_primary_address
       ? values.primary_address
       : values.company_address,
-    city: values.company_same_as_primary_address ? undefined : values.company_city,
+    city: values.company_same_as_primary_address
+      ? undefined
+      : values.company_city,
     stateAbbr: values.company_same_as_primary_address
       ? undefined
       : values.company_state_abbr,
-    zipcode: values.company_same_as_primary_address ? undefined : values.company_zipcode,
-    country: values.company_same_as_primary_address ? undefined : values.company_country,
+    zipcode: values.company_same_as_primary_address
+      ? undefined
+      : values.company_zipcode,
+    country: values.company_same_as_primary_address
+      ? undefined
+      : values.company_country,
     notes: values.notes,
   },
   billing: {

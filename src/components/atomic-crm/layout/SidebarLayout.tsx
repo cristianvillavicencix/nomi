@@ -192,7 +192,6 @@ const SidebarNavigation = () => {
     resource: "reports",
   });
 
-
   const isActive = (pattern: string) => {
     if (pattern === "/") {
       return location.pathname === "/";
@@ -219,7 +218,9 @@ const SidebarNavigation = () => {
                       src={lightModeLogo}
                       alt={title}
                     />
-                    <span className="text-base font-semibold truncate">{title}</span>
+                    <span className="text-base font-semibold truncate">
+                      {title}
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -419,7 +420,6 @@ const SidebarNavigation = () => {
             </SidebarMenu>
           </SidebarGroup>
         ) : null}
-
       </SidebarContent>
       <SidebarFooter className="p-2 group-data-[collapsible=icon]:p-1">
         <SidebarFooterControls />
@@ -473,9 +473,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         <div
           className={cn(
             "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
-            isMessagesShell
-              ? "gap-2 p-2 pl-1"
-              : "gap-4 px-4 pt-4 pb-2",
+            isMessagesShell ? "gap-2 p-2 pl-1" : "gap-4 px-4 pt-4 pb-2",
           )}
         >
           {currentDealId ? (

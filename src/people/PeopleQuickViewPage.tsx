@@ -24,7 +24,10 @@ const titleByType: Record<PeopleQuickNavType, string> = {
   subcontractor: "Subcontractors",
 };
 
-const normalize = (value?: string | null) => String(value ?? "").trim().toLowerCase();
+const normalize = (value?: string | null) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
 
 const toQuickItem = (person: Person): PeopleQuickNavItem => {
   const displayName =
@@ -49,7 +52,11 @@ const toQuickItem = (person: Person): PeopleQuickNavItem => {
   };
 };
 
-const filterItems = (items: PeopleQuickNavItem[], term: string, type: PeopleQuickNavType) => {
+const filterItems = (
+  items: PeopleQuickNavItem[],
+  term: string,
+  type: PeopleQuickNavType,
+) => {
   const normalizedTerm = normalize(term);
   if (!normalizedTerm) return items;
 
@@ -101,7 +108,10 @@ export const PeopleQuickViewPage = ({ type }: PeopleQuickViewPageProps) => {
   );
 
   const items = useMemo(() => people.map(toQuickItem), [people]);
-  const filteredItems = useMemo(() => filterItems(items, query, type), [items, query, type]);
+  const filteredItems = useMemo(
+    () => filterItems(items, query, type),
+    [items, query, type],
+  );
   const itemIds = useMemo(() => new Set(items.map((item) => item.id)), [items]);
 
   const routeId = params.id ? String(params.id) : null;
@@ -116,7 +126,8 @@ export const PeopleQuickViewPage = ({ type }: PeopleQuickViewPageProps) => {
     }
     if (isPending || items.length === 0) return;
     const fallbackId =
-      (lastSelectedId && itemIds.has(lastSelectedId) ? lastSelectedId : null) ?? items[0]?.id;
+      (lastSelectedId && itemIds.has(lastSelectedId) ? lastSelectedId : null) ??
+      items[0]?.id;
     if (!fallbackId) return;
     navigate(buildPath(fallbackId, activeTab), { replace: true });
   }, [
@@ -134,7 +145,8 @@ export const PeopleQuickViewPage = ({ type }: PeopleQuickViewPageProps) => {
     if (!routeId || isPending || items.length === 0) return;
     if (itemIds.has(routeId)) return;
     const fallbackId =
-      (lastSelectedId && itemIds.has(lastSelectedId) ? lastSelectedId : null) ?? items[0]?.id;
+      (lastSelectedId && itemIds.has(lastSelectedId) ? lastSelectedId : null) ??
+      items[0]?.id;
     if (!fallbackId) return;
     navigate(buildPath(fallbackId, activeTab), { replace: true });
   }, [activeTab, isPending, itemIds, items, lastSelectedId, navigate, routeId]);

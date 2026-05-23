@@ -487,7 +487,10 @@ export const PaymentsListContent = ({
 
       {!embedded ? (
         <>
-          <Dialog open={registerPickerOpen} onOpenChange={setRegisterPickerOpen}>
+          <Dialog
+            open={registerPickerOpen}
+            onOpenChange={setRegisterPickerOpen}
+          >
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Elegir corrida de pago</DialogTitle>

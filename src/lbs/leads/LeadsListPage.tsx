@@ -18,10 +18,12 @@ import { Status } from "@/components/atomic-crm/misc/Status";
 import { cn } from "@/lib/utils";
 
 const getPrimaryPhone = (contact: Contact) =>
-  contact.phone_jsonb?.find((phone) => String(phone.number ?? "").trim())?.number ?? "—";
+  contact.phone_jsonb?.find((phone) => String(phone.number ?? "").trim())
+    ?.number ?? "—";
 
 const getPrimaryEmail = (contact: Contact) =>
-  contact.email_jsonb?.find((email) => String(email.email ?? "").trim())?.email ?? "—";
+  contact.email_jsonb?.find((email) => String(email.email ?? "").trim())
+    ?.email ?? "—";
 
 export const LeadsListPage = () => {
   const { identity } = useGetIdentity();

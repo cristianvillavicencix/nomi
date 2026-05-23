@@ -42,7 +42,9 @@ export const CalendarMonthGrid = ({
     const rows: Date[][] = [];
     for (let index = 0; index < days.length; index += 7) {
       rows.push(
-        days.slice(index, index + 7).filter((day) => isDayVisible(day, displayOptions)),
+        days
+          .slice(index, index + 7)
+          .filter((day) => isDayVisible(day, displayOptions)),
       );
     }
     return rows;
@@ -68,7 +70,10 @@ export const CalendarMonthGrid = ({
               const dateKey = toDateKey(day);
               const dayEvents = eventsByDate[dateKey] ?? [];
               const visibleEvents = dayEvents.slice(0, 3);
-              const hiddenCount = Math.max(dayEvents.length - visibleEvents.length, 0);
+              const hiddenCount = Math.max(
+                dayEvents.length - visibleEvents.length,
+                0,
+              );
               const inMonth = isSameMonth(day, anchor);
               const isToday = isSameDay(day, today);
 
@@ -79,7 +84,10 @@ export const CalendarMonthGrid = ({
                   tabIndex={0}
                   onClick={() => onSelectDay(dateKey)}
                   onKeyDown={(keyboardEvent) => {
-                    if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {
+                    if (
+                      keyboardEvent.key === "Enter" ||
+                      keyboardEvent.key === " "
+                    ) {
                       keyboardEvent.preventDefault();
                       onSelectDay(dateKey);
                     }
@@ -94,7 +102,8 @@ export const CalendarMonthGrid = ({
                     <span
                       className={cn(
                         "inline-flex size-6 items-center justify-center rounded-full text-xs",
-                        isToday && "bg-primary text-primary-foreground font-semibold",
+                        isToday &&
+                          "bg-primary text-primary-foreground font-semibold",
                       )}
                     >
                       {day.getDate()}

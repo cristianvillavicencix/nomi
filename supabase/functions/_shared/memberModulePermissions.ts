@@ -61,10 +61,13 @@ export function normalizeModulePermissions(
 }
 
 export function hasMemberCapability(
-  member: {
-    administrator?: boolean | null;
-    module_permissions?: unknown;
-  } | null | undefined,
+  member:
+    | {
+        administrator?: boolean | null;
+        module_permissions?: unknown;
+      }
+    | null
+    | undefined,
   capabilityId: string,
 ): boolean {
   if (!member) return false;

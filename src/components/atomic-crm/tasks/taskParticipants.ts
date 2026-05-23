@@ -51,7 +51,9 @@ export const buildDesiredTaskParticipants = (
 export const getTaskParticipantCount = (task: Task) => {
   const personIds = new Set<string>();
   (task.assignee_person_ids ?? []).forEach((id) => personIds.add(String(id)));
-  (task.collaborator_person_ids ?? []).forEach((id) => personIds.add(String(id)));
+  (task.collaborator_person_ids ?? []).forEach((id) =>
+    personIds.add(String(id)),
+  );
   const memberIds = new Set<string>();
   (task.mentioned_member_ids ?? []).forEach((id) => memberIds.add(String(id)));
   return personIds.size + memberIds.size;
@@ -108,7 +110,12 @@ export const syncTaskParticipants = async (
   await Promise.all(
     existing
       .filter((entry) => !desiredKeys.has(participantKey(entry)))
-      .map((entry) => dataProvider.delete("task_participants", { id: entry.id, previousData: entry })),
+      .map((entry) =>
+        dataProvider.delete("task_participants", {
+          id: entry.id,
+          previousData: entry,
+        }),
+      ),
   );
 
   await Promise.all(
@@ -143,7 +150,7 @@ export const recomputeTaskDoneDate = async (
     .sort()
     .at(-1);
   const nextDoneDate = allComplete
-    ? latestCompletion ?? task.done_date ?? new Date().toISOString()
+    ? (latestCompletion ?? task.done_date ?? new Date().toISOString())
     : null;
 
   if (Boolean(task.done_date) === Boolean(nextDoneDate)) {
@@ -186,7 +193,9 @@ export const toggleTaskParticipantCompletion = async (
   participant: TaskParticipant,
   participants: TaskParticipant[],
 ) => {
-  const nextCompletedAt = participant.completed_at ? null : new Date().toISOString();
+  const nextCompletedAt = participant.completed_at
+    ? null
+    : new Date().toISOString();
 
   await dataProvider.update("task_participants", {
     id: participant.id,

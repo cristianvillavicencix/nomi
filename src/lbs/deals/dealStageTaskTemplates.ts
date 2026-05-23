@@ -169,7 +169,10 @@ export const createStageTasksForDeal = async ({
   return templates.length;
 };
 
-export const getStageTasksCreatedMessage = (newStage: string, count: number) => {
+export const getStageTasksCreatedMessage = (
+  newStage: string,
+  count: number,
+) => {
   if (count === 0) return null;
   const label = getLbsProjectStageLabel(newStage);
   return `${count} task${count === 1 ? "" : "s"} added for ${label}`;

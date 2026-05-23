@@ -5,11 +5,11 @@ import {
   useNotify,
   useRecordContext,
   useRefresh,
-} from 'ra-core';
-import { ChevronLeft } from 'lucide-react';
-import { useNavigate } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+} from "ra-core";
+import { ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DateInput,
   Edit,
@@ -18,11 +18,15 @@ import {
   SelectInput,
   SimpleForm,
   TextInput,
-} from '@/components/admin';
-import type { CrmDataProvider } from '@/components/atomic-crm/providers/types';
-import type { PayrollRun, PayrollRunLine, Person } from '@/components/atomic-crm/types';
-import { PayrollRunHeaderBadges } from './payrollRunUi';
-import { PayrollRunLinesTableForData } from './PayrollRunLinesTable';
+} from "@/components/admin";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import type {
+  PayrollRun,
+  PayrollRunLine,
+  Person,
+} from "@/components/atomic-crm/types";
+import { PayrollRunHeaderBadges } from "./payrollRunUi";
+import { PayrollRunLinesTableForData } from "./PayrollRunLinesTable";
 
 const GenerateLinesButton = () => {
   const record = useRecordContext();
@@ -39,10 +43,14 @@ const GenerateLinesButton = () => {
       onClick={async () => {
         try {
           const created = await dataProvider.generatePayrollRun(record.id);
-          notify(`Payroll refreshed from current hours and loans (${created ?? 0} lines)`);
+          notify(
+            `Payroll refreshed from current hours and loans (${created ?? 0} lines)`,
+          );
           refresh();
         } catch {
-          notify('Could not refresh payroll from current hours and loans', { type: 'error' });
+          notify("Could not refresh payroll from current hours and loans", {
+            type: "error",
+          });
         }
       }}
     >
@@ -62,17 +70,17 @@ const PayrollRunLinesSection = () => {
   const record = useRecordContext<PayrollRun>();
   const navigate = useNavigate();
   const { data: lines = [], isPending } = useGetList<PayrollRunLine>(
-    'payroll_run_lines',
+    "payroll_run_lines",
     {
       pagination: { page: 1, perPage: 1000 },
-      sort: { field: 'id', order: 'ASC' },
+      sort: { field: "id", order: "ASC" },
       filter: { payroll_run_id: record?.id },
     },
     { enabled: Boolean(record?.id) },
   );
   const { data: employee } = useGetOne<Person>(
-    'people',
-    { id: record?.employee_id ?? '' },
+    "people",
+    { id: record?.employee_id ?? "" },
     { enabled: Boolean(record?.employee_id) },
   );
 
@@ -85,7 +93,7 @@ const PayrollRunLinesSection = () => {
           type="button"
           variant="ghost"
           className="-ml-3 h-8 px-2"
-          onClick={() => navigate('/payroll_runs')}
+          onClick={() => navigate("/payroll_runs")}
         >
           <ChevronLeft className="mr-2 h-4 w-4" />
           Regresar
@@ -100,7 +108,7 @@ const PayrollRunLinesSection = () => {
                 ? employee
                   ? `${employee.first_name} ${employee.last_name}`
                   : `Employee #${record.employee_id}`
-                : 'All employees'
+                : "All employees"
             }
           />
         </CardContent>
@@ -116,20 +124,20 @@ export const PayrollRunsEdit = () => (
       <SelectInput
         source="category"
         choices={[
-          { id: 'hourly', name: 'Hourly Staff' },
-          { id: 'salaried', name: 'Salaried Staff' },
-          { id: 'subcontractor', name: 'Subcontractors' },
-          { id: 'sales_commissions', name: 'Sales Commissions' },
-          { id: 'mixed', name: 'Mixed' },
+          { id: "hourly", name: "Hourly Staff" },
+          { id: "salaried", name: "Salaried Staff" },
+          { id: "subcontractor", name: "Subcontractors" },
+          { id: "sales_commissions", name: "Sales Commissions" },
+          { id: "mixed", name: "Mixed" },
         ]}
       />
       <SelectInput
         source="pay_schedule"
         choices={[
-          { id: 'weekly', name: 'Weekly' },
-          { id: 'biweekly', name: 'Biweekly' },
-          { id: 'semimonthly', name: 'Semi-Monthly' },
-          { id: 'monthly', name: 'Monthly' },
+          { id: "weekly", name: "Weekly" },
+          { id: "biweekly", name: "Biweekly" },
+          { id: "semimonthly", name: "Semi-Monthly" },
+          { id: "monthly", name: "Monthly" },
         ]}
       />
       <DateInput source="pay_period_start" />

@@ -93,7 +93,12 @@ export const SendProjectResourcesDialog = ({
             <Label>Upload link</Label>
             <div className="flex gap-2">
               <Input readOnly value={formUrl} />
-              <Button type="button" variant="outline" size="icon" onClick={handleCopy}>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleCopy}
+              >
                 <Copy className="size-4" />
                 <span className="sr-only">Copy link</span>
               </Button>

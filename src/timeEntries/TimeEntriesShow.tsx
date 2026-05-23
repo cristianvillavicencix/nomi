@@ -54,7 +54,9 @@ const TimeEntriesShowContent = () => {
 
   if (isPending || !record) return null;
 
-  const personName = [person?.first_name, person?.last_name].filter(Boolean).join(" ");
+  const personName = [person?.first_name, person?.last_name]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="space-y-4">
@@ -62,7 +64,13 @@ const TimeEntriesShowContent = () => {
         <h1 className="text-2xl font-semibold">Time Entry</h1>
         {record.status !== "paid" ? (
           <Button asChild>
-            <Link to={createPath({ resource: "time_entries", id: record.id, type: "edit" })}>
+            <Link
+              to={createPath({
+                resource: "time_entries",
+                id: record.id,
+                type: "edit",
+              })}
+            >
               Edit time entry
             </Link>
           </Button>
@@ -89,9 +97,18 @@ const TimeEntriesShowContent = () => {
           />
           <Row label="End time" value={formatTime(record.end_time)} />
           <Row label="Hours" value={Number(record.hours ?? 0).toFixed(2)} />
-          <Row label="Payable hours" value={Number(record.payable_hours ?? 0).toFixed(2)} />
-          <Row label="Regular hours" value={Number(record.regular_hours ?? 0).toFixed(2)} />
-          <Row label="Overtime hours" value={Number(record.overtime_hours ?? 0).toFixed(2)} />
+          <Row
+            label="Payable hours"
+            value={Number(record.payable_hours ?? 0).toFixed(2)}
+          />
+          <Row
+            label="Regular hours"
+            value={Number(record.regular_hours ?? 0).toFixed(2)}
+          />
+          <Row
+            label="Overtime hours"
+            value={Number(record.overtime_hours ?? 0).toFixed(2)}
+          />
           <Row label="Status" value={record.status} />
           <Row label="Day type" value={record.day_type ?? "—"} />
           <Row label="Notes" value={record.notes || "—"} />

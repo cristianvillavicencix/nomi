@@ -1,16 +1,17 @@
 import type { Identifier } from "ra-core";
-import type { OrganizationMember, Person, Task } from "@/components/atomic-crm/types";
+import type {
+  OrganizationMember,
+  Person,
+  Task,
+} from "@/components/atomic-crm/types";
 import { getPersonName } from "@/components/atomic-crm/tasks/taskPeopleOptions";
 
 /** Stored tokens: @[Name](person:42) or @[Name](member:5) */
-export const TASK_PERSON_MENTION_REGEX =
-  /@\[([^\]]+)\]\(person:(\d+)\)/g;
+export const TASK_PERSON_MENTION_REGEX = /@\[([^\]]+)\]\(person:(\d+)\)/g;
 
-export const TASK_MEMBER_MENTION_REGEX =
-  /@\[([^\]]+)\]\(member:(\d+)\)/g;
+export const TASK_MEMBER_MENTION_REGEX = /@\[([^\]]+)\]\(member:(\d+)\)/g;
 
-export const TASK_ANY_MENTION_REGEX =
-  /@\[([^\]]+)\]\((person|member):(\d+)\)/g;
+export const TASK_ANY_MENTION_REGEX = /@\[([^\]]+)\]\((person|member):(\d+)\)/g;
 
 export const buildTaskPersonMentionToken = (
   person: Pick<Person, "id" | "first_name" | "last_name">,
@@ -19,7 +20,9 @@ export const buildTaskPersonMentionToken = (
 export const buildTaskMemberMentionToken = (
   member: Pick<OrganizationMember, "id" | "first_name" | "last_name">,
 ) => {
-  const name = [member.first_name, member.last_name].filter(Boolean).join(" ") || "Team member";
+  const name =
+    [member.first_name, member.last_name].filter(Boolean).join(" ") ||
+    "Team member";
   return `@[${name}](member:${member.id})`;
 };
 
@@ -52,7 +55,8 @@ export const getMentionQueryAtCursor = (text: string, cursor: number) => {
   if (atIndex === -1) return null;
 
   const segment = beforeCursor.slice(atIndex);
-  if (segment.includes("](person:") || segment.includes("](member:")) return null;
+  if (segment.includes("](person:") || segment.includes("](member:"))
+    return null;
 
   const rawQuery = beforeCursor.slice(atIndex + 1);
   if (rawQuery.includes("\n") || rawQuery.includes(" ")) return null;
@@ -79,7 +83,12 @@ export const insertTaskPersonMention = (
   mentionStart: number,
   person: Pick<Person, "id" | "first_name" | "last_name">,
 ) =>
-  insertTaskMentionToken(text, cursor, mentionStart, buildTaskPersonMentionToken(person));
+  insertTaskMentionToken(
+    text,
+    cursor,
+    mentionStart,
+    buildTaskPersonMentionToken(person),
+  );
 
 export const insertTaskMemberMention = (
   text: string,
@@ -87,14 +96,21 @@ export const insertTaskMemberMention = (
   mentionStart: number,
   member: Pick<OrganizationMember, "id" | "first_name" | "last_name">,
 ) =>
-  insertTaskMentionToken(text, cursor, mentionStart, buildTaskMemberMentionToken(member));
+  insertTaskMentionToken(
+    text,
+    cursor,
+    mentionStart,
+    buildTaskMemberMentionToken(member),
+  );
 
 export type TaskMentionSegment =
   | { type: "text"; value: string }
   | { type: "person"; name: string; id: Identifier }
   | { type: "member"; name: string; id: Identifier };
 
-export const parseTaskMentionSegments = (text?: string | null): TaskMentionSegment[] => {
+export const parseTaskMentionSegments = (
+  text?: string | null,
+): TaskMentionSegment[] => {
   if (!text) return [];
 
   const segments: TaskMentionSegment[] = [];
@@ -128,7 +144,10 @@ export const buildLegacyTaskMentionPrefix = ({
 }: {
   assigneePersonIds?: Identifier[];
   collaboratorPersonIds?: Identifier[];
-  organizationMember?: Pick<OrganizationMember, "id" | "first_name" | "last_name" | "email"> | null;
+  organizationMember?: Pick<
+    OrganizationMember,
+    "id" | "first_name" | "last_name" | "email"
+  > | null;
   peopleById: Record<string, Person>;
 }) => {
   const tokens: string[] = [];
@@ -148,7 +167,9 @@ export const buildLegacyTaskMentionPrefix = ({
 
   if (tokens.length === 0 && organizationMember) {
     tokens.push(buildTaskMemberMentionToken(organizationMember));
-    mentionedMemberIds = [Number(organizationMember.id)].filter(Number.isFinite);
+    mentionedMemberIds = [Number(organizationMember.id)].filter(
+      Number.isFinite,
+    );
   }
 
   return {
@@ -188,7 +209,7 @@ export const migrateLegacyTaskRecord = (
     mentioned_member_ids:
       mentionedMemberIds.length > 0
         ? mentionedMemberIds
-        : task.mentioned_member_ids ?? [],
+        : (task.mentioned_member_ids ?? []),
   };
 };
 

@@ -43,7 +43,10 @@ export const WebFormFieldsEditor = () => {
 
       <div className="space-y-3">
         {fields.map((field, index) => (
-          <div key={`${field.key}-${index}`} className="space-y-3 rounded-md border p-3">
+          <div
+            key={`${field.key}-${index}`}
+            className="space-y-3 rounded-md border p-3"
+          >
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor={`field-label-${index}`}>Label</Label>
@@ -124,7 +127,9 @@ export const WebFormFieldsEditor = () => {
                 size="sm"
                 className="ml-auto text-destructive hover:text-destructive"
                 disabled={fields.length <= 1}
-                onClick={() => updateFields(fields.filter((_, i) => i !== index))}
+                onClick={() =>
+                  updateFields(fields.filter((_, i) => i !== index))
+                }
               >
                 <Trash2 className="mr-1 size-4" />
                 Remove

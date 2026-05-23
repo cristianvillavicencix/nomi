@@ -148,19 +148,25 @@ export const useImportFromJson = (): [
     ) => {
       try {
         if (!isOrganizationMemberRow(dataToImport)) {
-          throw new Error(`Error while importing organization member: Invalid data`);
+          throw new Error(
+            `Error while importing organization member: Invalid data`,
+          );
         }
         const saleEmail = dataToImport.email.trim();
         if (!isValidEmail(saleEmail)) {
           throw new Error(`Invalid email: ${saleEmail}`);
         }
-        const existingRecordResponse = await dataProvider.getList("organization_members", {
-          filter: { email: saleEmail },
-          pagination: { page: 1, perPage: 1 },
-          sort: { field: "id", order: "ASC" },
-        });
+        const existingRecordResponse = await dataProvider.getList(
+          "organization_members",
+          {
+            filter: { email: saleEmail },
+            pagination: { page: 1, perPage: 1 },
+            sort: { field: "id", order: "ASC" },
+          },
+        );
         if (existingRecordResponse.total === 1) {
-          idsMaps.organizationMembers[dataToImport.id] = existingRecordResponse.data[0].id;
+          idsMaps.organizationMembers[dataToImport.id] =
+            existingRecordResponse.data[0].id;
           return existingRecordResponse.data[0].id;
         }
 
@@ -179,7 +185,8 @@ export const useImportFromJson = (): [
               ...old,
               stats: {
                 ...(old.stats ?? defaultStats),
-                organizationMembers: (old.stats ?? defaultStats).organizationMembers + 1,
+                organizationMembers:
+                  (old.stats ?? defaultStats).organizationMembers + 1,
               },
             };
           }
@@ -188,7 +195,8 @@ export const useImportFromJson = (): [
             status: "importing",
             stats: {
               ...(old.stats ?? defaultStats),
-              organizationMembers: (old.stats ?? defaultStats).organizationMembers + 1,
+              organizationMembers:
+                (old.stats ?? defaultStats).organizationMembers + 1,
             },
             error: null,
           };
@@ -466,7 +474,10 @@ export const useImportFromJson = (): [
         return;
       }
       try {
-        if (idsMaps.organizationMembers[dataToImport.organization_member_id] == null) {
+        if (
+          idsMaps.organizationMembers[dataToImport.organization_member_id] ==
+          null
+        ) {
           console.error(
             `note ${dataToImport.text} has an invalid organization_member_id: ${dataToImport.organization_member_id}. Fallback to current user`,
           );
@@ -511,7 +522,10 @@ export const useImportFromJson = (): [
         await dataProvider.create("contact_notes", {
           data: {
             contact_id: idsMaps.contacts[dataToImport.contact_id],
-            organization_member_id: idsMaps.organizationMembers[dataToImport.organization_member_id] ?? currentSale.id,
+            organization_member_id:
+              idsMaps.organizationMembers[
+                dataToImport.organization_member_id
+              ] ?? currentSale.id,
             text: dataToImport.text,
             date: dataToImport.date,
             attachments,
@@ -562,7 +576,10 @@ export const useImportFromJson = (): [
         return;
       }
       try {
-        if (idsMaps.organizationMembers[dataToImport.organization_member_id] == null) {
+        if (
+          idsMaps.organizationMembers[dataToImport.organization_member_id] ==
+          null
+        ) {
           console.error(
             `task ${dataToImport.text} has an invalid organization_member_id: ${dataToImport.organization_member_id}. Fallback to current user`,
           );
@@ -589,7 +606,10 @@ export const useImportFromJson = (): [
         await dataProvider.create("tasks", {
           data: {
             contact_id: idsMaps.contacts[dataToImport.contact_id],
-            organization_member_id: idsMaps.organizationMembers[dataToImport.organization_member_id] ?? currentSale.id,
+            organization_member_id:
+              idsMaps.organizationMembers[
+                dataToImport.organization_member_id
+              ] ?? currentSale.id,
             text: dataToImport.text,
             due_date: dataToImport.due_date || undefined,
             done_date: dataToImport.done_date || undefined,
@@ -718,7 +738,13 @@ export const useImportFromJson = (): [
   return [state, importFile, reset];
 };
 
-const TYPES = ["organization_members", "companies", "contacts", "notes", "tasks"] as const;
+const TYPES = [
+  "organization_members",
+  "companies",
+  "contacts",
+  "notes",
+  "tasks",
+] as const;
 type Types = (typeof TYPES)[number];
 
 const getType = (value: string | undefined): Types | undefined => {

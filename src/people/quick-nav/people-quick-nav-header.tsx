@@ -36,7 +36,13 @@ export const PeopleQuickNavHeader = ({
 
   return (
     <div className="space-y-3">
-      <Button type="button" variant="ghost" size="sm" className="h-8 gap-2 px-2" onClick={onBack}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-2 px-2"
+        onClick={onBack}
+      >
         <ChevronLeft className="h-4 w-4" />
         Regresar
       </Button>

@@ -139,7 +139,9 @@ const ProfileForm = ({
 
     try {
       setPasswordSaving(true);
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
       if (error) {
         throw error;
       }

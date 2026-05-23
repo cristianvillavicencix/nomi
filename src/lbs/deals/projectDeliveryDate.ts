@@ -1,4 +1,10 @@
-import { differenceInCalendarDays, format, isValid, parseISO, startOfToday } from "date-fns";
+import {
+  differenceInCalendarDays,
+  format,
+  isValid,
+  parseISO,
+  startOfToday,
+} from "date-fns";
 
 export type ProjectDeliveryStatus =
   | "none"
@@ -86,9 +92,14 @@ export const getProjectDeliveryCountdown = (
 export const getProjectDeliveryCountdownClassName = (
   deliveryDate?: string | null,
   options?: { stage?: string },
-) => getProjectDeliveryUrgencyClassName(getProjectDeliveryUrgency(deliveryDate, options));
+) =>
+  getProjectDeliveryUrgencyClassName(
+    getProjectDeliveryUrgency(deliveryDate, options),
+  );
 
-export const getProjectDeliveryUrgencyClassName = (urgency: ProjectDeliveryUrgency) => {
+export const getProjectDeliveryUrgencyClassName = (
+  urgency: ProjectDeliveryUrgency,
+) => {
   switch (urgency) {
     case "delivered":
       return "text-emerald-700 font-medium dark:text-emerald-400";
@@ -109,6 +120,8 @@ export const getProjectDeliveryUrgencyClassName = (urgency: ProjectDeliveryUrgen
   }
 };
 
-export const getProjectDeliveryUrgencyStyles = (urgency: ProjectDeliveryUrgency) => ({
+export const getProjectDeliveryUrgencyStyles = (
+  urgency: ProjectDeliveryUrgency,
+) => ({
   countdown: getProjectDeliveryUrgencyClassName(urgency),
 });

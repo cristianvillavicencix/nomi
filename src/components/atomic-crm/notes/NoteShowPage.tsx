@@ -77,7 +77,11 @@ export const NoteShowPage = () => {
                 reference="organization_members"
                 link={false}
               >
-                <WithRecord render={(record) => <OrganizationMemberName member={record} />} />
+                <WithRecord
+                  render={(record) => (
+                    <OrganizationMemberName member={record} />
+                  )}
+                />
               </ReferenceField>
             </span>
             {note.status && <Status status={note.status} />}

@@ -26,7 +26,9 @@ export const TaskNotificationsBanner = () => {
   const taskIds = useMemo(
     () =>
       Array.from(
-        new Set(notifications.map((entry) => String(entry.task_id)).filter(Boolean)),
+        new Set(
+          notifications.map((entry) => String(entry.task_id)).filter(Boolean),
+        ),
       ),
     [notifications],
   );
@@ -35,14 +37,18 @@ export const TaskNotificationsBanner = () => {
     "tasks",
     {
       filter:
-        taskIds.length > 0 ? { "id@in": `(${taskIds.join(",")})` } : { "id@eq": -1 },
+        taskIds.length > 0
+          ? { "id@in": `(${taskIds.join(",")})` }
+          : { "id@eq": -1 },
       pagination: { page: 1, perPage: taskIds.length || 1 },
       sort: { field: "id", order: "ASC" },
     },
     { enabled: taskIds.length > 0, staleTime: 15_000 },
   );
 
-  const tasksById = Object.fromEntries(tasks.map((task) => [String(task.id), task]));
+  const tasksById = Object.fromEntries(
+    tasks.map((task) => [String(task.id), task]),
+  );
   const [update] = useUpdate();
 
   if (notifications.length === 0) return null;

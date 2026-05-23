@@ -13,7 +13,11 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Contact, Deal, OrganizationMember } from "../types";
 import { getStageColor, getStageLabel } from "./pipelines";
 
-export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string }) => {
+export const DealsExplorerPanel = ({
+  currentDealId,
+}: {
+  currentDealId: string;
+}) => {
   const config = useConfigurationContext();
   const [query, setQuery] = useState("");
   const [minimized, setMinimized] = useStore<boolean>(
@@ -37,8 +41,9 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
         new Set(
           deals
             .map((deal) => deal.organization_member_id)
-            .filter((salesId): salesId is NonNullable<typeof salesId> =>
-              salesId != null,
+            .filter(
+              (salesId): salesId is NonNullable<typeof salesId> =>
+                salesId != null,
             ),
         ),
       ),
@@ -51,8 +56,9 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
         new Set(
           deals
             .map((deal) => deal.contact_ids?.[0])
-            .filter((contactId): contactId is NonNullable<typeof contactId> =>
-              contactId != null,
+            .filter(
+              (contactId): contactId is NonNullable<typeof contactId> =>
+                contactId != null,
             ),
         ),
       ),
@@ -75,14 +81,19 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
     [sales],
   );
   const contactsById = useMemo(
-    () => Object.fromEntries(contacts.map((contact) => [String(contact.id), contact])),
+    () =>
+      Object.fromEntries(
+        contacts.map((contact) => [String(contact.id), contact]),
+      ),
     [contacts],
   );
 
   const filteredDeals = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return deals;
-    return deals.filter((deal) => (deal.name || "").toLowerCase().includes(term));
+    return deals.filter((deal) =>
+      (deal.name || "").toLowerCase().includes(term),
+    );
   }, [deals, query]);
 
   const currencyFormatter = useMemo(
@@ -150,13 +161,23 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
             <Skeleton className="h-20 w-full" />
           </div>
         ) : filteredDeals.length === 0 ? (
-          <div className="p-3 text-sm text-muted-foreground">No projects found.</div>
+          <div className="p-3 text-sm text-muted-foreground">
+            No projects found.
+          </div>
         ) : (
           <div className="p-2 space-y-1.5">
             {filteredDeals.map((deal) => {
               const isCurrent = String(deal.id) === String(currentDealId);
-              const stageLabel = getStageLabel(config, deal.stage, deal.pipeline_id);
-              const stageColor = getStageColor(config, deal.stage, deal.pipeline_id);
+              const stageLabel = getStageLabel(
+                config,
+                deal.stage,
+                deal.pipeline_id,
+              );
+              const stageColor = getStageColor(
+                config,
+                deal.stage,
+                deal.pipeline_id,
+              );
               const updatedDate = deal.updated_at
                 ? format(new Date(deal.updated_at), "MMM d, yyyy")
                 : "—";
@@ -172,7 +193,9 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
                 ? salesById[String(deal.organization_member_id)]
                 : undefined;
               const managerName = manager
-                ? [manager.first_name, manager.last_name].filter(Boolean).join(" ")
+                ? [manager.first_name, manager.last_name]
+                    .filter(Boolean)
+                    .join(" ")
                 : "—";
 
               return (
@@ -204,7 +227,9 @@ export const DealsExplorerPanel = ({ currentDealId }: { currentDealId: string })
                     <div className="text-xs text-muted-foreground truncate">
                       Owner: {ownerName}
                     </div>
-                    <div className="text-xs text-muted-foreground shrink-0">{updatedDate}</div>
+                    <div className="text-xs text-muted-foreground shrink-0">
+                      {updatedDate}
+                    </div>
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <div className="text-xs text-muted-foreground truncate">

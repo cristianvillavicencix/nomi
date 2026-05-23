@@ -32,7 +32,7 @@ export const NoteCreate = ({
   const { identity } = useGetIdentity();
   const resource = reference === "contacts" ? "contact_notes" : "deal_notes";
   const referenceRecordId =
-    reference === "contacts" ? contactId ?? record?.id : record?.id;
+    reference === "contacts" ? (contactId ?? record?.id) : record?.id;
 
   if (!referenceRecordId || !identity) return null;
 

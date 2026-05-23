@@ -18,7 +18,11 @@ import {
 import { Status } from "@/components/atomic-crm/misc/Status";
 import { getCompanyAvatarFallback } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { getCompanyFaviconSrc } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
-import { AvatarFallback, AvatarImage, Avatar as UiAvatar } from "@/components/ui/avatar";
+import {
+  AvatarFallback,
+  AvatarImage,
+  Avatar as UiAvatar,
+} from "@/components/ui/avatar";
 import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
 import {
   formatClientHeaderAddress,
@@ -43,7 +47,10 @@ type ClientProfileHeaderProps = {
   onAddContact: () => void;
 };
 
-export const ClientProfileHeader = ({ record, onAddContact }: ClientProfileHeaderProps) => {
+export const ClientProfileHeader = ({
+  record,
+  onAddContact,
+}: ClientProfileHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const notify = useNotify();
@@ -61,8 +68,12 @@ export const ClientProfileHeader = ({ record, onAddContact }: ClientProfileHeade
   const contactEmail = getPrimaryContactEmailFromContact(primaryContact);
   const allEmails = collectClientEmails(record, primaryContact);
   const displayEmail =
-    contactEmail !== "—" ? contactEmail : allEmails[0]?.email ?? "";
-  const extraEmails = getExtraClientEmails(record, primaryContact, displayEmail || undefined);
+    contactEmail !== "—" ? contactEmail : (allEmails[0]?.email ?? "");
+  const extraEmails = getExtraClientEmails(
+    record,
+    primaryContact,
+    displayEmail || undefined,
+  );
   const phone = getPrimaryContactPhone(record);
   const businessSocialLinks = collectBusinessSocialLinks(record);
   const address = formatClientHeaderAddress(record, primaryContact?.address);

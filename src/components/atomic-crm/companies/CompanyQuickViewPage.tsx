@@ -2,11 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { ShowBase, useGetList, useStore } from "ra-core";
 import { useNavigate, useParams } from "react-router";
 import type { Company } from "../types";
-import { QuickMasterDetailLayout, type QuickNavItem } from "../layout/QuickMasterDetailLayout";
+import {
+  QuickMasterDetailLayout,
+  type QuickNavItem,
+} from "../layout/QuickMasterDetailLayout";
 import { CompanyShowContent } from "./CompanyShow";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 
-const normalize = (value?: string | null) => String(value ?? "").trim().toLowerCase();
+const normalize = (value?: string | null) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
 
 export const CompanyQuickViewPage = () => {
   const navigate = useNavigate();
@@ -34,7 +40,9 @@ export const CompanyQuickViewPage = () => {
   const items = useMemo<QuickNavItem[]>(
     () =>
       companies.map((company) => {
-        const sectorLabel = companySectors.find((item) => item.value === company.sector)?.label;
+        const sectorLabel = companySectors.find(
+          (item) => item.value === company.sector,
+        )?.label;
         return {
           id: String(company.id),
           title: company.name ?? "Unnamed company",
@@ -49,7 +57,9 @@ export const CompanyQuickViewPage = () => {
     const term = normalize(query);
     if (!term) return items;
     return items.filter((item) =>
-      [item.title, item.subtitle, item.meta].some((field) => normalize(field).includes(term)),
+      [item.title, item.subtitle, item.meta].some((field) =>
+        normalize(field).includes(term),
+      ),
     );
   }, [items, query]);
 
@@ -63,10 +73,19 @@ export const CompanyQuickViewPage = () => {
     }
     if (isPending || items.length === 0) return;
     const fallbackId =
-      (lastSelectedId && itemIds.has(lastSelectedId) ? lastSelectedId : null) ?? items[0]?.id;
+      (lastSelectedId && itemIds.has(lastSelectedId) ? lastSelectedId : null) ??
+      items[0]?.id;
     if (!fallbackId) return;
     navigate(`/companies/${fallbackId}/show`, { replace: true });
-  }, [selectedId, isPending, items, itemIds, lastSelectedId, navigate, setLastSelectedId]);
+  }, [
+    selectedId,
+    isPending,
+    items,
+    itemIds,
+    lastSelectedId,
+    navigate,
+    setLastSelectedId,
+  ]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">

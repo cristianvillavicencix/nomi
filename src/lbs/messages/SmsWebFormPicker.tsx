@@ -48,7 +48,11 @@ export const SmsWebFormPicker = ({
       forms
         .map((form) => {
           if (!form.slug) return null;
-          const url = buildWebFormShareUrl(window.location.origin, form.slug, shareParams);
+          const url = buildWebFormShareUrl(
+            window.location.origin,
+            form.slug,
+            shareParams,
+          );
           if (!url) return null;
           return { form, url };
         })

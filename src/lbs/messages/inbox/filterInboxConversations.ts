@@ -1,6 +1,9 @@
 import type { Identifier } from "ra-core";
 import type { Conversation, ConversationParticipant } from "@/lbs/types";
-import type { InboxFilterState, InboxTab } from "@/lbs/messages/messagesHubTypes";
+import type {
+  InboxFilterState,
+  InboxTab,
+} from "@/lbs/messages/messagesHubTypes";
 import { isConversationUnread } from "@/lbs/messages/messagesUnreadUtils";
 
 export const filterInboxConversations = (
@@ -17,7 +20,11 @@ export const filterInboxConversations = (
 
   return conversations.filter((conversation) => {
     if (tab === "sms" && conversation.type !== "client") return false;
-    if (tab === "team" && conversation.type !== "team_dm" && conversation.type !== "project") {
+    if (
+      tab === "team" &&
+      conversation.type !== "team_dm" &&
+      conversation.type !== "project"
+    ) {
       return false;
     }
     if (tab === "mine") {
@@ -29,16 +36,23 @@ export const filterInboxConversations = (
         String(conversation.created_by_member_id) === String(currentMemberId);
       if (!isAssignee && !isCreator) return false;
     }
-    if (tab === "unread" && !isConversationUnread(conversation, participations)) {
+    if (
+      tab === "unread" &&
+      !isConversationUnread(conversation, participations)
+    ) {
       return false;
     }
 
-    if (filters.status !== "all" && (conversation.status ?? "open") !== filters.status) {
+    if (
+      filters.status !== "all" &&
+      (conversation.status ?? "open") !== filters.status
+    ) {
       return false;
     }
 
     if (filters.assigneeMemberId === "mine") {
-      if (String(conversation.assignee_member_id) !== String(currentMemberId)) return false;
+      if (String(conversation.assignee_member_id) !== String(currentMemberId))
+        return false;
     } else if (
       filters.assigneeMemberId !== "all" &&
       String(conversation.assignee_member_id) !== filters.assigneeMemberId

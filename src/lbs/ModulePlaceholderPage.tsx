@@ -20,7 +20,9 @@ export const ModulePlaceholderPage = ({
         </div>
         <div>
           <CardTitle>{title}</CardTitle>
-          <p className="text-sm text-muted-foreground">Coming in Phase {phase}</p>
+          <p className="text-sm text-muted-foreground">
+            Coming in Phase {phase}
+          </p>
         </div>
       </CardHeader>
       <CardContent>

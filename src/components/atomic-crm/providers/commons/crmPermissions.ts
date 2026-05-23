@@ -4,7 +4,11 @@ import {
   hasCapability,
   resolveEffectivePermissions,
 } from "@/lib/permissions/permissionCatalog";
-import { getAccessRoles, type AccessIdentity, type AccessRole } from "./canAccess";
+import {
+  getAccessRoles,
+  type AccessIdentity,
+  type AccessRole,
+} from "./canAccess";
 import { resolveEffectiveModules } from "./memberModuleAccess";
 
 export type CrmPermission =
@@ -25,11 +29,12 @@ export type CrmMutationAction = "create" | "update" | "delete";
 const hasRole = (roles: AccessRole[], expected: AccessRole[]) =>
   expected.some((role) => roles.includes(role));
 
-const MUTATION_ACTION_TO_CAPABILITY_ACTION: Record<CrmMutationAction, string> = {
-  create: "create",
-  update: "edit",
-  delete: "delete",
-};
+const MUTATION_ACTION_TO_CAPABILITY_ACTION: Record<CrmMutationAction, string> =
+  {
+    create: "create",
+    update: "edit",
+    delete: "delete",
+  };
 
 const DEAL_FIN_RESOURCES = new Set([
   "deal_expenses",
@@ -115,11 +120,15 @@ export const canUseCrmPermission = (
   }
 
   const idObj =
-    identity && typeof identity === "object" ? (identity as AccessIdentity) : undefined;
+    identity && typeof identity === "object"
+      ? (identity as AccessIdentity)
+      : undefined;
 
   if (idObj && isLbsMode() && mutationResource) {
     const action =
-      permission === "sales.manage" || permission === "people.manage" ? "edit" : "list";
+      permission === "sales.manage" || permission === "people.manage"
+        ? "edit"
+        : "list";
     const catalogHit = canMutateViaCatalog(
       idObj,
       mutationResource,
@@ -175,7 +184,8 @@ const getMutationPermission = (
     resource === "employee_loans" ||
     resource === "employee_loan_deductions"
   ) {
-    if (action === "update" && data?.status === "approved") return "payments.approve";
+    if (action === "update" && data?.status === "approved")
+      return "payments.approve";
     if (action === "update" && data?.status === "paid") return "payments.pay";
     return "payments.manage";
   }
@@ -185,7 +195,8 @@ const getMutationPermission = (
   }
 
   if (resource === "time_entries") {
-    if (action === "update" && data?.status === "approved") return "hours.approve";
+    if (action === "update" && data?.status === "approved")
+      return "hours.approve";
     return "hours.manage";
   }
 
@@ -194,7 +205,12 @@ const getMutationPermission = (
   }
 
   if (isLbsMode()) {
-    if (getCapabilityForResourceAction(resource, MUTATION_ACTION_TO_CAPABILITY_ACTION[action])) {
+    if (
+      getCapabilityForResourceAction(
+        resource,
+        MUTATION_ACTION_TO_CAPABILITY_ACTION[action],
+      )
+    ) {
       return "sales.manage";
     }
     return null;

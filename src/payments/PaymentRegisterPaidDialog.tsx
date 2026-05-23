@@ -131,8 +131,8 @@ export function PaymentRegisterPaidDialog({
           <DialogTitle>Aprobar pago</DialogTitle>
           <DialogDescription className="text-left">
             Sube <strong>una imagen del comprobante</strong> para completar el
-            pago (vale para toda la corrida; incluye a todas las personas de este
-            batch).
+            pago (vale para toda la corrida; incluye a todas las personas de
+            este batch).
             {contextHint ? (
               <span className="mt-2 block text-foreground">{contextHint}</span>
             ) : null}

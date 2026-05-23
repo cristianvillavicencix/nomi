@@ -167,7 +167,11 @@ export const CompanyShowContent = () => {
               <CompanyAvatar />
               <h5 className="text-xl ml-2 flex-1">{record.name}</h5>
             </div>
-            <Tabs defaultValue={currentTab} onValueChange={handleTabChange} className="flex min-h-0 flex-col">
+            <Tabs
+              defaultValue={currentTab}
+              onValueChange={handleTabChange}
+              className="flex min-h-0 flex-col"
+            >
               <StickyTabsBar className="pb-2">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="activity">Activity</TabsTrigger>
@@ -205,7 +209,9 @@ export const CompanyShowContent = () => {
                               fields={["last_name", "first_name", "last_seen"]}
                             />
                           )}
-                          {canManageSales ? <CreateRelatedContactButton /> : null}
+                          {canManageSales ? (
+                            <CreateRelatedContactButton />
+                          ) : null}
                         </div>
                         <ContactsIterator />
                       </div>

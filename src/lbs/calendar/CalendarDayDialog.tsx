@@ -60,9 +60,15 @@ const CalendarEntryListItem = ({
       ) : null}
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span>{getEntryTypeLabel(event)}</span>
-        {timeRangeLabel ? <span>Time: {timeRangeLabel}</span> : timeLabel ? <span>Time: {timeLabel}</span> : null}
+        {timeRangeLabel ? (
+          <span>Time: {timeRangeLabel}</span>
+        ) : timeLabel ? (
+          <span>Time: {timeLabel}</span>
+        ) : null}
         {remindLabel ? <span>Alert: {remindLabel}</span> : null}
-        {event.assignedName ? <span>Assigned: {event.assignedName}</span> : null}
+        {event.assignedName ? (
+          <span>Assigned: {event.assignedName}</span>
+        ) : null}
         {event.record.contact_id ? (
           <Link
             to={`/contacts/${event.record.contact_id}/show`}
@@ -170,7 +176,10 @@ export const CalendarDayDialog = ({
                       className="w-full cursor-pointer text-left"
                       onClick={() => onEditTask(event)}
                       onKeyDown={(keyboardEvent) => {
-                        if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {
+                        if (
+                          keyboardEvent.key === "Enter" ||
+                          keyboardEvent.key === " "
+                        ) {
                           keyboardEvent.preventDefault();
                           onEditTask(event);
                         }
@@ -182,7 +191,10 @@ export const CalendarDayDialog = ({
                       </p>
                     </div>
                   ) : isCalendarEntryEvent(event) ? (
-                    <CalendarEntryListItem event={event} onEdit={onEditReminder} />
+                    <CalendarEntryListItem
+                      event={event}
+                      onEdit={onEditReminder}
+                    />
                   ) : (
                     <div className="space-y-2">
                       <CalendarEventChip event={event} />

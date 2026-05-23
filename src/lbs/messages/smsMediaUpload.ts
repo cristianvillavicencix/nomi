@@ -12,7 +12,10 @@ export const uploadSmsMedia = async (file: File, orgId?: string | number) => {
       ? ".jpg"
       : "";
   const fileName = `${crypto.randomUUID()}${ext}`;
-  const path = buildMessagingAttachmentPathOutbound(orgId ?? "unknown", fileName);
+  const path = buildMessagingAttachmentPathOutbound(
+    orgId ?? "unknown",
+    fileName,
+  );
   const { error } = await supabase.storage
     .from(MESSAGING_ATTACHMENTS_BUCKET)
     .upload(path, file, {
@@ -23,7 +26,10 @@ export const uploadSmsMedia = async (file: File, orgId?: string | number) => {
   return path;
 };
 
-export const createSignedMediaUrl = async (storagePath: string, expiresIn = 3600) => {
+export const createSignedMediaUrl = async (
+  storagePath: string,
+  expiresIn = 3600,
+) => {
   if (isLegacyPublicMediaUrl(storagePath)) {
     return storagePath;
   }
@@ -73,4 +79,5 @@ export const downloadMediaUrl = async (urlOrPath: string) => {
 };
 
 export const isImageMediaUrl = (urlOrPath: string) =>
-  /\.(jpe?g|png|gif|webp)(\?|$)/i.test(urlOrPath) || urlOrPath.includes("image/");
+  /\.(jpe?g|png|gif|webp)(\?|$)/i.test(urlOrPath) ||
+  urlOrPath.includes("image/");

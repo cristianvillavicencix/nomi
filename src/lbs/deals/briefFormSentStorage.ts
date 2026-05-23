@@ -10,7 +10,9 @@ export const markBriefFormSent = (dealId: string | number) => {
   return record;
 };
 
-export const getBriefFormSent = (dealId: string | number): BriefFormSentRecord | null => {
+export const getBriefFormSent = (
+  dealId: string | number,
+): BriefFormSentRecord | null => {
   try {
     const raw = localStorage.getItem(storageKey(dealId));
     if (!raw) return null;

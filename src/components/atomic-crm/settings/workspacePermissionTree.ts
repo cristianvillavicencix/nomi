@@ -112,7 +112,10 @@ export function collapsePermissionsForSave(
       ? (caps[ROLE_PRESET_KEY] as RoleSlug)
       : null);
 
-  const out = collapseCatalogPermissions(caps, preset) as MemberModulePermissions;
+  const out = collapseCatalogPermissions(
+    caps,
+    preset,
+  ) as MemberModulePermissions;
 
   for (const [modKey, enabled] of Object.entries(
     deriveModuleFlagsFromCapabilities(out as Record<string, unknown>),
@@ -125,4 +128,8 @@ export function collapsePermissionsForSave(
   return out;
 }
 
-export { ROLE_PRESET_KEY, ROLE_PRESETS, type RoleSlug } from "@/lib/permissions/permissionCatalog";
+export {
+  ROLE_PRESET_KEY,
+  ROLE_PRESETS,
+  type RoleSlug,
+} from "@/lib/permissions/permissionCatalog";

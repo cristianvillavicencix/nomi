@@ -8,13 +8,16 @@ export const groupTaskParticipantsByTaskId = (
   const grouped: Record<string, TaskParticipant[]> = {};
   participants.forEach((participant) => {
     const key = String(participant.task_id);
-    grouped[key] = grouped[key] ? [...grouped[key], participant] : [participant];
+    grouped[key] = grouped[key]
+      ? [...grouped[key], participant]
+      : [participant];
   });
   return grouped;
 };
 
-export const taskUsesParticipantCompletion = (participants: TaskParticipant[]) =>
-  participants.length > 0;
+export const taskUsesParticipantCompletion = (
+  participants: TaskParticipant[],
+) => participants.length > 0;
 
 export const isTaskOpenForUser = (
   task: Task,

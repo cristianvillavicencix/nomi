@@ -444,7 +444,9 @@ export const isBriefSectionVisible = (
   if (section.isVisible && !section.isVisible(projectType, scopeMode)) {
     return false;
   }
-  return section.fields.some((entry) => isBriefFieldVisible(entry, projectType, scopeMode));
+  return section.fields.some((entry) =>
+    isBriefFieldVisible(entry, projectType, scopeMode),
+  );
 };
 
 export const getVisibleBriefSections = (projectType?: string | null) => {
@@ -567,7 +569,10 @@ export type WebsiteBriefApproval = {
   revision_notes?: string | null;
 };
 
-export type WebsiteBriefWithApprovals = Record<string, string | null | undefined> & {
+export type WebsiteBriefWithApprovals = Record<
+  string,
+  string | null | undefined
+> & {
   _approvals?: WebsiteBriefApproval[];
 };
 
@@ -588,7 +593,9 @@ export const approveBriefSection = (
   sectionId: string,
   memberId?: number | null,
 ): WebsiteBriefWithApprovals => {
-  const approvals = parseBriefApprovals(brief).filter((entry) => entry.section_id !== sectionId);
+  const approvals = parseBriefApprovals(brief).filter(
+    (entry) => entry.section_id !== sectionId,
+  );
   return {
     ...brief,
     _approvals: [
@@ -610,7 +617,9 @@ export const requestBriefSectionRevision = (
   sectionId: string,
   notes: string,
 ): WebsiteBriefWithApprovals => {
-  const approvals = parseBriefApprovals(brief).filter((entry) => entry.section_id !== sectionId);
+  const approvals = parseBriefApprovals(brief).filter(
+    (entry) => entry.section_id !== sectionId,
+  );
   return {
     ...brief,
     _approvals: [

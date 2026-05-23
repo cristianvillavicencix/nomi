@@ -62,7 +62,9 @@ export const SettingsGeneralTab = () => {
       ) : null}
 
       <section className="space-y-4">
-        <h2 className="text-base font-semibold tracking-tight">Your business</h2>
+        <h2 className="text-base font-semibold tracking-tight">
+          Your business
+        </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <TextInput source="companyLegalName" label="Business name" />
           <TextInput source="companyPhone" label="Phone" />

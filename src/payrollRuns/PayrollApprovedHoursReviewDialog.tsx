@@ -173,8 +173,7 @@ export function PayrollApprovedHoursReviewDialog({
         },
       });
 
-      const id =
-        result?.data?.id ?? (result as { id?: string | number })?.id;
+      const id = result?.data?.id ?? (result as { id?: string | number })?.id;
       if (id == null) return;
 
       try {
@@ -316,9 +315,7 @@ export function PayrollApprovedHoursReviewDialog({
                 disabled={creating || entriesLoading || entries.length === 0}
                 onClick={handleCreate}
               >
-                {creating && (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                )}
+                {creating && <Loader2 className="mr-2 size-4 animate-spin" />}
                 {creating ? "Creando corrida…" : "Crear corrida de nómina"}
               </Button>
               <Button

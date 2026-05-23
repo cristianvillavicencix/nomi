@@ -75,13 +75,17 @@ export const PublicProjectResourcesForm = () => {
       (sum, files) => sum + (files?.length ?? 0),
       0,
     );
-    const serviceCount = serviceRows.reduce((sum, row) => sum + row.files.length, 0);
+    const serviceCount = serviceRows.reduce(
+      (sum, row) => sum + row.files.length,
+      0,
+    );
     return staticCount + serviceCount;
   }, [categoryFiles, serviceRows]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
-      if (!dealId) throw new Error("This upload link is missing the project id.");
+      if (!dealId)
+        throw new Error("This upload link is missing the project id.");
       if (!canSubmit) {
         throw new Error("Upload is not available in this environment");
       }
@@ -103,7 +107,11 @@ export const PublicProjectResourcesForm = () => {
         }
         for (const file of row.files) {
           items.push(
-            await fileToUploadItem(file, "service-photo", row.serviceName.trim()),
+            await fileToUploadItem(
+              file,
+              "service-photo",
+              row.serviceName.trim(),
+            ),
           );
         }
       }
@@ -141,8 +149,8 @@ export const PublicProjectResourcesForm = () => {
       <div className="mx-auto max-w-lg space-y-3 p-6 text-center">
         <h1 className="text-2xl font-semibold">Thank you</h1>
         <p className="text-sm text-muted-foreground">
-          Your files were uploaded and organized in the project workspace. Our team
-          will review them shortly.
+          Your files were uploaded and organized in the project workspace. Our
+          team will review them shortly.
         </p>
       </div>
     );
@@ -165,19 +173,22 @@ export const PublicProjectResourcesForm = () => {
           mutate();
         }}
       >
-        {PROJECT_RESOURCE_TAB_CATEGORIES.filter((entry) => entry.id !== "service-photo").map(
-          (categoryDef) => (
-            <CategoryUploadField
-              key={categoryDef.id}
-              label={categoryDef.clientLabel}
-              description={categoryDef.description}
-              files={categoryFiles[categoryDef.id] ?? []}
-              onChange={(files) =>
-                setCategoryFiles((current) => ({ ...current, [categoryDef.id]: files }))
-              }
-            />
-          ),
-        )}
+        {PROJECT_RESOURCE_TAB_CATEGORIES.filter(
+          (entry) => entry.id !== "service-photo",
+        ).map((categoryDef) => (
+          <CategoryUploadField
+            key={categoryDef.id}
+            label={categoryDef.clientLabel}
+            description={categoryDef.description}
+            files={categoryFiles[categoryDef.id] ?? []}
+            onChange={(files) =>
+              setCategoryFiles((current) => ({
+                ...current,
+                [categoryDef.id]: files,
+              }))
+            }
+          />
+        ))}
 
         <div className="rounded-lg border p-4 space-y-4">
           <div>
@@ -188,9 +199,14 @@ export const PublicProjectResourcesForm = () => {
           </div>
 
           {serviceRows.map((row, index) => (
-            <div key={row.id} className="space-y-2 rounded-md border bg-muted/20 p-3">
+            <div
+              key={row.id}
+              className="space-y-2 rounded-md border bg-muted/20 p-3"
+            >
               <div className="flex items-center justify-between gap-2">
-                <Label htmlFor={`service-name-${row.id}`}>Service {index + 1}</Label>
+                <Label htmlFor={`service-name-${row.id}`}>
+                  Service {index + 1}
+                </Label>
                 {serviceRows.length > 1 ? (
                   <Button
                     type="button"
@@ -228,7 +244,10 @@ export const PublicProjectResourcesForm = () => {
                   setServiceRows((current) =>
                     current.map((entry) =>
                       entry.id === row.id
-                        ? { ...entry, files: Array.from(event.target.files ?? []) }
+                        ? {
+                            ...entry,
+                            files: Array.from(event.target.files ?? []),
+                          }
                         : entry,
                     ),
                   )
@@ -236,7 +255,8 @@ export const PublicProjectResourcesForm = () => {
               />
               {row.files.length > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  {row.files.length} photo{row.files.length === 1 ? "" : "s"} selected
+                  {row.files.length} photo{row.files.length === 1 ? "" : "s"}{" "}
+                  selected
                 </p>
               ) : null}
             </div>
@@ -262,7 +282,10 @@ export const PublicProjectResourcesForm = () => {
           <p className="text-sm text-muted-foreground">
             {totalSelected} file{totalSelected === 1 ? "" : "s"} selected
           </p>
-          <Button type="submit" disabled={isPending || totalSelected === 0 || !canSubmit}>
+          <Button
+            type="submit"
+            disabled={isPending || totalSelected === 0 || !canSubmit}
+          >
             {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
             {isPending ? "Uploading…" : "Submit files"}
           </Button>

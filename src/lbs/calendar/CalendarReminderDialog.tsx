@@ -36,8 +36,10 @@ import {
 } from "@/lbs/calendar/calendarReminderOptions";
 import { MeetingScheduleForm } from "@/lbs/meetings/MeetingScheduleForm";
 
-const dealOptionText = (choice: { name?: string | null; id?: number | string }) =>
-  choice.name?.trim() || `Project #${choice.id}`;
+const dealOptionText = (choice: {
+  name?: string | null;
+  id?: number | string;
+}) => choice.name?.trim() || `Project #${choice.id}`;
 
 const contactOptionText = (contact: Contact) => getContactDisplayName(contact);
 
@@ -45,7 +47,8 @@ const formatRemindBefore = (value?: number | null) =>
   value == null ? REMIND_BEFORE_NONE : value;
 
 const parseRemindBefore = (value: string | number) => {
-  if (value === REMIND_BEFORE_NONE || value === "" || value == null) return null;
+  if (value === REMIND_BEFORE_NONE || value === "" || value == null)
+    return null;
   return Number(value);
 };
 
@@ -74,7 +77,11 @@ const CalendarEventForm = ({
     <TextInput source="title" label="Title" validate={required()} autoFocus />
     <div className="grid gap-4 sm:grid-cols-2">
       <DateInput source="event_date" label="Date" validate={required()} />
-      <CalendarTimeInput source="event_time" label="Start time" helperText={false} />
+      <CalendarTimeInput
+        source="event_time"
+        label="Start time"
+        helperText={false}
+      />
     </div>
     <SelectInput
       source="duration_minutes"
@@ -92,7 +99,12 @@ const CalendarEventForm = ({
       parse={parseRemindBefore}
       helperText="Alert before the scheduled time"
     />
-    <TextInput source="description" label="Notes" multiline helperText={false} />
+    <TextInput
+      source="description"
+      label="Notes"
+      multiline
+      helperText={false}
+    />
 
     <div className="space-y-3 rounded-md border p-3">
       <p className="text-sm font-medium">Link to (optional)</p>
@@ -202,7 +214,8 @@ export const CalendarReminderDialog = ({
     notify(variant === "meeting" ? "Meeting updated" : "Event updated");
   };
 
-  const FormComponent = variant === "meeting" ? MeetingScheduleForm : CalendarEventForm;
+  const FormComponent =
+    variant === "meeting" ? MeetingScheduleForm : CalendarEventForm;
 
   const handleDeleteSuccess = () => {
     refresh();

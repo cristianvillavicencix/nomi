@@ -16,7 +16,13 @@ const getProjectTypeLabel = (value?: string | null) =>
   value?.replace(/-/g, " ") ??
   "—";
 
-const DetailField = ({ label, value }: { label: string; value?: string | null }) => (
+const DetailField = ({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) => (
   <div className="space-y-1">
     <div className="text-sm text-muted-foreground">{label}</div>
     <div className="whitespace-pre-wrap text-sm font-medium">
@@ -82,9 +88,13 @@ export const WebsiteBriefSectionView = ({
       <div className="space-y-6">
         <div className="space-y-1">
           <div className="text-sm text-muted-foreground">Project setup</div>
-          <div className="text-sm font-medium">{getProjectTypeLabel(record.project_type)}</div>
+          <div className="text-sm font-medium">
+            {getProjectTypeLabel(record.project_type)}
+          </div>
           <div className="text-sm text-muted-foreground">
-            Delivery {formatProjectDeliveryDate(getProjectDeliveryDate(record)) ?? "not set"}
+            Delivery{" "}
+            {formatProjectDeliveryDate(getProjectDeliveryDate(record)) ??
+              "not set"}
           </div>
         </div>
         {sections.map((section) => (
@@ -105,7 +115,9 @@ export const WebsiteBriefSectionView = ({
   return (
     <div className="space-y-4">
       {target.section.description ? (
-        <p className="text-sm text-muted-foreground">{target.section.description}</p>
+        <p className="text-sm text-muted-foreground">
+          {target.section.description}
+        </p>
       ) : null}
       <SectionDetail section={target.section} brief={brief} />
       <div className="flex justify-end pt-2">

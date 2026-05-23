@@ -1,6 +1,8 @@
 export const getJitsiBaseUrl = () =>
-  (import.meta.env.VITE_JITSI_BASE_URL as string | undefined)?.replace(/\/$/, "") ||
-  "https://meet.jit.si";
+  (import.meta.env.VITE_JITSI_BASE_URL as string | undefined)?.replace(
+    /\/$/,
+    "",
+  ) || "https://meet.jit.si";
 
 const slugifyRoomSegment = (value: string) =>
   value

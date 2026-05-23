@@ -3,7 +3,8 @@ import { supabaseAdmin } from "./supabaseAdmin.ts";
 const MESSAGING_ATTACHMENTS_BUCKET = "messaging-attachments";
 
 const extensionForContentType = (contentType: string) => {
-  if (contentType.includes("jpeg") || contentType.includes("jpg")) return ".jpg";
+  if (contentType.includes("jpeg") || contentType.includes("jpg"))
+    return ".jpg";
   if (contentType.includes("png")) return ".png";
   if (contentType.includes("gif")) return ".gif";
   if (contentType.includes("webp")) return ".webp";
@@ -39,7 +40,8 @@ export async function mirrorTwilioMediaToStorage(params: {
     throw new Error("Failed to download inbound MMS from Twilio");
   }
 
-  const contentType = response.headers.get("content-type") ?? "application/octet-stream";
+  const contentType =
+    response.headers.get("content-type") ?? "application/octet-stream";
   const extension = extensionForContentType(contentType);
   const path = `org_${params.orgId}/conversation_${params.conversationId}/${crypto.randomUUID()}${extension}`;
   const bytes = new Uint8Array(await response.arrayBuffer());

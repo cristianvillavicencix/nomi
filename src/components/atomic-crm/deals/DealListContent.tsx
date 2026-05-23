@@ -88,33 +88,31 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
     );
 
     // persist the changes
-    updateDealStage(sourceDeal, destinationDeal, dataProvider, identity?.id).then(
-      async ({ stageChanged, newStage }) => {
-        refetch();
-        if (
-          isLbsMode() &&
-          stageChanged &&
-          newStage &&
-          identity?.id
-        ) {
-          try {
-            const count = await createStageTasksForDeal({
-              dataProvider,
-              deal: sourceDeal as LbsDeal,
-              newStage,
-              previousStage: source.stage,
-              organizationMemberId: identity.id,
-            });
-            const message = getStageTasksCreatedMessage(newStage, count);
-            if (message) notify(message, { type: "info" });
-          } catch {
-            notify("Project moved, but task templates could not be created", {
-              type: "warning",
-            });
-          }
+    updateDealStage(
+      sourceDeal,
+      destinationDeal,
+      dataProvider,
+      identity?.id,
+    ).then(async ({ stageChanged, newStage }) => {
+      refetch();
+      if (isLbsMode() && stageChanged && newStage && identity?.id) {
+        try {
+          const count = await createStageTasksForDeal({
+            dataProvider,
+            deal: sourceDeal as LbsDeal,
+            newStage,
+            previousStage: source.stage,
+            organizationMemberId: identity.id,
+          });
+          const message = getStageTasksCreatedMessage(newStage, count);
+          if (message) notify(message, { type: "info" });
+        } catch {
+          notify("Project moved, but task templates could not be created", {
+            type: "warning",
+          });
         }
-      },
-    );
+      }
+    });
   };
 
   return (

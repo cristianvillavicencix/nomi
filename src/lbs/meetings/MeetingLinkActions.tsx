@@ -84,7 +84,10 @@ export const MeetingLinkActions = ({
       <MeetingIconButton label="Join call" href={meetingUrl}>
         <Video className="size-4" />
       </MeetingIconButton>
-      <MeetingIconButton label={copied ? "Copied" : "Copy link"} onClick={handleCopy}>
+      <MeetingIconButton
+        label={copied ? "Copied" : "Copy link"}
+        onClick={handleCopy}
+      >
         <Copy className="size-4" />
       </MeetingIconButton>
       {onRegenerate ? (

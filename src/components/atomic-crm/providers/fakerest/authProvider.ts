@@ -66,7 +66,9 @@ export const authProvider: AuthProvider = {
   canAccess: async ({ signal: _signal, ...params }) => {
     // Get the current user
     const userItem = localStorage.getItem(USER_STORAGE_KEY);
-    const localUser = userItem ? (JSON.parse(userItem) as OrganizationMember) : null;
+    const localUser = userItem
+      ? (JSON.parse(userItem) as OrganizationMember)
+      : null;
     if (!localUser) return false;
 
     return canAccess(
@@ -86,7 +88,7 @@ export const authProvider: AuthProvider = {
       fullName: user ? `${user.first_name} ${user.last_name}` : "Juan Capriles",
       avatar: user?.avatar?.src,
       administrator: user?.administrator ?? false,
-      role: user?.administrator ? "admin" : user?.roles?.[0] ?? "user",
+      role: user?.administrator ? "admin" : (user?.roles?.[0] ?? "user"),
       roles: user?.roles ?? (user?.administrator ? ["admin"] : []),
     });
   },

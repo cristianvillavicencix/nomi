@@ -25,9 +25,7 @@ export function PaymentDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open && paymentId != null ? (
         <DialogContent className="flex max-h-[min(92vh,900px)] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(1400px,calc(100vw-1.5rem))]">
-          <DialogTitle className="sr-only">
-            Payment run details
-          </DialogTitle>
+          <DialogTitle className="sr-only">Payment run details</DialogTitle>
           <DialogDescription className="sr-only">
             Payment run details and actions. Open full page for a dedicated
             screen or printing.

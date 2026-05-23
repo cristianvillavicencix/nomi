@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
-import { Children, createElement, isValidElement, useCallback, useRef } from "react";
+import {
+  Children,
+  createElement,
+  isValidElement,
+  useCallback,
+  useRef,
+} from "react";
 import type {
   DataTableBaseProps,
   ExtractRecordPaths,
@@ -116,8 +122,8 @@ export function DataTable<RecordType extends RaRecord = RaRecord>(
       <div className={cn("rounded-md border overflow-auto min-h-0", className)}>
         <Table>
           <DataTableRenderContext.Provider value="header">
-          <DataTableHead>{columns}</DataTableHead>
-        </DataTableRenderContext.Provider>
+            <DataTableHead>{columns}</DataTableHead>
+          </DataTableRenderContext.Provider>
           <DataTableBody<RecordType>
             rowClassName={rowClassName}
             rowDoubleClick={rowDoubleClick}
@@ -253,26 +259,31 @@ const DataTableRow = ({
     [handleToggleItem, record.id],
   );
 
-  const navigateToLink = useCallback(async (linkSource: DataTableBaseProps["rowClick"]) => {
-    const temporaryLink =
-      typeof linkSource === "function"
-        ? linkSource(record.id, resource, record)
-        : linkSource;
+  const navigateToLink = useCallback(
+    async (linkSource: DataTableBaseProps["rowClick"]) => {
+      const temporaryLink =
+        typeof linkSource === "function"
+          ? linkSource(record.id, resource, record)
+          : linkSource;
 
-    const link = isPromise(temporaryLink) ? await temporaryLink : temporaryLink;
+      const link = isPromise(temporaryLink)
+        ? await temporaryLink
+        : temporaryLink;
 
-    const path = await getPathForRecord({
-      record,
-      resource,
-      link,
-    });
-    if (path === false || path == null) {
-      return;
-    }
-    navigate(path, {
-      state: { _scrollToTop: true },
-    });
-  }, [record, resource, navigate, getPathForRecord]);
+      const path = await getPathForRecord({
+        record,
+        resource,
+        link,
+      });
+      if (path === false || path == null) {
+        return;
+      }
+      navigate(path, {
+        state: { _scrollToTop: true },
+      });
+    },
+    [record, resource, navigate, getPathForRecord],
+  );
 
   const handleClick = useCallback(() => {
     if (rowDoubleClick && rowDoubleClick !== false) {
@@ -413,7 +424,13 @@ function DataTableHeadCell<
   });
 
   return (
-    <TableHead className={cn("sticky top-0 z-10 bg-background", className, headerClassName)}>
+    <TableHead
+      className={cn(
+        "sticky top-0 z-10 bg-background",
+        className,
+        headerClassName,
+      )}
+    >
       {handleSort && sort && !disableSort && source ? (
         <TooltipProvider>
           <Tooltip>

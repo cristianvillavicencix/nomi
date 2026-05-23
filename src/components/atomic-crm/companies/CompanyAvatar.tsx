@@ -16,7 +16,9 @@ export const safeFirstChar = (value?: string | null) => {
   return normalized.length > 0 ? normalized.charAt(0).toUpperCase() : "?";
 };
 
-export const getCompanyAvatarFallback = (record?: CompanyAvatarSource | null) => {
+export const getCompanyAvatarFallback = (
+  record?: CompanyAvatarSource | null,
+) => {
   const companyName = record?.name ?? record?.company_name;
   const contactName = record?.contact_name;
   const emailLocalPart = record?.email?.split("@")[0];
@@ -38,7 +40,11 @@ export const CompanyAvatar = (props: {
   if (!record) return null;
 
   const resolvedSizeClass =
-    width === 20 ? "w-[20px] h-[20px]" : width === 25 ? "w-[25px] h-[25px]" : "w-10 h-10";
+    width === 20
+      ? "w-[20px] h-[20px]"
+      : width === 25
+        ? "w-[25px] h-[25px]"
+        : "w-10 h-10";
   const companyName = String(record.name ?? "").trim();
   const fallbackInitial = getCompanyAvatarFallback(record);
 

@@ -57,15 +57,19 @@ export const CalendarPage = () => {
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
-  const [createTaskDueDate, setCreateTaskDueDate] = useState(
-    () => new Date().toISOString().slice(0, 10),
+  const [createTaskDueDate, setCreateTaskDueDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
   );
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
-  const [reminderDateKey, setReminderDateKey] = useState(
-    () => new Date().toISOString().slice(0, 10),
+  const [reminderDateKey, setReminderDateKey] = useState(() =>
+    new Date().toISOString().slice(0, 10),
   );
-  const [editReminderId, setEditReminderId] = useState<string | number | null>(null);
-  const [reminderVariant, setReminderVariant] = useState<"event" | "meeting">("event");
+  const [editReminderId, setEditReminderId] = useState<string | number | null>(
+    null,
+  );
+  const [reminderVariant, setReminderVariant] = useState<"event" | "meeting">(
+    "event",
+  );
   const [reminderInitialRecord, setReminderInitialRecord] = useState<
     Record<string, unknown> | undefined
   >();
@@ -78,7 +82,10 @@ export const CalendarPage = () => {
   );
 
   const hasActiveFilters =
-    includeDoneTasks || includeCompletedReminders || !showSaturday || !showSunday;
+    includeDoneTasks ||
+    includeCompletedReminders ||
+    !showSaturday ||
+    !showSunday;
 
   const { eventsByDate, isPending } = useCalendarEvents({
     anchor,
@@ -89,15 +96,20 @@ export const CalendarPage = () => {
   });
 
   const periodLabel = useMemo(
-    () => (view === "month" ? formatMonthLabel(anchor) : formatWeekLabel(anchor)),
+    () =>
+      view === "month" ? formatMonthLabel(anchor) : formatWeekLabel(anchor),
     [anchor, view],
   );
 
-  const selectedDayEvents = selectedDateKey ? eventsByDate[selectedDateKey] ?? [] : [];
+  const selectedDayEvents = selectedDateKey
+    ? (eventsByDate[selectedDateKey] ?? [])
+    : [];
 
   const shiftPeriod = (direction: -1 | 1) => {
     setAnchor((current) =>
-      view === "month" ? addMonths(current, direction) : addDays(current, direction * 7),
+      view === "month"
+        ? addMonths(current, direction)
+        : addDays(current, direction * 7),
     );
   };
 
@@ -190,12 +202,16 @@ export const CalendarPage = () => {
             <div className="flex flex-wrap items-center justify-end gap-2">
               <CalendarProjectFilter
                 value={projectId}
-                onChange={(nextProjectId) => setPreferences({ projectId: nextProjectId })}
+                onChange={(nextProjectId) =>
+                  setPreferences({ projectId: nextProjectId })
+                }
               />
 
               <Tabs
                 value={view}
-                onValueChange={(value) => setPreferences({ view: value as CalendarView })}
+                onValueChange={(value) =>
+                  setPreferences({ view: value as CalendarView })
+                }
               >
                 <TabsList>
                   <TabsTrigger value="month">Month</TabsTrigger>
@@ -205,11 +221,19 @@ export const CalendarPage = () => {
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button type="button" variant="outline" size="sm" className="gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
                     <SlidersHorizontal className="size-4" />
                     Filter
                     {hasActiveFilters ? (
-                      <span className="size-2 rounded-full bg-primary" aria-hidden />
+                      <span
+                        className="size-2 rounded-full bg-primary"
+                        aria-hidden
+                      />
                     ) : null}
                   </Button>
                 </PopoverTrigger>
@@ -228,7 +252,9 @@ export const CalendarPage = () => {
                       />
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="calendar-show-done-events">Show done events</Label>
+                      <Label htmlFor="calendar-show-done-events">
+                        Show done events
+                      </Label>
                       <Switch
                         id="calendar-show-done-events"
                         checked={includeCompletedReminders}
@@ -238,11 +264,15 @@ export const CalendarPage = () => {
                       />
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="calendar-show-saturday">Show Saturday</Label>
+                      <Label htmlFor="calendar-show-saturday">
+                        Show Saturday
+                      </Label>
                       <Switch
                         id="calendar-show-saturday"
                         checked={showSaturday}
-                        onCheckedChange={(checked) => setPreferences({ showSaturday: checked })}
+                        onCheckedChange={(checked) =>
+                          setPreferences({ showSaturday: checked })
+                        }
                       />
                     </div>
                     <div className="flex items-center justify-between gap-3">
@@ -250,7 +280,9 @@ export const CalendarPage = () => {
                       <Switch
                         id="calendar-show-sunday"
                         checked={showSunday}
-                        onCheckedChange={(checked) => setPreferences({ showSunday: checked })}
+                        onCheckedChange={(checked) =>
+                          setPreferences({ showSunday: checked })
+                        }
                       />
                     </div>
                   </div>

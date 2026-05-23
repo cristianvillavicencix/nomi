@@ -30,7 +30,10 @@ import { withCurrentProductName } from "../../root/defaultConfiguration";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getActivityLog } from "../commons/activity";
-import { syncTaskAssignees, createTaskTagNotifications } from "../../tasks/taskAssignments";
+import {
+  syncTaskAssignees,
+  createTaskTagNotifications,
+} from "../../tasks/taskAssignments";
 import { syncTaskParticipants } from "../../tasks/taskParticipants";
 import { getTaskAssignmentPayload } from "../../tasks/persistTaskAssignmentSideEffects";
 import { enrichTasksWithLegacyMentions } from "../../tasks/enrichTasksWithLegacyMentions";
@@ -71,19 +74,25 @@ import {
 const baseDataProvider = fakeRestDataProvider(generateData(), true, 300);
 
 const enrichCompaniesWithPrimaryContact = async (companies: Company[]) => {
-  const { data: contacts } = await baseDataProvider.getList<Contact>("contacts", {
-    pagination: { page: 1, perPage: 10000 },
-    sort: { field: "id", order: "ASC" },
-  });
+  const { data: contacts } = await baseDataProvider.getList<Contact>(
+    "contacts",
+    {
+      pagination: { page: 1, perPage: 10000 },
+      sort: { field: "id", order: "ASC" },
+    },
+  );
 
   return companies.map((company) => enrichCompanySummary(company, contacts));
 };
 
 const enrichContactsWithCompanyMeta = async (contacts: Contact[]) => {
-  const { data: companies } = await baseDataProvider.getList<Company>("companies", {
-    pagination: { page: 1, perPage: 10000 },
-    sort: { field: "id", order: "ASC" },
-  });
+  const { data: companies } = await baseDataProvider.getList<Company>(
+    "companies",
+    {
+      pagination: { page: 1, perPage: 10000 },
+      sort: { field: "id", order: "ASC" },
+    },
+  );
 
   return contacts.map((contact) => {
     const matchedCompany = companies.find(
@@ -266,7 +275,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     if (resource === "tasks") {
       return {
         ...result,
-        data: await enrichTasksWithLegacyMentions(result.data as Task[], baseDataProvider),
+        data: await enrichTasksWithLegacyMentions(
+          result.data as Task[],
+          baseDataProvider,
+        ),
       };
     }
     return result;
@@ -445,12 +457,16 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       params.personId,
     );
   },
-  signUp: async (_data: SignUpData): Promise<{ id: string; email: string; password: string }> => {
+  signUp: async (
+    _data: SignUpData,
+  ): Promise<{ id: string; email: string; password: string }> => {
     throw new Error(
       "El registro público está deshabilitado. Pide a tu administrador una invitación.",
     );
   },
-  organizationMemberCreate: async ({ ...data }: OrganizationMemberFormData): Promise<OrganizationMember> => {
+  organizationMemberCreate: async ({
+    ...data
+  }: OrganizationMemberFormData): Promise<OrganizationMember> => {
     const response = await dataProvider.create("organization_members", {
       data: {
         ...data,
@@ -465,30 +481,37 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     id: Identifier,
     data: Partial<Omit<OrganizationMemberFormData, "password">>,
   ): Promise<OrganizationMember> => {
-    const { data: previousData } = await dataProvider.getOne<OrganizationMember>("organization_members", {
-      id,
-    });
+    const { data: previousData } =
+      await dataProvider.getOne<OrganizationMember>("organization_members", {
+        id,
+      });
 
     if (!previousData) {
       throw new Error("User not found");
     }
 
-    const { data: member } = await dataProvider.update<OrganizationMember>("organization_members", {
-      id,
-      data: {
-        ...data,
-        email: normalizeEmailValue(data.email, "email"),
+    const { data: member } = await dataProvider.update<OrganizationMember>(
+      "organization_members",
+      {
+        id,
+        data: {
+          ...data,
+          email: normalizeEmailValue(data.email, "email"),
+        },
+        previousData,
       },
-      previousData,
-    });
+    );
     return { ...member, user_id: member.id.toString() };
   },
   isInitialized: async (): Promise<boolean> => {
-    const sales = await dataProvider.getList<OrganizationMember>("organization_members", {
-      filter: {},
-      pagination: { page: 1, perPage: 1 },
-      sort: { field: "id", order: "ASC" },
-    });
+    const sales = await dataProvider.getList<OrganizationMember>(
+      "organization_members",
+      {
+        filter: {},
+        pagination: { page: 1, perPage: 1 },
+        sort: { field: "id", order: "ASC" },
+      },
+    );
     if (sales.data.length === 0) {
       return false;
     }
@@ -499,9 +522,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     if (!currentUser) {
       throw new Error("User not found");
     }
-    const { data: previousData } = await dataProvider.getOne<OrganizationMember>("organization_members", {
-      id: currentUser.id,
-    });
+    const { data: previousData } =
+      await dataProvider.getOne<OrganizationMember>("organization_members", {
+        id: currentUser.id,
+      });
 
     if (!previousData) {
       throw new Error("User not found");
@@ -520,18 +544,25 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   mergeContacts: async (sourceId: Identifier, targetId: Identifier) => {
     return mergeContacts(sourceId, targetId, baseDataProvider);
   },
-  upsertLbsClient: async (input: LbsClientUpsertInput): Promise<LbsClientUpsertResult> => {
+  upsertLbsClient: async (
+    input: LbsClientUpsertInput,
+  ): Promise<LbsClientUpsertResult> => {
     const companyName = input.business.name.trim();
     const { firstName, lastName } = splitClientFullName(input.primary.fullName);
     let created = false;
 
-    const { data: companies } = await baseDataProvider.getList<Company>("companies", {
-      pagination: { page: 1, perPage: 10000 },
-      sort: { field: "id", order: "ASC" },
-    });
+    const { data: companies } = await baseDataProvider.getList<Company>(
+      "companies",
+      {
+        pagination: { page: 1, perPage: 10000 },
+        sort: { field: "id", order: "ASC" },
+      },
+    );
 
     const existingCompany = input.companyId
-      ? companies.find((company) => String(company.id) === String(input.companyId))
+      ? companies.find(
+          (company) => String(company.id) === String(input.companyId),
+        )
       : companies.find(
           (company) => company.name.toLowerCase() === companyName.toLowerCase(),
         );
@@ -547,28 +578,37 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
 
     let companyId: Identifier;
     if (existingCompany) {
-      const { data: updatedCompany } = await baseDataProvider.update<Company>("companies", {
-        id: existingCompany.id,
-        data: companyPayload,
-        previousData: existingCompany,
-      });
+      const { data: updatedCompany } = await baseDataProvider.update<Company>(
+        "companies",
+        {
+          id: existingCompany.id,
+          data: companyPayload,
+          previousData: existingCompany,
+        },
+      );
       companyId = updatedCompany.id;
     } else {
-      const { data: newCompany } = await baseDataProvider.create<Company>("companies", {
-        data: {
-          sector: "information-technology",
-          ...companyPayload,
+      const { data: newCompany } = await baseDataProvider.create<Company>(
+        "companies",
+        {
+          data: {
+            sector: "information-technology",
+            ...companyPayload,
+          },
         },
-      });
+      );
       companyId = newCompany.id;
       created = true;
     }
 
     const contactPayload = buildContactPayloadFromUpsert(input, companyId);
-    const { data: contacts } = await baseDataProvider.getList<Contact>("contacts", {
-      pagination: { page: 1, perPage: 10000 },
-      sort: { field: "id", order: "ASC" },
-    });
+    const { data: contacts } = await baseDataProvider.getList<Contact>(
+      "contacts",
+      {
+        pagination: { page: 1, perPage: 10000 },
+        sort: { field: "id", order: "ASC" },
+      },
+    );
 
     const companyContacts = contacts.filter(
       (candidate) => String(candidate.company_id) === String(companyId),
@@ -578,7 +618,8 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     let contact =
       (input.primaryContactId
         ? companyContacts.find(
-            (candidate) => String(candidate.id) === String(input.primaryContactId),
+            (candidate) =>
+              String(candidate.id) === String(input.primaryContactId),
           )
         : undefined) ??
       (primaryEmail
@@ -591,20 +632,27 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       companyContacts.find(
         (candidate) =>
           candidate.first_name?.toLowerCase() === firstName.toLowerCase() &&
-          candidate.last_name?.toLowerCase() === (lastName || firstName).toLowerCase(),
+          candidate.last_name?.toLowerCase() ===
+            (lastName || firstName).toLowerCase(),
       );
 
     if (contact) {
-      const { data: updatedContact } = await baseDataProvider.update<Contact>("contacts", {
-        id: contact.id,
-        data: contactPayload,
-        previousData: contact,
-      });
+      const { data: updatedContact } = await baseDataProvider.update<Contact>(
+        "contacts",
+        {
+          id: contact.id,
+          data: contactPayload,
+          previousData: contact,
+        },
+      );
       contact = updatedContact;
     } else {
-      const { data: newContact } = await baseDataProvider.create<Contact>("contacts", {
-        data: contactPayload,
-      });
+      const { data: newContact } = await baseDataProvider.create<Contact>(
+        "contacts",
+        {
+          data: contactPayload,
+        },
+      );
       contact = newContact;
     }
 
@@ -624,30 +672,44 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     companyName: string;
   }) => {
     const trimmedName = companyName.trim();
-    const { data: contact } = await baseDataProvider.getOne<Contact>("contacts", { id: contactId });
+    const { data: contact } = await baseDataProvider.getOne<Contact>(
+      "contacts",
+      { id: contactId },
+    );
     if (!contact) {
       throw new Error("Lead not found");
     }
 
-    const { data: companies } = await baseDataProvider.getList<Company>("companies", {
-      pagination: { page: 1, perPage: 10000 },
-      sort: { field: "id", order: "ASC" },
-    });
+    const { data: companies } = await baseDataProvider.getList<Company>(
+      "companies",
+      {
+        pagination: { page: 1, perPage: 10000 },
+        sort: { field: "id", order: "ASC" },
+      },
+    );
 
     let company =
       (contact.company_id
-        ? companies.find((candidate) => String(candidate.id) === String(contact.company_id))
+        ? companies.find(
+            (candidate) => String(candidate.id) === String(contact.company_id),
+          )
         : undefined) ??
-      companies.find((candidate) => candidate.name.toLowerCase() === trimmedName.toLowerCase());
+      companies.find(
+        (candidate) =>
+          candidate.name.toLowerCase() === trimmedName.toLowerCase(),
+      );
 
     if (!company) {
-      const { data: createdCompany } = await baseDataProvider.create<Company>("companies", {
-        data: {
-          name: trimmedName,
-          organization_member_id: contact.organization_member_id,
-          sector: "information-technology",
+      const { data: createdCompany } = await baseDataProvider.create<Company>(
+        "companies",
+        {
+          data: {
+            name: trimmedName,
+            organization_member_id: contact.organization_member_id,
+            sector: "information-technology",
+          },
         },
-      });
+      );
       company = createdCompany;
     }
 
@@ -677,7 +739,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     dealId?: Identifier | null;
     data: Record<string, unknown>;
   }) => {
-    const { data: forms } = await baseDataProvider.getList<import("@/lbs/types").Form>("forms", {
+    const { data: forms } = await baseDataProvider.getList<
+      import("@/lbs/types").Form
+    >("forms", {
       pagination: { page: 1, perPage: 100 },
       sort: { field: "id", order: "ASC" },
     });
@@ -723,12 +787,17 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     const companyId = payload.companyId ? Number(payload.companyId) : null;
     const contactId = payload.contactId ? Number(payload.contactId) : null;
     if (!companyId || !contactId) {
-      throw new Error("This form link must include a valid client and contact.");
+      throw new Error(
+        "This form link must include a valid client and contact.",
+      );
     }
 
-    const { data: company } = await baseDataProvider.getOne<Company>("companies", {
-      id: companyId,
-    });
+    const { data: company } = await baseDataProvider.getOne<Company>(
+      "companies",
+      {
+        id: companyId,
+      },
+    );
 
     const { data: deals } = await baseDataProvider.getList<Deal>("deals", {
       pagination: { page: 1, perPage: 10000 },
@@ -743,7 +812,8 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       linkedDeal ??
       deals.find(
         (deal) =>
-          String(deal.company_id) === String(companyId) && deal.category === "website",
+          String(deal.company_id) === String(companyId) &&
+          deal.category === "website",
       );
 
     let dealId: Identifier;
@@ -756,27 +826,34 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
           contact_id: contactId,
           contact_ids: [contactId],
           website_brief: payload.data,
-          description: String(payload.data.client_notes ?? payload.data.notes ?? ""),
+          description: String(
+            payload.data.client_notes ?? payload.data.notes ?? "",
+          ),
         },
         previousData: existing,
       });
       dealId = updated.id;
     } else {
-      const { data: createdDeal } = await baseDataProvider.create<Deal>("deals", {
-        data: {
-          name: `${company.name} Website`,
-          company_id: companyId,
-          contact_id: contactId,
-          contact_ids: [contactId],
-          stage: "lead",
-          amount: 0,
-          category: "website",
-          website_brief: payload.data,
-          description: String(payload.data.client_notes ?? payload.data.notes ?? ""),
-          index: 0,
-          pipeline_id: "default",
+      const { data: createdDeal } = await baseDataProvider.create<Deal>(
+        "deals",
+        {
+          data: {
+            name: `${company.name} Website`,
+            company_id: companyId,
+            contact_id: contactId,
+            contact_ids: [contactId],
+            stage: "lead",
+            amount: 0,
+            category: "website",
+            website_brief: payload.data,
+            description: String(
+              payload.data.client_notes ?? payload.data.notes ?? "",
+            ),
+            index: 0,
+            pipeline_id: "default",
+          },
         },
-      });
+      );
       dealId = createdDeal.id;
       created = true;
     }
@@ -799,7 +876,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     };
   },
   getPublicForm: async (payload: { slug: string }) => {
-    const { data: forms } = await baseDataProvider.getList<import("@/lbs/types").Form>("forms", {
+    const { data: forms } = await baseDataProvider.getList<
+      import("@/lbs/types").Form
+    >("forms", {
       pagination: { page: 1, perPage: 100 },
       sort: { field: "id", order: "ASC" },
     });
@@ -837,7 +916,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     return {
       project_type: deal.project_type,
       expected_end_date: deal.expected_end_date,
-      website_brief: (deal.website_brief ?? {}) as Record<string, string | null>,
+      website_brief: (deal.website_brief ?? {}) as Record<
+        string,
+        string | null
+      >,
     };
   },
   getGithubRepoStatus: async (payload: { dealId: Identifier }) => {
@@ -1373,75 +1455,76 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     auto_acknowledge_message: params.auto_acknowledge_message ?? null,
   }),
   sendTestSms: async () => ({ ok: true }),
-  sendClientSms: async ({ conversationId, contactId, dealId, body, mediaUrls }) => {
+  sendClientSms: async ({
+    conversationId,
+    contactId,
+    dealId,
+    body,
+    mediaUrls,
+  }) => {
     let conversation: import("@/lbs/types").Conversation;
     if (conversationId) {
-      const { data } = await baseDataProvider.getOne<import("@/lbs/types").Conversation>(
-        "conversations",
-        { id: conversationId },
-      );
+      const { data } = await baseDataProvider.getOne<
+        import("@/lbs/types").Conversation
+      >("conversations", { id: conversationId });
       conversation = data;
     } else if (contactId) {
-      conversation = await dataProviderWithCustomMethod.ensureClientConversation({
-        contactId,
-        authorMemberId: 1,
-        dealId,
-      });
+      conversation =
+        await dataProviderWithCustomMethod.ensureClientConversation({
+          contactId,
+          authorMemberId: 1,
+          dealId,
+        });
     } else {
       throw new Error("conversation_id or contact_id is required");
     }
 
-    const message = await baseDataProvider.create<import("@/lbs/types").ConversationMessage>(
-      "conversation_messages",
-      {
-        data: {
-          conversation_id: conversation.id,
-          body: body?.trim() || (mediaUrls?.length ? "Photo" : ""),
-          channel: "sms",
-          direction: "outbound",
-          author_member_id: conversation.created_by_member_id ?? null,
-          media_url: mediaUrls?.[0] ?? null,
-        },
+    const message = await baseDataProvider.create<
+      import("@/lbs/types").ConversationMessage
+    >("conversation_messages", {
+      data: {
+        conversation_id: conversation.id,
+        body: body?.trim() || (mediaUrls?.length ? "Photo" : ""),
+        channel: "sms",
+        direction: "outbound",
+        author_member_id: conversation.created_by_member_id ?? null,
+        media_url: mediaUrls?.[0] ?? null,
       },
-    );
+    });
     return { message: message.data, conversation };
   },
   findClientConversationForContact: async (contactId) => {
-    const { data: contact } = await baseDataProvider.getOne<import("@/lbs/types").Contact>(
-      "contacts",
-      { id: contactId },
-    );
+    const { data: contact } = await baseDataProvider.getOne<
+      import("@/lbs/types").Contact
+    >("contacts", { id: contactId });
     const phone =
       contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ?? null;
-    const { data: existing = [] } = await baseDataProvider.getList<import("@/lbs/types").Conversation>(
-      "conversations",
-      {
-        filter: phone
-          ? { "type@eq": "client", "external_phone@eq": phone }
-          : { "type@eq": "client", "contact_id@eq": contactId },
-        pagination: { page: 1, perPage: 1 },
-        sort: { field: "id", order: "ASC" },
-      },
-    );
+    const { data: existing = [] } = await baseDataProvider.getList<
+      import("@/lbs/types").Conversation
+    >("conversations", {
+      filter: phone
+        ? { "type@eq": "client", "external_phone@eq": phone }
+        : { "type@eq": "client", "contact_id@eq": contactId },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "id", order: "ASC" },
+    });
     return existing[0] ?? null;
   },
   ensureClientConversation: async ({ contactId, authorMemberId, dealId }) => {
-    const { data: contact } = await baseDataProvider.getOne<import("@/lbs/types").Contact>(
-      "contacts",
-      { id: contactId },
-    );
+    const { data: contact } = await baseDataProvider.getOne<
+      import("@/lbs/types").Contact
+    >("contacts", { id: contactId });
     const phone =
       contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ?? null;
-    const { data: existing = [] } = await baseDataProvider.getList<import("@/lbs/types").Conversation>(
-      "conversations",
-      {
-        filter: phone
-          ? { "type@eq": "client", "external_phone@eq": phone }
-          : { "type@eq": "client", "contact_id@eq": contactId },
-        pagination: { page: 1, perPage: 1 },
-        sort: { field: "id", order: "ASC" },
-      },
-    );
+    const { data: existing = [] } = await baseDataProvider.getList<
+      import("@/lbs/types").Conversation
+    >("conversations", {
+      filter: phone
+        ? { "type@eq": "client", "external_phone@eq": phone }
+        : { "type@eq": "client", "contact_id@eq": contactId },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "id", order: "ASC" },
+    });
     if (existing[0]) {
       return existing[0];
     }
@@ -1449,19 +1532,18 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
       phone ||
       "Client SMS";
-    const { data: created } = await baseDataProvider.create<import("@/lbs/types").Conversation>(
-      "conversations",
-      {
-        data: {
-          type: "client",
-          title,
-          contact_id: contactId,
-          external_phone: phone,
-          created_by_member_id: authorMemberId,
-          ...(dealId != null && dealId !== "" ? { deal_id: dealId } : {}),
-        },
+    const { data: created } = await baseDataProvider.create<
+      import("@/lbs/types").Conversation
+    >("conversations", {
+      data: {
+        type: "client",
+        title,
+        contact_id: contactId,
+        external_phone: phone,
+        created_by_member_id: authorMemberId,
+        ...(dealId != null && dealId !== "" ? { deal_id: dealId } : {}),
       },
-    );
+    });
     return created;
   },
 };

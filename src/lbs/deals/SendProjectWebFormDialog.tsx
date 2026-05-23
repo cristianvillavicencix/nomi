@@ -20,7 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Form } from "@/lbs/types";
-import { buildProjectWebFormUrl, WEBSITE_INTAKE_SLUG } from "@/lbs/deals/websiteIntakeForm";
+import {
+  buildProjectWebFormUrl,
+  WEBSITE_INTAKE_SLUG,
+} from "@/lbs/deals/websiteIntakeForm";
 import { markBriefFormSent } from "@/lbs/deals/briefFormSentStorage";
 import { mailtoHref } from "@/lib/linking";
 
@@ -60,11 +63,13 @@ export const SendProjectWebFormDialog = ({
 
   useEffect(() => {
     if (!forms.length || selectedFormId) return;
-    const preferred = forms.find((form) => form.slug === WEBSITE_INTAKE_SLUG) ?? forms[0];
+    const preferred =
+      forms.find((form) => form.slug === WEBSITE_INTAKE_SLUG) ?? forms[0];
     setSelectedFormId(String(preferred.id));
   }, [forms, selectedFormId]);
 
-  const selectedForm = forms.find((form) => String(form.id) === selectedFormId) ?? forms[0];
+  const selectedForm =
+    forms.find((form) => String(form.id) === selectedFormId) ?? forms[0];
 
   const formUrl = useMemo(() => {
     if (!selectedForm?.slug) return "";
@@ -137,7 +142,12 @@ export const SendProjectWebFormDialog = ({
             <Label>Link for client</Label>
             <div className="flex gap-2">
               <Input readOnly value={formUrl} />
-              <Button type="button" variant="outline" size="icon" onClick={handleCopy}>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleCopy}
+              >
                 <Copy className="size-4" />
                 <span className="sr-only">Copy link</span>
               </Button>

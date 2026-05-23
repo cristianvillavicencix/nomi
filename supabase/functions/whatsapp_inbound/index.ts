@@ -28,5 +28,8 @@ Deno.serve(async (req) => {
     return new Response("OK", { status: 200, headers: corsHeaders });
   }
 
-  return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+  return new Response("Method not allowed", {
+    status: 405,
+    headers: corsHeaders,
+  });
 });

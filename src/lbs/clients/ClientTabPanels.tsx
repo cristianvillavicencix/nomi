@@ -38,7 +38,11 @@ const TabLoading = () => (
   </div>
 );
 
-export const ClientProjectsTab = ({ companyId }: { companyId: Company["id"] }) => {
+export const ClientProjectsTab = ({
+  companyId,
+}: {
+  companyId: Company["id"];
+}) => {
   const { dealStages } = useConfigurationContext();
   const { data: deals = [], isPending } = useGetList<Deal>(
     "deals",
@@ -73,7 +77,10 @@ export const ClientProjectsTab = ({ companyId }: { companyId: Company["id"] }) =
           {deals.map((deal) => (
             <TableRow key={deal.id}>
               <TableCell>
-                <Link to={`/deals/${deal.id}/show`} className="link-action font-medium">
+                <Link
+                  to={`/deals/${deal.id}/show`}
+                  className="link-action font-medium"
+                >
                   {deal.name}
                 </Link>
               </TableCell>
@@ -94,7 +101,11 @@ export const ClientProjectsTab = ({ companyId }: { companyId: Company["id"] }) =
   );
 };
 
-export const ClientProposalsTab = ({ companyId }: { companyId: Company["id"] }) => {
+export const ClientProposalsTab = ({
+  companyId,
+}: {
+  companyId: Company["id"];
+}) => {
   const { data = [], isPending } = useGetList<Proposal>(
     "proposals",
     {
@@ -158,7 +169,11 @@ export const ClientProposalsTab = ({ companyId }: { companyId: Company["id"] }) 
   );
 };
 
-export const ClientContractsTab = ({ companyId }: { companyId: Company["id"] }) => {
+export const ClientContractsTab = ({
+  companyId,
+}: {
+  companyId: Company["id"];
+}) => {
   const { data = [], isPending } = useGetList<Contract>(
     "contracts",
     {
@@ -216,7 +231,11 @@ export const ClientContractsTab = ({ companyId }: { companyId: Company["id"] }) 
   );
 };
 
-export const ClientTicketsTab = ({ companyId }: { companyId: Company["id"] }) => {
+export const ClientTicketsTab = ({
+  companyId,
+}: {
+  companyId: Company["id"];
+}) => {
   const { data = [], isPending } = useGetList<Ticket>(
     "tickets",
     {
@@ -280,7 +299,11 @@ export const ClientTicketsTab = ({ companyId }: { companyId: Company["id"] }) =>
   );
 };
 
-export const ClientSupportTab = ({ companyId }: { companyId: Company["id"] }) => (
+export const ClientSupportTab = ({
+  companyId,
+}: {
+  companyId: Company["id"];
+}) => (
   <div className="space-y-8">
     <section className="space-y-3">
       <h3 className="text-base font-semibold">Tickets</h3>
@@ -293,7 +316,11 @@ export const ClientSupportTab = ({ companyId }: { companyId: Company["id"] }) =>
   </div>
 );
 
-export const ClientWebFormsTab = ({ companyId }: { companyId: Company["id"] }) => {
+export const ClientWebFormsTab = ({
+  companyId,
+}: {
+  companyId: Company["id"];
+}) => {
   const { data = [], isPending } = useGetList<FormSubmission>(
     "form_submissions",
     {
@@ -454,7 +481,10 @@ export const ClientTasksTab = ({
         <AddTask selectContact contactFilter={contactFilter} display="chip" />
       )}
 
-      <Tabs value={status} onValueChange={(value) => setStatus(value as TaskStatusFilter)}>
+      <Tabs
+        value={status}
+        onValueChange={(value) => setStatus(value as TaskStatusFilter)}
+      >
         <TabsList className="inline-flex h-auto w-max justify-start gap-1 rounded-lg bg-muted p-1">
           <TabsTrigger value="open" className="shrink-0">
             Open
@@ -512,7 +542,11 @@ export const ClientNotesTab = ({
   return (
     <div className="space-y-4">
       {primaryContactId ? (
-        <NoteCreate reference="contacts" showStatus contactId={primaryContactId} />
+        <NoteCreate
+          reference="contacts"
+          showStatus
+          contactId={primaryContactId}
+        />
       ) : null}
       {contactIds.length === 0 || notes.length === 0 ? (
         <ClientTabEmpty message="No notes for this client's contacts yet." />

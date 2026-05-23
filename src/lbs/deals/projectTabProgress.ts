@@ -1,4 +1,7 @@
-import { getResourceTabCategory, PROJECT_RESOURCE_TAB_CATEGORIES } from "@/lbs/deals/projectResourceConstants";
+import {
+  getResourceTabCategory,
+  PROJECT_RESOURCE_TAB_CATEGORIES,
+} from "@/lbs/deals/projectResourceConstants";
 import type { DealResource } from "@/lbs/types";
 
 export type TabProgress = {
@@ -35,7 +38,8 @@ export const getProjectTasksProgress = (
 };
 
 export const getProgressBarClassName = (percent: number) => {
-  if (percent >= 100) return "[&_[data-slot=progress-indicator]]:bg-emerald-600";
+  if (percent >= 100)
+    return "[&_[data-slot=progress-indicator]]:bg-emerald-600";
   if (percent >= 70) return "[&_[data-slot=progress-indicator]]:bg-sky-600";
   if (percent >= 40) return "[&_[data-slot=progress-indicator]]:bg-amber-500";
   return "[&_[data-slot=progress-indicator]]:bg-muted-foreground/50";

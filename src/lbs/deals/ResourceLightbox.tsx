@@ -33,7 +33,10 @@ const resolveResourceUrl = async (file: ProjectResourceFile) => {
   return file.src;
 };
 
-export const ResourceLightbox = ({ resource, onClose }: ResourceLightboxProps) => {
+export const ResourceLightbox = ({
+  resource,
+  onClose,
+}: ResourceLightboxProps) => {
   const [fileUrl, setFileUrl] = useState("");
   const [loadingUrl, setLoadingUrl] = useState(false);
 
@@ -69,7 +72,10 @@ export const ResourceLightbox = ({ resource, onClose }: ResourceLightboxProps) =
   const previewUrl = fileUrl || file.src;
 
   return (
-    <Dialog open={Boolean(resource)} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={Boolean(resource)}
+      onOpenChange={(open) => !open && onClose()}
+    >
       <DialogContent className="max-w-4xl gap-4 p-0 overflow-hidden">
         <DialogHeader className="space-y-3 px-6 pt-6">
           <DialogTitle className="pr-8">{title}</DialogTitle>
@@ -122,7 +128,12 @@ export const ResourceLightbox = ({ resource, onClose }: ResourceLightboxProps) =
         <div className="flex justify-end gap-2 px-6 pb-6">
           {previewUrl ? (
             <Button type="button" variant="outline" asChild>
-              <a href={previewUrl} download={file.title} target="_blank" rel="noreferrer">
+              <a
+                href={previewUrl}
+                download={file.title}
+                target="_blank"
+                rel="noreferrer"
+              >
                 <Download className="size-4" />
                 Download
               </a>

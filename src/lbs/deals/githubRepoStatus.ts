@@ -49,7 +49,9 @@ export const getGithubRunStatusLabel = (run?: GithubRepoRunStatus | null) => {
   return run.workflow_name ?? "Workflow";
 };
 
-export const getGithubRunStatusClassName = (run?: GithubRepoRunStatus | null) => {
+export const getGithubRunStatusClassName = (
+  run?: GithubRepoRunStatus | null,
+) => {
   if (!run) return "bg-muted text-muted-foreground";
   if (run.status === "in_progress" || run.status === "queued") {
     return "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200";

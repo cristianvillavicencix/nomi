@@ -11,7 +11,10 @@ export const buildMeetingTitle = (contactName?: string | null) => {
 
 export const MeetingContactTitleSync = () => {
   const { setValue, getValues } = useFormContext();
-  const contactId = useWatch({ name: "contact_id" }) as Identifier | null | undefined;
+  const contactId = useWatch({ name: "contact_id" }) as
+    | Identifier
+    | null
+    | undefined;
   const title = useWatch({ name: "title" }) as string | null | undefined;
 
   const { data: contact } = useGetOne<Contact>(
@@ -30,7 +33,11 @@ export const MeetingContactTitleSync = () => {
       getValues("_meeting_contact_name") as string | null | undefined,
     );
 
-    if (!currentTitle || currentTitle === previousAutoTitle || currentTitle === "Client video call") {
+    if (
+      !currentTitle ||
+      currentTitle === previousAutoTitle ||
+      currentTitle === "Client video call"
+    ) {
       setValue("title", nextTitle, { shouldDirty: true });
     }
 

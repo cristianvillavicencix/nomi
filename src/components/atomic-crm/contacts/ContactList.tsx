@@ -87,7 +87,8 @@ const ContactListLayoutDesktop = () => {
             className="w-[30%]"
             cellClassName="w-[30%]"
             render={(record: Contact) =>
-              `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim() || "—"
+              `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim() ||
+              "—"
             }
           />
           <DataTable.Col
@@ -137,7 +138,8 @@ const ContactListActions = () => {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const currentQ = typeof filterValues.q === "string" ? filterValues.q : undefined;
+      const currentQ =
+        typeof filterValues.q === "string" ? filterValues.q : undefined;
       const nextQ = query.trim() ? query : undefined;
       if (currentQ === nextQ) {
         return;
@@ -235,7 +237,11 @@ const exporter: Exporter<Contact> = async (records, fetchRelatedRecords) => {
     "company_id",
     "companies",
   );
-  const sales = await fetchRelatedRecords<OrganizationMember>(records, "organization_member_id", "organization_members");
+  const sales = await fetchRelatedRecords<OrganizationMember>(
+    records,
+    "organization_member_id",
+    "organization_members",
+  );
   const tags = await fetchRelatedRecords<Tag>(records, "tags", "tags");
 
   const contacts = records.map((contact) => {

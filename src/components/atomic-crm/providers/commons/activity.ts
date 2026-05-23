@@ -88,7 +88,8 @@ async function getNewContactsAndNotes(
 
   const recentContactNotesFilter = {} as any;
   if (filter.organization_member_id) {
-    recentContactNotesFilter.organization_member_id = filter.organization_member_id;
+    recentContactNotesFilter.organization_member_id =
+      filter.organization_member_id;
   }
   if (filter.company_id) {
     // No company_id field in contactNote, filtering by related contacts instead.
@@ -138,7 +139,8 @@ async function getNewDealsAndNotes(
 
   const recentDealNotesFilter = {} as any;
   if (filter.organization_member_id) {
-    recentDealNotesFilter.organization_member_id = filter.organization_member_id;
+    recentDealNotesFilter.organization_member_id =
+      filter.organization_member_id;
   }
   if (filter.company_id) {
     // No company_id field in dealNote, filtering by related deals instead.

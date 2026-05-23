@@ -31,7 +31,9 @@ const PlatformNavItem = ({
 }) => {
   const location = useLocation();
   const active =
-    to === "/sas/empresas" ? isPlatformEmpresasPathExact(location.pathname) : false;
+    to === "/sas/empresas"
+      ? isPlatformEmpresasPathExact(location.pathname)
+      : false;
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={active}>
@@ -75,12 +77,17 @@ export const PlatformLayout = () => {
                       src={lightModeLogo}
                       alt={title}
                     />
-                    <span className="text-sm font-semibold truncate">Plataforma</span>
+                    <span className="text-sm font-semibold truncate">
+                      Plataforma
+                    </span>
                   </div>
                 </SidebarMenuItem>
               </SidebarMenu>
             </div>
-            <div className="hidden h-8 w-8 group-data-[collapsible=icon]:block" aria-hidden />
+            <div
+              className="hidden h-8 w-8 group-data-[collapsible=icon]:block"
+              aria-hidden
+            />
             <SidebarTrigger
               className="absolute top-0.5 right-0 group-data-[collapsible=icon]:top-0 group-data-[collapsible=icon]:right-0"
               variant="ghost"
@@ -99,7 +106,8 @@ export const PlatformLayout = () => {
               />
             </SidebarMenu>
             <p className="px-2 text-xs text-muted-foreground mt-2 max-w-[14rem] group-data-[collapsible=icon]:hidden">
-              Más módulos: rutas bajo <code className="text-[0.65rem]">/sas/…</code>.
+              Más módulos: rutas bajo{" "}
+              <code className="text-[0.65rem]">/sas/…</code>.
             </p>
           </SidebarGroup>
         </SidebarContent>
@@ -116,7 +124,9 @@ export const PlatformLayout = () => {
         <div className="border-b border-border flex h-12 shrink-0 items-center justify-between gap-2 px-2">
           <div className="flex min-w-0 items-center gap-1">
             <SidebarTrigger className="shrink-0 md:hidden" />
-            <h2 className="text-sm font-medium text-muted-foreground truncate">Nomi — operador de plataforma</h2>
+            <h2 className="text-sm font-medium text-muted-foreground truncate">
+              Nomi — operador de plataforma
+            </h2>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             <ThemeModeToggle />
@@ -127,7 +137,12 @@ export const PlatformLayout = () => {
                 </Button>
               }
             />
-            <Button type="button" variant="secondary" size="sm" onClick={() => void logout()}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void logout()}
+            >
               Cerrar sesión
             </Button>
           </div>

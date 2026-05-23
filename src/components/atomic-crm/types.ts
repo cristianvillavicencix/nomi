@@ -36,7 +36,9 @@ export const MEMBER_MODULE_KEYS = [
 export type MemberModuleKey = (typeof MEMBER_MODULE_KEYS)[number];
 
 /** Stored in organization_members.module_permissions (JSON); drives UI + synced roles[]. */
-export type MemberModulePermissions = Partial<Record<MemberModuleKey, boolean>> &
+export type MemberModulePermissions = Partial<
+  Record<MemberModuleKey, boolean>
+> &
   Record<string, boolean | string | undefined>;
 
 export type OrganizationMemberFormData = {
@@ -306,7 +308,14 @@ export type Person = {
   notes?: string | null;
   status: "active" | "inactive";
   compensation_mode?: "hourly" | "salary" | "day_rate" | null;
-  compensation_unit?: "hour" | "day" | "week" | "month" | "year" | "commission" | null;
+  compensation_unit?:
+    | "hour"
+    | "day"
+    | "week"
+    | "month"
+    | "year"
+    | "commission"
+    | null;
   compensation_amount?: number | null;
   pay_type: "hourly" | "salary" | "commission" | "day_rate";
   compensation_type?:
@@ -534,7 +543,14 @@ export type PaymentLine = {
   payment_id: Identifier;
   person_id: Identifier;
   project_id?: Identifier | null;
-  compensation_unit?: "hour" | "day" | "week" | "month" | "year" | "commission" | null;
+  compensation_unit?:
+    | "hour"
+    | "day"
+    | "week"
+    | "month"
+    | "year"
+    | "commission"
+    | null;
   compensation_amount?: number | null;
   compensation_type?:
     | "hourly"

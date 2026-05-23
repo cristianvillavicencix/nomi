@@ -26,7 +26,9 @@ export const MessagesQuickAccessContext =
 export const useMessagesQuickAccess = () => {
   const context = useContext(MessagesQuickAccessContext);
   if (!context) {
-    throw new Error("useMessagesQuickAccess must be used within MessagesQuickAccessProvider");
+    throw new Error(
+      "useMessagesQuickAccess must be used within MessagesQuickAccessProvider",
+    );
   }
   return context;
 };

@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
-import { useCreate, useDelete, useGetList, useNotify, useRefresh } from "ra-core";
+import {
+  useCreate,
+  useDelete,
+  useGetList,
+  useNotify,
+  useRefresh,
+} from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -100,11 +106,19 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
       <div className="flex flex-wrap items-end gap-2 rounded-lg border p-4">
         <div className="space-y-1">
           <label className="text-sm font-medium">Amount</label>
-          <Input value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32" />
+          <Input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-32"
+          />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium">Reference</label>
-          <Input value={reference} onChange={(e) => setReference(e.target.value)} className="w-48" />
+          <Input
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            className="w-48"
+          />
         </div>
         <Button type="button" onClick={addPayment}>
           Record payment
@@ -148,7 +162,8 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
                         { id: payment.id, previousData: payment },
                         {
                           onSuccess: () => refresh(),
-                          onError: () => notify("Could not delete", { type: "error" }),
+                          onError: () =>
+                            notify("Could not delete", { type: "error" }),
                         },
                       )
                     }

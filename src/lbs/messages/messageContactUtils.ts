@@ -33,7 +33,10 @@ export const contactAlreadyHasClientConversation = (
   return conversations.some((conversation) => {
     if (conversation.type !== "client") return false;
     if (!conversation.last_message_at) return false;
-    if (conversation.contact_id != null && String(conversation.contact_id) === contactId) {
+    if (
+      conversation.contact_id != null &&
+      String(conversation.contact_id) === contactId
+    ) {
       return true;
     }
     if (phone && conversation.external_phone === phone) {

@@ -36,7 +36,8 @@ export const ProjectScopeTab = ({ record }: { record: LbsDeal }) => {
     return (
       <Card>
         <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          No accepted proposal linked. Accept a proposal or link one when creating the project.
+          No accepted proposal linked. Accept a proposal or link one when
+          creating the project.
         </CardContent>
       </Card>
     );
@@ -46,7 +47,9 @@ export const ProjectScopeTab = ({ record }: { record: LbsDeal }) => {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{proposal?.title ?? "Accepted proposal"}</CardTitle>
+          <CardTitle className="text-base">
+            {proposal?.title ?? "Accepted proposal"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="flex flex-wrap gap-3">
@@ -57,11 +60,20 @@ export const ProjectScopeTab = ({ record }: { record: LbsDeal }) => {
               Amount: <MoneyText value={proposal?.amount ?? record.amount} />
             </span>
             {proposal?.accepted_at ? (
-              <span>Accepted {new Date(proposal.accepted_at).toLocaleDateString()}</span>
+              <span>
+                Accepted {new Date(proposal.accepted_at).toLocaleDateString()}
+              </span>
             ) : null}
           </div>
-          {proposal?.notes ? <p className="whitespace-pre-wrap text-muted-foreground">{proposal.notes}</p> : null}
-          <Link to={`/proposals/${proposalId}/show`} className="text-sm link-action">
+          {proposal?.notes ? (
+            <p className="whitespace-pre-wrap text-muted-foreground">
+              {proposal.notes}
+            </p>
+          ) : null}
+          <Link
+            to={`/proposals/${proposalId}/show`}
+            className="text-sm link-action"
+          >
             View full proposal
           </Link>
         </CardContent>
@@ -73,7 +85,9 @@ export const ProjectScopeTab = ({ record }: { record: LbsDeal }) => {
         </CardHeader>
         <CardContent>
           {lineItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No line items on this proposal.</p>
+            <p className="text-sm text-muted-foreground">
+              No line items on this proposal.
+            </p>
           ) : (
             <Table>
               <TableHeader>

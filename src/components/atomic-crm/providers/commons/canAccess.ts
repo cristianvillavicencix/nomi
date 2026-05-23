@@ -47,7 +47,9 @@ export type AccessIdentity = {
   } | null;
 };
 
-export const getAccessRoles = (identity: string | AccessIdentity | null | undefined): AccessRole[] => {
+export const getAccessRoles = (
+  identity: string | AccessIdentity | null | undefined,
+): AccessRole[] => {
   if (!identity) return [];
 
   if (typeof identity === "string") {
@@ -70,7 +72,9 @@ export const getAccessRoles = (identity: string | AccessIdentity | null | undefi
   const arrayRoles = identity.roles ?? identity.user_metadata?.roles;
   if (Array.isArray(arrayRoles)) {
     for (const role of arrayRoles) {
-      const normalized = String(role ?? "").trim().toLowerCase();
+      const normalized = String(role ?? "")
+        .trim()
+        .toLowerCase();
       if (normalized) {
         roles.add(normalized as AccessRole);
       }
@@ -158,7 +162,10 @@ export const canAccess = <
   const canAccessPeople = legacyRolePeople(roles);
   const canAccessSales = legacyRoleSales(roles);
 
-  if (params.resource === "organization_members" || params.resource === "configuration") {
+  if (
+    params.resource === "organization_members" ||
+    params.resource === "configuration"
+  ) {
     return false;
   }
 

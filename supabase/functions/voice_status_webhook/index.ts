@@ -8,11 +8,17 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: corsHeaders,
+    });
   }
 
   const body = await req.formData();
-  console.log("[Voice SHELL] Status callback:", Object.fromEntries(body.entries()));
+  console.log(
+    "[Voice SHELL] Status callback:",
+    Object.fromEntries(body.entries()),
+  );
 
   // TODO: validate Twilio signature, upsert voice_calls by CallSid
 

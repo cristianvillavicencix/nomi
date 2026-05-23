@@ -1,6 +1,6 @@
 import { getAccessRoles } from "@/components/atomic-crm/providers/commons/canAccess";
 
-export type PayrollApproverRole = 'owner' | 'admin' | 'accountant';
+export type PayrollApproverRole = "owner" | "admin" | "accountant";
 
 /**
  * Permission gate for approval actions in Hours/Payroll.

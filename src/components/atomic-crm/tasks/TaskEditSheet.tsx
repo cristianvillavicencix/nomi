@@ -13,7 +13,11 @@ export interface TaskEditSheetProps {
 }
 
 const TaskEditShareButton = ({ taskId }: { taskId: Identifier }) => {
-  const { data: task } = useGetOne<Task>("tasks", { id: taskId }, { enabled: !!taskId });
+  const { data: task } = useGetOne<Task>(
+    "tasks",
+    { id: taskId },
+    { enabled: !!taskId },
+  );
   if (!task) return null;
   return (
     <ShareRecordModal
@@ -42,23 +46,23 @@ export const TaskEditSheet = ({
           </div>
         ) : (
           <ReferenceField
-          source="contact_id"
-          reference="contacts"
-          render={({ referenceRecord }) => (
-            <h1 className="text-xl font-semibold truncate pr-10">
-              Edit Task
-              {referenceRecord ? (
-                <>
-                  {" for "}
-                  <RecordRepresentation
-                    record={referenceRecord}
-                    resource="contacts"
-                  />
-                </>
-              ) : null}
-            </h1>
-          )}
-        />
+            source="contact_id"
+            reference="contacts"
+            render={({ referenceRecord }) => (
+              <h1 className="text-xl font-semibold truncate pr-10">
+                Edit Task
+                {referenceRecord ? (
+                  <>
+                    {" for "}
+                    <RecordRepresentation
+                      record={referenceRecord}
+                      resource="contacts"
+                    />
+                  </>
+                ) : null}
+              </h1>
+            )}
+          />
         )
       }
       redirect={false}

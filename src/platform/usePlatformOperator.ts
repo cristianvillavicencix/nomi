@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 
 /** `true` si el usuario de Supabase figura en `platform_operators`. */
-export const isUserPlatformOperator = async (userId: string): Promise<boolean> => {
+export const isUserPlatformOperator = async (
+  userId: string,
+): Promise<boolean> => {
   const { data, error } = await supabase
     .from("platform_operators")
     .select("user_id")
@@ -24,7 +26,9 @@ export const usePlatformOperator = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(() => {
-      void queryClient.invalidateQueries({ queryKey: ["auth", "platform_operator"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["auth", "platform_operator"],
+      });
     });
     return () => subscription.unsubscribe();
   }, [queryClient]);

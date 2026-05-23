@@ -11,7 +11,10 @@ export const WebFormInputs = ({
   showFieldsEditor?: boolean;
 }) => (
   <>
-    <TextInput source="name" validate={(value) => (value ? undefined : "Required")} />
+    <TextInput
+      source="name"
+      validate={(value) => (value ? undefined : "Required")}
+    />
     <TextInput
       source="slug"
       disabled={slugDisabled}

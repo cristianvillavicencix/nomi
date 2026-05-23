@@ -69,7 +69,11 @@ const NotesField = () => {
   if (!record) return null;
   const value = String(record.notes ?? "").trim();
   if (!value) return <span>-</span>;
-  return <span title={value}>{value.length > 40 ? `${value.slice(0, 40)}...` : value}</span>;
+  return (
+    <span title={value}>
+      {value.length > 40 ? `${value.slice(0, 40)}...` : value}
+    </span>
+  );
 };
 
 const SpecialtyField = () => {
@@ -84,7 +88,8 @@ const CompensationModeField = () => {
   if (record.compensation_unit) {
     return (
       <span>
-        {compensationUnitLabels[record.compensation_unit] ?? record.compensation_unit}
+        {compensationUnitLabels[record.compensation_unit] ??
+          record.compensation_unit}
       </span>
     );
   }
@@ -95,7 +100,8 @@ const CompensationModeField = () => {
   if (record.compensation_type) {
     return (
       <span>
-        {compensationTypeLabels[record.compensation_type] ?? record.compensation_type}
+        {compensationTypeLabels[record.compensation_type] ??
+          record.compensation_type}
       </span>
     );
   }
@@ -145,9 +151,7 @@ const RowActionsField = () => {
       {
         onSuccess: () => {
           notify(
-            nextStatus === "active"
-              ? "Person activated"
-              : "Person deactivated",
+            nextStatus === "active" ? "Person activated" : "Person deactivated",
           );
           refresh();
         },
@@ -163,11 +167,22 @@ const RowActionsField = () => {
       {canManagePeople ? (
         <>
           <Button asChild size="sm" variant="outline">
-            <Link to={createPath({ resource: "people", id: record.id, type: "edit" })}>
+            <Link
+              to={createPath({
+                resource: "people",
+                id: record.id,
+                type: "edit",
+              })}
+            >
               Edit
             </Link>
           </Button>
-          <Button size="sm" variant="outline" onClick={handleToggleStatus} disabled={isPending}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleToggleStatus}
+            disabled={isPending}
+          >
             {record.status === "active" ? "Deactivate" : "Activate"}
           </Button>
         </>
@@ -258,7 +273,10 @@ const PeopleListActions = ({
 
   return (
     <TopToolbar className="w-full justify-between items-center">
-      <Tabs value={activeType} onValueChange={(value) => onTypeChange(value as Person["type"])}>
+      <Tabs
+        value={activeType}
+        onValueChange={(value) => onTypeChange(value as Person["type"])}
+      >
         <TabsList>
           {personTypeTabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
@@ -278,7 +296,9 @@ const PeopleListActions = ({
         <ExportButton />
         {canManagePeople ? (
           <Button asChild variant="outline">
-            <Link to={`/people/create?type=${activeType}`}>New {personTypeLabels[activeType]}</Link>
+            <Link to={`/people/create?type=${activeType}`}>
+              New {personTypeLabels[activeType]}
+            </Link>
           </Button>
         ) : null}
         <ModuleInfoPopover

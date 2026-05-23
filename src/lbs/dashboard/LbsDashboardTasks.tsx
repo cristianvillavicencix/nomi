@@ -5,15 +5,19 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddTask } from "@/components/atomic-crm/tasks/AddTask";
+import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 import {
-  TASK_STATUS_FILTERS,
-} from "@/components/atomic-crm/tasks/taskConstants";
-import { computeTaskStats, isTaskOverdue } from "@/components/atomic-crm/tasks/taskStats";
+  computeTaskStats,
+  isTaskOverdue,
+} from "@/components/atomic-crm/tasks/taskStats";
 import { TaskDescriptionCell } from "@/components/atomic-crm/tasks/TaskDescriptionCell";
 import type { Task } from "@/components/atomic-crm/types";
 
 const formatDue = (value: string) =>
-  new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 
 export const LbsDashboardTasks = () => {
   const { identity } = useGetIdentity();
@@ -31,18 +35,19 @@ export const LbsDashboardTasks = () => {
     { enabled: !!identity, staleTime: 30_000 },
   );
 
-  const { total: unassigned = 0, isPending: unassignedPending } = useGetList<Task>(
-    "tasks",
-    {
-      filter: {
-        ...TASK_STATUS_FILTERS.open,
-        "organization_member_id@is": null,
+  const { total: unassigned = 0, isPending: unassignedPending } =
+    useGetList<Task>(
+      "tasks",
+      {
+        filter: {
+          ...TASK_STATUS_FILTERS.open,
+          "organization_member_id@is": null,
+        },
+        pagination: { page: 1, perPage: 1 },
+        sort: { field: "due_date", order: "ASC" },
       },
-      pagination: { page: 1, perPage: 1 },
-      sort: { field: "due_date", order: "ASC" },
-    },
-    { staleTime: 30_000 },
-  );
+      { staleTime: 30_000 },
+    );
 
   const isPending = myPending || unassignedPending;
   const stats = computeTaskStats(myTasks);
@@ -61,7 +66,9 @@ export const LbsDashboardTasks = () => {
       const leftOverdue = isTaskOverdue(left) ? 0 : 1;
       const rightOverdue = isTaskOverdue(right) ? 0 : 1;
       if (leftOverdue !== rightOverdue) return leftOverdue - rightOverdue;
-      return new Date(left.due_date).getTime() - new Date(right.due_date).getTime();
+      return (
+        new Date(left.due_date).getTime() - new Date(right.due_date).getTime()
+      );
     })
     .slice(0, 5);
 
@@ -81,7 +88,9 @@ export const LbsDashboardTasks = () => {
         <div className="mr-3 flex">
           <CheckSquare className="text-muted-foreground h-6 w-6" />
         </div>
-        <h2 className="text-xl font-semibold text-muted-foreground flex-1">My tasks</h2>
+        <h2 className="text-xl font-semibold text-muted-foreground flex-1">
+          My tasks
+        </h2>
         <AddTask display="icon" selectContact />
       </div>
       <Card className="p-4 space-y-4">
@@ -98,13 +107,22 @@ export const LbsDashboardTasks = () => {
         </div>
 
         {preview.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No open tasks assigned to you.</p>
+          <p className="text-sm text-muted-foreground">
+            No open tasks assigned to you.
+          </p>
         ) : (
           <ul className="space-y-2">
             {preview.map((task) => (
-              <li key={String(task.id)} className="flex items-start justify-between gap-2 text-sm">
+              <li
+                key={String(task.id)}
+                className="flex items-start justify-between gap-2 text-sm"
+              >
                 <div className="min-w-0 flex-1">
-                  <TaskDescriptionCell text={task.text} useMentions fadeSurface="card" />
+                  <TaskDescriptionCell
+                    text={task.text}
+                    useMentions
+                    fadeSurface="card"
+                  />
                   {task.deal_id ? (
                     <Link
                       to={`/deals/${task.deal_id}/show?tab=tasks`}

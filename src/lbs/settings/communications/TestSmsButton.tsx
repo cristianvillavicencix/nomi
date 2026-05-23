@@ -16,9 +16,12 @@ export const TestSmsButton = ({ disabled }: { disabled?: boolean }) => {
     mutationFn: () => dataProvider.sendTestSms(phone.trim()),
     onSuccess: () => notify("Test SMS sent", { type: "success" }),
     onError: (error) =>
-      notify(error instanceof Error ? error.message : "Failed to send test SMS", {
-        type: "error",
-      }),
+      notify(
+        error instanceof Error ? error.message : "Failed to send test SMS",
+        {
+          type: "error",
+        },
+      ),
   });
 
   return (
@@ -41,7 +44,11 @@ export const TestSmsButton = ({ disabled }: { disabled?: boolean }) => {
           disabled={disabled || mutation.isPending || !phone.trim()}
           onClick={() => mutation.mutate()}
         >
-          {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+          {mutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Send className="size-4" />
+          )}
           Test SMS
         </Button>
       </div>

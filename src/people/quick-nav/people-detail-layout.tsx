@@ -10,7 +10,10 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PeopleQuickNav } from "./people-quick-nav";
-import type { PeopleQuickNavItem as QuickItem, PeopleQuickNavType } from "./types";
+import type {
+  PeopleQuickNavItem as QuickItem,
+  PeopleQuickNavType,
+} from "./types";
 import { PeopleQuickNavSearch } from "./people-quick-nav-search";
 import { PeopleQuickNavList } from "./people-quick-nav-list";
 

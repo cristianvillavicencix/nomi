@@ -8,7 +8,10 @@ import type {
 } from "@/lbs/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { getConversationDisplay, formatConversationListTime } from "@/lbs/messages/conversationDisplay";
+import {
+  getConversationDisplay,
+  formatConversationListTime,
+} from "@/lbs/messages/conversationDisplay";
 import { cn } from "@/lib/utils";
 
 export const ConversationListItem = ({
@@ -56,20 +59,29 @@ export const ConversationListItem = ({
         {display.memberAvatarSrc ? (
           <AvatarImage src={display.memberAvatarSrc} alt={display.title} />
         ) : null}
-        <AvatarFallback className="text-sm font-medium">{display.initials}</AvatarFallback>
+        <AvatarFallback className="text-sm font-medium">
+          {display.initials}
+        </AvatarFallback>
       </Avatar>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <span className={cn("truncate", isUnread && "font-semibold")}>{display.title}</span>
+          <span className={cn("truncate", isUnread && "font-semibold")}>
+            {display.title}
+          </span>
           <div className="flex shrink-0 items-center gap-1.5">
             {isUnread ? (
-              <Badge variant="default" className="h-5 min-w-5 rounded-full px-1.5 text-[10px]">
+              <Badge
+                variant="default"
+                className="h-5 min-w-5 rounded-full px-1.5 text-[10px]"
+              >
                 1
               </Badge>
             ) : null}
             {timeLabel ? (
-              <span className="text-[11px] text-muted-foreground">{timeLabel}</span>
+              <span className="text-[11px] text-muted-foreground">
+                {timeLabel}
+              </span>
             ) : null}
           </div>
         </div>

@@ -5,7 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddTask } from "@/components/atomic-crm/tasks/AddTask";
-import { TASK_STATUS_FILTERS, type TaskStatusFilter } from "@/components/atomic-crm/tasks/taskConstants";
+import {
+  TASK_STATUS_FILTERS,
+  type TaskStatusFilter,
+} from "@/components/atomic-crm/tasks/taskConstants";
 import { TaskTable } from "@/components/atomic-crm/tasks/TaskTable";
 import { computeTaskStats } from "@/components/atomic-crm/tasks/taskStats";
 import { ProjectTaskStats } from "@/lbs/deals/ProjectTaskStats";
@@ -35,30 +38,45 @@ import type { DealResource, LbsDeal, Task as TaskRecord } from "@/lbs/types";
 import { ProjectContextPanel } from "@/lbs/projects/ProjectContextPanel";
 
 const ProjectScopeTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectScopeTab").then((m) => ({ default: m.ProjectScopeTab })),
+  import("@/lbs/projects/tabs/ProjectScopeTab").then((m) => ({
+    default: m.ProjectScopeTab,
+  })),
 );
 const ProjectContentTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectContentTab").then((m) => ({ default: m.ProjectContentTab })),
+  import("@/lbs/projects/tabs/ProjectContentTab").then((m) => ({
+    default: m.ProjectContentTab,
+  })),
 );
 const ProjectScheduleTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectScheduleTab").then((m) => ({ default: m.ProjectScheduleTab })),
+  import("@/lbs/projects/tabs/ProjectScheduleTab").then((m) => ({
+    default: m.ProjectScheduleTab,
+  })),
 );
 const ProjectPaymentsTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectPaymentsTab").then((m) => ({ default: m.ProjectPaymentsTab })),
+  import("@/lbs/projects/tabs/ProjectPaymentsTab").then((m) => ({
+    default: m.ProjectPaymentsTab,
+  })),
 );
 const ProjectActivityTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectActivityTab").then((m) => ({ default: m.ProjectActivityTab })),
+  import("@/lbs/projects/tabs/ProjectActivityTab").then((m) => ({
+    default: m.ProjectActivityTab,
+  })),
 );
 const ProjectSettingsTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectSettingsTab").then((m) => ({ default: m.ProjectSettingsTab })),
+  import("@/lbs/projects/tabs/ProjectSettingsTab").then((m) => ({
+    default: m.ProjectSettingsTab,
+  })),
 );
 const ProjectMessagesTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectMessagesTab").then((m) => ({ default: m.ProjectMessagesTab })),
+  import("@/lbs/projects/tabs/ProjectMessagesTab").then((m) => ({
+    default: m.ProjectMessagesTab,
+  })),
 );
 
 const TabFallback = () => <Skeleton className="h-40 w-full rounded-lg" />;
 
-const tabLabel = (label: string, count?: number) => `${label}${formatTabCount(count)}`;
+const tabLabel = (label: string, count?: number) =>
+  `${label}${formatTabCount(count)}`;
 
 const progressTabTriggerClassName =
   "shrink-0 flex-col items-start gap-0.5 py-1 leading-none [&>span:first-child]:text-sm";
@@ -66,7 +84,9 @@ const progressTabTriggerClassName =
 export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = getValidProjectTab(searchParams.get("tab"));
-  const [visited, setVisited] = useState<Set<string>>(() => new Set(["overview"]));
+  const [visited, setVisited] = useState<Set<string>>(
+    () => new Set(["overview"]),
+  );
 
   const contactIds =
     record.contact_ids?.length > 0
@@ -95,20 +115,30 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
     { staleTime: 30_000 },
   );
 
-  const { data: projectResources = [], error: resourcesListError } = useGetList<DealResource>(
-    "deal_resources",
-    {
-      filter: { "deal_id@eq": record.id },
-      pagination: { page: 1, perPage: 200 },
-      sort: { field: "created_at", order: "DESC" },
-    },
-    { staleTime: 30_000, ...supabaseTableQueryOptions("deal_resources") },
-  );
+  const { data: projectResources = [], error: resourcesListError } =
+    useGetList<DealResource>(
+      "deal_resources",
+      {
+        filter: { "deal_id@eq": record.id },
+        pagination: { page: 1, perPage: 200 },
+        sort: { field: "created_at", order: "DESC" },
+      },
+      { staleTime: 30_000, ...supabaseTableQueryOptions("deal_resources") },
+    );
 
-  const resourcesSchemaMissing = isSupabaseSchemaMissingError(resourcesListError, "deal_resources");
-  const briefProgress = useMemo(() => getProjectBriefProgress(record), [record]);
+  const resourcesSchemaMissing = isSupabaseSchemaMissingError(
+    resourcesListError,
+    "deal_resources",
+  );
+  const briefProgress = useMemo(
+    () => getProjectBriefProgress(record),
+    [record],
+  );
   const resourcesProgress = useMemo(
-    () => (resourcesSchemaMissing ? null : getProjectResourcesProgress(projectResources)),
+    () =>
+      resourcesSchemaMissing
+        ? null
+        : getProjectResourcesProgress(projectResources),
     [projectResources, resourcesSchemaMissing],
   );
   const tasksProgress = useMemo(
@@ -134,26 +164,53 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
           <Tabs value={currentTab} onValueChange={handleTabChange}>
             <StickyTabsBar className="pb-1">
               <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-                <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>
-                <TabsTrigger value="scope" className="shrink-0">Scope</TabsTrigger>
-                <TabsTrigger value="website-brief" className={progressTabTriggerClassName}>
+                <TabsTrigger value="overview" className="shrink-0">
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="scope" className="shrink-0">
+                  Scope
+                </TabsTrigger>
+                <TabsTrigger
+                  value="website-brief"
+                  className={progressTabTriggerClassName}
+                >
                   <span>Brief</span>
                   <BriefTabProgress percent={briefProgress.percent} />
                 </TabsTrigger>
-                <TabsTrigger value="content" className="shrink-0">Content</TabsTrigger>
-                <TabsTrigger value="resources" className={progressTabTriggerClassName}>
-                  <span>Assets</span>
-                  {resourcesProgress ? <BriefTabProgress percent={resourcesProgress.percent} /> : null}
+                <TabsTrigger value="content" className="shrink-0">
+                  Content
                 </TabsTrigger>
-                <TabsTrigger value="tasks" className={progressTabTriggerClassName}>
+                <TabsTrigger
+                  value="resources"
+                  className={progressTabTriggerClassName}
+                >
+                  <span>Assets</span>
+                  {resourcesProgress ? (
+                    <BriefTabProgress percent={resourcesProgress.percent} />
+                  ) : null}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="tasks"
+                  className={progressTabTriggerClassName}
+                >
                   <span>Tasks</span>
                   <BriefTabProgress percent={tasksProgress.percent} />
                 </TabsTrigger>
-                <TabsTrigger value="schedule" className="shrink-0">Schedule</TabsTrigger>
-                <TabsTrigger value="messages" className="shrink-0">Messages</TabsTrigger>
-                <TabsTrigger value="payments" className="shrink-0">Payments</TabsTrigger>
-                <TabsTrigger value="activity" className="shrink-0">Activity</TabsTrigger>
-                <TabsTrigger value="settings" className="shrink-0">Settings</TabsTrigger>
+                <TabsTrigger value="schedule" className="shrink-0">
+                  Schedule
+                </TabsTrigger>
+                <TabsTrigger value="messages" className="shrink-0">
+                  Messages
+                </TabsTrigger>
+                <TabsTrigger value="payments" className="shrink-0">
+                  Payments
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="shrink-0">
+                  Activity
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="shrink-0">
+                  Settings
+                </TabsTrigger>
               </TabsList>
             </StickyTabsBar>
             <ScrollableContentArea>
@@ -280,13 +337,23 @@ const ProjectTasksPanel = ({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <Tabs value={status} onValueChange={(v) => setStatus(v as TaskStatusFilter)}>
+          <Tabs
+            value={status}
+            onValueChange={(v) => setStatus(v as TaskStatusFilter)}
+          >
             <TabsList className="inline-flex h-auto w-max shrink-0 gap-1 rounded-lg bg-muted p-1">
-              <TabsTrigger value="open" className="shrink-0">Open</TabsTrigger>
-              <TabsTrigger value="done" className="shrink-0">Done</TabsTrigger>
+              <TabsTrigger value="open" className="shrink-0">
+                Open
+              </TabsTrigger>
+              <TabsTrigger value="done" className="shrink-0">
+                Done
+              </TabsTrigger>
             </TabsList>
           </Tabs>
-          <ProjectTaskStats stats={computeTaskStats(openTasksForStats)} variant="compact" />
+          <ProjectTaskStats
+            stats={computeTaskStats(openTasksForStats)}
+            variant="compact"
+          />
         </div>
         {taskContactId ? (
           <AddTask
@@ -296,12 +363,16 @@ const ProjectTasksPanel = ({
             display="chip"
           />
         ) : (
-          <p className="text-sm text-muted-foreground">Link a contact to create tasks.</p>
+          <p className="text-sm text-muted-foreground">
+            Link a contact to create tasks.
+          </p>
         )}
       </div>
       <TaskTable
         tasks={tasks}
-        emptyMessage={status === "done" ? "No completed tasks." : "No open tasks."}
+        emptyMessage={
+          status === "done" ? "No completed tasks." : "No open tasks."
+        }
       />
     </div>
   );

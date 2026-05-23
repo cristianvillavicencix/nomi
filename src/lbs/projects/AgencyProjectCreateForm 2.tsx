@@ -12,7 +12,12 @@ import { Create } from "@/components/admin/create";
 import { SaveButton } from "@/components/admin/form";
 import { FormToolbar } from "@/components/admin/simple-form";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Deal } from "@/components/atomic-crm/types";
 import { normalizeProjectPayload } from "@/components/atomic-crm/deals/projectForm";
 import { syncProjectAssignments } from "@/components/atomic-crm/deals/projectAssignments";
@@ -65,10 +70,14 @@ const AgencyProjectCreateReview = () => {
           Stage {stage ?? "setup"} · Priority {priority ?? "normal"}
           {expectedEnd ? ` · Delivery ${expectedEnd}` : ""}
         </li>
-        <li>Team members: {Array.isArray(team) && team.length > 0 ? team.length : 0}</li>
+        <li>
+          Team members:{" "}
+          {Array.isArray(team) && team.length > 0 ? team.length : 0}
+        </li>
       </ul>
       <p className="text-xs text-muted-foreground">
-        Starter tasks will be created automatically based on project type and stage.
+        Starter tasks will be created automatically based on project type and
+        stage.
       </p>
     </div>
   );
@@ -85,7 +94,12 @@ const AgencyProjectCreateStepToolbar = ({
 }) => (
   <FormToolbar>
     <div className="flex w-full items-center justify-between gap-2">
-      <Button type="button" variant="outline" disabled={step === 1} onClick={onBack}>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={step === 1}
+        onClick={onBack}
+      >
         Back
       </Button>
       {step < 4 ? (
@@ -93,7 +107,10 @@ const AgencyProjectCreateStepToolbar = ({
           Next
         </Button>
       ) : (
-        <SaveButton transform={normalizeProjectPayload} label="Create project" />
+        <SaveButton
+          transform={normalizeProjectPayload}
+          label="Create project"
+        />
       )}
     </div>
   </FormToolbar>
@@ -120,7 +137,12 @@ export const AgencyProjectCreateForm = ({
 
   const onSuccess = async (deal: Deal) => {
     try {
-      await syncProjectAssignments(dataProvider, deal.id, deal.salesperson_ids, []);
+      await syncProjectAssignments(
+        dataProvider,
+        deal.id,
+        deal.salesperson_ids,
+        [],
+      );
     } catch {
       notify("Project saved, but team sync had issues", { type: "warning" });
     }
@@ -133,7 +155,9 @@ export const AgencyProjectCreateForm = ({
           organizationMemberId: identity.id,
         });
         if (count > 0) {
-          notify(`${count} starter task${count === 1 ? "" : "s"} created`, { type: "info" });
+          notify(`${count} starter task${count === 1 ? "" : "s"} created`, {
+            type: "info",
+          });
         }
       } catch {
         /* non-blocking */
@@ -153,7 +177,9 @@ export const AgencyProjectCreateForm = ({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto lg:max-w-4xl">
-        <DialogTitle className="text-2xl font-semibold">New agency project</DialogTitle>
+        <DialogTitle className="text-2xl font-semibold">
+          New agency project
+        </DialogTitle>
         <DialogDescription>
           Step {step} of {CREATE_STEPS.length}: {CREATE_STEPS[step - 1].label}
         </DialogDescription>
@@ -170,7 +196,12 @@ export const AgencyProjectCreateForm = ({
           ))}
         </div>
 
-        <Create resource="deals" title={false} disableBreadcrumb mutationOptions={{ onSuccess }}>
+        <Create
+          resource="deals"
+          title={false}
+          disableBreadcrumb
+          mutationOptions={{ onSuccess }}
+        >
           <Form
             defaultValues={{
               organization_member_id: identity?.id,
@@ -185,7 +216,9 @@ export const AgencyProjectCreateForm = ({
               company_id: presetCompanyId ? Number(presetCompanyId) : null,
               contact_id: presetContactId ? Number(presetContactId) : null,
               contact_ids: presetContactId ? [Number(presetContactId)] : [],
-              accepted_proposal_id: presetProposalId ? Number(presetProposalId) : null,
+              accepted_proposal_id: presetProposalId
+                ? Number(presetProposalId)
+                : null,
               salesperson_ids: [],
               subcontractor_ids: [],
               index: 0,
@@ -200,8 +233,16 @@ export const AgencyProjectCreateForm = ({
             ) : null}
             <AgencyProjectCreateStepToolbar
               step={step}
-              onBack={() => setStep((current) => (current > 1 ? ((current - 1) as 1 | 2 | 3 | 4) : current))}
-              onNext={() => setStep((current) => (current < 4 ? ((current + 1) as 1 | 2 | 3 | 4) : current))}
+              onBack={() =>
+                setStep((current) =>
+                  current > 1 ? ((current - 1) as 1 | 2 | 3 | 4) : current,
+                )
+              }
+              onNext={() =>
+                setStep((current) =>
+                  current < 4 ? ((current + 1) as 1 | 2 | 3 | 4) : current,
+                )
+              }
             />
           </Form>
         </Create>

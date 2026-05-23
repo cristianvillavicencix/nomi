@@ -11,11 +11,19 @@ export const ProjectDeliveryCountdownText = ({
   record,
   className,
 }: {
-  record: Pick<Deal, "expected_end_date" | "expected_closing_date" | "stage" | "actual_completion_date">;
+  record: Pick<
+    Deal,
+    | "expected_end_date"
+    | "expected_closing_date"
+    | "stage"
+    | "actual_completion_date"
+  >;
   className?: string;
 }) => {
   const deliveryDate = getProjectDeliveryDate(record);
-  const urgency = getProjectDeliveryUrgency(deliveryDate, { stage: record.stage });
+  const urgency = getProjectDeliveryUrgency(deliveryDate, {
+    stage: record.stage,
+  });
   const countdown = getProjectDeliveryCountdown(deliveryDate, {
     stage: record.stage,
     actualCompletionDate: record.actual_completion_date,
@@ -26,7 +34,9 @@ export const ProjectDeliveryCountdownText = ({
   }
 
   return (
-    <span className={cn(getProjectDeliveryUrgencyClassName(urgency), className)}>
+    <span
+      className={cn(getProjectDeliveryUrgencyClassName(urgency), className)}
+    >
       {countdown.label}
     </span>
   );

@@ -17,7 +17,9 @@ const toNullableId = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-export const prepareCalendarEventWriteData = (data: Record<string, unknown>) => {
+export const prepareCalendarEventWriteData = (
+  data: Record<string, unknown>,
+) => {
   const next: Record<string, unknown> = { ...data };
 
   NULLABLE_ID_FIELDS.forEach((field) => {
@@ -40,14 +42,12 @@ export const prepareCalendarEventWriteData = (data: Record<string, unknown>) => 
     next.event_time = null;
   }
 
-  if (
-    next.duration_minutes === DURATION_NONE ||
-    next.duration_minutes === ""
-  ) {
+  if (next.duration_minutes === DURATION_NONE || next.duration_minutes === "") {
     next.duration_minutes = null;
   } else if (next.duration_minutes != null) {
     const minutes = Number(next.duration_minutes);
-    next.duration_minutes = Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+    next.duration_minutes =
+      Number.isFinite(minutes) && minutes > 0 ? minutes : null;
   }
 
   if (next.description === "") {

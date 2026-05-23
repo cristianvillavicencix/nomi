@@ -23,7 +23,11 @@ type ClientChannelsInputProps = {
   label: string;
 };
 
-export const ClientChannelsInput = ({ source, kind, label }: ClientChannelsInputProps) => {
+export const ClientChannelsInput = ({
+  source,
+  kind,
+  label,
+}: ClientChannelsInputProps) => {
   const { control } = useFormContext<ClientCreateFormValues>();
   const { fields, append, remove } = useFieldArray({
     control,
@@ -120,7 +124,9 @@ const ChannelRow = ({
         size="icon"
         className={cn(
           "mb-0.5 size-8 shrink-0",
-          isPrimary ? "text-amber-500 hover:text-amber-600" : "text-muted-foreground",
+          isPrimary
+            ? "text-amber-500 hover:text-amber-600"
+            : "text-muted-foreground",
         )}
         onClick={setPrimary}
         aria-label={isPrimary ? "Primary" : "Set as primary"}

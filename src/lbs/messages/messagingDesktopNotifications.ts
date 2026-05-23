@@ -1,6 +1,10 @@
 /** Browser/OS desktop notifications for new messages (any tab / minimized window). */
 
-export type MessagingDesktopSupport = "unsupported" | "default" | "granted" | "denied";
+export type MessagingDesktopSupport =
+  | "unsupported"
+  | "default"
+  | "granted"
+  | "denied";
 
 export const getMessagingDesktopSupport = (): MessagingDesktopSupport => {
   if (typeof window === "undefined" || typeof Notification === "undefined") {
@@ -19,7 +23,11 @@ export async function requestMessagingDesktopNotifications(): Promise<MessagingD
   if (Notification.permission === "denied") return "denied";
   try {
     const next = await Notification.requestPermission();
-    return next === "granted" ? "granted" : next === "denied" ? "denied" : "default";
+    return next === "granted"
+      ? "granted"
+      : next === "denied"
+        ? "denied"
+        : "default";
   } catch {
     return "denied";
   }
@@ -35,7 +43,8 @@ export const showMessagingDesktopNotification = ({
   body: string;
   tag: string;
 }) => {
-  if (typeof window === "undefined" || typeof Notification === "undefined") return;
+  if (typeof window === "undefined" || typeof Notification === "undefined")
+    return;
   if (Notification.permission !== "granted") return;
   try {
     const n = new Notification(title, {

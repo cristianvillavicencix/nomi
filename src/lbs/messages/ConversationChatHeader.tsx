@@ -80,12 +80,16 @@ export const ConversationChatHeader = ({
           {display.memberAvatarSrc ? (
             <AvatarImage src={display.memberAvatarSrc} alt={display.title} />
           ) : null}
-          <AvatarFallback className="text-sm font-medium">{display.initials}</AvatarFallback>
+          <AvatarFallback className="text-sm font-medium">
+            {display.initials}
+          </AvatarFallback>
         </Avatar>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h2 className="truncate text-base font-semibold">{display.title}</h2>
+            <h2 className="truncate text-base font-semibold">
+              {display.title}
+            </h2>
             <ChangeStatusDropdown conversation={conversation} />
           </div>
           <p className="truncate text-xs text-muted-foreground">

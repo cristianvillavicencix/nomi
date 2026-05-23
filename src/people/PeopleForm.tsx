@@ -60,19 +60,26 @@ const validateCompensationMode = (
   return "Required";
 };
 
-const validateEmploymentForDraft = (value: unknown, values: Record<string, unknown>) => {
-  if (values.type !== "employee" || !values.create_draft_payroll_run) return undefined;
+const validateEmploymentForDraft = (
+  value: unknown,
+  values: Record<string, unknown>,
+) => {
+  if (values.type !== "employee" || !values.create_draft_payroll_run)
+    return undefined;
   const unit = String(values.compensation_unit ?? "hour");
   const salaried = unit === "week" || unit === "month" || unit === "year";
   if (!salaried) return undefined;
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) return undefined;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value))
+    return undefined;
   return "Set their start date (above) or turn off the draft run.";
 };
 
 export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
   const data = { ...rawData };
   const type = String(data.type ?? "employee") as PersonType;
-  const compensationUnit = String(data.compensation_unit ?? "hour") as CompensationUnit;
+  const compensationUnit = String(
+    data.compensation_unit ?? "hour",
+  ) as CompensationUnit;
   const compensationAmount = Number(data.compensation_amount ?? 0);
   const hourlyRate = Number(data.hourly_rate ?? 0);
   const dayRate = Number(data.day_rate ?? 0);
@@ -84,15 +91,21 @@ export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
 
   if (type === "employee") {
     data.compensation_unit = compensationUnit;
-    data.compensation_amount = Number.isFinite(compensationAmount) ? compensationAmount : null;
+    data.compensation_amount = Number.isFinite(compensationAmount)
+      ? compensationAmount
+      : null;
     data.pay_type =
-      compensationUnit === "week" || compensationUnit === "month" || compensationUnit === "year"
+      compensationUnit === "week" ||
+      compensationUnit === "month" ||
+      compensationUnit === "year"
         ? "salary"
         : compensationUnit === "day"
           ? "day_rate"
           : "hourly";
     data.compensation_mode =
-      compensationUnit === "week" || compensationUnit === "month" || compensationUnit === "year"
+      compensationUnit === "week" ||
+      compensationUnit === "month" ||
+      compensationUnit === "year"
         ? "salary"
         : compensationUnit === "day"
           ? "day_rate"
@@ -113,11 +126,19 @@ export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
           : null;
     data.hourly_rate =
       compensationUnit === "hour"
-        ? (Number.isFinite(compensationAmount) ? compensationAmount : Number.isFinite(hourlyRate) ? hourlyRate : null)
+        ? Number.isFinite(compensationAmount)
+          ? compensationAmount
+          : Number.isFinite(hourlyRate)
+            ? hourlyRate
+            : null
         : null;
     data.day_rate =
       compensationUnit === "day"
-        ? (Number.isFinite(compensationAmount) ? compensationAmount : Number.isFinite(dayRate) ? dayRate : null)
+        ? Number.isFinite(compensationAmount)
+          ? compensationAmount
+          : Number.isFinite(dayRate)
+            ? dayRate
+            : null
         : null;
     data.salary_rate =
       compensationUnit === "month" && Number.isFinite(compensationAmount)
@@ -125,7 +146,10 @@ export const normalizePeoplePayload = (rawData: Record<string, unknown>) => {
         : compensationUnit === "year" && Number.isFinite(compensationAmount)
           ? Number((compensationAmount / 12).toFixed(2))
           : null;
-    data.weekly_salary_amount = compensationUnit === "week" && Number.isFinite(compensationAmount) ? compensationAmount : null;
+    data.weekly_salary_amount =
+      compensationUnit === "week" && Number.isFinite(compensationAmount)
+        ? compensationAmount
+        : null;
     data.biweekly_salary_amount = null;
     data.monthly_salary_amount =
       compensationUnit === "month" && Number.isFinite(compensationAmount)
@@ -247,10 +271,17 @@ const SyncEmployeePayScheduleFromSettings = () => {
 };
 
 const FormToolbar = () => (
-  <div role="toolbar" className="sticky pt-4 pb-4 md:pb-0 bottom-0 bg-linear-to-b from-transparent to-background to-10%">
+  <div
+    role="toolbar"
+    className="sticky pt-4 pb-4 md:pb-0 bottom-0 bg-linear-to-b from-transparent to-background to-10%"
+  >
     <div className="flex flex-row gap-2 justify-end">
       <CancelButton />
-      <SaveButton type="button" transform={normalizePeoplePayload} label="Save" />
+      <SaveButton
+        type="button"
+        transform={normalizePeoplePayload}
+        label="Save"
+      />
     </div>
   </div>
 );
@@ -258,8 +289,12 @@ const FormToolbar = () => (
 export const PeopleForm = () => {
   const config = useConfigurationContext();
   const type = useWatch({ name: "type" }) as PersonType | undefined;
-  const compensationUnit = useWatch({ name: "compensation_unit" }) as CompensationUnit | undefined;
-  const paymentMethod = useWatch({ name: "payment_method" }) as PaymentMethod | undefined;
+  const compensationUnit = useWatch({ name: "compensation_unit" }) as
+    | CompensationUnit
+    | undefined;
+  const paymentMethod = useWatch({ name: "payment_method" }) as
+    | PaymentMethod
+    | undefined;
   const [subcontractorSpecialties, setSubcontractorSpecialties] =
     useState(specialtyChoices);
 
@@ -269,7 +304,10 @@ export const PeopleForm = () => {
     compensationUnit === "month" ||
     compensationUnit === "year";
 
-  const specialtyOptions = useMemo(() => subcontractorSpecialties, [subcontractorSpecialties]);
+  const specialtyOptions = useMemo(
+    () => subcontractorSpecialties,
+    [subcontractorSpecialties],
+  );
 
   const basicInfoCard = (
     <Card>
@@ -343,8 +381,16 @@ export const PeopleForm = () => {
                   validate={validateEmploymentForDraft}
                   helperText={false}
                 />
-                <TextInput source="emergency_contact_name" label="Emergency contact name" helperText={false} />
-                <PhoneInput source="emergency_contact_phone" label="Emergency contact phone" helperText={false} />
+                <TextInput
+                  source="emergency_contact_name"
+                  label="Emergency contact name"
+                  helperText={false}
+                />
+                <PhoneInput
+                  source="emergency_contact_phone"
+                  label="Emergency contact phone"
+                  helperText={false}
+                />
                 <TextInput
                   source="emergency_contact_relationship"
                   label="Emergency contact relationship"
@@ -361,7 +407,9 @@ export const PeopleForm = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div className="rounded-md border p-4">
-                    <h4 className="mb-3 text-sm font-semibold">Compensation Profile</h4>
+                    <h4 className="mb-3 text-sm font-semibold">
+                      Compensation Profile
+                    </h4>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <SelectInput
                         source="compensation_unit"
@@ -396,10 +444,18 @@ export const PeopleForm = () => {
                         />
                       ) : null}
                       {paymentMethod === "bank_deposit" ? (
-                        <TextInput source="bank_account_holder_name" label="Account holder name" helperText={false} />
+                        <TextInput
+                          source="bank_account_holder_name"
+                          label="Account holder name"
+                          helperText={false}
+                        />
                       ) : null}
                       {paymentMethod === "bank_deposit" ? (
-                        <TextInput source="bank_name" label="Bank name" helperText={false} />
+                        <TextInput
+                          source="bank_name"
+                          label="Bank name"
+                          helperText={false}
+                        />
                       ) : null}
                       {paymentMethod === "bank_deposit" ? (
                         <SelectInput
@@ -410,29 +466,52 @@ export const PeopleForm = () => {
                         />
                       ) : null}
                       {paymentMethod === "bank_deposit" ? (
-                        <TextInput source="routing_number" label="Routing number (ABA)" helperText={false} />
+                        <TextInput
+                          source="routing_number"
+                          label="Routing number (ABA)"
+                          helperText={false}
+                        />
                       ) : null}
                       {paymentMethod === "bank_deposit" ? (
-                        <TextInput source="account_number" label="Account number" helperText={false} />
+                        <TextInput
+                          source="account_number"
+                          label="Account number"
+                          helperText={false}
+                        />
                       ) : null}
                       {paymentMethod === "zelle" ? (
-                        <TextInput source="zelle_account_holder_name" label="Account holder name" helperText={false} />
+                        <TextInput
+                          source="zelle_account_holder_name"
+                          label="Account holder name"
+                          helperText={false}
+                        />
                       ) : null}
                       {paymentMethod === "zelle" ? (
-                        <TextInput source="zelle_contact" label="Zelle phone or email" helperText={false} />
+                        <TextInput
+                          source="zelle_contact"
+                          label="Zelle phone or email"
+                          helperText={false}
+                        />
                       ) : null}
                       {paymentMethod === "check" ? (
-                        <TextInput source="check_pay_to_name" label="Pay to name" helperText={false} />
+                        <TextInput
+                          source="check_pay_to_name"
+                          label="Pay to name"
+                          helperText={false}
+                        />
                       ) : null}
                     </div>
                   </div>
 
                   {isSalariedCompensation ? (
                     <div className="rounded-md border p-4">
-                      <h4 className="mb-1 text-sm font-semibold">Payroll (optional)</h4>
+                      <h4 className="mb-1 text-sm font-semibold">
+                        Payroll (optional)
+                      </h4>
                       <p className="mb-3 text-xs text-muted-foreground">
-                        Pay days follow your company in Settings (Payment settings). A draft
-                        run uses the start date in Employee details and that schedule.
+                        Pay days follow your company in Settings (Payment
+                        settings). A draft run uses the start date in Employee
+                        details and that schedule.
                       </p>
                       <BooleanInput
                         source="create_draft_payroll_run"
@@ -442,14 +521,38 @@ export const PeopleForm = () => {
                   ) : null}
 
                   <div className="rounded-md border p-4">
-                    <h4 className="mb-3 text-sm font-semibold">Paid Time Off</h4>
+                    <h4 className="mb-3 text-sm font-semibold">
+                      Paid Time Off
+                    </h4>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <BooleanInput source="off_days_paid" label="Off days paid" />
-                      <BooleanInput source="holidays_paid" label="Holidays paid" />
-                      <BooleanInput source="sick_days_paid" label="Sick days paid" />
-                      <BooleanInput source="vacation_days_paid" label="Vacation days paid" />
-                      <NumberInput source="sick_balance_days" label="Sick balance days" step={0.5} helperText={false} />
-                      <NumberInput source="vacation_balance_days" label="Vacation balance days" step={0.5} helperText={false} />
+                      <BooleanInput
+                        source="off_days_paid"
+                        label="Off days paid"
+                      />
+                      <BooleanInput
+                        source="holidays_paid"
+                        label="Holidays paid"
+                      />
+                      <BooleanInput
+                        source="sick_days_paid"
+                        label="Sick days paid"
+                      />
+                      <BooleanInput
+                        source="vacation_days_paid"
+                        label="Vacation days paid"
+                      />
+                      <NumberInput
+                        source="sick_balance_days"
+                        label="Sick balance days"
+                        step={0.5}
+                        helperText={false}
+                      />
+                      <NumberInput
+                        source="vacation_balance_days"
+                        label="Vacation balance days"
+                        step={0.5}
+                        helperText={false}
+                      />
                     </div>
                   </div>
                 </div>
@@ -490,9 +593,13 @@ export const PeopleForm = () => {
               onCreate={(value?: string) => {
                 const trimmed = String(value ?? "").trim();
                 if (!trimmed) return undefined;
-                const nextOption = { id: trimmed.toLowerCase().replace(/\s+/g, "_"), name: trimmed };
+                const nextOption = {
+                  id: trimmed.toLowerCase().replace(/\s+/g, "_"),
+                  name: trimmed,
+                };
                 setSubcontractorSpecialties((current) => {
-                  if (current.some((item) => item.id === nextOption.id)) return current;
+                  if (current.some((item) => item.id === nextOption.id))
+                    return current;
                   return [...current, nextOption];
                 });
                 return nextOption;

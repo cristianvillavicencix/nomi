@@ -49,7 +49,11 @@ import type {
   Person,
   TimeEntry,
 } from "@/components/atomic-crm/types";
-import { getLoanRecordTypeLabel, getLoanStatus, getRepaymentSummary } from "@/loans/helpers";
+import {
+  getLoanRecordTypeLabel,
+  getLoanStatus,
+  getRepaymentSummary,
+} from "@/loans/helpers";
 import { formatRate, getPersonDisplayName } from "./constants";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -141,7 +145,8 @@ const getWeekRange = (today: Date) => {
   return { start, end };
 };
 
-const getMonthStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+const getMonthStart = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), 1);
 const getQuarterStart = (date: Date) =>
   new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1);
 const getYearStart = (date: Date) => new Date(date.getFullYear(), 0, 1);
@@ -218,7 +223,8 @@ const getCurrentPayPeriodRange = (
   }
 
   const anchor =
-    toDate(settings?.biweeklyAnchorDate ?? null) ?? new Date(today.getFullYear(), 0, 2);
+    toDate(settings?.biweeklyAnchorDate ?? null) ??
+    new Date(today.getFullYear(), 0, 2);
   anchor.setHours(0, 0, 0, 0);
   const diffDays = Math.floor((today.getTime() - anchor.getTime()) / DAY_MS);
   const periodIndex = Math.floor(diffDays / 14);
@@ -231,7 +237,11 @@ const getCurrentPayPeriodRange = (
   return { start, end };
 };
 
-const inRange = (value?: string | null, start?: Date | null, end?: Date | null) => {
+const inRange = (
+  value?: string | null,
+  start?: Date | null,
+  end?: Date | null,
+) => {
   const date = toDate(value);
   if (!date || !start || !end) return false;
   return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
@@ -385,7 +395,10 @@ export const PeopleProfileDetailsContent = ({
     const hoursThisWeek = Number(
       timeEntries
         .filter((entry) => inRange(entry.date, weekRange.start, weekRange.end))
-        .reduce((sum, entry) => sum + number(entry.payable_hours ?? entry.hours), 0)
+        .reduce(
+          (sum, entry) => sum + number(entry.payable_hours ?? entry.hours),
+          0,
+        )
         .toFixed(2),
     );
 
@@ -395,7 +408,10 @@ export const PeopleProfileDetailsContent = ({
 
     const hoursThisPayPeriod = Number(
       timeEntriesPayPeriod
-        .reduce((sum, entry) => sum + number(entry.payable_hours ?? entry.hours), 0)
+        .reduce(
+          (sum, entry) => sum + number(entry.payable_hours ?? entry.hours),
+          0,
+        )
         .toFixed(2),
     );
 
@@ -406,32 +422,47 @@ export const PeopleProfileDetailsContent = ({
     );
 
     const ptoEntries = timeEntries.filter(
-      (entry) => entry.day_type === "sick_day" || entry.day_type === "vacation_day",
+      (entry) =>
+        entry.day_type === "sick_day" || entry.day_type === "vacation_day",
     );
 
     const sickUsedHours = ptoEntries
       .filter((entry) => entry.day_type === "sick_day")
-      .reduce((sum, entry) => sum + number(entry.payable_hours ?? entry.hours), 0);
+      .reduce(
+        (sum, entry) => sum + number(entry.payable_hours ?? entry.hours),
+        0,
+      );
     const vacationUsedHours = ptoEntries
       .filter((entry) => entry.day_type === "vacation_day")
-      .reduce((sum, entry) => sum + number(entry.payable_hours ?? entry.hours), 0);
+      .reduce(
+        (sum, entry) => sum + number(entry.payable_hours ?? entry.hours),
+        0,
+      );
 
     const sickUsedDays = Number((sickUsedHours / 8).toFixed(2));
     const vacationUsedDays = Number((vacationUsedHours / 8).toFixed(2));
-    const lastPtoActivity = [...ptoEntries].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const lastPtoActivity = [...ptoEntries].sort((a, b) =>
+      b.date.localeCompare(a.date),
+    )[0];
 
-    const payrollRunById = new Map(payrollRuns.map((run) => [String(run.id), run]));
+    const payrollRunById = new Map(
+      payrollRuns.map((run) => [String(run.id), run]),
+    );
     const latestPayrollLine = payrollLines[0];
     const latestPayrollRun = latestPayrollLine
       ? payrollRunById.get(String(latestPayrollLine.payroll_run_id))
       : null;
 
     const ytdGross = Number(
-      payrollLines.reduce((sum, line) => sum + number(line.gross_pay), 0).toFixed(2),
+      payrollLines
+        .reduce((sum, line) => sum + number(line.gross_pay), 0)
+        .toFixed(2),
     );
 
     const ytdOvertime = Number(
-      timeEntries.reduce((sum, entry) => sum + number(entry.overtime_hours), 0).toFixed(2),
+      timeEntries
+        .reduce((sum, entry) => sum + number(entry.overtime_hours), 0)
+        .toFixed(2),
     );
 
     const assignedProjects = projects
@@ -446,8 +477,13 @@ export const PeopleProfileDetailsContent = ({
       })
       .map((project) => {
         const projectHours = timeEntries
-          .filter((entry) => String(entry.project_id ?? "") === String(project.id))
-          .reduce((sum, entry) => sum + number(entry.payable_hours ?? entry.hours), 0);
+          .filter(
+            (entry) => String(entry.project_id ?? "") === String(project.id),
+          )
+          .reduce(
+            (sum, entry) => sum + number(entry.payable_hours ?? entry.hours),
+            0,
+          );
         return {
           ...project,
           projectHours: Number(projectHours.toFixed(2)),
@@ -481,7 +517,10 @@ export const PeopleProfileDetailsContent = ({
           ]
         : []),
       ...payrollLines.slice(0, 8).map((line) => ({
-        date: payrollRunById.get(String(line.payroll_run_id))?.payday ?? line.created_at ?? null,
+        date:
+          payrollRunById.get(String(line.payroll_run_id))?.payday ??
+          line.created_at ??
+          null,
         label: "Payroll processed",
         detail: `Gross ${money(line.gross_pay)} • Net ${money(line.net_pay)}`,
       })),
@@ -538,20 +577,29 @@ export const PeopleProfileDetailsContent = ({
   const subcontractorSummary = useMemo(() => {
     if (!record || record.type !== "subcontractor") return null;
 
-    const paymentById = new Map(payments.map((payment) => [String(payment.id), payment]));
+    const paymentById = new Map(
+      payments.map((payment) => [String(payment.id), payment]),
+    );
     const now = new Date();
     const monthStart = getMonthStart(now);
     const quarterStart = getQuarterStart(now);
     const yearStart = getYearStart(now);
 
     const assignedProjects = projects
-      .filter((project) => includesId(project.subcontractor_ids, personIdString))
+      .filter((project) =>
+        includesId(project.subcontractor_ids, personIdString),
+      )
       .map((project) => ({
         ...project,
         projectHours: Number(
           timeEntries
-            .filter((entry) => String(entry.project_id ?? "") === String(project.id))
-            .reduce((sum, entry) => sum + number(entry.payable_hours ?? entry.hours), 0)
+            .filter(
+              (entry) => String(entry.project_id ?? "") === String(project.id),
+            )
+            .reduce(
+              (sum, entry) => sum + number(entry.payable_hours ?? entry.hours),
+              0,
+            )
             .toFixed(2),
         ),
       }));
@@ -562,7 +610,9 @@ export const PeopleProfileDetailsContent = ({
 
     const costRows = paymentLines
       .map((line) => {
-        const payment = line.payment_id ? paymentById.get(String(line.payment_id)) : undefined;
+        const payment = line.payment_id
+          ? paymentById.get(String(line.payment_id))
+          : undefined;
         const eventDate = toDate(payment?.pay_date ?? line.created_at ?? null);
         if (!eventDate) return null;
         const amount = number(line.amount ?? line.total_pay);
@@ -607,15 +657,22 @@ export const PeopleProfileDetailsContent = ({
         .reduce((sum, row) => sum + row.amount, 0)
         .toFixed(2),
     );
-    const pendingCostItems = costRows.filter((row) => row.payment_status === "draft").length;
+    const pendingCostItems = costRows.filter(
+      (row) => row.payment_status === "draft",
+    ).length;
     const paidAmountYtd = Number(
       costRows
-        .filter((row) => row.payment_status === "paid" && row.date.getTime() >= yearStart.getTime())
+        .filter(
+          (row) =>
+            row.payment_status === "paid" &&
+            row.date.getTime() >= yearStart.getTime(),
+        )
         .reduce((sum, row) => sum + row.amount, 0)
         .toFixed(2),
     );
 
-    const lastProjectCostRecorded = costRows.find((row) => row.project_id != null) ?? null;
+    const lastProjectCostRecorded =
+      costRows.find((row) => row.project_id != null) ?? null;
 
     const byProject = new Map<
       string,
@@ -720,8 +777,9 @@ export const PeopleProfileDetailsContent = ({
   }, [paymentLines, payments, personIdString, projects, record, timeEntries]);
 
   const currentTab = useMemo<TabValue>(() => {
-    const tab = (quickTabMatch?.params?.tab ??
-      tabMatch?.params?.tab) as TabValue | undefined;
+    const tab = (quickTabMatch?.params?.tab ?? tabMatch?.params?.tab) as
+      | TabValue
+      | undefined;
     if (
       tab === "overview" ||
       tab === "time_entries" ||
@@ -740,7 +798,8 @@ export const PeopleProfileDetailsContent = ({
   const handleTabChange = (nextTab: string) => {
     if (!record) return;
     if (nextTab === currentTab) return;
-    const quickGroup = quickBaseMatch?.params?.group ?? quickTabMatch?.params?.group;
+    const quickGroup =
+      quickBaseMatch?.params?.group ?? quickTabMatch?.params?.group;
     const quickId = quickBaseMatch?.params?.id ?? quickTabMatch?.params?.id;
     if (quickGroup && quickId) {
       if (nextTab === "overview") {
@@ -760,7 +819,9 @@ export const PeopleProfileDetailsContent = ({
   const submitPtoAdjustment = async () => {
     if (!record) return;
     if (!canManagePeople) {
-      notify("You do not have permission to create PTO adjustments", { type: "error" });
+      notify("You do not have permission to create PTO adjustments", {
+        type: "error",
+      });
       return;
     }
     const parsedDelta = Number(adjustmentForm.days_delta);
@@ -840,14 +901,23 @@ export const PeopleProfileDetailsContent = ({
 
   if (isPending || !record || !summary) return null;
 
-  const displayName = getPersonDisplayName(record) || record.business_name || "Employee";
+  const displayName =
+    getPersonDisplayName(record) || record.business_name || "Employee";
   const isQuickDetailLayout = !showBackButton;
   const isEmployee = record.type === "employee";
   const isSalesperson = record.type === "salesperson";
   const canSeeTimeEntriesAndPayroll =
     isEmployee || (isSalesperson && record.pay_type !== "commission");
   const allowedTabs: TabValue[] = isEmployee
-    ? ["overview", "time_entries", "payroll", "pto", "loans", "projects", "activity"]
+    ? [
+        "overview",
+        "time_entries",
+        "payroll",
+        "pto",
+        "loans",
+        "projects",
+        "activity",
+      ]
     : canSeeTimeEntriesAndPayroll
       ? ["overview", "time_entries", "payroll", "projects", "activity"]
       : ["overview", "projects", "activity"];
@@ -874,77 +944,88 @@ export const PeopleProfileDetailsContent = ({
             : "space-y-6 pb-8"
         }
       >
-        <div className={isQuickDetailLayout ? "sticky top-0 z-30 bg-background pb-3" : ""}>
+        <div
+          className={
+            isQuickDetailLayout ? "sticky top-0 z-30 bg-background pb-3" : ""
+          }
+        >
           <Card>
-          <CardContent className="pt-6">
-            {showBackButton ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className="mb-3 gap-2 px-0"
-                onClick={() => navigate(location.state?.from ?? "/people")}
-              >
-                <ChevronLeft className="size-4" />
-                Regresar
-              </Button>
-            ) : null}
-
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex items-start gap-4">
-                <Avatar className="size-16">
-                  <AvatarFallback>{getInitials(record)}</AvatarFallback>
-                </Avatar>
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-2xl font-semibold">
-                      {record.business_name || getPersonDisplayName(record) || "Subcontractor"}
-                    </h1>
-                    <Badge variant={record.status === "active" ? "outline" : "secondary"}>
-                      {record.status}
-                    </Badge>
-                    <Badge variant="secondary">Subcontractor</Badge>
-                    {record.specialty ? (
-                      <Badge variant="secondary">{record.specialty}</Badge>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <Mail className="size-3.5" />
-                      {record.email || "No email"}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Phone className="size-3.5" />
-                      {record.phone || "No phone"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {canManagePeople ? (
-                <Button asChild variant="outline">
-                  <Link
-                    to={createPath({
-                      resource: "people",
-                      id: record.id,
-                      type: "edit",
-                    })}
-                    state={{ from: location.pathname }}
-                  >
-                    <Edit className="mr-1 size-4" />
-                    Edit Profile
-                  </Link>
+            <CardContent className="pt-6">
+              {showBackButton ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="mb-3 gap-2 px-0"
+                  onClick={() => navigate(location.state?.from ?? "/people")}
+                >
+                  <ChevronLeft className="size-4" />
+                  Regresar
                 </Button>
               ) : null}
-            </div>
 
-          </CardContent>
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-4">
+                  <Avatar className="size-16">
+                    <AvatarFallback>{getInitials(record)}</AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-2xl font-semibold">
+                        {record.business_name ||
+                          getPersonDisplayName(record) ||
+                          "Subcontractor"}
+                      </h1>
+                      <Badge
+                        variant={
+                          record.status === "active" ? "outline" : "secondary"
+                        }
+                      >
+                        {record.status}
+                      </Badge>
+                      <Badge variant="secondary">Subcontractor</Badge>
+                      {record.specialty ? (
+                        <Badge variant="secondary">{record.specialty}</Badge>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Mail className="size-3.5" />
+                        {record.email || "No email"}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="size-3.5" />
+                        {record.phone || "No phone"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {canManagePeople ? (
+                  <Button asChild variant="outline">
+                    <Link
+                      to={createPath({
+                        resource: "people",
+                        id: record.id,
+                        type: "edit",
+                      })}
+                      state={{ from: location.pathname }}
+                    >
+                      <Edit className="mr-1 size-4" />
+                      Edit Profile
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+            </CardContent>
           </Card>
         </div>
 
         <Tabs
           value={currentTab}
           onValueChange={handleTabChange}
-          className={isQuickDetailLayout ? "flex min-h-0 flex-1 flex-col gap-3" : "gap-4"}
+          className={
+            isQuickDetailLayout ? "flex min-h-0 flex-1 flex-col gap-3" : "gap-4"
+          }
         >
           {isQuickDetailLayout ? (
             <StickyTabsBar>
@@ -967,7 +1048,9 @@ export const PeopleProfileDetailsContent = ({
           <TabsContent
             value="overview"
             className={
-              isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto space-y-4 pr-1" : "space-y-4"
+              isQuickDetailLayout
+                ? "mt-0 min-h-0 flex-1 overflow-y-auto space-y-4 pr-1"
+                : "space-y-4"
             }
           >
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -977,7 +1060,9 @@ export const PeopleProfileDetailsContent = ({
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
-                    <p className="text-xs text-muted-foreground">Business name</p>
+                    <p className="text-xs text-muted-foreground">
+                      Business name
+                    </p>
                     <p className="font-medium">{record.business_name || "—"}</p>
                   </div>
                   <div>
@@ -1002,11 +1087,17 @@ export const PeopleProfileDetailsContent = ({
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Created</p>
-                    <p className="font-medium">{formatDate(record.created_at)}</p>
+                    <p className="font-medium">
+                      {formatDate(record.created_at)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Updated</p>
-                    <p className="font-medium">{formatDate((record as { updated_at?: string }).updated_at)}</p>
+                    <p className="font-medium">
+                      {formatDate(
+                        (record as { updated_at?: string }).updated_at,
+                      )}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -1017,8 +1108,12 @@ export const PeopleProfileDetailsContent = ({
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <p>
-                    <span className="text-muted-foreground">Trade / Specialty:</span>{" "}
-                    <span className="font-medium">{record.specialty || "No specialty configured"}</span>
+                    <span className="text-muted-foreground">
+                      Trade / Specialty:
+                    </span>{" "}
+                    <span className="font-medium">
+                      {record.specialty || "No specialty configured"}
+                    </span>
                   </p>
                   {subcontractorSummary.isCustomSpecialty ? (
                     <Badge variant="secondary">Custom specialty</Badge>
@@ -1034,11 +1129,36 @@ export const PeopleProfileDetailsContent = ({
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="grid grid-cols-2 gap-2">
-                    <p>This month: <span className="font-semibold">{money(subcontractorSummary.totalCostThisMonth)}</span></p>
-                    <p>This quarter: <span className="font-semibold">{money(subcontractorSummary.totalCostThisQuarter)}</span></p>
-                    <p>YTD total: <span className="font-semibold">{money(subcontractorSummary.totalCostYtd)}</span></p>
-                    <p>Paid YTD: <span className="font-semibold">{money(subcontractorSummary.paidAmountYtd)}</span></p>
-                    <p>Pending items: <span className="font-semibold">{subcontractorSummary.pendingCostItems}</span></p>
+                    <p>
+                      This month:{" "}
+                      <span className="font-semibold">
+                        {money(subcontractorSummary.totalCostThisMonth)}
+                      </span>
+                    </p>
+                    <p>
+                      This quarter:{" "}
+                      <span className="font-semibold">
+                        {money(subcontractorSummary.totalCostThisQuarter)}
+                      </span>
+                    </p>
+                    <p>
+                      YTD total:{" "}
+                      <span className="font-semibold">
+                        {money(subcontractorSummary.totalCostYtd)}
+                      </span>
+                    </p>
+                    <p>
+                      Paid YTD:{" "}
+                      <span className="font-semibold">
+                        {money(subcontractorSummary.paidAmountYtd)}
+                      </span>
+                    </p>
+                    <p>
+                      Pending items:{" "}
+                      <span className="font-semibold">
+                        {subcontractorSummary.pendingCostItems}
+                      </span>
+                    </p>
                     <p>
                       Last project cost:{" "}
                       <span className="font-semibold">
@@ -1050,10 +1170,14 @@ export const PeopleProfileDetailsContent = ({
                   </div>
                   <div className="flex gap-2">
                     <Button asChild variant="outline" size="sm">
-                      <Link to={`/people/${record.id}/show/costs`}>View cost history</Link>
+                      <Link to={`/people/${record.id}/show/costs`}>
+                        View cost history
+                      </Link>
                     </Button>
                     <Button asChild variant="outline" size="sm">
-                      <Link to={`/people/${record.id}/show/projects`}>View cost by project</Link>
+                      <Link to={`/people/${record.id}/show/projects`}>
+                        View cost by project
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -1065,9 +1189,13 @@ export const PeopleProfileDetailsContent = ({
                 </CardHeader>
                 <CardContent>
                   {record.notes ? (
-                    <p className="text-sm whitespace-pre-wrap">{record.notes}</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {record.notes}
+                    </p>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No notes yet.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No notes yet.
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -1076,7 +1204,11 @@ export const PeopleProfileDetailsContent = ({
 
           <TabsContent
             value="projects"
-            className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
+            className={
+              isQuickDetailLayout
+                ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+                : ""
+            }
           >
             <Card>
               <CardHeader>
@@ -1086,7 +1218,9 @@ export const PeopleProfileDetailsContent = ({
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
-                    variant={subcontractProjectFilter === "all" ? "default" : "outline"}
+                    variant={
+                      subcontractProjectFilter === "all" ? "default" : "outline"
+                    }
                     size="sm"
                     onClick={() => setSubcontractProjectFilter("all")}
                   >
@@ -1094,7 +1228,11 @@ export const PeopleProfileDetailsContent = ({
                   </Button>
                   <Button
                     type="button"
-                    variant={subcontractProjectFilter === "Pending" ? "default" : "outline"}
+                    variant={
+                      subcontractProjectFilter === "Pending"
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
                     onClick={() => setSubcontractProjectFilter("Pending")}
                   >
@@ -1102,7 +1240,11 @@ export const PeopleProfileDetailsContent = ({
                   </Button>
                   <Button
                     type="button"
-                    variant={subcontractProjectFilter === "Approved" ? "default" : "outline"}
+                    variant={
+                      subcontractProjectFilter === "Approved"
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
                     onClick={() => setSubcontractProjectFilter("Approved")}
                   >
@@ -1110,7 +1252,11 @@ export const PeopleProfileDetailsContent = ({
                   </Button>
                   <Button
                     type="button"
-                    variant={subcontractProjectFilter === "Paid" ? "default" : "outline"}
+                    variant={
+                      subcontractProjectFilter === "Paid"
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
                     onClick={() => setSubcontractProjectFilter("Paid")}
                   >
@@ -1119,7 +1265,9 @@ export const PeopleProfileDetailsContent = ({
                 </div>
 
                 {filteredProjectRows.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No assigned projects.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No assigned projects.
+                  </p>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -1140,7 +1288,9 @@ export const PeopleProfileDetailsContent = ({
                           <TableCell>{project.name}</TableCell>
                           <TableCell>{project.stage}</TableCell>
                           <TableCell>{project.category}</TableCell>
-                          <TableCell>{money(project.estimated_value ?? project.amount)}</TableCell>
+                          <TableCell>
+                            {money(project.estimated_value ?? project.amount)}
+                          </TableCell>
                           <TableCell>{project.costType}</TableCell>
                           <TableCell>{money(project.costValue)}</TableCell>
                           <TableCell>{project.costStatus}</TableCell>
@@ -1162,7 +1312,11 @@ export const PeopleProfileDetailsContent = ({
 
           <TabsContent
             value="costs"
-            className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
+            className={
+              isQuickDetailLayout
+                ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+                : ""
+            }
           >
             <Card>
               <CardHeader>
@@ -1170,7 +1324,9 @@ export const PeopleProfileDetailsContent = ({
               </CardHeader>
               <CardContent>
                 {subcontractorSummary.costRows.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No cost records found.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No cost records found.
+                  </p>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -1188,12 +1344,16 @@ export const PeopleProfileDetailsContent = ({
                           <TableCell>{formatDate(row.dateIso)}</TableCell>
                           <TableCell>
                             {row.project_id
-                              ? subcontractorSummary.projectRows.find(
-                                  (project) => String(project.id) === String(row.project_id),
-                                )?.name ?? `Project #${row.project_id}`
+                              ? (subcontractorSummary.projectRows.find(
+                                  (project) =>
+                                    String(project.id) ===
+                                    String(row.project_id),
+                                )?.name ?? `Project #${row.project_id}`)
                               : "—"}
                           </TableCell>
-                          <TableCell>{row.compensation_type ?? row.source_type}</TableCell>
+                          <TableCell>
+                            {row.compensation_type ?? row.source_type}
+                          </TableCell>
                           <TableCell>{money(row.amount)}</TableCell>
                           <TableCell>{row.statusLabel}</TableCell>
                         </TableRow>
@@ -1207,7 +1367,11 @@ export const PeopleProfileDetailsContent = ({
 
           <TabsContent
             value="activity"
-            className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
+            className={
+              isQuickDetailLayout
+                ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+                : ""
+            }
           >
             <Card>
               <CardHeader>
@@ -1215,13 +1379,20 @@ export const PeopleProfileDetailsContent = ({
               </CardHeader>
               <CardContent>
                 {subcontractorSummary.activity.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No activity found.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No activity found.
+                  </p>
                 ) : (
                   <div className="space-y-3">
                     {subcontractorSummary.activity.map((event, index) => (
-                      <div key={`${event.label}-${event.date}-${index}`} className="rounded-md border p-3">
+                      <div
+                        key={`${event.label}-${event.date}-${index}`}
+                        className="rounded-md border p-3"
+                      >
                         <p className="text-sm font-medium">{event.label}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(String(event.date))}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(String(event.date))}
+                        </p>
                         <p className="text-sm">{event.detail}</p>
                       </div>
                     ))}
@@ -1243,74 +1414,85 @@ export const PeopleProfileDetailsContent = ({
           : "space-y-6 pb-8"
       }
     >
-      <div className={isQuickDetailLayout ? "sticky top-0 z-30 bg-background pb-3" : ""}>
+      <div
+        className={
+          isQuickDetailLayout ? "sticky top-0 z-30 bg-background pb-3" : ""
+        }
+      >
         <Card>
-        <CardContent className="pt-6">
-          {showBackButton ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className="mb-3 gap-2 px-0"
-              onClick={() => navigate(location.state?.from ?? "/people")}
-            >
-              <ChevronLeft className="size-4" />
-              Regresar
-            </Button>
-          ) : null}
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex items-start gap-4">
-              <Avatar className="size-16">
-                <AvatarFallback>{getInitials(record)}</AvatarFallback>
-              </Avatar>
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-semibold">{displayName}</h1>
-                  <Badge variant={record.status === "active" ? "outline" : "secondary"}>
-                    {record.status}
-                  </Badge>
-                  <Badge variant="secondary">{record.type}</Badge>
-                  <Badge variant="secondary">{getCompensationLabel(record)}</Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <Mail className="size-3.5" />
-                    {record.email || "No email"}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Phone className="size-3.5" />
-                    {record.phone || "No phone"}
-                  </span>
+          <CardContent className="pt-6">
+            {showBackButton ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="mb-3 gap-2 px-0"
+                onClick={() => navigate(location.state?.from ?? "/people")}
+              >
+                <ChevronLeft className="size-4" />
+                Regresar
+              </Button>
+            ) : null}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex items-start gap-4">
+                <Avatar className="size-16">
+                  <AvatarFallback>{getInitials(record)}</AvatarFallback>
+                </Avatar>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-2xl font-semibold">{displayName}</h1>
+                    <Badge
+                      variant={
+                        record.status === "active" ? "outline" : "secondary"
+                      }
+                    >
+                      {record.status}
+                    </Badge>
+                    <Badge variant="secondary">{record.type}</Badge>
+                    <Badge variant="secondary">
+                      {getCompensationLabel(record)}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Mail className="size-3.5" />
+                      {record.email || "No email"}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Phone className="size-3.5" />
+                      {record.phone || "No phone"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {canManagePeople ? (
-                <Button asChild variant="outline">
-                  <Link
-                    to={createPath({
-                      resource: "people",
-                      id: record.id,
-                      type: "edit",
-                    })}
-                    state={{ from: location.pathname }}
-                  >
-                    <Edit className="mr-1 size-4" />
-                    Edit Profile
-                  </Link>
-                </Button>
-              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                {canManagePeople ? (
+                  <Button asChild variant="outline">
+                    <Link
+                      to={createPath({
+                        resource: "people",
+                        id: record.id,
+                        type: "edit",
+                      })}
+                      state={{ from: location.pathname }}
+                    >
+                      <Edit className="mr-1 size-4" />
+                      Edit Profile
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
             </div>
-          </div>
-
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
 
       <Tabs
         value={currentTab}
         onValueChange={handleTabChange}
-        className={isQuickDetailLayout ? "flex min-h-0 flex-1 flex-col gap-3" : "gap-4"}
+        className={
+          isQuickDetailLayout ? "flex min-h-0 flex-1 flex-col gap-3" : "gap-4"
+        }
       >
         {isQuickDetailLayout ? (
           <StickyTabsBar>
@@ -1323,7 +1505,9 @@ export const PeopleProfileDetailsContent = ({
                 <TabsTrigger value="payroll">Payroll</TabsTrigger>
               ) : null}
               {isEmployee ? <TabsTrigger value="pto">PTO</TabsTrigger> : null}
-              {isEmployee ? <TabsTrigger value="loans">Loans</TabsTrigger> : null}
+              {isEmployee ? (
+                <TabsTrigger value="loans">Loans</TabsTrigger>
+              ) : null}
               <TabsTrigger value="projects">Projects</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
@@ -1334,7 +1518,9 @@ export const PeopleProfileDetailsContent = ({
             {canSeeTimeEntriesAndPayroll ? (
               <TabsTrigger value="time_entries">Time Entries</TabsTrigger>
             ) : null}
-            {canSeeTimeEntriesAndPayroll ? <TabsTrigger value="payroll">Payroll</TabsTrigger> : null}
+            {canSeeTimeEntriesAndPayroll ? (
+              <TabsTrigger value="payroll">Payroll</TabsTrigger>
+            ) : null}
             {isEmployee ? <TabsTrigger value="pto">PTO</TabsTrigger> : null}
             {isEmployee ? <TabsTrigger value="loans">Loans</TabsTrigger> : null}
             <TabsTrigger value="projects">Projects</TabsTrigger>
@@ -1345,7 +1531,9 @@ export const PeopleProfileDetailsContent = ({
         <TabsContent
           value="overview"
           className={
-            isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto space-y-4 pr-1" : "space-y-4"
+            isQuickDetailLayout
+              ? "mt-0 min-h-0 flex-1 overflow-y-auto space-y-4 pr-1"
+              : "space-y-4"
           }
         >
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -1384,88 +1572,138 @@ export const PeopleProfileDetailsContent = ({
             <Card>
               <CardHeader>
                 <CardTitle>
-                  {isSalesperson ? "Sales Compensation & Contracts" : "Employment & Compensation"}
+                  {isSalesperson
+                    ? "Sales Compensation & Contracts"
+                    : "Employment & Compensation"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <p>
-                  <span className="text-muted-foreground">Compensation type:</span>{" "}
-                  <span className="font-medium">{getCompensationLabel(record)}</span>
+                  <span className="text-muted-foreground">
+                    Compensation type:
+                  </span>{" "}
+                  <span className="font-medium">
+                    {getCompensationLabel(record)}
+                  </span>
                 </p>
                 {record.employment_start_date ? (
                   <p>
-                    <span className="text-muted-foreground">Start date (work):</span>{" "}
+                    <span className="text-muted-foreground">
+                      Start date (work):
+                    </span>{" "}
                     <span className="font-medium">
                       {formatDate(record.employment_start_date as string)}
                     </span>
                   </p>
                 ) : null}
-                {record.compensation_unit === "hour" || record.compensation_mode === "hourly" ? (
+                {record.compensation_unit === "hour" ||
+                record.compensation_mode === "hourly" ? (
                   <p>
                     <span className="text-muted-foreground">Hourly rate:</span>{" "}
-                    <span className="font-medium">{money(record.compensation_amount ?? record.hourly_rate)}</span>
+                    <span className="font-medium">
+                      {money(record.compensation_amount ?? record.hourly_rate)}
+                    </span>
                   </p>
                 ) : null}
                 {record.compensation_unit === "week" ? (
                   <p>
-                    <span className="text-muted-foreground">Weekly amount:</span>{" "}
-                    <span className="font-medium">{money(record.compensation_amount ?? record.weekly_salary_amount)}</span>
+                    <span className="text-muted-foreground">
+                      Weekly amount:
+                    </span>{" "}
+                    <span className="font-medium">
+                      {money(
+                        record.compensation_amount ??
+                          record.weekly_salary_amount,
+                      )}
+                    </span>
                   </p>
                 ) : null}
                 {record.compensation_unit === "year" ? (
                   <>
                     <p>
-                      <span className="text-muted-foreground">Annual salary:</span>{" "}
+                      <span className="text-muted-foreground">
+                        Annual salary:
+                      </span>{" "}
                       <span className="font-medium">
-                        {money(record.annual_salary ?? record.compensation_amount)}
+                        {money(
+                          record.annual_salary ?? record.compensation_amount,
+                        )}
                       </span>
                     </p>
                     <p>
-                      <span className="text-muted-foreground">Monthly equivalent (approx.):</span>{" "}
+                      <span className="text-muted-foreground">
+                        Monthly equivalent (approx.):
+                      </span>{" "}
                       <span className="font-medium">
-                        {money(record.monthly_salary_amount ?? record.salary_rate)}
+                        {money(
+                          record.monthly_salary_amount ?? record.salary_rate,
+                        )}
                       </span>
                     </p>
                     <p>
-                      <span className="text-muted-foreground">Company pay schedule:</span>{" "}
+                      <span className="text-muted-foreground">
+                        Company pay schedule:
+                      </span>{" "}
                       <span className="font-medium">
-                        Payment Settings ({getCompanyPaySchedule(config.payrollSettings)})
+                        Payment Settings (
+                        {getCompanyPaySchedule(config.payrollSettings)})
                       </span>
                     </p>
                   </>
                 ) : null}
                 {record.compensation_unit === "month" ||
-                (record.compensation_mode === "salary" && record.compensation_unit !== "year") ? (
+                (record.compensation_mode === "salary" &&
+                  record.compensation_unit !== "year") ? (
                   <>
                     <p>
-                      <span className="text-muted-foreground">Monthly amount:</span>{" "}
-                      <span className="font-medium">{money(record.compensation_amount ?? record.monthly_salary_amount ?? record.salary_amount)}</span>
+                      <span className="text-muted-foreground">
+                        Monthly amount:
+                      </span>{" "}
+                      <span className="font-medium">
+                        {money(
+                          record.compensation_amount ??
+                            record.monthly_salary_amount ??
+                            record.salary_amount,
+                        )}
+                      </span>
                     </p>
                     <p>
-                      <span className="text-muted-foreground">Company pay schedule:</span>{" "}
+                      <span className="text-muted-foreground">
+                        Company pay schedule:
+                      </span>{" "}
                       <span className="font-medium">
-                        Payment Settings ({getCompanyPaySchedule(config.payrollSettings)})
+                        Payment Settings (
+                        {getCompanyPaySchedule(config.payrollSettings)})
                       </span>
                     </p>
                   </>
                 ) : null}
-                {record.compensation_unit === "day" || record.compensation_mode === "day_rate" ? (
+                {record.compensation_unit === "day" ||
+                record.compensation_mode === "day_rate" ? (
                   <p>
                     <span className="text-muted-foreground">Day rate:</span>{" "}
-                    <span className="font-medium">{money(record.compensation_amount ?? record.day_rate)}</span>
+                    <span className="font-medium">
+                      {money(record.compensation_amount ?? record.day_rate)}
+                    </span>
                   </p>
                 ) : null}
                 <p>
                   <span className="text-muted-foreground">Payment method:</span>{" "}
-                  <span className="font-medium">{record.payment_method ?? "—"}</span>
+                  <span className="font-medium">
+                    {record.payment_method ?? "—"}
+                  </span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Overtime policy source:</span>{" "}
+                  <span className="text-muted-foreground">
+                    Overtime policy source:
+                  </span>{" "}
                   <span className="font-medium">Payment Settings (global)</span>
                 </p>
                 {isSalesperson ? (
                   <p>
-                    <span className="text-muted-foreground">Commission model:</span>{" "}
+                    <span className="text-muted-foreground">
+                      Commission model:
+                    </span>{" "}
                     <span className="font-medium">
                       Per project assignment / contract (not global)
                     </span>
@@ -1476,134 +1714,312 @@ export const PeopleProfileDetailsContent = ({
 
             {isEmployee ? (
               <Card>
-              <CardHeader>
-                <CardTitle>Payment Method Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {record.payment_method === "bank_deposit" ? (
-                  <>
-                    <p><span className="text-muted-foreground">Account holder:</span> <span className="font-medium">{record.bank_account_holder_name ?? "—"}</span></p>
-                    <p><span className="text-muted-foreground">Bank name:</span> <span className="font-medium">{record.bank_name ?? "—"}</span></p>
-                    <p><span className="text-muted-foreground">Routing number:</span> <span className="font-medium">{maskSensitive(record.routing_number, 3)}</span></p>
-                    <p><span className="text-muted-foreground">Account number:</span> <span className="font-medium">{maskSensitive(record.account_number, 4)}</span></p>
-                    <p><span className="text-muted-foreground">Account type:</span> <span className="font-medium">{record.account_type ?? "—"}</span></p>
-                  </>
-                ) : null}
-                {record.payment_method === "zelle" ? (
-                  <>
-                    <p><span className="text-muted-foreground">Account holder:</span> <span className="font-medium">{record.zelle_account_holder_name ?? "—"}</span></p>
-                    <p><span className="text-muted-foreground">Zelle contact:</span> <span className="font-medium">{record.zelle_contact ?? "—"}</span></p>
-                  </>
-                ) : null}
-                {record.payment_method === "check" ? (
-                  <p><span className="text-muted-foreground">Pay to name:</span> <span className="font-medium">{record.check_pay_to_name ?? "—"}</span></p>
-                ) : null}
-                {record.payment_method === "cash" ? <p className="font-medium">Cash payment</p> : null}
-                {!record.payment_method ? <p className="font-medium">No payment method configured.</p> : null}
-              </CardContent>
+                <CardHeader>
+                  <CardTitle>Payment Method Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  {record.payment_method === "bank_deposit" ? (
+                    <>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Account holder:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {record.bank_account_holder_name ?? "—"}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Bank name:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {record.bank_name ?? "—"}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Routing number:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {maskSensitive(record.routing_number, 3)}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Account number:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {maskSensitive(record.account_number, 4)}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Account type:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {record.account_type ?? "—"}
+                        </span>
+                      </p>
+                    </>
+                  ) : null}
+                  {record.payment_method === "zelle" ? (
+                    <>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Account holder:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {record.zelle_account_holder_name ?? "—"}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Zelle contact:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {record.zelle_contact ?? "—"}
+                        </span>
+                      </p>
+                    </>
+                  ) : null}
+                  {record.payment_method === "check" ? (
+                    <p>
+                      <span className="text-muted-foreground">
+                        Pay to name:
+                      </span>{" "}
+                      <span className="font-medium">
+                        {record.check_pay_to_name ?? "—"}
+                      </span>
+                    </p>
+                  ) : null}
+                  {record.payment_method === "cash" ? (
+                    <p className="font-medium">Cash payment</p>
+                  ) : null}
+                  {!record.payment_method ? (
+                    <p className="font-medium">No payment method configured.</p>
+                  ) : null}
+                </CardContent>
               </Card>
             ) : null}
 
             {isEmployee ? (
               <Card>
-              <CardHeader>
-                <CardTitle>PTO / Time Off Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="grid grid-cols-2 gap-2">
-                  <p>Holidays paid: <span className="font-medium">{record.holidays_paid ? "Yes" : "No"}</span></p>
-                  <p>Off days paid: <span className="font-medium">{record.off_days_paid ? "Yes" : "No"}</span></p>
-                  <p>Sick days paid: <span className="font-medium">{record.sick_days_paid ? "Yes" : "No"}</span></p>
-                  <p>Vacation days paid: <span className="font-medium">{record.vacation_days_paid ? "Yes" : "No"}</span></p>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <p>Sick balance: <span className="font-semibold">{number(record.sick_balance_days).toFixed(2)} days</span></p>
-                  <p>Vacation balance: <span className="font-semibold">{number(record.vacation_balance_days).toFixed(2)} days</span></p>
-                  <p>Sick used (YTD): <span className="font-semibold">{summary.sickUsedDays.toFixed(2)} days</span></p>
-                  <p>Vacation used (YTD): <span className="font-semibold">{summary.vacationUsedDays.toFixed(2)} days</span></p>
-                </div>
-                <p>
-                  Last PTO activity:{" "}
-                  <span className="font-medium">
-                    {summary.lastPtoActivity
-                      ? `${summary.lastPtoActivity.day_type} on ${formatDate(summary.lastPtoActivity.date)}`
-                      : "No PTO entries"}
-                  </span>
-                </p>
-                <div className="flex gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link to={`/people/${record.id}/show/pto`}>View PTO history</Link>
-                  </Button>
-                  {canManagePeople ? (
-                    <Button variant="outline" size="sm" onClick={() => setIsPtoAdjustmentOpen(true)}>
-                      Add adjustment
+                <CardHeader>
+                  <CardTitle>PTO / Time Off Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <p>
+                      Holidays paid:{" "}
+                      <span className="font-medium">
+                        {record.holidays_paid ? "Yes" : "No"}
+                      </span>
+                    </p>
+                    <p>
+                      Off days paid:{" "}
+                      <span className="font-medium">
+                        {record.off_days_paid ? "Yes" : "No"}
+                      </span>
+                    </p>
+                    <p>
+                      Sick days paid:{" "}
+                      <span className="font-medium">
+                        {record.sick_days_paid ? "Yes" : "No"}
+                      </span>
+                    </p>
+                    <p>
+                      Vacation days paid:{" "}
+                      <span className="font-medium">
+                        {record.vacation_days_paid ? "Yes" : "No"}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <p>
+                      Sick balance:{" "}
+                      <span className="font-semibold">
+                        {number(record.sick_balance_days).toFixed(2)} days
+                      </span>
+                    </p>
+                    <p>
+                      Vacation balance:{" "}
+                      <span className="font-semibold">
+                        {number(record.vacation_balance_days).toFixed(2)} days
+                      </span>
+                    </p>
+                    <p>
+                      Sick used (YTD):{" "}
+                      <span className="font-semibold">
+                        {summary.sickUsedDays.toFixed(2)} days
+                      </span>
+                    </p>
+                    <p>
+                      Vacation used (YTD):{" "}
+                      <span className="font-semibold">
+                        {summary.vacationUsedDays.toFixed(2)} days
+                      </span>
+                    </p>
+                  </div>
+                  <p>
+                    Last PTO activity:{" "}
+                    <span className="font-medium">
+                      {summary.lastPtoActivity
+                        ? `${summary.lastPtoActivity.day_type} on ${formatDate(summary.lastPtoActivity.date)}`
+                        : "No PTO entries"}
+                    </span>
+                  </p>
+                  <div className="flex gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/people/${record.id}/show/pto`}>
+                        View PTO history
+                      </Link>
                     </Button>
-                  ) : null}
-                </div>
-              </CardContent>
+                    {canManagePeople ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsPtoAdjustmentOpen(true)}
+                      >
+                        Add adjustment
+                      </Button>
+                    ) : null}
+                  </div>
+                </CardContent>
               </Card>
             ) : null}
 
             {canSeeTimeEntriesAndPayroll ? (
               <Card>
-              <CardHeader>
-                <CardTitle>Hours & Payroll Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="grid grid-cols-2 gap-2">
-                  <p>Hours this week: <span className="font-semibold">{summary.hoursThisWeek.toFixed(2)}</span></p>
-                  <p>Hours this pay period: <span className="font-semibold">{summary.hoursThisPayPeriod.toFixed(2)}</span></p>
-                  <p>OT hours pay period: <span className="font-semibold">{summary.overtimeHoursThisPayPeriod.toFixed(2)}</span></p>
-                  <p>YTD OT hours: <span className="font-semibold">{summary.ytdOvertime.toFixed(2)}</span></p>
-                  <p>Last payroll date: <span className="font-semibold">{formatDate(summary.latestPayrollRun?.payday)}</span></p>
-                  <p>Last gross pay: <span className="font-semibold">{money(summary.latestPayrollLine?.gross_pay)}</span></p>
-                  <p>Last net pay: <span className="font-semibold">{money(summary.latestPayrollLine?.net_pay)}</span></p>
-                  <p>YTD gross pay: <span className="font-semibold">{money(summary.ytdGross)}</span></p>
-                  {record.compensation_mode === "day_rate" ? (
-                    <p>Days worked this pay period: <span className="font-semibold">{summary.daysWorkedThisPayPeriod}</span></p>
-                  ) : null}
-                </div>
-                <p className="text-muted-foreground">
-                  Current period: {formatDate(summary.payPeriodRange.start.toISOString())} - {formatDate(summary.payPeriodRange.end.toISOString())}
-                </p>
-                <div className="flex gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/time_entries">View time entries</Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/payroll_runs">View payroll history</Link>
-                  </Button>
-                </div>
-              </CardContent>
+                <CardHeader>
+                  <CardTitle>Hours & Payroll Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <p>
+                      Hours this week:{" "}
+                      <span className="font-semibold">
+                        {summary.hoursThisWeek.toFixed(2)}
+                      </span>
+                    </p>
+                    <p>
+                      Hours this pay period:{" "}
+                      <span className="font-semibold">
+                        {summary.hoursThisPayPeriod.toFixed(2)}
+                      </span>
+                    </p>
+                    <p>
+                      OT hours pay period:{" "}
+                      <span className="font-semibold">
+                        {summary.overtimeHoursThisPayPeriod.toFixed(2)}
+                      </span>
+                    </p>
+                    <p>
+                      YTD OT hours:{" "}
+                      <span className="font-semibold">
+                        {summary.ytdOvertime.toFixed(2)}
+                      </span>
+                    </p>
+                    <p>
+                      Last payroll date:{" "}
+                      <span className="font-semibold">
+                        {formatDate(summary.latestPayrollRun?.payday)}
+                      </span>
+                    </p>
+                    <p>
+                      Last gross pay:{" "}
+                      <span className="font-semibold">
+                        {money(summary.latestPayrollLine?.gross_pay)}
+                      </span>
+                    </p>
+                    <p>
+                      Last net pay:{" "}
+                      <span className="font-semibold">
+                        {money(summary.latestPayrollLine?.net_pay)}
+                      </span>
+                    </p>
+                    <p>
+                      YTD gross pay:{" "}
+                      <span className="font-semibold">
+                        {money(summary.ytdGross)}
+                      </span>
+                    </p>
+                    {record.compensation_mode === "day_rate" ? (
+                      <p>
+                        Days worked this pay period:{" "}
+                        <span className="font-semibold">
+                          {summary.daysWorkedThisPayPeriod}
+                        </span>
+                      </p>
+                    ) : null}
+                  </div>
+                  <p className="text-muted-foreground">
+                    Current period:{" "}
+                    {formatDate(summary.payPeriodRange.start.toISOString())} -{" "}
+                    {formatDate(summary.payPeriodRange.end.toISOString())}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/time_entries">View time entries</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/payroll_runs">View payroll history</Link>
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             ) : null}
 
             {isEmployee ? (
               <Card>
-              <CardHeader>
-                <CardTitle>Emergency Contact</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {record.emergency_contact_name || record.emergency_contact_phone || record.emergency_contact_relationship ? (
-                  <>
-                    <p><span className="text-muted-foreground">Name:</span> <span className="font-medium">{record.emergency_contact_name ?? "—"}</span></p>
-                    <p><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{record.emergency_contact_phone ?? "—"}</span></p>
-                    <p><span className="text-muted-foreground">Relationship:</span> <span className="font-medium">{record.emergency_contact_relationship ?? "—"}</span></p>
-                  </>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-muted-foreground">No emergency contact configured.</p>
-                    <Button asChild variant="outline" size="sm">
-                      <Link
-                        to={createPath({ resource: "people", id: record.id, type: "edit" })}
-                        state={{ from: location.pathname }}
-                      >
-                        Add emergency contact
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
+                <CardHeader>
+                  <CardTitle>Emergency Contact</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  {record.emergency_contact_name ||
+                  record.emergency_contact_phone ||
+                  record.emergency_contact_relationship ? (
+                    <>
+                      <p>
+                        <span className="text-muted-foreground">Name:</span>{" "}
+                        <span className="font-medium">
+                          {record.emergency_contact_name ?? "—"}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Phone:</span>{" "}
+                        <span className="font-medium">
+                          {record.emergency_contact_phone ?? "—"}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">
+                          Relationship:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {record.emergency_contact_relationship ?? "—"}
+                        </span>
+                      </p>
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-muted-foreground">
+                        No emergency contact configured.
+                      </p>
+                      <Button asChild variant="outline" size="sm">
+                        <Link
+                          to={createPath({
+                            resource: "people",
+                            id: record.id,
+                            type: "edit",
+                          })}
+                          state={{ from: location.pathname }}
+                        >
+                          Add emergency contact
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
               </Card>
             ) : null}
 
@@ -1613,7 +2029,9 @@ export const PeopleProfileDetailsContent = ({
               </CardHeader>
               <CardContent>
                 {summary.assignedProjects.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No assigned projects.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No assigned projects.
+                  </p>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -1632,9 +2050,14 @@ export const PeopleProfileDetailsContent = ({
                           <TableCell>{project.name}</TableCell>
                           <TableCell>{project.stage}</TableCell>
                           <TableCell>{project.role}</TableCell>
-                          <TableCell>{project.projectHours.toFixed(2)}h</TableCell>
                           <TableCell>
-                            {project.stage === "completed" || project.stage === "closed" ? "Closed" : "Active"}
+                            {project.projectHours.toFixed(2)}h
+                          </TableCell>
+                          <TableCell>
+                            {project.stage === "completed" ||
+                            project.stage === "closed"
+                              ? "Closed"
+                              : "Active"}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button asChild variant="ghost" size="sm">
@@ -1667,196 +2090,249 @@ export const PeopleProfileDetailsContent = ({
         </TabsContent>
 
         {canSeeTimeEntriesAndPayroll ? (
-            <TabsContent
-              value="time_entries"
-              className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
-            >
-          <Card>
-            <CardHeader>
-              <CardTitle>Time Entries</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {timeEntries.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No time entries for this year.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Day Type</TableHead>
-                      <TableHead>Hours</TableHead>
-                      <TableHead>Payable</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Project</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {timeEntries.slice(0, 50).map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{entry.date}</TableCell>
-                        <TableCell>{entry.day_type ?? "worked_day"}</TableCell>
-                        <TableCell>{number(entry.hours).toFixed(2)}</TableCell>
-                        <TableCell>{number(entry.payable_hours ?? entry.hours).toFixed(2)}</TableCell>
-                        <TableCell>{entry.status}</TableCell>
-                        <TableCell>{entry.project_id ?? "—"}</TableCell>
+          <TabsContent
+            value="time_entries"
+            className={
+              isQuickDetailLayout
+                ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+                : ""
+            }
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Time Entries</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {timeEntries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No time entries for this year.
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Day Type</TableHead>
+                        <TableHead>Hours</TableHead>
+                        <TableHead>Payable</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Project</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {timeEntries.slice(0, 50).map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell>{entry.date}</TableCell>
+                          <TableCell>
+                            {entry.day_type ?? "worked_day"}
+                          </TableCell>
+                          <TableCell>
+                            {number(entry.hours).toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            {number(entry.payable_hours ?? entry.hours).toFixed(
+                              2,
+                            )}
+                          </TableCell>
+                          <TableCell>{entry.status}</TableCell>
+                          <TableCell>{entry.project_id ?? "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         ) : null}
 
         {canSeeTimeEntriesAndPayroll ? (
-            <TabsContent
-              value="payroll"
-              className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
-            >
-          <Card>
-            <CardHeader>
-              <CardTitle>Payroll History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {payrollLines.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No payroll lines found.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Pay Date</TableHead>
-                      <TableHead>Compensation</TableHead>
-                      <TableHead>Regular Hrs</TableHead>
-                      <TableHead>OT Hrs</TableHead>
-                      <TableHead>Gross</TableHead>
-                      <TableHead>Net</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payrollLines.slice(0, 30).map((line) => {
-                      const run = payrollRuns.find(
-                        (item) => String(item.id) === String(line.payroll_run_id),
-                      );
-                      return (
-                        <TableRow key={line.id}>
-                          <TableCell>{formatDate(run?.payday ?? line.created_at)}</TableCell>
-                          <TableCell>{line.compensation_type ?? "—"}</TableCell>
-                          <TableCell>{number(line.regular_hours).toFixed(2)}</TableCell>
-                          <TableCell>{number(line.overtime_hours).toFixed(2)}</TableCell>
-                          <TableCell>{money(line.gross_pay)}</TableCell>
-                          <TableCell>{money(line.net_pay)}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          <TabsContent
+            value="payroll"
+            className={
+              isQuickDetailLayout
+                ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+                : ""
+            }
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Payroll History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {payrollLines.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No payroll lines found.
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Pay Date</TableHead>
+                        <TableHead>Compensation</TableHead>
+                        <TableHead>Regular Hrs</TableHead>
+                        <TableHead>OT Hrs</TableHead>
+                        <TableHead>Gross</TableHead>
+                        <TableHead>Net</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payrollLines.slice(0, 30).map((line) => {
+                        const run = payrollRuns.find(
+                          (item) =>
+                            String(item.id) === String(line.payroll_run_id),
+                        );
+                        return (
+                          <TableRow key={line.id}>
+                            <TableCell>
+                              {formatDate(run?.payday ?? line.created_at)}
+                            </TableCell>
+                            <TableCell>
+                              {line.compensation_type ?? "—"}
+                            </TableCell>
+                            <TableCell>
+                              {number(line.regular_hours).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              {number(line.overtime_hours).toFixed(2)}
+                            </TableCell>
+                            <TableCell>{money(line.gross_pay)}</TableCell>
+                            <TableCell>{money(line.net_pay)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         ) : null}
 
         {isEmployee ? (
-            <TabsContent
-              value="pto"
-              className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
-            >
-          <Card>
-            <CardHeader>
-              <CardTitle>PTO Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-end">
-                {canManagePeople ? (
-                  <Button variant="outline" onClick={() => setIsPtoAdjustmentOpen(true)}>
-                    Add adjustment
-                  </Button>
-                ) : null}
-              </div>
+          <TabsContent
+            value="pto"
+            className={
+              isQuickDetailLayout
+                ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+                : ""
+            }
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>PTO Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-end">
+                  {canManagePeople ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsPtoAdjustmentOpen(true)}
+                    >
+                      Add adjustment
+                    </Button>
+                  ) : null}
+                </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Hours</TableHead>
-                    <TableHead>Days (8h)</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {timeEntries.filter((entry) => isPaidLeaveDay(entry.day_type ?? null)).length === 0 ? (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-muted-foreground">
-                        No PTO activity in current period.
-                      </TableCell>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Hours</TableHead>
+                      <TableHead>Days (8h)</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ) : (
-                    timeEntries
-                      .filter((entry) => isPaidLeaveDay(entry.day_type ?? null))
-                      .slice(0, 30)
-                      .map((entry) => {
-                        const hours = number(entry.payable_hours ?? entry.hours);
-                        return (
-                          <TableRow key={entry.id}>
-                            <TableCell>{entry.date}</TableCell>
-                            <TableCell>{entry.day_type}</TableCell>
-                            <TableCell>{hours.toFixed(2)}</TableCell>
-                            <TableCell>{(hours / 8).toFixed(2)}</TableCell>
-                            <TableCell>{entry.status}</TableCell>
-                          </TableRow>
-                        );
-                      })
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {timeEntries.filter((entry) =>
+                      isPaidLeaveDay(entry.day_type ?? null),
+                    ).length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-muted-foreground"
+                        >
+                          No PTO activity in current period.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      timeEntries
+                        .filter((entry) =>
+                          isPaidLeaveDay(entry.day_type ?? null),
+                        )
+                        .slice(0, 30)
+                        .map((entry) => {
+                          const hours = number(
+                            entry.payable_hours ?? entry.hours,
+                          );
+                          return (
+                            <TableRow key={entry.id}>
+                              <TableCell>{entry.date}</TableCell>
+                              <TableCell>{entry.day_type}</TableCell>
+                              <TableCell>{hours.toFixed(2)}</TableCell>
+                              <TableCell>{(hours / 8).toFixed(2)}</TableCell>
+                              <TableCell>{entry.status}</TableCell>
+                            </TableRow>
+                          );
+                        })
+                    )}
+                  </TableBody>
+                </Table>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>PTO Adjustment History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {summary.ptoAdjustments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No PTO adjustments yet.</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Delta Days</TableHead>
-                          <TableHead>Reason</TableHead>
-                          <TableHead>Notes</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {summary.ptoAdjustments.slice(0, 30).map((adj) => (
-                          <TableRow key={adj.id}>
-                            <TableCell>{formatDate(adj.adjustment_date)}</TableCell>
-                            <TableCell>{adj.adjustment_type}</TableCell>
-                            <TableCell>
-                              {Number(adj.days_delta) > 0 ? "+" : ""}
-                              {Number(adj.days_delta).toFixed(2)}
-                            </TableCell>
-                            <TableCell>{adj.reason ?? "—"}</TableCell>
-                            <TableCell>{adj.notes ?? "—"}</TableCell>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>PTO Adjustment History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {summary.ptoAdjustments.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No PTO adjustments yet.
+                      </p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Delta Days</TableHead>
+                            <TableHead>Reason</TableHead>
+                            <TableHead>Notes</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </CardContent>
-          </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {summary.ptoAdjustments.slice(0, 30).map((adj) => (
+                            <TableRow key={adj.id}>
+                              <TableCell>
+                                {formatDate(adj.adjustment_date)}
+                              </TableCell>
+                              <TableCell>{adj.adjustment_type}</TableCell>
+                              <TableCell>
+                                {Number(adj.days_delta) > 0 ? "+" : ""}
+                                {Number(adj.days_delta).toFixed(2)}
+                              </TableCell>
+                              <TableCell>{adj.reason ?? "—"}</TableCell>
+                              <TableCell>{adj.notes ?? "—"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
           </TabsContent>
         ) : null}
 
         {isEmployee ? (
           <TabsContent
             value="loans"
-            className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
+            className={
+              isQuickDetailLayout
+                ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+                : ""
+            }
           >
             <Card>
               <CardHeader>
@@ -1892,7 +2368,9 @@ export const PeopleProfileDetailsContent = ({
                         return (
                           <TableRow key={loan.id}>
                             <TableCell>{formatDate(loan.loan_date)}</TableCell>
-                            <TableCell>{getLoanRecordTypeLabel(loan.record_type)}</TableCell>
+                            <TableCell>
+                              {getLoanRecordTypeLabel(loan.record_type)}
+                            </TableCell>
                             <TableCell>
                               <Badge
                                 variant={
@@ -1907,7 +2385,9 @@ export const PeopleProfileDetailsContent = ({
                               </Badge>
                             </TableCell>
                             <TableCell>{money(loan.original_amount)}</TableCell>
-                            <TableCell>{money(loan.remaining_balance)}</TableCell>
+                            <TableCell>
+                              {money(loan.remaining_balance)}
+                            </TableCell>
                             <TableCell>{getRepaymentSummary(loan)}</TableCell>
                             <TableCell className="text-right">
                               <Button asChild variant="ghost" size="sm">
@@ -1929,7 +2409,11 @@ export const PeopleProfileDetailsContent = ({
 
         <TabsContent
           value="projects"
-          className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
+          className={
+            isQuickDetailLayout
+              ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+              : ""
+          }
         >
           <Card>
             <CardHeader>
@@ -1937,7 +2421,9 @@ export const PeopleProfileDetailsContent = ({
             </CardHeader>
             <CardContent>
               {summary.assignedProjects.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No assigned projects yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  No assigned projects yet.
+                </p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -1958,7 +2444,8 @@ export const PeopleProfileDetailsContent = ({
                         <TableCell>{project.role}</TableCell>
                         <TableCell>{project.projectHours.toFixed(2)}</TableCell>
                         <TableCell>
-                          {project.stage === "completed" || project.stage === "closed"
+                          {project.stage === "completed" ||
+                          project.stage === "closed"
                             ? "Closed"
                             : "Active"}
                         </TableCell>
@@ -1980,7 +2467,11 @@ export const PeopleProfileDetailsContent = ({
 
         <TabsContent
           value="activity"
-          className={isQuickDetailLayout ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1" : ""}
+          className={
+            isQuickDetailLayout
+              ? "mt-0 min-h-0 flex-1 overflow-y-auto pr-1"
+              : ""
+          }
         >
           <Card>
             <CardHeader>
@@ -1988,7 +2479,9 @@ export const PeopleProfileDetailsContent = ({
             </CardHeader>
             <CardContent>
               {summary.activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No activity found.</p>
+                <p className="text-sm text-muted-foreground">
+                  No activity found.
+                </p>
               ) : (
                 <div className="space-y-3">
                   {summary.activity.map((event, index) => (
@@ -2068,7 +2561,10 @@ export const PeopleProfileDetailsContent = ({
                 step="0.25"
                 value={adjustmentForm.days_delta}
                 onChange={(event) =>
-                  setAdjustmentForm((prev) => ({ ...prev, days_delta: event.target.value }))
+                  setAdjustmentForm((prev) => ({
+                    ...prev,
+                    days_delta: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -2079,7 +2575,10 @@ export const PeopleProfileDetailsContent = ({
                 id="reason"
                 value={adjustmentForm.reason}
                 onChange={(event) =>
-                  setAdjustmentForm((prev) => ({ ...prev, reason: event.target.value }))
+                  setAdjustmentForm((prev) => ({
+                    ...prev,
+                    reason: event.target.value,
+                  }))
                 }
                 placeholder="Manual correction / accrual / carry over"
               />
@@ -2092,7 +2591,10 @@ export const PeopleProfileDetailsContent = ({
                 rows={3}
                 value={adjustmentForm.notes}
                 onChange={(event) =>
-                  setAdjustmentForm((prev) => ({ ...prev, notes: event.target.value }))
+                  setAdjustmentForm((prev) => ({
+                    ...prev,
+                    notes: event.target.value,
+                  }))
                 }
                 placeholder="Optional detail for audit trail"
               />

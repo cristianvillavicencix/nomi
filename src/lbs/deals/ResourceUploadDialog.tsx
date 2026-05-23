@@ -29,7 +29,9 @@ type ResourceUploadDialogProps = {
 };
 
 const mergeFiles = (current: File[], incoming: File[]) => {
-  const seen = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+  const seen = new Set(
+    current.map((file) => `${file.name}:${file.size}:${file.lastModified}`),
+  );
   const next = [...current];
   for (const file of incoming) {
     const key = `${file.name}:${file.size}:${file.lastModified}`;
@@ -53,7 +55,9 @@ export const ResourceUploadDialog = ({
 }: ResourceUploadDialogProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const categoryDef = PROJECT_RESOURCE_TAB_CATEGORIES.find((entry) => entry.id === category);
+  const categoryDef = PROJECT_RESOURCE_TAB_CATEGORIES.find(
+    (entry) => entry.id === category,
+  );
 
   const handleFiles = (incoming: File[]) => {
     if (incoming.length === 0) return;
@@ -70,9 +74,13 @@ export const ResourceUploadDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Upload to {categoryDef?.label ?? "Resources"}</DialogTitle>
+          <DialogTitle>
+            Upload to {categoryDef?.label ?? "Resources"}
+          </DialogTitle>
           {categoryDef?.description ? (
-            <p className="text-sm text-muted-foreground">{categoryDef.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {categoryDef.description}
+            </p>
           ) : null}
         </DialogHeader>
         <div className="space-y-4 py-1">
@@ -126,7 +134,8 @@ export const ResourceUploadDialog = ({
               }}
               onDragLeave={(event) => {
                 event.preventDefault();
-                if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+                if (event.currentTarget.contains(event.relatedTarget as Node))
+                  return;
                 setIsDragging(false);
               }}
               onDrop={handleDrop}
@@ -134,7 +143,10 @@ export const ResourceUploadDialog = ({
               <UploadCloud className="size-8 text-muted-foreground" />
               <div className="text-sm">
                 <span className="font-medium">Drop files here</span>
-                <span className="text-muted-foreground"> or click to browse</span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  or click to browse
+                </span>
               </div>
               <p className="text-xs text-muted-foreground">
                 Images, PDF, SVG, and WebP supported
@@ -147,7 +159,9 @@ export const ResourceUploadDialog = ({
               accept="image/*,.pdf,.svg,.webp"
               multiple
               className="sr-only"
-              onChange={(event) => handleFiles(Array.from(event.target.files ?? []))}
+              onChange={(event) =>
+                handleFiles(Array.from(event.target.files ?? []))
+              }
             />
             {files.length > 0 ? (
               <p className="text-xs text-muted-foreground">
@@ -157,7 +171,11 @@ export const ResourceUploadDialog = ({
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button

@@ -38,7 +38,10 @@ export const ClientShowContent = () => {
     const rawTab = searchParams.get("tab");
     if (!rawTab) return;
     const mapped = resolveClientTabFromUrl(rawTab);
-    if (mapped.tab === rawTab && (!mapped.section || mapped.section === searchParams.get("section"))) {
+    if (
+      mapped.tab === rawTab &&
+      (!mapped.section || mapped.section === searchParams.get("section"))
+    ) {
       return;
     }
     const next = new URLSearchParams(searchParams);
@@ -73,11 +76,15 @@ export const ClientShowContent = () => {
     `${label}${formatTabCount(count)}`;
 
   const financialCount = counts.proposals + counts.contracts + counts.payments;
-  const activityCount = counts.notes + counts.tasks + counts.tickets + counts.webForms;
+  const activityCount =
+    counts.notes + counts.tasks + counts.tickets + counts.webForms;
 
   return (
     <div className="mt-2 space-y-4 pb-2">
-      <ClientProfileHeader record={record} onAddContact={() => setAddContactOpen(true)} />
+      <ClientProfileHeader
+        record={record}
+        onAddContact={() => setAddContactOpen(true)}
+      />
 
       <Card>
         <CardContent>

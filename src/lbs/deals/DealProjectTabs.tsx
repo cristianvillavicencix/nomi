@@ -1,1 +1,4 @@
-export { ProjectWorkspaceTabs, DealProjectTabs } from "@/lbs/projects/ProjectWorkspaceTabs";
+export {
+  ProjectWorkspaceTabs,
+  DealProjectTabs,
+} from "@/lbs/projects/ProjectWorkspaceTabs";

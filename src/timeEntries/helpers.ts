@@ -1,9 +1,9 @@
-import type { Identifier } from 'ra-core';
-import type { CrmDataProvider } from '@/components/atomic-crm/providers/types';
-import type { Person, TimeEntry } from '@/components/atomic-crm/types';
-import { getPersonDisplayName } from '@/people/constants';
+import type { Identifier } from "ra-core";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import type { Person, TimeEntry } from "@/components/atomic-crm/types";
+import { getPersonDisplayName } from "@/people/constants";
 
-export type DayState = 'working' | 'day_off' | 'holiday';
+export type DayState = "working" | "day_off" | "holiday";
 
 export type TimeEntryMeta = {
   day_state?: DayState;
@@ -24,12 +24,12 @@ export type DayDraft = {
   address: string;
   day_state: DayState;
   day_type:
-    | 'worked_day'
-    | 'holiday'
-    | 'sick_day'
-    | 'vacation_day'
-    | 'day_off'
-    | 'unpaid_leave';
+    | "worked_day"
+    | "holiday"
+    | "sick_day"
+    | "vacation_day"
+    | "day_off"
+    | "unpaid_leave";
   start_time: string;
   end_time: string;
   break_minutes: number;
@@ -58,13 +58,13 @@ export const enWeekdayShort = (isoDate: string): string => {
 };
 
 export const employeeOptionText = (person?: Partial<Person>) =>
-  person ? getPersonDisplayName(person) : '';
+  person ? getPersonDisplayName(person) : "";
 
 export const parseTimeEntryMeta = (notes?: string | null): TimeEntryMeta => {
   if (!notes) return {};
   try {
     const parsed = JSON.parse(notes) as TimeEntryMeta;
-    return typeof parsed === 'object' && parsed != null ? parsed : {};
+    return typeof parsed === "object" && parsed != null ? parsed : {};
   } catch {
     return {};
   }
@@ -75,7 +75,7 @@ export const stringifyTimeEntryMeta = (meta: TimeEntryMeta) =>
 
 export const timeStringToMinutes = (value?: string | null) => {
   if (!value) return null;
-  const [hours, minutes] = value.split(':').map(Number);
+  const [hours, minutes] = value.split(":").map(Number);
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
   if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
   return hours * 60 + minutes;
@@ -92,7 +92,10 @@ export const calculateHours = (
   return Math.max(0, Number(((end - start - lunchMinutes) / 60).toFixed(2)));
 };
 
-export const splitRegularOvertimeHours = (hours: number, dailyRegularLimit = 8) => {
+export const splitRegularOvertimeHours = (
+  hours: number,
+  dailyRegularLimit = 8,
+) => {
   const regular = Math.min(Math.max(hours, 0), dailyRegularLimit);
   const overtime = Math.max(0, hours - dailyRegularLimit);
   return {
@@ -131,7 +134,7 @@ export const splitWeeklyRegularOvertimeByDate = (
 
   for (const [index, day] of days.entries()) {
     const hours =
-      day.day_state === 'working' && day.day_type === 'worked_day'
+      day.day_state === "working" && day.day_type === "worked_day"
         ? calculateHours(day.start_time, day.end_time, day.break_minutes)
         : 0;
 
@@ -145,7 +148,12 @@ export const splitWeeklyRegularOvertimeByDate = (
     if (!groupedByWeek[weekKey]) {
       groupedByWeek[weekKey] = [];
     }
-    groupedByWeek[weekKey].push({ row_id: day.row_id, date: day.date, hours, index });
+    groupedByWeek[weekKey].push({
+      row_id: day.row_id,
+      date: day.date,
+      hours,
+      index,
+    });
   }
 
   if (!overtimeEnabled) {
@@ -158,7 +166,10 @@ export const splitWeeklyRegularOvertimeByDate = (
     );
     let accumulatedRegular = 0;
     for (const entry of sorted) {
-      const remainingRegular = Math.max(0, weeklyThreshold - accumulatedRegular);
+      const remainingRegular = Math.max(
+        0,
+        weeklyThreshold - accumulatedRegular,
+      );
       const regular = Math.min(entry.hours, remainingRegular);
       const overtime = Math.max(0, entry.hours - regular);
       accumulatedRegular += regular;
@@ -175,8 +186,10 @@ export const splitWeeklyRegularOvertimeByDate = (
 };
 
 export const getDayHours = (day: DayDraft) => {
-  if (day.day_state === 'day_off') return 0;
-  return Number(calculateHours(day.start_time, day.end_time, day.break_minutes).toFixed(2));
+  if (day.day_state === "day_off") return 0;
+  return Number(
+    calculateHours(day.start_time, day.end_time, day.break_minutes).toFixed(2),
+  );
 };
 
 /** Hours for payroll preview; matches buildTimeEntryPayloads (worked shift vs unpaid vs paid absence). */
@@ -185,13 +198,13 @@ export const getPayrollHoursForDayDraft = (
   options?: { defaultPaidHours?: number; offDaysPaid?: boolean },
 ) => {
   const isWorkedShift =
-    day.day_type === 'worked_day' && day.day_state === 'working';
+    day.day_type === "worked_day" && day.day_state === "working";
   if (isWorkedShift) {
     return calculateHours(day.start_time, day.end_time, day.break_minutes);
   }
-  if (day.day_type === 'unpaid_leave') return 0;
+  if (day.day_type === "unpaid_leave") return 0;
   // "Day off" is only paid if the employee has Off days paid enabled (people.off_days_paid).
-  if (day.day_type === 'day_off' && !options?.offDaysPaid) {
+  if (day.day_type === "day_off" && !options?.offDaysPaid) {
     return 0;
   }
   return Number(options?.defaultPaidHours ?? 8);
@@ -199,7 +212,7 @@ export const getPayrollHoursForDayDraft = (
 
 export const getDailyBreakdown = (day: DayDraft) => {
   const total = getDayHours(day);
-  if (day.day_state === 'holiday') {
+  if (day.day_state === "holiday") {
     return { total, regular: 0, overtime: 0, holiday: total };
   }
   const { regular, overtime } = splitRegularOvertimeHours(total);
@@ -209,13 +222,13 @@ export const getDailyBreakdown = (day: DayDraft) => {
 
 export const getRateForPerson = (person: Person) => {
   switch (person.pay_type) {
-    case 'hourly':
+    case "hourly":
       return Number(person.hourly_rate ?? 0);
-    case 'day_rate':
+    case "day_rate":
       return Number((Number(person.day_rate ?? 0) / 8).toFixed(2));
-    case 'salary':
+    case "salary":
       return 0;
-    case 'commission':
+    case "commission":
       return 0;
     default:
       return 0;
@@ -233,29 +246,32 @@ export const getRangeDates = (startDate: string, endDate: string) => {
   return result;
 };
 
-export const createDefaultDayDrafts = (startDate: string, endDate: string): DayDraft[] =>
+export const createDefaultDayDrafts = (
+  startDate: string,
+  endDate: string,
+): DayDraft[] =>
   getRangeDates(startDate, endDate).map((date) => ({
     row_id: createDayRowId(date),
     date,
-    address: '',
-    day_state: 'working',
-    day_type: 'worked_day',
-    start_time: '',
-    end_time: '',
+    address: "",
+    day_state: "working",
+    day_type: "worked_day",
+    start_time: "",
+    end_time: "",
     break_minutes: 0,
     project_id: null,
-    notes: '',
+    notes: "",
   }));
 
 export const chunkCreateTimeEntries = async (
   dataProvider: CrmDataProvider,
-  entries: Array<Omit<TimeEntry, 'id'>>,
+  entries: Array<Omit<TimeEntry, "id">>,
   chunkSize = 25,
 ) => {
   for (let index = 0; index < entries.length; index += chunkSize) {
     const chunk = entries.slice(index, index + chunkSize);
     await Promise.all(
-      chunk.map((data) => dataProvider.create('time_entries', { data })),
+      chunk.map((data) => dataProvider.create("time_entries", { data })),
     );
   }
 };
@@ -276,20 +292,23 @@ export const buildTimeEntryPayloads = ({
   workType?: string;
   internalNotes?: string;
   weeklyOvertimeThreshold?: number;
-  status: TimeEntry['status'];
+  status: TimeEntry["status"];
   /** Skip person+date keys that already have a paid time entry (e.g. `12|2026-04-01`). */
   paidPersonDateKeys?: Set<string>;
-}): Array<Omit<TimeEntry, 'id'>> => {
-  const payloads: Array<Omit<TimeEntry, 'id'>> = [];
+}): Array<Omit<TimeEntry, "id">> => {
+  const payloads: Array<Omit<TimeEntry, "id">> = [];
   const overtimeThreshold = weeklyOvertimeThreshold ?? 40;
 
   const daysForPayrollCalc = days.filter((d) => !d.paid_day_locked);
 
   employees.forEach((employee) => {
-    const weeklyBreakdown = splitWeeklyRegularOvertimeByDate(daysForPayrollCalc, {
-      overtimeEnabled: Boolean(employee.overtime_enabled),
-      weeklyThreshold: overtimeThreshold,
-    });
+    const weeklyBreakdown = splitWeeklyRegularOvertimeByDate(
+      daysForPayrollCalc,
+      {
+        overtimeEnabled: Boolean(employee.overtime_enabled),
+        weeklyThreshold: overtimeThreshold,
+      },
+    );
 
     days.forEach((day) => {
       if (day.paid_day_locked) {
@@ -300,13 +319,14 @@ export const buildTimeEntryPayloads = ({
       if (paidPersonDateKeys?.has(lockKey)) {
         return;
       }
-      const isWorkedShift = day.day_type === 'worked_day' && day.day_state === 'working';
+      const isWorkedShift =
+        day.day_type === "worked_day" && day.day_state === "working";
       const paidDayDefault = Number(employee.paid_day_hours ?? 8);
       const hours = isWorkedShift
         ? calculateHours(day.start_time, day.end_time, day.break_minutes)
-        : day.day_type === 'unpaid_leave'
+        : day.day_type === "unpaid_leave"
           ? 0
-          : day.day_type === 'day_off' && !employee.off_days_paid
+          : day.day_type === "day_off" && !employee.off_days_paid
             ? 0
             : paidDayDefault;
 
@@ -328,7 +348,9 @@ export const buildTimeEntryPayloads = ({
         hours,
         lunch_minutes: day.break_minutes,
         break_minutes: day.break_minutes,
-        worked_hours_raw: isWorkedShift ? Number((hours + day.break_minutes / 60).toFixed(2)) : 0,
+        worked_hours_raw: isWorkedShift
+          ? Number((hours + day.break_minutes / 60).toFixed(2))
+          : 0,
         payable_hours: hours,
         regular_hours: split.regular,
         overtime_hours: split.overtime,

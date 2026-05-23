@@ -57,14 +57,30 @@ export const LoginPage = (props: { redirectTo?: string }) => {
       | null
       | undefined;
     const next = st?.nextPathname;
-    if (typeof next !== "string" || (next !== "/sas" && !next.startsWith("/sas/"))) {
+    if (
+      typeof next !== "string" ||
+      (next !== "/sas" && !next.startsWith("/sas/"))
+    ) {
       return;
     }
     navigate(
-      { pathname: location.pathname, search: location.search, hash: location.hash },
-      { replace: true, state: { ...st, nextPathname: undefined, nextSearch: undefined } },
+      {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+      },
+      {
+        replace: true,
+        state: { ...st, nextPathname: undefined, nextSearch: undefined },
+      },
     );
-  }, [location.pathname, location.search, location.hash, location.state, navigate]);
+  }, [
+    location.pathname,
+    location.search,
+    location.hash,
+    location.state,
+    navigate,
+  ]);
 
   // Con router por *historia* la ruta es solo /login. Quitar fragmentos #/… heredados del
   // HashRouter (marcadores, SW, caché) — p. ej. /login#/login. No tocar #access_token=…

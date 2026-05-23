@@ -6,11 +6,14 @@ export const WhatsAppSettingsCard = () => (
   <div className="space-y-4 rounded-xl border border-border/60 p-4">
     <div>
       <h3 className="font-semibold">WhatsApp Business</h3>
-      <p className="text-sm text-muted-foreground">Coming soon — shell configuration only.</p>
+      <p className="text-sm text-muted-foreground">
+        Coming soon — shell configuration only.
+      </p>
     </div>
     <Alert>
       <AlertDescription>
-        Add WhatsApp Business credentials to activate. Webhook remains in shell mode until enabled.
+        Add WhatsApp Business credentials to activate. Webhook remains in shell
+        mode until enabled.
       </AlertDescription>
     </Alert>
     <div className="grid gap-3 md:grid-cols-2">

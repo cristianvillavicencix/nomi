@@ -81,7 +81,10 @@ export const getSocialLinkLabel = (link: ClientSocialLinkValue) => {
   if (network === "other") {
     if (link.label?.trim()) return link.label.trim();
     try {
-      return new URL(normalizeSocialUrl(link.url)).hostname.replace(/^www\./, "");
+      return new URL(normalizeSocialUrl(link.url)).hostname.replace(
+        /^www\./,
+        "",
+      );
     } catch {
       return "Link";
     }
@@ -100,7 +103,9 @@ const dedupeSocialLinks = (links: ClientSocialLinkValue[]) => {
   });
 };
 
-export const cleanSocialLinksForSave = (links?: ClientSocialLinkValue[] | null) =>
+export const cleanSocialLinksForSave = (
+  links?: ClientSocialLinkValue[] | null,
+) =>
   dedupeSocialLinks(
     (links ?? [])
       .map((link) => {
@@ -160,7 +165,8 @@ export const collectCompanySocialLinks = (
 ): ClientSocialLinkValue[] => {
   const ctx = parseLbsClientContextLinks(company.context_links);
   const fromJson = ctx.companySocialLinks ?? [];
-  const merged = fromJson.length > 0 ? fromJson : legacyCompanySocialLinks(company);
+  const merged =
+    fromJson.length > 0 ? fromJson : legacyCompanySocialLinks(company);
   return dedupeSocialLinks(
     merged.map((link) => ({
       network: resolveSocialNetwork(link),
@@ -175,7 +181,10 @@ export const collectContactSocialLinks = (
 ): ClientSocialLinkValue[] => {
   const ctx = parseLbsClientContextLinks(contextLinks);
   const fromJson = ctx.contactSocialLinks ?? [];
-  const merged = fromJson.length > 0 ? fromJson : legacyContactSocialLinks(contact, contextLinks);
+  const merged =
+    fromJson.length > 0
+      ? fromJson
+      : legacyContactSocialLinks(contact, contextLinks);
   return dedupeSocialLinks(
     merged.map((link) => ({
       network: resolveSocialNetwork(link),

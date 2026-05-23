@@ -17,12 +17,13 @@ const DEFAULT_FIELDS = [
   },
 ];
 
-const parseCustomSchema = (schema: Record<string, unknown> | null | undefined) => {
+const parseCustomSchema = (
+  schema: Record<string, unknown> | null | undefined,
+) => {
   if (schema?.type === "custom" && Array.isArray(schema.fields)) {
     const fields = schema.fields
-      .filter(
-        (field): field is Record<string, unknown> =>
-          Boolean(field && typeof field === "object"),
+      .filter((field): field is Record<string, unknown> =>
+        Boolean(field && typeof field === "object"),
       )
       .map((field) => ({
         key: String(field.key ?? "").trim(),
@@ -67,7 +68,9 @@ Deno.serve(
           name: form.name,
           description: form.description,
           slug: form.slug,
-          schema: parseCustomSchema(form.schema as Record<string, unknown> | null),
+          schema: parseCustomSchema(
+            form.schema as Record<string, unknown> | null,
+          ),
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

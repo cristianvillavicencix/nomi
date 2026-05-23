@@ -48,12 +48,16 @@ export const resolveClientTabFromUrl = (
 export const getValidClientTab = (value: string | null): ClientTab =>
   CLIENT_TABS.includes(value as ClientTab) ? (value as ClientTab) : "overview";
 
-export const getValidFinancialSection = (value: string | null): FinancialSection =>
+export const getValidFinancialSection = (
+  value: string | null,
+): FinancialSection =>
   FINANCIAL_SECTIONS.includes(value as FinancialSection)
     ? (value as FinancialSection)
     : "summary";
 
-export const getValidActivitySection = (value: string | null): ActivitySection =>
+export const getValidActivitySection = (
+  value: string | null,
+): ActivitySection =>
   ACTIVITY_SECTIONS.includes(value as ActivitySection)
     ? (value as ActivitySection)
     : "feed";
@@ -71,10 +75,12 @@ export const formatDateTime = (value?: string | null) => {
 };
 
 export const getContactEmail = (contact: Contact) =>
-  contact.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() || "—";
+  contact.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() ||
+  "—";
 
 export const getContactPhone = (contact: Contact) =>
-  contact.phone_jsonb?.find((entry) => entry.number?.trim())?.number?.trim() || "—";
+  contact.phone_jsonb?.find((entry) => entry.number?.trim())?.number?.trim() ||
+  "—";
 
 export const getContactFullName = (contact: Contact) =>
   `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() || "—";

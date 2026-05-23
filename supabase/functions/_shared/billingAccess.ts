@@ -95,9 +95,12 @@ export async function assertSeatsAllowNewInvite(orgId: number) {
   if (limit == null || limit < 1) {
     try {
       const stripe = getStripe();
-      const sub = await stripe.subscriptions.retrieve(org.stripe_subscription_id, {
-        expand: ["items.data"],
-      });
+      const sub = await stripe.subscriptions.retrieve(
+        org.stripe_subscription_id,
+        {
+          expand: ["items.data"],
+        },
+      );
       const q = sub.items.data[0]?.quantity;
       limit = typeof q === "number" && q > 0 ? q : 1;
       await supabaseAdmin
@@ -118,7 +121,9 @@ export async function assertSeatsAllowNewInvite(orgId: number) {
   }
 }
 
-export async function getPrimaryAdminEmail(orgId: number): Promise<string | null> {
+export async function getPrimaryAdminEmail(
+  orgId: number,
+): Promise<string | null> {
   const { data } = await supabaseAdmin
     .from("organization_members")
     .select("email")
@@ -135,7 +140,10 @@ export async function getPrimaryAdminEmail(orgId: number): Promise<string | null
     .eq("org_id", orgId)
     .limit(1)
     .maybeSingle();
-  if (anyUser?.email && typeof (anyUser as { email: string }).email === "string") {
+  if (
+    anyUser?.email &&
+    typeof (anyUser as { email: string }).email === "string"
+  ) {
     return (anyUser as { email: string }).email.trim() || null;
   }
   return null;

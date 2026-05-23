@@ -43,11 +43,7 @@ export const TaskDescriptionCell = ({
     return <span className="text-sm text-muted-foreground">—</span>;
   }
 
-  const renderedText = useMentions ? (
-    <TaskMentionText text={text} />
-  ) : (
-    text
-  );
+  const renderedText = useMentions ? <TaskMentionText text={text} /> : text;
 
   return (
     <>
@@ -64,10 +60,7 @@ export const TaskDescriptionCell = ({
           >
             <div
               ref={contentRef}
-              className={cn(
-                "truncate pr-8",
-                isDone && "line-through",
-              )}
+              className={cn("truncate pr-8", isDone && "line-through")}
             >
               {renderedText}
             </div>

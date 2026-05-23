@@ -36,9 +36,11 @@ export const ContactHeader = ({
   const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
 
   const primaryEmail =
-    record.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() ?? "";
+    record.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() ??
+    "";
   const primaryPhone =
-    record.phone_jsonb?.find((entry) => entry.number?.trim())?.number?.trim() ?? "";
+    record.phone_jsonb?.find((entry) => entry.number?.trim())?.number?.trim() ??
+    "";
   const emailLink = primaryEmail ? mailtoHref(primaryEmail) : "";
   const phoneLink = primaryPhone ? normalizePhoneForTel(primaryPhone) : null;
   const address = record.address?.trim() ?? "";
@@ -58,7 +60,12 @@ export const ContactHeader = ({
           <Avatar />
           <div className="min-w-0 space-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h1 className={cn("truncate font-semibold", embedded ? "text-xl" : "text-2xl")}>
+              <h1
+                className={cn(
+                  "truncate font-semibold",
+                  embedded ? "text-xl" : "text-2xl",
+                )}
+              >
                 {record.first_name} {record.last_name}
               </h1>
               <Badge variant="secondary">{statusLabel}</Badge>
@@ -134,7 +141,11 @@ export const ContactHeader = ({
               {!embedded ? <TagsListEdit buttonOnly /> : null}
               {!embedded ? <AddTask display="chip" /> : null}
               {isLbsMode() ? <OpenClientSmsButton contact={record} /> : null}
-              <Button onClick={onEdit} size={embedded ? "sm" : "default"} variant="outline">
+              <Button
+                onClick={onEdit}
+                size={embedded ? "sm" : "default"}
+                variant="outline"
+              >
                 Edit
               </Button>
               {embedded && onClose ? (

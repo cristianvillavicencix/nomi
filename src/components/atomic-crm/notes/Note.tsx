@@ -107,7 +107,9 @@ export const Note = ({
             reference="organization_members"
             link={false}
           >
-            <WithRecord render={(record) => <OrganizationMemberName member={record} />} />
+            <WithRecord
+              render={(record) => <OrganizationMemberName member={record} />}
+            />
           </ReferenceField>{" "}
           added a note{" "}
           {showStatus && note.status && (

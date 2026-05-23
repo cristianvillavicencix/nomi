@@ -37,7 +37,13 @@ import { cn } from "@/lib/utils";
 import { isLbsMode } from "@/lbs/productMode";
 import { ProjectDeliveryCountdownText } from "@/lbs/deals/ProjectDeliveryCountdownText";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import type { Company, Contact, Deal, OrganizationMember, Person } from "../types";
+import type {
+  Company,
+  Contact,
+  Deal,
+  OrganizationMember,
+  Person,
+} from "../types";
 import { ProjectAssignedAvatars } from "@/lbs/deals/ProjectAssignedAvatars";
 import { getStageColor, getStageLabel } from "./pipelines";
 
@@ -63,7 +69,8 @@ export const DealTableView = () => {
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const companyIds = useMemo(
-    () => Array.from(new Set(deals.map((deal) => deal.company_id).filter(Boolean))),
+    () =>
+      Array.from(new Set(deals.map((deal) => deal.company_id).filter(Boolean))),
     [deals],
   );
   const primaryContactIds = useMemo(
@@ -72,8 +79,9 @@ export const DealTableView = () => {
         new Set(
           deals
             .map((deal) => deal.contact_ids?.[0])
-            .filter((contactId): contactId is NonNullable<typeof contactId> =>
-              contactId != null,
+            .filter(
+              (contactId): contactId is NonNullable<typeof contactId> =>
+                contactId != null,
             ),
         ),
       ),
@@ -85,8 +93,9 @@ export const DealTableView = () => {
         new Set(
           deals
             .map((deal) => deal.organization_member_id)
-            .filter((salesId): salesId is NonNullable<typeof salesId> =>
-              salesId != null,
+            .filter(
+              (salesId): salesId is NonNullable<typeof salesId> =>
+                salesId != null,
             ),
         ),
       ),
@@ -138,7 +147,8 @@ export const DealTableView = () => {
     [sales],
   );
   const peopleById = useMemo(
-    () => Object.fromEntries(people.map((person) => [String(person.id), person])),
+    () =>
+      Object.fromEntries(people.map((person) => [String(person.id), person])),
     [people],
   );
   const sortedDeals = useMemo(() => {
@@ -250,7 +260,9 @@ export const DealTableView = () => {
               sortOrder={sortOrder}
               onSort={handleSort}
             />
-            <TableHead className={cn("min-w-[120px]", !lbsMode && "hidden")}>Days left</TableHead>
+            <TableHead className={cn("min-w-[120px]", !lbsMode && "hidden")}>
+              Days left
+            </TableHead>
             <SortableHead
               label="Value"
               field="amount"
@@ -339,13 +351,22 @@ export const DealTableView = () => {
                         deal.stage,
                         deal.pipeline_id,
                       )}22`,
-                      borderColor: getStageColor(config, deal.stage, deal.pipeline_id),
+                      borderColor: getStageColor(
+                        config,
+                        deal.stage,
+                        deal.pipeline_id,
+                      ),
                     }}
                   >
                     {getStageLabel(config, deal.stage, deal.pipeline_id)}
                   </Badge>
                 </TableCell>
-                <TableCell className={cn("min-w-[120px] whitespace-normal", !lbsMode && "hidden")}>
+                <TableCell
+                  className={cn(
+                    "min-w-[120px] whitespace-normal",
+                    !lbsMode && "hidden",
+                  )}
+                >
                   <ProjectDeliveryCountdownText record={deal} />
                 </TableCell>
                 <TableCell className={cn("text-right", lbsMode && "hidden")}>
@@ -374,13 +395,19 @@ export const DealTableView = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link to={`/deals/${deal.id}/show`} onClick={stopPropagation}>
+                        <Link
+                          to={`/deals/${deal.id}/show`}
+                          onClick={stopPropagation}
+                        >
                           <FolderKanban className="size-4" />
                           Open
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to={`/deals/${deal.id}`} onClick={stopPropagation}>
+                        <Link
+                          to={`/deals/${deal.id}`}
+                          onClick={stopPropagation}
+                        >
                           <Pencil className="size-4" />
                           Edit
                         </Link>

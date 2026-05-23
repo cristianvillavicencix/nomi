@@ -72,14 +72,21 @@ const CompaniesRowsList = () => {
         cellClassName="w-[52px]"
         render={(record: any) => <CompanyAvatar record={record} width={25} />}
       />
-      <DataTable.Col source="name" label="Company Name" className="w-[22%]" cellClassName="w-[22%]" />
+      <DataTable.Col
+        source="name"
+        label="Company Name"
+        className="w-[22%]"
+        cellClassName="w-[22%]"
+      />
       <DataTable.Col
         source="sector"
         label="Sector"
         className="w-[16%]"
         cellClassName="w-[16%] text-xs text-muted-foreground"
         render={(record: any) =>
-          record?.sector ? sectorLabelByValue[String(record.sector)] ?? record.sector : "—"
+          record?.sector
+            ? (sectorLabelByValue[String(record.sector)] ?? record.sector)
+            : "—"
         }
       />
       <DataTable.Col
@@ -163,7 +170,8 @@ const CompanyListActions = () => {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const currentQ = typeof filterValues.q === "string" ? filterValues.q : undefined;
+      const currentQ =
+        typeof filterValues.q === "string" ? filterValues.q : undefined;
       const nextQ = query.trim() ? query : undefined;
       if (currentQ === nextQ) {
         return;

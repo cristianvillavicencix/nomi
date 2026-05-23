@@ -32,14 +32,22 @@ const serializeScope = (pages: Set<string>) => Array.from(pages).join(", ");
 
 export const ProjectScopeChecklist = () => {
   const { field } = useInput({ source: "website_brief.scope" });
-  const scopeValue = useWatch({ name: "website_brief.scope" }) as string | undefined;
-  const selected = useMemo(() => parseScope(scopeValue ?? field.value), [field.value, scopeValue]);
+  const scopeValue = useWatch({ name: "website_brief.scope" }) as
+    | string
+    | undefined;
+  const selected = useMemo(
+    () => parseScope(scopeValue ?? field.value),
+    [field.value, scopeValue],
+  );
   const [customDraft, setCustomDraft] = useState("");
 
   const customPages = useMemo(
     () =>
       Array.from(selected).filter(
-        (page) => !DEFAULT_PAGES.some((item) => item.toLowerCase() === page.toLowerCase()),
+        (page) =>
+          !DEFAULT_PAGES.some(
+            (item) => item.toLowerCase() === page.toLowerCase(),
+          ),
       ),
     [selected],
   );

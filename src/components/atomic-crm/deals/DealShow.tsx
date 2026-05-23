@@ -3,7 +3,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { isLbsMode } from "@/lbs/productMode";
 
 const ProjectShowPage = lazy(() =>
-  import("@/lbs/projects/ProjectShowPage").then((m) => ({ default: m.ProjectShowPage })),
+  import("@/lbs/projects/ProjectShowPage").then((m) => ({
+    default: m.ProjectShowPage,
+  })),
 );
 
 const ContractorDealShow = lazy(() =>

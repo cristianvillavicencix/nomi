@@ -65,7 +65,9 @@ export const AddTask = ({
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const defaultDueDate = dueDate ?? new Date().toISOString().slice(0, 10);
   const resolvedContactId =
-    contactId ?? (contactIds?.length === 1 ? contactIds[0] : undefined) ?? contact?.id;
+    contactId ??
+    (contactIds?.length === 1 ? contactIds[0] : undefined) ??
+    contact?.id;
   const scopedContactFilter =
     contactIds && contactIds.length > 1
       ? { "id@in": `(${contactIds.join(",")})` }
@@ -137,52 +139,58 @@ export const AddTask = ({
         <CreateBase
           key={defaultDueDate}
           resource="tasks"
-        record={{
-          type: "none",
-          ...(resolvedContactId != null ? { contact_id: resolvedContactId } : {}),
-          deal_id: dealId ?? null,
-          due_date: defaultDueDate,
-          organization_member_id: identity.id,
-          assignee_person_ids: [],
-          collaborator_person_ids: [],
-          priority: "normal",
-          internal: false,
-        }}
-        transform={(data) =>
-          normalizeTaskCreateData({
-            ...data,
-            deal_id: dealId ?? data.deal_id ?? null,
-          })
-        }
-        mutationOptions={{ onSuccess: handleSuccess }}
-      >
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="lg:max-w-xl overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
-            <Form className="flex flex-col gap-4">
-              <DialogHeader>
-                <DialogTitle>
-                  {isLbsMode() ? "New task" : !shouldSelectContact ? "Create a new task for " : "Create a new task"}
-                  {!isLbsMode() && !shouldSelectContact && (
-                    <RecordRepresentation
-                      record={linkedContact ?? contact}
-                      resource="contacts"
-                    />
-                  )}
-                </DialogTitle>
-              </DialogHeader>
-              <TaskFormContent
-                selectContact={!isLbsMode() && shouldSelectContact}
-                contactFilter={scopedContactFilter}
-                showDealLink={!isLbsMode() && dealId == null}
-                defaultDealId={dealId}
-              />
-              <DialogFooter className="w-full justify-end">
-                <SaveButton />
-              </DialogFooter>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </CreateBase>
+          record={{
+            type: "none",
+            ...(resolvedContactId != null
+              ? { contact_id: resolvedContactId }
+              : {}),
+            deal_id: dealId ?? null,
+            due_date: defaultDueDate,
+            organization_member_id: identity.id,
+            assignee_person_ids: [],
+            collaborator_person_ids: [],
+            priority: "normal",
+            internal: false,
+          }}
+          transform={(data) =>
+            normalizeTaskCreateData({
+              ...data,
+              deal_id: dealId ?? data.deal_id ?? null,
+            })
+          }
+          mutationOptions={{ onSuccess: handleSuccess }}
+        >
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent className="lg:max-w-xl overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
+              <Form className="flex flex-col gap-4">
+                <DialogHeader>
+                  <DialogTitle>
+                    {isLbsMode()
+                      ? "New task"
+                      : !shouldSelectContact
+                        ? "Create a new task for "
+                        : "Create a new task"}
+                    {!isLbsMode() && !shouldSelectContact && (
+                      <RecordRepresentation
+                        record={linkedContact ?? contact}
+                        resource="contacts"
+                      />
+                    )}
+                  </DialogTitle>
+                </DialogHeader>
+                <TaskFormContent
+                  selectContact={!isLbsMode() && shouldSelectContact}
+                  contactFilter={scopedContactFilter}
+                  showDealLink={!isLbsMode() && dealId == null}
+                  defaultDealId={dealId}
+                />
+                <DialogFooter className="w-full justify-end">
+                  <SaveButton />
+                </DialogFooter>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </CreateBase>
       ) : null}
     </>
   );

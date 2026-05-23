@@ -2,10 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { ShowBase, useGetList, useStore } from "ra-core";
 import { useNavigate, useParams } from "react-router";
 import type { Contact } from "../types";
-import { QuickMasterDetailLayout, type QuickNavItem } from "../layout/QuickMasterDetailLayout";
+import {
+  QuickMasterDetailLayout,
+  type QuickNavItem,
+} from "../layout/QuickMasterDetailLayout";
 import { ContactShowContent } from "./ContactShow";
 
-const normalize = (value?: string | null) => String(value ?? "").trim().toLowerCase();
+const normalize = (value?: string | null) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
 
 const getPrimaryEmail = (contact: Contact) =>
   contact.email_jsonb?.find((email) => email.email?.trim())?.email ?? "";
@@ -39,7 +45,9 @@ export const ContactQuickViewPage = () => {
     () =>
       contacts.map((contact) => ({
         id: String(contact.id),
-        title: [contact.first_name, contact.last_name].filter(Boolean).join(" ") || "Unnamed contact",
+        title:
+          [contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
+          "Unnamed contact",
         subtitle: contact.company_name ?? undefined,
         meta: getPrimaryEmail(contact) || getPrimaryPhone(contact) || undefined,
       })),
@@ -50,7 +58,9 @@ export const ContactQuickViewPage = () => {
     const term = normalize(query);
     if (!term) return items;
     return items.filter((item) =>
-      [item.title, item.subtitle, item.meta].some((field) => normalize(field).includes(term)),
+      [item.title, item.subtitle, item.meta].some((field) =>
+        normalize(field).includes(term),
+      ),
     );
   }, [items, query]);
 
@@ -64,10 +74,19 @@ export const ContactQuickViewPage = () => {
     }
     if (isPending || items.length === 0) return;
     const fallbackId =
-      (lastSelectedId && itemIds.has(lastSelectedId) ? lastSelectedId : null) ?? items[0]?.id;
+      (lastSelectedId && itemIds.has(lastSelectedId) ? lastSelectedId : null) ??
+      items[0]?.id;
     if (!fallbackId) return;
     navigate(`/contacts/${fallbackId}/show`, { replace: true });
-  }, [selectedId, isPending, items, itemIds, lastSelectedId, navigate, setLastSelectedId]);
+  }, [
+    selectedId,
+    isPending,
+    items,
+    itemIds,
+    lastSelectedId,
+    navigate,
+    setLastSelectedId,
+  ]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">

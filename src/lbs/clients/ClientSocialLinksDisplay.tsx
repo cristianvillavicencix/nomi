@@ -39,7 +39,9 @@ export const ClientSocialLinksDisplay = ({
             title={label}
             aria-label={label}
             className="inline-flex text-muted-foreground transition-colors hover:text-foreground"
-            onClick={stopPropagation ? (event) => event.stopPropagation() : undefined}
+            onClick={
+              stopPropagation ? (event) => event.stopPropagation() : undefined
+            }
           >
             <Icon className={iconClassName} />
           </a>

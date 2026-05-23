@@ -33,7 +33,10 @@ export const ClientExtraEmailsIndicator = ({
             <div className="text-[10px] uppercase tracking-wide opacity-80">
               {entry.label}
             </div>
-            <a href={mailtoHref(entry.email)} className="break-all underline-offset-2 hover:underline">
+            <a
+              href={mailtoHref(entry.email)}
+              className="break-all underline-offset-2 hover:underline"
+            >
               {entry.email}
             </a>
           </div>

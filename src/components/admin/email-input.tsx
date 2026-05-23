@@ -20,10 +20,7 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover";
-import {
-  getEmailDomainSuggestions,
-  isValidEmail,
-} from "@/utils/email";
+import { getEmailDomainSuggestions, isValidEmail } from "@/utils/email";
 
 export type EmailInputProps = InputProps & React.ComponentProps<"input">;
 

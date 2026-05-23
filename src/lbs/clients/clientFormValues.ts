@@ -42,7 +42,10 @@ export const companyToClientFormValues = (
       collectCompanySocialLinks(company),
       collectContactSocialLinks(primaryContact, company.context_links),
     ),
-    company_same_as_primary_address: isCompanySameAsPrimaryAddress(company, primaryContact),
+    company_same_as_primary_address: isCompanySameAsPrimaryAddress(
+      company,
+      primaryContact,
+    ),
     company_address: company.address?.trim() ?? "",
     company_city: company.city?.trim() ?? "",
     company_state_abbr: company.state_abbr?.trim() ?? "",
@@ -58,7 +61,10 @@ export const companyToClientFormValues = (
     invoice_contact_name: ctx.invoiceContactName ?? "",
     invoice_email: ctx.invoiceEmail ?? "",
     invoice_phone: ctx.invoicePhone ?? "",
-    primary_lead_source: primaryContact?.lead_source?.trim() ?? company.primary_contact_lead_source?.trim() ?? "",
+    primary_lead_source:
+      primaryContact?.lead_source?.trim() ??
+      company.primary_contact_lead_source?.trim() ??
+      "",
     interested_service:
       primaryContact?.interested_service?.trim() ??
       company.primary_contact_interested_service?.trim() ??

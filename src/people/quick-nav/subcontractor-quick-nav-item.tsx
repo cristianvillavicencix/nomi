@@ -17,4 +17,3 @@ export const SubcontractorQuickNavItem = ({
     secondaryLine={item.specialty || item.email || item.phone || "No specialty"}
   />
 );
-

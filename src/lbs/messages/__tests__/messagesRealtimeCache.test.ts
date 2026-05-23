@@ -24,7 +24,11 @@ const merged = mergeMessageIntoList(first, {
   body: "hello updated",
 });
 assert.equal(merged.data.length, 1);
-assert.equal(merged.data[0]?.body, "hello updated", "same id should merge fields");
+assert.equal(
+  merged.data[0]?.body,
+  "hello updated",
+  "same id should merge fields",
+);
 
 const appended = mergeMessageIntoList(first, baseMessage(2, "second"));
 assert.equal(appended.data.length, 2);

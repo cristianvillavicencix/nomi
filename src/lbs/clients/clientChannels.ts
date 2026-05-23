@@ -1,4 +1,7 @@
-import type { EmailAndType, PhoneNumberAndType } from "@/components/atomic-crm/types";
+import type {
+  EmailAndType,
+  PhoneNumberAndType,
+} from "@/components/atomic-crm/types";
 import type { ClientSocialLinkValue } from "@/lbs/clients/clientSocialLinks";
 import { normalizeSocialUrl } from "@/lbs/clients/clientSocialLinks";
 
@@ -16,12 +19,16 @@ export const CHANNEL_TYPE_CHOICES = [
   { id: "Other", name: "Other" },
 ] as const;
 
-export const getPrimaryChannelValue = (channels?: ClientChannelFormValue[] | null) => {
+export const getPrimaryChannelValue = (
+  channels?: ClientChannelFormValue[] | null,
+) => {
   const list = cleanChannelFormValues(channels);
   return list.find((entry) => entry.isPrimary)?.value ?? list[0]?.value ?? "";
 };
 
-export const cleanChannelFormValues = (channels?: ClientChannelFormValue[] | null) => {
+export const cleanChannelFormValues = (
+  channels?: ClientChannelFormValue[] | null,
+) => {
   const cleaned = (channels ?? [])
     .map((entry) => ({
       value: entry.value?.trim() ?? "",
@@ -86,7 +93,9 @@ export const phonesToFormValues = (
   return legacy ? [{ value: legacy, type: "Work", isPrimary: true }] : [];
 };
 
-export const formValuesToEmailJsonb = (channels?: ClientChannelFormValue[] | null): EmailAndType[] =>
+export const formValuesToEmailJsonb = (
+  channels?: ClientChannelFormValue[] | null,
+): EmailAndType[] =>
   cleanChannelFormValues(channels).map((entry) => ({
     email: entry.value,
     type: entry.type,

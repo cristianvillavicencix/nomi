@@ -16,7 +16,11 @@ export const useEnsureProjectConversation = (
   const [create] = useCreate();
   const isCreatingRef = useRef(false);
 
-  const { data: conversations = [], isPending, refetch } = useGetList<Conversation>(
+  const {
+    data: conversations = [],
+    isPending,
+    refetch,
+  } = useGetList<Conversation>(
     "conversations",
     {
       filter: {
@@ -47,7 +51,13 @@ export const useEnsureProjectConversation = (
     );
 
   useEffect(() => {
-    if (!dealId || !memberId || isPending || conversation || isCreatingRef.current) {
+    if (
+      !dealId ||
+      !memberId ||
+      isPending ||
+      conversation ||
+      isCreatingRef.current
+    ) {
       return;
     }
 
@@ -120,7 +130,13 @@ export const useEnsureProjectConversation = (
         },
       },
     );
-  }, [conversation, create, memberId, participants.length, refetchParticipants]);
+  }, [
+    conversation,
+    create,
+    memberId,
+    participants.length,
+    refetchParticipants,
+  ]);
 
   return {
     conversation,

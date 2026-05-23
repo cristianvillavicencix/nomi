@@ -66,7 +66,8 @@ const ArchiveButton = ({ record }: { record: Deal }) => {
               notify("Project archived", { type: "info" });
               refresh();
             },
-            onError: () => notify("Could not archive project", { type: "error" }),
+            onError: () =>
+              notify("Could not archive project", { type: "error" }),
           },
         )
       }
@@ -99,7 +100,8 @@ const UnarchiveButton = ({ record }: { record: Deal }) => {
               notify("Project restored", { type: "info" });
               refresh();
             },
-            onError: () => notify("Could not restore project", { type: "error" }),
+            onError: () =>
+              notify("Could not restore project", { type: "error" }),
           },
         )
       }
@@ -125,7 +127,10 @@ const ProjectShowContent = () => {
 
   if (!record) return null;
 
-  const canManageSales = canUseCrmPermission(identity as Parameters<typeof canUseCrmPermission>[0], "sales.manage");
+  const canManageSales = canUseCrmPermission(
+    identity as Parameters<typeof canUseCrmPermission>[0],
+    "sales.manage",
+  );
 
   const handleStageChange = (stageId: string) => {
     if (isUpdatingStage || stageId === record.stage) return;
@@ -139,7 +144,8 @@ const ProjectShowContent = () => {
     const previousStage = record.stage;
     const normalizedStage = normalizeLbsProjectStage(stageId);
     const nextDeliveryStatus = deliveryStatusForStage(normalizedStage);
-    const nextLifecyclePhase = normalizedStage === "delivered" ? "closed" : "delivery";
+    const nextLifecyclePhase =
+      normalizedStage === "delivered" ? "closed" : "delivery";
 
     update(
       "deals",
@@ -190,15 +196,22 @@ const ProjectShowContent = () => {
 
             await runProjectStageAutomations({
               dataProvider,
-              deal: { ...record, stage: stageId, delivery_status: nextDeliveryStatus },
+              deal: {
+                ...record,
+                stage: stageId,
+                delivery_status: nextDeliveryStatus,
+              },
               previousStage,
               organizationMemberId: identity.id,
             });
           } catch {
-            notify("Stage updated, but automations could not run", { type: "warning" });
+            notify("Stage updated, but automations could not run", {
+              type: "warning",
+            });
           }
         },
-        onError: () => notify("Error: stage was not updated", { type: "error" }),
+        onError: () =>
+          notify("Error: stage was not updated", { type: "error" }),
       },
     );
   };
@@ -266,7 +279,9 @@ export const ProjectShowPage = ({ id }: { id?: string }) => {
   const showExplorerPanel = layoutMode === "top" && !!id;
 
   return (
-    <div className={cn("w-full py-2", layoutMode === "sidebar" ? "px-4 py-4" : "")}>
+    <div
+      className={cn("w-full py-2", layoutMode === "sidebar" ? "px-4 py-4" : "")}
+    >
       <div className={cn(showExplorerPanel ? "flex gap-4" : "")}>
         {showExplorerPanel ? <DealsExplorerPanel currentDealId={id} /> : null}
         <div className="min-w-0 flex-1">

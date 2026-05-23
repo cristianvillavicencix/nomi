@@ -11,7 +11,12 @@ import type { Conversation } from "@/lbs/types";
 import { StatusBadge } from "@/lbs/messages/status/StatusBadge";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 
-const STATUSES: Conversation["status"][] = ["open", "pending", "closed", "urgent"];
+const STATUSES: Conversation["status"][] = [
+  "open",
+  "pending",
+  "closed",
+  "urgent",
+];
 
 export const ChangeStatusDropdown = ({
   conversation,
@@ -50,7 +55,12 @@ export const ChangeStatusDropdown = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2"
+        >
           <StatusBadge status={current} />
           <ChevronDown className="size-3.5 opacity-60" />
         </Button>

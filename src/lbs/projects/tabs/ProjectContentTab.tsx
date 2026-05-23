@@ -21,7 +21,8 @@ export const ProjectContentTab = ({ record }: { record: LbsDeal }) => {
   const refresh = useRefresh();
   const { data: identity } = useGetIdentity();
 
-  const activePage = content.pages?.find((p) => p.id === activeId) ?? content.pages?.[0];
+  const activePage =
+    content.pages?.find((p) => p.id === activeId) ?? content.pages?.[0];
   if (!activePage) return null;
 
   const savePage = (patch: Partial<WebsiteContentPage>) => {
@@ -73,7 +74,11 @@ export const ProjectContentTab = ({ record }: { record: LbsDeal }) => {
       {
         id: record.id,
         data: {
-          website_content: requestContentRevision(content, activePage.id, notes.trim()),
+          website_content: requestContentRevision(
+            content,
+            activePage.id,
+            notes.trim(),
+          ),
         },
         previousData: record,
       },
@@ -140,7 +145,9 @@ export const ProjectContentTab = ({ record }: { record: LbsDeal }) => {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Page content (client-facing draft)</label>
+            <label className="text-sm font-medium">
+              Page content (client-facing draft)
+            </label>
             <Textarea
               rows={6}
               defaultValue={activePage.client_text ?? ""}
@@ -158,12 +165,19 @@ export const ProjectContentTab = ({ record }: { record: LbsDeal }) => {
             <Button type="button" size="sm" onClick={approve}>
               Approve page
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={requestRevision}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={requestRevision}
+            >
               Request revision
             </Button>
           </div>
           {activePage.approval?.revision_notes ? (
-            <p className="text-sm text-amber-700">{activePage.approval.revision_notes}</p>
+            <p className="text-sm text-amber-700">
+              {activePage.approval.revision_notes}
+            </p>
           ) : null}
         </CardContent>
       </Card>

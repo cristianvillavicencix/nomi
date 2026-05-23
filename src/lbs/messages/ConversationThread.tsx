@@ -3,7 +3,12 @@ import { useCreate, useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ClientSmsDraft, Contact, Conversation, ConversationMessage } from "@/lbs/types";
+import type {
+  ClientSmsDraft,
+  Contact,
+  Conversation,
+  ConversationMessage,
+} from "@/lbs/types";
 import { formatMessageTime } from "@/lbs/messages/conversationUtils";
 import { useConversationMessages } from "@/lbs/messages/useConversationMessages";
 import { useMarkConversationRead } from "@/lbs/messages/useMarkConversationRead";
@@ -41,8 +46,8 @@ const MessageBubble = ({
           message.is_internal_note
             ? "rounded-bl-md border border-amber-300/60 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-50"
             : isOwn
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md bg-muted/50 text-foreground dark:bg-muted/30",
+              ? "rounded-br-md bg-primary text-primary-foreground"
+              : "rounded-bl-md bg-muted/50 text-foreground dark:bg-muted/30",
         )}
       >
         {message.is_internal_note ? (
@@ -89,14 +94,21 @@ export const ConversationThread = ({
   const notify = useNotify();
   const messagesQuickAccess = useMessagesQuickAccessOptional();
   const [body, setBody] = useState("");
-  const [replyToMessageId, setReplyToMessageId] = useState<Identifier | null>(null);
+  const [replyToMessageId, setReplyToMessageId] = useState<Identifier | null>(
+    null,
+  );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const [create, { isPending }] = useCreate();
   const canSendMessages = useMemberCapability(SEND_MESSAGES_CAPABILITY);
-  const { messages, isPending: isLoadingMessages, refetch, loadOlder, hasMoreOlder, loadingOlder } = useConversationMessages(
-    conversation?.id,
-  );
+  const {
+    messages,
+    isPending: isLoadingMessages,
+    refetch,
+    loadOlder,
+    hasMoreOlder,
+    loadingOlder,
+  } = useConversationMessages(conversation?.id);
 
   const markConversationRead = messagesQuickAccess?.markConversationRead;
   const latestMessage = messages[messages.length - 1];
@@ -146,7 +158,9 @@ export const ConversationThread = ({
     }
 
     if (!canSendMessages) {
-      notify("You don't have permission to send messages.", { type: "warning" });
+      notify("You don't have permission to send messages.", {
+        type: "warning",
+      });
       return;
     }
 
@@ -170,9 +184,12 @@ export const ConversationThread = ({
           markConversationRead?.(conversation.id, sentAt);
         },
         onError: () => {
-          notify("Failed to send message. You may not have permission to send messages.", {
-            type: "error",
-          });
+          notify(
+            "Failed to send message. You may not have permission to send messages.",
+            {
+              type: "error",
+            },
+          );
         },
       },
     );
@@ -206,15 +223,20 @@ export const ConversationThread = ({
           <div className="flex h-full min-h-[220px] flex-col items-center justify-center px-4 text-center">
             <p className="text-sm font-medium">{draftLabel}</p>
             {draftCompany ? (
-              <p className="mt-1 text-sm text-muted-foreground">{draftCompany}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {draftCompany}
+              </p>
             ) : null}
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-              Write your first message below. The conversation is created when you send.
+              Write your first message below. The conversation is created when
+              you send.
             </p>
           </div>
         ) : isLoadingMessages ? null : messages.length === 0 ? (
           <div className="flex h-full min-h-[220px] items-center justify-center">
-            <p className="max-w-xs text-center text-sm text-muted-foreground">{emptyLabel}</p>
+            <p className="max-w-xs text-center text-sm text-muted-foreground">
+              {emptyLabel}
+            </p>
           </div>
         ) : (
           messages.map((message) => (
@@ -235,18 +257,18 @@ export const ConversationThread = ({
       {isClientSms ? (
         <div className="mt-auto shrink-0 bg-background">
           <ClientSmsComposer
-          contact={composerContact ?? clientSmsDraft?.contact}
-          dealId={clientSmsDraft?.dealId ?? conversation?.deal_id}
-          conversationId={conversation?.id}
-          replyToMessageId={replyToMessageId}
-          disabled={!canSendMessages}
-          onSent={({ conversation: nextConversation, message }) => {
-            onClientSmsSent?.(nextConversation);
-            if (message && nextConversation?.id != null) {
-              void refetch();
-            }
-          }}
-        />
+            contact={composerContact ?? clientSmsDraft?.contact}
+            dealId={clientSmsDraft?.dealId ?? conversation?.deal_id}
+            conversationId={conversation?.id}
+            replyToMessageId={replyToMessageId}
+            disabled={!canSendMessages}
+            onSent={({ conversation: nextConversation, message }) => {
+              onClientSmsSent?.(nextConversation);
+              if (message && nextConversation?.id != null) {
+                void refetch();
+              }
+            }}
+          />
         </div>
       ) : canSendMessages ? (
         <form

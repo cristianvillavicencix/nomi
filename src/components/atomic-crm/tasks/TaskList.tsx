@@ -5,7 +5,12 @@ import { AddTask } from "./AddTask";
 import { TasksPageContent } from "./TasksPageContent";
 
 export const TaskList = () => (
-  <List title="Tasks" perPage={50} disableBreadcrumb actions={<TaskListActions />}>
+  <List
+    title="Tasks"
+    perPage={50}
+    disableBreadcrumb
+    actions={<TaskListActions />}
+  >
     <TasksPageContent />
   </List>
 );

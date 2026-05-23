@@ -1,4 +1,7 @@
-export const SYSTEM_WEB_FORM_SLUGS = ["website-intake", "project-resources"] as const;
+export const SYSTEM_WEB_FORM_SLUGS = [
+  "website-intake",
+  "project-resources",
+] as const;
 
 export type SystemWebFormSlug = (typeof SYSTEM_WEB_FORM_SLUGS)[number];
 

@@ -18,7 +18,10 @@ import {
   StickyPageHeader,
 } from "@/components/atomic-crm/layout/page-shell";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import type { CalendarEventRecord, Contact } from "@/components/atomic-crm/types";
+import type {
+  CalendarEventRecord,
+  Contact,
+} from "@/components/atomic-crm/types";
 import { CalendarReminderDialog } from "@/lbs/calendar/CalendarReminderDialog";
 import {
   formatEventTimeRange,
@@ -67,14 +70,15 @@ export const MeetingsPage = () => {
   );
 
   const contactIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          meetings
-            .map((meeting) => meeting.contact_id)
-            .filter((id): id is Identifier => id != null && String(id).trim() !== ""),
-        ),
-      ],
+    () => [
+      ...new Set(
+        meetings
+          .map((meeting) => meeting.contact_id)
+          .filter(
+            (id): id is Identifier => id != null && String(id).trim() !== "",
+          ),
+      ),
+    ],
     [meetings],
   );
 
@@ -100,7 +104,9 @@ export const MeetingsPage = () => {
     );
 
     return [...scoped].sort((left, right) => {
-      const diff = getMeetingSortKey(left).localeCompare(getMeetingSortKey(right));
+      const diff = getMeetingSortKey(left).localeCompare(
+        getMeetingSortKey(right),
+      );
       return tab === "upcoming" ? diff : -diff;
     });
   }, [meetings, tab, todayKey]);
@@ -146,7 +152,10 @@ export const MeetingsPage = () => {
           </Button>
         </div>
 
-        <Tabs value={tab} onValueChange={(value) => setTab(value as MeetingsTab)}>
+        <Tabs
+          value={tab}
+          onValueChange={(value) => setTab(value as MeetingsTab)}
+        >
           <TabsList>
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             <TabsTrigger value="past">Past</TabsTrigger>
@@ -159,7 +168,9 @@ export const MeetingsPage = () => {
           <div className="rounded-lg border border-dashed p-8 text-center">
             <Video className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">
-              {tab === "upcoming" ? "No upcoming video calls" : "No past video calls"}
+              {tab === "upcoming"
+                ? "No upcoming video calls"
+                : "No past video calls"}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Schedule a meeting and choose a contact to generate the call link.
@@ -192,10 +203,13 @@ export const MeetingsPage = () => {
               <TableBody>
                 {filteredMeetings.map((meeting) => {
                   const contactName = meeting.contact_id
-                    ? contactNameById.get(String(meeting.contact_id)) ?? "—"
+                    ? (contactNameById.get(String(meeting.contact_id)) ?? "—")
                     : "—";
                   const timeLabel =
-                    formatEventTimeRange(meeting.event_time, meeting.duration_minutes) ?? "—";
+                    formatEventTimeRange(
+                      meeting.event_time,
+                      meeting.duration_minutes,
+                    ) ?? "—";
                   const durationLabel =
                     formatDurationLabel(meeting.duration_minutes) ?? "—";
                   const isDone = Boolean(meeting.completed_at);
@@ -217,10 +231,14 @@ export const MeetingsPage = () => {
                           contactName
                         )}
                       </TableCell>
-                      <TableCell className={isDone ? "line-through" : undefined}>
+                      <TableCell
+                        className={isDone ? "line-through" : undefined}
+                      >
                         {meeting.title}
                       </TableCell>
-                      <TableCell>{formatMeetingDate(meeting.event_date)}</TableCell>
+                      <TableCell>
+                        {formatMeetingDate(meeting.event_date)}
+                      </TableCell>
                       <TableCell>{timeLabel}</TableCell>
                       <TableCell>{durationLabel}</TableCell>
                       <TableCell>
@@ -228,7 +246,9 @@ export const MeetingsPage = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                          <MeetingLinkActions meetingUrl={meeting.meeting_url} />
+                          <MeetingLinkActions
+                            meetingUrl={meeting.meeting_url}
+                          />
                           <Button
                             type="button"
                             variant="outline"

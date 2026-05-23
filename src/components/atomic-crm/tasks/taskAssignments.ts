@@ -96,14 +96,12 @@ export const createTaskTagNotifications = async (
   const personIds = [...assignees, ...collaborators];
   const memberIds = toNumericIds(mentionedMemberIds);
 
-  const { data: existing = [] } = await dataProvider.getList<TaskTagNotification>(
-    "task_tag_notifications",
-    {
+  const { data: existing = [] } =
+    await dataProvider.getList<TaskTagNotification>("task_tag_notifications", {
       filter: { "task_id@eq": taskId },
       pagination: { page: 1, perPage: 500 },
       sort: { field: "id", order: "ASC" },
-    },
-  );
+    });
 
   const existingKeys = new Set(
     existing.map((entry) =>
@@ -115,7 +113,11 @@ export const createTaskTagNotifications = async (
 
   const [{ data: people }, { data: members }] = await Promise.all([
     personIds.length > 0
-      ? dataProvider.getList<{ id: Identifier; email?: string | null; org_id?: Identifier | null }>("people", {
+      ? dataProvider.getList<{
+          id: Identifier;
+          email?: string | null;
+          org_id?: Identifier | null;
+        }>("people", {
           filter: { "id@in": `(${personIds.join(",")})` },
           pagination: { page: 1, perPage: personIds.length },
           sort: { field: "id", order: "ASC" },

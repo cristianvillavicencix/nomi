@@ -64,7 +64,7 @@ export const WebsiteBriefSectionSheet = ({
       ? "Project setup"
       : target?.kind === "all"
         ? "Project brief"
-        : target?.section.title ?? "Brief section";
+        : (target?.section.title ?? "Brief section");
 
   const description =
     mode === "view"
@@ -83,7 +83,9 @@ export const WebsiteBriefSectionSheet = ({
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4 text-left">
           <SheetTitle>{title}</SheetTitle>
-          {description ? <SheetDescription>{description}</SheetDescription> : null}
+          {description ? (
+            <SheetDescription>{description}</SheetDescription>
+          ) : null}
         </SheetHeader>
 
         {mode === "view" && target ? (
@@ -134,7 +136,9 @@ export const WebsiteBriefSectionSheet = ({
                 </div>
               ) : (
                 <WebsiteBriefFormSections
-                  onlySectionId={target.kind === "section" ? target.section.id : undefined}
+                  onlySectionId={
+                    target.kind === "section" ? target.section.id : undefined
+                  }
                   validateUrl={optionalUrl}
                   showSecurityHint={target.kind === "all"}
                 />

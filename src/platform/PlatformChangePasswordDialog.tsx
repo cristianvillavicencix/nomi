@@ -40,11 +40,15 @@ export const PlatformChangePasswordDialog = ({ trigger }: Props) => {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (next.length < MIN_LEN || confirm.length < MIN_LEN) {
-      notify("La contraseña nueva debe tener al menos 6 caracteres.", { type: "error" });
+      notify("La contraseña nueva debe tener al menos 6 caracteres.", {
+        type: "error",
+      });
       return;
     }
     if (next !== confirm) {
-      notify("La nueva contraseña y su confirmación no coinciden.", { type: "error" });
+      notify("La nueva contraseña y su confirmación no coinciden.", {
+        type: "error",
+      });
       return;
     }
     if (!current) {
@@ -58,15 +62,23 @@ export const PlatformChangePasswordDialog = ({ trigger }: Props) => {
         const { data, error: userErr } = await supabase.auth.getUser();
         const email = data.user?.email;
         if (userErr || !email) {
-          notify("No se pudo obtener el usuario. Vuelve a entrar a la consola.", { type: "error" });
+          notify(
+            "No se pudo obtener el usuario. Vuelve a entrar a la consola.",
+            { type: "error" },
+          );
           return;
         }
-        const { error: reauth } = await supabase.auth.signInWithPassword({ email, password: current });
+        const { error: reauth } = await supabase.auth.signInWithPassword({
+          email,
+          password: current,
+        });
         if (reauth) {
           notify("La contraseña actual no es correcta.", { type: "error" });
           return;
         }
-        const { error: upd } = await supabase.auth.updateUser({ password: next });
+        const { error: upd } = await supabase.auth.updateUser({
+          password: next,
+        });
         if (upd) {
           notify(upd.message, { type: "error" });
           return;
@@ -75,9 +87,14 @@ export const PlatformChangePasswordDialog = ({ trigger }: Props) => {
         reset();
         setOpen(false);
       } catch (err) {
-        notify(err instanceof Error ? err.message : "Error al actualizar la contraseña.", {
-          type: "error",
-        });
+        notify(
+          err instanceof Error
+            ? err.message
+            : "Error al actualizar la contraseña.",
+          {
+            type: "error",
+          },
+        );
       } finally {
         setBusy(false);
       }
@@ -114,8 +131,10 @@ export const PlatformChangePasswordDialog = ({ trigger }: Props) => {
           <DialogHeader>
             <DialogTitle>Cambiar contraseña</DialogTitle>
             <DialogDescription>
-              Confirma tu clave actual y elige una nueva. Si no recuerdas la clave, cierra e usa{" "}
-              <span className="text-foreground">Recuperar contraseña</span> en la pantalla de acceso a la plataforma.
+              Confirma tu clave actual y elige una nueva. Si no recuerdas la
+              clave, cierra e usa{" "}
+              <span className="text-foreground">Recuperar contraseña</span> en
+              la pantalla de acceso a la plataforma.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
@@ -145,7 +164,9 @@ export const PlatformChangePasswordDialog = ({ trigger }: Props) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="platform-pw-confirm">Confirmar nueva contraseña</Label>
+              <Label htmlFor="platform-pw-confirm">
+                Confirmar nueva contraseña
+              </Label>
               <Input
                 id="platform-pw-confirm"
                 type="password"

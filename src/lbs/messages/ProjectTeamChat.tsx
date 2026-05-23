@@ -6,8 +6,12 @@ import { useEnsureProjectConversation } from "@/lbs/messages/useEnsureProjectCon
 
 export const ProjectTeamChat = ({ record }: { record: LbsDeal }) => {
   const { dealStages } = useConfigurationContext();
-  const projectTitle = record.name?.trim() || findDealLabel(dealStages, record.stage);
-  const { conversation, isPending } = useEnsureProjectConversation(record.id, projectTitle);
+  const projectTitle =
+    record.name?.trim() || findDealLabel(dealStages, record.stage);
+  const { conversation, isPending } = useEnsureProjectConversation(
+    record.id,
+    projectTitle,
+  );
 
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Opening team chat…</p>;
@@ -18,7 +22,8 @@ export const ProjectTeamChat = ({ record }: { record: LbsDeal }) => {
       <div className="border-b px-4 py-3">
         <h3 className="font-semibold">Team chat</h3>
         <p className="text-sm text-muted-foreground">
-          Internal messages for this project. Only your CRM team can see this thread.
+          Internal messages for this project. Only your CRM team can see this
+          thread.
         </p>
       </div>
       <div className="h-[520px] p-3">

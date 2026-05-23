@@ -15,16 +15,27 @@ import { List } from "@/components/admin/list";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { FilterButton } from "@/components/admin/filter-form";
 import { SelectInput } from "@/components/admin/select-input";
-import { TopToolbar, ACTION_BAR_SURFACE_CLASSNAME } from "@/components/atomic-crm/layout/TopToolbar";
+import {
+  TopToolbar,
+  ACTION_BAR_SURFACE_CLASSNAME,
+} from "@/components/atomic-crm/layout/TopToolbar";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { useConfigurationContext, useConfigurationUpdater } from "../root/ConfigurationContext";
+import {
+  useConfigurationContext,
+  useConfigurationUpdater,
+} from "../root/ConfigurationContext";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { isLbsMode } from "@/lbs/productMode";
 import { DealArchivedList } from "./DealArchivedList";
@@ -155,7 +166,9 @@ const DealActions = () => {
           ) : null}
         </div>
         <div className="flex min-w-max items-center gap-2">
-          <span className="hidden text-sm text-muted-foreground xl:inline">View</span>
+          <span className="hidden text-sm text-muted-foreground xl:inline">
+            View
+          </span>
           <ToggleGroup
             type="single"
             value={view}
@@ -230,7 +243,8 @@ const ProjectSearchField = () => {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const currentQ = typeof filterValues.q === "string" ? filterValues.q : undefined;
+      const currentQ =
+        typeof filterValues.q === "string" ? filterValues.q : undefined;
       const nextQ = value.trim() ? value : undefined;
       if (currentQ === nextQ) {
         return;
@@ -274,7 +288,11 @@ const OnlyMineSwitch = () => {
 
   return (
     <div className="flex h-9 shrink-0 items-center gap-2 rounded-md border border-input px-3">
-      <Switch id="projects-only-mine" checked={isActive} onCheckedChange={handleChange} />
+      <Switch
+        id="projects-only-mine"
+        checked={isActive}
+        onCheckedChange={handleChange}
+      />
       <Label
         htmlFor="projects-only-mine"
         className="hidden text-sm font-normal xl:inline"
@@ -371,7 +389,10 @@ const ManageStagesDialog = ({
         </DialogHeader>
         <div className="space-y-2">
           {draftStages.map((stage, index) => (
-            <div key={stage.id || index} className="grid grid-cols-[1fr_auto_auto_auto] gap-2">
+            <div
+              key={stage.id || index}
+              className="grid grid-cols-[1fr_auto_auto_auto] gap-2"
+            >
               <input
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                 value={stage.label}
@@ -398,7 +419,9 @@ const ManageStagesDialog = ({
                 onChange={(event) =>
                   setDraftStages((prev) =>
                     prev.map((item, itemIndex) =>
-                      itemIndex === index ? { ...item, color: event.target.value } : item,
+                      itemIndex === index
+                        ? { ...item, color: event.target.value }
+                        : item,
                     ),
                   )
                 }
@@ -413,7 +436,10 @@ const ManageStagesDialog = ({
                   onClick={() =>
                     setDraftStages((prev) => {
                       const next = [...prev];
-                      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                      [next[index - 1], next[index]] = [
+                        next[index],
+                        next[index - 1],
+                      ];
                       return next;
                     })
                   }
@@ -428,7 +454,10 @@ const ManageStagesDialog = ({
                   onClick={() =>
                     setDraftStages((prev) => {
                       const next = [...prev];
-                      [next[index + 1], next[index]] = [next[index], next[index + 1]];
+                      [next[index + 1], next[index]] = [
+                        next[index],
+                        next[index + 1],
+                      ];
                       return next;
                     })
                   }
@@ -447,10 +476,14 @@ const ManageStagesDialog = ({
                       deal.stage === stage.id,
                   );
                   if (inUse) {
-                    notify("This stage is in use by projects", { type: "error" });
+                    notify("This stage is in use by projects", {
+                      type: "error",
+                    });
                     return;
                   }
-                  setDraftStages((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+                  setDraftStages((prev) =>
+                    prev.filter((_, itemIndex) => itemIndex !== index),
+                  );
                 }}
               >
                 Delete
@@ -477,7 +510,11 @@ const ManageStagesDialog = ({
           </Button>
         </div>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={handleSave}>

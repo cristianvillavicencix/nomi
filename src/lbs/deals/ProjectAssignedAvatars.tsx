@@ -1,17 +1,25 @@
 import type { MouseEvent } from "react";
 import { Link } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { Deal, OrganizationMember, Person } from "@/components/atomic-crm/types";
+import type {
+  Deal,
+  OrganizationMember,
+  Person,
+} from "@/components/atomic-crm/types";
 import { isLbsMode } from "@/lbs/productMode";
 
-const getPersonInitials = (person: Pick<Person, "first_name" | "last_name">) => {
+const getPersonInitials = (
+  person: Pick<Person, "first_name" | "last_name">,
+) => {
   const first = (person.first_name ?? "").trim().charAt(0);
   const last = (person.last_name ?? "").trim().charAt(0);
   const initials = `${first}${last}`.toUpperCase();
   return initials || "—";
 };
 
-const getMemberInitials = (member: Pick<OrganizationMember, "first_name" | "last_name">) => {
+const getMemberInitials = (
+  member: Pick<OrganizationMember, "first_name" | "last_name">,
+) => {
   const first = (member.first_name ?? "").trim().charAt(0);
   const last = (member.last_name ?? "").trim().charAt(0);
   const initials = `${first}${last}`.toUpperCase();
@@ -19,10 +27,14 @@ const getMemberInitials = (member: Pick<OrganizationMember, "first_name" | "last
 };
 
 const getPersonName = (person: Pick<Person, "first_name" | "last_name">) =>
-  [person.first_name, person.last_name].filter(Boolean).join(" ") || "Team member";
+  [person.first_name, person.last_name].filter(Boolean).join(" ") ||
+  "Team member";
 
-const getMemberName = (member: Pick<OrganizationMember, "first_name" | "last_name">) =>
-  [member.first_name, member.last_name].filter(Boolean).join(" ") || "Team member";
+const getMemberName = (
+  member: Pick<OrganizationMember, "first_name" | "last_name">,
+) =>
+  [member.first_name, member.last_name].filter(Boolean).join(" ") ||
+  "Team member";
 
 type ProjectAssignedAvatarsProps = {
   deal: Deal;
@@ -61,7 +73,10 @@ export const ProjectAssignedAvatars = ({
                 onClick={onClick}
               >
                 <Avatar className="size-7">
-                  <AvatarImage src={member.avatar?.src ?? undefined} alt={getMemberName(member)} />
+                  <AvatarImage
+                    src={member.avatar?.src ?? undefined}
+                    alt={getMemberName(member)}
+                  />
                   <AvatarFallback className="bg-muted text-[10px] font-medium">
                     {getMemberInitials(member)}
                   </AvatarFallback>

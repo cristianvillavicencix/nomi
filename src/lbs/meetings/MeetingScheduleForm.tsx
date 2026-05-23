@@ -12,12 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import type { Contact } from "@/components/atomic-crm/types";
 import { CalendarTimeInput } from "@/lbs/calendar/CalendarTimeInput";
 import {
@@ -31,8 +26,10 @@ import { MeetingContactTitleSync } from "@/lbs/meetings/meetingFormUtils";
 import { MeetingVideoCallSection } from "@/lbs/meetings/MeetingVideoCallSection";
 import { Form } from "ra-core";
 
-const dealOptionText = (choice: { name?: string | null; id?: number | string }) =>
-  choice.name?.trim() || `Project #${choice.id}`;
+const dealOptionText = (choice: {
+  name?: string | null;
+  id?: number | string;
+}) => choice.name?.trim() || `Project #${choice.id}`;
 
 const contactOptionText = (contact: Contact) => getContactDisplayName(contact);
 
@@ -40,7 +37,8 @@ const formatRemindBefore = (value?: number | null) =>
   value == null ? REMIND_BEFORE_NONE : value;
 
 const parseRemindBefore = (value: string | number) => {
-  if (value === REMIND_BEFORE_NONE || value === "" || value == null) return null;
+  if (value === REMIND_BEFORE_NONE || value === "" || value == null)
+    return null;
   return Number(value);
 };
 
@@ -129,7 +127,11 @@ export const MeetingScheduleForm = ({
         </MeetingFormRow>
 
         <MeetingFormRow label="Start time">
-          <CalendarTimeInput source="event_time" label={false} helperText={false} />
+          <CalendarTimeInput
+            source="event_time"
+            label={false}
+            helperText={false}
+          />
         </MeetingFormRow>
 
         <MeetingFormRow label="Duration">
@@ -155,7 +157,12 @@ export const MeetingScheduleForm = ({
         </MeetingFormRow>
 
         <MeetingFormRow label="Notes">
-          <TextInput source="description" label={false} multiline helperText={false} />
+          <TextInput
+            source="description"
+            label={false}
+            multiline
+            helperText={false}
+          />
         </MeetingFormRow>
 
         <MeetingFormRow label="Video call">
@@ -186,7 +193,10 @@ export const MeetingScheduleForm = ({
       ) : (
         <span />
       )}
-      <SaveButton type="button" label={isEdit ? "Save meeting" : "Schedule meeting"} />
+      <SaveButton
+        type="button"
+        label={isEdit ? "Save meeting" : "Schedule meeting"}
+      />
     </DialogFooter>
   </Form>
 );

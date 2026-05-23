@@ -1,5 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import type { PeopleQuickNavItem as QuickItem, PeopleQuickNavType } from "./types";
+import type {
+  PeopleQuickNavItem as QuickItem,
+  PeopleQuickNavType,
+} from "./types";
 import { EmployeeQuickNavItem } from "./employee-quick-nav-item";
 import { SalespersonQuickNavItem } from "./salesperson-quick-nav-item";
 import { SubcontractorQuickNavItem } from "./subcontractor-quick-nav-item";
@@ -34,7 +37,11 @@ export const PeopleQuickNavList = ({
   }
 
   if (items.length === 0) {
-    return <p className="px-1 py-2 text-sm text-muted-foreground">{emptyLabelByType[type]}</p>;
+    return (
+      <p className="px-1 py-2 text-sm text-muted-foreground">
+        {emptyLabelByType[type]}
+      </p>
+    );
   }
 
   return (
@@ -73,4 +80,3 @@ export const PeopleQuickNavList = ({
     </div>
   );
 };
-

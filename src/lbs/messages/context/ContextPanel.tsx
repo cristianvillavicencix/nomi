@@ -32,7 +32,9 @@ export const ContextPanelContent = ({
         <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
           Conversation
         </div>
-        <div className="mt-1 text-base font-semibold">{conversation.title ?? "Untitled"}</div>
+        <div className="mt-1 text-base font-semibold">
+          {conversation.title ?? "Untitled"}
+        </div>
         <div className="mt-2">
           <StatusBadge status={conversation.status} />
         </div>
@@ -43,9 +45,13 @@ export const ContextPanelContent = ({
           <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Contact
           </div>
-          <div className="mt-1 font-medium">{getContactDisplayName(contact)}</div>
+          <div className="mt-1 font-medium">
+            {getContactDisplayName(contact)}
+          </div>
           {contact.company_name ? (
-            <div className="text-sm text-muted-foreground">{contact.company_name}</div>
+            <div className="text-sm text-muted-foreground">
+              {contact.company_name}
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -67,14 +73,25 @@ export const ContextPanelContent = ({
           Quick actions
         </div>
         {deal?.id != null ? (
-          <Button asChild variant="outline" size="sm" className="w-full justify-start">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+          >
             <Link to={`/deals/${deal.id}/show`}>
               <ExternalLink className="mr-2 size-4" />
               Open project
             </Link>
           </Button>
         ) : null}
-        <Button variant="outline" size="sm" className="w-full justify-start" disabled title="Voice not configured">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start"
+          disabled
+          title="Voice not configured"
+        >
           <Phone className="mr-2 size-4" />
           Call (coming soon)
         </Button>
@@ -124,7 +141,11 @@ export const ContextPanel = ({
           </Button>
         ) : null}
       </div>
-      <ContextPanelContent conversation={conversation} contact={contact} deal={deal} />
+      <ContextPanelContent
+        conversation={conversation}
+        contact={contact}
+        deal={deal}
+      />
     </div>
   </aside>
 );

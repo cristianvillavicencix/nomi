@@ -15,7 +15,10 @@ export async function pushSeatCountToStripeForOrg(orgId: number) {
     .single();
 
   if (error || !org?.stripe_subscription_id) {
-    return { ok: false as const, error: "No subscription on file for this organization" };
+    return {
+      ok: false as const,
+      error: "No subscription on file for this organization",
+    };
   }
 
   const seats = await getActiveMemberCount(orgId);

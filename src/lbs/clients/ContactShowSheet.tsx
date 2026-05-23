@@ -20,7 +20,10 @@ export const ContactShowSheet = ({
   onOpenChange,
 }: ContactShowSheetProps) => (
   <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
+    <SheetContent
+      side="right"
+      className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl"
+    >
       <SheetHeader className="border-b px-6 py-4 text-left">
         <SheetTitle>Contact profile</SheetTitle>
       </SheetHeader>

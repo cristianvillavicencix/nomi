@@ -22,9 +22,7 @@ import {
   LBS_DEFAULT_LIFECYCLE_PHASE,
   LBS_DEFAULT_PROJECT_PRIORITY,
 } from "@/lbs/deals/lbsAgencyProjectModel";
-import {
-  LBS_DEFAULT_PROJECT_CATEGORY,
-} from "@/lbs/deals/lbsProjectConstants";
+import { LBS_DEFAULT_PROJECT_CATEGORY } from "@/lbs/deals/lbsProjectConstants";
 import { emptyWebsiteBriefValues } from "@/lbs/deals/websiteBriefSchema";
 
 import type { Deal } from "../types";
@@ -128,7 +126,9 @@ export const DealCreate = ({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
       <DialogContent className="lg:max-w-4xl overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
-        <DialogTitle className="text-2xl font-semibold">New Project</DialogTitle>
+        <DialogTitle className="text-2xl font-semibold">
+          New Project
+        </DialogTitle>
         <DialogDescription>
           {lbsMode
             ? "Set up a website or digital marketing project with service details, budget, and goals."
@@ -145,9 +145,15 @@ export const DealCreate = ({
               organization_member_id: identity?.id,
               category: lbsMode ? LBS_DEFAULT_PROJECT_CATEGORY : "retail",
               stage: lbsMode ? LBS_DEFAULT_AGENCY_STAGE : "lead",
-              project_type: lbsMode ? LBS_DEFAULT_AGENCY_PROJECT_TYPE : "roofing",
-              lifecycle_phase: lbsMode ? LBS_DEFAULT_LIFECYCLE_PHASE : undefined,
-              delivery_status: lbsMode ? LBS_DEFAULT_DELIVERY_STATUS : undefined,
+              project_type: lbsMode
+                ? LBS_DEFAULT_AGENCY_PROJECT_TYPE
+                : "roofing",
+              lifecycle_phase: lbsMode
+                ? LBS_DEFAULT_LIFECYCLE_PHASE
+                : undefined,
+              delivery_status: lbsMode
+                ? LBS_DEFAULT_DELIVERY_STATUS
+                : undefined,
               priority: lbsMode ? LBS_DEFAULT_PROJECT_PRIORITY : undefined,
               estimated_value: lbsMode ? undefined : 0,
               amount: lbsMode ? undefined : 0,

@@ -8,7 +8,10 @@ import type {
   LabeledValue,
   NoteStatus,
 } from "../types";
-import { defaultConfiguration, withCurrentProductName } from "./defaultConfiguration";
+import {
+  defaultConfiguration,
+  withCurrentProductName,
+} from "./defaultConfiguration";
 import { type PayrollSettings } from "@/payroll/rules";
 import { isLbsMode } from "@/lbs/productMode";
 import { hasLegacyProjectPipeline } from "@/lbs/deals/lbsProjectConstants";
@@ -55,8 +58,7 @@ const normalizeDealPipelines = (
   if (Array.isArray(maybePipelines) && maybePipelines.length > 0) {
     return maybePipelines
       .map((pipeline, pipelineIndex) => {
-        const normalizedId =
-          pipeline.id || `pipeline-${pipelineIndex + 1}`;
+        const normalizedId = pipeline.id || `pipeline-${pipelineIndex + 1}`;
         const stages = (pipeline.stages ?? [])
           .map((stage, stageIndex) => ({
             id: stage.id || `stage-${stageIndex + 1}`,

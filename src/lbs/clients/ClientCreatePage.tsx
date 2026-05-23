@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Form, useDataProvider, useGetIdentity, useNotify, useRedirect } from "ra-core";
+import {
+  Form,
+  useDataProvider,
+  useGetIdentity,
+  useNotify,
+  useRedirect,
+} from "ra-core";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormToolbar } from "@/components/atomic-crm/layout/FormToolbar";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
@@ -34,7 +40,9 @@ export const ClientCreatePage = () => {
     }
 
     if (!("upsertLbsClient" in dataProvider)) {
-      notify("Client creation is not available in this environment", { type: "error" });
+      notify("Client creation is not available in this environment", {
+        type: "error",
+      });
       return;
     }
 
@@ -46,10 +54,9 @@ export const ClientCreatePage = () => {
       notify(result.created ? "Client created" : "Client updated");
       redirect(getClientShowPath(result.company_id));
     } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Failed to save client",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Failed to save client", {
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }

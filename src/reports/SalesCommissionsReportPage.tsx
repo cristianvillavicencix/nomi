@@ -1,29 +1,29 @@
-import { useMemo, useState } from 'react';
-import { useGetList } from 'ra-core';
-import { Printer } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ReportDateFilters } from './ReportFilters';
+import { useMemo, useState } from "react";
+import { useGetList } from "ra-core";
+import { Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ReportDateFilters } from "./ReportFilters";
 
 export const SalesCommissionsReportPage = ({
   embedded = false,
 }: {
   embedded?: boolean;
 }) => {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   const filter = useMemo(
     () => ({
-      ...(from ? { 'pay_date@gte': from } : {}),
-      ...(to ? { 'pay_date@lte': to } : {}),
+      ...(from ? { "pay_date@gte": from } : {}),
+      ...(to ? { "pay_date@lte": to } : {}),
     }),
     [from, to],
   );
 
-  const { data } = useGetList('report_sales_commissions_by_salesperson', {
+  const { data } = useGetList("report_sales_commissions_by_salesperson", {
     pagination: { page: 1, perPage: 200 },
-    sort: { field: 'pay_date', order: 'DESC' },
+    sort: { field: "pay_date", order: "DESC" },
     filter,
   });
 
@@ -31,15 +31,24 @@ export const SalesCommissionsReportPage = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between print:hidden">
         {!embedded ? (
-          <h1 className="text-2xl font-semibold">Sales Commissions by Salesperson</h1>
-        ) : <span />}
+          <h1 className="text-2xl font-semibold">
+            Sales Commissions by Salesperson
+          </h1>
+        ) : (
+          <span />
+        )}
         <Button variant="outline" size="sm" onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" />
           Print / PDF
         </Button>
       </div>
       <div className="print:hidden">
-        <ReportDateFilters from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
+        <ReportDateFilters
+          from={from}
+          to={to}
+          onFromChange={setFrom}
+          onToChange={setTo}
+        />
       </div>
       <Card>
         <CardContent className="pt-6 overflow-x-auto">
@@ -58,7 +67,9 @@ export const SalesCommissionsReportPage = ({
                   <td className="py-2">{row.salesperson_name}</td>
                   <td className="py-2">{row.pay_date}</td>
                   <td className="py-2">{row.commission_lines}</td>
-                  <td className="py-2">${Number(row.total_commission ?? 0).toFixed(2)}</td>
+                  <td className="py-2">
+                    ${Number(row.total_commission ?? 0).toFixed(2)}
+                  </td>
                 </tr>
               ))}
             </tbody>

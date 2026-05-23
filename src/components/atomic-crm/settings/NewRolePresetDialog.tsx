@@ -20,7 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import { ROLE_PRESETS, type RoleSlug } from "@/lib/permissions/permissionCatalog";
+import {
+  ROLE_PRESETS,
+  type RoleSlug,
+} from "@/lib/permissions/permissionCatalog";
 import {
   getPresetDisplayLabel,
   normalizeCustomPresetSlug,
@@ -67,7 +70,9 @@ export const NewRolePresetDialog = ({
     },
     onSuccess: (nextConfig) => {
       onSaved(nextConfig);
-      void queryClient.invalidateQueries({ queryKey: ["settings", "org_seat_gate"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["settings", "org_seat_gate"],
+      });
       notify("Role preset created", { type: "success" });
       onOpenChange(false);
     },
@@ -111,13 +116,16 @@ export const NewRolePresetDialog = ({
         <DialogHeader>
           <DialogTitle>New role preset</DialogTitle>
           <DialogDescription>
-            Create a reusable role for your workspace, then assign it when editing users.
+            Create a reusable role for your workspace, then assign it when
+            editing users.
           </DialogDescription>
         </DialogHeader>
 
         {customPresets.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Existing roles</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Existing roles
+            </p>
             <ul className="max-h-32 space-y-1 overflow-y-auto text-sm">
               {customPresets.map(([slug, preset]) => (
                 <li
@@ -134,7 +142,10 @@ export const NewRolePresetDialog = ({
                     onClick={() => {
                       const next = { ...(rbacConfig.customPresets ?? {}) };
                       delete next[slug];
-                      saveMutation.mutate({ ...rbacConfig, customPresets: next });
+                      saveMutation.mutate({
+                        ...rbacConfig,
+                        customPresets: next,
+                      });
                     }}
                   >
                     Remove
@@ -157,7 +168,10 @@ export const NewRolePresetDialog = ({
           </div>
           <div className="space-y-1.5">
             <Label>Start from</Label>
-            <Select value={basedOn} onValueChange={(value) => setBasedOn(value as RoleSlug)}>
+            <Select
+              value={basedOn}
+              onValueChange={(value) => setBasedOn(value as RoleSlug)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

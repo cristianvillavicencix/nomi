@@ -151,7 +151,9 @@ export function deriveRolesFromModulePermissions(
     ) {
       roles.add("sales_manager");
     } else if (
-      CAPABILITY_IDS.some((id) => hasCapability(perms, id, { administrator: false }))
+      CAPABILITY_IDS.some((id) =>
+        hasCapability(perms, id, { administrator: false }),
+      )
     ) {
       roles.add("employee");
     }
@@ -197,7 +199,9 @@ export function legacyRoleSales(roles: AccessRole[]): boolean {
   );
 }
 
-export function applyRolePresetToPermissions(role: RoleSlug): Record<string, boolean | string> {
+export function applyRolePresetToPermissions(
+  role: RoleSlug,
+): Record<string, boolean | string> {
   const base = permissionsMapFromRolePreset(role);
   if (role === "user") {
     base[SCOPED_TO_PROJECTS_KEY] = true;

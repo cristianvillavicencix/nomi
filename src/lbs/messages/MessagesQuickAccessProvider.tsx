@@ -1,11 +1,11 @@
-import {
-  useCallback,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import { useDataProvider, useGetIdentity, useNotify, type Identifier } from "ra-core";
+import {
+  useDataProvider,
+  useGetIdentity,
+  useNotify,
+  type Identifier,
+} from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientSmsDraft, Contact, Conversation } from "@/lbs/types";
 import { MessagesDock } from "@/lbs/messages/MessagesDock";
@@ -22,7 +22,11 @@ export {
   useMessagesQuickAccessOptional,
 } from "@/lbs/messages/messagesQuickAccessContext";
 
-export const MessagesQuickAccessProvider = ({ children }: { children: ReactNode }) => {
+export const MessagesQuickAccessProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
   const notify = useNotify();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -31,9 +35,11 @@ export const MessagesQuickAccessProvider = ({ children }: { children: ReactNode 
   const { findClientConversation } = useOpenClientSms();
   const [isOpening, setIsOpening] = useState(false);
   const [isDockOpen, setIsDockOpen] = useState(false);
-  const [focusedConversation, setFocusedConversation] = useState<Conversation | null>(null);
+  const [focusedConversation, setFocusedConversation] =
+    useState<Conversation | null>(null);
   const [draftSms, setDraftSms] = useState<ClientSmsDraft | null>(null);
-  const [activeConversationId, setActiveConversationId] = useState<Identifier | null>(null);
+  const [activeConversationId, setActiveConversationId] =
+    useState<Identifier | null>(null);
 
   const markConversationRead = useCallback(
     (conversationId: Identifier, readAt?: string) => {
@@ -99,9 +105,14 @@ export const MessagesQuickAccessProvider = ({ children }: { children: ReactNode 
           setDraftSms({ contact: nextContact, dealId: nextDealId ?? null });
         }
       } catch (error) {
-        notify(error instanceof Error ? error.message : "Failed to open SMS conversation", {
-          type: "error",
-        });
+        notify(
+          error instanceof Error
+            ? error.message
+            : "Failed to open SMS conversation",
+          {
+            type: "error",
+          },
+        );
       } finally {
         setIsOpening(false);
       }

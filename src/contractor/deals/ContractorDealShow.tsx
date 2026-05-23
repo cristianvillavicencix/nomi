@@ -21,7 +21,13 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   ShowBase,
   useDataProvider,
@@ -75,17 +81,29 @@ import type {
   TimeEntry,
 } from "@/components/atomic-crm/types";
 import { DealsExplorerPanel } from "@/components/atomic-crm/deals/DealsExplorerPanel";
-import { getPipelineStages, getStageColor, getStageLabel } from "@/components/atomic-crm/deals/pipelines";
+import {
+  getPipelineStages,
+  getStageColor,
+  getStageLabel,
+} from "@/components/atomic-crm/deals/pipelines";
 import { ProjectStageFlow } from "@/components/atomic-crm/deals/ProjectStageFlow";
-import { calculateHours, splitRegularOvertimeHours } from "@/timeEntries/helpers";
-import { useSyncAmountVisibility, formatMoneyMasked } from "@/lib/permissions/useMaskedAmount";
+import {
+  calculateHours,
+  splitRegularOvertimeHours,
+} from "@/timeEntries/helpers";
+import {
+  useSyncAmountVisibility,
+  formatMoneyMasked,
+} from "@/lib/permissions/useMaskedAmount";
 
 export const ContractorDealShow = ({ id }: { id?: string }) => {
   const [layoutMode] = useNavigationLayoutPreference();
   const showExplorerPanel = layoutMode === "top" && !!id;
 
   return (
-    <div className={cn("w-full py-2", layoutMode === "sidebar" ? "px-4 py-4" : "")}>
+    <div
+      className={cn("w-full py-2", layoutMode === "sidebar" ? "px-4 py-4" : "")}
+    >
       <div className={cn(showExplorerPanel ? "flex gap-4" : "")}>
         {showExplorerPanel ? <DealsExplorerPanel currentDealId={id} /> : null}
         <div className="min-w-0 flex-1">
@@ -259,10 +277,7 @@ const DealShowContent = () => {
       }),
     [attachmentEntries],
   );
-  const photosCount = useMemo(
-    () => photoLinks.length,
-    [photoLinks.length],
-  );
+  const photosCount = useMemo(() => photoLinks.length, [photoLinks.length]);
   const documentsCount = documentAttachments.length + documentLinks.length;
   const subcontractorDocCount = useMemo(
     () =>
@@ -303,7 +318,9 @@ const DealShowContent = () => {
     changeOrderDocCount +
     paymentDocCount;
   const subcontractorPaidCount = useMemo(
-    () => (subcontractorEntries ?? []).filter((entry) => entry.status === "paid").length,
+    () =>
+      (subcontractorEntries ?? []).filter((entry) => entry.status === "paid")
+        .length,
     [subcontractorEntries],
   );
   const subcontractorPendingCount = useMemo(
@@ -322,7 +339,9 @@ const DealShowContent = () => {
     [expenseEntries],
   );
   const changeOrdersApprovedCount = useMemo(
-    () => (changeOrderEntries ?? []).filter((entry) => entry.status === "approved").length,
+    () =>
+      (changeOrderEntries ?? []).filter((entry) => entry.status === "approved")
+        .length,
     [changeOrderEntries],
   );
   const changeOrdersPendingCount = useMemo(
@@ -357,14 +376,17 @@ const DealShowContent = () => {
     [clientPaymentEntries],
   );
   const paymentsPendingCount = useMemo(
-    () => (clientPaymentEntries ?? []).filter((entry) => entry.status === "pending").length,
+    () =>
+      (clientPaymentEntries ?? []).filter((entry) => entry.status === "pending")
+        .length,
     [clientPaymentEntries],
   );
   const notesOnlyCount = useMemo(
     () =>
       (dealNotes ?? []).filter((note) => {
         if (extractAssetLinksFromDealNotes([note]).length > 0) return false;
-        if (!note.text?.trim() && (note.attachments?.length ?? 0) > 0) return false;
+        if (!note.text?.trim() && (note.attachments?.length ?? 0) > 0)
+          return false;
         return true;
       }).length,
     [dealNotes],
@@ -433,7 +455,11 @@ const DealShowContent = () => {
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-4">
-              <ReferenceField source="company_id" reference="companies" link="show">
+              <ReferenceField
+                source="company_id"
+                reference="companies"
+                link="show"
+              >
                 <CompanyAvatar />
               </ReferenceField>
               <div className="min-w-0 flex-1 space-y-1">
@@ -449,18 +475,18 @@ const DealShowContent = () => {
             )}
           >
             <div className="flex gap-2">
-            {record.archived_at && canManageSales ? (
-              <>
-                <UnarchiveButton record={record} />
-                <DeleteButton />
-              </>
-            ) : null}
-            {!record.archived_at && canManageSales ? (
-              <>
-                <ArchiveButton record={record} />
-                <EditButton />
-              </>
-            ) : null}
+              {record.archived_at && canManageSales ? (
+                <>
+                  <UnarchiveButton record={record} />
+                  <DeleteButton />
+                </>
+              ) : null}
+              {!record.archived_at && canManageSales ? (
+                <>
+                  <ArchiveButton record={record} />
+                  <EditButton />
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -479,55 +505,117 @@ const DealShowContent = () => {
                 <DealTabTrigger
                   value="hours"
                   label="Hours"
-                  count={typeof hoursCount === "number" ? hoursCount : undefined}
+                  count={
+                    typeof hoursCount === "number" ? hoursCount : undefined
+                  }
                 />
                 <DealTabTrigger
                   value="subcontractors"
                   label="Subcontractors"
                   count={subcontractorsCount}
                   badges={[
-                    { label: "paid", value: subcontractorPaidCount, tone: "emerald" },
-                    { label: "pending", value: subcontractorPendingCount, tone: "amber" },
+                    {
+                      label: "paid",
+                      value: subcontractorPaidCount,
+                      tone: "emerald",
+                    },
+                    {
+                      label: "pending",
+                      value: subcontractorPendingCount,
+                      tone: "amber",
+                    },
                   ]}
                 />
                 <DealTabTrigger
                   value="expenses"
                   label="Expenses"
-                  count={typeof expensesCount === "number" ? expensesCount : undefined}
+                  count={
+                    typeof expensesCount === "number"
+                      ? expensesCount
+                      : undefined
+                  }
                   badges={[
-                    { label: "paid", value: expensesPaidCount, tone: "emerald" },
-                    { label: "pending", value: expensesPendingCount, tone: "amber" },
+                    {
+                      label: "paid",
+                      value: expensesPaidCount,
+                      tone: "emerald",
+                    },
+                    {
+                      label: "pending",
+                      value: expensesPendingCount,
+                      tone: "amber",
+                    },
                   ]}
                 />
                 <DealTabTrigger
                   value="change-orders"
                   label="Change Orders"
-                  count={typeof changeOrdersCount === "number" ? changeOrdersCount : undefined}
+                  count={
+                    typeof changeOrdersCount === "number"
+                      ? changeOrdersCount
+                      : undefined
+                  }
                   badges={[
-                    { label: "approved", value: changeOrdersApprovedCount, tone: "emerald" },
-                    { label: "pending", value: changeOrdersPendingCount, tone: "amber" },
+                    {
+                      label: "approved",
+                      value: changeOrdersApprovedCount,
+                      tone: "emerald",
+                    },
+                    {
+                      label: "pending",
+                      value: changeOrdersPendingCount,
+                      tone: "amber",
+                    },
                   ]}
                 />
                 <DealTabTrigger
                   value="commissions"
                   label="Commissions"
-                  count={typeof commissionsCount === "number" ? commissionsCount : undefined}
+                  count={
+                    typeof commissionsCount === "number"
+                      ? commissionsCount
+                      : undefined
+                  }
                   badges={[
                     { label: "paid", value: commissionsPaid, tone: "emerald" },
-                    { label: "pending", value: commissionsPending, tone: "amber" },
+                    {
+                      label: "pending",
+                      value: commissionsPending,
+                      tone: "amber",
+                    },
                   ]}
                 />
                 <DealTabTrigger
                   value="payments"
                   label="Payments"
-                  count={typeof paymentsCount === "number" ? paymentsCount : undefined}
+                  count={
+                    typeof paymentsCount === "number"
+                      ? paymentsCount
+                      : undefined
+                  }
                   badges={[
-                    { label: "cleared", value: paymentsClearedCount, tone: "emerald" },
-                    { label: "pending", value: paymentsPendingCount, tone: "amber" },
+                    {
+                      label: "cleared",
+                      value: paymentsClearedCount,
+                      tone: "emerald",
+                    },
+                    {
+                      label: "pending",
+                      value: paymentsPendingCount,
+                      tone: "amber",
+                    },
                   ]}
                 />
-                <DealTabTrigger value="documents" label="Documents" count={allDocumentsCount} />
-                <DealTabTrigger value="photos" label="Photos" count={photosCount} />
+                <DealTabTrigger
+                  value="documents"
+                  label="Documents"
+                  count={allDocumentsCount}
+                />
+                <DealTabTrigger
+                  value="photos"
+                  label="Photos"
+                  count={photosCount}
+                />
                 <DealTabTrigger
                   value="notes"
                   label="Notes"
@@ -538,10 +626,14 @@ const DealShowContent = () => {
           </StickyTabsBar>
 
           <TabsContent value="summary" className="pt-3">
-            {visitedTabs.has("summary") ? <DealSummaryTab record={record} /> : null}
+            {visitedTabs.has("summary") ? (
+              <DealSummaryTab record={record} />
+            ) : null}
           </TabsContent>
           <TabsContent value="hours" className="pt-3">
-            {visitedTabs.has("hours") ? <DealHoursTab dealId={record.id} /> : null}
+            {visitedTabs.has("hours") ? (
+              <DealHoursTab dealId={record.id} />
+            ) : null}
           </TabsContent>
           <TabsContent value="subcontractors" className="pt-3">
             {visitedTabs.has("subcontractors") ? (
@@ -576,11 +668,15 @@ const DealShowContent = () => {
                 files={documentAttachments}
                 links={documentLinks}
                 groupedSources={{
-                  payments: (clientPaymentEntries ?? []).flatMap((entry) => entry.attachments ?? []),
+                  payments: (clientPaymentEntries ?? []).flatMap(
+                    (entry) => entry.attachments ?? [],
+                  ),
                   subcontractors: (subcontractorEntries ?? []).flatMap(
                     (entry) => entry.invoice_attachments ?? [],
                   ),
-                  expenses: (expenseEntries ?? []).flatMap((entry) => entry.attachments ?? []),
+                  expenses: (expenseEntries ?? []).flatMap(
+                    (entry) => entry.attachments ?? [],
+                  ),
                   changeOrders: (changeOrderEntries ?? []).flatMap(
                     (entry) => entry.attachments ?? [],
                   ),
@@ -727,7 +823,10 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
     { staleTime: 30_000 },
   );
   const employeeIds = useMemo(
-    () => Array.from(new Set(hours.map((entry) => Number(entry.person_id)).filter(Boolean))),
+    () =>
+      Array.from(
+        new Set(hours.map((entry) => Number(entry.person_id)).filter(Boolean)),
+      ),
     [hours],
   );
   const { data: employees = [] } = useGetMany<Person>(
@@ -736,18 +835,22 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
     { enabled: employeeIds.length > 0, staleTime: 30_000 },
   );
   const personById = useMemo(
-    () => Object.fromEntries(employees.map((person) => [Number(person.id), person])),
+    () =>
+      Object.fromEntries(
+        employees.map((person) => [Number(person.id), person]),
+      ),
     [employees],
   );
-  const { data: subcontractorEntries = [] } = useGetList<DealSubcontractorEntry>(
-    "deal_subcontractor_entries",
-    {
-      filter: { "deal_id@eq": record.id },
-      pagination: { page: 1, perPage: 1000 },
-      sort: { field: "created_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
+  const { data: subcontractorEntries = [] } =
+    useGetList<DealSubcontractorEntry>(
+      "deal_subcontractor_entries",
+      {
+        filter: { "deal_id@eq": record.id },
+        pagination: { page: 1, perPage: 1000 },
+        sort: { field: "created_at", order: "DESC" },
+      },
+      { staleTime: 30_000 },
+    );
   const { data: expenses = [] } = useGetList<DealExpense>(
     "deal_expenses",
     {
@@ -788,7 +891,10 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
   const totalCollected = useMemo(
     () =>
       clientPayments
-        .filter((payment) => payment.status === "cleared" || payment.status === "deposited")
+        .filter(
+          (payment) =>
+            payment.status === "cleared" || payment.status === "deposited",
+        )
         .reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0),
     [clientPayments],
   );
@@ -796,18 +902,31 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
     () =>
       Math.max(
         0,
-        Number(record.current_project_value ?? record.original_project_value ?? record.amount ?? 0) -
-          totalCollected,
+        Number(
+          record.current_project_value ??
+            record.original_project_value ??
+            record.amount ??
+            0,
+        ) - totalCollected,
       ),
-    [record.amount, record.current_project_value, record.original_project_value, totalCollected],
+    [
+      record.amount,
+      record.current_project_value,
+      record.original_project_value,
+      totalCollected,
+    ],
   );
   const totalSubcontractorCost = useMemo(
     () =>
-      subcontractorEntries.reduce((sum, entry) => sum + Number(entry.cost_amount ?? 0), 0),
+      subcontractorEntries.reduce(
+        (sum, entry) => sum + Number(entry.cost_amount ?? 0),
+        0,
+      ),
     [subcontractorEntries],
   );
   const totalExpenseCost = useMemo(
-    () => expenses.reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0),
+    () =>
+      expenses.reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0),
     [expenses],
   );
   const totalApprovedChangeOrders = useMemo(
@@ -828,8 +947,15 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
           Number(person?.hourly_rate ?? 0) ||
           Number(person?.day_rate ?? 0) / paidDayHours ||
           0;
-        const overtimeMultiplier = Math.max(Number(person?.overtime_rate_multiplier ?? 1.5), 1);
-        return sum + regularHours * hourlyRate + overtimeHours * hourlyRate * overtimeMultiplier;
+        const overtimeMultiplier = Math.max(
+          Number(person?.overtime_rate_multiplier ?? 1.5),
+          1,
+        );
+        return (
+          sum +
+          regularHours * hourlyRate +
+          overtimeHours * hourlyRate * overtimeMultiplier
+        );
       }, 0),
     [hours, personById],
   );
@@ -838,13 +964,17 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
       commissions.reduce((sum, commission) => {
         const value = Number(commission.commission_value ?? 0);
         if (commission.commission_type === "fixed") return sum + value;
-        if (commission.basis === "payments_collected") return sum + totalCollected * (value / 100);
+        if (commission.basis === "payments_collected")
+          return sum + totalCollected * (value / 100);
         return sum;
       }, 0),
     [commissions, totalCollected],
   );
   const totalCost =
-    totalLaborCost + totalSubcontractorCost + totalExpenseCost + totalCommissionCost;
+    totalLaborCost +
+    totalSubcontractorCost +
+    totalExpenseCost +
+    totalCommissionCost;
   const profit = totalCollected - totalCost;
   const currentProjectValue =
     Number(record.current_project_value ?? 0) ||
@@ -858,7 +988,8 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
   const collectedPercent = clampPercent(
     currentProjectValue > 0 ? (totalCollected / currentProjectValue) * 100 : 0,
   );
-  const costRatio = currentProjectValue > 0 ? totalCost / currentProjectValue : 0;
+  const costRatio =
+    currentProjectValue > 0 ? totalCost / currentProjectValue : 0;
   const marginOnCollected = totalCollected > 0 ? profit / totalCollected : 0;
   const healthState = getProjectHealthState({
     profit,
@@ -889,7 +1020,11 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
             Total Project Value
           </div>
           <div className="mt-2 flex flex-col gap-2 max-[430px]:mt-1.5 max-[390px]:gap-1.5 min-[412px]:max-[430px]:gap-2.5 sm:mt-4 sm:gap-4 lg:flex-row lg:items-center">
-            <svg viewBox="0 0 42 42" className="h-16 w-16 shrink-0 transition-all duration-500 ease-out sm:h-[6.5rem] sm:w-[6.5rem]" aria-hidden>
+            <svg
+              viewBox="0 0 42 42"
+              className="h-16 w-16 shrink-0 transition-all duration-500 ease-out sm:h-[6.5rem] sm:w-[6.5rem]"
+              aria-hidden
+            >
               <circle
                 cx="21"
                 cy="21"
@@ -961,7 +1096,9 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
               <div className="break-words text-[clamp(0.95rem,1.2vw,1.25rem)] font-semibold leading-tight tracking-tight">
                 {toCurrency(totalPendingToCollect)}
               </div>
-              <div className="text-[clamp(0.62rem,0.52rem+0.18vw,0.72rem)] text-muted-foreground">Balance Pending</div>
+              <div className="text-[clamp(0.62rem,0.52rem+0.18vw,0.72rem)] text-muted-foreground">
+                Balance Pending
+              </div>
               <div className="text-[clamp(0.58rem,0.5rem+0.14vw,0.78rem)] text-muted-foreground/90">
                 {Math.round(collectedPercent)}% Collected
               </div>
@@ -1027,7 +1164,9 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
             {toCurrency(profit)}
           </div>
           <div className="mt-2 space-y-0.5">
-            <div className="text-[clamp(0.62rem,0.52rem+0.18vw,0.72rem)] text-muted-foreground">Margin on collected</div>
+            <div className="text-[clamp(0.62rem,0.52rem+0.18vw,0.72rem)] text-muted-foreground">
+              Margin on collected
+            </div>
             <div className="text-[clamp(0.72rem,0.62rem+0.2vw,0.9rem)] font-medium text-foreground/80">
               {toPercentLabel(marginOnCollected)}
             </div>
@@ -1040,7 +1179,9 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
           <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Cost Breakdown
           </div>
-          <div className="mb-2 flex justify-end text-xs text-muted-foreground">% of total value</div>
+          <div className="mb-2 flex justify-end text-xs text-muted-foreground">
+            % of total value
+          </div>
           <div className="space-y-1">
             {costRows.map((row) => (
               <div
@@ -1076,9 +1217,15 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
             Financials Overview
           </div>
           <div className="space-y-1 text-xs sm:text-sm">
-            <OverviewRow label="Values" value={toCurrency(currentProjectValue)} />
+            <OverviewRow
+              label="Values"
+              value={toCurrency(currentProjectValue)}
+            />
             <OverviewRow label="Payments" value={toCurrency(totalCollected)} />
-            <OverviewRow label="Approved change orders" value={toCurrency(totalApprovedChangeOrders)} />
+            <OverviewRow
+              label="Approved change orders"
+              value={toCurrency(totalApprovedChangeOrders)}
+            />
             <OverviewRow label="Total costs" value={toCurrency(totalCost)} />
             <OverviewRow
               label="Profit"
@@ -1093,10 +1240,15 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
             Project Milestones
           </div>
           <div className="space-y-2 text-xs sm:text-sm">
-            <OverviewRow label="Start Date" value={toDateLabel(record.start_date)} />
+            <OverviewRow
+              label="Start Date"
+              value={toDateLabel(record.start_date)}
+            />
             <OverviewRow
               label="Expected End Date"
-              value={toDateLabel(record.expected_end_date || record.expected_closing_date)}
+              value={toDateLabel(
+                record.expected_end_date || record.expected_closing_date,
+              )}
             />
             <OverviewRow
               label="Estimated Completion"
@@ -1104,7 +1256,11 @@ const DealSummaryTab = ({ record }: { record: Deal }) => {
             />
             <OverviewRow
               label="Current Stage"
-              value={getStageLabel({ dealPipelines }, record.stage, record.pipeline_id)}
+              value={getStageLabel(
+                { dealPipelines },
+                record.stage,
+                record.pipeline_id,
+              )}
             />
             <div className="mt-2 h-3 rounded-full bg-muted">
               <div
@@ -1185,21 +1341,29 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
     { staleTime: 30_000 },
   );
   const peopleById = useMemo(
-    () => Object.fromEntries((people ?? []).map((person) => [person.id, person])),
+    () =>
+      Object.fromEntries((people ?? []).map((person) => [person.id, person])),
     [people],
   );
   const totalHours = useMemo(
-    () => (entries ?? []).reduce((sum, entry) => sum + Number(entry.hours ?? 0), 0),
+    () =>
+      (entries ?? []).reduce((sum, entry) => sum + Number(entry.hours ?? 0), 0),
     [entries],
   );
   const totalRegularHours = useMemo(
     () =>
-      (entries ?? []).reduce((sum, entry) => sum + Number(entry.regular_hours ?? 0), 0),
+      (entries ?? []).reduce(
+        (sum, entry) => sum + Number(entry.regular_hours ?? 0),
+        0,
+      ),
     [entries],
   );
   const totalOvertimeHours = useMemo(
     () =>
-      (entries ?? []).reduce((sum, entry) => sum + Number(entry.overtime_hours ?? 0), 0),
+      (entries ?? []).reduce(
+        (sum, entry) => sum + Number(entry.overtime_hours ?? 0),
+        0,
+      ),
     [entries],
   );
   const totalLaborCost = useMemo(
@@ -1210,8 +1374,11 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
         const overtimeHours = Number(entry.overtime_hours ?? 0);
         const hourlyRate =
           Number(person?.hourly_rate ?? 0) ||
-          Number(person?.day_rate ?? 0) / Math.max(Number(person?.paid_day_hours ?? 8), 1);
-        return sum + regularHours * hourlyRate + overtimeHours * hourlyRate * 1.5;
+          Number(person?.day_rate ?? 0) /
+            Math.max(Number(person?.paid_day_hours ?? 8), 1);
+        return (
+          sum + regularHours * hourlyRate + overtimeHours * hourlyRate * 1.5
+        );
       }, 0),
     [entries, peopleById],
   );
@@ -1277,7 +1444,11 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
     if (!date) errors.date = "Date is required";
     if (!startTime) errors.start_time = "Start is required";
     if (!endTime) errors.end_time = "End is required";
-    if (startTime && endTime && calculateHours(startTime, endTime, lunchMinutes) <= 0) {
+    if (
+      startTime &&
+      endTime &&
+      calculateHours(startTime, endTime, lunchMinutes) <= 0
+    ) {
       errors.end_time = "End must be after start";
     }
     if (!Number.isFinite(lunchMinutes) || lunchMinutes < 0) {
@@ -1342,7 +1513,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
       date: entry.date ?? "",
       start_time: String(entry.start_time ?? "").slice(0, 5),
       end_time: String(entry.end_time ?? "").slice(0, 5),
-      lunch_minutes: String(Number(entry.lunch_minutes ?? entry.break_minutes ?? 0)),
+      lunch_minutes: String(
+        Number(entry.lunch_minutes ?? entry.break_minutes ?? 0),
+      ),
       status: entry.status,
       work_location: entry.work_location ?? "",
       notes: entry.notes ?? "",
@@ -1419,7 +1592,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
               <option value="">Select employee</option>
               {(employeeOptions ?? []).map((person) => (
                 <option key={person.id} value={String(person.id)}>
-                  {[person.first_name, person.last_name].filter(Boolean).join(" ")}
+                  {[person.first_name, person.last_name]
+                    .filter(Boolean)
+                    .join(" ")}
                 </option>
               ))}
             </select>
@@ -1429,7 +1604,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
             <Input
               type="date"
               value={form.date}
-              onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, date: event.target.value }))
+              }
             />
           </div>
           <div className="space-y-1">
@@ -1447,7 +1624,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
             <Input
               type="time"
               value={form.end_time}
-              onChange={(event) => setForm((prev) => ({ ...prev, end_time: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, end_time: event.target.value }))
+              }
             />
           </div>
           <div className="space-y-1">
@@ -1457,7 +1636,10 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
               min={0}
               value={form.lunch_minutes}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, lunch_minutes: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  lunch_minutes: event.target.value,
+                }))
               }
             />
           </div>
@@ -1466,7 +1648,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
             <select
               className="h-9 w-full rounded-md border bg-background px-2 text-sm"
               value={form.status}
-              onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, status: event.target.value }))
+              }
             >
               <option value="draft">Draft</option>
               <option value="submitted">Submitted</option>
@@ -1474,12 +1658,17 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
             </select>
           </div>
           <div className="space-y-1 md:col-span-2">
-            <div className="text-xs text-muted-foreground">Address / Work location</div>
+            <div className="text-xs text-muted-foreground">
+              Address / Work location
+            </div>
             <Input
               value={form.work_location}
               placeholder="Where was the work done?"
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, work_location: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  work_location: event.target.value,
+                }))
               }
             />
           </div>
@@ -1488,7 +1677,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
             <Input
               value={form.notes}
               placeholder="Optional note"
-              onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, notes: event.target.value }))
+              }
             />
           </div>
         </div>
@@ -1507,16 +1698,28 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">
-          Total logged: <strong className="text-foreground">{totalHours.toFixed(2)}h</strong>
+          Total logged:{" "}
+          <strong className="text-foreground">{totalHours.toFixed(2)}h</strong>
           {" · "}
-          Regular: <strong className="text-foreground">{totalRegularHours.toFixed(2)}h</strong>
+          Regular:{" "}
+          <strong className="text-foreground">
+            {totalRegularHours.toFixed(2)}h
+          </strong>
           {" · "}
-          OT: <strong className="text-foreground">{totalOvertimeHours.toFixed(2)}h</strong>
+          OT:{" "}
+          <strong className="text-foreground">
+            {totalOvertimeHours.toFixed(2)}h
+          </strong>
           {" · "}
-          Labor cost: <strong className="text-foreground">{toCurrency(totalLaborCost)}</strong>
+          Labor cost:{" "}
+          <strong className="text-foreground">
+            {toCurrency(totalLaborCost)}
+          </strong>
         </div>
       </div>
-      {!entries?.length ? <EmptyDealTab label="No hours linked to this project yet." /> : null}
+      {!entries?.length ? (
+        <EmptyDealTab label="No hours linked to this project yet." />
+      ) : null}
       <div className="overflow-x-auto rounded-md border">
         <table className="min-w-full text-sm">
           <thead className="bg-muted/40">
@@ -1542,16 +1745,24 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                   entry.break_minutes ??
                   0,
               );
-              const startTime = (isEditing ? editRow?.start_time : entry.start_time) ?? "";
-              const endTime = (isEditing ? editRow?.end_time : entry.end_time) ?? "";
-              const computedHours = calculateHours(startTime, endTime, lunchMinutes);
+              const startTime =
+                (isEditing ? editRow?.start_time : entry.start_time) ?? "";
+              const endTime =
+                (isEditing ? editRow?.end_time : entry.end_time) ?? "";
+              const computedHours = calculateHours(
+                startTime,
+                endTime,
+                lunchMinutes,
+              );
               const computedSplit = splitRegularOvertimeHours(computedHours, 8);
               const person = peopleById[entry.person_id];
               const rate =
                 Number(person?.hourly_rate ?? 0) ||
-                Number(person?.day_rate ?? 0) / Math.max(Number(person?.paid_day_hours ?? 8), 1);
+                Number(person?.day_rate ?? 0) /
+                  Math.max(Number(person?.paid_day_hours ?? 8), 1);
               const computedLaborCost =
-                computedSplit.regular * rate + computedSplit.overtime * rate * 1.5;
+                computedSplit.regular * rate +
+                computedSplit.overtime * rate * 1.5;
 
               return (
                 <tr key={entry.id} className="border-t">
@@ -1560,7 +1771,10 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                       <Input
                         type="date"
                         value={editRow?.date ?? ""}
-                        className={cn("h-8 min-w-[140px]", editErrors.date ? "border-red-500" : "")}
+                        className={cn(
+                          "h-8 min-w-[140px]",
+                          editErrors.date ? "border-red-500" : "",
+                        )}
                         onChange={(event) =>
                           setEditRow((prev) =>
                             prev ? { ...prev, date: event.target.value } : prev,
@@ -1587,7 +1801,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         )}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, start_time: event.target.value } : prev,
+                            prev
+                              ? { ...prev, start_time: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -1607,7 +1823,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         )}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, lunch_minutes: event.target.value } : prev,
+                            prev
+                              ? { ...prev, lunch_minutes: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -1626,7 +1844,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         )}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, end_time: event.target.value } : prev,
+                            prev
+                              ? { ...prev, end_time: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -1634,13 +1854,27 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                       entry.end_time?.slice(0, 5) || "—"
                     )}
                   </td>
-                  <td className="px-3 py-2">{Number((isEditing ? computedHours : entry.hours) ?? 0).toFixed(2)}</td>
                   <td className="px-3 py-2">
                     {Number(
-                      (isEditing ? computedSplit.overtime : entry.overtime_hours) ?? 0,
+                      (isEditing ? computedHours : entry.hours) ?? 0,
                     ).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2">{toCurrency(isEditing ? computedLaborCost : (Number(entry.regular_hours ?? entry.hours ?? 0) + Number(entry.overtime_hours ?? 0) * 1.5) * rate)}</td>
+                  <td className="px-3 py-2">
+                    {Number(
+                      (isEditing
+                        ? computedSplit.overtime
+                        : entry.overtime_hours) ?? 0,
+                    ).toFixed(2)}
+                  </td>
+                  <td className="px-3 py-2">
+                    {toCurrency(
+                      isEditing
+                        ? computedLaborCost
+                        : (Number(entry.regular_hours ?? entry.hours ?? 0) +
+                            Number(entry.overtime_hours ?? 0) * 1.5) *
+                            rate,
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     {isEditing ? (
                       <select
@@ -1648,7 +1882,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.status ?? "submitted"}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, status: event.target.value } : prev,
+                            prev
+                              ? { ...prev, status: event.target.value }
+                              : prev,
                           )
                         }
                       >
@@ -1656,7 +1892,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         <option value="submitted">submitted</option>
                         <option value="approved">approved</option>
                         <option value="rejected">rejected</option>
-                        <option value="included_in_payroll">included_in_payroll</option>
+                        <option value="included_in_payroll">
+                          included_in_payroll
+                        </option>
                         <option value="paid">paid</option>
                       </select>
                     ) : (
@@ -1671,7 +1909,9 @@ const DealHoursTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         placeholder="Address"
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, work_location: event.target.value } : prev,
+                            prev
+                              ? { ...prev, work_location: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -1774,11 +2014,18 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
     { staleTime: 30_000 },
   );
   const peopleById = useMemo(
-    () => Object.fromEntries((people ?? []).map((person) => [Number(person.id), person])),
+    () =>
+      Object.fromEntries(
+        (people ?? []).map((person) => [Number(person.id), person]),
+      ),
     [people],
   );
   const totalCost = useMemo(
-    () => (entries ?? []).reduce((sum, entry) => sum + Number(entry.cost_amount ?? 0), 0),
+    () =>
+      (entries ?? []).reduce(
+        (sum, entry) => sum + Number(entry.cost_amount ?? 0),
+        0,
+      ),
     [entries],
   );
   const pendingPayments = useMemo(
@@ -1837,7 +2084,8 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
           refresh();
           notify("Subcontractor entry added", { type: "info" });
         },
-        onError: () => notify("Could not add subcontractor entry", { type: "error" }),
+        onError: () =>
+          notify("Could not add subcontractor entry", { type: "error" }),
       },
     );
   };
@@ -1894,7 +2142,8 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
           refresh();
           notify(`Subcontractor entry #${entry.id} updated`, { type: "info" });
         },
-        onError: () => notify("Could not update subcontractor entry", { type: "error" }),
+        onError: () =>
+          notify("Could not update subcontractor entry", { type: "error" }),
       },
     );
   };
@@ -1908,7 +2157,8 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
           refresh();
           notify(`Subcontractor entry #${entry.id} deleted`, { type: "info" });
         },
-        onError: () => notify("Could not delete subcontractor entry", { type: "error" }),
+        onError: () =>
+          notify("Could not delete subcontractor entry", { type: "error" }),
       },
     );
   };
@@ -1938,7 +2188,9 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
           <select
             className="h-9 rounded-md border bg-background px-3 text-sm"
             value={form.status}
-            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, status: event.target.value }))
+            }
           >
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
@@ -1950,7 +2202,10 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
             placeholder="Invoice number"
             value={form.invoice_number}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, invoice_number: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                invoice_number: event.target.value,
+              }))
             }
           />
           <Input
@@ -1966,13 +2221,18 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
           <Input
             type="date"
             value={form.start_date}
-            onChange={(event) => setForm((prev) => ({ ...prev, start_date: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, start_date: event.target.value }))
+            }
           />
           <Input
             type="date"
             value={form.estimated_completion_date}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, estimated_completion_date: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                estimated_completion_date: event.target.value,
+              }))
             }
           />
           <label className="flex items-center gap-2 text-sm text-muted-foreground md:col-span-2">
@@ -1980,7 +2240,10 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
               type="checkbox"
               checked={form.material_included}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, material_included: event.target.checked }))
+                setForm((prev) => ({
+                  ...prev,
+                  material_included: event.target.checked,
+                }))
               }
             />
             Material included
@@ -1994,23 +2257,33 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
           <Textarea
             placeholder="Notes"
             value={form.notes}
-            onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, notes: event.target.value }))
+            }
             className="md:col-span-2"
           />
         </div>
         <div className="mt-3 flex justify-end">
-          <Button type="button" size="sm" onClick={handleCreate} disabled={isCreating}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleCreate}
+            disabled={isCreating}
+          >
             Add Subcontractor
           </Button>
         </div>
       </InlineFormCard>
 
       <div className="text-sm text-muted-foreground">
-        Total subcontractor cost: <strong className="text-foreground">{toCurrency(totalCost)}</strong>
+        Total subcontractor cost:{" "}
+        <strong className="text-foreground">{toCurrency(totalCost)}</strong>
         {" · "}
-        Total records: <strong className="text-foreground">{entries?.length ?? 0}</strong>
+        Total records:{" "}
+        <strong className="text-foreground">{entries?.length ?? 0}</strong>
         {" · "}
-        Pending payments: <strong className="text-foreground">{pendingPayments}</strong>
+        Pending payments:{" "}
+        <strong className="text-foreground">{pendingPayments}</strong>
       </div>
 
       {hasRows ? (
@@ -2018,12 +2291,18 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
           <table className="min-w-full text-sm">
             <thead className="bg-muted/40">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Subcontractor</th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Subcontractor
+                </th>
                 <th className="px-3 py-2 text-left font-medium">Invoice</th>
                 <th className="px-3 py-2 text-left font-medium">Amount</th>
-                <th className="px-3 py-2 text-left font-medium">Material included</th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Material included
+                </th>
                 <th className="px-3 py-2 text-left font-medium">Start date</th>
-                <th className="px-3 py-2 text-left font-medium">Estimated completion</th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Estimated completion
+                </th>
                 <th className="px-3 py-2 text-left font-medium">Status</th>
                 <th className="px-3 py-2 text-left font-medium">Notes</th>
                 <th className="px-3 py-2 text-left font-medium">Documents</th>
@@ -2043,11 +2322,15 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                   <td className="px-3 py-2">
                     {editingId === Number(entry.id) ? (
                       <Input
-                        className={cn(editErrors.invoice_number ? "border-red-500" : "")}
+                        className={cn(
+                          editErrors.invoice_number ? "border-red-500" : "",
+                        )}
                         value={editRow?.invoice_number ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, invoice_number: event.target.value } : prev,
+                            prev
+                              ? { ...prev, invoice_number: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -2061,11 +2344,15 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         type="number"
                         min={0}
                         step="0.01"
-                        className={cn(editErrors.cost_amount ? "border-red-500" : "")}
+                        className={cn(
+                          editErrors.cost_amount ? "border-red-500" : "",
+                        )}
                         value={editRow?.cost_amount ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, cost_amount: event.target.value } : prev,
+                            prev
+                              ? { ...prev, cost_amount: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -2082,7 +2369,10 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                           onChange={(event) =>
                             setEditRow((prev) =>
                               prev
-                                ? { ...prev, material_included: event.target.checked }
+                                ? {
+                                    ...prev,
+                                    material_included: event.target.checked,
+                                  }
                                 : prev,
                             )
                           }
@@ -2102,7 +2392,9 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.start_date ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, start_date: event.target.value } : prev,
+                            prev
+                              ? { ...prev, start_date: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -2118,7 +2410,10 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         onChange={(event) =>
                           setEditRow((prev) =>
                             prev
-                              ? { ...prev, estimated_completion_date: event.target.value }
+                              ? {
+                                  ...prev,
+                                  estimated_completion_date: event.target.value,
+                                }
                               : prev,
                           )
                         }
@@ -2137,7 +2432,9 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.status ?? "pending"}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, status: event.target.value } : prev,
+                            prev
+                              ? { ...prev, status: event.target.value }
+                              : prev,
                           )
                         }
                       >
@@ -2157,14 +2454,18 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.notes ?? ""}
                         placeholder="Notes"
                         onChange={(next) =>
-                          setEditRow((prev) => (prev ? { ...prev, notes: next } : prev))
+                          setEditRow((prev) =>
+                            prev ? { ...prev, notes: next } : prev,
+                          )
                         }
                       />
                     ) : (
                       <TextPreview value={entry.notes} />
                     )}
                   </td>
-                  <td className="px-3 py-2">{entry.invoice_attachments?.length ?? 0}</td>
+                  <td className="px-3 py-2">
+                    {entry.invoice_attachments?.length ?? 0}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
                       {editingId === Number(entry.id) ? (
@@ -2184,7 +2485,7 @@ const DealSubcontractorsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                             size="icon"
                             variant="ghost"
                             className="h-7 w-7"
-                          onClick={() => {
+                            onClick={() => {
                               setEditingId(null);
                               setEditRow(null);
                               setEditErrors({});
@@ -2422,7 +2723,9 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
           <Input
             placeholder="Vendor / store"
             value={form.vendor}
-            onChange={(event) => setForm((prev) => ({ ...prev, vendor: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, vendor: event.target.value }))
+            }
           />
           <Input
             placeholder="Description"
@@ -2437,20 +2740,27 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
             step="0.01"
             placeholder="Amount"
             value={form.amount}
-            onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, amount: event.target.value }))
+            }
           />
           <Input
             type="date"
             value={form.purchase_date}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, purchase_date: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                purchase_date: event.target.value,
+              }))
             }
           />
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"
               checked={form.paid}
-              onChange={(event) => setForm((prev) => ({ ...prev, paid: event.target.checked }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, paid: event.target.checked }))
+              }
             />
             Paid
           </label>
@@ -2463,23 +2773,35 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
           <Textarea
             placeholder="Notes"
             value={form.notes}
-            onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, notes: event.target.value }))
+            }
             className="md:col-span-2"
           />
         </div>
         <div className="mt-3 flex justify-end">
-          <Button type="button" size="sm" onClick={handleCreate} disabled={isCreating}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleCreate}
+            disabled={isCreating}
+          >
             Add Expense
           </Button>
         </div>
       </InlineFormCard>
 
       <div className="text-sm text-muted-foreground">
-        Total expenses: <strong className="text-foreground">{toCurrency(totalExpenses)}</strong>
+        Total expenses:{" "}
+        <strong className="text-foreground">{toCurrency(totalExpenses)}</strong>
         {" · "}
-        Paid: <strong className="text-foreground">{toCurrency(paidExpenses)}</strong>
+        Paid:{" "}
+        <strong className="text-foreground">{toCurrency(paidExpenses)}</strong>
         {" · "}
-        Unpaid: <strong className="text-foreground">{toCurrency(totalExpenses - paidExpenses)}</strong>
+        Unpaid:{" "}
+        <strong className="text-foreground">
+          {toCurrency(totalExpenses - paidExpenses)}
+        </strong>
       </div>
 
       {expenses.length === 0 ? (
@@ -2493,7 +2815,9 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
                 <th className="px-3 py-2 text-left font-medium">Vendor</th>
                 <th className="px-3 py-2 text-left font-medium">Description</th>
                 <th className="px-3 py-2 text-left font-medium">Amount</th>
-                <th className="px-3 py-2 text-left font-medium">Purchase date</th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Purchase date
+                </th>
                 <th className="px-3 py-2 text-left font-medium">Paid</th>
                 <th className="px-3 py-2 text-left font-medium">Notes</th>
                 <th className="px-3 py-2 text-left font-medium">Attachments</th>
@@ -2506,11 +2830,15 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
                   <td className="px-3 py-2">
                     {editingId === Number(entry.id) ? (
                       <Input
-                        className={cn(editErrors.expense_type ? "border-red-500" : "")}
+                        className={cn(
+                          editErrors.expense_type ? "border-red-500" : "",
+                        )}
                         value={editRow?.expense_type ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, expense_type: event.target.value } : prev,
+                            prev
+                              ? { ...prev, expense_type: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -2523,7 +2851,11 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
                       <Input
                         value={editRow?.vendor ?? ""}
                         onChange={(event) =>
-                          setEditRow((prev) => (prev ? { ...prev, vendor: event.target.value } : prev))
+                          setEditRow((prev) =>
+                            prev
+                              ? { ...prev, vendor: event.target.value }
+                              : prev,
+                          )
                         }
                       />
                     ) : (
@@ -2551,10 +2883,16 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         type="number"
                         min={0}
                         step="0.01"
-                        className={cn(editErrors.amount ? "border-red-500" : "")}
+                        className={cn(
+                          editErrors.amount ? "border-red-500" : "",
+                        )}
                         value={editRow?.amount ?? ""}
                         onChange={(event) =>
-                          setEditRow((prev) => (prev ? { ...prev, amount: event.target.value } : prev))
+                          setEditRow((prev) =>
+                            prev
+                              ? { ...prev, amount: event.target.value }
+                              : prev,
+                          )
                         }
                       />
                     ) : (
@@ -2568,7 +2906,9 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.purchase_date ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, purchase_date: event.target.value } : prev,
+                            prev
+                              ? { ...prev, purchase_date: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -2583,7 +2923,11 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
                           type="checkbox"
                           checked={!!editRow?.paid}
                           onChange={(event) =>
-                            setEditRow((prev) => (prev ? { ...prev, paid: event.target.checked } : prev))
+                            setEditRow((prev) =>
+                              prev
+                                ? { ...prev, paid: event.target.checked }
+                                : prev,
+                            )
                           }
                         />
                         paid
@@ -2600,14 +2944,18 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.notes ?? ""}
                         placeholder="Notes"
                         onChange={(next) =>
-                          setEditRow((prev) => (prev ? { ...prev, notes: next } : prev))
+                          setEditRow((prev) =>
+                            prev ? { ...prev, notes: next } : prev,
+                          )
                         }
                       />
                     ) : (
                       <TextPreview value={entry.notes} />
                     )}
                   </td>
-                  <td className="px-3 py-2">{entry.attachments?.length ?? 0}</td>
+                  <td className="px-3 py-2">
+                    {entry.attachments?.length ?? 0}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
                       {editingId === Number(entry.id) ? (
@@ -2676,11 +3024,7 @@ const DealExpensesTab = ({ dealId }: { dealId: Deal["id"] }) => {
   );
 };
 
-const DealPaymentsTab = ({
-  dealId,
-}: {
-  dealId: Deal["id"];
-}) => {
+const DealPaymentsTab = ({ dealId }: { dealId: Deal["id"] }) => {
   const [create, { isPending: isCreating }] = useCreate();
   const [update, { isPending: isUpdating }] = useUpdate();
   const [removeOne, { isPending: isDeleting }] = useDelete();
@@ -2720,7 +3064,10 @@ const DealPaymentsTab = ({
   const totalCollected = useMemo(
     () =>
       payments
-        .filter((payment) => payment.status === "cleared" || payment.status === "deposited")
+        .filter(
+          (payment) =>
+            payment.status === "cleared" || payment.status === "deposited",
+        )
         .reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0),
     [payments],
   );
@@ -2871,7 +3218,9 @@ const DealPaymentsTab = ({
           <Input
             type="date"
             value={form.payment_date}
-            onChange={(event) => setForm((prev) => ({ ...prev, payment_date: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, payment_date: event.target.value }))
+            }
           />
           <Input
             type="number"
@@ -2879,13 +3228,18 @@ const DealPaymentsTab = ({
             step="0.01"
             placeholder="Amount"
             value={form.amount}
-            onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, amount: event.target.value }))
+            }
           />
           <select
             className="h-9 rounded-md border bg-background px-3 text-sm"
             value={form.payment_method}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, payment_method: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                payment_method: event.target.value,
+              }))
             }
           >
             <option value="check">Check</option>
@@ -2898,7 +3252,9 @@ const DealPaymentsTab = ({
           <select
             className="h-9 rounded-md border bg-background px-3 text-sm"
             value={form.status}
-            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, status: event.target.value }))
+            }
           >
             <option value="pending">Pending</option>
             <option value="cleared">Cleared</option>
@@ -2908,13 +3264,18 @@ const DealPaymentsTab = ({
           <Input
             placeholder="Check number"
             value={form.check_number}
-            onChange={(event) => setForm((prev) => ({ ...prev, check_number: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, check_number: event.target.value }))
+            }
           />
           <Input
             placeholder="Reference number"
             value={form.reference_number}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, reference_number: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                reference_number: event.target.value,
+              }))
             }
           />
           <Input
@@ -2926,23 +3287,35 @@ const DealPaymentsTab = ({
           <Textarea
             placeholder="Notes"
             value={form.notes}
-            onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, notes: event.target.value }))
+            }
             className="md:col-span-2"
           />
         </div>
         <div className="mt-3 flex justify-end">
-          <Button type="button" size="sm" onClick={handleCreate} disabled={isCreating}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleCreate}
+            disabled={isCreating}
+          >
             Add Payment
           </Button>
         </div>
       </InlineFormCard>
 
       <div className="text-sm text-muted-foreground">
-        Total collected: <strong className="text-foreground">{toCurrency(totalCollected)}</strong>
+        Total collected:{" "}
+        <strong className="text-foreground">
+          {toCurrency(totalCollected)}
+        </strong>
         {" · "}
-        Pending: <strong className="text-foreground">{toCurrency(totalPending)}</strong>
+        Pending:{" "}
+        <strong className="text-foreground">{toCurrency(totalPending)}</strong>
         {" · "}
-        Bounced: <strong className="text-foreground">{toCurrency(totalBounced)}</strong>
+        Bounced:{" "}
+        <strong className="text-foreground">{toCurrency(totalBounced)}</strong>
       </div>
 
       {payments.length === 0 ? (
@@ -2952,10 +3325,14 @@ const DealPaymentsTab = ({
           <table className="min-w-full text-sm">
             <thead className="bg-muted/40">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Payment date</th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Payment date
+                </th>
                 <th className="px-3 py-2 text-left font-medium">Amount</th>
                 <th className="px-3 py-2 text-left font-medium">Method</th>
-                <th className="px-3 py-2 text-left font-medium">Check / Reference</th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Check / Reference
+                </th>
                 <th className="px-3 py-2 text-left font-medium">Status</th>
                 <th className="px-3 py-2 text-left font-medium">Notes</th>
                 <th className="px-3 py-2 text-left font-medium">Attachments</th>
@@ -2969,11 +3346,15 @@ const DealPaymentsTab = ({
                     {editingId === Number(payment.id) ? (
                       <Input
                         type="date"
-                        className={cn(editErrors.payment_date ? "border-red-500" : "")}
+                        className={cn(
+                          editErrors.payment_date ? "border-red-500" : "",
+                        )}
                         value={editRow?.payment_date ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, payment_date: event.target.value } : prev,
+                            prev
+                              ? { ...prev, payment_date: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -2987,10 +3368,16 @@ const DealPaymentsTab = ({
                         type="number"
                         min={0}
                         step="0.01"
-                        className={cn(editErrors.amount ? "border-red-500" : "")}
+                        className={cn(
+                          editErrors.amount ? "border-red-500" : "",
+                        )}
                         value={editRow?.amount ?? ""}
                         onChange={(event) =>
-                          setEditRow((prev) => (prev ? { ...prev, amount: event.target.value } : prev))
+                          setEditRow((prev) =>
+                            prev
+                              ? { ...prev, amount: event.target.value }
+                              : prev,
+                          )
                         }
                       />
                     ) : (
@@ -3004,7 +3391,9 @@ const DealPaymentsTab = ({
                         value={editRow?.payment_method ?? "check"}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, payment_method: event.target.value } : prev,
+                            prev
+                              ? { ...prev, payment_method: event.target.value }
+                              : prev,
                           )
                         }
                       >
@@ -3027,7 +3416,9 @@ const DealPaymentsTab = ({
                           placeholder="Check"
                           onChange={(event) =>
                             setEditRow((prev) =>
-                              prev ? { ...prev, check_number: event.target.value } : prev,
+                              prev
+                                ? { ...prev, check_number: event.target.value }
+                                : prev,
                             )
                           }
                         />
@@ -3036,7 +3427,12 @@ const DealPaymentsTab = ({
                           placeholder="Reference"
                           onChange={(event) =>
                             setEditRow((prev) =>
-                              prev ? { ...prev, reference_number: event.target.value } : prev,
+                              prev
+                                ? {
+                                    ...prev,
+                                    reference_number: event.target.value,
+                                  }
+                                : prev,
                             )
                           }
                         />
@@ -3054,7 +3450,11 @@ const DealPaymentsTab = ({
                         )}
                         value={editRow?.status ?? "pending"}
                         onChange={(event) =>
-                          setEditRow((prev) => (prev ? { ...prev, status: event.target.value } : prev))
+                          setEditRow((prev) =>
+                            prev
+                              ? { ...prev, status: event.target.value }
+                              : prev,
+                          )
                         }
                       >
                         <option value="pending">Pending</option>
@@ -3072,14 +3472,18 @@ const DealPaymentsTab = ({
                         value={editRow?.notes ?? ""}
                         placeholder="Notes"
                         onChange={(next) =>
-                          setEditRow((prev) => (prev ? { ...prev, notes: next } : prev))
+                          setEditRow((prev) =>
+                            prev ? { ...prev, notes: next } : prev,
+                          )
                         }
                       />
                     ) : (
                       <TextPreview value={payment.notes} />
                     )}
                   </td>
-                  <td className="px-3 py-2">{payment.attachments?.length ?? 0}</td>
+                  <td className="px-3 py-2">
+                    {payment.attachments?.length ?? 0}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
                       {editingId === Number(payment.id) ? (
@@ -3221,7 +3625,8 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
           deal_id: dealId,
           title: form.title.trim(),
           description: form.description || null,
-          change_date: form.change_date || new Date().toISOString().slice(0, 10),
+          change_date:
+            form.change_date || new Date().toISOString().slice(0, 10),
           amount,
           reason: form.reason || null,
           status: form.status,
@@ -3290,7 +3695,8 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
         data: {
           title: editRow.title.trim(),
           description: editRow.description || null,
-          change_date: editRow.change_date || new Date().toISOString().slice(0, 10),
+          change_date:
+            editRow.change_date || new Date().toISOString().slice(0, 10),
           amount,
           status: editRow.status,
           reason: editRow.reason || null,
@@ -3305,7 +3711,8 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
           refresh();
           notify(`Change order #${entry.id} updated`, { type: "info" });
         },
-        onError: () => notify("Could not update change order", { type: "error" }),
+        onError: () =>
+          notify("Could not update change order", { type: "error" }),
       },
     );
   };
@@ -3319,7 +3726,8 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
           refresh();
           notify(`Change order #${entry.id} deleted`, { type: "info" });
         },
-        onError: () => notify("Could not delete change order", { type: "error" }),
+        onError: () =>
+          notify("Could not delete change order", { type: "error" }),
       },
     );
   };
@@ -3332,7 +3740,9 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
           <Input
             placeholder="Change order title"
             value={form.title}
-            onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, title: event.target.value }))
+            }
             className="md:col-span-2"
           />
           <Textarea
@@ -3355,17 +3765,23 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
             step="0.01"
             placeholder="Amount (+/-)"
             value={form.amount}
-            onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, amount: event.target.value }))
+            }
           />
           <Input
             placeholder="Reason"
             value={form.reason}
-            onChange={(event) => setForm((prev) => ({ ...prev, reason: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, reason: event.target.value }))
+            }
           />
           <select
             className="h-9 rounded-md border bg-background px-3 text-sm"
             value={form.status}
-            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, status: event.target.value }))
+            }
           >
             <option value="draft">Draft</option>
             <option value="sent">Sent</option>
@@ -3380,18 +3796,26 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
           />
         </div>
         <div className="mt-3 flex justify-end">
-          <Button type="button" size="sm" onClick={handleCreate} disabled={isCreating}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleCreate}
+            disabled={isCreating}
+          >
             Add Change Order
           </Button>
         </div>
       </InlineFormCard>
 
       <div className="text-sm text-muted-foreground">
-        Approved total: <strong className="text-foreground">{toCurrency(approvedTotal)}</strong>
+        Approved total:{" "}
+        <strong className="text-foreground">{toCurrency(approvedTotal)}</strong>
         {" · "}
-        Pending total: <strong className="text-foreground">{toCurrency(pendingTotal)}</strong>
+        Pending total:{" "}
+        <strong className="text-foreground">{toCurrency(pendingTotal)}</strong>
         {" · "}
-        Rejected total: <strong className="text-foreground">{toCurrency(rejectedTotal)}</strong>
+        Rejected total:{" "}
+        <strong className="text-foreground">{toCurrency(rejectedTotal)}</strong>
       </div>
 
       {changeOrders.length === 0 ? (
@@ -3420,7 +3844,11 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         className={cn(editErrors.title ? "border-red-500" : "")}
                         value={editRow?.title ?? ""}
                         onChange={(event) =>
-                          setEditRow((prev) => (prev ? { ...prev, title: event.target.value } : prev))
+                          setEditRow((prev) =>
+                            prev
+                              ? { ...prev, title: event.target.value }
+                              : prev,
+                          )
                         }
                       />
                     ) : (
@@ -3434,7 +3862,9 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.change_date ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, change_date: event.target.value } : prev,
+                            prev
+                              ? { ...prev, change_date: event.target.value }
+                              : prev,
                           )
                         }
                       />
@@ -3447,10 +3877,16 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
                       <Input
                         type="number"
                         step="0.01"
-                        className={cn(editErrors.amount ? "border-red-500" : "")}
+                        className={cn(
+                          editErrors.amount ? "border-red-500" : "",
+                        )}
                         value={editRow?.amount ?? ""}
                         onChange={(event) =>
-                          setEditRow((prev) => (prev ? { ...prev, amount: event.target.value } : prev))
+                          setEditRow((prev) =>
+                            prev
+                              ? { ...prev, amount: event.target.value }
+                              : prev,
+                          )
                         }
                       />
                     ) : (
@@ -3466,7 +3902,11 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         )}
                         value={editRow?.status ?? "draft"}
                         onChange={(event) =>
-                          setEditRow((prev) => (prev ? { ...prev, status: event.target.value } : prev))
+                          setEditRow((prev) =>
+                            prev
+                              ? { ...prev, status: event.target.value }
+                              : prev,
+                          )
                         }
                       >
                         <option value="draft">Draft</option>
@@ -3484,7 +3924,9 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.description ?? ""}
                         placeholder="Description"
                         onChange={(next) =>
-                          setEditRow((prev) => (prev ? { ...prev, description: next } : prev))
+                          setEditRow((prev) =>
+                            prev ? { ...prev, description: next } : prev,
+                          )
                         }
                       />
                     ) : (
@@ -3497,14 +3939,18 @@ const DealChangeOrdersTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.reason ?? ""}
                         placeholder="Reason"
                         onChange={(next) =>
-                          setEditRow((prev) => (prev ? { ...prev, reason: next } : prev))
+                          setEditRow((prev) =>
+                            prev ? { ...prev, reason: next } : prev,
+                          )
                         }
                       />
                     ) : (
                       <TextPreview value={entry.reason} />
                     )}
                   </td>
-                  <td className="px-3 py-2">{entry.attachments?.length ?? 0}</td>
+                  <td className="px-3 py-2">
+                    {entry.attachments?.length ?? 0}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
                       {editingId === Number(entry.id) ? (
@@ -3616,7 +4062,10 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
     { staleTime: 30_000 },
   );
   const salespersonById = useMemo(
-    () => Object.fromEntries(salespeople.map((person) => [Number(person.id), person])),
+    () =>
+      Object.fromEntries(
+        salespeople.map((person) => [Number(person.id), person]),
+      ),
     [salespeople],
   );
   const { data: payments = [] } = useGetList<DealClientPayment>(
@@ -3631,7 +4080,10 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
   const collectedAmount = useMemo(
     () =>
       payments
-        .filter((payment) => payment.status === "cleared" || payment.status === "deposited")
+        .filter(
+          (payment) =>
+            payment.status === "cleared" || payment.status === "deposited",
+        )
         .reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0),
     [payments],
   );
@@ -3654,7 +4106,10 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
     [rows],
   );
   const totalPaid = useMemo(
-    () => rows.filter((row) => row.commission.paid).reduce((sum, row) => sum + row.earned, 0),
+    () =>
+      rows
+        .filter((row) => row.commission.paid)
+        .reduce((sum, row) => sum + row.earned, 0),
     [rows],
   );
 
@@ -3779,7 +4234,10 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
             className="h-9 rounded-md border bg-background px-3 text-sm"
             value={form.salesperson_id}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, salesperson_id: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                salesperson_id: event.target.value,
+              }))
             }
           >
             <option value="">Select salesperson</option>
@@ -3793,7 +4251,10 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
             className="h-9 rounded-md border bg-background px-3 text-sm"
             value={form.commission_type}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, commission_type: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                commission_type: event.target.value,
+              }))
             }
           >
             <option value="fixed">Fixed</option>
@@ -3803,16 +4264,25 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
             type="number"
             min={0}
             step="0.01"
-            placeholder={form.commission_type === "percentage" ? "Percent value" : "Fixed value"}
+            placeholder={
+              form.commission_type === "percentage"
+                ? "Percent value"
+                : "Fixed value"
+            }
             value={form.commission_value}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, commission_value: event.target.value }))
+              setForm((prev) => ({
+                ...prev,
+                commission_value: event.target.value,
+              }))
             }
           />
           <select
             className="h-9 rounded-md border bg-background px-3 text-sm"
             value={form.basis}
-            onChange={(event) => setForm((prev) => ({ ...prev, basis: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, basis: event.target.value }))
+            }
           >
             <option value="payments_collected">Payments collected</option>
             <option value="custom">Custom</option>
@@ -3821,30 +4291,44 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
             <input
               type="checkbox"
               checked={form.paid}
-              onChange={(event) => setForm((prev) => ({ ...prev, paid: event.target.checked }))}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, paid: event.target.checked }))
+              }
             />
             Mark as paid
           </label>
           <Textarea
             placeholder="Notes"
             value={form.notes}
-            onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, notes: event.target.value }))
+            }
             className="md:col-span-2"
           />
         </div>
         <div className="mt-3 flex justify-end">
-          <Button type="button" size="sm" onClick={handleCreate} disabled={isCreating}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleCreate}
+            disabled={isCreating}
+          >
             Add Commission
           </Button>
         </div>
       </InlineFormCard>
 
       <div className="text-sm text-muted-foreground">
-        Total commissions earned: <strong className="text-foreground">{toCurrency(totalEarned)}</strong>
+        Total commissions earned:{" "}
+        <strong className="text-foreground">{toCurrency(totalEarned)}</strong>
         {" · "}
-        Paid: <strong className="text-foreground">{toCurrency(totalPaid)}</strong>
+        Paid:{" "}
+        <strong className="text-foreground">{toCurrency(totalPaid)}</strong>
         {" · "}
-        Pending: <strong className="text-foreground">{toCurrency(totalEarned - totalPaid)}</strong>
+        Pending:{" "}
+        <strong className="text-foreground">
+          {toCurrency(totalEarned - totalPaid)}
+        </strong>
       </div>
 
       {rows.length === 0 ? (
@@ -3877,7 +4361,9 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.salesperson_id ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, salesperson_id: event.target.value } : prev,
+                            prev
+                              ? { ...prev, salesperson_id: event.target.value }
+                              : prev,
                           )
                         }
                       >
@@ -3890,7 +4376,8 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                       </select>
                     ) : (
                       `${salespersonById[Number(commission.salesperson_id)]?.first_name || ""} ${
-                        salespersonById[Number(commission.salesperson_id)]?.last_name || ""
+                        salespersonById[Number(commission.salesperson_id)]
+                          ?.last_name || ""
                       }`.trim() || "—"
                     )}
                   </td>
@@ -3901,7 +4388,9 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.commission_type ?? "percentage"}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, commission_type: event.target.value } : prev,
+                            prev
+                              ? { ...prev, commission_type: event.target.value }
+                              : prev,
                           )
                         }
                       >
@@ -3918,11 +4407,18 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         type="number"
                         min={0}
                         step="0.01"
-                        className={cn(editErrors.commission_value ? "border-red-500" : "")}
+                        className={cn(
+                          editErrors.commission_value ? "border-red-500" : "",
+                        )}
                         value={editRow?.commission_value ?? ""}
                         onChange={(event) =>
                           setEditRow((prev) =>
-                            prev ? { ...prev, commission_value: event.target.value } : prev,
+                            prev
+                              ? {
+                                  ...prev,
+                                  commission_value: event.target.value,
+                                }
+                              : prev,
                           )
                         }
                       />
@@ -3938,10 +4434,16 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         className="h-8 rounded-md border bg-background px-2 text-xs"
                         value={editRow?.basis ?? "payments_collected"}
                         onChange={(event) =>
-                          setEditRow((prev) => (prev ? { ...prev, basis: event.target.value } : prev))
+                          setEditRow((prev) =>
+                            prev
+                              ? { ...prev, basis: event.target.value }
+                              : prev,
+                          )
                         }
                       >
-                        <option value="payments_collected">Payments collected</option>
+                        <option value="payments_collected">
+                          Payments collected
+                        </option>
                         <option value="custom">Custom</option>
                       </select>
                     ) : (
@@ -3956,7 +4458,11 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                           type="checkbox"
                           checked={!!editRow?.paid}
                           onChange={(event) =>
-                            setEditRow((prev) => (prev ? { ...prev, paid: event.target.checked } : prev))
+                            setEditRow((prev) =>
+                              prev
+                                ? { ...prev, paid: event.target.checked }
+                                : prev,
+                            )
                           }
                         />
                         paid
@@ -3973,7 +4479,9 @@ const DealCommissionsTab = ({ dealId }: { dealId: Deal["id"] }) => {
                         value={editRow?.notes ?? ""}
                         placeholder="Notes"
                         onChange={(next) =>
-                          setEditRow((prev) => (prev ? { ...prev, notes: next } : prev))
+                          setEditRow((prev) =>
+                            prev ? { ...prev, notes: next } : prev,
+                          )
                         }
                       />
                     ) : (
@@ -4077,7 +4585,9 @@ const DealFilesTab = ({
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
-  const [pendingUploads, setPendingUploads] = useState<PendingUploadEntry[]>([]);
+  const [pendingUploads, setPendingUploads] = useState<PendingUploadEntry[]>(
+    [],
+  );
   const [isDragOverUpload, setIsDragOverUpload] = useState(false);
   const [isUploadingDocs, setIsUploadingDocs] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -4096,12 +4606,21 @@ const DealFilesTab = ({
   const groupedDocFiles = groupedSources
     ? [
         { key: "payments", label: "Payments", files: groupedSources.payments },
-        { key: "subcontractors", label: "Subcontractors", files: groupedSources.subcontractors },
+        {
+          key: "subcontractors",
+          label: "Subcontractors",
+          files: groupedSources.subcontractors,
+        },
         { key: "expenses", label: "Expenses", files: groupedSources.expenses },
-        { key: "change-orders", label: "Change Orders", files: groupedSources.changeOrders },
+        {
+          key: "change-orders",
+          label: "Change Orders",
+          files: groupedSources.changeOrders,
+        },
       ].filter((group) => group.files.length > 0)
     : [];
-  const hasItems = files.length > 0 || links.length > 0 || groupedDocFiles.length > 0;
+  const hasItems =
+    files.length > 0 || links.length > 0 || groupedDocFiles.length > 0;
 
   const handleCreateLink = () => {
     if (!identity?.id) {
@@ -4224,7 +4743,9 @@ const DealFilesTab = ({
     const queued = allowedFiles.map((file, index) => ({
       id: `${Date.now()}-${index}-${file.name}`,
       file,
-      previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+      previewUrl: file.type.startsWith("image/")
+        ? URL.createObjectURL(file)
+        : "",
     }));
     setPendingUploads(queued);
     setIsUploadingDocs(true);
@@ -4272,7 +4793,10 @@ const DealFilesTab = ({
     );
   };
 
-  const handleEditFileTitle = (entry: DealAttachmentEntry, fallbackTitle: string) => {
+  const handleEditFileTitle = (
+    entry: DealAttachmentEntry,
+    fallbackTitle: string,
+  ) => {
     const currentTitle = entry.file.title || fallbackTitle;
     const nextTitle = window.prompt("Edit file title", currentTitle);
     if (nextTitle == null) return;
@@ -4338,10 +4862,7 @@ const DealFilesTab = ({
     if (type === "application/pdf" || ext === "pdf") {
       return { label: "PDF", Icon: FileText };
     }
-    if (
-      type?.includes("spreadsheet") ||
-      ["xls", "xlsx", "csv"].includes(ext)
-    ) {
+    if (type?.includes("spreadsheet") || ["xls", "xlsx", "csv"].includes(ext)) {
       return { label: "XLS", Icon: FileSpreadsheet };
     }
     if (type?.startsWith("audio/") || ["mp3", "wav", "m4a"].includes(ext)) {
@@ -4359,7 +4880,11 @@ const DealFilesTab = ({
     return { label: ext ? ext.toUpperCase() : "FILE", Icon: FileText };
   };
 
-  const renderReadOnlyFileCard = (file: RAFile, key: string, fallbackTitle: string) => (
+  const renderReadOnlyFileCard = (
+    file: RAFile,
+    key: string,
+    fallbackTitle: string,
+  ) => (
     <div
       key={key}
       className="group relative aspect-square cursor-pointer overflow-hidden rounded-md border bg-muted/20"
@@ -4375,7 +4900,11 @@ const DealFilesTab = ({
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             {(() => {
-              const { Icon, label } = getFilePreviewMeta(file.src, file.title, file.type);
+              const { Icon, label } = getFilePreviewMeta(
+                file.src,
+                file.title,
+                file.type,
+              );
               return (
                 <div className="flex flex-col items-center gap-1">
                   <Icon className="h-7 w-7" />
@@ -4422,7 +4951,9 @@ const DealFilesTab = ({
     <div className="space-y-4">
       {kind === "photos" ? (
         <div className="rounded-md border p-3">
-          <div className="mb-2 text-sm font-medium">Add external photo link</div>
+          <div className="mb-2 text-sm font-medium">
+            Add external photo link
+          </div>
           <div className="grid grid-cols-1 gap-2">
             <Input
               value={url}
@@ -4455,7 +4986,9 @@ const DealFilesTab = ({
         </div>
       ) : null}
 
-      {!hasItems && kind !== "documents" ? <EmptyDealTab label={emptyLabel} /> : null}
+      {!hasItems && kind !== "documents" ? (
+        <EmptyDealTab label={emptyLabel} />
+      ) : null}
 
       {links.length > 0 ? (
         <div className="space-y-2">
@@ -4466,10 +4999,13 @@ const DealFilesTab = ({
               onClick={() => openInBrowser(link.url)}
             >
               <div className="font-medium underline pr-20">
-                {link.title || `External ${kind === "photos" ? "photo" : "document"} ${index + 1}`}
+                {link.title ||
+                  `External ${kind === "photos" ? "photo" : "document"} ${index + 1}`}
               </div>
               {link.note ? (
-                <div className="mt-1 text-xs text-muted-foreground">{link.note}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {link.note}
+                </div>
               ) : null}
               <div className="absolute right-2 top-2 hidden items-center gap-1 group-hover:flex">
                 <Button
@@ -4522,183 +5058,187 @@ const DealFilesTab = ({
             </div>
           ) : null}
           <div className="grid grid-cols-[repeat(auto-fill,minmax(145px,1fr))] gap-3">
-          {kind === "documents" ? (
-            <div
-              className={cn(
-                "relative aspect-square overflow-hidden rounded-md border border-dashed bg-muted/20 transition-colors",
-                isDragOverUpload ? "border-primary bg-primary/10" : "",
-              )}
-              onDragOver={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (!isDragOverUpload) setIsDragOverUpload(true);
-              }}
-              onDragLeave={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setIsDragOverUpload(false);
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setIsDragOverUpload(false);
-                const nextFiles = Array.from(event.dataTransfer.files ?? []);
-                if (nextFiles.length > 0) {
-                  queueAndUploadFiles(nextFiles);
-                }
-              }}
-            >
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                onChange={(event) => {
-                  const nextFiles = Array.from(event.target.files ?? []);
-                  queueAndUploadFiles(nextFiles);
-                  event.currentTarget.value = "";
+            {kind === "documents" ? (
+              <div
+                className={cn(
+                  "relative aspect-square overflow-hidden rounded-md border border-dashed bg-muted/20 transition-colors",
+                  isDragOverUpload ? "border-primary bg-primary/10" : "",
+                )}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (!isDragOverUpload) setIsDragOverUpload(true);
                 }}
-              />
-              <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 text-center">
-                <UploadCloud className="h-6 w-6 text-muted-foreground" />
-                <div className="text-xs text-muted-foreground">
-                  Drop or click to upload
-                </div>
-                {isUploadingDocs || uploadProgress > 0 ? (
-                  <div className="w-full px-2">
-                    <Progress value={uploadProgress} className="h-1.5" />
-                    <div className="mt-1 text-[10px] text-muted-foreground">
-                      Uploading documents... {uploadProgress}%
+                onDragLeave={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setIsDragOverUpload(false);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setIsDragOverUpload(false);
+                  const nextFiles = Array.from(event.dataTransfer.files ?? []);
+                  if (nextFiles.length > 0) {
+                    queueAndUploadFiles(nextFiles);
+                  }
+                }}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  onChange={(event) => {
+                    const nextFiles = Array.from(event.target.files ?? []);
+                    queueAndUploadFiles(nextFiles);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 text-center">
+                  <UploadCloud className="h-6 w-6 text-muted-foreground" />
+                  <div className="text-xs text-muted-foreground">
+                    Drop or click to upload
+                  </div>
+                  {isUploadingDocs || uploadProgress > 0 ? (
+                    <div className="w-full px-2">
+                      <Progress value={uploadProgress} className="h-1.5" />
+                      <div className="mt-1 text-[10px] text-muted-foreground">
+                        Uploading documents... {uploadProgress}%
+                      </div>
                     </div>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ) : null}
-          {pendingUploads.map((pending) => (
-            <div
-              key={`pending-${pending.id}`}
-              className="relative aspect-square overflow-hidden rounded-md border bg-muted/10"
-            >
-              <div className="h-full w-full overflow-hidden bg-muted/30">
-                {pending.previewUrl ? (
-                  <img
-                    src={pending.previewUrl}
-                    alt={pending.file.name}
-                    className="h-full w-full object-cover opacity-70"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    {(() => {
-                      const { Icon, label } = getFilePreviewMeta(
-                        pending.file.name,
-                        pending.file.name,
-                        pending.file.type,
-                      );
-                      return (
-                        <div className="flex flex-col items-center gap-1">
-                          <Icon className="h-7 w-7" />
-                          <span className="text-[10px] font-semibold">{label}</span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
+            ) : null}
+            {pendingUploads.map((pending) => (
+              <div
+                key={`pending-${pending.id}`}
+                className="relative aspect-square overflow-hidden rounded-md border bg-muted/10"
+              >
+                <div className="h-full w-full overflow-hidden bg-muted/30">
+                  {pending.previewUrl ? (
+                    <img
+                      src={pending.previewUrl}
+                      alt={pending.file.name}
+                      className="h-full w-full object-cover opacity-70"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                      {(() => {
+                        const { Icon, label } = getFilePreviewMeta(
+                          pending.file.name,
+                          pending.file.name,
+                          pending.file.type,
+                        );
+                        return (
+                          <div className="flex flex-col items-center gap-1">
+                            <Icon className="h-7 w-7" />
+                            <span className="text-[10px] font-semibold">
+                              {label}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+                <div className="absolute inset-x-2 bottom-2 rounded-md bg-background/90 px-2 py-1 text-xs font-medium truncate">
+                  {pending.file.name}
+                </div>
+                <div className="absolute inset-x-2 top-2">
+                  <Progress value={uploadProgress} className="h-1.5" />
+                </div>
               </div>
-              <div className="absolute inset-x-2 bottom-2 rounded-md bg-background/90 px-2 py-1 text-xs font-medium truncate">
-                {pending.file.name}
+            ))}
+            {files.map((entry, index) => (
+              <div
+                key={`${entry.noteId}-${entry.attachmentIndex}-${entry.file.src}-${index}`}
+                className="group relative aspect-square cursor-pointer overflow-hidden rounded-md border bg-muted/20"
+                onClick={() => openInBrowser(entry.file.src)}
+              >
+                <div className="h-full w-full overflow-hidden bg-muted/30">
+                  {isImageFile(entry.file.src, entry.file.type) ? (
+                    <img
+                      src={entry.file.src}
+                      alt={entry.file.title || `File ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                      {(() => {
+                        const { Icon, label } = getFilePreviewMeta(
+                          entry.file.src,
+                          entry.file.title,
+                          entry.file.type,
+                        );
+                        return (
+                          <div className="flex flex-col items-center gap-1">
+                            <Icon className="h-7 w-7" />
+                            <span className="text-[10px] font-semibold">
+                              {label}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+                <div className="pointer-events-none absolute inset-x-2 bottom-2 rounded-md bg-background/90 px-2 py-1 text-xs font-medium truncate">
+                  {entry.file.title || `File ${index + 1}`}
+                </div>
+                <div className="absolute right-1.5 top-1.5 hidden items-center gap-1 rounded-md bg-background/90 p-1 shadow-sm group-hover:flex">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openInBrowser(entry.file.src);
+                    }}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      downloadFile(entry.file.src, entry.file.title);
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleEditFileTitle(entry, `File ${index + 1}`);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleDeleteFile(entry);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="absolute inset-x-2 top-2">
-                <Progress value={uploadProgress} className="h-1.5" />
-              </div>
-            </div>
-          ))}
-          {files.map((entry, index) => (
-            <div
-              key={`${entry.noteId}-${entry.attachmentIndex}-${entry.file.src}-${index}`}
-              className="group relative aspect-square cursor-pointer overflow-hidden rounded-md border bg-muted/20"
-              onClick={() => openInBrowser(entry.file.src)}
-            >
-              <div className="h-full w-full overflow-hidden bg-muted/30">
-                {isImageFile(entry.file.src, entry.file.type) ? (
-                  <img
-                    src={entry.file.src}
-                    alt={entry.file.title || `File ${index + 1}`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    {(() => {
-                      const { Icon, label } = getFilePreviewMeta(
-                        entry.file.src,
-                        entry.file.title,
-                        entry.file.type,
-                      );
-                      return (
-                        <div className="flex flex-col items-center gap-1">
-                          <Icon className="h-7 w-7" />
-                          <span className="text-[10px] font-semibold">{label}</span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-              <div className="pointer-events-none absolute inset-x-2 bottom-2 rounded-md bg-background/90 px-2 py-1 text-xs font-medium truncate">
-                {entry.file.title || `File ${index + 1}`}
-              </div>
-              <div className="absolute right-1.5 top-1.5 hidden items-center gap-1 rounded-md bg-background/90 p-1 shadow-sm group-hover:flex">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openInBrowser(entry.file.src);
-                  }}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    downloadFile(entry.file.src, entry.file.title);
-                  }}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleEditFileTitle(entry, `File ${index + 1}`);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleDeleteFile(entry);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            ))}
           </div>
         </div>
       ) : null}
@@ -4727,9 +5267,7 @@ const DealFilesTab = ({
   );
 };
 
-const DealNotesTab = () => (
-  <DealNotesTabContent />
-);
+const DealNotesTab = () => <DealNotesTabContent />;
 
 const DealNotesTabContent = () => {
   const record = useRecordContext<Deal>();
@@ -4749,7 +5287,8 @@ const DealNotesTabContent = () => {
         // Hide entries created by Documents/Photos tabs.
         if (extractAssetLinksFromDealNotes([note]).length > 0) return false;
         // Backward compatibility for previously stored document-only notes.
-        if (!note.text?.trim() && (note.attachments?.length ?? 0) > 0) return false;
+        if (!note.text?.trim() && (note.attachments?.length ?? 0) > 0)
+          return false;
         return true;
       }),
     [notes],
@@ -4808,8 +5347,16 @@ const DealHeaderMeta = ({ record }: { record: Deal }) => {
     record.project_type ||
     dealCategories.find((c) => c.value === record.category)?.label ||
     "Construction";
-  const stageLabel = getStageLabel({ dealPipelines }, record.stage, record.pipeline_id);
-  const stageColor = getStageColor({ dealPipelines }, record.stage, record.pipeline_id);
+  const stageLabel = getStageLabel(
+    { dealPipelines },
+    record.stage,
+    record.pipeline_id,
+  );
+  const stageColor = getStageColor(
+    { dealPipelines },
+    record.stage,
+    record.pipeline_id,
+  );
   const stageBadgeStyle = toStageBadgeStyle(stageColor);
   const contactName = getContactDisplayName(mainContact);
   const contactPhone = getContactPhone(mainContact);
@@ -4830,7 +5377,10 @@ const DealHeaderMeta = ({ record }: { record: Deal }) => {
           <span className="rounded-full border bg-muted/40 px-2 py-0.5 font-medium text-foreground/80">
             {projectTypeLabel}
           </span>
-          <span className="rounded-full px-2 py-0.5 font-medium" style={stageBadgeStyle}>
+          <span
+            className="rounded-full px-2 py-0.5 font-medium"
+            style={stageBadgeStyle}
+          >
             {stageLabel}
           </span>
           <span className="text-muted-foreground/90">
@@ -4851,7 +5401,8 @@ const DealHeaderMeta = ({ record }: { record: Deal }) => {
 };
 
 const toStageBadgeStyle = (color?: string): CSSProperties => {
-  const safeColor = color && /^#([0-9A-Fa-f]{3}){1,2}$/.test(color) ? color : "#64748b";
+  const safeColor =
+    color && /^#([0-9A-Fa-f]{3}){1,2}$/.test(color) ? color : "#64748b";
   const rgba = hexToRgba(safeColor, 0.16);
   return {
     backgroundColor: rgba,
@@ -4878,19 +5429,26 @@ const hexToRgba = (hex: string, alpha: number) => {
 
 const getContactDisplayName = (contact?: Contact) => {
   if (!contact) return "No contact linked";
-  const full = [contact.first_name, contact.last_name].filter(Boolean).join(" ").trim();
+  const full = [contact.first_name, contact.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
   return full || "Unnamed contact";
 };
 
 const getContactPhone = (contact?: Contact) => {
   if (!contact) return "—";
-  const phoneEntries = Array.isArray(contact.phone_jsonb) ? contact.phone_jsonb : [];
+  const phoneEntries = Array.isArray(contact.phone_jsonb)
+    ? contact.phone_jsonb
+    : [];
   return phoneEntries[0]?.number || "—";
 };
 
 const getContactEmail = (contact?: Contact) => {
   if (!contact) return "—";
-  const emailEntries = Array.isArray(contact.email_jsonb) ? contact.email_jsonb : [];
+  const emailEntries = Array.isArray(contact.email_jsonb)
+    ? contact.email_jsonb
+    : [];
   return emailEntries[0]?.email || "—";
 };
 
@@ -4957,7 +5515,11 @@ const ExpandableTextCellEditor = ({
           className="h-8 w-8 shrink-0"
           onClick={() => setExpanded((prev) => !prev)}
         >
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {expanded ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
         </Button>
       </div>
       {expanded ? (
@@ -4997,7 +5559,9 @@ const OverviewRow = ({
 }) => (
   <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-t py-2 text-sm first:border-t-0">
     <span className="pr-2">{label}</span>
-    <span className={cn("text-right font-semibold", valueClassName)}>{value}</span>
+    <span className={cn("text-right font-semibold", valueClassName)}>
+      {value}
+    </span>
   </div>
 );
 
@@ -5070,7 +5634,8 @@ const clampPercent = (value: number) => {
   return Math.max(0, Math.min(100, value));
 };
 
-const toPercentLabel = (value: number) => `${(Number(value ?? 0) * 100).toFixed(1)}%`;
+const toPercentLabel = (value: number) =>
+  `${(Number(value ?? 0) * 100).toFixed(1)}%`;
 
 const SummaryItem = ({
   label,
@@ -5082,8 +5647,12 @@ const SummaryItem = ({
   valueClassName?: string;
 }) => (
   <div className="rounded-md border p-3">
-    <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-    <div className={cn("mt-1 text-sm font-medium", valueClassName)}>{value}</div>
+    <div className="text-xs uppercase tracking-wide text-muted-foreground">
+      {label}
+    </div>
+    <div className={cn("mt-1 text-sm font-medium", valueClassName)}>
+      {value}
+    </div>
   </div>
 );
 

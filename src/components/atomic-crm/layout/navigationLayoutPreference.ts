@@ -68,9 +68,16 @@ export const useNavigationLayoutPreference = () => {
   const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const setMode = useCallback(
-    (next: NavigationLayoutMode | ((prev: NavigationLayoutMode) => NavigationLayoutMode)) => {
+    (
+      next:
+        | NavigationLayoutMode
+        | ((prev: NavigationLayoutMode) => NavigationLayoutMode),
+    ) => {
       const prev = getSnapshot();
-      const resolved = typeof next === "function" ? (next as (p: NavigationLayoutMode) => NavigationLayoutMode)(prev) : next;
+      const resolved =
+        typeof next === "function"
+          ? (next as (p: NavigationLayoutMode) => NavigationLayoutMode)(prev)
+          : next;
       if (resolved === "top" || resolved === "sidebar") {
         setLayoutState(resolved);
       }

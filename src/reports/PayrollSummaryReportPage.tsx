@@ -1,29 +1,29 @@
-import { useMemo, useState } from 'react';
-import { useGetList } from 'ra-core';
-import { Printer } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ReportDateFilters } from './ReportFilters';
+import { useMemo, useState } from "react";
+import { useGetList } from "ra-core";
+import { Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ReportDateFilters } from "./ReportFilters";
 
 export const PayrollSummaryReportPage = ({
   embedded = false,
 }: {
   embedded?: boolean;
 }) => {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   const filter = useMemo(
     () => ({
-      ...(from ? { 'pay_date@gte': from } : {}),
-      ...(to ? { 'pay_date@lte': to } : {}),
+      ...(from ? { "pay_date@gte": from } : {}),
+      ...(to ? { "pay_date@lte": to } : {}),
     }),
     [from, to],
   );
 
-  const { data } = useGetList('report_payroll_summary', {
+  const { data } = useGetList("report_payroll_summary", {
     pagination: { page: 1, perPage: 100 },
-    sort: { field: 'pay_date', order: 'DESC' },
+    sort: { field: "pay_date", order: "DESC" },
     filter,
   });
 
@@ -32,18 +32,21 @@ export const PayrollSummaryReportPage = ({
       <div className="flex items-center justify-between print:hidden">
         {!embedded ? (
           <h1 className="text-2xl font-semibold">Payroll Summary by Period</h1>
-        ) : <span />}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.print()}
-        >
+        ) : (
+          <span />
+        )}
+        <Button variant="outline" size="sm" onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" />
           Print / PDF
         </Button>
       </div>
       <div className="print:hidden">
-        <ReportDateFilters from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
+        <ReportDateFilters
+          from={from}
+          to={to}
+          onFromChange={setFrom}
+          onToChange={setTo}
+        />
       </div>
       <Card>
         <CardContent className="pt-6 overflow-x-auto">
@@ -61,12 +64,18 @@ export const PayrollSummaryReportPage = ({
             <tbody>
               {data?.map((row: any) => (
                 <tr key={row.id} className="border-b">
-                  <td className="py-2">{row.pay_period_start} - {row.pay_period_end}</td>
+                  <td className="py-2">
+                    {row.pay_period_start} - {row.pay_period_end}
+                  </td>
                   <td className="py-2">{row.pay_date}</td>
                   <td className="py-2">{row.status}</td>
                   <td className="py-2">{row.lines_count}</td>
-                  <td className="py-2">${Number(row.total_gross ?? 0).toFixed(2)}</td>
-                  <td className="py-2">${Number(row.total_net ?? 0).toFixed(2)}</td>
+                  <td className="py-2">
+                    ${Number(row.total_gross ?? 0).toFixed(2)}
+                  </td>
+                  <td className="py-2">
+                    ${Number(row.total_net ?? 0).toFixed(2)}
+                  </td>
                 </tr>
               ))}
             </tbody>

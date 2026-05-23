@@ -19,10 +19,13 @@ const baseAuthProvider = supabaseAuthProvider(supabase, {
       fullName: `${sale.first_name} ${sale.last_name}`,
       avatar: sale.avatar?.src,
       administrator: sale.administrator === true,
-      role: sale.administrator ? 'admin' : sale.roles?.[0] ?? 'user',
-      roles: sale.roles ?? (sale.administrator ? ['admin'] : []),
+      role: sale.administrator ? "admin" : (sale.roles?.[0] ?? "user"),
+      roles: sale.roles ?? (sale.administrator ? ["admin"] : []),
       module_permissions:
-        (sale.module_permissions as MemberModulePermissions | null | undefined) ?? null,
+        (sale.module_permissions as
+          | MemberModulePermissions
+          | null
+          | undefined) ?? null,
     };
   },
 });
@@ -67,7 +70,9 @@ const fetchSale = async () => {
 
   const { data: dataSale, error: errorSale } = await supabase
     .from("organization_members")
-    .select("id, first_name, last_name, avatar, administrator, roles, module_permissions")
+    .select(
+      "id, first_name, last_name, avatar, administrator, roles, module_permissions",
+    )
     .match({ user_id: dataSession?.session?.user.id })
     .single();
 
@@ -83,7 +88,9 @@ const fetchSale = async () => {
 
 const getSale = async (useCache = true) => {
   const storage = getLocalStorage();
-  const cachedValue = useCache ? storage?.getItem(CURRENT_SALE_CACHE_KEY) : null;
+  const cachedValue = useCache
+    ? storage?.getItem(CURRENT_SALE_CACHE_KEY)
+    : null;
   if (cachedValue != null) {
     return JSON.parse(cachedValue);
   }
@@ -106,8 +113,7 @@ function isPublicAuthRoute(): boolean {
   if (typeof window === "undefined") return false;
   const path = window.location.pathname.replace(/\/$/, "") || "/";
   const hash = window.location.hash;
-  const segment =
-    (s: "sign-up" | "set-password" | "forgot-password") =>
+  const segment = (s: "sign-up" | "set-password" | "forgot-password") =>
     path === `/${s}` || path.endsWith(`/${s}`) || hash.includes(`#/${s}`);
   return segment("set-password") || segment("forgot-password");
 }
@@ -182,8 +188,10 @@ export const authProvider: AuthProvider = {
         role: sale.administrator ? "admin" : "user",
         roles: sale.roles ?? [],
         module_permissions:
-          (sale.module_permissions as MemberModulePermissions | null | undefined) ??
-          null,
+          (sale.module_permissions as
+            | MemberModulePermissions
+            | null
+            | undefined) ?? null,
       },
       params,
     );

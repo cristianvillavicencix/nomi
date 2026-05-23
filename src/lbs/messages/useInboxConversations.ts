@@ -31,10 +31,7 @@ export const useInboxConversations = (
   const dataProvider = useDataProvider<CrmDataProvider>();
   const scopeToProjects = shouldScopeMessagingToAssignedProjects(identity);
 
-  const {
-    data: allowedDealIds,
-    isPending: isAssignedDealsPending,
-  } = useQuery({
+  const { data: allowedDealIds, isPending: isAssignedDealsPending } = useQuery({
     queryKey: ["messaging-assigned-deal-ids", identity?.id, scopeToProjects],
     enabled: enabled && scopeToProjects && identity?.id != null,
     staleTime: 60_000,
@@ -99,46 +96,45 @@ export const useInboxConversations = (
     [participations],
   );
 
-  const visibleConversations = useMemo(
-    () => {
-      const base = sortConversationsByActivity(
-        conversations.filter((conversation) => {
-          if (!conversation.last_message_at) {
-            return false;
-          }
-          return (
-            conversation.type === "project" ||
-            conversation.type === "client" ||
-            participantConversationIds.has(String(conversation.id))
-          );
-        }),
-      );
-      if (!scopeToProjects) {
-        return base;
-      }
-      if (isAssignedDealsPending) {
-        return base.filter((conversation) => conversation.type === "team_dm");
-      }
-      return filterConversationsForAssignedProjects(base, allowedDealIds ?? new Set());
-    },
-    [
-      allowedDealIds,
-      conversations,
-      isAssignedDealsPending,
-      participantConversationIds,
-      scopeToProjects,
-    ],
-  );
+  const visibleConversations = useMemo(() => {
+    const base = sortConversationsByActivity(
+      conversations.filter((conversation) => {
+        if (!conversation.last_message_at) {
+          return false;
+        }
+        return (
+          conversation.type === "project" ||
+          conversation.type === "client" ||
+          participantConversationIds.has(String(conversation.id))
+        );
+      }),
+    );
+    if (!scopeToProjects) {
+      return base;
+    }
+    if (isAssignedDealsPending) {
+      return base.filter((conversation) => conversation.type === "team_dm");
+    }
+    return filterConversationsForAssignedProjects(
+      base,
+      allowedDealIds ?? new Set(),
+    );
+  }, [
+    allowedDealIds,
+    conversations,
+    isAssignedDealsPending,
+    participantConversationIds,
+    scopeToProjects,
+  ]);
 
   const dealIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          visibleConversations
-            .map((conversation) => conversation.deal_id)
-            .filter((id): id is Identifier => id != null),
-        ),
-      ],
+    () => [
+      ...new Set(
+        visibleConversations
+          .map((conversation) => conversation.deal_id)
+          .filter((id): id is Identifier => id != null),
+      ),
+    ],
     [visibleConversations],
   );
 
@@ -169,14 +165,13 @@ export const useInboxConversations = (
   );
 
   const memberIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          dmParticipants
-            .map((entry) => entry.member_id)
-            .filter((id): id is Identifier => id != null),
-        ),
-      ],
+    () => [
+      ...new Set(
+        dmParticipants
+          .map((entry) => entry.member_id)
+          .filter((id): id is Identifier => id != null),
+      ),
+    ],
     [dmParticipants],
   );
 
@@ -187,14 +182,13 @@ export const useInboxConversations = (
   );
 
   const contactIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          visibleConversations
-            .map((conversation) => conversation.contact_id)
-            .filter((id): id is Identifier => id != null),
-        ),
-      ],
+    () => [
+      ...new Set(
+        visibleConversations
+          .map((conversation) => conversation.contact_id)
+          .filter((id): id is Identifier => id != null),
+      ),
+    ],
     [visibleConversations],
   );
 

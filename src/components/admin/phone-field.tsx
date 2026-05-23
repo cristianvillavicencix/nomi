@@ -10,15 +10,8 @@ const PhoneFieldImpl = <
 >(
   inProps: PhoneFieldProps<RecordType>,
 ) => {
-  const {
-    className,
-    empty,
-    defaultValue,
-    source,
-    record,
-    value,
-    ...rest
-  } = inProps;
+  const { className, empty, defaultValue, source, record, value, ...rest } =
+    inProps;
   const fieldValue = useFieldValue({ defaultValue, source, record });
   const translate = useTranslate();
   const resolvedValue = value ?? fieldValue;

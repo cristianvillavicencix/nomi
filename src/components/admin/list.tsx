@@ -172,7 +172,12 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
             {pagination}
           </ScrollableContentArea>
         ) : (
-          <div className={cn("my-2 min-h-0 flex-1 overflow-hidden", props.className)}>
+          <div
+            className={cn(
+              "my-2 min-h-0 flex-1 overflow-hidden",
+              props.className,
+            )}
+          >
             {children}
             {pagination}
           </div>

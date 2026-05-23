@@ -2,7 +2,16 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useDataProvider, useNotify, type Identifier } from "ra-core";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Pencil, Trash2, PowerOff, Power, Save, X, KeyRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Pencil,
+  Trash2,
+  PowerOff,
+  Power,
+  Save,
+  X,
+  KeyRound,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +43,10 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { OrganizationForPlatform, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  OrganizationForPlatform,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 
 const BILLING_STATUSES = [
   "none",
@@ -77,7 +89,9 @@ type ContactEditState = {
   address: string;
 };
 
-const toContactEditState = (org: OrganizationForPlatform): ContactEditState => ({
+const toContactEditState = (
+  org: OrganizationForPlatform,
+): ContactEditState => ({
   name: org.name ?? "",
   email: org.email ?? "",
   phone: org.phone ?? "",
@@ -96,7 +110,9 @@ type BillingEditState = {
   stripe_seat_price_id: string;
 };
 
-const toBillingEditState = (org: OrganizationForPlatform): BillingEditState => ({
+const toBillingEditState = (
+  org: OrganizationForPlatform,
+): BillingEditState => ({
   billing_status: org.billing_status ?? "none",
   billable_seat_count: String(org.billable_seat_count ?? ""),
   price_per_seat_usd_monthly: String(org.price_per_seat_usd_monthly ?? ""),
@@ -158,7 +174,9 @@ const OrgSummaryPanel = ({
       return r.data as OrganizationForPlatform;
     },
     onSuccess: () => {
-      notify(isDisabled ? "Empresa reactivada." : "Empresa desactivada.", { type: "success" });
+      notify(isDisabled ? "Empresa reactivada." : "Empresa desactivada.", {
+        type: "success",
+      });
       onUpdated();
     },
     onError: (e) => notify(formatQueryError(e), { type: "error" }),
@@ -166,7 +184,10 @@ const OrgSummaryPanel = ({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await dataProvider.delete("organizations", { id: org.id, previousData: org });
+      await dataProvider.delete("organizations", {
+        id: org.id,
+        previousData: org,
+      });
     },
     onSuccess: () => {
       notify("Empresa eliminada.", { type: "success" });
@@ -184,7 +205,10 @@ const OrgSummaryPanel = ({
             size="icon"
             variant="outline"
             title="Editar"
-            onClick={() => { setForm(toContactEditState(org)); setEditing(true); }}
+            onClick={() => {
+              setForm(toContactEditState(org));
+              setEditing(true);
+            }}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -198,7 +222,12 @@ const OrgSummaryPanel = ({
             >
               <Save className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" title="Cancelar" onClick={() => setEditing(false)}>
+            <Button
+              size="icon"
+              variant="ghost"
+              title="Cancelar"
+              onClick={() => setEditing(false)}
+            >
               <X className="h-4 w-4" />
             </Button>
           </>
@@ -210,7 +239,11 @@ const OrgSummaryPanel = ({
           onClick={() => toggleDisableMutation.mutate()}
           disabled={toggleDisableMutation.isPending}
         >
-          {isDisabled ? <Power className="h-4 w-4" /> : <PowerOff className="h-4 w-4" />}
+          {isDisabled ? (
+            <Power className="h-4 w-4" />
+          ) : (
+            <PowerOff className="h-4 w-4" />
+          )}
         </Button>
         <Button
           size="icon"
@@ -245,7 +278,9 @@ const OrgSummaryPanel = ({
             <Input
               type="email"
               value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, email: e.target.value }))
+              }
               placeholder="empresa@ejemplo.com"
             />
           </div>
@@ -253,7 +288,9 @@ const OrgSummaryPanel = ({
             <Label>Teléfono</Label>
             <Input
               value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, phone: e.target.value }))
+              }
               placeholder="+52 55 0000 0000"
             />
           </div>
@@ -261,7 +298,9 @@ const OrgSummaryPanel = ({
             <Label>Página web</Label>
             <Input
               value={form.website}
-              onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, website: e.target.value }))
+              }
               placeholder="https://empresa.com"
             />
           </div>
@@ -269,7 +308,9 @@ const OrgSummaryPanel = ({
             <Label>Dirección</Label>
             <Input
               value={form.address}
-              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, address: e.target.value }))
+              }
               placeholder="Calle, Ciudad, País"
             />
           </div>
@@ -281,7 +322,9 @@ const OrgSummaryPanel = ({
             <dd className="font-medium">{org.name || "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground mb-0.5">Correo electrónico</dt>
+            <dt className="text-xs text-muted-foreground mb-0.5">
+              Correo electrónico
+            </dt>
             <dd>{org.email || "—"}</dd>
           </div>
           <div>
@@ -311,7 +354,9 @@ const OrgSummaryPanel = ({
           </div>
           <div>
             <dt className="text-xs text-muted-foreground mb-0.5">Registrada</dt>
-            <dd className="text-muted-foreground">{formatDate(org.created_at)}</dd>
+            <dd className="text-muted-foreground">
+              {formatDate(org.created_at)}
+            </dd>
           </div>
         </dl>
       )}
@@ -322,8 +367,9 @@ const OrgSummaryPanel = ({
           <DialogHeader>
             <DialogTitle>¿Eliminar empresa?</DialogTitle>
             <DialogDescription>
-              Esta acción es <strong>irreversible</strong>. Se eliminará la organización{" "}
-              <strong>{org.name}</strong> y todos sus datos relacionados.
+              Esta acción es <strong>irreversible</strong>. Se eliminará la
+              organización <strong>{org.name}</strong> y todos sus datos
+              relacionados.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -332,7 +378,10 @@ const OrgSummaryPanel = ({
             </Button>
             <Button
               variant="destructive"
-              onClick={() => { setConfirmDelete(false); deleteMutation.mutate(); }}
+              onClick={() => {
+                setConfirmDelete(false);
+                deleteMutation.mutate();
+              }}
             >
               Sí, eliminar
             </Button>
@@ -346,8 +395,12 @@ const OrgSummaryPanel = ({
 // ── Billing badge ────────────────────────────────────────────────────────────
 
 const BillingBadge = ({ status }: { status?: string | null }) => {
-  if (!status || status === "none") return <span className="text-muted-foreground">—</span>;
-  const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  if (!status || status === "none")
+    return <span className="text-muted-foreground">—</span>;
+  const variants: Record<
+    string,
+    "default" | "secondary" | "destructive" | "outline"
+  > = {
     active: "default",
     trialing: "secondary",
     past_due: "destructive",
@@ -378,7 +431,9 @@ const BillingTab = ({
     mutationFn: async () => {
       const payload: Partial<OrganizationForPlatform> = {
         billing_status: form.billing_status || null,
-        billable_seat_count: form.billable_seat_count ? Number(form.billable_seat_count) : null,
+        billable_seat_count: form.billable_seat_count
+          ? Number(form.billable_seat_count)
+          : null,
         price_per_seat_usd_monthly: form.price_per_seat_usd_monthly
           ? Number(form.price_per_seat_usd_monthly)
           : null,
@@ -410,7 +465,10 @@ const BillingTab = ({
             size="icon"
             variant="outline"
             title="Editar facturación"
-            onClick={() => { setForm(toBillingEditState(org)); setEditing(true); }}
+            onClick={() => {
+              setForm(toBillingEditState(org));
+              setEditing(true);
+            }}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -424,7 +482,12 @@ const BillingTab = ({
             >
               <Save className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" title="Cancelar" onClick={() => setEditing(false)}>
+            <Button
+              size="icon"
+              variant="ghost"
+              title="Cancelar"
+              onClick={() => setEditing(false)}
+            >
               <X className="h-4 w-4" />
             </Button>
           </>
@@ -437,12 +500,18 @@ const BillingTab = ({
             <Label>Estado de facturación</Label>
             <Select
               value={form.billing_status}
-              onValueChange={(v) => setForm((f) => ({ ...f, billing_status: v }))}
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, billing_status: v }))
+              }
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {BILLING_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -454,7 +523,12 @@ const BillingTab = ({
                 type="number"
                 min={0}
                 value={form.billable_seat_count}
-                onChange={(e) => setForm((f) => ({ ...f, billable_seat_count: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    billable_seat_count: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="space-y-1.5">
@@ -465,7 +539,10 @@ const BillingTab = ({
                 step={0.01}
                 value={form.price_per_seat_usd_monthly}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, price_per_seat_usd_monthly: e.target.value }))
+                  setForm((f) => ({
+                    ...f,
+                    price_per_seat_usd_monthly: e.target.value,
+                  }))
                 }
               />
             </div>
@@ -475,7 +552,9 @@ const BillingTab = ({
             <Label>Stripe Customer ID</Label>
             <Input
               value={form.stripe_customer_id}
-              onChange={(e) => setForm((f) => ({ ...f, stripe_customer_id: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, stripe_customer_id: e.target.value }))
+              }
               placeholder="cus_…"
             />
           </div>
@@ -483,7 +562,12 @@ const BillingTab = ({
             <Label>Stripe Subscription ID</Label>
             <Input
               value={form.stripe_subscription_id}
-              onChange={(e) => setForm((f) => ({ ...f, stripe_subscription_id: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  stripe_subscription_id: e.target.value,
+                }))
+              }
               placeholder="sub_…"
             />
           </div>
@@ -491,7 +575,9 @@ const BillingTab = ({
             <Label>Stripe Price ID</Label>
             <Input
               value={form.stripe_seat_price_id}
-              onChange={(e) => setForm((f) => ({ ...f, stripe_seat_price_id: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, stripe_seat_price_id: e.target.value }))
+              }
               placeholder="price_…"
             />
           </div>
@@ -500,15 +586,21 @@ const BillingTab = ({
         <dl className="space-y-3 text-sm">
           <div>
             <dt className="text-xs text-muted-foreground mb-0.5">Estado</dt>
-            <dd><BillingBadge status={org.billing_status} /></dd>
+            <dd>
+              <BillingBadge status={org.billing_status} />
+            </dd>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <dt className="text-xs text-muted-foreground mb-0.5">Asientos facturables</dt>
+              <dt className="text-xs text-muted-foreground mb-0.5">
+                Asientos facturables
+              </dt>
               <dd>{org.billable_seat_count ?? "—"}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground mb-0.5">Precio / asiento</dt>
+              <dt className="text-xs text-muted-foreground mb-0.5">
+                Precio / asiento
+              </dt>
               <dd>
                 {org.price_per_seat_usd_monthly != null
                   ? `$${org.price_per_seat_usd_monthly} USD/mes`
@@ -518,16 +610,28 @@ const BillingTab = ({
           </div>
           <Separator />
           <div>
-            <dt className="text-xs text-muted-foreground mb-0.5">Stripe Customer ID</dt>
-            <dd className="font-mono text-xs break-all">{org.stripe_customer_id || "—"}</dd>
+            <dt className="text-xs text-muted-foreground mb-0.5">
+              Stripe Customer ID
+            </dt>
+            <dd className="font-mono text-xs break-all">
+              {org.stripe_customer_id || "—"}
+            </dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground mb-0.5">Stripe Subscription ID</dt>
-            <dd className="font-mono text-xs break-all">{org.stripe_subscription_id || "—"}</dd>
+            <dt className="text-xs text-muted-foreground mb-0.5">
+              Stripe Subscription ID
+            </dt>
+            <dd className="font-mono text-xs break-all">
+              {org.stripe_subscription_id || "—"}
+            </dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground mb-0.5">Stripe Price ID</dt>
-            <dd className="font-mono text-xs break-all">{org.stripe_seat_price_id || "—"}</dd>
+            <dt className="text-xs text-muted-foreground mb-0.5">
+              Stripe Price ID
+            </dt>
+            <dd className="font-mono text-xs break-all">
+              {org.stripe_seat_price_id || "—"}
+            </dd>
           </div>
         </dl>
       )}
@@ -561,7 +665,8 @@ const MembersTab = ({ orgId }: { orgId: Identifier }) => {
       });
       if (error) throw error;
     },
-    onSuccess: () => notify("Correo de restablecimiento enviado.", { type: "success" }),
+    onSuccess: () =>
+      notify("Correo de restablecimiento enviado.", { type: "success" }),
     onError: (e) => notify(formatQueryError(e), { type: "error" }),
   });
 
@@ -586,15 +691,23 @@ const MembersTab = ({ orgId }: { orgId: Identifier }) => {
   const members = membersQuery.data?.data ?? [];
 
   if (membersQuery.isLoading)
-    return <p className="text-sm text-muted-foreground py-4">Cargando usuarios…</p>;
+    return (
+      <p className="text-sm text-muted-foreground py-4">Cargando usuarios…</p>
+    );
 
   if (membersQuery.isError)
     return (
-      <p className="text-sm text-destructive py-4">{formatQueryError(membersQuery.error)}</p>
+      <p className="text-sm text-destructive py-4">
+        {formatQueryError(membersQuery.error)}
+      </p>
     );
 
   if (members.length === 0)
-    return <p className="text-sm text-muted-foreground py-4">Sin usuarios registrados.</p>;
+    return (
+      <p className="text-sm text-muted-foreground py-4">
+        Sin usuarios registrados.
+      </p>
+    );
 
   return (
     <div className="rounded-md border overflow-x-auto">
@@ -614,7 +727,9 @@ const MembersTab = ({ orgId }: { orgId: Identifier }) => {
               <TableCell className="font-medium">
                 {m.first_name} {m.last_name}
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">{m.email}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {m.email}
+              </TableCell>
               <TableCell>
                 {m.administrator ? (
                   <Badge variant="secondary">Admin</Badge>
@@ -685,11 +800,15 @@ export const PlatformEmpresaDetailPage = () => {
   const org = orgQuery.data ?? null;
 
   const handleUpdated = () => {
-    void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["platform", "organizations"],
+    });
   };
 
   const handleDeleted = () => {
-    void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["platform", "organizations"],
+    });
     navigate("/sas/empresas", { replace: true });
   };
 
@@ -707,7 +826,11 @@ export const PlatformEmpresaDetailPage = () => {
         <p className="text-sm text-destructive">
           No se pudo cargar la empresa: {formatQueryError(orgQuery.error)}
         </p>
-        <Button variant="outline" size="sm" onClick={() => navigate("/sas/empresas")}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/sas/empresas")}
+        >
           <ArrowLeft className="h-4 w-4 mr-1" /> Volver
         </Button>
       </div>
@@ -718,18 +841,30 @@ export const PlatformEmpresaDetailPage = () => {
     <div className="space-y-4">
       {/* Back + title */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/sas/empresas")}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/sas/empresas")}
+        >
           <ArrowLeft className="h-4 w-4 mr-1" /> Empresas
         </Button>
-        <h1 className="text-xl font-semibold tracking-tight truncate">{org.name}</h1>
-        <span className="text-xs text-muted-foreground font-mono ml-1">#{String(id)}</span>
+        <h1 className="text-xl font-semibold tracking-tight truncate">
+          {org.name}
+        </h1>
+        <span className="text-xs text-muted-foreground font-mono ml-1">
+          #{String(id)}
+        </span>
       </div>
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
         {/* Left: contact summary + actions */}
         <div className="rounded-lg border bg-card p-5">
-          <OrgSummaryPanel org={org} onUpdated={handleUpdated} onDeleted={handleDeleted} />
+          <OrgSummaryPanel
+            org={org}
+            onUpdated={handleUpdated}
+            onDeleted={handleDeleted}
+          />
         </div>
 
         {/* Right: tabs */}

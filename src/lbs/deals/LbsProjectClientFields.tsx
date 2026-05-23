@@ -26,7 +26,8 @@ export const LbsProjectClientFields = () => {
   const isMobile = useIsMobile();
   const { setValue } = useFormContext<Deal & Record<string, unknown>>();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogDefaults, setDialogDefaults] = useState<QuickCreateClientDefaults>({});
+  const [dialogDefaults, setDialogDefaults] =
+    useState<QuickCreateClientDefaults>({});
   const pendingCreateRef = useRef<PendingQuickCreate | null>(null);
 
   const applyClientToProject = (
@@ -60,7 +61,11 @@ export const LbsProjectClientFields = () => {
     result: { company_id: Identifier; contact_id: Identifier },
     values: QuickCreateClientInput,
   ) => {
-    applyClientToProject(result.contact_id, result.company_id, values.businessName.trim());
+    applyClientToProject(
+      result.contact_id,
+      result.company_id,
+      values.businessName.trim(),
+    );
     const record = toQuickCreateContactRecord(result, values);
     pendingCreateRef.current?.resolve(record);
     pendingCreateRef.current = null;

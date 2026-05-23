@@ -5,11 +5,12 @@ export const useCurrentMemberPerson = () => {
   const { identity, isPending: isIdentityPending } = useGetIdentity();
   const memberId = identity?.id;
 
-  const { data: member, isPending: isMemberPending } = useGetOne<OrganizationMember>(
-    "organization_members",
-    { id: memberId! },
-    { enabled: memberId != null },
-  );
+  const { data: member, isPending: isMemberPending } =
+    useGetOne<OrganizationMember>(
+      "organization_members",
+      { id: memberId! },
+      { enabled: memberId != null },
+    );
 
   const normalizedEmail = member?.email?.trim().toLowerCase();
 

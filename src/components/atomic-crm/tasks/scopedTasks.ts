@@ -85,5 +85,7 @@ export const taskMatchesProjectScope = (
   projectDealIds: Identifier[],
 ) => {
   if (task.deal_id == null || projectDealIds.length === 0) return false;
-  return projectDealIds.some((dealId) => String(dealId) === String(task.deal_id));
+  return projectDealIds.some(
+    (dealId) => String(dealId) === String(task.deal_id),
+  );
 };

@@ -44,8 +44,16 @@ const ContactBasicsSection = () => {
     <div className="flex flex-col gap-4">
       <h6 className="text-lg font-semibold">Contact</h6>
       <div className="grid gap-4 md:grid-cols-2">
-        <TextInput source="first_name" validate={required()} helperText={false} />
-        <TextInput source="last_name" validate={required()} helperText={false} />
+        <TextInput
+          source="first_name"
+          validate={required()}
+          helperText={false}
+        />
+        <TextInput
+          source="last_name"
+          validate={required()}
+          helperText={false}
+        />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <TextInput source="title" helperText={false} />
@@ -176,7 +184,11 @@ const ContactManagementInputs = () => {
       />
       {isLbsMode() ? (
         <>
-          <TextInput source="lead_source" label="Lead source" helperText={false} />
+          <TextInput
+            source="lead_source"
+            label="Lead source"
+            helperText={false}
+          />
           <TextInput
             source="interested_service"
             label="Service interested in"

@@ -6,7 +6,10 @@ import {
   isConversationUnread,
 } from "../messagesUnreadUtils";
 
-const participant = (conversationId: number, lastReadAt?: string): ConversationParticipant => ({
+const participant = (
+  conversationId: number,
+  lastReadAt?: string,
+): ConversationParticipant => ({
   id: conversationId,
   conversation_id: conversationId,
   member_id: 1,
@@ -19,15 +22,22 @@ const conversation = (id: number, lastMessageAt: string): Conversation => ({
   last_message_at: lastMessageAt,
 });
 
-assert.equal(getConversationReadAt(1, [participant(1, "2026-01-02T00:00:00.000Z")]), "2026-01-02T00:00:00.000Z");
+assert.equal(
+  getConversationReadAt(1, [participant(1, "2026-01-02T00:00:00.000Z")]),
+  "2026-01-02T00:00:00.000Z",
+);
 
 assert.equal(
-  isConversationUnread(conversation(1, "2026-01-03T00:00:00.000Z"), [participant(1, "2026-01-02T00:00:00.000Z")]),
+  isConversationUnread(conversation(1, "2026-01-03T00:00:00.000Z"), [
+    participant(1, "2026-01-02T00:00:00.000Z"),
+  ]),
   true,
 );
 
 assert.equal(
-  isConversationUnread(conversation(1, "2026-01-01T00:00:00.000Z"), [participant(1, "2026-01-02T00:00:00.000Z")]),
+  isConversationUnread(conversation(1, "2026-01-01T00:00:00.000Z"), [
+    participant(1, "2026-01-02T00:00:00.000Z"),
+  ]),
   false,
 );
 
@@ -37,11 +47,9 @@ assert.equal(
 );
 
 assert.equal(
-  isConversationUnread(
-    conversation(1, "2026-01-03T00:00:00.000Z"),
-    [],
-    { "1": "2026-01-03T00:00:00.000Z" },
-  ),
+  isConversationUnread(conversation(1, "2026-01-03T00:00:00.000Z"), [], {
+    "1": "2026-01-03T00:00:00.000Z",
+  }),
   false,
 );
 
@@ -51,8 +59,14 @@ assert.equal(
 );
 
 const counts = computeUnreadConversationCounts(
-  [conversation(1, "2026-01-03T00:00:00.000Z"), conversation(2, "2026-01-01T00:00:00.000Z")],
-  [participant(1, "2026-01-02T00:00:00.000Z"), participant(2, "2026-01-02T00:00:00.000Z")],
+  [
+    conversation(1, "2026-01-03T00:00:00.000Z"),
+    conversation(2, "2026-01-01T00:00:00.000Z"),
+  ],
+  [
+    participant(1, "2026-01-02T00:00:00.000Z"),
+    participant(2, "2026-01-02T00:00:00.000Z"),
+  ],
 );
 assert.equal(counts.totalUnread, 1);
 assert.equal(counts.unreadByConversationId["1"], true);

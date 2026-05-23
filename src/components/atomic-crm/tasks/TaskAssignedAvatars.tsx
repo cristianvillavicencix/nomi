@@ -2,7 +2,12 @@ import { Link } from "react-router";
 import { useGetList } from "ra-core";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { OrganizationMember, Person, Task, TaskParticipant } from "@/components/atomic-crm/types";
+import type {
+  OrganizationMember,
+  Person,
+  Task,
+  TaskParticipant,
+} from "@/components/atomic-crm/types";
 import {
   getPersonInitials,
   getPersonName,
@@ -15,13 +20,17 @@ type TaskAssignedAvatarsProps = {
   size?: "sm" | "md";
 };
 
-const getMemberInitials = (member: Pick<OrganizationMember, "first_name" | "last_name">) => {
+const getMemberInitials = (
+  member: Pick<OrganizationMember, "first_name" | "last_name">,
+) => {
   const first = (member.first_name ?? "").trim().charAt(0);
   const last = (member.last_name ?? "").trim().charAt(0);
   return `${first}${last}`.toUpperCase() || "—";
 };
 
-const getMemberName = (member: Pick<OrganizationMember, "first_name" | "last_name">) =>
+const getMemberName = (
+  member: Pick<OrganizationMember, "first_name" | "last_name">,
+) =>
   [member.first_name, member.last_name].filter(Boolean).join(" ") || "CRM user";
 
 export const TaskAssignedAvatars = ({
@@ -38,7 +47,9 @@ export const TaskAssignedAvatars = ({
   const mentionedMemberIds = Array.isArray(task.mentioned_member_ids)
     ? task.mentioned_member_ids.map(String).filter(Boolean)
     : [];
-  const allPeopleIds = Array.from(new Set([...assigneeIds, ...collaboratorIds]));
+  const allPeopleIds = Array.from(
+    new Set([...assigneeIds, ...collaboratorIds]),
+  );
 
   const { data: people = [] } = useGetList<Person>(
     "people",
@@ -66,7 +77,9 @@ export const TaskAssignedAvatars = ({
     { enabled: mentionedMemberIds.length > 0, staleTime: 60_000 },
   );
 
-  const peopleById = Object.fromEntries(people.map((person) => [String(person.id), person]));
+  const peopleById = Object.fromEntries(
+    people.map((person) => [String(person.id), person]),
+  );
   const assignees = assigneeIds
     .map((id) => peopleById[id])
     .filter((person): person is Person => Boolean(person));
@@ -91,67 +104,80 @@ export const TaskAssignedAvatars = ({
     <div className="flex items-center">
       <div className="flex -space-x-2">
         {assignees.map((person) => {
-          const done = isParticipantComplete(participants, { personId: person.id });
+          const done = isParticipantComplete(participants, {
+            personId: person.id,
+          });
           return (
-          <Link
-            key={`assignee-${String(person.id)}`}
-            to={`/people/${person.id}/show`}
-            title={`${getPersonName(person)} · Assignee${done ? " · Done" : ""}`}
-            aria-label={`${getPersonName(person)} · Assignee${done ? " · Done" : ""}`}
-            className={cn(
-              "rounded-full ring-2 ring-background transition-transform hover:z-10 hover:scale-105",
-              done && completedAvatarClass,
-            )}
-          >
-            <Avatar className={avatarClass}>
-              <AvatarFallback className={`bg-primary/10 text-primary ${textClass} font-medium`}>
-                {getPersonInitials(person)}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+            <Link
+              key={`assignee-${String(person.id)}`}
+              to={`/people/${person.id}/show`}
+              title={`${getPersonName(person)} · Assignee${done ? " · Done" : ""}`}
+              aria-label={`${getPersonName(person)} · Assignee${done ? " · Done" : ""}`}
+              className={cn(
+                "rounded-full ring-2 ring-background transition-transform hover:z-10 hover:scale-105",
+                done && completedAvatarClass,
+              )}
+            >
+              <Avatar className={avatarClass}>
+                <AvatarFallback
+                  className={`bg-primary/10 text-primary ${textClass} font-medium`}
+                >
+                  {getPersonInitials(person)}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
           );
         })}
         {collaborators.map((person) => {
-          const done = isParticipantComplete(participants, { personId: person.id });
+          const done = isParticipantComplete(participants, {
+            personId: person.id,
+          });
           return (
-          <Link
-            key={`collaborator-${String(person.id)}`}
-            to={`/people/${person.id}/show`}
-            title={`${getPersonName(person)} · Collaborator${done ? " · Done" : ""}`}
-            aria-label={`${getPersonName(person)} · Collaborator${done ? " · Done" : ""}`}
-            className={cn(
-              "rounded-full ring-2 ring-dashed ring-muted-foreground/40 transition-transform hover:z-10 hover:scale-105",
-              done && completedAvatarClass,
-            )}
-          >
-            <Avatar className={avatarClass}>
-              <AvatarFallback className={`bg-muted ${textClass} font-medium`}>
-                {getPersonInitials(person)}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+            <Link
+              key={`collaborator-${String(person.id)}`}
+              to={`/people/${person.id}/show`}
+              title={`${getPersonName(person)} · Collaborator${done ? " · Done" : ""}`}
+              aria-label={`${getPersonName(person)} · Collaborator${done ? " · Done" : ""}`}
+              className={cn(
+                "rounded-full ring-2 ring-dashed ring-muted-foreground/40 transition-transform hover:z-10 hover:scale-105",
+                done && completedAvatarClass,
+              )}
+            >
+              <Avatar className={avatarClass}>
+                <AvatarFallback className={`bg-muted ${textClass} font-medium`}>
+                  {getPersonInitials(person)}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
           );
         })}
         {members.map((member) => {
-          const done = isParticipantComplete(participants, { memberId: member.id });
+          const done = isParticipantComplete(participants, {
+            memberId: member.id,
+          });
           return (
-          <Link
-            key={`member-${String(member.id)}`}
-            to={`/organization_members/${member.id}`}
-            title={`${getMemberName(member)} · CRM user${done ? " · Done" : ""}`}
-            aria-label={`${getMemberName(member)} · CRM user${done ? " · Done" : ""}`}
-            className={cn(
-              "rounded-full ring-2 ring-blue-200 transition-transform hover:z-10 hover:scale-105",
-              done && completedAvatarClass,
-            )}
-          >
-            <Avatar className={avatarClass}>
-              <AvatarImage src={member.avatar?.src ?? undefined} alt={getMemberName(member)} />
-              <AvatarFallback className={`bg-blue-50 text-blue-700 ${textClass} font-medium`}>
-                {getMemberInitials(member)}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+            <Link
+              key={`member-${String(member.id)}`}
+              to={`/organization_members/${member.id}`}
+              title={`${getMemberName(member)} · CRM user${done ? " · Done" : ""}`}
+              aria-label={`${getMemberName(member)} · CRM user${done ? " · Done" : ""}`}
+              className={cn(
+                "rounded-full ring-2 ring-blue-200 transition-transform hover:z-10 hover:scale-105",
+                done && completedAvatarClass,
+              )}
+            >
+              <Avatar className={avatarClass}>
+                <AvatarImage
+                  src={member.avatar?.src ?? undefined}
+                  alt={getMemberName(member)}
+                />
+                <AvatarFallback
+                  className={`bg-blue-50 text-blue-700 ${textClass} font-medium`}
+                >
+                  {getMemberInitials(member)}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
           );
         })}
       </div>

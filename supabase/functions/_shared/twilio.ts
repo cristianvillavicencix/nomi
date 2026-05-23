@@ -6,8 +6,7 @@ export async function sendTwilioSms(params: {
   body: string;
   mediaUrls?: string[];
 }) {
-  const url =
-    `https://api.twilio.com/2010-04-01/Accounts/${params.accountSid}/Messages.json`;
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${params.accountSid}/Messages.json`;
   const credentials = btoa(`${params.accountSid}:${params.authToken}`);
 
   const form = new URLSearchParams({

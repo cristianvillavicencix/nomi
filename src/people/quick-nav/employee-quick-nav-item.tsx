@@ -17,4 +17,3 @@ export const EmployeeQuickNavItem = ({
     secondaryLine={item.email || item.phone || "No contact info"}
   />
 );
-

@@ -1,8 +1,5 @@
 import type { CalendarEvent } from "@/lbs/calendar/calendarUtils";
-import {
-  getEventClassName,
-  getEventLabel,
-} from "@/lbs/calendar/calendarUtils";
+import { getEventClassName, getEventLabel } from "@/lbs/calendar/calendarUtils";
 import { cn } from "@/lib/utils";
 
 export const CalendarEventChip = ({

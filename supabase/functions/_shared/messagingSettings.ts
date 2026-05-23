@@ -10,7 +10,10 @@ export type MessagingSettingsPublic = {
   sms_enabled: boolean;
   has_auth_token: boolean;
   webhook_url: string | null;
-  business_hours?: Record<string, { open?: string | null; close?: string | null; closed?: boolean }> | null;
+  business_hours?: Record<
+    string,
+    { open?: string | null; close?: string | null; closed?: boolean }
+  > | null;
   out_of_hours_message?: string | null;
   auto_acknowledge_enabled?: boolean;
   auto_acknowledge_message?: string | null;
@@ -43,7 +46,9 @@ const resolveTwilioAuthToken = async (
   if (row.twilio_auth_token_encrypted?.trim()) {
     const key = getPgcryptoKey();
     if (!key) {
-      throw new Error("PGCRYPTO_KEY is not configured for Twilio token decryption");
+      throw new Error(
+        "PGCRYPTO_KEY is not configured for Twilio token decryption",
+      );
     }
     const { data, error } = await supabaseAdmin.rpc("get_twilio_auth_token", {
       p_org_id: orgId,
@@ -91,10 +96,13 @@ export async function getMessagingSettingsPublic(
     twilio_phone_number: data?.twilio_phone_number ?? null,
     sms_enabled: data?.sms_enabled === true,
     has_auth_token: Boolean(
-      data?.twilio_auth_token_encrypted?.trim() || data?.twilio_auth_token?.trim(),
+      data?.twilio_auth_token_encrypted?.trim() ||
+        data?.twilio_auth_token?.trim(),
     ),
     webhook_url: getWebhookUrl(),
-    business_hours: (data?.business_hours as MessagingSettingsPublic["business_hours"]) ?? null,
+    business_hours:
+      (data?.business_hours as MessagingSettingsPublic["business_hours"]) ??
+      null,
     out_of_hours_message: data?.out_of_hours_message ?? null,
     auto_acknowledge_enabled: data?.auto_acknowledge_enabled === true,
     auto_acknowledge_message: data?.auto_acknowledge_message ?? null,
@@ -203,13 +211,18 @@ export async function upsertMessagingSettings(
     if (!key) {
       throw new Error("PGCRYPTO_KEY is not configured");
     }
-    const { error: encryptError } = await supabaseAdmin.rpc("set_twilio_auth_token", {
-      p_org_id: orgId,
-      p_token: authToken,
-      p_key: key,
-    });
+    const { error: encryptError } = await supabaseAdmin.rpc(
+      "set_twilio_auth_token",
+      {
+        p_org_id: orgId,
+        p_token: authToken,
+        p_key: key,
+      },
+    );
     if (encryptError) {
-      throw new Error(encryptError.message ?? "Failed to encrypt Twilio auth token");
+      throw new Error(
+        encryptError.message ?? "Failed to encrypt Twilio auth token",
+      );
     }
   }
 

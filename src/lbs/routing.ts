@@ -19,8 +19,7 @@ export const getContactShowPath = (contactId: string | number) =>
   `/contacts/${contactId}/show`;
 
 export const isLeadStatus = (status?: string | null) =>
-  !!status &&
-  (LBS_LEAD_STATUSES as readonly string[]).includes(status);
+  !!status && (LBS_LEAD_STATUSES as readonly string[]).includes(status);
 
 export const getClientsListPath = () => "/clients";
 
@@ -43,7 +42,9 @@ export const getClientDealCreatePath = (
 };
 
 export const getPersonListPath = (status?: string | null) =>
-  isLbsMode() && isLeadStatus(status) ? getLeadsListPath() : getClientsListPath();
+  isLbsMode() && isLeadStatus(status)
+    ? getLeadsListPath()
+    : getClientsListPath();
 
 export const getPersonShowPath = (contact: {
   id: string | number;

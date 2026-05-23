@@ -224,7 +224,10 @@ const ContactItemContent = ({
           <div className="min-w-0 truncate text-sm text-muted-foreground">
             <PhoneText value={getPrimaryPhone(contact)} />
           </div>
-          <div className="min-w-0 truncate text-sm text-muted-foreground" title={email}>
+          <div
+            className="min-w-0 truncate text-sm text-muted-foreground"
+            title={email}
+          >
             {emailHref ? (
               <PlainAnchor href={emailHref} title={email}>
                 {email}

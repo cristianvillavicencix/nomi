@@ -62,8 +62,19 @@ export const ResourceMediaCard = ({
       </div>
 
       <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <Button type="button" size="icon" variant="secondary" className="size-8" asChild>
-          <a href={file.src} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+        <Button
+          type="button"
+          size="icon"
+          variant="secondary"
+          className="size-8"
+          asChild
+        >
+          <a
+            href={file.src}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(event) => event.stopPropagation()}
+          >
             <ExternalLink className="size-3.5" />
             <span className="sr-only">Open file</span>
           </a>
@@ -131,7 +142,11 @@ export const ResourceCategoryContent = ({
     );
   }
 
-  if (categoryId === "service-photo" && serviceGroups && serviceGroups.length > 0) {
+  if (
+    categoryId === "service-photo" &&
+    serviceGroups &&
+    serviceGroups.length > 0
+  ) {
     return (
       <div className="space-y-6">
         {serviceGroups.map(([serviceName, groupItems]) => (

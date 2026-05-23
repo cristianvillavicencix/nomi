@@ -1,5 +1,8 @@
 import type { ClientSocialLinkValue } from "@/lbs/clients/clientSocialLinks";
-import type { EmailAndType, PhoneNumberAndType } from "@/components/atomic-crm/types";
+import type {
+  EmailAndType,
+  PhoneNumberAndType,
+} from "@/components/atomic-crm/types";
 
 export type LbsBillingAddress = {
   address?: string;
@@ -63,15 +66,26 @@ export const parseLbsClientContextLinks = (
 
   return {
     businessEmail: parseLink(normalized, "business_email"),
-    billingSameAsBusiness: parseLink(normalized, "billing_same_as_business") === "true",
+    billingSameAsBusiness:
+      parseLink(normalized, "billing_same_as_business") === "true",
     billingAddress,
-    invoiceSameAsPrimary: parseLink(normalized, "invoice_same_as_primary") !== "false",
+    invoiceSameAsPrimary:
+      parseLink(normalized, "invoice_same_as_primary") !== "false",
     invoiceContactName: parseLink(normalized, "invoice_contact_name"),
     invoiceEmail: parseLink(normalized, "invoice_email"),
     invoicePhone: parseLink(normalized, "invoice_phone"),
-    companyEmails: parseChannelsJson<EmailAndType>(normalized, "company_emails"),
-    companyPhones: parseChannelsJson<PhoneNumberAndType>(normalized, "company_phones"),
-    companySocialLinks: parseSocialLinksJson(normalized, "company_social_links"),
+    companyEmails: parseChannelsJson<EmailAndType>(
+      normalized,
+      "company_emails",
+    ),
+    companyPhones: parseChannelsJson<PhoneNumberAndType>(
+      normalized,
+      "company_phones",
+    ),
+    companySocialLinks: parseSocialLinksJson(
+      normalized,
+      "company_social_links",
+    ),
     socialLinks: {
       companyFacebook: parseLink(normalized, "social_facebook"),
       companyInstagram: parseLink(normalized, "social_instagram"),
@@ -83,7 +97,7 @@ export const parseLbsClientContextLinks = (
   };
 };
 
-const parseChannelsJson = <T,>(
+const parseChannelsJson = <T>(
   links: string[] | undefined,
   key: string,
 ): T[] | undefined => {
@@ -128,7 +142,10 @@ export const buildLbsClientContextLinks = (
   }
   if (data.billingSameAsBusiness != null) {
     links.push(
-      setLink("billing_same_as_business", data.billingSameAsBusiness ? "true" : "false"),
+      setLink(
+        "billing_same_as_business",
+        data.billingSameAsBusiness ? "true" : "false",
+      ),
     );
   }
   if (data.billingAddress && !data.billingSameAsBusiness) {
@@ -136,7 +153,10 @@ export const buildLbsClientContextLinks = (
   }
   if (data.invoiceSameAsPrimary != null) {
     links.push(
-      setLink("invoice_same_as_primary", data.invoiceSameAsPrimary ? "true" : "false"),
+      setLink(
+        "invoice_same_as_primary",
+        data.invoiceSameAsPrimary ? "true" : "false",
+      ),
     );
   }
   if (data.invoiceContactName?.trim()) {
@@ -150,22 +170,22 @@ export const buildLbsClientContextLinks = (
   }
 
   if (data.companySocialLinks?.length) {
-    links.push(setLink("company_social_links", JSON.stringify(data.companySocialLinks)));
+    links.push(
+      setLink("company_social_links", JSON.stringify(data.companySocialLinks)),
+    );
   }
 
   return links;
 };
 
-export const formatBillingAddress = (
-  company: {
-    address?: string | null;
-    city?: string | null;
-    state_abbr?: string | null;
-    zipcode?: string | null;
-    country?: string | null;
-    context_links?: string[] | null;
-  },
-) => {
+export const formatBillingAddress = (company: {
+  address?: string | null;
+  city?: string | null;
+  state_abbr?: string | null;
+  zipcode?: string | null;
+  country?: string | null;
+  context_links?: string[] | null;
+}) => {
   const ctx = parseLbsClientContextLinks(company.context_links);
   if (ctx.billingSameAsBusiness !== false) {
     return formatAddressParts({
@@ -180,13 +200,15 @@ export const formatBillingAddress = (
   return formatAddressParts(ctx.billingAddress ?? {});
 };
 
-const formatAddressParts = (parts: LbsBillingAddress & {
-  address?: string | null;
-  city?: string | null;
-  stateAbbr?: string | null;
-  zipcode?: string | null;
-  country?: string | null;
-}) => {
+const formatAddressParts = (
+  parts: LbsBillingAddress & {
+    address?: string | null;
+    city?: string | null;
+    stateAbbr?: string | null;
+    zipcode?: string | null;
+    country?: string | null;
+  },
+) => {
   const segments = [
     parts.address,
     [parts.city, parts.stateAbbr].filter(Boolean).join(", "),
@@ -214,9 +236,11 @@ export const getInvoiceContactSummary = (company: {
     const name =
       `${company.primary_contact_first_name ?? ""} ${company.primary_contact_last_name ?? ""}`.trim();
     const email =
-      company.primary_contact_email_jsonb?.find((entry) => entry.email?.trim())?.email ?? "";
+      company.primary_contact_email_jsonb?.find((entry) => entry.email?.trim())
+        ?.email ?? "";
     const phone =
-      company.primary_contact_phone_jsonb?.find((entry) => entry.number?.trim())?.number ?? "";
+      company.primary_contact_phone_jsonb?.find((entry) => entry.number?.trim())
+        ?.number ?? "";
     return { name: name || "—", email: email || "—", phone: phone || "—" };
   }
 

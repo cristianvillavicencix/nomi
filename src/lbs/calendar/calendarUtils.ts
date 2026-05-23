@@ -1,4 +1,8 @@
-import type { CalendarEventRecord, Deal, Task } from "@/components/atomic-crm/types";
+import type {
+  CalendarEventRecord,
+  Deal,
+  Task,
+} from "@/components/atomic-crm/types";
 import { isTaskOverdue } from "@/components/atomic-crm/tasks/taskStats";
 import { getProjectDeliveryDate } from "@/lbs/deals/projectDeliveryDate";
 import {
@@ -17,9 +21,18 @@ export type CalendarDisplayOptions = {
   showSunday: boolean;
 };
 
-export const WEEKDAY_SHORT_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
+export const WEEKDAY_SHORT_LABELS = [
+  "Su",
+  "Mo",
+  "Tu",
+  "We",
+  "Th",
+  "Fr",
+  "Sa",
+] as const;
 
-export const getWeekdayLabel = (date: Date) => WEEKDAY_SHORT_LABELS[date.getDay()];
+export const getWeekdayLabel = (date: Date) =>
+  WEEKDAY_SHORT_LABELS[date.getDay()];
 
 export const getVisibleWeekdayLabels = (options: CalendarDisplayOptions) =>
   WEEKDAY_SHORT_LABELS.filter((_, index) => {
@@ -150,7 +163,8 @@ export const formatWeekLabel = (date: Date) => {
   const start = startOfWeek(date);
   const end = endOfWeek(date);
   const sameMonth =
-    start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+    start.getMonth() === end.getMonth() &&
+    start.getFullYear() === end.getFullYear();
   const sameYear = start.getFullYear() === end.getFullYear();
 
   if (sameMonth) {
@@ -159,8 +173,14 @@ export const formatWeekLabel = (date: Date) => {
   }
 
   if (sameYear) {
-    const startLabel = start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const endLabel = end.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const startLabel = start.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+    const endLabel = end.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
     return `${startLabel}–${endLabel}, ${start.getFullYear()}`;
   }
 
@@ -278,7 +298,9 @@ export const buildCalendarEntryEvent = (
 export const groupEventsByDate = (events: CalendarEvent[]) => {
   const grouped: Record<string, CalendarEvent[]> = {};
   events.forEach((event) => {
-    grouped[event.date] = grouped[event.date] ? [...grouped[event.date], event] : [event];
+    grouped[event.date] = grouped[event.date]
+      ? [...grouped[event.date], event]
+      : [event];
   });
   Object.values(grouped).forEach((entries) => {
     entries.sort((left, right) => {
@@ -294,8 +316,8 @@ export const groupEventsByDate = (events: CalendarEvent[]) => {
       };
       const orderDiff = kindOrder(left) - kindOrder(right);
       if (orderDiff !== 0) return orderDiff;
-      const leftTime = "time" in left ? left.time ?? "99:99" : "99:99";
-      const rightTime = "time" in right ? right.time ?? "99:99" : "99:99";
+      const leftTime = "time" in left ? (left.time ?? "99:99") : "99:99";
+      const rightTime = "time" in right ? (right.time ?? "99:99") : "99:99";
       const timeDiff = leftTime.localeCompare(rightTime);
       if (timeDiff !== 0) return timeDiff;
       return left.title.localeCompare(right.title);
@@ -369,7 +391,10 @@ export const getEventLabel = (event: CalendarEvent) => {
     const timeLabel = formatEventTimeLabel(event.time);
     const timeRangeLabel =
       "record" in event
-        ? formatEventTimeRange(event.record.event_time, event.record.duration_minutes)
+        ? formatEventTimeRange(
+            event.record.event_time,
+            event.record.duration_minutes,
+          )
         : null;
     const displayTime = timeRangeLabel ?? timeLabel;
     const prefix =
@@ -389,12 +414,16 @@ export const getEventLabel = (event: CalendarEvent) => {
   return `Start · ${event.title}`;
 };
 
-export const getCalendarEntryMeta = (event: Extract<
-  CalendarEvent,
-  { kind: "activity" | "meeting" | "scheduled_task" | "reminder" }
->) => {
+export const getCalendarEntryMeta = (
+  event: Extract<
+    CalendarEvent,
+    { kind: "activity" | "meeting" | "scheduled_task" | "reminder" }
+  >,
+) => {
   const timeLabel = formatEventTimeLabel(event.time);
-  const remindLabel = formatRemindBeforeLabel(event.record.remind_before_minutes);
+  const remindLabel = formatRemindBeforeLabel(
+    event.record.remind_before_minutes,
+  );
   return { timeLabel, remindLabel };
 };
 

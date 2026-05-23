@@ -57,8 +57,7 @@ export const DealsChart = memo(() => {
         pending: dealsByMonth[month]
           .filter((deal: Deal) => !["won", "lost"].includes(deal.stage))
           .reduce((acc: number, deal: Deal) => {
-            const m =
-              multiplier[deal.stage as keyof typeof multiplier] ?? 0;
+            const m = multiplier[deal.stage as keyof typeof multiplier] ?? 0;
             return acc + (Number(deal.amount) || 0) * m;
           }, 0),
         lost: dealsByMonth[month]

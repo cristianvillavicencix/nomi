@@ -7,7 +7,10 @@ export {
   getAllBriefFieldKeys,
 } from "@/lbs/deals/websiteBriefSchema";
 
-export type { WebsiteBriefFieldDef, WebsiteBriefSectionDef } from "@/lbs/deals/websiteBriefSchema";
+export type {
+  WebsiteBriefFieldDef,
+  WebsiteBriefSectionDef,
+} from "@/lbs/deals/websiteBriefSchema";
 
 export type WebsiteIntakeField = {
   key: string;

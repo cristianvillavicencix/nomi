@@ -77,7 +77,8 @@ export const BusinessHoursSettingsCard = ({
       <div>
         <h3 className="text-sm font-medium">Business hours & auto-reply</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Configure when your team is available and optional automatic replies for inbound SMS.
+          Configure when your team is available and optional automatic replies
+          for inbound SMS.
         </p>
       </div>
 
@@ -85,24 +86,33 @@ export const BusinessHoursSettingsCard = ({
         {DAYS.map((day) => {
           const entry = businessHours[day.key] ?? {};
           return (
-            <div key={day.key} className="grid grid-cols-[110px_1fr_1fr_auto] items-center gap-2">
+            <div
+              key={day.key}
+              className="grid grid-cols-[110px_1fr_1fr_auto] items-center gap-2"
+            >
               <span className="text-sm">{day.label}</span>
               <Input
                 type="time"
                 value={entry.open ?? "09:00"}
                 disabled={entry.closed}
-                onChange={(event) => updateDay(day.key, "open", event.target.value)}
+                onChange={(event) =>
+                  updateDay(day.key, "open", event.target.value)
+                }
               />
               <Input
                 type="time"
                 value={entry.close ?? "18:00"}
                 disabled={entry.closed}
-                onChange={(event) => updateDay(day.key, "close", event.target.value)}
+                onChange={(event) =>
+                  updateDay(day.key, "close", event.target.value)
+                }
               />
               <label className="flex items-center gap-2 text-xs">
                 <Checkbox
                   checked={entry.closed === true}
-                  onCheckedChange={(checked) => updateDay(day.key, "closed", checked === true)}
+                  onCheckedChange={(checked) =>
+                    updateDay(day.key, "closed", checked === true)
+                  }
                 />
                 Closed
               </label>
@@ -112,7 +122,10 @@ export const BusinessHoursSettingsCard = ({
       </div>
 
       <label className="flex items-center gap-2 text-sm">
-        <Checkbox checked={autoAckEnabled} onCheckedChange={(checked) => setAutoAckEnabled(checked === true)} />
+        <Checkbox
+          checked={autoAckEnabled}
+          onCheckedChange={(checked) => setAutoAckEnabled(checked === true)}
+        />
         Auto-acknowledge new inbound messages
       </label>
       <Textarea
@@ -143,7 +156,9 @@ export const BusinessHoursSettingsCard = ({
             business_hours: businessHours,
             auto_acknowledge_enabled: autoAckEnabled,
             auto_acknowledge_message: autoAckMessage.trim() || null,
-            out_of_hours_message: outOfHoursEnabled ? outOfHoursMessage.trim() || null : null,
+            out_of_hours_message: outOfHoursEnabled
+              ? outOfHoursMessage.trim() || null
+              : null,
           })
         }
         disabled={saving}

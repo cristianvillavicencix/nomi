@@ -25,7 +25,10 @@ type ClientSocialLinksInputProps = {
   label: string;
 };
 
-export const ClientSocialLinksInput = ({ source, label }: ClientSocialLinksInputProps) => {
+export const ClientSocialLinksInput = ({
+  source,
+  label,
+}: ClientSocialLinksInputProps) => {
   const { control } = useFormContext<ClientCreateFormValues>();
   const { fields, append, remove } = useFieldArray({
     control,

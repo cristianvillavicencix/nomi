@@ -96,7 +96,9 @@ export const NoteMobile = ({
           reference="organization_members"
           link={false}
         >
-          <WithRecord render={(record) => <OrganizationMemberName member={record} />} />
+          <WithRecord
+            render={(record) => <OrganizationMemberName member={record} />}
+          />
         </ReferenceField>
         {showStatus && note.status && (
           <Status className="ml-2" status={note.status} />

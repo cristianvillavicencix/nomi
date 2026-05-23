@@ -6,7 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Contact, Conversation, ConversationMessage } from "@/lbs/types";
 import { SmsWebFormPicker } from "@/lbs/messages/SmsWebFormPicker";
 import { cn } from "@/lib/utils";
-import { isImageMediaUrl, getMediaFileName, downloadMediaUrl, uploadSmsMedia } from "@/lbs/messages/smsMediaUpload";
+import {
+  isImageMediaUrl,
+  getMediaFileName,
+  downloadMediaUrl,
+  uploadSmsMedia,
+} from "@/lbs/messages/smsMediaUpload";
 import { useResolvedMediaUrl } from "@/lbs/messages/useResolvedMediaUrl";
 import { InternalNoteToggle } from "@/lbs/messages/composer/InternalNoteToggle";
 import { useSendClientSms } from "@/lbs/messages/useClientSms";
@@ -44,7 +49,9 @@ export const ClientSmsComposer = ({
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isInternalNote, setIsInternalNote] = useState(false);
-  const canWriteInternalNotes = useMemberCapability("messaging.internal_notes.write");
+  const canWriteInternalNotes = useMemberCapability(
+    "messaging.internal_notes.write",
+  );
 
   const canSend =
     !disabled &&
@@ -82,7 +89,9 @@ export const ClientSmsComposer = ({
 
   const insertFormLink = (url: string, label: string) => {
     const snippet = `${label}: ${url}`;
-    setBody((current) => (current.trim() ? `${current.trim()}\n${snippet}` : snippet));
+    setBody((current) =>
+      current.trim() ? `${current.trim()}\n${snippet}` : snippet,
+    );
   };
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -180,7 +189,9 @@ export const ClientSmsComposer = ({
               ) : (
                 <Paperclip className="size-4 text-muted-foreground" />
               )}
-              <span className="max-w-[140px] truncate">{pending.file.name}</span>
+              <span className="max-w-[140px] truncate">
+                {pending.file.name}
+              </span>
               <button
                 type="button"
                 className="rounded-full p-0.5 hover:bg-muted"
@@ -258,14 +269,22 @@ export const ClientSmsComposer = ({
   );
 };
 
-export const SmsMessageMedia = ({ url, alt }: { url: string; alt?: string }) => {
+export const SmsMessageMedia = ({
+  url,
+  alt,
+}: {
+  url: string;
+  alt?: string;
+}) => {
   const resolvedUrl = useResolvedMediaUrl(url);
   const fileName = getMediaFileName(url);
   const isImage = isImageMediaUrl(url);
 
   if (!resolvedUrl) {
     return (
-      <div className="mt-1 text-xs text-muted-foreground">Loading attachment…</div>
+      <div className="mt-1 text-xs text-muted-foreground">
+        Loading attachment…
+      </div>
     );
   }
 

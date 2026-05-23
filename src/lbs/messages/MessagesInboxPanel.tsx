@@ -51,7 +51,8 @@ const MessageSearchContactItem = ({
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{label}</span>
         <span className="block truncate text-sm text-muted-foreground">
-          {contact.company_name?.trim() || "Client contact"} · {getContactPhoneLabel(contact)}
+          {contact.company_name?.trim() || "Client contact"} ·{" "}
+          {getContactPhoneLabel(contact)}
         </span>
       </span>
       <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
@@ -87,10 +88,13 @@ export const MessagesInboxPanel = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const { openSms } = useMessagesQuickAccess();
-  const { totalUnread: totalUnreadCount, isConversationUnread } = useMessagesUnreadCounts();
+  const { totalUnread: totalUnreadCount, isConversationUnread } =
+    useMessagesUnreadCounts();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [startingContactId, setStartingContactId] = useState<Identifier | null>(null);
+  const [startingContactId, setStartingContactId] = useState<Identifier | null>(
+    null,
+  );
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -99,15 +103,16 @@ export const MessagesInboxPanel = ({
     return () => clearTimeout(timeoutId);
   }, [query]);
 
-  const { data: searchedContacts = [], isPending: isSearchingContacts } = useGetList<Contact>(
-    "contacts",
-    {
-      filter: debouncedQuery ? { q: debouncedQuery } : {},
-      pagination: { page: 1, perPage: 25 },
-      sort: { field: "last_name", order: "ASC" },
-    },
-    { enabled: debouncedQuery.length > 0, staleTime: 15_000 },
-  );
+  const { data: searchedContacts = [], isPending: isSearchingContacts } =
+    useGetList<Contact>(
+      "contacts",
+      {
+        filter: debouncedQuery ? { q: debouncedQuery } : {},
+        pagination: { page: 1, perPage: 25 },
+        sort: { field: "last_name", order: "ASC" },
+      },
+      { enabled: debouncedQuery.length > 0, staleTime: 15_000 },
+    );
 
   const filteredConversations = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -116,7 +121,9 @@ export const MessagesInboxPanel = ({
     return conversations.filter((conversation) => {
       const contact =
         conversation.contact_id != null
-          ? contacts.find((entry) => String(entry.id) === String(conversation.contact_id))
+          ? contacts.find(
+              (entry) => String(entry.id) === String(conversation.contact_id),
+            )
           : undefined;
       const contactName = contact
         ? `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim()
@@ -129,7 +136,9 @@ export const MessagesInboxPanel = ({
         contactName,
         contact?.company_name,
         conversation.deal_id != null
-          ? deals.find((deal) => String(deal.id) === String(conversation.deal_id))?.name
+          ? deals.find(
+              (deal) => String(deal.id) === String(conversation.deal_id),
+            )?.name
           : null,
       ]
         .filter(Boolean)
@@ -158,9 +167,14 @@ export const MessagesInboxPanel = ({
       setQuery("");
       setDebouncedQuery("");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not start SMS conversation", {
-        type: "error",
-      });
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Could not start SMS conversation",
+        {
+          type: "error",
+        },
+      );
     } finally {
       setStartingContactId(null);
     }
@@ -168,24 +182,39 @@ export const MessagesInboxPanel = ({
 
   const hasSearch = query.trim().length > 0;
   const showConversationEmpty =
-    !isPending && filteredConversations.length === 0 && (!hasSearch || debouncedQuery.length > 0);
+    !isPending &&
+    filteredConversations.length === 0 &&
+    (!hasSearch || debouncedQuery.length > 0);
   const showContactsSection =
-    debouncedQuery.length > 0 && (isSearchingContacts || newSmsContacts.length > 0);
+    debouncedQuery.length > 0 &&
+    (isSearchingContacts || newSmsContacts.length > 0);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className={cn("border-b border-border/40 px-4", compact ? "py-3" : "py-4")}>
+      <div
+        className={cn(
+          "border-b border-border/40 px-4",
+          compact ? "py-3" : "py-4",
+        )}
+      >
         <div>
-          <h1 className={cn("font-semibold", compact ? "text-base" : "text-lg")}>
+          <h1
+            className={cn("font-semibold", compact ? "text-base" : "text-lg")}
+          >
             {compact ? "Inbox" : "Messages"}
             {totalUnreadCount > 0 ? (
-              <Badge variant="default" className="ml-2 rounded-full px-2 py-0 text-[11px]">
+              <Badge
+                variant="default"
+                className="ml-2 rounded-full px-2 py-0 text-[11px]"
+              >
                 {formatUnreadBadgeCount(totalUnreadCount)}
               </Badge>
             ) : null}
           </h1>
           {!compact ? (
-            <p className="text-xs text-muted-foreground">Team chats, projects, and client SMS</p>
+            <p className="text-xs text-muted-foreground">
+              Team chats, projects, and client SMS
+            </p>
           ) : null}
         </div>
 
@@ -209,7 +238,9 @@ export const MessagesInboxPanel = ({
                   <ConversationListItem
                     key={String(conversation.id)}
                     conversation={conversation}
-                    isActive={String(selectedConversationId) === String(conversation.id)}
+                    isActive={
+                      String(selectedConversationId) === String(conversation.id)
+                    }
                     onSelect={onSelectConversation}
                     deals={deals}
                     dmParticipants={dmParticipants}
@@ -224,7 +255,9 @@ export const MessagesInboxPanel = ({
               <div className="flex min-h-[180px] flex-col items-center justify-center px-4 text-center">
                 <MessageSquare className="size-8 text-muted-foreground/70" />
                 <p className="mt-3 text-sm font-medium">
-                  {hasSearch ? "No conversations match your search" : "No conversations yet"}
+                  {hasSearch
+                    ? "No conversations match your search"
+                    : "No conversations yet"}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {hasSearch
@@ -235,13 +268,20 @@ export const MessagesInboxPanel = ({
             ) : null}
 
             {showContactsSection ? (
-              <div className={cn(filteredConversations.length > 0 && "mt-4 border-t border-border/40 pt-3")}>
+              <div
+                className={cn(
+                  filteredConversations.length > 0 &&
+                    "mt-4 border-t border-border/40 pt-3",
+                )}
+              >
                 <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <UserPlus className="size-3.5" />
                   Start SMS with a contact
                 </div>
                 {isSearchingContacts ? (
-                  <p className="px-3 py-4 text-sm text-muted-foreground">Searching contacts…</p>
+                  <p className="px-3 py-4 text-sm text-muted-foreground">
+                    Searching contacts…
+                  </p>
                 ) : newSmsContacts.length === 0 ? (
                   <p className="px-3 py-4 text-sm text-muted-foreground">
                     No new contacts with phone numbers match this search.
@@ -252,7 +292,9 @@ export const MessagesInboxPanel = ({
                       <MessageSearchContactItem
                         key={String(contact.id)}
                         contact={contact}
-                        disabled={String(startingContactId) === String(contact.id)}
+                        disabled={
+                          String(startingContactId) === String(contact.id)
+                        }
                         onSelect={(entry) => void handleStartClientSms(entry)}
                       />
                     ))}

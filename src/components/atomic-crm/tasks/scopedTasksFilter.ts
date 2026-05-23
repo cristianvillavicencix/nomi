@@ -49,11 +49,15 @@ export const filterScopedTasks = (
     filtered = filtered.filter((task) => task.type === params.typeFilter);
   }
   if (params.priorityFilter && params.priorityFilter !== "all") {
-    filtered = filtered.filter((task) => task.priority === params.priorityFilter);
+    filtered = filtered.filter(
+      (task) => task.priority === params.priorityFilter,
+    );
   }
   if (params.projectId != null && params.projectId !== "") {
     filtered = filtered.filter(
-      (task) => task.deal_id != null && String(task.deal_id) === String(params.projectId),
+      (task) =>
+        task.deal_id != null &&
+        String(task.deal_id) === String(params.projectId),
     );
   }
 
@@ -73,9 +77,13 @@ export const filterScopedTasks = (
     const leftValue = left[sortField as keyof Task];
     const rightValue = right[sortField as keyof Task];
     return (
-      String(leftValue ?? "").localeCompare(String(rightValue ?? ""), undefined, {
-        numeric: true,
-      }) * sortMultiplier
+      String(leftValue ?? "").localeCompare(
+        String(rightValue ?? ""),
+        undefined,
+        {
+          numeric: true,
+        },
+      ) * sortMultiplier
     );
   });
 
@@ -90,7 +98,11 @@ export const filterScopedTasks = (
 };
 
 export const collectMyProjectDealIds = (
-  deals: Array<{ id: Identifier; organization_member_id?: Identifier | null; salesperson_ids?: Identifier[] }>,
+  deals: Array<{
+    id: Identifier;
+    organization_member_id?: Identifier | null;
+    salesperson_ids?: Identifier[];
+  }>,
   organizationMemberId: Identifier,
   personId?: Identifier | null,
 ) => {

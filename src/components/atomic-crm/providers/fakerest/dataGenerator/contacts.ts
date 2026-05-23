@@ -93,7 +93,8 @@ export const generateContacts = (db: Db, size = 500): Required<Contact>[] => {
       has_newsletter: weightedBoolean(30),
       status: random.arrayElement(defaultNoteStatuses).value,
       lead_source:
-        random.arrayElement(["Website", "Referral", "Google", "Social"]) ?? null,
+        random.arrayElement(["Website", "Referral", "Google", "Social"]) ??
+        null,
       interested_service:
         random.arrayElement([
           "Website design",

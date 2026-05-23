@@ -27,9 +27,12 @@ export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
   const { data: identity } = useGetIdentity();
   const roles = getAccessRoles(identity as any);
   const canViewFinanceReports =
-    roles.includes("admin") || roles.includes("accountant") || roles.includes("payroll_manager");
+    roles.includes("admin") ||
+    roles.includes("accountant") ||
+    roles.includes("payroll_manager");
   const canViewPeopleReports = canViewFinanceReports || roles.includes("hr");
-  const canViewSalesReports = roles.includes("admin") || roles.includes("sales_manager");
+  const canViewSalesReports =
+    roles.includes("admin") || roles.includes("sales_manager");
   const availableTabs: ReportTab[] = [
     ...(canViewSalesReports ? (["project-profitability"] as ReportTab[]) : []),
     ...(canViewFinanceReports ? (["payroll-summary"] as ReportTab[]) : []),
@@ -89,7 +92,11 @@ export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
           />
         </div>
       </StickyPageHeader>
-      <Tabs value={tab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
+      <Tabs
+        value={tab}
+        onValueChange={handleTabChange}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <StickyTabsBar className="pb-2">
           <div className="overflow-x-auto">
             <TabsList className="inline-flex h-10 w-max min-w-full items-center justify-start gap-1">
@@ -99,7 +106,9 @@ export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
                 </TabsTrigger>
               ) : null}
               {canViewFinanceReports ? (
-                <TabsTrigger value="payroll-summary">Payroll Summary</TabsTrigger>
+                <TabsTrigger value="payroll-summary">
+                  Payroll Summary
+                </TabsTrigger>
               ) : null}
               {canViewPeopleReports ? (
                 <TabsTrigger value="labor-cost-by-person">

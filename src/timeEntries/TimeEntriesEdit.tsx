@@ -32,8 +32,8 @@ const TimeEntriesEditFormBody = () => {
             Día ya pagado
           </span>
           <p className="mt-1 text-muted-foreground">
-            Este registro ya está en un pago completado. No se puede editar para evitar pagar dos
-            veces el mismo día.
+            Este registro ya está en un pago completado. No se puede editar para
+            evitar pagar dos veces el mismo día.
           </p>
         </div>
       ) : null}

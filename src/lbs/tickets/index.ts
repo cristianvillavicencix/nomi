@@ -6,4 +6,10 @@ export default {
   show: TicketShow,
 };
 
-export { TicketsList, TicketShow, TicketCreate, TicketReplyForm, CreateTicketButton };
+export {
+  TicketsList,
+  TicketShow,
+  TicketCreate,
+  TicketReplyForm,
+  CreateTicketButton,
+};

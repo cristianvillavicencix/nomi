@@ -8,7 +8,8 @@ export type WebFormShareParams = {
   contactId?: string | number | null;
 };
 
-export const isProjectScopedWebForm = (slug: string) => slug === PROJECT_RESOURCES_SLUG;
+export const isProjectScopedWebForm = (slug: string) =>
+  slug === PROJECT_RESOURCES_SLUG;
 
 export const getWebFormTypeLabel = (slug: string) => {
   if (slug === PROJECT_RESOURCES_SLUG) return "File upload";

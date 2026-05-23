@@ -1,5 +1,8 @@
 import type { WebFormShareParams } from "@/lbs/web-forms/webFormLinks";
-import { buildWebFormPreviewUrl, buildWebFormShareUrl } from "@/lbs/web-forms/webFormLinks";
+import {
+  buildWebFormPreviewUrl,
+  buildWebFormShareUrl,
+} from "@/lbs/web-forms/webFormLinks";
 
 export const WEB_FORM_EMBED_PARAM = "embed";
 

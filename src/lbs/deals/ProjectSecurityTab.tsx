@@ -57,7 +57,10 @@ import {
 } from "@/lbs/deals/supabaseSchemaErrors";
 import type { DealAccessEntry, LbsDeal } from "@/lbs/types";
 
-const copyToClipboard = async (value: string, notify: ReturnType<typeof useNotify>) => {
+const copyToClipboard = async (
+  value: string,
+  notify: ReturnType<typeof useNotify>,
+) => {
   if (!value.trim()) return;
   await navigator.clipboard.writeText(value.trim());
   notify("Copied to clipboard", { type: "info" });
@@ -89,7 +92,9 @@ const AccessEntryRow = ({
 
   return (
     <TableRow>
-      <TableCell className="font-medium whitespace-nowrap">{entry.label}</TableCell>
+      <TableCell className="font-medium whitespace-nowrap">
+        {entry.label}
+      </TableCell>
       <TableCell className="max-w-[220px]">
         {href ? (
           <a
@@ -138,7 +143,11 @@ const AccessEntryRow = ({
               className="size-7 shrink-0"
               onClick={() => setShowPassword((current) => !current)}
             >
-              {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              {showPassword ? (
+                <EyeOff className="size-3.5" />
+              ) : (
+                <Eye className="size-3.5" />
+              )}
               <span className="sr-only">Toggle password visibility</span>
             </Button>
             <Button
@@ -174,7 +183,13 @@ const AccessEntryRow = ({
             <Copy className="size-4" />
             <span className="sr-only">Copy all</span>
           </Button>
-          <Button type="button" variant="ghost" size="icon" className="size-8" onClick={onEdit}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={onEdit}
+          >
             <Pencil className="size-4" />
             <span className="sr-only">Edit</span>
           </Button>
@@ -251,10 +266,13 @@ const AccessEntryDialog = ({
                 ))}
               </SelectContent>
             </Select>
-            {presetMatch === "Other" || !PROJECT_ACCESS_PRESETS.includes(values.label as never) ? (
+            {presetMatch === "Other" ||
+            !PROJECT_ACCESS_PRESETS.includes(values.label as never) ? (
               <Input
                 value={values.label}
-                onChange={(event) => onChange({ ...values, label: event.target.value })}
+                onChange={(event) =>
+                  onChange({ ...values, label: event.target.value })
+                }
                 placeholder="Custom label, e.g. Shopify admin"
               />
             ) : null}
@@ -264,7 +282,9 @@ const AccessEntryDialog = ({
             <Input
               id="access-url"
               value={values.url}
-              onChange={(event) => onChange({ ...values, url: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...values, url: event.target.value })
+              }
               placeholder="https://example.com/wp-admin"
             />
           </div>
@@ -274,7 +294,9 @@ const AccessEntryDialog = ({
               <Input
                 id="access-username"
                 value={values.username}
-                onChange={(event) => onChange({ ...values, username: event.target.value })}
+                onChange={(event) =>
+                  onChange({ ...values, username: event.target.value })
+                }
                 placeholder="admin@client.com"
               />
             </div>
@@ -284,7 +306,9 @@ const AccessEntryDialog = ({
                 id="access-password"
                 type="text"
                 value={values.password}
-                onChange={(event) => onChange({ ...values, password: event.target.value })}
+                onChange={(event) =>
+                  onChange({ ...values, password: event.target.value })
+                }
                 placeholder="••••••••"
               />
             </div>
@@ -294,7 +318,9 @@ const AccessEntryDialog = ({
             <Textarea
               id="access-notes"
               value={values.notes}
-              onChange={(event) => onChange({ ...values, notes: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...values, notes: event.target.value })
+              }
               rows={3}
               placeholder="2FA codes, recovery email, server IP, etc."
             />
@@ -325,7 +351,9 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   const [deleteOne, { isPending: isDeleting }] = useDelete();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<Identifier | null>(null);
-  const [values, setValues] = useState<DealAccessFormValues>(emptyDealAccessFormValues());
+  const [values, setValues] = useState<DealAccessFormValues>(
+    emptyDealAccessFormValues(),
+  );
   const [deletingId, setDeletingId] = useState<Identifier | null>(null);
 
   const {
@@ -467,8 +495,8 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
         <div className="flex items-start gap-2 min-w-0">
           <KeyRound className="mt-0.5 size-4 shrink-0" />
           <p>
-            Only your team can see these credentials. Avoid sharing this tab with
-            clients.
+            Only your team can see these credentials. Avoid sharing this tab
+            with clients.
           </p>
         </div>
         <Button type="button" onClick={openCreate} className="shrink-0">

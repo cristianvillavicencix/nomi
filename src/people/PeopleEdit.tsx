@@ -1,5 +1,5 @@
-import { Edit, SimpleForm } from '@/components/admin';
-import { PeopleForm } from './PeopleForm';
+import { Edit, SimpleForm } from "@/components/admin";
+import { PeopleForm } from "./PeopleForm";
 
 export const PeopleEdit = () => (
   <Edit>

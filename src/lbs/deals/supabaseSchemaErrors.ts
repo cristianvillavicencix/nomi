@@ -1,4 +1,7 @@
-export const isSupabaseSchemaMissingError = (error: unknown, table?: string) => {
+export const isSupabaseSchemaMissingError = (
+  error: unknown,
+  table?: string,
+) => {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const normalized = message.toLowerCase();
 

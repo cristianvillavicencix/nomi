@@ -34,7 +34,9 @@ export const NewClientSmsDialog = ({
   onOpenChange: (open: boolean) => void;
   onConversationCreated: (conversation: Conversation) => void;
 }) => {
-  const [selectedContactId, setSelectedContactId] = useState<Identifier | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<Identifier | null>(
+    null,
+  );
   const [isCreating, setIsCreating] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -107,7 +109,9 @@ export const NewClientSmsDialog = ({
         </div>
         <div className="max-h-72 space-y-1 overflow-y-auto rounded-xl border bg-muted/20 p-1">
           {isPending ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">Searching…</p>
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+              Searching…
+            </p>
           ) : smsContacts.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">
               {debouncedQuery
@@ -117,7 +121,8 @@ export const NewClientSmsDialog = ({
           ) : (
             smsContacts.map((contact) => {
               const label = getContactLabel(contact);
-              const isSelected = String(contact.id) === String(selectedContactId);
+              const isSelected =
+                String(contact.id) === String(selectedContactId);
 
               return (
                 <button

@@ -26,8 +26,10 @@ export const generateDeals = (db: Db): Deal[] => {
     ).toISOString();
 
     const repoSlug =
-      company.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
-      `project-${id}`;
+      company.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || `project-${id}`;
 
     return {
       id,

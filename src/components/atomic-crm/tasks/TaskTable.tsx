@@ -1,14 +1,6 @@
 import { useMemo, useState } from "react";
-import {
-  useDelete,
-  useNotify,
-} from "ra-core";
-import {
-  Loader2,
-  MoreVertical,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { useDelete, useNotify } from "ra-core";
+import { Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { DateField } from "@/components/admin/date-field";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +30,12 @@ import {
 import { OrganizationMemberName } from "@/components/atomic-crm/organizationMembers/OrganizationMemberName";
 import { TaskAssignedAvatars } from "@/components/atomic-crm/tasks/TaskAssignedAvatars";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import type { Contact, Deal, Task as TaskRecord, TaskParticipant } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  Deal,
+  Task as TaskRecord,
+  TaskParticipant,
+} from "@/components/atomic-crm/types";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
 import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
 import {
@@ -74,7 +71,10 @@ export const TaskTable = ({
   const isMobile = useIsMobile();
   const lbsMode = isLbsMode();
   const sortedTasks = sortTasksByPriorityAndDue(tasks);
-  const taskIds = useMemo(() => sortedTasks.map((task) => task.id), [sortedTasks]);
+  const taskIds = useMemo(
+    () => sortedTasks.map((task) => task.id),
+    [sortedTasks],
+  );
   const { participantsByTaskId } = useTaskParticipantsByTaskIds(taskIds);
 
   if (sortedTasks.length === 0) {
@@ -187,15 +187,17 @@ const TaskTableRow = ({
   const typeLabel =
     taskTypes.find((entry) => entry.value === task.type)?.label ?? task.type;
   const isFullyDone = Boolean(task.done_date);
-  const isDoneForUser = usesParticipantCompletion ? checkboxChecked : isFullyDone;
+  const isDoneForUser = usesParticipantCompletion
+    ? checkboxChecked
+    : isFullyDone;
   const timingLabel =
     status === "done"
-      ? getUserCompletionDurationLabel(task, currentParticipant) ??
+      ? (getUserCompletionDurationLabel(task, currentParticipant) ??
         (isFullyDone && task.done_date
           ? getUserCompletionDurationLabel(task, {
               completed_at: task.done_date,
             } as TaskParticipant)
-          : null)
+          : null))
       : getOpenTaskAgeLabel(task);
   const isSimple = variant === "simple";
 
@@ -259,7 +261,10 @@ const TaskTableRow = ({
                 <span className="text-sm text-muted-foreground">—</span>
               )}
               {task.internal ? (
-                <Badge variant="secondary" className="ml-2 text-[10px] uppercase">
+                <Badge
+                  variant="secondary"
+                  className="ml-2 text-[10px] uppercase"
+                >
                   Internal
                 </Badge>
               ) : null}
@@ -267,7 +272,11 @@ const TaskTableRow = ({
           </TableCell>
         ) : null}
 
-        <TableCell className={isSimple ? "max-w-[360px] align-top" : "max-w-[280px] align-top"}>
+        <TableCell
+          className={
+            isSimple ? "max-w-[360px] align-top" : "max-w-[280px] align-top"
+          }
+        >
           <TaskDescriptionCell
             text={task.text}
             isDone={isDoneForUser}
@@ -285,7 +294,9 @@ const TaskTableRow = ({
                 link="show"
                 render={({ referenceRecord }) =>
                   referenceRecord ? (
-                    <span className="truncate text-sm link-action">{referenceRecord.name}</span>
+                    <span className="truncate text-sm link-action">
+                      {referenceRecord.name}
+                    </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )
@@ -318,7 +329,13 @@ const TaskTableRow = ({
         ) : null}
 
         <TableCell className="whitespace-nowrap text-sm align-top">
-          <span className={isTaskOverdue(task) ? "font-medium text-red-600" : "text-muted-foreground"}>
+          <span
+            className={
+              isTaskOverdue(task)
+                ? "font-medium text-red-600"
+                : "text-muted-foreground"
+            }
+          >
             <DateField source="due_date" record={task} />
           </span>
         </TableCell>
@@ -333,7 +350,9 @@ const TaskTableRow = ({
           {assignedCell}
         </TableCell>
 
-        <TableCell className={`align-top ${isSimple ? "" : "hidden lg:table-cell"}`}>
+        <TableCell
+          className={`align-top ${isSimple ? "" : "hidden lg:table-cell"}`}
+        >
           <Badge
             variant="outline"
             className={getTaskPriorityClassName(task.priority)}
@@ -345,7 +364,12 @@ const TaskTableRow = ({
         <TableCell className="text-right align-top">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" className="size-8">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8"
+              >
                 <MoreVertical className="size-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -373,7 +397,11 @@ const TaskTableRow = ({
           onOpenChange={setEditOpen}
         />
       ) : (
-        <TaskEdit taskId={task.id} open={editOpen} close={() => setEditOpen(false)} />
+        <TaskEdit
+          taskId={task.id}
+          open={editOpen}
+          close={() => setEditOpen(false)}
+        />
       )}
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -385,7 +413,11 @@ const TaskTableRow = ({
             This will permanently remove the task. This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDeleteOpen(false)}
+            >
               Cancel
             </Button>
             <Button

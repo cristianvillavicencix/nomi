@@ -1,6 +1,13 @@
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
 export const SpotlightSearchButton = ({
@@ -18,7 +25,13 @@ export const SpotlightSearchButton = ({
 }) => (
   <Dialog>
     <DialogTrigger asChild>
-      <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label={title}>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-9 w-9 shrink-0"
+        aria-label={title}
+      >
         <Search className="h-4 w-4" />
       </Button>
     </DialogTrigger>
@@ -40,4 +53,3 @@ export const SpotlightSearchButton = ({
     </DialogContent>
   </Dialog>
 );
-

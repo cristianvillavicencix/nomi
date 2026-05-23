@@ -74,7 +74,10 @@ export const ClientOverviewTab = ({
         <h3 className="text-base font-semibold">Business information</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <ProfileField label="Business name" value={record.name || "—"} />
-          <ProfileField label="Business phone" value={record.phone_number?.trim() || "—"} />
+          <ProfileField
+            label="Business phone"
+            value={record.phone_number?.trim() || "—"}
+          />
           <ProfileField
             label="Website"
             value={
@@ -103,12 +106,17 @@ export const ClientOverviewTab = ({
               )
             }
           />
-          <ProfileField label="Business address" value={formatCompanyAddress(record)} />
+          <ProfileField
+            label="Business address"
+            value={formatCompanyAddress(record)}
+          />
           <ProfileField
             label="Notes"
             value={
               record.description?.trim() ? (
-                <span className="whitespace-pre-wrap font-normal">{record.description}</span>
+                <span className="whitespace-pre-wrap font-normal">
+                  {record.description}
+                </span>
               ) : (
                 "—"
               )
@@ -145,24 +153,35 @@ export const ClientOverviewTab = ({
             value={
               primaryEmail !== "—" ? (
                 <span className="inline-flex items-center gap-1.5 font-normal">
-                  <a href={mailtoHref(primaryEmail)} className="link-action break-all">
+                  <a
+                    href={mailtoHref(primaryEmail)}
+                    className="link-action break-all"
+                  >
                     {primaryEmail}
                   </a>
                   <ClientExtraEmailsIndicator extraEmails={extraEmails} />
                 </span>
               ) : extraEmails.length > 0 ? (
                 <span className="inline-flex items-center gap-1.5 font-normal">
-                  <a href={mailtoHref(extraEmails[0].email)} className="link-action break-all">
+                  <a
+                    href={mailtoHref(extraEmails[0].email)}
+                    className="link-action break-all"
+                  >
                     {extraEmails[0].email}
                   </a>
-                  <ClientExtraEmailsIndicator extraEmails={extraEmails.slice(1)} />
+                  <ClientExtraEmailsIndicator
+                    extraEmails={extraEmails.slice(1)}
+                  />
                 </span>
               ) : (
                 "—"
               )
             }
           />
-          <ProfileField label="Address" value={primaryContact?.address?.trim() || "—"} />
+          <ProfileField
+            label="Address"
+            value={primaryContact?.address?.trim() || "—"}
+          />
           <ProfileField
             label="Status"
             value={status === "—" ? status : <Status status={status} />}

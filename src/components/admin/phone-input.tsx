@@ -22,7 +22,9 @@ const validatePhone: Validator = (value) => {
     return undefined;
   }
 
-  return isValidUsPhone(String(value)) ? undefined : "Invalid phone. Use 10 digits";
+  return isValidUsPhone(String(value))
+    ? undefined
+    : "Invalid phone. Use 10 digits";
 };
 
 export const PhoneInput = (props: PhoneInputProps) => {
@@ -106,4 +108,3 @@ export const PhoneInput = (props: PhoneInputProps) => {
     </FormField>
   );
 };
-

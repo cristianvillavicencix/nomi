@@ -75,7 +75,8 @@ export const getResourceTabCategory = (
 };
 
 export const getProjectResourceCategoryLabel = (category: string) =>
-  PROJECT_RESOURCE_TAB_CATEGORIES.find((entry) => entry.id === category)?.label ??
+  PROJECT_RESOURCE_TAB_CATEGORIES.find((entry) => entry.id === category)
+    ?.label ??
   LEGACY_CATEGORY_LABELS[category as LegacyProjectResourceCategory] ??
   category.replace(/-/g, " ");
 

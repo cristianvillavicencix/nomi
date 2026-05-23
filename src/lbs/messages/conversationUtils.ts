@@ -51,7 +51,11 @@ export const formatMessageTime = (value?: string | null) => {
 };
 
 export const sortConversationsByActivity = <
-  T extends { last_message_at?: string | null; updated_at?: string | null; id: unknown },
+  T extends {
+    last_message_at?: string | null;
+    updated_at?: string | null;
+    id: unknown;
+  },
 >(
   conversations: T[],
 ) =>

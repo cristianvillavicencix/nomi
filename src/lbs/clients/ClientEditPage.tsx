@@ -33,23 +33,29 @@ export const ClientEditPage = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [isSaving, setIsSaving] = useState(false);
 
-  const { data: company, isPending: companyPending } = useGetOne<CompanyWithPrimaryContact>(
-    "companies",
-    { id: id! },
-    { enabled: !!id },
-  );
+  const { data: company, isPending: companyPending } =
+    useGetOne<CompanyWithPrimaryContact>(
+      "companies",
+      { id: id! },
+      { enabled: !!id },
+    );
 
-  const { data: primaryContact, isPending: contactPending } = useGetOne<Contact>(
-    "contacts",
-    { id: company?.primary_contact_id! },
-    { enabled: !!company?.primary_contact_id },
-  );
+  const { data: primaryContact, isPending: contactPending } =
+    useGetOne<Contact>(
+      "contacts",
+      { id: company?.primary_contact_id! },
+      { enabled: !!company?.primary_contact_id },
+    );
 
   if (!id) return null;
-  if (companyPending || (company?.primary_contact_id && contactPending)) return null;
+  if (companyPending || (company?.primary_contact_id && contactPending))
+    return null;
   if (!company) return null;
 
-  const defaultValues = companyToClientFormValues(company, primaryContact ?? null);
+  const defaultValues = companyToClientFormValues(
+    company,
+    primaryContact ?? null,
+  );
 
   const handleSubmit = async (values: ClientCreateFormValues) => {
     if (!identity?.id) {
@@ -58,7 +64,9 @@ export const ClientEditPage = () => {
     }
 
     if (!("upsertLbsClient" in dataProvider)) {
-      notify("Client editing is not available in this environment", { type: "error" });
+      notify("Client editing is not available in this environment", {
+        type: "error",
+      });
       return;
     }
 

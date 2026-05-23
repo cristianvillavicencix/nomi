@@ -15,8 +15,10 @@ import { isLbsMode } from "@/lbs/productMode";
 const memberOptionText = (choice: OrganizationMember) =>
   `${choice.first_name} ${choice.last_name}`;
 
-const dealOptionText = (choice: { name?: string | null; id?: number | string }) =>
-  choice.name?.trim() || `Project #${choice.id}`;
+const dealOptionText = (choice: {
+  name?: string | null;
+  id?: number | string;
+}) => choice.name?.trim() || `Project #${choice.id}`;
 
 export const TaskFormContent = ({
   selectContact,
@@ -48,7 +50,11 @@ export const TaskFormContent = ({
           rows={4}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <DateInput source="due_date" helperText={false} validate={required()} />
+          <DateInput
+            source="due_date"
+            helperText={false}
+            validate={required()}
+          />
           <SelectInput
             source="priority"
             label="Priority"

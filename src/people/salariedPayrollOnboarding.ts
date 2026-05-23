@@ -47,7 +47,15 @@ export const buildPayrollPeriodForSchedule = (
   }
   if (paySchedule === "monthly") {
     const s = new Date(start.getFullYear(), start.getMonth(), 1, 12, 0, 0, 0);
-    const e = new Date(start.getFullYear(), start.getMonth() + 1, 0, 12, 0, 0, 0);
+    const e = new Date(
+      start.getFullYear(),
+      start.getMonth() + 1,
+      0,
+      12,
+      0,
+      0,
+      0,
+    );
     const eIso = toIso(e);
     return { pay_period_start: toIso(s), pay_period_end: eIso, payday: eIso };
   }
@@ -74,7 +82,9 @@ const isPaySchedule = (s: string): s is PayrollRun["pay_schedule"] =>
  * kept on the person; pay cadence is mirrored from org Payment Settings
  * (`pay_schedule` on the form, not the employee re-defining the company).
  */
-export const captureSalariedPayrollOnboarding = (raw: Record<string, unknown>) => {
+export const captureSalariedPayrollOnboarding = (
+  raw: Record<string, unknown>,
+) => {
   const type = String(raw.type ?? "employee");
   const unit = String(raw.compensation_unit ?? "hour");
   const salaried = unit === "week" || unit === "month" || unit === "year";

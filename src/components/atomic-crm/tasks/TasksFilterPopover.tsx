@@ -16,9 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  TASK_PRIORITIES,
-} from "@/components/atomic-crm/tasks/taskConstants";
+import { TASK_PRIORITIES } from "@/components/atomic-crm/tasks/taskConstants";
 import type { TaskScopeFilter } from "@/components/atomic-crm/tasks/scopedTasks";
 import type { TaskPreferences } from "@/components/atomic-crm/tasks/useTaskPreferences";
 import { taskPreferencesHaveActiveFilters } from "@/components/atomic-crm/tasks/useTaskPreferences";
@@ -51,7 +49,9 @@ export const TasksFilterPopover = ({
     { enabled: lbsMode, staleTime: 60_000 },
   );
 
-  const hasActiveFilters = taskPreferencesHaveActiveFilters(preferences, { lbsMode });
+  const hasActiveFilters = taskPreferencesHaveActiveFilters(preferences, {
+    lbsMode,
+  });
 
   return (
     <Popover>
@@ -70,7 +70,9 @@ export const TasksFilterPopover = ({
             <Label htmlFor="tasks-filter-assigned">Assigned</Label>
             <Select
               value={scope}
-              onValueChange={(value) => onChange({ scope: value as TaskScopeFilter })}
+              onValueChange={(value) =>
+                onChange({ scope: value as TaskScopeFilter })
+              }
             >
               <SelectTrigger id="tasks-filter-assigned">
                 <SelectValue />
@@ -113,7 +115,10 @@ export const TasksFilterPopover = ({
           {!lbsMode ? (
             <div className="space-y-2">
               <Label htmlFor="tasks-filter-type">Type</Label>
-              <Select value={typeFilter} onValueChange={(value) => onChange({ typeFilter: value })}>
+              <Select
+                value={typeFilter}
+                onValueChange={(value) => onChange({ typeFilter: value })}
+              >
                 <SelectTrigger id="tasks-filter-type">
                   <SelectValue />
                 </SelectTrigger>

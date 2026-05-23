@@ -236,7 +236,9 @@ async function updateSaleProfile(
   return sale;
 }
 
-function isAuthEmailAlreadyUsed(error: { code?: string; message?: string } | null) {
+function isAuthEmailAlreadyUsed(
+  error: { code?: string; message?: string } | null,
+) {
   if (!error) return false;
   const msg = (error.message ?? "").toLowerCase();
   return (
@@ -267,7 +269,9 @@ async function finalizeInvitedMember(
 }
 
 function normalizeInviteEmail(email: unknown): string {
-  return String(email ?? "").trim().toLowerCase();
+  return String(email ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 function getSetPasswordRedirectUrl(req: Request) {
@@ -297,13 +301,11 @@ async function sendInviteOrSetPasswordEmail(
   metadata: Record<string, string>,
   redirectTo: string,
 ) {
-  const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-    email,
-    {
+  const { error: inviteError } =
+    await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: metadata,
       redirectTo,
-    },
-  );
+    });
   if (!inviteError) return null;
 
   if (!isAuthEmailAlreadyUsed(inviteError)) {
@@ -312,10 +314,8 @@ async function sendInviteOrSetPasswordEmail(
   }
 
   // Auth user already exists (pending invite or old signup) — send set-password mail.
-  const { error: recoveryError } = await supabaseAdmin.auth.resetPasswordForEmail(
-    email,
-    { redirectTo },
-  );
+  const { error: recoveryError } =
+    await supabaseAdmin.auth.resetPasswordForEmail(email, { redirectTo });
   if (recoveryError) {
     console.error("sendInviteOrSetPasswordEmail recovery", recoveryError);
     return recoveryError;
@@ -529,12 +529,9 @@ async function inviteUser(req: Request, currentOrgMember: any) {
                 "User updated but the invitation email could not be sent. Try again in a moment.",
               );
             }
-            return new Response(
-              JSON.stringify({ data: saleRow }),
-              {
-                headers: { "Content-Type": "application/json", ...corsHeaders },
-              },
-            );
+            return new Response(JSON.stringify({ data: saleRow }), {
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
           } catch (error) {
             return createErrorResponse(
               (error as any).status ?? 500,

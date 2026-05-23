@@ -120,7 +120,9 @@ export const ProjectStageFlow = ({
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      onClick={() => canChangeToStage && onStageChange?.(stage.id)}
+                      onClick={() =>
+                        canChangeToStage && onStageChange?.(stage.id)
+                      }
                       disabled={!canChangeToStage}
                       className={`relative h-12 flex-1 min-w-[140px] px-6 text-left text-sm font-medium transition-all duration-300 ${
                         canChangeToStage
@@ -134,7 +136,9 @@ export const ProjectStageFlow = ({
                         background,
                         color: textColor,
                         transform:
-                          isCurrent && isAnimating ? "translateY(-1px) scale(1.01)" : "none",
+                          isCurrent && isAnimating
+                            ? "translateY(-1px) scale(1.01)"
+                            : "none",
                         boxShadow:
                           state === "active"
                             ? isAnimating
@@ -147,9 +151,15 @@ export const ProjectStageFlow = ({
                       <span className="line-clamp-1">{stage.label}</span>
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" align="center" className="space-y-1">
+                  <TooltipContent
+                    side="top"
+                    align="center"
+                    className="space-y-1"
+                  >
                     <div className="font-medium">{stage.label}</div>
-                    <div>Stage {index + 1} of {stages.length}</div>
+                    <div>
+                      Stage {index + 1} of {stages.length}
+                    </div>
                     <div>Status: {statusLabel}</div>
                     <div className="flex items-center gap-2">
                       <span

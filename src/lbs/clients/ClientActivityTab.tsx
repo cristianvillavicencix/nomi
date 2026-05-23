@@ -53,7 +53,10 @@ export const ClientActivityTab = ({
     const tab = searchParams.get("tab");
     if (tab !== "activity") return;
     const rawSection = searchParams.get("section");
-    if (rawSection && !ACTIVITY_SECTIONS.includes(rawSection as ActivitySection)) {
+    if (
+      rawSection &&
+      !ACTIVITY_SECTIONS.includes(rawSection as ActivitySection)
+    ) {
       const next = new URLSearchParams(searchParams);
       next.delete("section");
       setSearchParams(next, { replace: true });
@@ -83,7 +86,10 @@ export const ClientActivityTab = ({
         <ActivityLog companyId={companyId} context="company" />
       </TabsContent>
       <TabsContent value="notes" className="mt-0">
-        <ClientNotesTab contactIds={contactIds} primaryContactId={primaryContactId} />
+        <ClientNotesTab
+          contactIds={contactIds}
+          primaryContactId={primaryContactId}
+        />
       </TabsContent>
       <TabsContent value="tasks" className="mt-0">
         <ClientTasksTab

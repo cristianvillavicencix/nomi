@@ -12,7 +12,9 @@ import { cn } from "@/lib/utils";
 export const LbsProjectDeliveryUrgency = ({ record }: { record: Deal }) => {
   const deliveryDate = getProjectDeliveryDate(record);
   const deliveryDateLabel = formatProjectDeliveryDate(deliveryDate);
-  const urgency = getProjectDeliveryUrgency(deliveryDate, { stage: record.stage });
+  const urgency = getProjectDeliveryUrgency(deliveryDate, {
+    stage: record.stage,
+  });
   const countdown = getProjectDeliveryCountdown(deliveryDate, {
     stage: record.stage,
     actualCompletionDate: record.actual_completion_date,
@@ -32,7 +34,9 @@ export const LbsProjectDeliveryUrgency = ({ record }: { record: Deal }) => {
           </span>
           {countdown ? (
             <>
-              <span className="text-base font-light text-muted-foreground/50">|</span>
+              <span className="text-base font-light text-muted-foreground/50">
+                |
+              </span>
               <span
                 className={cn(
                   "text-lg font-bold leading-tight sm:text-xl",
@@ -45,7 +49,9 @@ export const LbsProjectDeliveryUrgency = ({ record }: { record: Deal }) => {
           ) : null}
         </div>
       ) : (
-        <p className="text-sm font-medium text-muted-foreground">No delivery date set</p>
+        <p className="text-sm font-medium text-muted-foreground">
+          No delivery date set
+        </p>
       )}
     </div>
   );

@@ -44,7 +44,8 @@ export const MessagesDock = () => {
     viewConversation,
   } = useMessagesQuickAccess();
   const { totalUnread: totalUnreadCount } = useMessagesUnreadCounts();
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [selectedConversation, setSelectedConversation] =
+    useState<Conversation | null>(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
 
   const isMessagesPage = location.pathname.startsWith("/messages");
@@ -65,7 +66,12 @@ export const MessagesDock = () => {
     setSelectedConversation(focusedConversation);
     if (isMobile) setMobileShowChat(true);
     clearFocusedConversation();
-  }, [clearFocusedConversation, focusedConversation, isMobile, viewConversation]);
+  }, [
+    clearFocusedConversation,
+    focusedConversation,
+    isMobile,
+    viewConversation,
+  ]);
 
   useEffect(() => {
     if (!isDockOpen) {
@@ -79,7 +85,8 @@ export const MessagesDock = () => {
   useEffect(() => {
     if (!isDockOpen || !selectedConversation) return;
     const stillVisible = conversations.some(
-      (conversation) => String(conversation.id) === String(selectedConversation.id),
+      (conversation) =>
+        String(conversation.id) === String(selectedConversation.id),
     );
     if (!stillVisible && conversations[0]) {
       viewConversation(conversations[0]);
@@ -155,15 +162,29 @@ export const MessagesDock = () => {
             />
           </div>
         </div>
-        <Sheet open={isDockOpen} onOpenChange={(open) => (open ? handleOpen() : handleClose())}>
-          <SheetContent side="bottom" className="flex h-[92vh] flex-col gap-0 p-0">
+        <Sheet
+          open={isDockOpen}
+          onOpenChange={(open) => (open ? handleOpen() : handleClose())}
+        >
+          <SheetContent
+            side="bottom"
+            className="flex h-[92vh] flex-col gap-0 p-0"
+          >
             <SheetHeader className="border-b px-4 py-3 text-left">
               <SheetTitle>Messages</SheetTitle>
-              <SheetDescription>Team chats, projects, and client SMS</SheetDescription>
+              <SheetDescription>
+                Team chats, projects, and client SMS
+              </SheetDescription>
             </SheetHeader>
             <div className="min-h-0 flex-1">{workspace}</div>
             <div className="border-t px-4 py-3">
-              <Button type="button" variant="outline" size="sm" asChild className="w-full">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                asChild
+                className="w-full"
+              >
                 <Link to="/messages" onClick={handleClose}>
                   <ExternalLink className="size-4" />
                   Open full Messages page
@@ -249,10 +270,17 @@ const MessagesDockTrigger = ({
     aria-expanded={isOpen}
     aria-label={isOpen ? "Minimize messages dock" : "Open messages dock"}
   >
-    {isOpen ? <ChevronDown className="size-4" /> : <MessageSquare className="size-4" />}
+    {isOpen ? (
+      <ChevronDown className="size-4" />
+    ) : (
+      <MessageSquare className="size-4" />
+    )}
     <span className="font-medium">{isOpen ? "Minimize" : "Messages"}</span>
     {!isOpen && unreadCount > 0 ? (
-      <Badge variant="default" className="ml-1 rounded-full px-2 py-0 text-[11px]">
+      <Badge
+        variant="default"
+        className="ml-1 rounded-full px-2 py-0 text-[11px]"
+      >
         {formatUnreadBadgeCount(unreadCount)}
       </Badge>
     ) : null}

@@ -18,7 +18,10 @@ type SettingsBody = {
   twilio_auth_token?: string | null;
   twilio_phone_number?: string | null;
   sms_enabled?: boolean;
-  business_hours?: Record<string, { open?: string | null; close?: string | null; closed?: boolean }> | null;
+  business_hours?: Record<
+    string,
+    { open?: string | null; close?: string | null; closed?: boolean }
+  > | null;
   out_of_hours_message?: string | null;
   auto_acknowledge_enabled?: boolean;
   auto_acknowledge_message?: string | null;
@@ -62,9 +65,13 @@ Deno.serve((req: Request) =>
           const accountSid = settings.twilio_account_sid?.trim();
           const authToken = settings.twilio_auth_token?.trim();
           const fromNumber = settings.twilio_phone_number?.trim();
-          const toNumber = normalizeUsPhoneToE164(body.test_phone?.trim() ?? "");
+          const toNumber = normalizeUsPhoneToE164(
+            body.test_phone?.trim() ?? "",
+          );
           if (!accountSid || !authToken || !fromNumber || !toNumber) {
-            throw new Error("Twilio credentials or test phone number are missing");
+            throw new Error(
+              "Twilio credentials or test phone number are missing",
+            );
           }
           await sendTwilioSms({
             accountSid,
@@ -100,7 +107,8 @@ Deno.serve((req: Request) =>
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Request failed";
+        const message =
+          error instanceof Error ? error.message : "Request failed";
         return createErrorResponse(400, message);
       }
     });

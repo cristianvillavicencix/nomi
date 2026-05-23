@@ -8,7 +8,9 @@ export const ProjectScheduleTab = ({ record }: { record: LbsDeal }) => (
       <div className="text-muted-foreground">Target launch</div>
       <div className="font-medium">
         {record.expected_end_date
-          ? new Date(`${record.expected_end_date}T12:00:00`).toLocaleDateString()
+          ? new Date(
+              `${record.expected_end_date}T12:00:00`,
+            ).toLocaleDateString()
           : "Not set — update in Settings"}
       </div>
     </div>

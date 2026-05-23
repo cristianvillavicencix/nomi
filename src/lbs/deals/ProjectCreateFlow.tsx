@@ -82,7 +82,7 @@ export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
     contact?.email_jsonb?.find((entry) => entry.email?.trim())?.email ?? "";
   const clientName = contact
     ? `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim()
-    : company?.name ?? "";
+    : (company?.name ?? "");
 
   if (!matchCreate || !step) return null;
 
@@ -94,7 +94,9 @@ export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
         onWebForm={goToWebForm}
         onClose={handleChooserClose}
       />
-      {step === "manual" ? <AgencyProjectCreateForm open onClose={closeAll} /> : null}
+      {step === "manual" ? (
+        <AgencyProjectCreateForm open onClose={closeAll} />
+      ) : null}
       {step === "web-form" ? (
         <SendProjectWebFormDialog
           open

@@ -3,7 +3,10 @@ import { cn } from "@/lib/utils";
 import { PeopleQuickNavHeader } from "./people-quick-nav-header";
 import { PeopleQuickNavSearch } from "./people-quick-nav-search";
 import { PeopleQuickNavList } from "./people-quick-nav-list";
-import type { PeopleQuickNavItem as QuickItem, PeopleQuickNavType } from "./types";
+import type {
+  PeopleQuickNavItem as QuickItem,
+  PeopleQuickNavType,
+} from "./types";
 
 const pluralTitle: Record<PeopleQuickNavType, string> = {
   employee: "Employees",

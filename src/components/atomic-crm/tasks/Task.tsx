@@ -28,11 +28,7 @@ import { TaskMentionText } from "@/components/atomic-crm/tasks/TaskMentionText";
 import { useTaskCompletionToggle } from "@/components/atomic-crm/tasks/useTaskCompletionToggle";
 import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import {
-  useDeleteWithUndoController,
-  useNotify,
-  useUpdate,
-} from "ra-core";
+import { useDeleteWithUndoController, useNotify, useUpdate } from "ra-core";
 import { MoreVertical } from "lucide-react";
 import type { Contact, Deal, Task as TData } from "../types";
 import { TaskEditSheet } from "./TaskEditSheet";
@@ -68,7 +64,9 @@ export const Task = ({
   const [openEdit, setOpenEdit] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isFullyDone = Boolean(task.done_date);
-  const isDoneForUser = usesParticipantCompletion ? checkboxChecked : isFullyDone;
+  const isDoneForUser = usesParticipantCompletion
+    ? checkboxChecked
+    : isFullyDone;
 
   const handleCloseEdit = () => {
     setOpenEdit(false);
@@ -141,7 +139,10 @@ export const Task = ({
                     (task.collaborator_person_ids?.length ?? 0) > 0 ||
                     (task.mentioned_member_ids?.length ?? 0) > 0) ? (
                     <span className="inline-flex align-middle">
-                      <TaskAssignedAvatars task={task} participants={participants} />
+                      <TaskAssignedAvatars
+                        task={task}
+                        participants={participants}
+                      />
                     </span>
                   ) : (
                     <ReferenceField
@@ -149,7 +150,9 @@ export const Task = ({
                       reference="organization_members"
                       record={task}
                       render={({ referenceRecord }) => (
-                        <OrganizationMemberName member={referenceRecord ?? undefined} />
+                        <OrganizationMemberName
+                          member={referenceRecord ?? undefined}
+                        />
                       )}
                     />
                   )}
@@ -188,7 +191,8 @@ export const Task = ({
                       <>
                         {" "}
                         (Re:&nbsp;
-                        {referenceRecord.first_name} {referenceRecord.last_name})
+                        {referenceRecord.first_name} {referenceRecord.last_name}
+                        )
                       </>
                     );
                   }}
@@ -277,7 +281,11 @@ export const Task = ({
             This will permanently remove the task. This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDeleteOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="button" variant="destructive" onClick={handleDelete}>

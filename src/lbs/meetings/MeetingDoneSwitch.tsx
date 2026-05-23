@@ -8,7 +8,11 @@ import {
 } from "@/components/ui/tooltip";
 import type { CalendarEventRecord } from "@/components/atomic-crm/types";
 
-export const MeetingDoneSwitch = ({ meeting }: { meeting: CalendarEventRecord }) => {
+export const MeetingDoneSwitch = ({
+  meeting,
+}: {
+  meeting: CalendarEventRecord;
+}) => {
   const [update, { isPending }] = useUpdate();
   const notify = useNotify();
   const isDone = Boolean(meeting.completed_at);
@@ -40,11 +44,15 @@ export const MeetingDoneSwitch = ({ meeting }: { meeting: CalendarEventRecord })
               checked={isDone}
               disabled={isPending}
               onCheckedChange={handleChange}
-              aria-label={isDone ? "Mark meeting as not done" : "Mark meeting as done"}
+              aria-label={
+                isDone ? "Mark meeting as not done" : "Mark meeting as done"
+              }
             />
           </div>
         </TooltipTrigger>
-        <TooltipContent>{isDone ? "Meeting done" : "Mark as done"}</TooltipContent>
+        <TooltipContent>
+          {isDone ? "Meeting done" : "Mark as done"}
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

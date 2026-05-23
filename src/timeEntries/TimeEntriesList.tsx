@@ -578,10 +578,7 @@ const DayTotalField = () => {
   return <span>{Number(entry?.hours ?? 0).toFixed(2)}</span>;
 };
 
-const DAY_TYPE_LABELS: Record<
-  NonNullable<TimeEntry["day_type"]>,
-  string
-> = {
+const DAY_TYPE_LABELS: Record<NonNullable<TimeEntry["day_type"]>, string> = {
   worked_day: "Worked Day",
   holiday: "Holiday",
   sick_day: "Sick Day",

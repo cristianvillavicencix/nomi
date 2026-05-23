@@ -28,7 +28,5 @@ export const getEmailDomainSuggestions = (value: string): string[] => {
     return [];
   }
 
-  return COMMON_EMAIL_DOMAINS.filter((domain) =>
-    domain.startsWith(domainPart),
-  );
+  return COMMON_EMAIL_DOMAINS.filter((domain) => domain.startsWith(domainPart));
 };

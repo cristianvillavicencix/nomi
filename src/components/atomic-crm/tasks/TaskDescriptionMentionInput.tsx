@@ -1,5 +1,18 @@
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
-import { useGetList, useGetOne, useInput, useResourceContext, FieldTitle } from "ra-core";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from "react";
+import {
+  useGetList,
+  useGetOne,
+  useInput,
+  useResourceContext,
+  FieldTitle,
+} from "ra-core";
 import { useWatch } from "react-hook-form";
 import {
   FormControl,
@@ -9,7 +22,11 @@ import {
 } from "@/components/admin/form";
 import { InputHelperText } from "@/components/admin/input-helper-text";
 import { cn } from "@/lib/utils";
-import type { Deal, OrganizationMember, Person } from "@/components/atomic-crm/types";
+import type {
+  Deal,
+  OrganizationMember,
+  Person,
+} from "@/components/atomic-crm/types";
 import {
   findActiveMentionInEditor,
   insertTaskMemberMentionInEditor,
@@ -17,7 +34,10 @@ import {
   renderTaskMentionEditorContent,
   serializeTaskMentionEditor,
 } from "@/components/atomic-crm/tasks/taskMentionEditor";
-import { getPersonName, getPersonOptionText } from "@/components/atomic-crm/tasks/taskPeopleOptions";
+import {
+  getPersonName,
+  getPersonOptionText,
+} from "@/components/atomic-crm/tasks/taskPeopleOptions";
 
 type MentionCandidate =
   | { kind: "person"; person: Person; onTeam: boolean; dedupeKey: string }
@@ -34,11 +54,14 @@ type TaskDescriptionMentionInputProps = {
 };
 
 const getMemberOptionText = (member: OrganizationMember) => {
-  const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ");
+  const fullName = [member.first_name, member.last_name]
+    .filter(Boolean)
+    .join(" ");
   return member.email ? `${fullName} (${member.email})` : fullName;
 };
 
-const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+const normalizeEmail = (value?: string | null) =>
+  value?.trim().toLowerCase() ?? "";
 
 export const TaskDescriptionMentionInput = ({
   source = "text",
@@ -94,18 +117,19 @@ export const TaskDescriptionMentionInput = ({
     { enabled: mentionOpen, staleTime: 10_000 },
   );
 
-  const { data: members = [], isPending: isMembersPending } = useGetList<OrganizationMember>(
-    "organization_members",
-    {
-      filter: {
-        "disabled@neq": true,
-        ...(searchText ? { q: searchText } : {}),
+  const { data: members = [], isPending: isMembersPending } =
+    useGetList<OrganizationMember>(
+      "organization_members",
+      {
+        filter: {
+          "disabled@neq": true,
+          ...(searchText ? { q: searchText } : {}),
+        },
+        pagination: { page: 1, perPage: 20 },
+        sort: { field: "first_name", order: "ASC" },
       },
-      pagination: { page: 1, perPage: 20 },
-      sort: { field: "first_name", order: "ASC" },
-    },
-    { enabled: mentionOpen, staleTime: 10_000 },
-  );
+      { enabled: mentionOpen, staleTime: 10_000 },
+    );
 
   const candidates = useMemo(() => {
     const reservedEmails = new Set<string>();
@@ -274,7 +298,9 @@ export const TaskDescriptionMentionInput = ({
           {mentionOpen ? (
             <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
               {isPending ? (
-                <div className="px-3 py-2 text-sm text-muted-foreground">Loading people…</div>
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  Loading people…
+                </div>
               ) : candidates.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-muted-foreground">
                   No matches for “{mentionQuery || "@"}”

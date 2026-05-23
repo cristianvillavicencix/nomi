@@ -32,7 +32,9 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
   const requiresProject = isProjectScopedWebForm(form.slug);
   const [dealId, setDealId] = useState(requiresProject ? "" : NO_PROJECT);
   const [copied, setCopied] = useState(false);
-  const [copiedEmbed, setCopiedEmbed] = useState<"iframe" | "script" | null>(null);
+  const [copiedEmbed, setCopiedEmbed] = useState<"iframe" | "script" | null>(
+    null,
+  );
 
   const { data: deals = [], isPending: isDealsPending } = useGetList<Deal>(
     "deals",
@@ -83,7 +85,11 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
   const scriptSnippet = useMemo(
     () =>
       embedUrl && !requiresProject
-        ? buildWebFormScriptSnippet(window.location.origin, form.slug, form.name)
+        ? buildWebFormScriptSnippet(
+            window.location.origin,
+            form.slug,
+            form.name,
+          )
         : "",
     [embedUrl, form.name, form.slug, requiresProject],
   );
@@ -116,13 +122,14 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
     <div className="space-y-4">
       {requiresProject ? (
         <p className="text-sm text-muted-foreground">
-          Select a project to generate a client upload link. Files are saved under
-          that project&apos;s Resources tab.
+          Select a project to generate a client upload link. Files are saved
+          under that project&apos;s Resources tab.
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Optionally link the form to a project so submissions update the project
-          brief. Without a project, the link works for new client intake.
+          Optionally link the form to a project so submissions update the
+          project brief. Without a project, the link works for new client
+          intake.
         </p>
       )}
 
@@ -137,7 +144,9 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
         >
           <SelectTrigger id={`web-form-project-${form.id}`}>
             <SelectValue
-              placeholder={requiresProject ? "Select a project" : "No project linked"}
+              placeholder={
+                requiresProject ? "Select a project" : "No project linked"
+              }
             />
           </SelectTrigger>
           <SelectContent>
@@ -180,7 +189,9 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
             </Button>
           ) : null}
         </div>
-        {copied ? <p className="text-sm text-muted-foreground">Link copied.</p> : null}
+        {copied ? (
+          <p className="text-sm text-muted-foreground">Link copied.</p>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -207,17 +218,24 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
           <div>
             <p className="text-sm font-medium">Embed on your website</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Paste this on lbs.com or any site. Submissions still land in Web Forms.
+              Paste this on lbs.com or any site. Submissions still land in Web
+              Forms.
             </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor={`web-form-embed-url-${form.id}`}>Embed URL</Label>
-            <Input id={`web-form-embed-url-${form.id}`} readOnly value={embedUrl} />
+            <Input
+              id={`web-form-embed-url-${form.id}`}
+              readOnly
+              value={embedUrl}
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`web-form-iframe-snippet-${form.id}`}>Iframe code</Label>
+            <Label htmlFor={`web-form-iframe-snippet-${form.id}`}>
+              Iframe code
+            </Label>
             <textarea
               id={`web-form-iframe-snippet-${form.id}`}
               readOnly
@@ -232,13 +250,17 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
               onClick={() => handleCopyEmbed("iframe")}
             >
               <Copy className="size-4" />
-              {copiedEmbed === "iframe" ? "Iframe code copied" : "Copy iframe code"}
+              {copiedEmbed === "iframe"
+                ? "Iframe code copied"
+                : "Copy iframe code"}
             </Button>
           </div>
 
           {scriptSnippet ? (
             <div className="space-y-2">
-              <Label htmlFor={`web-form-script-snippet-${form.id}`}>Script embed</Label>
+              <Label htmlFor={`web-form-script-snippet-${form.id}`}>
+                Script embed
+              </Label>
               <textarea
                 id={`web-form-script-snippet-${form.id}`}
                 readOnly
@@ -253,7 +275,9 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
                 onClick={() => handleCopyEmbed("script")}
               >
                 <Copy className="size-4" />
-                {copiedEmbed === "script" ? "Script copied" : "Copy script embed"}
+                {copiedEmbed === "script"
+                  ? "Script copied"
+                  : "Copy script embed"}
               </Button>
             </div>
           ) : null}

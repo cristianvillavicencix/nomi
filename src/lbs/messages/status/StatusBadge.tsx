@@ -9,10 +9,17 @@ const STATUS_STYLES: Record<string, string> = {
   urgent: "bg-red-500/10 text-red-700 dark:text-red-300",
 };
 
-export const StatusBadge = ({ status }: { status?: Conversation["status"] | null }) => {
+export const StatusBadge = ({
+  status,
+}: {
+  status?: Conversation["status"] | null;
+}) => {
   const value = status ?? "open";
   return (
-    <Badge variant="secondary" className={cn("rounded-full capitalize", STATUS_STYLES[value])}>
+    <Badge
+      variant="secondary"
+      className={cn("rounded-full capitalize", STATUS_STYLES[value])}
+    >
       {value}
     </Badge>
   );

@@ -1,5 +1,9 @@
 import type { DataProvider } from "ra-core";
-import type { OrganizationMember, Person, Task } from "@/components/atomic-crm/types";
+import type {
+  OrganizationMember,
+  Person,
+  Task,
+} from "@/components/atomic-crm/types";
 import { migrateLegacyTaskRecord } from "@/components/atomic-crm/tasks/taskMentions";
 
 export const enrichTasksWithLegacyMentions = async (
@@ -35,7 +39,9 @@ export const enrichTasksWithLegacyMentions = async (
       : Promise.resolve({ data: [] as OrganizationMember[], total: 0 }),
   ]);
 
-  const peopleById = Object.fromEntries(people.map((person) => [String(person.id), person]));
+  const peopleById = Object.fromEntries(
+    people.map((person) => [String(person.id), person]),
+  );
   const membersById = Object.fromEntries(
     members.map((member) => [String(member.id), member]),
   );

@@ -22,33 +22,33 @@ export const WebFormCreate = () => (
       schema: data.schema ?? DEFAULT_CUSTOM_FORM_SCHEMA,
     })}
   >
-      <div className="space-y-4 px-4 py-4 md:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold">New web form</h1>
-          <Button type="button" variant="outline" asChild>
-            <Link to="/web-forms">Cancel</Link>
-          </Button>
-        </div>
-
-        <Card>
-          <CardContent className="space-y-4 pt-6">
-            <p className="text-sm text-muted-foreground">
-              Create a custom form with your own fields. Clients can fill it out at
-              /forms/your-slug once the form is active.
-            </p>
-            <Form
-              defaultValues={{
-                active: true,
-                schema: DEFAULT_CUSTOM_FORM_SCHEMA,
-              }}
-            >
-              <WebFormInputs />
-              <FormToolbar>
-                <SaveButton label="Create form" />
-              </FormToolbar>
-            </Form>
-          </CardContent>
-        </Card>
+    <div className="space-y-4 px-4 py-4 md:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">New web form</h1>
+        <Button type="button" variant="outline" asChild>
+          <Link to="/web-forms">Cancel</Link>
+        </Button>
       </div>
-    </CreateBase>
+
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <p className="text-sm text-muted-foreground">
+            Create a custom form with your own fields. Clients can fill it out
+            at /forms/your-slug once the form is active.
+          </p>
+          <Form
+            defaultValues={{
+              active: true,
+              schema: DEFAULT_CUSTOM_FORM_SCHEMA,
+            }}
+          >
+            <WebFormInputs />
+            <FormToolbar>
+              <SaveButton label="Create form" />
+            </FormToolbar>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
+  </CreateBase>
 );

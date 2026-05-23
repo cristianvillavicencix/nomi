@@ -41,7 +41,9 @@ export const parseAssetLinkText = (text?: string): AssetLinkPayload | null => {
   return null;
 };
 
-export const extractAssetLinksFromDealNotes = (notes: DealNote[]): ParsedAssetLink[] =>
+export const extractAssetLinksFromDealNotes = (
+  notes: DealNote[],
+): ParsedAssetLink[] =>
   notes
     .map((note) => {
       const parsed = parseAssetLinkText(note.text);
@@ -53,4 +55,3 @@ export const extractAssetLinksFromDealNotes = (notes: DealNote[]): ParsedAssetLi
       } satisfies ParsedAssetLink;
     })
     .filter((item): item is ParsedAssetLink => item != null);
-

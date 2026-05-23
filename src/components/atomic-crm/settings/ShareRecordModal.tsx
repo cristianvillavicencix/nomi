@@ -71,7 +71,12 @@ export const ShareRecordModal = ({
     { enabled: open && canManageSharing },
   );
 
-  const sharesQueryKey = ["record_shares", resourceType, resourceId, effectiveOrgId];
+  const sharesQueryKey = [
+    "record_shares",
+    resourceType,
+    resourceId,
+    effectiveOrgId,
+  ];
 
   const { data: existingShares = [] } = useQuery({
     queryKey: sharesQueryKey,
@@ -144,7 +149,12 @@ export const ShareRecordModal = ({
   return (
     <>
       {!hideTrigger ? (
-        <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setOpen(true)}
+        >
           <Share2 className="mr-2 h-4 w-4" />
           {label}
         </Button>
@@ -154,8 +164,8 @@ export const ShareRecordModal = ({
           <DialogHeader>
             <DialogTitle>Share record</DialogTitle>
             <DialogDescription>
-              Grant specific teammates access to this {resourceType.slice(0, -1)}{" "}
-              even when they are not assigned.
+              Grant specific teammates access to this{" "}
+              {resourceType.slice(0, -1)} even when they are not assigned.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-80 space-y-2 overflow-y-auto">
@@ -172,7 +182,9 @@ export const ShareRecordModal = ({
                       <p className="text-sm font-medium">
                         {member.first_name} {member.last_name}
                       </p>
-                      <p className="text-xs text-muted-foreground">{member.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {member.email}
+                      </p>
                     </div>
                     <Switch
                       checked={checked}

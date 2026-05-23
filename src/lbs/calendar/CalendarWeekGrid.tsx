@@ -32,7 +32,8 @@ export const CalendarWeekGrid = ({
   const gridColsClass = GRID_COLUMN_CLASS[columnCount];
 
   const days = useMemo(
-    () => getWeekDays(anchor).filter((day) => isDayVisible(day, displayOptions)),
+    () =>
+      getWeekDays(anchor).filter((day) => isDayVisible(day, displayOptions)),
     [anchor, displayOptions],
   );
 
@@ -53,7 +54,9 @@ export const CalendarWeekGrid = ({
                 getWeekendCellClassName(day),
               )}
             >
-              <div className="text-[11px] text-muted-foreground">{weekdayLabel}</div>
+              <div className="text-[11px] text-muted-foreground">
+                {weekdayLabel}
+              </div>
               <div
                 className={cn(
                   "mx-auto mt-0.5 inline-flex size-7 items-center justify-center rounded-full text-xs font-medium",
@@ -79,7 +82,10 @@ export const CalendarWeekGrid = ({
               tabIndex={0}
               onClick={() => onSelectDay(dateKey)}
               onKeyDown={(keyboardEvent) => {
-                if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {
+                if (
+                  keyboardEvent.key === "Enter" ||
+                  keyboardEvent.key === " "
+                ) {
                   keyboardEvent.preventDefault();
                   onSelectDay(dateKey);
                 }

@@ -10,7 +10,10 @@ import { MeetingLinkActions } from "@/lbs/meetings/MeetingLinkActions";
 
 export const MeetingVideoCallSection = () => {
   const { setValue, getValues } = useFormContext();
-  const meetingUrl = useWatch({ name: "meeting_url" }) as string | null | undefined;
+  const meetingUrl = useWatch({ name: "meeting_url" }) as
+    | string
+    | null
+    | undefined;
   const title = useWatch({ name: "title" }) as string | null | undefined;
   const contactId = useWatch({ name: "contact_id" });
   const durationMinutes = useWatch({ name: "duration_minutes" });
@@ -33,8 +36,7 @@ export const MeetingVideoCallSection = () => {
 
     let seed = getValues("_meeting_link_seed") as string | null | undefined;
     if (!seed?.trim()) {
-      seed =
-        getMeetingLinkSeedFromUrl(meetingUrl) || createMeetingLinkSeed();
+      seed = getMeetingLinkSeedFromUrl(meetingUrl) || createMeetingLinkSeed();
       setValue("_meeting_link_seed", seed, { shouldDirty: false });
     }
 
@@ -42,14 +44,7 @@ export const MeetingVideoCallSection = () => {
     if (meetingUrl !== nextUrl) {
       setValue("meeting_url", nextUrl, { shouldDirty: true });
     }
-  }, [
-    contactId,
-    durationMinutes,
-    getValues,
-    meetingUrl,
-    setValue,
-    title,
-  ]);
+  }, [contactId, durationMinutes, getValues, meetingUrl, setValue, title]);
 
   if (!contactId) {
     return (
@@ -69,7 +64,9 @@ export const MeetingVideoCallSection = () => {
 
   if (!meetingUrl?.trim()) {
     return (
-      <p className="text-sm text-muted-foreground">Generating video call link…</p>
+      <p className="text-sm text-muted-foreground">
+        Generating video call link…
+      </p>
     );
   }
 

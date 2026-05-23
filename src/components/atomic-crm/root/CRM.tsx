@@ -40,9 +40,7 @@ import payrollRuns from "@/payrollRuns";
 import loans from "@/loans";
 import { ProfilePage } from "../settings/ProfilePage";
 import { SettingsPage } from "../settings/SettingsPage";
-import {
-  ReportsPage,
-} from "@/reports";
+import { ReportsPage } from "@/reports";
 import {
   CONFIGURATION_STORE_KEY,
   type ConfigurationContextValue,
@@ -65,7 +63,10 @@ import { StartPage } from "../login/StartPage.tsx";
 import { useIsMobile } from "@/hooks/use-mobile.ts";
 import { MobileTasksList } from "../tasks/MobileTasksList.tsx";
 import tasks from "../tasks";
-import { renderLbsCustomRoutes, renderLbsPublicFormRoute } from "@/lbs/LbsCustomRoutes";
+import {
+  renderLbsCustomRoutes,
+  renderLbsPublicFormRoute,
+} from "@/lbs/LbsCustomRoutes";
 import { isLbsMode } from "@/lbs/productMode";
 import proposals from "@/lbs/proposals";
 import contracts from "@/lbs/contracts";
@@ -300,14 +301,20 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           </>
         ) : (
           <>
-            <Route path="/platafform" element={<Navigate to="/sas" replace />} />
+            <Route
+              path="/platafform"
+              element={<Navigate to="/sas" replace />}
+            />
             <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
             <Route path="/platform" element={<Navigate to="/sas" replace />} />
             <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
             <Route path="/sas/*" element={<PlatformApp />}>
               <Route index element={<Navigate to="/sas/empresas" replace />} />
               <Route path="empresas" element={<PlatformEmpresasPage />} />
-              <Route path="empresas/:id" element={<PlatformEmpresaDetailPage />} />
+              <Route
+                path="empresas/:id"
+                element={<PlatformEmpresaDetailPage />}
+              />
             </Route>
           </>
         )}
@@ -325,9 +332,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
         />
         <Route
           path={ImportPage.path}
-          element={
-            isLbsMode() ? <Navigate to="/" replace /> : <ImportPage />
-          }
+          element={isLbsMode() ? <Navigate to="/" replace /> : <ImportPage />}
         />
         {!isLbsMode() ? (
           <Route
@@ -479,10 +484,19 @@ const DesktopAdmin = (props: CoreAdminProps) => {
         {renderLbsCustomRoutes({ ProtectedRoute })}
         {isLbsMode() ? (
           <>
-            <Route path="/time_entries/*" element={<Navigate to="/" replace />} />
-            <Route path="/payroll_runs/*" element={<Navigate to="/" replace />} />
+            <Route
+              path="/time_entries/*"
+              element={<Navigate to="/" replace />}
+            />
+            <Route
+              path="/payroll_runs/*"
+              element={<Navigate to="/" replace />}
+            />
             <Route path="/payments/*" element={<Navigate to="/" replace />} />
-            <Route path="/employee_loans/*" element={<Navigate to="/" replace />} />
+            <Route
+              path="/employee_loans/*"
+              element={<Navigate to="/" replace />}
+            />
             <Route path="/people/*" element={<Navigate to="/" replace />} />
             <Route path="/reports/*" element={<Navigate to="/" replace />} />
           </>
@@ -593,7 +607,10 @@ const MobileAdmin = (props: CoreAdminProps) => {
           {isLbsMode() ? (
             <>
               <Route path="/platafform" element={<Navigate to="/" replace />} />
-              <Route path="/platafform/*" element={<Navigate to="/" replace />} />
+              <Route
+                path="/platafform/*"
+                element={<Navigate to="/" replace />}
+              />
               <Route path="/platform" element={<Navigate to="/" replace />} />
               <Route path="/platform/*" element={<Navigate to="/" replace />} />
               <Route path="/sas" element={<Navigate to="/" replace />} />
@@ -602,14 +619,32 @@ const MobileAdmin = (props: CoreAdminProps) => {
             </>
           ) : (
             <>
-              <Route path="/platafform" element={<Navigate to="/sas" replace />} />
-              <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
-              <Route path="/platform" element={<Navigate to="/sas" replace />} />
-              <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
+              <Route
+                path="/platafform"
+                element={<Navigate to="/sas" replace />}
+              />
+              <Route
+                path="/platafform/*"
+                element={<PlatafformToSasRedirect />}
+              />
+              <Route
+                path="/platform"
+                element={<Navigate to="/sas" replace />}
+              />
+              <Route
+                path="/platform/*"
+                element={<OldPlatformToSasRedirect />}
+              />
               <Route path="/sas/*" element={<PlatformApp />}>
-                <Route index element={<Navigate to="/sas/empresas" replace />} />
+                <Route
+                  index
+                  element={<Navigate to="/sas/empresas" replace />}
+                />
                 <Route path="empresas" element={<PlatformEmpresasPage />} />
-                <Route path="empresas/:id" element={<PlatformEmpresaDetailPage />} />
+                <Route
+                  path="empresas/:id"
+                  element={<PlatformEmpresaDetailPage />}
+                />
               </Route>
             </>
           )}

@@ -65,7 +65,10 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
   );
 
   const formatDue = (value: string) =>
-    new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    new Date(value).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
 
   const deliveryDate = getProjectDeliveryDate(record);
   const deliveryDateLabel = formatProjectDeliveryDate(deliveryDate);
@@ -94,7 +97,9 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
               {deliveryCountdown ? (
                 <span
                   className={getProjectDeliveryUrgencyClassName(
-                    getProjectDeliveryUrgency(deliveryDate, { stage: record.stage }),
+                    getProjectDeliveryUrgency(deliveryDate, {
+                      stage: record.stage,
+                    }),
                   )}
                 >
                   {deliveryCountdown.label}
@@ -120,7 +125,11 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
                 Open brief
               </Link>
             </div>
-            <BriefProgressBar percent={briefProgress.percent} showLabel className="mt-3" />
+            <BriefProgressBar
+              percent={briefProgress.percent}
+              showLabel
+              className="mt-3"
+            />
           </div>
 
           {String(record.description ?? record.notes ?? "").trim() ? (
@@ -143,7 +152,9 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
             </Link>
           </div>
           {openTasks.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">No open tasks on this project.</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              No open tasks on this project.
+            </p>
           ) : (
             <ul className="mt-3 space-y-2">
               {openTasks.map((task) => (

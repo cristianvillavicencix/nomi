@@ -23,7 +23,9 @@ export const groupResourcesByTabCategory = (resources: DealResource[]) => {
 export const groupResourcesByCategory = groupResourcesByTabCategory;
 
 export const groupServicePhotosByLabel = (resources: DealResource[]) => {
-  const servicePhotos = resources.filter((entry) => entry.category === "service-photo");
+  const servicePhotos = resources.filter(
+    (entry) => entry.category === "service-photo",
+  );
   const groups = new Map<string, DealResource[]>();
 
   for (const resource of servicePhotos) {

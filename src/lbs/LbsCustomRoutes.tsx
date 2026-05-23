@@ -31,7 +31,9 @@ import { lazy, Suspense } from "react";
 import { CalendarPage } from "@/lbs/calendar/CalendarPage";
 import { MeetingsPage } from "@/lbs/meetings/MeetingsPage";
 const MessagesPage = lazy(() =>
-  import("@/lbs/messages/MessagesPage").then((module) => ({ default: module.MessagesPage })),
+  import("@/lbs/messages/MessagesPage").then((module) => ({
+    default: module.MessagesPage,
+  })),
 );
 import {
   CompanyToClientEditRedirect,
@@ -60,7 +62,10 @@ export const renderLbsCustomRoutes = ({
   return (
     <>
       <Route path="/contacts" element={<Navigate to="/clients" replace />} />
-      <Route path="/contacts/create" element={<Navigate to="/leads/create" replace />} />
+      <Route
+        path="/contacts/create"
+        element={<Navigate to="/leads/create" replace />}
+      />
       <Route path="/companies" element={<Navigate to="/clients" replace />} />
       <Route
         path="/companies/create"
@@ -98,7 +103,13 @@ export const renderLbsCustomRoutes = ({
         path="/messages"
         element={
           <ProtectedRoute resource="conversations" action="list">
-            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading messages…</div>}>
+            <Suspense
+              fallback={
+                <div className="p-6 text-sm text-muted-foreground">
+                  Loading messages…
+                </div>
+              }
+            >
               <MessagesPage />
             </Suspense>
           </ProtectedRoute>
@@ -265,9 +276,18 @@ export const renderLbsCustomRoutes = ({
         }
       />
       {/* Legacy placeholder routes kept for direct links during rollout */}
-      <Route path="/proposals-placeholder" element={<ProposalsPlaceholderPage />} />
-      <Route path="/contracts-placeholder" element={<ContractsPlaceholderPage />} />
-      <Route path="/web-forms-placeholder" element={<WebFormsPlaceholderPage />} />
+      <Route
+        path="/proposals-placeholder"
+        element={<ProposalsPlaceholderPage />}
+      />
+      <Route
+        path="/contracts-placeholder"
+        element={<ContractsPlaceholderPage />}
+      />
+      <Route
+        path="/web-forms-placeholder"
+        element={<WebFormsPlaceholderPage />}
+      />
       <Route path="/tickets-placeholder" element={<TicketsPlaceholderPage />} />
     </>
   );

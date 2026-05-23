@@ -21,7 +21,9 @@ const parseGithubRepo = (input?: string | null): GithubRepoRef | null => {
 
   if (/github\.com/i.test(trimmed)) {
     try {
-      const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+      const url = new URL(
+        trimmed.includes("://") ? trimmed : `https://${trimmed}`,
+      );
       const segments = url.pathname.split("/").filter(Boolean);
       if (segments.length < 2) return null;
       const owner = segments[0];
@@ -57,7 +59,10 @@ const githubFetch = async (path: string, token?: string | null) => {
   return response.json();
 };
 
-const fetchGithubRepoStatus = async (slugInput: string, token?: string | null) => {
+const fetchGithubRepoStatus = async (
+  slugInput: string,
+  token?: string | null,
+) => {
   const parsed = parseGithubRepo(slugInput);
   if (!parsed) {
     throw new Error("Invalid GitHub repository");
@@ -67,9 +72,10 @@ const fetchGithubRepoStatus = async (slugInput: string, token?: string | null) =
   const repoUrl = `https://github.com/${slug}`;
 
   const repoData = await githubFetch(`/repos/${owner}/${repo}`, token);
-  const defaultBranch = typeof repoData.default_branch === "string"
-    ? repoData.default_branch
-    : "main";
+  const defaultBranch =
+    typeof repoData.default_branch === "string"
+      ? repoData.default_branch
+      : "main";
 
   let lastCommit: Record<string, unknown> | null = null;
   try {
@@ -79,15 +85,15 @@ const fetchGithubRepoStatus = async (slugInput: string, token?: string | null) =
     );
     const commit = Array.isArray(commits) ? commits[0] : null;
     if (commit?.sha) {
-      const message = String(commit.commit?.message ?? "").split("\n")[0].trim();
+      const message = String(commit.commit?.message ?? "")
+        .split("\n")[0]
+        .trim();
       lastCommit = {
         sha: commit.sha,
         short_sha: String(commit.sha).slice(0, 7),
         message: message || "Commit",
         author:
-          commit.commit?.author?.name ??
-          commit.author?.login ??
-          "Unknown",
+          commit.commit?.author?.name ?? commit.author?.login ?? "Unknown",
         date: commit.commit?.author?.date ?? null,
         url: commit.html_url ?? `${repoUrl}/commit/${commit.sha}`,
       };
@@ -162,7 +168,10 @@ Deno.serve(async (req: Request) =>
           }
 
           if (!deal.github_repo?.trim()) {
-            return createErrorResponse(400, "Project has no GitHub repository linked");
+            return createErrorResponse(
+              400,
+              "Project has no GitHub repository linked",
+            );
           }
 
           const token = Deno.env.get("GITHUB_TOKEN")?.trim() || null;
@@ -182,9 +191,14 @@ Deno.serve(async (req: Request) =>
                 last_commit: null,
                 latest_run: null,
                 github_token_configured: Boolean(token),
-                error: error instanceof Error ? error.message : "Failed to load GitHub status",
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to load GitHub status",
               }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+              {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
             );
           }
         } catch (error) {

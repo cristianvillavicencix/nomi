@@ -1,7 +1,10 @@
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { contactHasPhone, normalizeUsPhoneToE164 } from "./phone.ts";
 
-export async function findClientConversation(orgId: number, externalPhone: string) {
+export async function findClientConversation(
+  orgId: number,
+  externalPhone: string,
+) {
   const normalized = normalizeUsPhoneToE164(externalPhone);
   if (!normalized) return null;
 
@@ -119,7 +122,9 @@ export async function deleteConversationIfEmpty(conversationId: number) {
     .eq("conversation_id", conversationId);
 
   if (countError) {
-    throw new Error(countError.message ?? "Failed to inspect conversation messages");
+    throw new Error(
+      countError.message ?? "Failed to inspect conversation messages",
+    );
   }
 
   if ((count ?? 0) > 0) {

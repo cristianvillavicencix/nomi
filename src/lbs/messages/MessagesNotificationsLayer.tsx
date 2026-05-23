@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { useGetIdentity, useNotify } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import type { Conversation, ConversationMessage, ConversationParticipant } from "@/lbs/types";
+import type {
+  Conversation,
+  ConversationMessage,
+  ConversationParticipant,
+} from "@/lbs/types";
 import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
 import { buildMessagePreview } from "@/lbs/messages/conversationUtils";
 import {
@@ -48,14 +52,24 @@ export const MessagesNotificationsLayer = () => {
   const location = useLocation();
   const { identity } = useGetIdentity();
   const notify = useNotify();
-  const { activeConversationId, focusConversation, openInbox, viewConversation } =
-    useMessagesQuickAccess();
+  const {
+    activeConversationId,
+    focusConversation,
+    openInbox,
+    viewConversation,
+  } = useMessagesQuickAccess();
   const [incomingNotifications, setIncomingNotifications] = useState<
     IncomingMessageNotification[]
   >([]);
 
-  const { conversations, deals, dmParticipants, members, contacts, participations } =
-    useInboxConversations();
+  const {
+    conversations,
+    deals,
+    dmParticipants,
+    members,
+    contacts,
+    participations,
+  } = useInboxConversations();
 
   const participationsRef = useRef<ConversationParticipant[]>(participations);
   useEffect(() => {
@@ -80,14 +94,15 @@ export const MessagesNotificationsLayer = () => {
   }, [activeConversationId]);
 
   const conversationsById = useMemo(
-    () => Object.fromEntries(conversations.map((entry) => [String(entry.id), entry])),
+    () =>
+      Object.fromEntries(
+        conversations.map((entry) => [String(entry.id), entry]),
+      ),
     [conversations],
   );
 
   const pushNotification = useCallback(
-    (
-      message: ConversationMessage,
-    ) => {
+    (message: ConversationMessage) => {
       const conversation = conversationsById[String(message.conversation_id)];
       const display = conversation
         ? getConversationDisplay({
@@ -124,7 +139,9 @@ export const MessagesNotificationsLayer = () => {
         document.visibilityState !== "visible" ||
         String(activeConversationId ?? "") !== String(message.conversation_id)
       ) {
-        notify(`${notification.title}: ${notification.preview}`, { type: "info" });
+        notify(`${notification.title}: ${notification.preview}`, {
+          type: "info",
+        });
       }
 
       showMessagingDesktopNotification({
@@ -186,7 +203,9 @@ export const MessagesNotificationsLayer = () => {
   }, [identity?.id, pushNotification]);
 
   const dismissNotification = useCallback((id: string) => {
-    setIncomingNotifications((current) => current.filter((entry) => entry.id !== id));
+    setIncomingNotifications((current) =>
+      current.filter((entry) => entry.id !== id),
+    );
   }, []);
 
   const openNotification = useCallback(

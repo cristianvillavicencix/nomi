@@ -39,12 +39,21 @@ export const ProposalCreate = () => {
           >
             <Card>
               <CardContent className="space-y-4 pt-6">
-                <TextInput source="title" validate={(value) => (!value ? "Required" : undefined)} />
+                <TextInput
+                  source="title"
+                  validate={(value) => (!value ? "Required" : undefined)}
+                />
                 <ReferenceInput source="company_id" reference="companies">
                   <AutocompleteInput optionText="name" label="Client" />
                 </ReferenceInput>
-                <ReferenceInput source="contact_id" reference="contacts_summary">
-                  <AutocompleteInput optionText={contactOptionText} label="Contact" />
+                <ReferenceInput
+                  source="contact_id"
+                  reference="contacts_summary"
+                >
+                  <AutocompleteInput
+                    optionText={contactOptionText}
+                    label="Contact"
+                  />
                 </ReferenceInput>
                 <NumberInput source="amount" />
                 <DateInput source="valid_until" />

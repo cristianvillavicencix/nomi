@@ -1,4 +1,10 @@
-import { EditBase, Form, useNotify, useRecordContext, useRedirect } from "ra-core";
+import {
+  EditBase,
+  Form,
+  useNotify,
+  useRecordContext,
+  useRedirect,
+} from "ra-core";
 import { Link, useParams } from "react-router";
 import { SaveButton } from "@/components/admin/form";
 import { FormToolbar } from "@/components/atomic-crm/layout/FormToolbar";
@@ -15,7 +21,9 @@ const WebFormEditForm = () => {
     <>
       <WebFormInputs
         slugDisabled={record?.slug ? isSystemWebFormSlug(record.slug) : true}
-        showFieldsEditor={record?.slug ? !isSystemWebFormSlug(record.slug) : true}
+        showFieldsEditor={
+          record?.slug ? !isSystemWebFormSlug(record.slug) : true
+        }
       />
       <FormToolbar>
         <SaveButton />

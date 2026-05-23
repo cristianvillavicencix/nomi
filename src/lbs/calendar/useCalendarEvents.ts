@@ -1,6 +1,12 @@
 import { useMemo } from "react";
 import { useGetList, useGetMany, type Identifier } from "ra-core";
-import type { CalendarEventRecord, Contact, Deal, Person, Task } from "@/components/atomic-crm/types";
+import type {
+  CalendarEventRecord,
+  Contact,
+  Deal,
+  Person,
+  Task,
+} from "@/components/atomic-crm/types";
 import { getPersonName } from "@/components/atomic-crm/tasks/taskPeopleOptions";
 import {
   buildCalendarEntryEvent,
@@ -14,7 +20,8 @@ import {
 
 const getContactName = (contact?: Contact | null) =>
   contact
-    ? [contact.first_name, contact.last_name].filter(Boolean).join(" ") || "Contact"
+    ? [contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
+      "Contact"
     : null;
 
 export const useCalendarEvents = ({
@@ -118,7 +125,8 @@ export const useCalendarEvents = ({
   const { data: deals = [], isPending: isDealsPending } = useGetList<Deal>(
     "deals",
     {
-      filter: projectId != null && projectId !== "" ? { "id@eq": projectId } : {},
+      filter:
+        projectId != null && projectId !== "" ? { "id@eq": projectId } : {},
       pagination: { page: 1, perPage: 500 },
       sort: { field: "name", order: "ASC" },
     },
@@ -150,7 +158,15 @@ export const useCalendarEvents = ({
       .filter((event) => event.date >= range.start && event.date <= range.end);
 
     return [...taskEvents, ...reminderEvents, ...dealEvents];
-  }, [contactsById, deals, peopleById, range.end, range.start, reminders, tasks]);
+  }, [
+    contactsById,
+    deals,
+    peopleById,
+    range.end,
+    range.start,
+    reminders,
+    tasks,
+  ]);
 
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
 

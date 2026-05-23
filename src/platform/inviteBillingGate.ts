@@ -7,6 +7,8 @@
  * - `VITE_SKIP_USER_INVITE_BILLING=1` (Vite env at build time)
  */
 export function inviteBillingSeatGateDisabled(): boolean {
-  const raw = String(import.meta.env.VITE_SKIP_USER_INVITE_BILLING ?? "").trim().toLowerCase();
+  const raw = String(import.meta.env.VITE_SKIP_USER_INVITE_BILLING ?? "")
+    .trim()
+    .toLowerCase();
   return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
 }

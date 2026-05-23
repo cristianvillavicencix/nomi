@@ -23,7 +23,8 @@ export const getWebhookSecret = () => {
 };
 
 export const defaultSeatPriceId = () =>
-  (Deno.env.get("STRIPE_SEAT_PRICE_ID") ?? "").trim() || "price_1TQFalPdDeQWOyitqTFDWn8Q";
+  (Deno.env.get("STRIPE_SEAT_PRICE_ID") ?? "").trim() ||
+  "price_1TQFalPdDeQWOyitqTFDWn8Q";
 
 export const mapStripeStatusToBilling = (status: string) => {
   switch (status) {

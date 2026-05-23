@@ -69,7 +69,12 @@ const ensureTask = async (
   dataProvider: DataProvider,
   deal: LbsDeal,
   organizationMemberId: Identifier | undefined,
-  template: { type: string; text: string; priority?: string; dueDaysOffset: number },
+  template: {
+    type: string;
+    text: string;
+    priority?: string;
+    dueDaysOffset: number;
+  },
 ) => {
   const contactId = getDealContactId(deal);
   if (!contactId || !organizationMemberId) return;
@@ -80,7 +85,11 @@ const ensureTask = async (
     sort: { field: "id", order: "ASC" },
   });
 
-  if (existing.some((t) => String(t.text).toLowerCase() === template.text.toLowerCase())) {
+  if (
+    existing.some(
+      (t) => String(t.text).toLowerCase() === template.text.toLowerCase(),
+    )
+  ) {
     return;
   }
 

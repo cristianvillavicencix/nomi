@@ -10,9 +10,11 @@ import { pushSeatCountToStripeForOrg } from "../_shared/syncSubscriptionSeats.ts
 import { createErrorResponse } from "../_shared/utils.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const resolveOrgIdFromSubscription = async (
-  sub: { id: string; customer: string; metadata: Record<string, string> | null | undefined },
-) => {
+const resolveOrgIdFromSubscription = async (sub: {
+  id: string;
+  customer: string;
+  metadata: Record<string, string> | null | undefined;
+}) => {
   const raw = sub.metadata?.org_id;
   if (raw) {
     const n = Number.parseInt(String(raw), 10);
@@ -56,11 +58,7 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      wh,
-    ) as typeof event;
+    event = stripe.webhooks.constructEvent(body, signature, wh) as typeof event;
   } catch (e) {
     return createErrorResponse(400, (e as Error).message);
   }
@@ -79,8 +77,8 @@ Deno.serve(async (req: Request) => {
         if (session.mode !== "subscription" || !session.subscription) {
           break;
         }
-        const orgIdRaw = session.client_reference_id ??
-          session.metadata?.org_id;
+        const orgIdRaw =
+          session.client_reference_id ?? session.metadata?.org_id;
         if (!orgIdRaw) {
           console.error("checkout.session.completed without org id");
           break;
@@ -94,9 +92,10 @@ Deno.serve(async (req: Request) => {
         );
 
         const status = mapStripeStatusToBilling(sub.status);
-        const customer = typeof session.customer === "string"
-          ? session.customer
-          : String(session.customer);
+        const customer =
+          typeof session.customer === "string"
+            ? session.customer
+            : String(session.customer);
 
         const { error } = await supabaseAdmin
           .from("organizations")
@@ -149,7 +148,9 @@ Deno.serve(async (req: Request) => {
             stripe_customer_id: subPartial.customer,
             stripe_subscription_id: subPartial.id,
             billing_status: status,
-            ...(billableCount != null ? { billable_seat_count: billableCount } : {}),
+            ...(billableCount != null
+              ? { billable_seat_count: billableCount }
+              : {}),
           })
           .eq("id", orgId);
         break;
@@ -160,7 +161,8 @@ Deno.serve(async (req: Request) => {
           customer: string;
           metadata?: Record<string, string> | null;
         };
-        let targetOrgId: number | null = await resolveOrgIdFromSubscription(sub);
+        let targetOrgId: number | null =
+          await resolveOrgIdFromSubscription(sub);
         if (targetOrgId == null) {
           const { data: org } = await supabaseAdmin
             .from("organizations")
@@ -181,7 +183,10 @@ Deno.serve(async (req: Request) => {
         break;
       }
       case "invoice.payment_failed": {
-        const inv = event.data.object as { customer?: string | null; subscription?: string | null };
+        const inv = event.data.object as {
+          customer?: string | null;
+          subscription?: string | null;
+        };
         const subId = inv.subscription;
         if (!subId || typeof subId !== "string") break;
         const { data: org } = await supabaseAdmin

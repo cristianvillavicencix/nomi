@@ -17,13 +17,19 @@ Deno.serve(
       const companyId = Number(body.company_id);
       const contactId = Number(body.contact_id);
 
-      if (!Number.isFinite(dealId) || !Number.isFinite(companyId) || !Number.isFinite(contactId)) {
+      if (
+        !Number.isFinite(dealId) ||
+        !Number.isFinite(companyId) ||
+        !Number.isFinite(contactId)
+      ) {
         return createErrorResponse("Missing deal, company, or contact", 400);
       }
 
       const { data: deal, error } = await supabaseAdmin
         .from("deals")
-        .select("id, company_id, contact_id, contact_ids, project_type, expected_end_date, website_brief")
+        .select(
+          "id, company_id, contact_id, contact_ids, project_type, expected_end_date, website_brief",
+        )
         .eq("id", dealId)
         .eq("company_id", companyId)
         .maybeSingle();
@@ -32,9 +38,12 @@ Deno.serve(
         return createErrorResponse("Project not found", 404);
       }
 
-      const contactIds = Array.isArray(deal.contact_ids) ? deal.contact_ids : [];
+      const contactIds = Array.isArray(deal.contact_ids)
+        ? deal.contact_ids
+        : [];
       const matchesContact =
-        Number(deal.contact_id) === contactId || contactIds.map(Number).includes(contactId);
+        Number(deal.contact_id) === contactId ||
+        contactIds.map(Number).includes(contactId);
 
       if (!matchesContact) {
         return createErrorResponse("Contact does not match project", 403);

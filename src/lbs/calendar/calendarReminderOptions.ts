@@ -115,6 +115,8 @@ export const getContactDisplayName = (contact?: {
   id?: number | string;
 }) => {
   if (!contact) return "";
-  const name = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
+  const name = [contact.first_name, contact.last_name]
+    .filter(Boolean)
+    .join(" ");
   return name || `Contact #${contact.id}`;
 };

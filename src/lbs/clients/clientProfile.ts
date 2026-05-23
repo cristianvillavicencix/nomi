@@ -1,4 +1,9 @@
-import type { Company, Contact, EmailAndType, PhoneNumberAndType } from "@/components/atomic-crm/types";
+import type {
+  Company,
+  Contact,
+  EmailAndType,
+  PhoneNumberAndType,
+} from "@/components/atomic-crm/types";
 import {
   getBusinessEmailFromLinks,
   getInvoiceContactSummary,
@@ -17,12 +22,16 @@ export type CompanyWithPrimaryContact = Company & {
 };
 
 const pickFirstEmail = (emails?: EmailAndType[] | null) =>
-  emails?.find((entry) => String(entry.email ?? "").trim())?.email?.trim() ?? "";
+  emails?.find((entry) => String(entry.email ?? "").trim())?.email?.trim() ??
+  "";
 
 const pickFirstPhone = (phones?: PhoneNumberAndType[] | null) =>
-  phones?.find((entry) => String(entry.number ?? "").trim())?.number?.trim() ?? "";
+  phones?.find((entry) => String(entry.number ?? "").trim())?.number?.trim() ??
+  "";
 
-export const getPrimaryContactFullName = (company: CompanyWithPrimaryContact) => {
+export const getPrimaryContactFullName = (
+  company: CompanyWithPrimaryContact,
+) => {
   const fullName =
     `${company.primary_contact_first_name ?? ""} ${company.primary_contact_last_name ?? ""}`.trim();
   return fullName || "—";
@@ -55,7 +64,8 @@ export const collectClientEmails = (
     entries.push({ label, email: trimmed });
   };
 
-  const contactEmails = primaryContact?.email_jsonb ?? company.primary_contact_email_jsonb;
+  const contactEmails =
+    primaryContact?.email_jsonb ?? company.primary_contact_email_jsonb;
   contactEmails?.forEach((entry) => {
     const typeLabel = entry.type ? ` (${entry.type})` : "";
     add(entry.email, `Contact${typeLabel}`);
@@ -89,7 +99,9 @@ export const getExtraClientEmails = (
   if (!normalizedDisplayed) {
     return all.length > 1 ? all.slice(1) : all;
   }
-  return all.filter((entry) => entry.email.toLowerCase() !== normalizedDisplayed);
+  return all.filter(
+    (entry) => entry.email.toLowerCase() !== normalizedDisplayed,
+  );
 };
 
 export {
@@ -160,8 +172,12 @@ export const pickPrimaryContact = (
     const rightIsClient = right.status === "client" ? 0 : 1;
     if (leftIsClient !== rightIsClient) return leftIsClient - rightIsClient;
 
-    const leftCreated = left.first_seen ? Date.parse(left.first_seen) : Number.MAX_SAFE_INTEGER;
-    const rightCreated = right.first_seen ? Date.parse(right.first_seen) : Number.MAX_SAFE_INTEGER;
+    const leftCreated = left.first_seen
+      ? Date.parse(left.first_seen)
+      : Number.MAX_SAFE_INTEGER;
+    const rightCreated = right.first_seen
+      ? Date.parse(right.first_seen)
+      : Number.MAX_SAFE_INTEGER;
     if (leftCreated !== rightCreated) return leftCreated - rightCreated;
 
     return Number(left.id) - Number(right.id);

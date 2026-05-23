@@ -44,7 +44,8 @@ export default (): Db => {
       id: 1,
       name: "Website & marketing intake",
       slug: "website-intake",
-      description: "Collect website and marketing project requirements from clients.",
+      description:
+        "Collect website and marketing project requirements from clients.",
       active: true,
       schema: { type: "brief" },
       created_at: new Date().toISOString(),
@@ -54,7 +55,8 @@ export default (): Db => {
       id: 2,
       name: "Project Resources Upload",
       slug: "project-resources",
-      description: "Let clients upload logos, service photos, team images, and other project files.",
+      description:
+        "Let clients upload logos, service photos, team images, and other project files.",
       active: true,
       schema: { type: "file-upload" },
       created_at: new Date().toISOString(),

@@ -32,7 +32,8 @@ export const DEFAULT_WEBSITE_CONTENT_PAGES: WebsiteContentPage[] = [
 ];
 
 export const parseWebsiteContent = (raw: unknown): WebsiteContent => {
-  if (!raw || typeof raw !== "object") return { pages: [...DEFAULT_WEBSITE_CONTENT_PAGES] };
+  if (!raw || typeof raw !== "object")
+    return { pages: [...DEFAULT_WEBSITE_CONTENT_PAGES] };
   const pages = (raw as WebsiteContent).pages;
   if (!Array.isArray(pages) || pages.length === 0) {
     return { pages: [...DEFAULT_WEBSITE_CONTENT_PAGES] };

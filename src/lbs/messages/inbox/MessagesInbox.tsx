@@ -58,7 +58,8 @@ const MessageSearchContactItem = ({
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{label}</span>
         <span className="block truncate text-sm text-muted-foreground">
-          {contact.company_name?.trim() || "Client contact"} · {getContactPhoneLabel(contact)}
+          {contact.company_name?.trim() || "Client contact"} ·{" "}
+          {getContactPhoneLabel(contact)}
         </span>
       </span>
     </button>
@@ -81,9 +82,13 @@ export const MessagesInbox = (props: {
   loadingMoreConversations?: boolean;
 }) => {
   const [activeTab, setActiveTab] = useState<InboxTab>("all");
-  const [filters, setFilters] = useState<InboxFilterState>(DEFAULT_INBOX_FILTERS);
+  const [filters, setFilters] = useState<InboxFilterState>(
+    DEFAULT_INBOX_FILTERS,
+  );
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [startingContactId, setStartingContactId] = useState<Identifier | null>(null);
+  const [startingContactId, setStartingContactId] = useState<Identifier | null>(
+    null,
+  );
   const { openSms } = useMessagesQuickAccess();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -124,15 +129,16 @@ export const MessagesInbox = (props: {
     [props.conversations, unread.totalUnread],
   );
 
-  const { data: searchedContacts = [], isPending: isSearchingContacts } = useGetList<Contact>(
-    "contacts",
-    {
-      filter: debouncedQuery ? { q: debouncedQuery } : {},
-      pagination: { page: 1, perPage: 25 },
-      sort: { field: "last_name", order: "ASC" },
-    },
-    { enabled: debouncedQuery.length > 0, staleTime: 15_000 },
-  );
+  const { data: searchedContacts = [], isPending: isSearchingContacts } =
+    useGetList<Contact>(
+      "contacts",
+      {
+        filter: debouncedQuery ? { q: debouncedQuery } : {},
+        pagination: { page: 1, perPage: 25 },
+        sort: { field: "last_name", order: "ASC" },
+      },
+      { enabled: debouncedQuery.length > 0, staleTime: 15_000 },
+    );
 
   const newSmsContacts = useMemo(() => {
     if (!debouncedQuery) return [];
@@ -149,9 +155,14 @@ export const MessagesInbox = (props: {
       await openSms(contact);
       refresh();
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Could not start SMS conversation", {
-        type: "error",
-      });
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Could not start SMS conversation",
+        {
+          type: "error",
+        },
+      );
     } finally {
       setStartingContactId(null);
     }
@@ -172,13 +183,19 @@ export const MessagesInbox = (props: {
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={filters.query}
-            onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                query: event.target.value,
+              }))
+            }
             placeholder="Search conversations or clients…"
             className="h-9 pl-9"
           />
         </div>
       </div>
-      {props.isPending ? null : filteredConversations.length === 0 && !debouncedQuery ? (
+      {props.isPending ? null : filteredConversations.length === 0 &&
+        !debouncedQuery ? (
         <div className="flex min-h-[180px] flex-1 flex-col items-center justify-center px-4 text-center text-sm text-muted-foreground">
           No conversations yet. Search for a client to start SMS.
         </div>
@@ -199,14 +216,17 @@ export const MessagesInbox = (props: {
         />
       )}
 
-      {debouncedQuery.length > 0 && (isSearchingContacts || newSmsContacts.length > 0) ? (
+      {debouncedQuery.length > 0 &&
+      (isSearchingContacts || newSmsContacts.length > 0) ? (
         <div className="border-t border-border/40 px-2 py-3">
           <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <UserPlus className="size-3.5" />
             Start SMS with a contact
           </div>
           {isSearchingContacts ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">Searching contacts…</p>
+            <p className="px-3 py-2 text-sm text-muted-foreground">
+              Searching contacts…
+            </p>
           ) : newSmsContacts.length === 0 ? (
             <p className="px-3 py-2 text-sm text-muted-foreground">
               No new contacts with phone numbers match this search.

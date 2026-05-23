@@ -44,7 +44,9 @@ export const ProposalsList = () => {
 
 const ProposalsListActions = () => (
   <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-    <SortButton fields={["title", "status", "amount", "valid_until", "updated_at"]} />
+    <SortButton
+      fields={["title", "status", "amount", "valid_until", "updated_at"]}
+    />
     <CreateButton label="New proposal" />
     <ModuleInfoPopover
       title={LBS_PLACEHOLDER_MODULES.proposals.title}

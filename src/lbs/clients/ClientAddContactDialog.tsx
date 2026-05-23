@@ -53,7 +53,9 @@ export const ClientAddContactDialog = ({
           resource="contacts"
           redirect={false}
           transform={(values: AddContactFormValues): Partial<Contact> => {
-            const { firstName, lastName } = splitClientFullName(values.full_name ?? "");
+            const { firstName, lastName } = splitClientFullName(
+              values.full_name ?? "",
+            );
             const now = new Date().toISOString();
             return {
               first_name: firstName,

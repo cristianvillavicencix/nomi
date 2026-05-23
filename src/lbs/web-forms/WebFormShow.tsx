@@ -1,6 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { ShowBase, useDataProvider, useGetList, useNotify, useShowContext } from "ra-core";
+import {
+  ShowBase,
+  useDataProvider,
+  useGetList,
+  useNotify,
+  useShowContext,
+} from "ra-core";
 import { useNavigate, useParams } from "react-router";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +43,9 @@ const WebFormShowContent = () => {
 
   const hasProcessIntake =
     "processWebsiteIntake" in dataProvider &&
-    typeof (dataProvider as CrmDataProvider & { processWebsiteIntake?: unknown })
-      .processWebsiteIntake === "function";
+    typeof (
+      dataProvider as CrmDataProvider & { processWebsiteIntake?: unknown }
+    ).processWebsiteIntake === "function";
 
   const { mutate: processIntake, isPending: isProcessing } = useMutation({
     mutationFn: (submission: FormSubmission) =>
@@ -94,7 +101,9 @@ const WebFormShowContent = () => {
             </Badge>
           </div>
           {record.description ? (
-            <p className="mt-2 text-sm text-muted-foreground">{record.description}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {record.description}
+            </p>
           ) : null}
         </div>
         <Button type="button" variant="outline" asChild>
@@ -126,12 +135,15 @@ const WebFormShowContent = () => {
                   className="rounded-lg border p-3 text-sm"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">Submission #{submission.id}</span>
+                    <span className="font-medium">
+                      Submission #{submission.id}
+                    </span>
                     <span className="text-muted-foreground">
                       {formatDateTime(submission.created_at)}
                     </span>
                   </div>
-                  {submission.data && Object.keys(submission.data).length > 0 ? (
+                  {submission.data &&
+                  Object.keys(submission.data).length > 0 ? (
                     <pre className="mt-2 overflow-x-auto rounded bg-muted/50 p-2 text-xs">
                       {JSON.stringify(submission.data, null, 2)}
                     </pre>

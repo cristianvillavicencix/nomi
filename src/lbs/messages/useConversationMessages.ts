@@ -79,7 +79,11 @@ export const useConversationMessages = (
 
       setOlderMessages((current) => [...[...rows].reverse(), ...current]);
       setPage(nextPage);
-      setHasMoreOlder(count != null ? count > nextPage * PAGE_SIZE : rows.length === PAGE_SIZE);
+      setHasMoreOlder(
+        count != null
+          ? count > nextPage * PAGE_SIZE
+          : rows.length === PAGE_SIZE,
+      );
     } finally {
       setLoadingOlder(false);
     }
@@ -116,5 +120,12 @@ export const useConversationMessages = (
     };
   }, [conversationId, queryClient]);
 
-  return { messages, isPending, refetch, loadOlder, hasMoreOlder, loadingOlder };
+  return {
+    messages,
+    isPending,
+    refetch,
+    loadOlder,
+    hasMoreOlder,
+    loadingOlder,
+  };
 };

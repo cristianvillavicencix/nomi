@@ -151,14 +151,26 @@ export const AddressInfo = ({ record }: { record: Company }) => {
     <AsideSection title="Main Address" noGap>
       <a
         href={mapsHref(
-          [record.address, record.city, record.state_abbr, record.zipcode, record.country]
+          [
+            record.address,
+            record.city,
+            record.state_abbr,
+            record.zipcode,
+            record.country,
+          ]
             .filter(Boolean)
             .join(" "),
         )}
         target="_blank"
         rel="noreferrer"
         className="link-action text-sm"
-        title={[record.address, record.city, record.state_abbr, record.zipcode, record.country]
+        title={[
+          record.address,
+          record.city,
+          record.state_abbr,
+          record.zipcode,
+          record.country,
+        ]
           .filter(Boolean)
           .join(", ")}
       >
@@ -212,7 +224,11 @@ export const AdditionalInfo = ({ record }: { record: Company }) => {
       {record.organization_member_id !== null && (
         <div className="inline-flex text-sm text-muted-foreground mb-1">
           Followed by&nbsp;
-          <ReferenceField source="organization_member_id" reference="organization_members" record={record}>
+          <ReferenceField
+            source="organization_member_id"
+            reference="organization_members"
+            record={record}
+          >
             <OrganizationMemberName />
           </ReferenceField>
         </div>

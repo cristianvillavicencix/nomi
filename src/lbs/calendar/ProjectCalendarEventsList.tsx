@@ -107,14 +107,23 @@ export const LinkedCalendarEventsList = ({
   if (isPending) return null;
 
   if (events.length === 0) {
-    return <p className={`text-sm text-muted-foreground ${className ?? ""}`}>{emptyMessage}</p>;
+    return (
+      <p className={`text-sm text-muted-foreground ${className ?? ""}`}>
+        {emptyMessage}
+      </p>
+    );
   }
 
   return (
     <ul className={`space-y-2 ${className ?? ""}`}>
       {events.map((event) => {
-        const timeLabel = formatEventTimeRange(event.event_time, event.duration_minutes);
-        const remindLabel = formatRemindBeforeLabel(event.remind_before_minutes);
+        const timeLabel = formatEventTimeRange(
+          event.event_time,
+          event.duration_minutes,
+        );
+        const remindLabel = formatRemindBeforeLabel(
+          event.remind_before_minutes,
+        );
 
         return (
           <li

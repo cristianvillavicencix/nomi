@@ -1,5 +1,10 @@
 import { useCallback } from "react";
-import { useCreate, useDataProvider, useGetIdentity, type Identifier } from "ra-core";
+import {
+  useCreate,
+  useDataProvider,
+  useGetIdentity,
+  type Identifier,
+} from "ra-core";
 import type { Conversation, OrganizationMember } from "@/lbs/types";
 import { buildDmKey } from "@/lbs/messages/conversationUtils";
 
@@ -39,23 +44,25 @@ export const useOpenDirectMessage = () => {
         `${otherMember.first_name ?? ""} ${otherMember.last_name ?? ""}`.trim() ||
         "Direct message";
 
-      const conversation = await new Promise<Conversation>((resolve, reject) => {
-        create(
-          "conversations",
-          {
-            data: {
-              type: "team_dm",
-              title,
-              dm_key: dmKey,
-              created_by_member_id: currentMemberId,
+      const conversation = await new Promise<Conversation>(
+        (resolve, reject) => {
+          create(
+            "conversations",
+            {
+              data: {
+                type: "team_dm",
+                title,
+                dm_key: dmKey,
+                created_by_member_id: currentMemberId,
+              },
             },
-          },
-          {
-            onSuccess: (record) => resolve(record as Conversation),
-            onError: reject,
-          },
-        );
-      });
+            {
+              onSuccess: (record) => resolve(record as Conversation),
+              onError: reject,
+            },
+          );
+        },
+      );
 
       await Promise.all(
         [currentMemberId, otherMember.id].map(
@@ -93,5 +100,4 @@ export const getOtherDmMemberId = (
 ) =>
   participantMemberIds.find(
     (memberId) => String(memberId) !== String(currentMemberId),
-  ) ??
-  (conversation.type === "team_dm" ? null : null);
+  ) ?? (conversation.type === "team_dm" ? null : null);

@@ -22,7 +22,10 @@ export const ProjectTaskStats = ({
         ) : null}
         <span aria-hidden>·</span>
         <span>
-          <span className="font-medium text-foreground">{stats.dueThisWeek}</span> due
+          <span className="font-medium text-foreground">
+            {stats.dueThisWeek}
+          </span>{" "}
+          due
         </span>
       </span>
     );

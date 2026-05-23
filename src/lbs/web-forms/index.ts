@@ -8,7 +8,8 @@ export default {
   show: WebFormShow,
   edit: WebFormEdit,
   create: WebFormCreate,
-  recordRepresentation: (record: { name?: string | null }) => record.name ?? "Web form",
+  recordRepresentation: (record: { name?: string | null }) =>
+    record.name ?? "Web form",
 };
 
 export { WebFormsList, WebFormShow, WebFormEdit, WebFormCreate };

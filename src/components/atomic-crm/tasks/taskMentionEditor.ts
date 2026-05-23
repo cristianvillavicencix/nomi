@@ -173,7 +173,10 @@ const createRangeFromCharacterOffsets = (
     ) {
       const leftTag = (topLevel[index] as HTMLElement).tagName;
       const rightTag = (next as HTMLElement).tagName;
-      if ((leftTag === "DIV" || leftTag === "P") && (rightTag === "DIV" || rightTag === "P")) {
+      if (
+        (leftTag === "DIV" || leftTag === "P") &&
+        (rightTag === "DIV" || rightTag === "P")
+      ) {
         if (!startNode && offset + 1 >= startOffset) {
           startNode = topLevel[index];
           startNodeOffset = (topLevel[index] as HTMLElement).childNodes.length;

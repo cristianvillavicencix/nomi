@@ -12,7 +12,10 @@ import {
   insertSmsMessage,
   touchConversationFirstResponse,
 } from "../_shared/messagingConversations.ts";
-import { expandTemplateVariables, sanitizeMessageBody } from "../_shared/messagingUtils.ts";
+import {
+  expandTemplateVariables,
+  sanitizeMessageBody,
+} from "../_shared/messagingUtils.ts";
 import { sendTwilioSms } from "../_shared/twilio.ts";
 import { resolveTwilioMediaUrls } from "../_shared/twilioMedia.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
@@ -114,7 +117,11 @@ Deno.serve((req: Request) =>
         const hasExistingConversation = Number.isFinite(conversationId);
 
         if (hasExistingConversation) {
-          await assertMemberCanAccessConversation(memberId, orgId, conversationId);
+          await assertMemberCanAccessConversation(
+            memberId,
+            orgId,
+            conversationId,
+          );
           const { data: phoneRow, error: phoneError } = await supabaseAdmin
             .from("conversations")
             .select("external_phone, contact_id, deal_id")
@@ -122,7 +129,9 @@ Deno.serve((req: Request) =>
             .single();
 
           if (phoneError || !phoneRow?.external_phone) {
-            throw new Error("Client phone number is missing on this conversation");
+            throw new Error(
+              "Client phone number is missing on this conversation",
+            );
           }
           externalPhone = phoneRow.external_phone;
 
@@ -183,7 +192,8 @@ Deno.serve((req: Request) =>
             externalPhone: normalizedPhone,
             contactId: contact.id,
             dealId:
-              payload.deal_id != null && Number.isFinite(Number(payload.deal_id))
+              payload.deal_id != null &&
+              Number.isFinite(Number(payload.deal_id))
                 ? Number(payload.deal_id)
                 : null,
             createdByMemberId: memberId,
@@ -219,7 +229,9 @@ Deno.serve((req: Request) =>
           const fromNumber = settings.twilio_phone_number?.trim();
 
           if (!accountSid || !authToken || !fromNumber) {
-            throw new Error("Twilio is not fully configured in Settings → Communications");
+            throw new Error(
+              "Twilio is not fully configured in Settings → Communications",
+            );
           }
 
           const twilioMediaUrls = await resolveTwilioMediaUrls(mediaUrls);
@@ -239,9 +251,12 @@ Deno.serve((req: Request) =>
             throw new Error("conversation_id or contact_id is required");
           }
 
-          const conversation = await ensureClientConversation(pendingNewConversation);
+          const conversation = await ensureClientConversation(
+            pendingNewConversation,
+          );
           conversationId = Number(conversation.id);
-          externalPhone = conversation.external_phone ?? pendingNewConversation.externalPhone;
+          externalPhone =
+            conversation.external_phone ?? pendingNewConversation.externalPhone;
         }
 
         const messageBody =

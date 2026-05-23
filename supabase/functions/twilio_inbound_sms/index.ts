@@ -1,7 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
-import { findOrgByTwilioPhone, getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
+import {
+  findOrgByTwilioPhone,
+  getMessagingSettingsSecrets,
+} from "../_shared/messagingSettings.ts";
 import {
   ensureClientConversation,
   findContactByPhone,
@@ -61,15 +64,18 @@ Deno.serve(async (req) => {
       return createErrorResponse(404, "Unknown Twilio number");
     }
 
-    const settings = await getMessagingSettingsSecrets(Number(orgSettings.org_id));
+    const settings = await getMessagingSettingsSecrets(
+      Number(orgSettings.org_id),
+    );
     const authToken = settings?.twilio_auth_token?.trim();
     if (!authToken) {
       return createErrorResponse(403, "Twilio auth token not configured");
     }
 
     const accountSid = params.AccountSid?.trim();
-    const storedAccountSid = settings?.twilio_account_sid?.trim()
-      ?? orgSettings.twilio_account_sid?.trim();
+    const storedAccountSid =
+      settings?.twilio_account_sid?.trim() ??
+      orgSettings.twilio_account_sid?.trim();
 
     const signature = req.headers.get("X-Twilio-Signature");
     // Webhook URL in Twilio Console must match TWILIO_WEBHOOK_URL or SUPABASE_URL/functions/v1/twilio_inbound_sms.
@@ -108,13 +114,13 @@ Deno.serve(async (req) => {
 
     let storedMediaUrl: string | null = null;
     if (mediaUrls[0] && storedAccountSid) {
-        storedMediaUrl = await mirrorTwilioMediaToStorage({
-          accountSid: storedAccountSid,
-          authToken,
-          mediaUrl: mediaUrls[0],
-          orgId: Number(orgSettings.org_id),
-          conversationId: Number(conversation.id),
-        });
+      storedMediaUrl = await mirrorTwilioMediaToStorage({
+        accountSid: storedAccountSid,
+        authToken,
+        mediaUrl: mediaUrls[0],
+        orgId: Number(orgSettings.org_id),
+        conversationId: Number(conversation.id),
+      });
     }
 
     const messageBody =
@@ -140,7 +146,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const withinHours = isWithinBusinessHours(
-      fullSettings.data?.business_hours as Record<string, { open?: string; close?: string; closed?: boolean }> | null,
+      fullSettings.data?.business_hours as Record<
+        string,
+        { open?: string; close?: string; closed?: boolean }
+      > | null,
     );
 
     let autoReply: string | null = null;
@@ -154,7 +163,10 @@ Deno.serve(async (req) => {
     }
 
     if (autoReply && storedAccountSid && authToken && toPhone) {
-      const contact = await findContactByPhone(Number(orgSettings.org_id), fromPhone);
+      const contact = await findContactByPhone(
+        Number(orgSettings.org_id),
+        fromPhone,
+      );
       const clientName = contact
         ? `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim()
         : "";

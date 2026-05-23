@@ -77,8 +77,16 @@ const Header = () => {
               to="/"
               className="flex items-center gap-2 text-secondary-foreground no-underline"
             >
-              <img className="[.light_&]:hidden h-6" src={darkModeLogo} alt={title} />
-              <img className="[.dark_&]:hidden h-6" src={lightModeLogo} alt={title} />
+              <img
+                className="[.light_&]:hidden h-6"
+                src={darkModeLogo}
+                alt={title}
+              />
+              <img
+                className="[.dark_&]:hidden h-6"
+                src={lightModeLogo}
+                alt={title}
+              />
               <h1 className="text-xl font-semibold">{title}</h1>
             </Link>
             <nav className="flex flex-wrap">
@@ -199,7 +207,10 @@ const NavigationTab = ({
   >
     {label}
     {badgeCount > 0 ? (
-      <Badge variant="secondary" className="rounded-full px-1.5 py-0 text-[10px]">
+      <Badge
+        variant="secondary"
+        className="rounded-full px-1.5 py-0 text-[10px]"
+      >
         {formatUnreadBadgeCount(badgeCount)}
       </Badge>
     ) : null}

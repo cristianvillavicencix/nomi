@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useSearchParams } from "react-router";
 import { cn } from "@/lib/utils";
 import {
@@ -31,7 +26,11 @@ const postEmbedHeight = () => {
   );
 };
 
-export const PublicFormEmbedProvider = ({ children }: { children: ReactNode }) => {
+export const PublicFormEmbedProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
   const [searchParams] = useSearchParams();
   const embedded = isWebFormEmbedMode(searchParams);
 
@@ -68,4 +67,7 @@ export const PublicFormEmbedProvider = ({ children }: { children: ReactNode }) =
 };
 
 export const publicFormContentClassName = (embedded: boolean) =>
-  cn("mx-auto w-full", embedded ? "max-w-xl space-y-5" : "max-w-2xl space-y-6 p-6");
+  cn(
+    "mx-auto w-full",
+    embedded ? "max-w-xl space-y-5" : "max-w-2xl space-y-6 p-6",
+  );

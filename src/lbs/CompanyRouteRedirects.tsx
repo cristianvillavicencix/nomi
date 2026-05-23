@@ -16,10 +16,7 @@ export const CompanyToClientShowRedirect = () => {
 
   const query = nextSearchParams.toString();
   return (
-    <Navigate
-      to={`/clients/${id}/show${query ? `?${query}` : ""}`}
-      replace
-    />
+    <Navigate to={`/clients/${id}/show${query ? `?${query}` : ""}`} replace />
   );
 };
 

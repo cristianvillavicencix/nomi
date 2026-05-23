@@ -13,7 +13,8 @@ import { defaultSeatPriceId, getStripe } from "../_shared/stripeClient.ts";
 import { pushSeatCountToStripeForOrg } from "../_shared/syncSubscriptionSeats.ts";
 
 const siteBaseUrl = () =>
-  (Deno.env.get("BILLING_PUBLIC_SITE_URL") ?? "").replace(/\/$/, "") || "http://localhost:5173";
+  (Deno.env.get("BILLING_PUBLIC_SITE_URL") ?? "").replace(/\/$/, "") ||
+  "http://localhost:5173";
 
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {
@@ -41,13 +42,17 @@ Deno.serve((req: Request) =>
       try {
         await assertPlatformOrOrgAdmin(user, orgId);
       } catch {
-        return createErrorResponse(403, "Not authorized to manage this organization");
+        return createErrorResponse(
+          403,
+          "Not authorized to manage this organization",
+        );
       }
 
       const base = siteBaseUrl();
-      const returnPath = typeof body.return_path === "string" && body.return_path.startsWith("/")
-        ? body.return_path
-        : "/sas";
+      const returnPath =
+        typeof body.return_path === "string" && body.return_path.startsWith("/")
+          ? body.return_path
+          : "/sas";
       const checkoutQuerySep = returnPath.includes("?") ? "&" : "?";
 
       try {
@@ -61,25 +66,37 @@ Deno.serve((req: Request) =>
             }
             const { data: org, error: orgErr } = await supabaseAdmin
               .from("organizations")
-              .select("id, stripe_customer_id, billing_status, stripe_seat_price_id, stripe_subscription_id")
+              .select(
+                "id, stripe_customer_id, billing_status, stripe_seat_price_id, stripe_subscription_id",
+              )
               .eq("id", orgId)
               .single();
             if (orgErr || !org) {
               return createErrorResponse(404, "Organization not found");
             }
-            const block = org.stripe_subscription_id &&
-              ["active", "trialing", "past_due", "incomplete", "unpaid", "paused"].includes(
-                org.billing_status ?? "",
-              );
+            const block =
+              org.stripe_subscription_id &&
+              [
+                "active",
+                "trialing",
+                "past_due",
+                "incomplete",
+                "unpaid",
+                "paused",
+              ].includes(org.billing_status ?? "");
             if (block) {
               return createErrorResponse(
                 400,
                 "This workspace already has a subscription. Open the billing portal to manage it.",
               );
             }
-            const price = (org.stripe_seat_price_id?.trim() || defaultSeatPriceId());
+            const price =
+              org.stripe_seat_price_id?.trim() || defaultSeatPriceId();
             if (!price) {
-              return createErrorResponse(500, "Missing STRIPE_SEAT_PRICE_ID / stripe_seat_price_id");
+              return createErrorResponse(
+                500,
+                "Missing STRIPE_SEAT_PRICE_ID / stripe_seat_price_id",
+              );
             }
             const seatCount = Math.max(1, await getActiveMemberCount(orgId));
             const adminEmail = await getPrimaryAdminEmail(orgId);
@@ -92,18 +109,24 @@ Deno.serve((req: Request) =>
               ...(org.stripe_customer_id
                 ? { customer: org.stripe_customer_id }
                 : adminEmail
-                ? { customer_email: adminEmail }
-                : {}),
+                  ? { customer_email: adminEmail }
+                  : {}),
               metadata: { org_id: String(orgId) },
               subscription_data: { metadata: { org_id: String(orgId) } },
             });
             if (!session.url) {
-              return createErrorResponse(500, "Stripe did not return a session URL");
+              return createErrorResponse(
+                500,
+                "Stripe did not return a session URL",
+              );
             }
-            return new Response(JSON.stringify({ url: session.url, id: session.id }), {
-              status: 200,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            });
+            return new Response(
+              JSON.stringify({ url: session.url, id: session.id }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              },
+            );
           }
           case "billing_portal": {
             let stripe: ReturnType<typeof getStripe>;
@@ -118,7 +141,10 @@ Deno.serve((req: Request) =>
               .eq("id", orgId)
               .single();
             if (oerr || !org?.stripe_customer_id) {
-              return createErrorResponse(400, "No Stripe customer for this organization yet");
+              return createErrorResponse(
+                400,
+                "No Stripe customer for this organization yet",
+              );
             }
             const session = await stripe.billingPortal.sessions.create({
               customer: org.stripe_customer_id,
@@ -170,11 +196,15 @@ Deno.serve((req: Request) =>
             );
             const first = sub.items.data[0];
             if (!first?.id) {
-              return createErrorResponse(500, "Subscription has no line items to update");
+              return createErrorResponse(
+                500,
+                "Subscription has no line items to update",
+              );
             }
-            const current = typeof first.quantity === "number" && first.quantity > 0
-              ? first.quantity
-              : 1;
+            const current =
+              typeof first.quantity === "number" && first.quantity > 0
+                ? first.quantity
+                : 1;
             const nextQty = current + 1;
             const updated = await stripe.subscriptions.update(sub.id, {
               items: [{ id: first.id, quantity: nextQty }],
@@ -186,7 +216,11 @@ Deno.serve((req: Request) =>
               .update({ billable_seat_count: qty })
               .eq("id", orgId);
             return new Response(
-              JSON.stringify({ ok: true as const, quantity: qty, previous: current }),
+              JSON.stringify({
+                ok: true as const,
+                quantity: qty,
+                previous: current,
+              }),
               {
                 status: 200,
                 headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -200,5 +234,5 @@ Deno.serve((req: Request) =>
         return createErrorResponse(500, (e as Error).message);
       }
     });
-  })
+  }),
 );

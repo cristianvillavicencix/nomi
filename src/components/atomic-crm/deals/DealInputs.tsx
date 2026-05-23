@@ -69,7 +69,9 @@ const toNumber = (value: unknown): number | null => {
 
 const getPersonOptionText = (person?: Partial<Person>) => {
   if (!person) return "";
-  const fullName = [person.first_name, person.last_name].filter(Boolean).join(" ");
+  const fullName = [person.first_name, person.last_name]
+    .filter(Boolean)
+    .join(" ");
   if (person.email) return `${fullName} (${person.email})`;
   return fullName;
 };
@@ -98,7 +100,6 @@ const positiveCurrency = (value: unknown) => {
   return undefined;
 };
 
-
 const AddressAutocompleteInput = ({
   source,
   label,
@@ -122,13 +123,17 @@ const AddressAutocompleteInput = ({
     validate,
   });
   const [open, setOpen] = useState(false);
-  const [googleSuggestions, setGoogleSuggestions] = useState<GoogleAddressSuggestion[]>([]);
+  const [googleSuggestions, setGoogleSuggestions] = useState<
+    GoogleAddressSuggestion[]
+  >([]);
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
   const query = String(field.value ?? "").trim();
 
   const filteredExistingOptions = useMemo(() => {
     const loweredQuery = query.toLowerCase();
-    const uniqueAddresses = Array.from(new Set(existingAddressOptions.filter(Boolean)));
+    const uniqueAddresses = Array.from(
+      new Set(existingAddressOptions.filter(Boolean)),
+    );
     if (!loweredQuery) return uniqueAddresses.slice(0, 8);
     return uniqueAddresses
       .filter((address) => address.toLowerCase().includes(loweredQuery))
@@ -146,21 +151,24 @@ const AddressAutocompleteInput = ({
     const timer = setTimeout(async () => {
       setIsLoadingGoogle(true);
       try {
-        const response = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
-            "X-Goog-FieldMask":
-              "suggestions.placePrediction.placeId,suggestions.placePrediction.text.text",
+        const response = await fetch(
+          "https://places.googleapis.com/v1/places:autocomplete",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
+              "X-Goog-FieldMask":
+                "suggestions.placePrediction.placeId,suggestions.placePrediction.text.text",
+            },
+            body: JSON.stringify({
+              input: query,
+              languageCode: "en",
+              regionCode: "US",
+            }),
+            signal: controller.signal,
           },
-          body: JSON.stringify({
-            input: query,
-            languageCode: "en",
-            regionCode: "US",
-          }),
-          signal: controller.signal,
-        });
+        );
         if (!response.ok) {
           setGoogleSuggestions([]);
           return;
@@ -251,7 +259,9 @@ const AddressAutocompleteInput = ({
                 SUGERENCIA DE DIRECCIONES DE GOOGLE
               </div>
               {isLoadingGoogle ? (
-                <div className="px-2 py-1 text-xs text-muted-foreground">Loading suggestions...</div>
+                <div className="px-2 py-1 text-xs text-muted-foreground">
+                  Loading suggestions...
+                </div>
               ) : googleSuggestions.length > 0 ? (
                 googleSuggestions.map((item) => (
                   <button
@@ -289,7 +299,9 @@ export const DealInputs = () => {
   }
 
   const isMobile = useIsMobile();
-  const { control, setValue } = useFormContext<Deal & Record<string, unknown>>();
+  const { control, setValue } = useFormContext<
+    Deal & Record<string, unknown>
+  >();
   const contactId = useWatch({ control, name: "contact_id" });
   const contactIds = useWatch({ control, name: "contact_ids" });
   const stage = useWatch({ control, name: "stage" });
@@ -330,7 +342,8 @@ export const DealInputs = () => {
     [stage],
   );
   const typeChoices = useMemo(
-    () => withCurrentCustomChoice(projectTypeChoices, String(projectType ?? "")),
+    () =>
+      withCurrentCustomChoice(projectTypeChoices, String(projectType ?? "")),
     [projectType],
   );
   const projectTypeAutocompleteChoices = useMemo(
@@ -393,12 +406,16 @@ export const DealInputs = () => {
     } else {
       setValue("company_id", null, { shouldDirty: true });
       if (selectedContact.company_name) {
-        setValue("company_name", selectedContact.company_name, { shouldDirty: true });
+        setValue("company_name", selectedContact.company_name, {
+          shouldDirty: true,
+        });
       }
     }
 
     if (selectedContact.address) {
-      setValue("project_address", selectedContact.address, { shouldDirty: true });
+      setValue("project_address", selectedContact.address, {
+        shouldDirty: true,
+      });
       setValue("project_place_id", null, { shouldDirty: true });
       setValue("project_address_meta", null, { shouldDirty: true });
     }
@@ -437,7 +454,9 @@ export const DealInputs = () => {
     <div className="flex flex-col gap-7">
       <section className="space-y-4 rounded-lg border p-4">
         <h3 className="text-base font-semibold">Basic project info</h3>
-        <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+        <div
+          className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}
+        >
           <TextInput
             source="name"
             label="Project name"
@@ -493,7 +512,9 @@ export const DealInputs = () => {
 
       <section className="space-y-4 rounded-lg border p-4">
         <h3 className="text-base font-semibold">Project details</h3>
-        <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+        <div
+          className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}
+        >
           <SelectInput
             source="category"
             label="Project category"
@@ -586,7 +607,9 @@ export const DealInputs = () => {
 
       <section className="space-y-4 rounded-lg border p-4">
         <h3 className="text-base font-semibold">Assignment</h3>
-        <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+        <div
+          className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}
+        >
           <ReferenceArrayInput
             source="salesperson_ids"
             reference="people"

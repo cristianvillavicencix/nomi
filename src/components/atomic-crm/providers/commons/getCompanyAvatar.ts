@@ -20,7 +20,9 @@ export async function getCompanyAvatar(record: Partial<Company>): Promise<{
   };
 }
 
-export const getCompanyFaviconSrc = (record: Partial<Company>): string | undefined => {
+export const getCompanyFaviconSrc = (
+  record: Partial<Company>,
+): string | undefined => {
   if (record.logo?.src) {
     return record.logo.src;
   }

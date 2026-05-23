@@ -8,7 +8,9 @@ export const PageLayout = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}>
+  <div
+    className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}
+  >
     {children}
   </div>
 );
@@ -20,7 +22,9 @@ export const StickyPageHeader = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn("sticky top-0 z-30 bg-background", className)}>{children}</div>
+  <div className={cn("sticky top-0 z-30 bg-background", className)}>
+    {children}
+  </div>
 );
 
 export const StickyActionBar = ({
@@ -30,7 +34,9 @@ export const StickyActionBar = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn("sticky top-0 z-20 bg-background", className)}>{children}</div>
+  <div className={cn("sticky top-0 z-20 bg-background", className)}>
+    {children}
+  </div>
 );
 
 export const StickyTabsBar = ({
@@ -40,7 +46,9 @@ export const StickyTabsBar = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn("sticky top-0 z-20 bg-background", className)}>{children}</div>
+  <div className={cn("sticky top-0 z-20 bg-background", className)}>
+    {children}
+  </div>
 );
 
 export const ScrollableContentArea = ({
@@ -50,5 +58,7 @@ export const ScrollableContentArea = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn("min-h-0 flex-1 overflow-y-auto", className)}>{children}</div>
+  <div className={cn("min-h-0 flex-1 overflow-y-auto", className)}>
+    {children}
+  </div>
 );

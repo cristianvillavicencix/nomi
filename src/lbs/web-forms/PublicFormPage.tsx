@@ -23,7 +23,11 @@ import {
 import { PROJECT_RESOURCES_SLUG } from "@/lbs/deals/projectResourceConstants";
 import { mergeDealIntoIntakeValues } from "@/lbs/deals/projectBriefProgress";
 import { PublicCustomForm } from "@/lbs/web-forms/PublicCustomForm";
-import { PublicFormEmbedProvider, publicFormContentClassName, usePublicFormEmbed } from "@/lbs/web-forms/PublicFormEmbedProvider";
+import {
+  PublicFormEmbedProvider,
+  publicFormContentClassName,
+  usePublicFormEmbed,
+} from "@/lbs/web-forms/PublicFormEmbedProvider";
 import { PublicProjectResourcesForm } from "@/lbs/web-forms/PublicProjectResourcesForm";
 
 export const PublicFormPage = () => (
@@ -135,8 +139,8 @@ const PublicFormPageContent = () => {
       <div className={publicFormContentClassName(embedded) + " text-center"}>
         <h1 className="text-2xl font-semibold">Thank you</h1>
         <p className="text-sm text-muted-foreground">
-          We received your project details. Our team will review them and follow up
-          soon.
+          We received your project details. Our team will review them and follow
+          up soon.
         </p>
       </div>
     );
@@ -152,7 +156,9 @@ const PublicFormPageContent = () => {
         <p className="mt-2 text-sm text-muted-foreground">
           Answer what you can — fields change based on your project type. Leave
           blanks if you are not sure yet.
-          {dealId ? " We loaded any details already on file for this project." : ""}
+          {dealId
+            ? " We loaded any details already on file for this project."
+            : ""}
         </p>
       </div>
 
@@ -205,7 +211,9 @@ const PublicFormPageContent = () => {
                   <Textarea
                     id={field.key}
                     value={values[field.key] ?? ""}
-                    onChange={(event) => setField(field.key, event.target.value)}
+                    onChange={(event) =>
+                      setField(field.key, event.target.value)
+                    }
                     placeholder={field.placeholder}
                     rows={field.rows ?? 3}
                   />
@@ -213,7 +221,9 @@ const PublicFormPageContent = () => {
                   <Input
                     id={field.key}
                     value={values[field.key] ?? ""}
-                    onChange={(event) => setField(field.key, event.target.value)}
+                    onChange={(event) =>
+                      setField(field.key, event.target.value)
+                    }
                     placeholder={field.placeholder}
                   />
                 )}
@@ -224,8 +234,8 @@ const PublicFormPageContent = () => {
 
         {!embedded ? (
           <p className="text-sm text-muted-foreground">
-            After we start your project, you can upload logos and photos through a
-            separate file upload link from our team.
+            After we start your project, you can upload logos and photos through
+            a separate file upload link from our team.
           </p>
         ) : null}
 

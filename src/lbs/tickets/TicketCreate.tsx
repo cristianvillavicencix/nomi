@@ -66,8 +66,14 @@ export const TicketCreate = () => {
                 <ReferenceInput source="company_id" reference="companies">
                   <AutocompleteInput optionText="name" label="Client" />
                 </ReferenceInput>
-                <ReferenceInput source="contact_id" reference="contacts_summary">
-                  <AutocompleteInput optionText={contactOptionText} label="Contact" />
+                <ReferenceInput
+                  source="contact_id"
+                  reference="contacts_summary"
+                >
+                  <AutocompleteInput
+                    optionText={contactOptionText}
+                    label="Contact"
+                  />
                 </ReferenceInput>
                 <ReferenceInput source="deal_id" reference="deals">
                   <AutocompleteInput optionText="name" label="Project" />

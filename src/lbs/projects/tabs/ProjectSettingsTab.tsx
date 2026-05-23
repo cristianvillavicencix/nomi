@@ -22,11 +22,15 @@ export const ProjectSettingsTab = ({ record }: { record: LbsDeal }) => (
       <CardContent className="grid gap-4 sm:grid-cols-2 text-sm">
         <div>
           <div className="text-muted-foreground">Project type</div>
-          <div className="font-medium">{getAgencyProjectTypeLabel(record.project_type)}</div>
+          <div className="font-medium">
+            {getAgencyProjectTypeLabel(record.project_type)}
+          </div>
         </div>
         <div>
           <div className="text-muted-foreground">Stage</div>
-          <div className="font-medium">{getLbsProjectStageLabel(record.stage)}</div>
+          <div className="font-medium">
+            {getLbsProjectStageLabel(record.stage)}
+          </div>
         </div>
         <div>
           <div className="text-muted-foreground">Delivery status</div>
@@ -50,12 +54,17 @@ export const ProjectSettingsTab = ({ record }: { record: LbsDeal }) => (
         </div>
         <div>
           <div className="text-muted-foreground">Lifecycle</div>
-          <div className="font-medium capitalize">{record.lifecycle_phase ?? "delivery"}</div>
+          <div className="font-medium capitalize">
+            {record.lifecycle_phase ?? "delivery"}
+          </div>
         </div>
         {record.accepted_proposal_id ? (
           <div>
             <div className="text-muted-foreground">Accepted proposal</div>
-            <Link to={`/proposals/${record.accepted_proposal_id}/show`} className="link-action">
+            <Link
+              to={`/proposals/${record.accepted_proposal_id}/show`}
+              className="link-action"
+            >
               View proposal
             </Link>
           </div>
@@ -68,8 +77,13 @@ export const ProjectSettingsTab = ({ record }: { record: LbsDeal }) => (
         <CardTitle className="text-base">Reference</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-xs text-muted-foreground">
-        <p>Delivery statuses: {lbsDeliveryStatuses.map((s) => s.label).join(", ")}</p>
-        <p>Priorities: {LBS_PROJECT_PRIORITIES.map((p) => p.label).join(", ")}</p>
+        <p>
+          Delivery statuses:{" "}
+          {lbsDeliveryStatuses.map((s) => s.label).join(", ")}
+        </p>
+        <p>
+          Priorities: {LBS_PROJECT_PRIORITIES.map((p) => p.label).join(", ")}
+        </p>
       </CardContent>
     </Card>
 

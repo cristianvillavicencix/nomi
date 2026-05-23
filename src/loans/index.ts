@@ -1,7 +1,7 @@
-import { LoansCreate } from './LoansCreate';
-import { LoansEdit } from './LoansEdit';
-import { LoansList } from './LoansList';
-import { LoansShow } from './LoansShow';
+import { LoansCreate } from "./LoansCreate";
+import { LoansEdit } from "./LoansEdit";
+import { LoansList } from "./LoansList";
+import { LoansShow } from "./LoansShow";
 
 export default {
   list: LoansList,
@@ -9,6 +9,6 @@ export default {
   edit: LoansEdit,
   show: LoansShow,
   options: {
-    label: 'Loans',
+    label: "Loans",
   },
 };

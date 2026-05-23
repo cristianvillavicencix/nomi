@@ -55,7 +55,8 @@ const ClientsListActions = () => {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const currentQ = typeof filterValues.q === "string" ? filterValues.q : undefined;
+      const currentQ =
+        typeof filterValues.q === "string" ? filterValues.q : undefined;
       const nextQ = query.trim() ? query : undefined;
       if (currentQ === nextQ) {
         return;
@@ -97,7 +98,8 @@ const ClientsListActions = () => {
 };
 
 const ClientsListLayout = () => {
-  const { data, isPending, filterValues } = useListContext<CompanyWithPrimaryContact>();
+  const { data, isPending, filterValues } =
+    useListContext<CompanyWithPrimaryContact>();
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
 
   if (isPending) return null;
@@ -112,7 +114,9 @@ const ClientsListLayout = () => {
         label=""
         disableSort
         className="w-[52px]"
-        render={(record: Company) => <CompanyAvatar record={record} width={25} />}
+        render={(record: Company) => (
+          <CompanyAvatar record={record} width={25} />
+        )}
       />
       <DataTable.Col
         source="name"
@@ -145,7 +149,9 @@ const ClientsListLayout = () => {
       <DataTable.Col
         source="website"
         label="Website"
-        render={(record: CompanyWithPrimaryContact) => record.website?.trim() || "—"}
+        render={(record: CompanyWithPrimaryContact) =>
+          record.website?.trim() || "—"
+        }
       />
       <DataTable.Col
         source="linkedin_url"
@@ -156,7 +162,11 @@ const ClientsListLayout = () => {
           if (links.length === 0) return "—";
 
           return (
-            <ClientSocialLinksDisplay links={links} stopPropagation iconClassName="size-4" />
+            <ClientSocialLinksDisplay
+              links={links}
+              stopPropagation
+              iconClassName="size-4"
+            />
           );
         }}
       />

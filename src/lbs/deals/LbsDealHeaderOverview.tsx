@@ -48,7 +48,8 @@ export const LbsDealHeaderOverview = ({ record }: { record: Deal }) => {
   const contactEmail = mainContact ? getContactEmail(mainContact) : null;
   const contactPhone = mainContact ? getContactPhone(mainContact) : null;
   const companyName =
-    record.company_name ?? (record.company_id ? `Company #${record.company_id}` : null);
+    record.company_name ??
+    (record.company_id ? `Company #${record.company_id}` : null);
   const githubUrl = getGithubRepoUrl(record.github_repo);
   const githubLabel = getGithubRepoLabel(record.github_repo);
 
@@ -63,7 +64,9 @@ export const LbsDealHeaderOverview = ({ record }: { record: Deal }) => {
             rel="noopener noreferrer"
             title={githubLabel ?? "Open GitHub repository"}
             aria-label={
-              githubLabel ? `Open GitHub repository ${githubLabel}` : "Open GitHub repository"
+              githubLabel
+                ? `Open GitHub repository ${githubLabel}`
+                : "Open GitHub repository"
             }
             className="inline-flex shrink-0 items-center rounded-md p-0.5 text-muted-foreground transition-colors hover:text-foreground"
           >
@@ -77,7 +80,10 @@ export const LbsDealHeaderOverview = ({ record }: { record: Deal }) => {
         rightClassName="text-sm text-muted-foreground"
         left={
           record.company_id && companyName ? (
-            <Link to={`/clients/${record.company_id}/show`} className="link-action">
+            <Link
+              to={`/clients/${record.company_id}/show`}
+              className="link-action"
+            >
               {companyName}
             </Link>
           ) : (
@@ -86,7 +92,10 @@ export const LbsDealHeaderOverview = ({ record }: { record: Deal }) => {
         }
         right={
           mainContactId != null && contactName ? (
-            <Link to={`/contacts/${mainContactId}/show`} className="link-action">
+            <Link
+              to={`/contacts/${mainContactId}/show`}
+              className="link-action"
+            >
               {contactName}
             </Link>
           ) : (
@@ -109,7 +118,10 @@ export const LbsDealHeaderOverview = ({ record }: { record: Deal }) => {
         }
         right={
           contactPhone ? (
-            <a href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`} className="link-action">
+            <a
+              href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}
+              className="link-action"
+            >
               {contactPhone}
             </a>
           ) : (

@@ -18,7 +18,9 @@ export const MessagingSettingsSection = () => {
   const { identity } = useGetIdentity();
   const notify = useNotify();
   const queryClient = useQueryClient();
-  const isAdmin = (identity as { administrator?: boolean } | undefined)?.administrator === true;
+  const isAdmin =
+    (identity as { administrator?: boolean } | undefined)?.administrator ===
+    true;
 
   const { data, isPending, error } = useQuery({
     queryKey: ["messaging-settings"],
@@ -63,8 +65,9 @@ export const MessagingSettingsSection = () => {
   });
 
   const businessHoursMutation = useMutation({
-    mutationFn: (payload: Parameters<CrmDataProvider["updateMessagingSettings"]>[0]) =>
-      dataProvider.updateMessagingSettings(payload),
+    mutationFn: (
+      payload: Parameters<CrmDataProvider["updateMessagingSettings"]>[0],
+    ) => dataProvider.updateMessagingSettings(payload),
     onSuccess: (saved) => {
       queryClient.setQueryData(["messaging-settings"], saved);
       notify("Business hours saved", { type: "success" });
@@ -110,15 +113,18 @@ export const MessagingSettingsSection = () => {
         </div>
       ) : error ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-6 text-sm text-destructive">
-          Could not load messaging settings. Apply the latest database migration and deploy edge
-          functions.
+          Could not load messaging settings. Apply the latest database migration
+          and deploy edge functions.
         </div>
       ) : (
         <>
           <div>
-            <h2 className="text-sm font-medium text-muted-foreground">Twilio SMS</h2>
+            <h2 className="text-sm font-medium text-muted-foreground">
+              Twilio SMS
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Connect your Twilio number to send and receive SMS with clients from Messages.
+              Connect your Twilio number to send and receive SMS with clients
+              from Messages.
             </p>
           </div>
 
@@ -141,7 +147,11 @@ export const MessagingSettingsSection = () => {
                 type="password"
                 value={authToken}
                 onChange={(event) => setAuthToken(event.target.value)}
-                placeholder={data?.has_auth_token ? "••••••••••••••••" : "Your Twilio auth token"}
+                placeholder={
+                  data?.has_auth_token
+                    ? "••••••••••••••••"
+                    : "Your Twilio auth token"
+                }
                 autoComplete="new-password"
               />
               <p className="text-xs text-muted-foreground">{configuredHint}</p>
@@ -159,7 +169,10 @@ export const MessagingSettingsSection = () => {
             </div>
 
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={smsEnabled} onCheckedChange={(checked) => setSmsEnabled(checked === true)} />
+              <Checkbox
+                checked={smsEnabled}
+                onCheckedChange={(checked) => setSmsEnabled(checked === true)}
+              />
               Enable SMS messaging
             </label>
           </div>
@@ -167,20 +180,30 @@ export const MessagingSettingsSection = () => {
           <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
             <Label>Inbound webhook URL</Label>
             <p className="text-sm text-muted-foreground">
-              Paste this URL in Twilio → Phone Numbers → your number → Messaging → &quot;A message
-              comes in&quot; (HTTP POST). Do not use a Messaging Service on the number, or configure
-              the same URL on the service&apos;s inbound webhook.
+              Paste this URL in Twilio → Phone Numbers → your number → Messaging
+              → &quot;A message comes in&quot; (HTTP POST). Do not use a
+              Messaging Service on the number, or configure the same URL on the
+              service&apos;s inbound webhook.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Input readOnly value={webhookUrl} className="font-mono text-xs" />
-              <Button type="button" variant="outline" onClick={() => void copyWebhook()}>
+              <Input
+                readOnly
+                value={webhookUrl}
+                className="font-mono text-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void copyWebhook()}
+              >
                 <Copy className="size-4" />
                 Copy
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Optional: set <code className="rounded bg-muted px-1">TWILIO_WEBHOOK_URL</code> in
-              Supabase if Twilio signature validation fails behind proxies.
+              Optional: set{" "}
+              <code className="rounded bg-muted px-1">TWILIO_WEBHOOK_URL</code>{" "}
+              in Supabase if Twilio signature validation fails behind proxies.
             </p>
           </div>
 

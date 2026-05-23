@@ -5,7 +5,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { InboxFilterState, InboxTab } from "@/lbs/messages/messagesHubTypes";
+import type {
+  InboxFilterState,
+  InboxTab,
+} from "@/lbs/messages/messagesHubTypes";
 import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
 import type { OrganizationMember } from "@/lbs/types";
 
@@ -26,7 +29,10 @@ const getAssigneeLabel = (
   if (assigneeMemberId === "mine") return "Assigned to me";
   const member = members.find((entry) => String(entry.id) === assigneeMemberId);
   if (!member) return "Assignee";
-  return [member.first_name, member.last_name].filter(Boolean).join(" ") || `#${member.id}`;
+  return (
+    [member.first_name, member.last_name].filter(Boolean).join(" ") ||
+    `#${member.id}`
+  );
 };
 
 export const InboxTabs = ({
@@ -65,7 +71,9 @@ export const InboxTabs = ({
             >
               {tab.label}
               {count > 0 ? (
-                <span className="ml-1 opacity-80">· {formatUnreadBadgeCount(count)}</span>
+                <span className="ml-1 opacity-80">
+                  · {formatUnreadBadgeCount(count)}
+                </span>
               ) : null}
             </button>
           );
@@ -77,14 +85,21 @@ export const InboxTabs = ({
           <DropdownMenuTrigger className={textFilterTriggerClass}>
             {assigneeLabel}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-64 w-48 overflow-y-auto">
+          <DropdownMenuContent
+            align="end"
+            className="max-h-64 w-48 overflow-y-auto"
+          >
             <DropdownMenuItem
-              onSelect={() => onFiltersChange({ ...filters, assigneeMemberId: "all" })}
+              onSelect={() =>
+                onFiltersChange({ ...filters, assigneeMemberId: "all" })
+              }
             >
               Any assignee
             </DropdownMenuItem>
             <DropdownMenuItem
-              onSelect={() => onFiltersChange({ ...filters, assigneeMemberId: "mine" })}
+              onSelect={() =>
+                onFiltersChange({ ...filters, assigneeMemberId: "mine" })
+              }
             >
               Assigned to me
             </DropdownMenuItem>
@@ -92,10 +107,15 @@ export const InboxTabs = ({
               <DropdownMenuItem
                 key={String(member.id)}
                 onSelect={() =>
-                  onFiltersChange({ ...filters, assigneeMemberId: String(member.id) })
+                  onFiltersChange({
+                    ...filters,
+                    assigneeMemberId: String(member.id),
+                  })
                 }
               >
-                {[member.first_name, member.last_name].filter(Boolean).join(" ") || `#${member.id}`}
+                {[member.first_name, member.last_name]
+                  .filter(Boolean)
+                  .join(" ") || `#${member.id}`}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

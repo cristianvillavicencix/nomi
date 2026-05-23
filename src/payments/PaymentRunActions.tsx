@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Printer } from "lucide-react";
-import { useGetIdentity, useGetList, useGetMany, useRecordContext } from "ra-core";
-import type { Deal, Payment, PaymentLine, Person } from "@/components/atomic-crm/types";
+import {
+  useGetIdentity,
+  useGetList,
+  useGetMany,
+  useRecordContext,
+} from "ra-core";
+import type {
+  Deal,
+  Payment,
+  PaymentLine,
+  Person,
+} from "@/components/atomic-crm/types";
 import { canUseCrmPermission } from "@/components/atomic-crm/providers/commons/crmPermissions";
 import { Button } from "@/components/ui/button";
 import {

@@ -35,7 +35,11 @@ const ALLOWED_CATEGORIES = new Set([
 const inferMimeKind = (mime: string): string => {
   if (mime.startsWith("image/")) return "image";
   if (mime.startsWith("video/")) return "video";
-  if (mime.includes("pdf") || mime.includes("document") || mime.includes("text")) {
+  if (
+    mime.includes("pdf") ||
+    mime.includes("document") ||
+    mime.includes("text")
+  ) {
     return "document";
   }
   return "other";
@@ -87,7 +91,9 @@ const uploadResourceFile = async (
     return null;
   }
 
-  const { data } = supabaseAdmin.storage.from(LEGACY_BUCKET).getPublicUrl(legacyPath);
+  const { data } = supabaseAdmin.storage
+    .from(LEGACY_BUCKET)
+    .getPublicUrl(legacyPath);
 
   return {
     title: name,
@@ -114,7 +120,9 @@ Deno.serve(
 
       const { data: deal, error: dealError } = await supabaseAdmin
         .from("deals")
-        .select("id, org_id, company_id, contact_id, organization_member_id, contact_ids")
+        .select(
+          "id, org_id, company_id, contact_id, organization_member_id, contact_ids",
+        )
         .eq("id", dealId)
         .maybeSingle();
 
@@ -132,7 +140,9 @@ Deno.serve(
       if (Number.isFinite(contactId)) {
         const dealContactIds = [
           Number(deal.contact_id),
-          ...(Array.isArray(deal.contact_ids) ? deal.contact_ids.map(Number) : []),
+          ...(Array.isArray(deal.contact_ids)
+            ? deal.contact_ids.map(Number)
+            : []),
         ].filter(Number.isFinite);
 
         if (!dealContactIds.includes(contactId)) {

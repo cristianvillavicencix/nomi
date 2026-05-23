@@ -41,7 +41,10 @@ export const ContactBackgroundInfo = () => {
 
       <div className="inline-flex text-muted-foreground text-sm md:py-0.5">
         Followed by&nbsp;
-        <ReferenceField source="organization_member_id" reference="organization_members">
+        <ReferenceField
+          source="organization_member_id"
+          reference="organization_members"
+        >
           <OrganizationMemberName />
         </ReferenceField>
       </div>

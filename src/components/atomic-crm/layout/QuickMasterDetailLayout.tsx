@@ -79,7 +79,12 @@ export const QuickMasterDetailLayout = ({
 
   const quickList = (
     <>
-      <div className={cn("px-3 py-3", collapsed ? "flex justify-center px-2" : "space-y-3")}>
+      <div
+        className={cn(
+          "px-3 py-3",
+          collapsed ? "flex justify-center px-2" : "space-y-3",
+        )}
+      >
         {!collapsed ? (
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -128,7 +133,9 @@ export const QuickMasterDetailLayout = ({
         <div
           ref={listScrollRef}
           className="min-h-0 flex-1 overflow-auto px-2 pb-2"
-          onScroll={(event) => persistScrollPosition(event.currentTarget.scrollTop)}
+          onScroll={(event) =>
+            persistScrollPosition(event.currentTarget.scrollTop)
+          }
         >
           {isLoading ? (
             <div className="space-y-2">
@@ -137,7 +144,9 @@ export const QuickMasterDetailLayout = ({
               <Skeleton className="h-12 w-full" />
             </div>
           ) : items.length === 0 ? (
-            <div className="px-1 py-2 text-sm text-muted-foreground">No results found.</div>
+            <div className="px-1 py-2 text-sm text-muted-foreground">
+              No results found.
+            </div>
           ) : (
             <div className="space-y-1.5">
               {items.map((item) => (
@@ -146,7 +155,8 @@ export const QuickMasterDetailLayout = ({
                   type="button"
                   className={cn(
                     "w-full rounded-md border px-2.5 py-2 text-left text-sm transition-colors hover:bg-muted/60",
-                    String(item.id) === String(selectedId ?? "") && "border-primary/40 bg-secondary/60",
+                    String(item.id) === String(selectedId ?? "") &&
+                      "border-primary/40 bg-secondary/60",
                   )}
                   onClick={() => onSelectAndClose(item.id)}
                 >
@@ -155,7 +165,9 @@ export const QuickMasterDetailLayout = ({
                     {item.subtitle || item.meta || "—"}
                   </div>
                   {item.meta && item.subtitle ? (
-                    <div className="text-[11px] text-muted-foreground truncate">{item.meta}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {item.meta}
+                    </div>
                   ) : null}
                 </button>
               ))}
@@ -180,7 +192,11 @@ export const QuickMasterDetailLayout = ({
       ) : (
         <>
           <div className="mb-2 flex items-center justify-between">
-            <Button type="button" variant="outline" onClick={() => setMobileSheetOpen(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMobileSheetOpen(true)}
+            >
               <Users className="mr-2 h-4 w-4" />
               {mobileBrowseLabel}
             </Button>

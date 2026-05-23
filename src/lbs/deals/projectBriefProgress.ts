@@ -20,7 +20,9 @@ export type ProjectBriefProgress = {
   setupFilled: number;
 };
 
-export const getProjectBriefProgress = (record: LbsDeal): ProjectBriefProgress => {
+export const getProjectBriefProgress = (
+  record: LbsDeal,
+): ProjectBriefProgress => {
   const brief = record.website_brief ?? {};
   const overall = getBriefOverallStats(record.project_type, brief);
   const setupFilled =
@@ -54,7 +56,10 @@ export const getIncompleteBriefSections = (record: LbsDeal) => {
   return incomplete;
 };
 
-export const getBriefStageAdvanceCheck = (record: LbsDeal, nextStage: string) => {
+export const getBriefStageAdvanceCheck = (
+  record: LbsDeal,
+  nextStage: string,
+) => {
   const progress = getProjectBriefProgress(record);
   const current = normalizeLbsProjectStage(record.stage);
   const next = normalizeLbsProjectStage(nextStage);
@@ -73,7 +78,9 @@ export const getBriefStageAdvanceCheck = (record: LbsDeal, nextStage: string) =>
 };
 
 export const getStageOrder = (stage: string) =>
-  lbsProjectStages.findIndex((entry) => entry.value === normalizeLbsProjectStage(stage));
+  lbsProjectStages.findIndex(
+    (entry) => entry.value === normalizeLbsProjectStage(stage),
+  );
 
 export const mergeDealIntoIntakeValues = (
   deal: {

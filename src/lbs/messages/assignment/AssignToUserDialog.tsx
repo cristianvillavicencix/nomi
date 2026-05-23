@@ -63,7 +63,9 @@ export const AssignToUserDialog = ({
 
   const handleSave = () => {
     const nextAssignee =
-      assigneeId === "none" ? null : (Number(assigneeId) as unknown as Identifier);
+      assigneeId === "none"
+        ? null
+        : (Number(assigneeId) as unknown as Identifier);
     update(
       "conversations",
       {
@@ -106,7 +108,9 @@ export const AssignToUserDialog = ({
             <SelectItem value="none">Unassigned</SelectItem>
             {activeMembers.map((member) => (
               <SelectItem key={String(member.id)} value={String(member.id)}>
-                {[member.first_name, member.last_name].filter(Boolean).join(" ") ||
+                {[member.first_name, member.last_name]
+                  .filter(Boolean)
+                  .join(" ") ||
                   member.email ||
                   `Member #${member.id}`}
               </SelectItem>
@@ -114,7 +118,11 @@ export const AssignToUserDialog = ({
           </SelectContent>
         </Select>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={handleSave}>

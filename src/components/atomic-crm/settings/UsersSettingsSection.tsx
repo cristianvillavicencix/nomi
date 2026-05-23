@@ -10,7 +10,14 @@ import {
   useNotify,
   useRefresh,
 } from "ra-core";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState, Fragment } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  Fragment,
+} from "react";
 import { useController, useFormContext } from "react-hook-form";
 import { useSearchParams } from "react-router";
 import { EmailInput } from "@/components/admin/email-input";
@@ -157,7 +164,11 @@ const UserModulesInput = ({
     if (customSlug) {
       const template = orgRbacConfig.customPresets?.[customSlug];
       if (!template) return;
-      field.onChange(collapsePermissionsForSave(applyCustomPresetToPermissions(customSlug, template)));
+      field.onChange(
+        collapsePermissionsForSave(
+          applyCustomPresetToPermissions(customSlug, template),
+        ),
+      );
       return;
     }
     const next = applyRolePresetToPermissions(presetKey as RoleSlug);
@@ -176,7 +187,8 @@ const UserModulesInput = ({
       <div>
         <p className="text-sm font-medium">Role & access</p>
         <p className="text-xs text-muted-foreground">
-          Pick a role preset. Fine-tune individual permissions below when needed.
+          Pick a role preset. Fine-tune individual permissions below when
+          needed.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -200,7 +212,11 @@ const UserModulesInput = ({
             key={presetKey}
             type="button"
             size="sm"
-            variant={!administrator && activePreset === presetKey ? "default" : "outline"}
+            variant={
+              !administrator && activePreset === presetKey
+                ? "default"
+                : "outline"
+            }
             disabled={administrator}
             onClick={() => applyPreset(presetKey)}
           >
@@ -369,7 +385,8 @@ const UserFormFields = ({
       <EmailInput source="email" validate={required()} helperText={false} />
       {mode === "create" ? (
         <p className="text-xs text-muted-foreground">
-          We&apos;ll email them an invitation link so they can choose their own password before signing in.
+          We&apos;ll email them an invitation link so they can choose their own
+          password before signing in.
         </p>
       ) : null}
 
@@ -519,7 +536,8 @@ const UserDialog = ({
           </DialogTitle>
           {state.mode === "edit" && sale ? (
             <DialogDescription>
-              Profile details and which workspace areas {sale.first_name} can use.
+              Profile details and which workspace areas {sale.first_name} can
+              use.
             </DialogDescription>
           ) : null}
         </DialogHeader>
@@ -613,7 +631,10 @@ const ModuleBadges = ({ sale }: { sale: OrganizationMember }) => {
     return (
       <div className="flex flex-wrap gap-1.5">
         {activeAreas.map((area) => (
-          <span key={area.area} className="rounded-full border px-2 py-0.5 text-xs">
+          <span
+            key={area.area}
+            className="rounded-full border px-2 py-0.5 text-xs"
+          >
             {area.label}
           </span>
         ))}
@@ -627,9 +648,9 @@ const ModuleBadges = ({ sale }: { sale: OrganizationMember }) => {
     module_permissions: sale.module_permissions ?? null,
   });
 
-  const activeKeys = (Object.keys(MODULE_SUMMARY_LABELS) as MemberModuleKey[]).filter(
-    (k) => mods[k],
-  );
+  const activeKeys = (
+    Object.keys(MODULE_SUMMARY_LABELS) as MemberModuleKey[]
+  ).filter((k) => mods[k]);
   if (!activeKeys.length) {
     return (
       <span className="text-xs text-muted-foreground">No modules resolved</span>

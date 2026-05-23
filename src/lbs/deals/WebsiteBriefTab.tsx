@@ -55,7 +55,8 @@ const formatActivityDate = (value?: string) => {
 
 export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
   const [sendOpen, setSendOpen] = useState(false);
-  const [sheetTarget, setSheetTarget] = useState<WebsiteBriefSheetTarget | null>(null);
+  const [sheetTarget, setSheetTarget] =
+    useState<WebsiteBriefSheetTarget | null>(null);
   const [sheetMode, setSheetMode] = useState<"view" | "edit">("view");
 
   const contactId =
@@ -84,7 +85,9 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
     [record.project_type],
   );
 
-  const deliveryDateLabel = formatProjectDeliveryDate(getProjectDeliveryDate(record));
+  const deliveryDateLabel = formatProjectDeliveryDate(
+    getProjectDeliveryDate(record),
+  );
   const setupPreview = [
     getProjectTypeLabel(record.project_type ?? record.category),
     deliveryDateLabel ? `Delivery ${deliveryDateLabel}` : null,
@@ -108,7 +111,10 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
     BRIEF_SETUP_FIELD_COUNT,
   );
 
-  const openSheet = (target: WebsiteBriefSheetTarget, mode: "view" | "edit" = "view") => {
+  const openSheet = (
+    target: WebsiteBriefSheetTarget,
+    mode: "view" | "edit" = "view",
+  ) => {
     setSheetMode(mode);
     setSheetTarget(target);
   };
@@ -116,11 +122,18 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => setSendOpen(true)}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setSendOpen(true)}
+        >
           <Link2 className="size-4" />
           Send to client
         </Button>
-        <Button type="button" onClick={() => openSheet({ kind: "all" }, "edit")}>
+        <Button
+          type="button"
+          onClick={() => openSheet({ kind: "all" }, "edit")}
+        >
           <Pencil className="size-4" />
           Fill manually
         </Button>
@@ -138,14 +151,21 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
           ) : sentSnapshot ? (
             <p>
               <span className="font-medium">Form sent to client</span>
-              {sentSnapshot.sentAt ? ` · ${formatActivityDate(sentSnapshot.sentAt)}` : ""}
+              {sentSnapshot.sentAt
+                ? ` · ${formatActivityDate(sentSnapshot.sentAt)}`
+                : ""}
             </p>
           ) : (
             <p className="text-muted-foreground">Form not sent to client yet</p>
           )}
         </div>
         {sentSnapshot && !latestSubmission ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => setSendOpen(true)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setSendOpen(true)}
+          >
             <Mail className="size-4" />
             Send reminder
           </Button>
@@ -183,7 +203,10 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
 
             {sections.map((section) => {
               const stats = getBriefSectionStats(section, brief);
-              const sectionPercent = getSectionProgressPercent(stats.filled, stats.total);
+              const sectionPercent = getSectionProgressPercent(
+                stats.filled,
+                stats.total,
+              );
               const approval = getBriefSectionApproval(brief, section.id);
               return (
                 <TableRow
@@ -198,7 +221,9 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
                   <TableCell
                     className={cn(
                       "max-w-[360px] truncate",
-                      stats.isEmpty ? "text-muted-foreground" : "text-foreground/80",
+                      stats.isEmpty
+                        ? "text-muted-foreground"
+                        : "text-foreground/80",
                     )}
                   >
                     {getBriefSectionPreview(section, brief)}

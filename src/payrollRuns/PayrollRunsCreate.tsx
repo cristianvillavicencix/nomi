@@ -459,8 +459,8 @@ const PayrollScopeEmployeeInput = () => {
       />
       {category === "hourly" ? (
         <p className="text-xs text-muted-foreground">
-          Only hourly and day-rate staff appear here—the same people whose time you approve in
-          Hours.
+          Only hourly and day-rate staff appear here—the same people whose time
+          you approve in Hours.
         </p>
       ) : category && category !== "mixed" ? (
         <p className="text-xs text-muted-foreground">
@@ -622,7 +622,11 @@ const CreateToolbar = () => {
   return (
     <FormToolbar>
       <SaveButton />
-      <Button type="button" variant="ghost" onClick={() => navigate("/payroll_runs")}>
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => navigate("/payroll_runs")}
+      >
         Cancel
       </Button>
     </FormToolbar>

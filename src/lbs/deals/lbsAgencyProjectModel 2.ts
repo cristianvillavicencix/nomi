@@ -3,7 +3,11 @@
  * Storage remains `deals`; this module defines semantics only.
  */
 
-export const LBS_LIFECYCLE_PHASES = ["opportunity", "delivery", "closed"] as const;
+export const LBS_LIFECYCLE_PHASES = [
+  "opportunity",
+  "delivery",
+  "closed",
+] as const;
 export type LbsLifecyclePhase = (typeof LBS_LIFECYCLE_PHASES)[number];
 
 export const LBS_DEFAULT_LIFECYCLE_PHASE: LbsLifecyclePhase = "delivery";
@@ -15,7 +19,8 @@ export const LBS_PROJECT_PRIORITIES = [
   { value: "urgent", label: "Urgent" },
 ] as const;
 
-export type LbsProjectPriority = (typeof LBS_PROJECT_PRIORITIES)[number]["value"];
+export type LbsProjectPriority =
+  (typeof LBS_PROJECT_PRIORITIES)[number]["value"];
 
 export const LBS_DEFAULT_PROJECT_PRIORITY: LbsProjectPriority = "normal";
 
@@ -65,12 +70,16 @@ export const lbsAgencyProjectTypes = [
   { value: "maintenance", label: "Maintenance / Hosting" },
 ] as const;
 
-export type LbsAgencyProjectType = (typeof lbsAgencyProjectTypes)[number]["value"];
+export type LbsAgencyProjectType =
+  (typeof lbsAgencyProjectTypes)[number]["value"];
 
 export const LBS_DEFAULT_AGENCY_PROJECT_TYPE: LbsAgencyProjectType = "website";
 
 /** Maps legacy project_type slugs to canonical agency types. */
-export const LEGACY_AGENCY_PROJECT_TYPE_MAP: Record<string, LbsAgencyProjectType> = {
+export const LEGACY_AGENCY_PROJECT_TYPE_MAP: Record<
+  string,
+  LbsAgencyProjectType
+> = {
   "new-website": "website",
   redesign: "website",
   "landing-page": "website",
@@ -89,7 +98,9 @@ export const normalizeAgencyProjectType = (
   if (!value) return LBS_DEFAULT_AGENCY_PROJECT_TYPE;
   const direct = lbsAgencyProjectTypes.find((t) => t.value === value);
   if (direct) return direct.value;
-  return LEGACY_AGENCY_PROJECT_TYPE_MAP[value] ?? LBS_DEFAULT_AGENCY_PROJECT_TYPE;
+  return (
+    LEGACY_AGENCY_PROJECT_TYPE_MAP[value] ?? LBS_DEFAULT_AGENCY_PROJECT_TYPE
+  );
 };
 
 export const getAgencyProjectTypeLabel = (value?: string | null) => {
@@ -110,7 +121,9 @@ export const STAGE_TO_DELIVERY_STATUS: Record<string, LbsDeliveryStatus> = {
   delivered: "completed",
 };
 
-export const deliveryStatusForStage = (stage?: string | null): LbsDeliveryStatus =>
+export const deliveryStatusForStage = (
+  stage?: string | null,
+): LbsDeliveryStatus =>
   STAGE_TO_DELIVERY_STATUS[stage ?? ""] ?? LBS_DEFAULT_DELIVERY_STATUS;
 
 export const getDeliveryStatusLabel = (value?: string | null) =>

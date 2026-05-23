@@ -343,7 +343,10 @@ const SettingsFormFields = () => {
   );
 
   useLayoutEffect(() => {
-    if (searchParams.get("tab") !== "plans" && searchParams.get("tab") !== "roles") {
+    if (
+      searchParams.get("tab") !== "plans" &&
+      searchParams.get("tab") !== "roles"
+    ) {
       return;
     }
     setSearchParams(

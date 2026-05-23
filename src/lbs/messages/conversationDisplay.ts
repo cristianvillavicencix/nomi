@@ -23,8 +23,16 @@ export const formatConversationListTime = (value?: string | null) => {
   if (Number.isNaN(date.getTime())) return "";
 
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const startOfDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  );
   const dayDiff = Math.round(
     (startOfToday.getTime() - startOfDate.getTime()) / (1000 * 60 * 60 * 24),
   );
@@ -76,7 +84,9 @@ export const getConversationDisplay = ({
   if (conversation.type === "client") {
     const contact =
       conversation.contact_id != null
-        ? contacts.find((entry) => String(entry.id) === String(conversation.contact_id))
+        ? contacts.find(
+            (entry) => String(entry.id) === String(conversation.contact_id),
+          )
         : undefined;
     const title =
       (contact
@@ -106,7 +116,9 @@ export const getConversationDisplay = ({
   if (conversation.type === "project") {
     const deal =
       conversation.deal_id != null
-        ? deals.find((entry) => String(entry.id) === String(conversation.deal_id))
+        ? deals.find(
+            (entry) => String(entry.id) === String(conversation.deal_id),
+          )
         : undefined;
     const title = deal?.name ?? conversation.title ?? "Project team";
 
@@ -124,7 +136,9 @@ export const getConversationDisplay = ({
   }
 
   const participantIds = dmParticipants
-    .filter((entry) => String(entry.conversation_id) === String(conversation.id))
+    .filter(
+      (entry) => String(entry.conversation_id) === String(conversation.id),
+    )
     .map((entry) => entry.member_id);
 
   const otherMemberId = getOtherDmMemberId(
@@ -139,7 +153,7 @@ export const getConversationDisplay = ({
 
   const title = otherMember
     ? `${otherMember.first_name ?? ""} ${otherMember.last_name ?? ""}`.trim()
-    : conversation.title ?? "Direct message";
+    : (conversation.title ?? "Direct message");
 
   return {
     title: title || "Direct message",

@@ -13,4 +13,3 @@ export type PeopleQuickNavItem = {
   phone?: string;
   status: "active" | "inactive";
 };
-

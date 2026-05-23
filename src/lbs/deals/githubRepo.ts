@@ -6,13 +6,17 @@ export type GithubRepoRef = {
 
 const GITHUB_HOST_PATTERN = /github\.com/i;
 
-export const parseGithubRepo = (input?: string | null): GithubRepoRef | null => {
+export const parseGithubRepo = (
+  input?: string | null,
+): GithubRepoRef | null => {
   const trimmed = input?.trim();
   if (!trimmed) return null;
 
   if (GITHUB_HOST_PATTERN.test(trimmed)) {
     try {
-      const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+      const url = new URL(
+        trimmed.includes("://") ? trimmed : `https://${trimmed}`,
+      );
       const segments = url.pathname.split("/").filter(Boolean);
       if (segments.length < 2) return null;
       const owner = segments[0];

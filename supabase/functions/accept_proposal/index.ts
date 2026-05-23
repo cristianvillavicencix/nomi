@@ -37,7 +37,10 @@ Deno.serve(
 
       if (proposal.deal_id) {
         return new Response(
-          JSON.stringify({ deal_id: proposal.deal_id, proposal_id: proposalId }),
+          JSON.stringify({
+            deal_id: proposal.deal_id,
+            proposal_id: proposalId,
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }

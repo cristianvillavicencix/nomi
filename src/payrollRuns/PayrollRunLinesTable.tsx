@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
-import { useGetMany, useListContext } from 'ra-core';
-import type { PayrollRunLine, Person } from '@/components/atomic-crm/types';
+import { useMemo } from "react";
+import { useGetMany, useListContext } from "ra-core";
+import type { PayrollRunLine, Person } from "@/components/atomic-crm/types";
 
 const money = (value?: number | null) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value ?? 0));
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    Number(value ?? 0),
+  );
 
 type PayrollRunLinesTableContentProps = {
   lines: PayrollRunLine[];
@@ -17,18 +19,26 @@ const PayrollRunLinesTableContent = ({
   const data = lines;
 
   const employeeIds = useMemo(
-    () => Array.from(new Set(data.map((line) => line.employee_id).filter((id) => id != null))),
+    () =>
+      Array.from(
+        new Set(
+          data.map((line) => line.employee_id).filter((id) => id != null),
+        ),
+      ),
     [data],
   );
 
   const { data: employees = [] } = useGetMany<Person>(
-    'people',
+    "people",
     { ids: employeeIds },
     { enabled: employeeIds.length > 0 },
   );
 
   const employeesById = useMemo(
-    () => Object.fromEntries(employees.map((employee) => [String(employee.id), employee])),
+    () =>
+      Object.fromEntries(
+        employees.map((employee) => [String(employee.id), employee]),
+      ),
     [employees],
   );
 
@@ -62,41 +72,66 @@ const PayrollRunLinesTableContent = ({
           {data.map((line) => {
             const employee = employeesById[String(line.employee_id)];
             const employeeName = employee
-              ? `${employee.first_name ?? ''} ${employee.last_name ?? ''}`.trim()
+              ? `${employee.first_name ?? ""} ${employee.last_name ?? ""}`.trim()
               : `#${line.employee_id}`;
             const workBreakdown = [
-              Number(line.regular_hours ?? 0) > 0 ? `Reg ${Number(line.regular_hours ?? 0)}h` : null,
-              Number(line.overtime_hours ?? 0) > 0 ? `OT ${Number(line.overtime_hours ?? 0)}h` : null,
-              Number(line.paid_leave_hours ?? 0) > 0 ? `Leave ${Number(line.paid_leave_hours ?? 0)}h` : null,
+              Number(line.regular_hours ?? 0) > 0
+                ? `Reg ${Number(line.regular_hours ?? 0)}h`
+                : null,
+              Number(line.overtime_hours ?? 0) > 0
+                ? `OT ${Number(line.overtime_hours ?? 0)}h`
+                : null,
+              Number(line.paid_leave_hours ?? 0) > 0
+                ? `Leave ${Number(line.paid_leave_hours ?? 0)}h`
+                : null,
             ].filter(Boolean);
             const grossBreakdown = [
-              Number(line.base_salary_amount ?? line.compensation_amount ?? 0) > 0
+              Number(line.base_salary_amount ?? line.compensation_amount ?? 0) >
+              0
                 ? `Base ${money(line.base_salary_amount ?? line.compensation_amount)}`
                 : null,
             ].filter(Boolean);
             const deductionBreakdown = [
-              Number(line.unpaid_absence_deduction ?? 0) > 0 ? `Absence ${money(line.unpaid_absence_deduction)}` : null,
-              Number(line.loan_deductions ?? 0) > 0 ? `Loan ${money(line.loan_deductions)}` : null,
-              Number(line.other_deductions ?? 0) > 0 ? `Other ${money(line.other_deductions)}` : null,
+              Number(line.unpaid_absence_deduction ?? 0) > 0
+                ? `Absence ${money(line.unpaid_absence_deduction)}`
+                : null,
+              Number(line.loan_deductions ?? 0) > 0
+                ? `Loan ${money(line.loan_deductions)}`
+                : null,
+              Number(line.other_deductions ?? 0) > 0
+                ? `Other ${money(line.other_deductions)}`
+                : null,
             ].filter(Boolean);
             return (
               <tr key={line.id} className="border-b">
                 <td className="px-3 py-2">{employeeName}</td>
-                <td className="px-3 py-2">{line.compensation_unit ?? line.compensation_type}</td>
+                <td className="px-3 py-2">
+                  {line.compensation_unit ?? line.compensation_type}
+                </td>
                 <td className="px-3 py-2">{line.payment_method}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {workBreakdown.length ? workBreakdown.join(' · ') : 'No hours breakdown'}
+                  {workBreakdown.length
+                    ? workBreakdown.join(" · ")
+                    : "No hours breakdown"}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {grossBreakdown.length ? grossBreakdown.join(' · ') : 'Calculated from rate'}
+                  {grossBreakdown.length
+                    ? grossBreakdown.join(" · ")
+                    : "Calculated from rate"}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {deductionBreakdown.length ? deductionBreakdown.join(' · ') : 'No deductions'}
+                  {deductionBreakdown.length
+                    ? deductionBreakdown.join(" · ")
+                    : "No deductions"}
                 </td>
-                <td className="px-3 py-2 font-medium">{money(line.gross_pay)}</td>
+                <td className="px-3 py-2 font-medium">
+                  {money(line.gross_pay)}
+                </td>
                 <td className="px-3 py-2">{money(line.total_deductions)}</td>
-                <td className="px-3 py-2 font-semibold">{money(line.net_pay)}</td>
-                <td className="px-3 py-2">{line.payment_reference ?? '—'}</td>
+                <td className="px-3 py-2 font-semibold">
+                  {money(line.net_pay)}
+                </td>
+                <td className="px-3 py-2">{line.payment_reference ?? "—"}</td>
               </tr>
             );
           })}

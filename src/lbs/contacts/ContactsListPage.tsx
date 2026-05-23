@@ -15,10 +15,12 @@ import { LBS_CONTACT_STATUSES } from "@/lbs/navigation";
 import { getContactShowPath } from "@/lbs/routing";
 
 const getPrimaryPhone = (contact: Contact) =>
-  contact.phone_jsonb?.find((phone) => String(phone.number ?? "").trim())?.number ?? "—";
+  contact.phone_jsonb?.find((phone) => String(phone.number ?? "").trim())
+    ?.number ?? "—";
 
 const getPrimaryEmail = (contact: Contact) =>
-  contact.email_jsonb?.find((email) => String(email.email ?? "").trim())?.email ?? "—";
+  contact.email_jsonb?.find((email) => String(email.email ?? "").trim())
+    ?.email ?? "—";
 
 export const ContactsListPage = () => {
   const { identity } = useGetIdentity();

@@ -21,7 +21,11 @@ export function ActivityLogContactCreated({
       <div className="flex flex-row gap-2 items-start w-full">
         <Avatar width={20} height={20} record={contact} />
         <span className="text-muted-foreground text-sm flex-grow">
-          <ReferenceField source="organization_member_id" reference="organization_members" record={activity}>
+          <ReferenceField
+            source="organization_member_id"
+            reference="organization_members"
+            record={activity}
+          >
             <OrganizationMemberName />
           </ReferenceField>{" "}
           added{" "}

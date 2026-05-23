@@ -52,13 +52,10 @@ Deno.serve((req: Request) =>
         if (page > 50) break;
       }
 
-      return new Response(
-        JSON.stringify({ users: rows, total: rows.length }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        },
-      );
+      return new Response(JSON.stringify({ users: rows, total: rows.length }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     });
-  })
+  }),
 );

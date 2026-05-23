@@ -74,9 +74,22 @@ export const ClientCreateFormFields = () => {
           validate={requiredName}
           helperText={false}
         />
-        <ClientChannelsInput source="company_emails" kind="email" label="Business email" />
-        <ClientChannelsInput source="company_phones" kind="phone" label="Business phone" />
-        <TextInput source="company_website" label="Website" helperText={false} validate={optionalUrl} />
+        <ClientChannelsInput
+          source="company_emails"
+          kind="email"
+          label="Business email"
+        />
+        <ClientChannelsInput
+          source="company_phones"
+          kind="phone"
+          label="Business phone"
+        />
+        <TextInput
+          source="company_website"
+          label="Website"
+          helperText={false}
+          validate={optionalUrl}
+        />
         <BooleanInput
           source="company_same_as_primary_address"
           label="Use same address as primary contact"
@@ -97,8 +110,16 @@ export const ClientCreateFormFields = () => {
           validate={requiredName}
           helperText={false}
         />
-        <ClientChannelsInput source="primary_emails" kind="email" label="Email" />
-        <ClientChannelsInput source="primary_phones" kind="phone" label="Phone" />
+        <ClientChannelsInput
+          source="primary_emails"
+          kind="email"
+          label="Email"
+        />
+        <ClientChannelsInput
+          source="primary_phones"
+          kind="phone"
+          label="Phone"
+        />
         <TextInput
           source="primary_address"
           label="Address"
@@ -167,7 +188,12 @@ const AddressFields = ({
       readOnly={readOnly}
     />
     <div className="grid gap-4 md:grid-cols-2">
-      <TextInput source={`${prefix}_city`} label="City" helperText={false} readOnly={readOnly} />
+      <TextInput
+        source={`${prefix}_city`}
+        label="City"
+        helperText={false}
+        readOnly={readOnly}
+      />
       <TextInput
         source={`${prefix}_state_abbr`}
         label="State"
@@ -219,7 +245,10 @@ const CompanyAddressFields = () => {
 };
 
 const BillingAddressFields = () => {
-  const billingSameAsBusiness = useWatch<ClientCreateFormValues, "billing_same_as_business">({
+  const billingSameAsBusiness = useWatch<
+    ClientCreateFormValues,
+    "billing_same_as_business"
+  >({
     name: "billing_same_as_business",
   });
   const { setValue } = useFormContext<ClientCreateFormValues>();
@@ -283,7 +312,10 @@ const BillingAddressFields = () => {
 };
 
 const InvoiceContactFields = () => {
-  const invoiceSameAsPrimary = useWatch<ClientCreateFormValues, "invoice_same_as_primary">({
+  const invoiceSameAsPrimary = useWatch<
+    ClientCreateFormValues,
+    "invoice_same_as_primary"
+  >({
     name: "invoice_same_as_primary",
   });
   const { setValue } = useFormContext<ClientCreateFormValues>();
@@ -300,9 +332,19 @@ const InvoiceContactFields = () => {
   useEffect(() => {
     if (!invoiceSameAsPrimary) return;
     setValue("invoice_contact_name", primaryName ?? "", { shouldDirty: true });
-    setValue("invoice_email", getPrimaryChannelValue(primaryEmails), { shouldDirty: true });
-    setValue("invoice_phone", getPrimaryChannelValue(primaryPhones), { shouldDirty: true });
-  }, [invoiceSameAsPrimary, primaryName, primaryEmails, primaryPhones, setValue]);
+    setValue("invoice_email", getPrimaryChannelValue(primaryEmails), {
+      shouldDirty: true,
+    });
+    setValue("invoice_phone", getPrimaryChannelValue(primaryPhones), {
+      shouldDirty: true,
+    });
+  }, [
+    invoiceSameAsPrimary,
+    primaryName,
+    primaryEmails,
+    primaryPhones,
+    setValue,
+  ]);
 
   if (invoiceSameAsPrimary) {
     return null;
@@ -315,8 +357,16 @@ const InvoiceContactFields = () => {
         label="Invoice contact name"
         helperText={false}
       />
-      <EmailInput source="invoice_email" label="Invoice email" helperText={false} />
-      <PhoneInput source="invoice_phone" label="Invoice phone" helperText={false} />
+      <EmailInput
+        source="invoice_email"
+        label="Invoice email"
+        helperText={false}
+      />
+      <PhoneInput
+        source="invoice_phone"
+        label="Invoice phone"
+        helperText={false}
+      />
     </div>
   );
 };

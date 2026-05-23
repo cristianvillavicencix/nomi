@@ -48,9 +48,12 @@ export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
                     deal.subcontractor_ids,
                   );
                 } catch {
-                  notify("Project updated, but assignments could not be fully synced", {
-                    type: "warning",
-                  });
+                  notify(
+                    "Project updated, but assignments could not be fully synced",
+                    {
+                      type: "warning",
+                    },
+                  );
                 }
                 notify("Project updated");
                 redirect(`/deals/${id}/show`, undefined, undefined, undefined, {

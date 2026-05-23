@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useDataProvider, useGetIdentity, useNotify, type Identifier } from "ra-core";
+import {
+  useDataProvider,
+  useGetIdentity,
+  useNotify,
+  type Identifier,
+} from "ra-core";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +34,10 @@ type QuickCreateClientDialogProps = {
   open: boolean;
   defaults?: QuickCreateClientDefaults;
   onClose: () => void;
-  onCreated: (result: LbsClientUpsertResult, values: QuickCreateClientInput) => void;
+  onCreated: (
+    result: LbsClientUpsertResult,
+    values: QuickCreateClientInput,
+  ) => void;
 };
 
 const emptyValues = (): QuickCreateClientInput => ({
@@ -95,8 +103,8 @@ export const QuickCreateClientDialog = ({
         <DialogHeader>
           <DialogTitle>Create new client</DialogTitle>
           <DialogDescription>
-            Add the business and main contact now. You can complete the full profile
-            later.
+            Add the business and main contact now. You can complete the full
+            profile later.
           </DialogDescription>
         </DialogHeader>
 
@@ -107,7 +115,10 @@ export const QuickCreateClientDialog = ({
               id="quick-business-name"
               value={values.businessName}
               onChange={(event) =>
-                setValues((current) => ({ ...current, businessName: event.target.value }))
+                setValues((current) => ({
+                  ...current,
+                  businessName: event.target.value,
+                }))
               }
               placeholder="Acme Corp"
               autoFocus
@@ -119,7 +130,10 @@ export const QuickCreateClientDialog = ({
               id="quick-contact-name"
               value={values.contactName}
               onChange={(event) =>
-                setValues((current) => ({ ...current, contactName: event.target.value }))
+                setValues((current) => ({
+                  ...current,
+                  contactName: event.target.value,
+                }))
               }
               placeholder="Jane Smith"
             />
@@ -132,7 +146,10 @@ export const QuickCreateClientDialog = ({
                 type="email"
                 value={values.email ?? ""}
                 onChange={(event) =>
-                  setValues((current) => ({ ...current, email: event.target.value }))
+                  setValues((current) => ({
+                    ...current,
+                    email: event.target.value,
+                  }))
                 }
                 placeholder="jane@acme.com"
               />
@@ -143,7 +160,10 @@ export const QuickCreateClientDialog = ({
                 id="quick-phone"
                 value={values.phone ?? ""}
                 onChange={(event) =>
-                  setValues((current) => ({ ...current, phone: event.target.value }))
+                  setValues((current) => ({
+                    ...current,
+                    phone: event.target.value,
+                  }))
                 }
                 placeholder="(555) 555-5555"
               />
@@ -152,13 +172,22 @@ export const QuickCreateClientDialog = ({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={isPending}
+          >
             Cancel
           </Button>
           <Button
             type="button"
             onClick={() => mutate()}
-            disabled={isPending || !values.businessName.trim() || !values.contactName.trim()}
+            disabled={
+              isPending ||
+              !values.businessName.trim() ||
+              !values.contactName.trim()
+            }
           >
             {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
             Create client

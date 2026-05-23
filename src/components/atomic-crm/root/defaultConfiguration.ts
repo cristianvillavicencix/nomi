@@ -84,7 +84,9 @@ export const contractorDealStages = [
 
 export const lbsDealStages = lbsProjectStages;
 
-export const defaultDealStages = isLbsMode() ? lbsDealStages : contractorDealStages;
+export const defaultDealStages = isLbsMode()
+  ? lbsDealStages
+  : contractorDealStages;
 
 export const defaultDealPipelineStatuses = isLbsMode()
   ? LBS_WON_PIPELINE_STATUSES
@@ -172,7 +174,9 @@ export const lbsTaskTypes = [
   { value: "meeting", label: "Meeting" },
 ];
 
-export const configuredTaskTypes = isLbsMode() ? lbsTaskTypes : defaultTaskTypes;
+export const configuredTaskTypes = isLbsMode()
+  ? lbsTaskTypes
+  : defaultTaskTypes;
 
 export const defaultConfiguration: ConfigurationContextValue = {
   companySectors: defaultCompanySectors,

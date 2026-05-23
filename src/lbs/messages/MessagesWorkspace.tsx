@@ -8,12 +8,22 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import type { ClientSmsDraft, Contact, Conversation, ConversationParticipant, LbsDeal, OrganizationMember } from "@/lbs/types";
+import type {
+  ClientSmsDraft,
+  Contact,
+  Conversation,
+  ConversationParticipant,
+  LbsDeal,
+  OrganizationMember,
+} from "@/lbs/types";
 import { getContactDisplayName } from "@/lbs/messages/messageContactUtils";
 import { ConversationThread } from "@/lbs/messages/ConversationThread";
 import { ConversationChatHeader } from "@/lbs/messages/ConversationChatHeader";
 import { MessagesInbox } from "@/lbs/messages/inbox/MessagesInbox";
-import { ContextPanel, ContextPanelContent } from "@/lbs/messages/context/ContextPanel";
+import {
+  ContextPanel,
+  ContextPanelContent,
+} from "@/lbs/messages/context/ContextPanel";
 import { useMessagesContextPanel } from "@/lbs/messages/context/useMessagesContextPanel";
 
 export const MessagesWorkspace = ({
@@ -57,7 +67,11 @@ export const MessagesWorkspace = ({
   hasMoreInbox?: boolean;
   loadingMoreInbox?: boolean;
 }) => {
-  const { open: contextOpen, toggle: toggleContext, close: closeContext } = useMessagesContextPanel();
+  const {
+    open: contextOpen,
+    toggle: toggleContext,
+    close: closeContext,
+  } = useMessagesContextPanel();
   const [mobileContextOpen, setMobileContextOpen] = useState(false);
   const showInbox = !isMobile || !showMobileChat;
   const showChat = !isMobile || showMobileChat || !!clientSmsDraft;
@@ -73,7 +87,9 @@ export const MessagesWorkspace = ({
 
   const activeDeal =
     activeConversation?.deal_id != null
-      ? deals.find((entry) => String(entry.id) === String(activeConversation.deal_id))
+      ? deals.find(
+          (entry) => String(entry.id) === String(activeConversation.deal_id),
+        )
       : undefined;
 
   const handleToggleContext = () => {
@@ -85,11 +101,18 @@ export const MessagesWorkspace = ({
   };
 
   return (
-    <div className={cn("flex min-h-0 flex-1 overflow-hidden bg-background", className)}>
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 overflow-hidden bg-background",
+        className,
+      )}
+    >
       <aside
         className={cn(
           "flex min-h-0 flex-col border-r border-border/30 bg-muted/5",
-          compact ? "w-[300px] shrink-0" : "w-full shrink-0 md:w-[320px] lg:w-[360px] xl:w-[400px]",
+          compact
+            ? "w-[300px] shrink-0"
+            : "w-full shrink-0 md:w-[320px] lg:w-[360px] xl:w-[400px]",
           !showInbox && "hidden md:flex",
         )}
       >
@@ -134,7 +157,12 @@ export const MessagesWorkspace = ({
                 onToggleContext={handleToggleContext}
               />
             ) : clientSmsDraft ? (
-              <div className={cn("border-b border-border/40 bg-background px-4", compact ? "py-2.5" : "py-3")}>
+              <div
+                className={cn(
+                  "border-b border-border/40 bg-background px-4",
+                  compact ? "py-2.5" : "py-3",
+                )}
+              >
                 <div className="truncate font-semibold">
                   {getContactDisplayName(clientSmsDraft.contact)}
                 </div>

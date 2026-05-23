@@ -1,7 +1,12 @@
-import { useState } from 'react';
-import { useDataProvider, useNotify, useRecordContext, useRefresh } from 'ra-core';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState } from "react";
+import {
+  useDataProvider,
+  useNotify,
+  useRecordContext,
+  useRefresh,
+} from "ra-core";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DateInput,
   Edit,
@@ -12,22 +17,22 @@ import {
   SelectInput,
   SimpleForm,
   TextInput,
-} from '@/components/admin';
-import { PaymentLinesTable, type PaymentLinesScope } from './PaymentLinesTable';
-import type { CrmDataProvider } from '@/components/atomic-crm/providers/types';
+} from "@/components/admin";
+import { PaymentLinesTable, type PaymentLinesScope } from "./PaymentLinesTable";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 
 const statusChoices = [
-  { id: 'draft', name: 'Draft' },
-  { id: 'approved', name: 'Approved' },
-  { id: 'paid', name: 'Paid' },
+  { id: "draft", name: "Draft" },
+  { id: "approved", name: "Approved" },
+  { id: "paid", name: "Paid" },
 ];
 
 const paymentScopeTabs: Array<{ value: PaymentLinesScope; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'sales_commissions', label: 'Sales Commissions' },
-  { value: 'hourly', label: 'Hourly Staff' },
-  { value: 'salaried', label: 'Salaried Staff' },
-  { value: 'subcontractor', label: 'Subcontractors' },
+  { value: "all", label: "All" },
+  { value: "sales_commissions", label: "Sales Commissions" },
+  { value: "hourly", label: "Hourly Staff" },
+  { value: "salaried", label: "Salaried Staff" },
+  { value: "subcontractor", label: "Subcontractors" },
 ];
 
 const GenerateLinesButton = () => {
@@ -44,7 +49,7 @@ const GenerateLinesButton = () => {
       notify(`Generated ${created ?? 0} payment lines`);
       refresh();
     } catch {
-      notify('Could not generate payment lines', { type: 'error' });
+      notify("Could not generate payment lines", { type: "error" });
     }
   };
 
@@ -63,7 +68,7 @@ const PaymentEditToolbar = () => (
 );
 
 export const PaymentsEdit = () => {
-  const [scope, setScope] = useState<PaymentLinesScope>('all');
+  const [scope, setScope] = useState<PaymentLinesScope>("all");
 
   return (
     <Edit>
@@ -75,11 +80,11 @@ export const PaymentsEdit = () => {
         <SelectInput
           source="category"
           choices={[
-            { id: 'hourly', name: 'Hourly Staff' },
-            { id: 'salaried', name: 'Salaried Staff' },
-            { id: 'subcontractor', name: 'Subcontractors' },
-            { id: 'sales_commissions', name: 'Sales Commissions' },
-            { id: 'mixed', name: 'Mixed' },
+            { id: "hourly", name: "Hourly Staff" },
+            { id: "salaried", name: "Salaried Staff" },
+            { id: "subcontractor", name: "Subcontractors" },
+            { id: "sales_commissions", name: "Sales Commissions" },
+            { id: "mixed", name: "Mixed" },
           ]}
         />
         <NumberInput source="total_gross" />
@@ -92,7 +97,10 @@ export const PaymentsEdit = () => {
         <SelectInput source="status" choices={statusChoices} />
 
         <div className="space-y-3">
-          <Tabs value={scope} onValueChange={(value) => setScope(value as PaymentLinesScope)}>
+          <Tabs
+            value={scope}
+            onValueChange={(value) => setScope(value as PaymentLinesScope)}
+          >
             <TabsList>
               {paymentScopeTabs.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value}>

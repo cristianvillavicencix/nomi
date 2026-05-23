@@ -14,7 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Company, Deal, DealClientPayment } from "@/components/atomic-crm/types";
+import type {
+  Company,
+  Deal,
+  DealClientPayment,
+} from "@/components/atomic-crm/types";
 import type { Proposal } from "@/lbs/types";
 import { ClientTabEmpty } from "@/lbs/clients/ClientContactsTab";
 import {
@@ -45,7 +49,10 @@ type ClientFinancialTabProps = {
   };
 };
 
-export const ClientFinancialTab = ({ companyId, counts }: ClientFinancialTabProps) => {
+export const ClientFinancialTab = ({
+  companyId,
+  counts,
+}: ClientFinancialTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const section = getValidFinancialSection(searchParams.get("section"));
 
@@ -65,7 +72,10 @@ export const ClientFinancialTab = ({ companyId, counts }: ClientFinancialTabProp
     const tab = searchParams.get("tab");
     if (tab !== "financial") return;
     const rawSection = searchParams.get("section");
-    if (rawSection && !FINANCIAL_SECTIONS.includes(rawSection as FinancialSection)) {
+    if (
+      rawSection &&
+      !FINANCIAL_SECTIONS.includes(rawSection as FinancialSection)
+    ) {
       const next = new URLSearchParams(searchParams);
       next.delete("section");
       setSearchParams(next, { replace: true });
@@ -105,7 +115,11 @@ export const ClientFinancialTab = ({ companyId, counts }: ClientFinancialTabProp
   );
 };
 
-const ClientFinancialSummary = ({ companyId }: { companyId: Company["id"] }) => {
+const ClientFinancialSummary = ({
+  companyId,
+}: {
+  companyId: Company["id"];
+}) => {
   const { data: deals = [], isPending: dealsPending } = useGetList<Deal>(
     "deals",
     {
@@ -123,25 +137,27 @@ const ClientFinancialSummary = ({ companyId }: { companyId: Company["id"] }) => 
       ? { "deal_id@in": `(${dealIds.join(",")})` }
       : { "deal_id@eq": -1 };
 
-  const { data: payments = [], isPending: paymentsPending } = useGetList<DealClientPayment>(
-    "deal_client_payments",
-    {
-      filter: paymentsFilter,
-      pagination: { page: 1, perPage: 500 },
-      sort: { field: "payment_date", order: "DESC" },
-    },
-    { staleTime: 30_000, enabled: dealIds.length > 0 },
-  );
+  const { data: payments = [], isPending: paymentsPending } =
+    useGetList<DealClientPayment>(
+      "deal_client_payments",
+      {
+        filter: paymentsFilter,
+        pagination: { page: 1, perPage: 500 },
+        sort: { field: "payment_date", order: "DESC" },
+      },
+      { staleTime: 30_000, enabled: dealIds.length > 0 },
+    );
 
-  const { data: proposals = [], isPending: proposalsPending } = useGetList<Proposal>(
-    "proposals",
-    {
-      filter: { "company_id@eq": companyId },
-      pagination: { page: 1, perPage: 100 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
+  const { data: proposals = [], isPending: proposalsPending } =
+    useGetList<Proposal>(
+      "proposals",
+      {
+        filter: { "company_id@eq": companyId },
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: "updated_at", order: "DESC" },
+      },
+      { staleTime: 30_000 },
+    );
 
   const totalContracted = useMemo(
     () => deals.reduce((sum, deal) => sum + Number(deal.amount ?? 0), 0),
@@ -151,7 +167,10 @@ const ClientFinancialSummary = ({ companyId }: { companyId: Company["id"] }) => 
   const totalCollected = useMemo(
     () =>
       payments
-        .filter((payment) => payment.status === "cleared" || payment.status === "deposited")
+        .filter(
+          (payment) =>
+            payment.status === "cleared" || payment.status === "deposited",
+        )
         .reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0),
     [payments],
   );
@@ -168,7 +187,8 @@ const ClientFinancialSummary = ({ companyId }: { companyId: Company["id"] }) => 
     () =>
       proposals.filter(
         (proposal) =>
-          proposal.status && !["accepted", "declined", "expired"].includes(proposal.status),
+          proposal.status &&
+          !["accepted", "declined", "expired"].includes(proposal.status),
       ),
     [proposals],
   );
@@ -188,15 +208,24 @@ const ClientFinancialSummary = ({ companyId }: { companyId: Company["id"] }) => 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Contracted" value={<MoneyText value={totalContracted} />} />
-        <SummaryCard label="Collected" value={<MoneyText value={totalCollected} />} />
-        <SummaryCard label="Pending payments" value={<MoneyText value={totalPending} />} />
+        <SummaryCard
+          label="Contracted"
+          value={<MoneyText value={totalContracted} />}
+        />
+        <SummaryCard
+          label="Collected"
+          value={<MoneyText value={totalCollected} />}
+        />
+        <SummaryCard
+          label="Pending payments"
+          value={<MoneyText value={totalPending} />}
+        />
         <SummaryCard label="Balance" value={<MoneyText value={balance} />} />
       </div>
       {openProposals.length > 0 ? (
         <p className="text-sm text-muted-foreground">
-          {openProposals.length} open proposal{openProposals.length === 1 ? "" : "s"} awaiting
-          response.
+          {openProposals.length} open proposal
+          {openProposals.length === 1 ? "" : "s"} awaiting response.
         </p>
       ) : null}
     </div>
@@ -225,15 +254,16 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
       ? { "deal_id@in": `(${dealIds.join(",")})` }
       : { "deal_id@eq": -1 };
 
-  const { data: payments = [], isPending: paymentsPending } = useGetList<DealClientPayment>(
-    "deal_client_payments",
-    {
-      filter: paymentsFilter,
-      pagination: { page: 1, perPage: 500 },
-      sort: { field: "payment_date", order: "DESC" },
-    },
-    { staleTime: 30_000, enabled: dealIds.length > 0 },
-  );
+  const { data: payments = [], isPending: paymentsPending } =
+    useGetList<DealClientPayment>(
+      "deal_client_payments",
+      {
+        filter: paymentsFilter,
+        pagination: { page: 1, perPage: 500 },
+        sort: { field: "payment_date", order: "DESC" },
+      },
+      { staleTime: 30_000, enabled: dealIds.length > 0 },
+    );
 
   if (dealsPending || paymentsPending) return <TabLoading />;
 
@@ -246,7 +276,8 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
   if (payments.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No payments recorded yet. Log payments in each project&apos;s detail view.
+        No payments recorded yet. Log payments in each project&apos;s detail
+        view.
       </p>
     );
   }
@@ -276,7 +307,8 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
                     to={`/deals/${payment.deal_id}/show`}
                     className="link-action font-medium"
                   >
-                    {dealsById[String(payment.deal_id)]?.name ?? `Project #${payment.deal_id}`}
+                    {dealsById[String(payment.deal_id)]?.name ??
+                      `Project #${payment.deal_id}`}
                   </Link>
                 ) : (
                   "—"
@@ -294,7 +326,10 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
                 </Badge>
               </TableCell>
               <TableCell className="hidden max-w-xs truncate lg:table-cell text-muted-foreground">
-                {payment.reference_number || payment.check_number || payment.notes || "—"}
+                {payment.reference_number ||
+                  payment.check_number ||
+                  payment.notes ||
+                  "—"}
               </TableCell>
             </TableRow>
           ))}
