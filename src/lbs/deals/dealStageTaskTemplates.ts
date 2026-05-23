@@ -20,7 +20,7 @@ type StageTaskTemplate = {
 };
 
 export const STAGE_TASK_TEMPLATES: Record<string, StageTaskTemplate[]> = {
-  setup: [
+  won: [
     {
       type: "brief-review",
       text: "Review accepted scope and confirm project setup",
@@ -39,7 +39,7 @@ export const STAGE_TASK_TEMPLATES: Record<string, StageTaskTemplate[]> = {
       dueDaysOffset: 1,
     },
   ],
-  client_review: [
+  review: [
     {
       type: "design-approval",
       text: "Collect client review and approval",
@@ -53,6 +53,29 @@ export const STAGE_TASK_TEMPLATES: Record<string, StageTaskTemplate[]> = {
       text: "Run launch checklist and final QA",
       priority: "high",
       dueDaysOffset: 2,
+    },
+  ],
+  closed_won: [
+    {
+      type: "client-follow-up",
+      text: "Confirm handoff and close out project documentation",
+      dueDaysOffset: 3,
+    },
+  ],
+  setup: [
+    {
+      type: "brief-review",
+      text: "Review accepted scope and confirm project setup",
+      priority: "high",
+      dueDaysOffset: 2,
+    },
+  ],
+  client_review: [
+    {
+      type: "design-approval",
+      text: "Collect client review and approval",
+      priority: "high",
+      dueDaysOffset: 3,
     },
   ],
   delivered: [

@@ -5,6 +5,7 @@ import {
 } from "@/lbs/deals/websiteBriefSchema";
 import { getProjectDeliveryDate } from "@/lbs/deals/projectDeliveryDate";
 import {
+  LBS_PRE_DELIVERY_STAGES,
   lbsProjectStages,
   normalizeLbsProjectStage,
 } from "@/lbs/deals/lbsProjectConstants";
@@ -63,9 +64,13 @@ export const getBriefStageAdvanceCheck = (
   const progress = getProjectBriefProgress(record);
   const current = normalizeLbsProjectStage(record.stage);
   const next = normalizeLbsProjectStage(nextStage);
-  const leavingSetup = current === "setup" && next !== "setup";
+  const leavingPreDelivery =
+    LBS_PRE_DELIVERY_STAGES.has(current) && !LBS_PRE_DELIVERY_STAGES.has(next);
 
-  if (!leavingSetup || progress.percent >= BRIEF_MIN_PERCENT_TO_LEAVE_SETUP) {
+  if (
+    !leavingPreDelivery ||
+    progress.percent >= BRIEF_MIN_PERCENT_TO_LEAVE_SETUP
+  ) {
     return { allowed: true as const, progress };
   }
 
@@ -73,7 +78,7 @@ export const getBriefStageAdvanceCheck = (
   return {
     allowed: false as const,
     progress,
-    message: `Brief is ${progress.percent}% complete (${BRIEF_MIN_PERCENT_TO_LEAVE_SETUP}% required to leave Setup). Still missing: ${incomplete.slice(0, 4).join(", ")}${incomplete.length > 4 ? "…" : ""}.`,
+    message: `Brief is ${progress.percent}% complete (${BRIEF_MIN_PERCENT_TO_LEAVE_SETUP}% required before delivery). Still missing: ${incomplete.slice(0, 4).join(", ")}${incomplete.length > 4 ? "…" : ""}.`,
   };
 };
 

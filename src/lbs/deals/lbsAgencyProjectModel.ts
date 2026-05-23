@@ -10,7 +10,7 @@ export const LBS_LIFECYCLE_PHASES = [
 ] as const;
 export type LbsLifecyclePhase = (typeof LBS_LIFECYCLE_PHASES)[number];
 
-export const LBS_DEFAULT_LIFECYCLE_PHASE: LbsLifecyclePhase = "delivery";
+export const LBS_DEFAULT_LIFECYCLE_PHASE: LbsLifecyclePhase = "opportunity";
 
 export const LBS_PROJECT_PRIORITIES = [
   { value: "low", label: "Low" },
@@ -24,19 +24,25 @@ export type LbsProjectPriority =
 
 export const LBS_DEFAULT_PROJECT_PRIORITY: LbsProjectPriority = "normal";
 
-/** Kanban columns — post-proposal execution pipeline. */
+/** Kanban columns — full web agency pipeline. */
 export const lbsAgencyPipelineStages = [
-  { value: "setup", label: "Setup" },
-  { value: "in_progress", label: "In progress" },
-  { value: "client_review", label: "Client review" },
+  { value: "lead", label: "Lead" },
+  { value: "discovery", label: "Discovery" },
+  { value: "proposal_sent", label: "Proposal Sent" },
+  { value: "won", label: "Won" },
+  { value: "design", label: "Design" },
+  { value: "development", label: "Development" },
+  { value: "review", label: "Client Review" },
   { value: "launch", label: "Launch" },
-  { value: "delivered", label: "Delivered" },
+  { value: "maintenance", label: "Maintenance" },
+  { value: "closed_won", label: "Closed Won" },
+  { value: "closed_lost", label: "Closed Lost" },
 ] as const;
 
 export type LbsAgencyPipelineStage =
   (typeof lbsAgencyPipelineStages)[number]["value"];
 
-export const LBS_DEFAULT_AGENCY_STAGE: LbsAgencyPipelineStage = "setup";
+export const LBS_DEFAULT_AGENCY_STAGE: LbsAgencyPipelineStage = "lead";
 
 /** Detailed operational status within delivery phase. */
 export const lbsDeliveryStatuses = [
@@ -114,10 +120,16 @@ export const getAgencyProjectTypeLabel = (value?: string | null) => {
 
 /** Maps Kanban stage → default delivery_status. */
 export const STAGE_TO_DELIVERY_STATUS: Record<string, LbsDeliveryStatus> = {
+  won: "planning",
+  design: "in_design",
+  development: "in_development",
+  review: "client_review",
+  launch: "ready_to_launch",
+  maintenance: "launched",
+  closed_won: "completed",
   setup: "planning",
   in_progress: "in_development",
   client_review: "client_review",
-  launch: "ready_to_launch",
   delivered: "completed",
 };
 

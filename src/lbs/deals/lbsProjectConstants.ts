@@ -15,17 +15,29 @@ export const lbsProjectTypeChoices = [
   { value: "email-marketing", label: "Email marketing (legacy)" },
 ];
 
-/**
- * Project pipeline after the client accepts the proposal.
- * Setup → build → review → go live → hand off to client.
- */
-export const lbsProjectStages = [
-  { value: "setup", label: "Setup" },
-  { value: "in_progress", label: "In progress" },
-  { value: "client_review", label: "Client review" },
+/** Full web agency pipeline: sales funnel + delivery + close. */
+export const LBS_WEB_PIPELINE_STAGES = [
+  { value: "lead", label: "Lead" },
+  { value: "discovery", label: "Discovery" },
+  { value: "proposal_sent", label: "Proposal Sent" },
+  { value: "won", label: "Won" },
+  { value: "design", label: "Design" },
+  { value: "development", label: "Development" },
+  { value: "review", label: "Client Review" },
   { value: "launch", label: "Launch" },
-  { value: "delivered", label: "Delivered" },
-];
+  { value: "maintenance", label: "Maintenance" },
+  { value: "closed_won", label: "Closed Won" },
+  { value: "closed_lost", label: "Closed Lost" },
+] as const;
+
+export const lbsProjectStages = LBS_WEB_PIPELINE_STAGES;
+
+/** Pre-delivery sales stages (brief not required). */
+export const LBS_PRE_DELIVERY_STAGES = new Set([
+  "lead",
+  "discovery",
+  "proposal_sent",
+]);
 
 /** Contractor / restoration pipeline slugs (not used in LBS). */
 export const CONTRACTOR_PROJECT_STAGE_IDS = [
@@ -36,38 +48,60 @@ export const CONTRACTOR_PROJECT_STAGE_IDS = [
   "completed",
 ] as const;
 
-/** Maps legacy stage slugs to the post-proposal project pipeline. */
+/** Maps legacy stage slugs to the web agency pipeline. */
 export const LEGACY_LBS_STAGE_MAP: Record<string, string> = {
-  lead: "setup",
-  discovery: "setup",
-  proposal: "setup",
-  kickoff: "setup",
-  approved: "setup",
-  scheduled: "setup",
-  closed: "delivered",
+  setup: "won",
+  in_progress: "development",
+  client_review: "review",
+  delivered: "closed_won",
+  opportunity: "lead",
+  qualified: "discovery",
+  proposal: "proposal_sent",
+  negotiation: "proposal_sent",
+  kickoff: "won",
+  approved: "won",
+  scheduled: "design",
+  closed: "closed_won",
   active: "launch",
-  on_hold: "in_progress",
-  material_ordered: "in_progress",
-  pending_inspection: "client_review",
-  completed: "delivered",
-  content_collection: "in_progress",
-  design: "in_progress",
-  development: "in_progress",
-  review: "client_review",
+  on_hold: "development",
+  material_ordered: "development",
+  pending_inspection: "review",
+  completed: "closed_won",
+  content_collection: "development",
+  design: "design",
+  development: "development",
+  review: "review",
   live: "launch",
-  maintenance: "launch",
+  maintenance: "maintenance",
+  lost: "closed_lost",
+  lead: "lead",
+  discovery: "discovery",
+  proposal_sent: "proposal_sent",
+  won: "won",
+  launch: "launch",
+  closed_won: "closed_won",
+  closed_lost: "closed_lost",
 };
 
 const LEGACY_PROJECT_PIPELINE_STAGE_IDS = new Set<string>([
   ...CONTRACTOR_PROJECT_STAGE_IDS,
-  "lead",
-  "discovery",
+  "setup",
+  "in_progress",
+  "client_review",
+  "delivered",
+  "opportunity",
+  "qualified",
   "proposal",
+  "negotiation",
   "kickoff",
   "closed",
   "active",
   "on_hold",
 ]);
+
+const LBS_WEB_PIPELINE_STAGE_IDS = new Set<string>(
+  lbsProjectStages.map((stage) => stage.value),
+);
 
 export const isLbsProjectStageId = (stageId?: string | null) =>
   !!stageId && !!lbsProjectStageByValue[stageId];
@@ -76,16 +110,23 @@ export const isContractorProjectStageId = (stageId?: string | null) =>
   !!stageId &&
   (CONTRACTOR_PROJECT_STAGE_IDS as readonly string[]).includes(stageId);
 
-/** True when the board still uses pre-project or contractor stages. */
+/** True when the board still uses pre-agency or contractor stages. */
 export const hasLegacyProjectPipeline = (stageIds: string[]) => {
   if (stageIds.length === 0) return false;
-  const isCurrentPipeline =
+
+  const isWebAgencyPipeline =
+    stageIds.includes("lead") &&
+    stageIds.includes("closed_lost") &&
+    stageIds.length === lbsProjectStages.length &&
+    stageIds.every((id) => LBS_WEB_PIPELINE_STAGE_IDS.has(id));
+  if (isWebAgencyPipeline) return false;
+
+  const isOldPostProposalPipeline =
     stageIds.includes("setup") &&
     stageIds.includes("delivered") &&
-    !stageIds.includes("active") &&
-    !stageIds.includes("on_hold") &&
-    stageIds.length === lbsProjectStages.length;
-  if (isCurrentPipeline) return false;
+    stageIds.length === 5;
+  if (isOldPostProposalPipeline) return true;
+
   return (
     stageIds.some((id) => LEGACY_PROJECT_PIPELINE_STAGE_IDS.has(id)) ||
     stageIds.includes("active") ||
@@ -115,9 +156,9 @@ export const getLbsProjectStageLabel = (value?: string | null) => {
 
 export const LBS_DEFAULT_PROJECT_CATEGORY = "website";
 export const LBS_DEFAULT_PROJECT_TYPE = "website";
-export const LBS_DEFAULT_PROJECT_STAGE = "setup";
+export const LBS_DEFAULT_PROJECT_STAGE = "lead";
 
-export const LBS_WON_PIPELINE_STATUSES = ["delivered"];
+export const LBS_WON_PIPELINE_STATUSES = ["closed_won", "won", "delivered"];
 
 export type LbsProjectScopeMode = "pages" | "single" | "deliverables";
 
@@ -171,7 +212,17 @@ export const buildLbsDealPipelines = () => [
 
 export const getLbsStageColor = (stageValue: string) => {
   const normalized = normalizeLbsProjectStage(stageValue);
-  if (normalized === "launch") return "#16a34a";
+  if (normalized === "lead") return "#64748b";
+  if (normalized === "discovery") return "#3b82f6";
+  if (normalized === "proposal_sent") return "#f59e0b";
+  if (normalized === "won") return "#16a34a";
+  if (normalized === "design") return "#9333ea";
+  if (normalized === "development") return "#6366f1";
+  if (normalized === "review") return "#f97316";
+  if (normalized === "launch") return "#0d9488";
+  if (normalized === "maintenance") return "#06b6d4";
+  if (normalized === "closed_won") return "#0f766e";
+  if (normalized === "closed_lost") return "#dc2626";
   if (normalized === "delivered") return "#0f766e";
   if (normalized === "setup") return "#7dbde8";
   if (normalized === "in_progress") return "#6366f1";

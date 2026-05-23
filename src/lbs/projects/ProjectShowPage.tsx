@@ -148,8 +148,16 @@ const ProjectShowContent = () => {
     const previousStage = record.stage;
     const normalizedStage = normalizeLbsProjectStage(stageId);
     const nextDeliveryStatus = deliveryStatusForStage(normalizedStage);
-    const nextLifecyclePhase =
-      normalizedStage === "delivered" ? "closed" : "delivery";
+    const isClosedStage =
+      normalizedStage === "closed_won" || normalizedStage === "delivered";
+    const isOpportunityStage = ["lead", "discovery", "proposal_sent"].includes(
+      normalizedStage,
+    );
+    const nextLifecyclePhase = isClosedStage
+      ? "closed"
+      : isOpportunityStage
+        ? "opportunity"
+        : "delivery";
 
     update(
       "deals",
@@ -159,7 +167,7 @@ const ProjectShowContent = () => {
           stage: stageId,
           delivery_status: nextDeliveryStatus,
           lifecycle_phase: nextLifecyclePhase,
-          ...(normalizedStage === "delivered"
+          ...(isClosedStage
             ? { actual_completion_date: new Date().toISOString().slice(0, 10) }
             : {}),
         },
@@ -184,7 +192,7 @@ const ProjectShowContent = () => {
             const message = getStageTasksCreatedMessage(stageId, count);
             if (message) notify(message, { type: "info" });
 
-            if (normalizeLbsProjectStage(stageId) === "setup") {
+            if (normalizeLbsProjectStage(stageId) === "won") {
               const briefTaskCount = await createBriefGapTasksForDeal({
                 dataProvider,
                 deal: record,
