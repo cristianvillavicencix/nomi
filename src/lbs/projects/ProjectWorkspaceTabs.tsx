@@ -87,6 +87,16 @@ const ProjectCommissionsTab = lazy(() =>
     default: m.CommissionsTab,
   })),
 );
+const LaunchChecklistTabLazy = lazy(() =>
+  import("@/lbs/projects/launch/LaunchChecklistTab").then((m) => ({
+    default: m.LaunchChecklistTab,
+  })),
+);
+const MaintenanceTabLazy = lazy(() =>
+  import("@/lbs/projects/tabs/MaintenanceTab").then((m) => ({
+    default: m.MaintenanceTab,
+  })),
+);
 
 const TabFallback = () => <Skeleton className="h-40 w-full rounded-lg" />;
 
@@ -224,6 +234,9 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                 <TabsTrigger value="schedule" className="shrink-0">
                   Schedule
                 </TabsTrigger>
+                <TabsTrigger value="launch" className="shrink-0">
+                  Launch
+                </TabsTrigger>
                 <TabsTrigger value="messages" className="shrink-0">
                   Messages
                 </TabsTrigger>
@@ -247,6 +260,9 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                     Commissions
                   </TabsTrigger>
                 ) : null}
+                <TabsTrigger value="maintenance" className="shrink-0">
+                  Maintenance
+                </TabsTrigger>
                 <TabsTrigger value="activity" className="shrink-0">
                   Activity
                 </TabsTrigger>
@@ -286,6 +302,13 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                 {showTab("schedule") ? (
                   <Suspense fallback={<TabFallback />}>
                     <ProjectScheduleTab record={record} />
+                  </Suspense>
+                ) : null}
+              </TabsContent>
+              <TabsContent value="launch" className="pt-4">
+                {showTab("launch") ? (
+                  <Suspense fallback={<TabFallback />}>
+                    <LaunchChecklistTabLazy record={record} />
                   </Suspense>
                 ) : null}
               </TabsContent>
@@ -332,6 +355,13 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   ) : null}
                 </TabsContent>
               ) : null}
+              <TabsContent value="maintenance" className="pt-4">
+                {showTab("maintenance") ? (
+                  <Suspense fallback={<TabFallback />}>
+                    <MaintenanceTabLazy record={record} />
+                  </Suspense>
+                ) : null}
+              </TabsContent>
               <TabsContent value="activity" className="pt-4">
                 {showTab("activity") ? (
                   <Suspense fallback={<TabFallback />}>

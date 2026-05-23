@@ -37,6 +37,7 @@ import {
 } from "@/lbs/deals/dealCommissionAutomation";
 import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
 import { getBriefStageAdvanceCheck } from "@/lbs/deals/projectBriefProgress";
+import { getLaunchStageAdvanceCheck } from "@/lbs/projects/launch/launchChecklistGate";
 import { runProjectStageAutomations } from "@/lbs/projects/projectStageAutomations";
 import { ProjectWorkspaceTabs } from "@/lbs/projects/ProjectWorkspaceTabs";
 import type { LbsDeal } from "@/lbs/types";
@@ -136,12 +137,22 @@ const ProjectShowContent = () => {
     "sales.manage",
   );
 
-  const handleStageChange = (stageId: string) => {
+  const handleStageChange = async (stageId: string) => {
     if (isUpdatingStage || stageId === record.stage) return;
 
     const briefCheck = getBriefStageAdvanceCheck(record, stageId);
     if (!briefCheck.allowed) {
       notify(briefCheck.message, { type: "warning" });
+      return;
+    }
+
+    const launchCheck = await getLaunchStageAdvanceCheck(
+      dataProvider,
+      record.id,
+      stageId,
+    );
+    if (!launchCheck.allowed) {
+      notify(launchCheck.message, { type: "warning" });
       return;
     }
 

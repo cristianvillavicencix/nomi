@@ -26,6 +26,7 @@ import {
   ensureCommissionsForWonDeal,
   getCommissionAutomationMessage,
 } from "@/lbs/deals/dealCommissionAutomation";
+import { getLaunchStageAdvanceCheck } from "@/lbs/projects/launch/launchChecklistGate";
 import { useLbsPipelineConfig } from "@/lbs/deals/useLbsPipelineConfig";
 import { useStageDeals } from "@/lbs/deals/useStageDeals";
 import type { LbsDeal } from "@/lbs/types";
@@ -159,13 +160,27 @@ export const LbsDealBoardContent = ({ pipelineId }: { pipelineId: string }) => {
       ),
     );
 
-    void updateDealStage(
-      sourceDeal,
-      destinationDeal,
+    void getLaunchStageAdvanceCheck(
       dataProvider,
-      identity?.id,
+      sourceDeal.id,
+      destinationStage,
     )
-      .then(async ({ stageChanged, newStage }) => {
+      .then((launchCheck) => {
+        if (!launchCheck.allowed) {
+          setDealsByStage(previousState);
+          notify(launchCheck.message, { type: "warning", multiLine: true });
+          return;
+        }
+        return updateDealStage(
+          sourceDeal,
+          destinationDeal,
+          dataProvider,
+          identity?.id,
+        );
+      })
+      .then(async (result) => {
+        if (!result) return;
+        const { stageChanged, newStage } = result;
         try {
           const count = await createStageTasksForDeal({
             dataProvider,

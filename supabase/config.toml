@@ -212,6 +212,9 @@ verify_jwt = false
 [functions.access_entry_password]
 verify_jwt = false
 
+[functions.client_portal]
+verify_jwt = false
+
 [functions.send_client_sms]
 verify_jwt = false
 

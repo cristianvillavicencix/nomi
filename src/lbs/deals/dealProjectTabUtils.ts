@@ -6,11 +6,13 @@ export const LBS_PROJECT_TABS = [
   "resources",
   "tasks",
   "schedule",
+  "launch",
   "messages",
   "expenses",
   "change_orders",
   "payments",
   "commissions",
+  "maintenance",
   "activity",
   "settings",
 ] as const;
