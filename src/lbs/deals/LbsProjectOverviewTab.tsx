@@ -21,6 +21,8 @@ import {
 import { getProjectBriefProgress } from "@/lbs/deals/projectBriefProgress";
 import { ProjectCalendarEventsList } from "@/lbs/calendar/ProjectCalendarEventsList";
 import { ProjectGithubLink } from "@/lbs/deals/ProjectGithubLink";
+import { ProfitSummaryCard } from "@/lbs/projects/financials/ProfitSummaryCard";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
 
@@ -46,6 +48,9 @@ const OverviewField = ({
 
 export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
   const { dealStages } = useConfigurationContext();
+  const canViewCollections = useMemberCapability(
+    "deal_financials.collections.view",
+  );
   const stageLabel =
     getLbsProjectStageLabel(record.stage) ||
     dealStages.find((stage) => stage.value === record.stage)?.label ||
@@ -141,9 +146,11 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
           ) : null}
         </div>
 
-        <div className="rounded-lg border p-4 lg:sticky lg:top-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base font-semibold">Next tasks due</h3>
+        <div className="rounded-lg border p-4 lg:sticky lg:top-4 space-y-6">
+          {canViewCollections ? <ProfitSummaryCard record={record} /> : null}
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-base font-semibold">Next tasks due</h3>
             <Link
               to={`/deals/${record.id}/show?tab=tasks`}
               className="text-sm link-action"
@@ -175,7 +182,7 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
             </ul>
           )}
 
-          <div className="mt-6 border-t pt-4">
+          <div className="border-t pt-4">
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-sm font-semibold">Upcoming events</h4>
               <Link to="/calendar" className="text-xs link-action">
@@ -188,6 +195,7 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
               className="mt-3"
               emptyMessage="No events linked to this project."
             />
+          </div>
           </div>
         </div>
       </div>
