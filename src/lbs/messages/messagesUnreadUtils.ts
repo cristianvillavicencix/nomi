@@ -14,8 +14,20 @@ export const getConversationReadAt = (
 export const isConversationUnread = (
   conversation: Conversation,
   participations: ConversationParticipant[],
+  currentMemberId?: Identifier | null,
 ) => {
   if (!conversation.last_message_at) return false;
+
+  if (
+    conversation.last_message_direction === "outbound" &&
+    currentMemberId != null &&
+    conversation.last_message_author_member_id != null &&
+    String(conversation.last_message_author_member_id) ===
+      String(currentMemberId)
+  ) {
+    return false;
+  }
+
   const readAt = getConversationReadAt(conversation.id, participations);
   if (!readAt) return true;
   return Date.parse(conversation.last_message_at) > Date.parse(readAt);
@@ -24,12 +36,17 @@ export const isConversationUnread = (
 export const computeUnreadConversationCounts = (
   conversations: Conversation[],
   participations: ConversationParticipant[],
+  currentMemberId?: Identifier | null,
 ) => {
   const unreadByConversationId: Record<string, boolean> = {};
   let totalUnread = 0;
 
   for (const conversation of conversations) {
-    if (!isConversationUnread(conversation, participations)) continue;
+    if (
+      !isConversationUnread(conversation, participations, currentMemberId)
+    ) {
+      continue;
+    }
     unreadByConversationId[String(conversation.id)] = true;
     totalUnread += 1;
   }

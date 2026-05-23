@@ -79,6 +79,9 @@ const patchConversationInList = (
   ...conversation,
   last_message_at: message.created_at ?? conversation.last_message_at,
   last_message_preview: buildMessagePreview(message),
+  last_message_direction: message.direction ?? conversation.last_message_direction,
+  last_message_author_member_id:
+    message.author_member_id ?? conversation.last_message_author_member_id,
 });
 
 const touchConversationLists = (

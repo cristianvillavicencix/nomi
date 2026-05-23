@@ -156,6 +156,8 @@ export type Conversation = {
   dm_key?: string | null;
   last_message_at?: string | null;
   last_message_preview?: string | null;
+  last_message_direction?: MessageDirection | null;
+  last_message_author_member_id?: Identifier | null;
   assignee_member_id?: Identifier | null;
   status?: "open" | "pending" | "closed" | "urgent";
   tags?: string[];
