@@ -52,7 +52,15 @@ jobs:
 
             - if: ${{ env.IS_SUPABASE_CONFIGURED }}
               name: 📡 Push supabase migrations
-              run: npx supabase db push
+              run: |
+                  npx supabase db push -p "$SUPABASE_DB_PASSWORD" || {
+                    echo ':warning:db push failed (often migration history drift after MCP applies). Edge functions will still deploy.' >> $GITHUB_STEP_SUMMARY
+                    exit 0
+                  }
+
+            - if: ${{ env.IS_SUPABASE_CONFIGURED }}
+              name: 📡 Sync edge publishable key secret
+              run: npx supabase secrets set SB_PUBLISHABLE_KEY="$VITE_SB_PUBLISHABLE_KEY"
 
             - if: ${{ env.IS_SUPABASE_CONFIGURED && env.POSTMARK_WEBHOOK_USER && env.POSTMARK_WEBHOOK_PASSWORD && env.POSTMARK_WEBHOOK_AUTHORIZED_IPS }}
               name: 📡 Push supabase postmark webhook user secret
