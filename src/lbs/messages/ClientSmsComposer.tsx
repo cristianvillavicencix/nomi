@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { Download, Paperclip, Send, X } from "lucide-react";
-import { useNotify, type Identifier } from "ra-core";
+import { useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Contact, Conversation, ConversationMessage } from "@/lbs/types";
 import { SmsWebFormPicker } from "@/lbs/messages/SmsWebFormPicker";
 import { isImageMediaUrl, getMediaFileName, downloadMediaUrl, uploadSmsMedia } from "@/lbs/messages/smsMediaUpload";
+import { useResolvedMediaUrl } from "@/lbs/messages/useResolvedMediaUrl";
 import { useSendClientSms } from "@/lbs/messages/useClientSms";
 
 type PendingAttachment = {
@@ -31,6 +32,7 @@ export const ClientSmsComposer = ({
   disabled?: boolean;
 }) => {
   const notify = useNotify();
+  const { identity } = useGetIdentity();
   const sendClientSms = useSendClientSms();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [body, setBody] = useState("");
@@ -100,7 +102,7 @@ export const ClientSmsComposer = ({
     try {
       const uploadedUrls: string[] = [];
       for (const pending of pendingFiles) {
-        uploadedUrls.push(await uploadSmsMedia(pending.file));
+        uploadedUrls.push(await uploadSmsMedia(pending.file, identity?.org_id));
       }
 
       const result = await sendClientSms({
@@ -235,14 +237,21 @@ export const ClientSmsComposer = ({
 };
 
 export const SmsMessageMedia = ({ url, alt }: { url: string; alt?: string }) => {
+  const resolvedUrl = useResolvedMediaUrl(url);
   const fileName = getMediaFileName(url);
   const isImage = isImageMediaUrl(url);
+
+  if (!resolvedUrl) {
+    return (
+      <div className="mt-1 text-xs text-muted-foreground">Loading attachment…</div>
+    );
+  }
 
   return (
     <div className="mt-1 space-y-2">
       {isImage ? (
         <img
-          src={url}
+          src={resolvedUrl}
           alt={alt ?? fileName}
           className="max-h-48 rounded-lg object-cover"
         />

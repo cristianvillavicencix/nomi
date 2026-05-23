@@ -11,6 +11,7 @@ import {
   insertSmsMessage,
 } from "../_shared/messagingConversations.ts";
 import { sendTwilioSms } from "../_shared/twilio.ts";
+import { resolveTwilioMediaUrls } from "../_shared/twilioMedia.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
 
@@ -144,13 +145,15 @@ Deno.serve((req: Request) =>
           externalPhone = conversation.external_phone ?? normalizedPhone;
         }
 
+        const twilioMediaUrls = await resolveTwilioMediaUrls(mediaUrls);
+
         const twilioResponse = await sendTwilioSms({
           accountSid,
           authToken,
           from: fromNumber,
           to: externalPhone!,
           body,
-          mediaUrls,
+          mediaUrls: twilioMediaUrls,
         });
 
         const messageBody =

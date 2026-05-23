@@ -1,5 +1,7 @@
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
+const MESSAGING_ATTACHMENTS_BUCKET = "messaging-attachments";
+
 const extensionForContentType = (contentType: string) => {
   if (contentType.includes("jpeg") || contentType.includes("jpg")) return ".jpg";
   if (contentType.includes("png")) return ".png";
@@ -25,6 +27,8 @@ export async function mirrorTwilioMediaToStorage(params: {
   accountSid: string;
   authToken: string;
   mediaUrl: string;
+  orgId: number;
+  conversationId: number;
 }) {
   const credentials = btoa(`${params.accountSid}:${params.authToken}`);
   const response = await fetch(params.mediaUrl, {
@@ -37,18 +41,40 @@ export async function mirrorTwilioMediaToStorage(params: {
 
   const contentType = response.headers.get("content-type") ?? "application/octet-stream";
   const extension = extensionForContentType(contentType);
-  const path = `sms-inbound/${crypto.randomUUID()}${extension}`;
+  const path = `org_${params.orgId}/conversation_${params.conversationId}/${crypto.randomUUID()}${extension}`;
   const bytes = new Uint8Array(await response.arrayBuffer());
 
-  const { error } = await supabaseAdmin.storage.from("attachments").upload(path, bytes, {
-    contentType,
-    upsert: false,
-  });
+  const { error } = await supabaseAdmin.storage
+    .from(MESSAGING_ATTACHMENTS_BUCKET)
+    .upload(path, bytes, {
+      contentType,
+      upsert: false,
+    });
 
   if (error) {
     throw new Error(error.message ?? "Failed to store inbound MMS");
   }
 
-  const { data } = supabaseAdmin.storage.from("attachments").getPublicUrl(path);
-  return data.publicUrl;
+  return path;
+}
+
+export const isPublicHttpUrl = (value: string) =>
+  value.startsWith("http://") || value.startsWith("https://");
+
+export async function resolveTwilioMediaUrls(mediaUrls: string[]) {
+  const resolved: string[] = [];
+  for (const entry of mediaUrls) {
+    if (isPublicHttpUrl(entry)) {
+      resolved.push(entry);
+      continue;
+    }
+    const { data, error } = await supabaseAdmin.storage
+      .from(MESSAGING_ATTACHMENTS_BUCKET)
+      .createSignedUrl(entry, 3600);
+    if (error || !data?.signedUrl) {
+      throw new Error(error?.message ?? "Failed to sign MMS URL for Twilio");
+    }
+    resolved.push(data.signedUrl);
+  }
+  return resolved;
 }
