@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { DesktopMessageAlertsSection } from "@/lbs/settings/DesktopMessageAlertsSection";
+import { WhatsAppSettingsCard } from "@/lbs/settings/communications/WhatsAppSettingsCard";
+import { VoiceSettingsCard } from "@/lbs/settings/communications/VoiceSettingsCard";
 
 export const MessagingSettingsSection = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -179,6 +181,9 @@ export const MessagingSettingsSection = () => {
           </div>
         </>
       )}
+
+      <WhatsAppSettingsCard />
+      <VoiceSettingsCard />
     </div>
   );
 };

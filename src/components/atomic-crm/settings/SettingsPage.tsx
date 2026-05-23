@@ -58,7 +58,7 @@ const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = isLbsMode()
   ? [
       { id: "general", label: "Company Settings" },
       { id: "users", label: "Users" },
-      { id: "messaging", label: "Messaging" },
+      { id: "messaging", label: "Communications" },
       { id: "projects", label: "Project Stages" },
       { id: "notes", label: "Lead Statuses" },
       { id: "tasks", label: "Task Types" },
