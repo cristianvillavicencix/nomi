@@ -49,18 +49,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router";
 import { cn } from "@/lib/utils";
 import { StickyTabsBar } from "@/components/atomic-crm/layout/page-shell";
-import { canUseCrmPermission } from "../providers/commons/crmPermissions";
+import { canUseCrmPermission } from "@/components/atomic-crm/providers/commons/crmPermissions";
 
-import { CompanyAvatar } from "../companies/CompanyAvatar";
-import { NoteCreate } from "../notes/NoteCreate";
-import { Note } from "../notes/Note";
+import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
+import { NoteCreate } from "@/components/atomic-crm/notes/NoteCreate";
+import { Note } from "@/components/atomic-crm/notes/Note";
 import {
   extractAssetLinksFromDealNotes,
   serializeAssetLink,
   type ParsedAssetLink,
-} from "../misc/assetLinks";
-import { useConfigurationContext } from "../root/ConfigurationContext";
-import { useNavigationLayoutPreference } from "../layout/navigationLayoutPreference";
+} from "@/components/atomic-crm/misc/assetLinks";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { useNavigationLayoutPreference } from "@/components/atomic-crm/layout/navigationLayoutPreference";
 import type {
   Contact,
   Deal,
@@ -73,10 +73,10 @@ import type {
   Person,
   RAFile,
   TimeEntry,
-} from "../types";
-import { DealsExplorerPanel } from "./DealsExplorerPanel";
-import { getPipelineStages, getStageColor, getStageLabel } from "./pipelines";
-import { ProjectStageFlow } from "./ProjectStageFlow";
+} from "@/components/atomic-crm/types";
+import { DealsExplorerPanel } from "@/components/atomic-crm/deals/DealsExplorerPanel";
+import { getPipelineStages, getStageColor, getStageLabel } from "@/components/atomic-crm/deals/pipelines";
+import { ProjectStageFlow } from "@/components/atomic-crm/deals/ProjectStageFlow";
 import { calculateHours, splitRegularOvertimeHours } from "@/timeEntries/helpers";
 import { useSyncAmountVisibility, formatMoneyMasked } from "@/lib/permissions/useMaskedAmount";
 
