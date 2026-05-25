@@ -13,6 +13,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { InboxTabs } from "@/lbs/messages/inbox/InboxTabs";
 import { InboxList } from "@/lbs/messages/inbox/InboxList";
+import { TeamMembersList } from "@/lbs/messages/inbox/TeamMembersList";
 import { filterInboxConversations } from "@/lbs/messages/inbox/filterInboxConversations";
 import {
   DEFAULT_INBOX_FILTERS,
@@ -119,6 +120,14 @@ export const MessagesInbox = (props: {
     ],
   );
 
+  const teamTabProjectConversations = useMemo(
+    () =>
+      filteredConversations.filter(
+        (conversation) => conversation.type === "project",
+      ),
+    [filteredConversations],
+  );
+
   const tabCounts = useMemo(
     () => ({
       team: props.conversations.filter(
@@ -194,7 +203,37 @@ export const MessagesInbox = (props: {
           />
         </div>
       </div>
-      {props.isPending ? null : filteredConversations.length === 0 &&
+      {activeTab === "team" ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="px-3 pt-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Team members
+          </div>
+          <TeamMembersList
+            conversations={props.conversations}
+            selectedConversationId={props.selectedConversationId}
+            onSelectConversation={props.onSelectConversation}
+          />
+          {teamTabProjectConversations.length > 0 ? (
+            <>
+              <div className="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Project chats
+              </div>
+              <InboxList
+                conversations={teamTabProjectConversations}
+                deals={props.deals}
+                dmParticipants={props.dmParticipants}
+                members={props.members}
+                contacts={props.contacts}
+                currentMemberId={props.currentMemberId}
+                selectedConversationId={props.selectedConversationId}
+                onSelectConversation={props.onSelectConversation}
+                isConversationUnread={unread.isConversationUnread}
+                getUnreadCount={unread.getUnreadCount}
+              />
+            </>
+          ) : null}
+        </div>
+      ) : props.isPending ? null : filteredConversations.length === 0 &&
         !debouncedQuery ? (
         <div className="flex min-h-[180px] flex-1 flex-col items-center justify-center px-4 text-center text-sm text-muted-foreground">
           No conversations yet. Search for a client to start SMS.

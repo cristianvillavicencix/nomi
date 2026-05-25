@@ -16,6 +16,7 @@ const baseAuthProvider = supabaseAuthProvider(supabase, {
 
     return {
       id: sale.id,
+      org_id: sale.org_id ?? null,
       fullName: `${sale.first_name} ${sale.last_name}`,
       avatar: sale.avatar?.src,
       administrator: sale.administrator === true,
@@ -71,7 +72,7 @@ const fetchSale = async () => {
   const { data: dataSale, error: errorSale } = await supabase
     .from("organization_members")
     .select(
-      "id, first_name, last_name, avatar, administrator, roles, module_permissions",
+      "id, org_id, first_name, last_name, avatar, administrator, roles, module_permissions",
     )
     .match({ user_id: dataSession?.session?.user.id })
     .single();
