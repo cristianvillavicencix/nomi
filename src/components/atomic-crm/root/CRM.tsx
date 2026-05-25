@@ -531,6 +531,10 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="contracts" {...contracts} />
           <Resource name="forms" {...webForms} />
           <Resource name="form_submissions" />
+          <Resource name="form_instances" />
+          <Resource name="form_submissions_v2" />
+          <Resource name="public_form_tokens" />
+          <Resource name="form_templates" />
           <Resource name="tickets" {...tickets} />
           <Resource name="ticket_messages" />
           <Resource name="conversations" />

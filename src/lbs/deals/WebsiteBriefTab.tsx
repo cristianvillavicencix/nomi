@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useGetList, useGetOne } from "ra-core";
 import { ChevronRight, Link2, Mail, Pencil } from "lucide-react";
 import type { Contact } from "@/components/atomic-crm/types";
@@ -18,7 +18,6 @@ import {
   getContactFullName,
 } from "@/lbs/clients/clientShowUtils";
 import { BriefProgressBar } from "@/lbs/deals/BriefProgressBar";
-import { getBriefFormSent } from "@/lbs/deals/briefFormSentStorage";
 import { SendProjectWebFormDialog } from "@/lbs/deals/SendProjectWebFormDialog";
 import {
   formatProjectDeliveryDate,
@@ -39,7 +38,8 @@ import {
   WebsiteBriefSectionSheet,
   type WebsiteBriefSheetTarget,
 } from "@/lbs/deals/WebsiteBriefSectionSheet";
-import type { FormSubmission, LbsDeal } from "@/lbs/types";
+import type { FormSubmissionV2, PublicFormToken } from "@/lbs/forms-v2/types";
+import type { LbsDeal } from "@/lbs/types";
 
 const getProjectTypeLabel = (value?: string | null) =>
   lbsProjectTypeChoices.find((choice) => choice.value === value)?.label ??
@@ -69,11 +69,21 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
     { enabled: contactId != null },
   );
 
-  const { data: submissions = [] } = useGetList<FormSubmission>(
-    "form_submissions",
+  const { data: submissions = [] } = useGetList<FormSubmissionV2>(
+    "form_submissions_v2",
     {
       filter: { "deal_id@eq": record.id },
       pagination: { page: 1, perPage: 5 },
+      sort: { field: "submitted_at", order: "DESC" },
+    },
+    { enabled: !!record.id, staleTime: 30_000 },
+  );
+
+  const { data: sentTokens = [] } = useGetList<PublicFormToken>(
+    "public_form_tokens",
+    {
+      filter: { "deal_id@eq": record.id },
+      pagination: { page: 1, perPage: 1 },
       sort: { field: "created_at", order: "DESC" },
     },
     { enabled: !!record.id, staleTime: 30_000 },
@@ -95,15 +105,7 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
     .filter(Boolean)
     .join(" · ");
 
-  const sentLocally = getBriefFormSent(record.id);
-  const [sentSnapshot, setSentSnapshot] = useState(sentLocally);
-
-  useEffect(() => {
-    if (!sendOpen) {
-      setSentSnapshot(getBriefFormSent(record.id));
-    }
-  }, [sendOpen, record.id]);
-
+  const latestSentToken = sentTokens[0];
   const latestSubmission = submissions[0];
   const setupPercent = getSectionProgressPercent(
     Number(Boolean(record.project_type)) +
@@ -144,22 +146,22 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
           {latestSubmission ? (
             <p>
               <span className="font-medium">Client submitted</span>
-              {latestSubmission.created_at
-                ? ` · ${formatActivityDate(String(latestSubmission.created_at))}`
+              {latestSubmission.submitted_at
+                ? ` · ${formatActivityDate(String(latestSubmission.submitted_at))}`
                 : ""}
             </p>
-          ) : sentSnapshot ? (
+          ) : latestSentToken ? (
             <p>
               <span className="font-medium">Form sent to client</span>
-              {sentSnapshot.sentAt
-                ? ` · ${formatActivityDate(sentSnapshot.sentAt)}`
+              {latestSentToken.created_at
+                ? ` · ${formatActivityDate(String(latestSentToken.created_at))}`
                 : ""}
             </p>
           ) : (
             <p className="text-muted-foreground">Form not sent to client yet</p>
           )}
         </div>
-        {sentSnapshot && !latestSubmission ? (
+        {latestSentToken && !latestSubmission ? (
           <Button
             type="button"
             variant="ghost"

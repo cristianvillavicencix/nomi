@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useGetList } from "ra-core";
+import { useGetList, useDataProvider } from "ra-core";
+import { useMutation } from "@tanstack/react-query";
 import { Copy, ExternalLink, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,13 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Form } from "@/lbs/types";
-import {
-  buildProjectWebFormUrl,
-  WEBSITE_INTAKE_SLUG,
-} from "@/lbs/deals/websiteIntakeForm";
-import { markBriefFormSent } from "@/lbs/deals/briefFormSentStorage";
+import type { FormInstance } from "@/lbs/forms-v2/types";
 import { mailtoHref } from "@/lib/linking";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 
 type SendProjectWebFormDialogProps = {
   open: boolean;
@@ -36,6 +33,7 @@ type SendProjectWebFormDialogProps = {
   clientEmail?: string;
   clientName?: string;
   projectName?: string;
+  onLinkGenerated?: () => void;
 };
 
 export const SendProjectWebFormDialog = ({
@@ -47,11 +45,13 @@ export const SendProjectWebFormDialog = ({
   clientEmail,
   clientName,
   projectName,
+  onLinkGenerated,
 }: SendProjectWebFormDialogProps) => {
-  const { data: forms = [] } = useGetList<Form>(
-    "forms",
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const { data: forms = [] } = useGetList<FormInstance>(
+    "form_instances",
     {
-      filter: { "active@eq": true },
+      filter: { "is_active@eq": true },
       pagination: { page: 1, perPage: 50 },
       sort: { field: "name", order: "ASC" },
     },
@@ -60,35 +60,44 @@ export const SendProjectWebFormDialog = ({
 
   const [selectedFormId, setSelectedFormId] = useState("");
   const [copied, setCopied] = useState(false);
+  const [formUrl, setFormUrl] = useState("");
 
   useEffect(() => {
     if (!forms.length || selectedFormId) return;
     const preferred =
-      forms.find((form) => form.slug === WEBSITE_INTAKE_SLUG) ?? forms[0];
+      forms.find((form) => form.slug === "project_brief") ?? forms[0];
     setSelectedFormId(String(preferred.id));
   }, [forms, selectedFormId]);
 
   const selectedForm =
     forms.find((form) => String(form.id) === selectedFormId) ?? forms[0];
 
-  const formUrl = useMemo(() => {
-    if (!selectedForm?.slug) return "";
-    return buildProjectWebFormUrl(window.location.origin, {
-      slug: selectedForm.slug,
-      companyId,
-      contactId,
-      dealId,
-    });
-  }, [selectedForm?.slug, companyId, contactId, dealId]);
+  const generateMutation = useMutation({
+    mutationFn: () =>
+      dataProvider.generateFormToken({
+        formInstanceId: Number(selectedForm.id),
+        companyId: companyId != null ? Number(companyId) : null,
+        contactId: contactId != null ? Number(contactId) : null,
+        dealId: dealId != null ? Number(dealId) : null,
+        expiresInDays: 30,
+        maxUses: 1,
+      }),
+    onSuccess: (result) => {
+      setFormUrl(result.url);
+      onLinkGenerated?.();
+    },
+  });
 
-  const markSent = () => {
-    if (dealId != null) markBriefFormSent(dealId);
-  };
+  useEffect(() => {
+    if (!open || !selectedForm?.id) return;
+    setFormUrl("");
+    generateMutation.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- regenerate when link context changes
+  }, [open, selectedFormId, dealId, companyId, contactId]);
 
   const handleCopy = async () => {
     if (!formUrl) return;
     await navigator.clipboard.writeText(formUrl);
-    markSent();
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
   };
@@ -113,8 +122,8 @@ export const SendProjectWebFormDialog = ({
           <DialogTitle>Send web form</DialogTitle>
           <DialogDescription>
             {dealId
-              ? "Share this link with your client. When they submit, their answers update this project's brief."
-              : "Share this link with your client. When they submit the form, a project is created and linked to this client."}
+              ? "Share this secure link with your client. When they submit, their answers update this project's brief."
+              : "Share this secure link with your client."}
           </DialogDescription>
         </DialogHeader>
 
@@ -141,11 +150,17 @@ export const SendProjectWebFormDialog = ({
           <div className="space-y-2">
             <Label>Link for client</Label>
             <div className="flex gap-2">
-              <Input readOnly value={formUrl} />
+              <Input
+                readOnly
+                value={
+                  generateMutation.isPending ? "Generating link…" : formUrl
+                }
+              />
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
+                disabled={!formUrl}
                 onClick={handleCopy}
               >
                 <Copy className="size-4" />
@@ -172,16 +187,11 @@ export const SendProjectWebFormDialog = ({
           </Button>
           <div className="flex gap-2">
             {emailHref ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  markSent();
-                  window.location.href = emailHref;
-                }}
-              >
-                <Mail className="size-4" />
-                Email client
+              <Button type="button" variant="outline" asChild>
+                <a href={emailHref}>
+                  <Mail className="size-4" />
+                  Email client
+                </a>
               </Button>
             ) : null}
           </div>
