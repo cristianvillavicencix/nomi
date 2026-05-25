@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
-import { Copy, ExternalLink, Link2, Mail, Upload } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useGetList, useDataProvider, useNotify } from "ra-core";
+import { Copy, ExternalLink, Loader2, Mail, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,8 +13,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { buildProjectResourcesUrl } from "@/lbs/deals/projectResourceConstants";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import type { FormInstance } from "@/lbs/forms-v2/types";
+import { PROJECT_RESOURCES_SLUG } from "@/lbs/deals/projectResourceConstants";
 import { mailtoHref } from "@/lib/linking";
+
+const resolveShareUrl = (
+  result: { url: string; short_url?: string },
+  origin: string,
+) => {
+  if (result.short_url) {
+    return result.short_url.startsWith("http")
+      ? result.short_url
+      : `${origin}${result.short_url}`;
+  }
+  return result.url.startsWith("http") ? result.url : `${origin}${result.url}`;
+};
 
 type SendProjectResourcesDialogProps = {
   open: boolean;
@@ -35,19 +51,61 @@ export const SendProjectResourcesDialog = ({
   clientName,
   projectName,
 }: SendProjectResourcesDialogProps) => {
+  const notify = useNotify();
+  const dataProvider = useDataProvider<CrmDataProvider>();
   const [copied, setCopied] = useState(false);
 
-  const formUrl = useMemo(
-    () =>
-      buildProjectResourcesUrl(window.location.origin, {
-        dealId,
-        companyId,
-        contactId,
-      }),
-    [dealId, companyId, contactId],
+  const { data: forms = [] } = useGetList<FormInstance>(
+    "form_instances",
+    {
+      filter: { "slug@eq": PROJECT_RESOURCES_SLUG, "is_active@eq": true },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "id", order: "ASC" },
+    },
+    { enabled: open, staleTime: 60_000 },
   );
 
+  const formInstance = forms[0];
+
+  const generateLink = useMutation({
+    mutationFn: async () => {
+      if (!formInstance) throw new Error("Project Resources form is not configured");
+      return dataProvider.generateFormToken({
+        formInstanceId: Number(formInstance.id),
+        dealId: Number(dealId),
+        companyId: companyId != null ? Number(companyId) : null,
+        contactId: contactId != null ? Number(contactId) : null,
+        expiresInDays: 30,
+        maxUses: 1,
+        baseUrl: window.location.origin,
+      });
+    },
+    onError: () => {
+      notify("Failed to generate upload link", { type: "error" });
+    },
+  });
+
+  useEffect(() => {
+    if (!open) {
+      generateLink.reset();
+      setCopied(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !formInstance || generateLink.data || generateLink.isPending) {
+      return;
+    }
+    generateLink.mutate();
+  }, [formInstance, generateLink.data, generateLink.isPending, open]);
+
+  const formUrl = useMemo(() => {
+    if (!generateLink.data) return "";
+    return resolveShareUrl(generateLink.data, window.location.origin);
+  }, [generateLink.data]);
+
   const handleCopy = async () => {
+    if (!formUrl) return;
     await navigator.clipboard.writeText(formUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
@@ -72,43 +130,52 @@ export const SendProjectResourcesDialog = ({
         <DialogHeader>
           <DialogTitle>Request files from client</DialogTitle>
           <DialogDescription>
-            Send this link so your client can upload logos, service photos, team
-            images, and other assets. Files are saved under Resources, grouped
-            by category.
+            Send this link so your client can upload logos, service photos, and
+            other assets through the Project Resources wizard.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
-          <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-            <div className="flex items-start gap-2">
-              <Link2 className="mt-0.5 size-4 shrink-0" />
-              <div>
-                The client form asks for logos, service photos, team images,
-                documents, and other project files.
-              </div>
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label>Upload link</Label>
             <div className="flex gap-2">
-              <Input readOnly value={formUrl} />
+              <Input
+                readOnly
+                value={
+                  generateLink.isPending
+                    ? "Generating link…"
+                    : formUrl || "Form unavailable"
+                }
+              />
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                onClick={handleCopy}
+                disabled={!formUrl}
+                onClick={() => void handleCopy()}
               >
                 <Copy className="size-4" />
                 <span className="sr-only">Copy link</span>
               </Button>
-              <Button type="button" variant="outline" size="icon" asChild>
-                <a href={formUrl} target="_blank" rel="noreferrer">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={!formUrl}
+                asChild
+              >
+                <a href={formUrl || "#"} target="_blank" rel="noreferrer">
                   <ExternalLink className="size-4" />
                   <span className="sr-only">Open link</span>
                 </a>
               </Button>
             </div>
+            {generateLink.isPending ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Creating secure link…
+              </p>
+            ) : null}
             {copied ? (
               <p className="text-sm text-muted-foreground">Link copied.</p>
             ) : null}
@@ -133,8 +200,8 @@ export const SendProjectResourcesDialog = ({
                 Email client
               </Button>
             )}
-            <Button type="button" asChild>
-              <a href={formUrl} target="_blank" rel="noreferrer">
+            <Button type="button" disabled={!formUrl} asChild>
+              <a href={formUrl || "#"} target="_blank" rel="noreferrer">
                 <Upload className="size-4" />
                 Preview form
               </a>
