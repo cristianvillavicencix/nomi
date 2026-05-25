@@ -6,6 +6,7 @@ import { UserMiddleware } from "../_shared/authentication.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { generateSecureToken } from "../_shared/formV2Schema.ts";
+import { generateUniqueShortCode } from "../_shared/formTokenUtils.ts";
 
 type GenerateTokenBody = {
   form_instance_id?: number;
@@ -95,10 +96,20 @@ Deno.serve((req: Request) =>
               : Number(body.max_uses);
 
         const token = generateSecureToken();
+        const shortCode = await generateUniqueShortCode(async (code) => {
+          const { data } = await supabaseAdmin
+            .from("public_form_tokens")
+            .select("id")
+            .eq("short_code", code)
+            .maybeSingle();
+          return Boolean(data?.id);
+        });
+
         const { data: tokenRow, error: insertError } = await supabaseAdmin
           .from("public_form_tokens")
           .insert({
             token,
+            short_code: shortCode,
             org_id: member.org_id,
             form_instance_id: formInstance.id,
             contact_id: body.contact_id ?? null,
@@ -109,7 +120,7 @@ Deno.serve((req: Request) =>
             is_preview: isPreview,
             created_by_member_id: member.id,
           })
-          .select("token, expires_at, max_uses")
+          .select("token, short_code, expires_at, max_uses")
           .single();
 
         if (insertError || !tokenRow) {
@@ -120,11 +131,15 @@ Deno.serve((req: Request) =>
         const baseUrl = resolveBaseUrl(body.base_url);
         const path = `/forms/${tokenRow.token}`;
         const url = baseUrl ? `${baseUrl}${path}` : path;
+        const shortPath = `/f/${tokenRow.short_code}`;
+        const short_url = baseUrl ? `${baseUrl}${shortPath}` : shortPath;
 
         return new Response(
           JSON.stringify({
             token: tokenRow.token,
+            short_code: tokenRow.short_code,
             url,
+            short_url,
             expires_at: tokenRow.expires_at,
             max_uses: tokenRow.max_uses,
             form_instance_id: formInstance.id,

@@ -1085,6 +1085,8 @@ const dataProviderWithCustomMethods = {
         thank_you_message?: string | null;
         recaptcha_enabled?: boolean;
         honeypot_enabled?: boolean;
+        custom_font_url?: string | null;
+        custom_css?: string | null;
       };
       prefill?: Record<string, unknown>;
       links?: {
@@ -1172,7 +1174,9 @@ const dataProviderWithCustomMethods = {
   }) {
     const { data, error } = await invokeEdgeFunction<{
       token: string;
+      short_code?: string;
       url: string;
+      short_url?: string;
       expires_at: string;
       max_uses: number | null;
       form_instance_id: number;
