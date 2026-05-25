@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, Paperclip, Send, X } from "lucide-react";
 import { useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { Contact, Conversation, ConversationMessage } from "@/lbs/types";
 import { SmsWebFormPicker } from "@/lbs/messages/SmsWebFormPicker";
@@ -16,6 +17,7 @@ import { useResolvedMediaUrl } from "@/lbs/messages/useResolvedMediaUrl";
 import { InternalNoteToggle } from "@/lbs/messages/composer/InternalNoteToggle";
 import { useSendClientSms } from "@/lbs/messages/useClientSms";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { useOrganizationSmsSignature } from "@/lbs/settings/useOrganizationSmsSignature";
 
 type PendingAttachment = {
   id: string;
@@ -44,15 +46,26 @@ export const ClientSmsComposer = ({
   const notify = useNotify();
   const { identity } = useGetIdentity();
   const sendClientSms = useSendClientSms();
+  const { signature, settings: orgSignatureSettings } =
+    useOrganizationSmsSignature();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [body, setBody] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isInternalNote, setIsInternalNote] = useState(false);
+  const [includeSignature, setIncludeSignature] = useState(
+    orgSignatureSettings?.sms_signature_enabled ?? true,
+  );
   const canWriteInternalNotes = useMemberCapability(
     "messaging.internal_notes.write",
   );
+
+  useEffect(() => {
+    if (orgSignatureSettings?.sms_signature_enabled != null) {
+      setIncludeSignature(orgSignatureSettings.sms_signature_enabled);
+    }
+  }, [orgSignatureSettings?.sms_signature_enabled]);
 
   const canSend =
     !disabled &&
@@ -122,11 +135,21 @@ export const ClientSmsComposer = ({
         uploadedUrls.push(await uploadSmsMedia(pending.file, identity?.org_id));
       }
 
+      let finalBody = body.trim();
+      if (
+        !isInternalNote &&
+        includeSignature &&
+        signature &&
+        finalBody.length > 0
+      ) {
+        finalBody = `${finalBody}\n${signature}`;
+      }
+
       const result = await sendClientSms({
         conversationId: conversationId ?? undefined,
         contactId: contact?.id,
         dealId,
-        body: body.trim(),
+        body: finalBody,
         mediaUrls: uploadedUrls,
         isInternalNote,
         replyToMessageId,
@@ -176,6 +199,19 @@ export const ClientSmsComposer = ({
           onCheckedChange={setIsInternalNote}
           disabled={disabled || isSending}
         />
+      ) : null}
+      {!isInternalNote && signature ? (
+        <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+          <Switch
+            id="signature-toggle"
+            checked={includeSignature}
+            onCheckedChange={setIncludeSignature}
+            disabled={disabled || isSending}
+          />
+          <label htmlFor="signature-toggle" className="cursor-pointer">
+            Include signature{includeSignature ? `: "${signature}"` : ""}
+          </label>
+        </div>
       ) : null}
       {pendingFiles.length > 0 ? (
         <div className="flex flex-wrap gap-2">
