@@ -11,6 +11,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -37,7 +44,8 @@ export const FormSettingsSheet = ({
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [deleteOne] = useDelete();
-  const { formInstance, setFormInstance, save, schema } = useFormBuilder();
+  const { formInstance, setFormInstance, save, schema, setSchema } =
+    useFormBuilder();
   const [notifyIds, setNotifyIds] = useState<number[]>(
     formInstance.notify_member_ids ?? [],
   );
@@ -470,6 +478,36 @@ export const FormSettingsSheet = ({
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="wizard-mode">Wizard mode</Label>
+              <Select
+                value={schema.settings?.wizard_mode ?? "auto"}
+                onValueChange={(value: "auto" | "on" | "off") =>
+                  setSchema({
+                    ...schema,
+                    settings: {
+                      ...schema.settings,
+                      wizard_mode: value,
+                    },
+                  })
+                }
+              >
+                <SelectTrigger id="wizard-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">
+                    Auto (multi-section with titles)
+                  </SelectItem>
+                  <SelectItem value="on">Always wizard</SelectItem>
+                  <SelectItem value="off">Single page</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Controls whether public forms show one step at a time or all
+                sections on one page.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label>Expiration date</Label>
               <Input

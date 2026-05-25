@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import { useDataProvider, useNotify } from "ra-core";
@@ -21,16 +21,24 @@ import {
 } from "@/lbs/deals/websiteBriefSchema";
 import { mergeDealIntoIntakeValues } from "@/lbs/deals/projectBriefProgress";
 import {
+  buildFormulaAnswers,
+  evaluateFormula,
+  formatFormulaValue,
+} from "@/lib/forms-v2/formulaEvaluator";
+import {
+  formProgressStorageKey,
   getVisibleFields,
+  getVisibleFormulaFields,
   getVisibleSections,
-  validateSection,
+  resolveWizardEnabled,
+  validateSectionFields,
 } from "@/lbs/forms-v2/formSchemaUtils";
 import { FormFieldRenderer } from "@/lbs/forms-v2/public/FormFieldRenderer";
 import {
   recaptchaConfigured,
   useRecaptchaToken,
 } from "@/lbs/forms-v2/public/useRecaptcha";
-import type { PublicFormPayload } from "@/lbs/forms-v2/types";
+import type { FormSectionDef, PublicFormPayload } from "@/lbs/forms-v2/types";
 import {
   PublicFormEmbedProvider,
   publicFormContentClassName,
@@ -46,6 +54,57 @@ const PreviewBanner = ({ isPreview }: { isPreview?: boolean }) =>
       Preview mode — submissions won&apos;t be saved.
     </div>
   ) : null;
+
+const renderFormSection = ({
+  section,
+  answers,
+  fieldErrors,
+  formId,
+  formulaAnswers,
+  onChange,
+}: {
+  section: FormSectionDef;
+  answers: Record<string, unknown>;
+  fieldErrors: Record<string, string>;
+  formId: number;
+  formulaAnswers: Record<string, unknown>;
+  onChange: (key: string, next: unknown) => void;
+}) => (
+  <section className="space-y-4 rounded-lg border p-4">
+    {section.title ? (
+      <h2 className="text-base font-semibold">{section.title}</h2>
+    ) : null}
+    {section.description ? (
+      <p className="text-sm text-muted-foreground">{section.description}</p>
+    ) : null}
+    {getVisibleFields(section, answers).map((field) => (
+      <div key={field.key} className="space-y-1">
+        <FormFieldRenderer
+          field={field}
+          value={answers[field.key]}
+          formId={formId}
+          onChange={(next) => onChange(field.key, next)}
+        />
+        {fieldErrors[field.key] ? (
+          <p className="text-xs text-destructive">{fieldErrors[field.key]}</p>
+        ) : null}
+      </div>
+    ))}
+    {getVisibleFormulaFields(section, answers).map((field) => {
+      const computed = evaluateFormula(field.formula, formulaAnswers);
+      return (
+        <FormFieldRenderer
+          key={field.key}
+          field={field}
+          value={formatFormulaValue(computed, field.format)}
+          formId={formId}
+          disabled
+          onChange={() => undefined}
+        />
+      );
+    })}
+  </section>
+);
 
 const ProjectBriefPublicForm = ({
   payload,
@@ -237,6 +296,13 @@ const PublicFormRendererContent = () => {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [honeypot, setHoneypot] = useState("");
   const [step, setStep] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [savedProgress, setSavedProgress] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [progressDismissed, setProgressDismissed] = useState(false);
+  const saveTimer = useRef<number | null>(null);
   const [submitted, setSubmitted] = useState<{
     thank_you_title?: string;
     thank_you_message?: string;
@@ -270,20 +336,70 @@ const PublicFormRendererContent = () => {
     setAnswers((current) => ({ ...urlPrefill, ...current }));
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!token || formPayload?.is_preview) return;
+    try {
+      const raw = localStorage.getItem(formProgressStorageKey(token));
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (parsed && typeof parsed === "object") {
+        setSavedProgress(parsed);
+      }
+    } catch {
+      // ignore invalid saved progress
+    }
+  }, [token, formPayload?.is_preview]);
+
+  useEffect(() => {
+    if (!token || formPayload?.is_preview || submitted) return;
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      try {
+        localStorage.setItem(
+          formProgressStorageKey(token),
+          JSON.stringify(answers),
+        );
+      } catch {
+        // ignore quota errors
+      }
+    }, 1000);
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [answers, token, formPayload?.is_preview, submitted]);
+
   const sections = useMemo(
     () => getVisibleSections(formPayload?.form.schema, answers),
     [formPayload?.form.schema, answers],
   );
-  const currentSection = sections[step];
-  const isMultiStep = sections.length > 1;
+  const isWizard = resolveWizardEnabled(formPayload?.form.schema);
+  const currentSection = isWizard ? sections[step] : sections[0];
+  const formulaAnswers = useMemo(
+    () => buildFormulaAnswers(formPayload?.form.schema, answers),
+    [formPayload?.form.schema, answers],
+  );
+
+  const setAnswer = useCallback((key: string, next: unknown) => {
+    setAnswers((current) => ({ ...current, [key]: next }));
+    setFieldErrors((current) => {
+      if (!current[key]) return current;
+      const rest = { ...current };
+      delete rest[key];
+      return rest;
+    });
+  }, []);
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
       if (!formPayload) throw new Error("Form not loaded");
       const recaptchaToken = await getRecaptchaToken();
+      const payloadAnswers = buildFormulaAnswers(
+        formPayload.form.schema,
+        answers,
+      );
       return dataProvider.submitFormV2({
         token: formPayload.token,
-        answers,
+        answers: payloadAnswers,
         recaptchaToken:
           formPayload.form.recaptcha_enabled && recaptchaConfigured
             ? recaptchaToken
@@ -292,6 +408,11 @@ const PublicFormRendererContent = () => {
       });
     },
     onSuccess: (result) => {
+      try {
+        localStorage.removeItem(formProgressStorageKey(token));
+      } catch {
+        // ignore
+      }
       setSubmitted({
         ...result,
         preview: Boolean((result as { preview?: boolean }).preview),
@@ -363,9 +484,29 @@ const PublicFormRendererContent = () => {
     );
   }
 
-  const sectionErrors = currentSection
-    ? validateSection(currentSection, answers)
-    : [];
+  const validateCurrentStep = () => {
+    if (!currentSection) return true;
+    const nextErrors = validateSectionFields(currentSection, answers);
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      notify(Object.values(nextErrors).join(", "), { type: "warning" });
+      return false;
+    }
+    return true;
+  };
+
+  const validateAllSections = () => {
+    const nextErrors: Record<string, string> = {};
+    for (const section of sections) {
+      Object.assign(nextErrors, validateSectionFields(section, answers));
+    }
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      notify(Object.values(nextErrors).join(", "), { type: "warning" });
+      return false;
+    }
+    return true;
+  };
 
   return (
     <div
@@ -400,26 +541,83 @@ const PublicFormRendererContent = () => {
         ) : null}
       </div>
 
-      {isMultiStep ? (
+      {!progressDismissed && savedProgress ? (
+        <div className="rounded-md border border-primary/30 bg-primary/5 p-4">
+          <p className="text-sm font-medium">Continue where you left off?</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            We saved your previous answers in this browser.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setAnswers((current) => ({ ...savedProgress, ...current }));
+                setProgressDismissed(true);
+              }}
+            >
+              Continue
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                try {
+                  localStorage.removeItem(formProgressStorageKey(token));
+                } catch {
+                  // ignore
+                }
+                setSavedProgress(null);
+                setProgressDismissed(true);
+              }}
+            >
+              Start over
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {isWizard ? (
         <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>
+              Step {Math.min(step + 1, sections.length || 1)} of{" "}
+              {sections.length || 1}
+              {currentSection?.title ? `: ${currentSection.title}` : ""}
+            </span>
+          </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             {sections.map((section, index) => (
-              <span
+              <button
                 key={section.id}
+                type="button"
+                disabled={index > step}
                 className={
-                  index === step ? "font-medium text-foreground" : undefined
+                  index === step
+                    ? "font-medium text-foreground"
+                    : index < step
+                      ? "text-foreground underline-offset-2 hover:underline"
+                      : "cursor-not-allowed opacity-60"
                 }
+                onClick={() => {
+                  if (index <= step) setStep(index);
+                }}
               >
                 {index < step ? "✓ " : index === step ? "● " : "○ "}
                 {section.title || `Step ${index + 1}`}
-              </span>
+              </button>
             ))}
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
               className="h-full bg-primary transition-all"
               style={{
-                width: `${((step + 1) / sections.length) * 100}%`,
+                width: `${
+                  sections.length > 0
+                    ? ((step + 1) / sections.length) * 100
+                    : 0
+                }%`,
               }}
             />
           </div>
@@ -430,14 +628,13 @@ const PublicFormRendererContent = () => {
         className="space-y-6"
         onSubmit={(event) => {
           event.preventDefault();
-          if (isMultiStep && step < sections.length - 1) {
-            if (sectionErrors.length > 0) {
-              notify(sectionErrors.join(", "), { type: "warning" });
-              return;
-            }
+          if (isWizard && step < sections.length - 1) {
+            if (!validateCurrentStep()) return;
             setStep((current) => current + 1);
+            setFieldErrors({});
             return;
           }
+          if (!validateAllSections()) return;
           mutate();
         }}
       >
@@ -454,35 +651,43 @@ const PublicFormRendererContent = () => {
           />
         ) : null}
 
-        {currentSection ? (
-          <section className="space-y-4 rounded-lg border p-4">
-            {currentSection.title ? (
-              <h2 className="text-base font-semibold">
-                {currentSection.title}
-              </h2>
-            ) : null}
-            {getVisibleFields(currentSection, answers).map((field) => (
-              <FormFieldRenderer
-                key={field.key}
-                field={field}
-                value={answers[field.key]}
-                formId={formPayload.form.id}
-                onChange={(next) =>
-                  setAnswers((current) => ({ ...current, [field.key]: next }))
-                }
-              />
-            ))}
-          </section>
-        ) : null}
+        {isWizard && currentSection
+          ? renderFormSection({
+              section: currentSection,
+              answers,
+              fieldErrors,
+              formId: formPayload.form.id,
+              formulaAnswers,
+              onChange: setAnswer,
+            })
+          : null}
+
+        {!isWizard
+          ? sections.map((section) => (
+              <div key={section.id}>
+                {renderFormSection({
+                  section,
+                  answers,
+                  fieldErrors,
+                  formId: formPayload.form.id,
+                  formulaAnswers,
+                  onChange: setAnswer,
+                })}
+              </div>
+            ))
+          : null}
 
         <div className="flex justify-between gap-2">
-          {isMultiStep && step > 0 ? (
+          {isWizard && step > 0 ? (
             <Button
               type="button"
               variant="outline"
-              onClick={() => setStep((current) => current - 1)}
+              onClick={() => {
+                setStep((current) => current - 1);
+                setFieldErrors({});
+              }}
             >
-              Back
+              Previous
             </Button>
           ) : (
             <span />
@@ -490,7 +695,7 @@ const PublicFormRendererContent = () => {
           <Button type="submit" disabled={isPending}>
             {isPending
               ? "Submitting…"
-              : isMultiStep && step < sections.length - 1
+              : isWizard && step < sections.length - 1
                 ? "Next"
                 : "Submit"}
           </Button>
