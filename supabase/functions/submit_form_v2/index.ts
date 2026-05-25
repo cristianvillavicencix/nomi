@@ -61,6 +61,27 @@ Deno.serve(
         return jsonResponse({ error: "Invalid or expired form link" }, 404);
       }
 
+      if (tokenData.is_preview) {
+        const formInstance = tokenData.form_instance as Record<string, unknown>;
+        const validationErrors = validateAnswersAgainstSchema(
+          answers,
+          formInstance.schema as FormSchema,
+        );
+        if (validationErrors.length > 0) {
+          return jsonResponse(
+            { error: "Validation failed", details: validationErrors },
+            400,
+          );
+        }
+        return jsonResponse({
+          ok: true,
+          preview: true,
+          thank_you_title: formInstance.thank_you_title,
+          thank_you_message: formInstance.thank_you_message,
+          redirect_url: formInstance.redirect_url,
+        });
+      }
+
       if (tokenData.expires_at && new Date(tokenData.expires_at) < new Date()) {
         return jsonResponse({ error: "This form link has expired" }, 410);
       }

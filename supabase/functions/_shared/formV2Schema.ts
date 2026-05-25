@@ -4,6 +4,10 @@ export type FormFieldDef = {
   label?: string;
   required?: boolean;
   options?: string[];
+  min?: number;
+  max?: number;
+  regex?: string;
+  regex_message?: string;
   visible_when?: Record<string, string | string[]>;
 };
 
@@ -53,6 +57,11 @@ export const extractFieldValue = (
   return null;
 };
 
+const isEmptyValue = (value: unknown): boolean =>
+  value == null ||
+  readString(value) === "" ||
+  (Array.isArray(value) && value.length === 0);
+
 export const validateAnswersAgainstSchema = (
   answers: Record<string, unknown>,
   schema: FormSchema | null | undefined,
@@ -65,16 +74,94 @@ export const validateAnswersAgainstSchema = (
 
     for (const field of section.fields ?? []) {
       if (!matchesVisibleWhen(field.visible_when, answers)) continue;
-      if (!field.required) continue;
 
       const value = answers[field.key];
-      const isEmpty =
-        value == null ||
-        readString(value) === "" ||
-        (Array.isArray(value) && value.length === 0);
+      const label = field.label ?? field.key;
 
-      if (isEmpty) {
-        errors.push(`${field.label ?? field.key} is required`);
+      if (field.required && isEmptyValue(value)) {
+        errors.push(`${label} is required`);
+        continue;
+      }
+
+      if (isEmptyValue(value)) continue;
+
+      const stringValue = readString(value);
+
+      switch (field.type) {
+        case "email":
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(stringValue)) {
+            errors.push(`${label} must be a valid email`);
+          }
+          break;
+        case "phone":
+          if (!/^[\d\s\-+()]{7,20}$/.test(stringValue)) {
+            errors.push(`${label} must be a valid phone number`);
+          }
+          break;
+        case "url":
+          try {
+            new URL(stringValue);
+          } catch {
+            errors.push(`${label} must be a valid URL`);
+          }
+          break;
+        case "number": {
+          const num = Number(value);
+          if (Number.isNaN(num)) {
+            errors.push(`${label} must be a number`);
+          } else {
+            if (field.min !== undefined && num < field.min) {
+              errors.push(`${label} must be >= ${field.min}`);
+            }
+            if (field.max !== undefined && num > field.max) {
+              errors.push(`${label} must be <= ${field.max}`);
+            }
+          }
+          break;
+        }
+        case "rating": {
+          const num = Number(value);
+          const min = field.min ?? 0;
+          const max = field.max ?? 10;
+          if (Number.isNaN(num) || num < min || num > max) {
+            errors.push(`${label} must be between ${min} and ${max}`);
+          }
+          break;
+        }
+        case "select":
+        case "radio":
+          if (field.options && !field.options.includes(stringValue)) {
+            errors.push(`${label} has an invalid option`);
+          }
+          break;
+        case "checkbox":
+        case "multi_select":
+          if (!Array.isArray(value)) {
+            errors.push(`${label} must be a list`);
+          } else if (field.options) {
+            const invalid = value.filter(
+              (item) => !field.options!.includes(String(item)),
+            );
+            if (invalid.length > 0) {
+              errors.push(`${label} has invalid options`);
+            }
+          }
+          break;
+        case "date":
+          if (!/^\d{4}-\d{2}-\d{2}/.test(stringValue)) {
+            errors.push(`${label} must be a valid date`);
+          }
+          break;
+      }
+
+      if (field.regex && typeof value === "string") {
+        try {
+          if (!new RegExp(field.regex).test(value)) {
+            errors.push(field.regex_message ?? `${label} format is invalid`);
+          }
+        } catch {
+          // ignore invalid regex config
+        }
       }
     }
   }
