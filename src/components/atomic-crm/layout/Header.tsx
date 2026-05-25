@@ -1,3 +1,4 @@
+import { useGetIdentity } from "ra-core";
 import { Link, matchPath, useLocation } from "react-router";
 import { ChevronDown } from "lucide-react";
 import { RefreshButton } from "@/components/admin/refresh-button";
@@ -10,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { canAccess } from "../providers/commons/canAccess";
+import { hasMemberCapability } from "../providers/commons/memberModuleAccess";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { isLbsMode } from "@/lbs/productMode";
@@ -34,6 +37,45 @@ const TIME_AND_PAY_NAV = [
 const Header = () => {
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
   const location = useLocation();
+  const { data: identity } = useGetIdentity();
+  const canViewSales = canAccess(identity as any, {
+    action: "list",
+    resource: "deals",
+  });
+  const canViewContacts = canAccess(identity as any, {
+    action: "list",
+    resource: "contacts",
+  });
+  const canViewCompanies = canAccess(identity as any, {
+    action: "list",
+    resource: "companies",
+  });
+  const canViewPeople = canAccess(identity as any, {
+    action: "list",
+    resource: "people",
+  });
+  const canViewHours = canAccess(identity as any, {
+    action: "list",
+    resource: "time_entries",
+  });
+  const canViewPayments = canAccess(identity as any, {
+    action: "list",
+    resource: "payments",
+  });
+  const canViewPayroll = canAccess(identity as any, {
+    action: "list",
+    resource: "payroll_runs",
+  });
+  const canViewLoans = canViewPayments || canViewPayroll;
+  const canViewReports = canAccess(identity as any, {
+    action: "list",
+    resource: "reports",
+  });
+  const timeAndPayItems = [
+    canViewHours ? TIME_AND_PAY_NAV[0] : null,
+    canViewPayroll ? TIME_AND_PAY_NAV[1] : null,
+    canViewLoans ? TIME_AND_PAY_NAV[2] : null,
+  ].filter((item): item is (typeof TIME_AND_PAY_NAV)[number] => item != null);
   let currentPath: string | boolean = "/";
   if (matchPath("/", location.pathname)) {
     currentPath = "/";
@@ -86,7 +128,16 @@ const Header = () => {
               <h1 className="text-xl font-semibold">{title}</h1>
             </Link>
             <nav className="flex flex-wrap">
-              {LBS_NAV_ITEMS.map((item) => (
+              {LBS_NAV_ITEMS.filter((item) =>
+                item.capability
+                  ? hasMemberCapability(identity as any, item.capability)
+                  : item.resource
+                    ? canAccess(identity as any, {
+                        resource: item.resource,
+                        action: item.action ?? "list",
+                      })
+                    : true,
+              ).map((item) => (
                 <NavigationTab
                   key={item.to}
                   label={item.label}
@@ -135,37 +186,49 @@ const Header = () => {
                 to="/"
                 isActive={currentPath === "/"}
               />
-              <NavigationTab
-                label="Contacts"
-                to="/contacts"
-                isActive={currentPath === "/contacts"}
-              />
-              <NavigationTab
-                label="Companies"
-                to="/companies"
-                isActive={currentPath === "/companies"}
-              />
-              <NavigationTab
-                label="People"
-                to="/people"
-                isActive={currentPath === "/people"}
-              />
-              <NavigationTab
-                label="Projects"
-                to="/deals"
-                isActive={currentPath === "/deals"}
-              />
-              <NavigationDropdown
-                label="Time & pay"
-                isActive={timeAndPaySection != null}
-                selectedTo={timeAndPaySection}
-                items={[...TIME_AND_PAY_NAV]}
-              />
-              <NavigationTab
-                label="Reports"
-                to="/reports"
-                isActive={currentPath === "/reports"}
-              />
+              {canViewContacts ? (
+                <NavigationTab
+                  label="Contacts"
+                  to="/contacts"
+                  isActive={currentPath === "/contacts"}
+                />
+              ) : null}
+              {canViewCompanies ? (
+                <NavigationTab
+                  label="Companies"
+                  to="/companies"
+                  isActive={currentPath === "/companies"}
+                />
+              ) : null}
+              {canViewPeople ? (
+                <NavigationTab
+                  label="People"
+                  to="/people"
+                  isActive={currentPath === "/people"}
+                />
+              ) : null}
+              {canViewSales ? (
+                <NavigationTab
+                  label="Projects"
+                  to="/deals"
+                  isActive={currentPath === "/deals"}
+                />
+              ) : null}
+              {timeAndPayItems.length > 0 ? (
+                <NavigationDropdown
+                  label="Time & pay"
+                  isActive={timeAndPaySection != null}
+                  selectedTo={timeAndPaySection}
+                  items={timeAndPayItems}
+                />
+              ) : null}
+              {canViewReports ? (
+                <NavigationTab
+                  label="Reports"
+                  to="/reports"
+                  isActive={currentPath === "/reports"}
+                />
+              ) : null}
             </nav>
           </div>
           <div className="flex items-center gap-2">
