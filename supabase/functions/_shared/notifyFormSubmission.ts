@@ -7,12 +7,14 @@ type FormInstance = {
   id: number;
   org_id: number;
   name: string;
+  slug?: string | null;
   notify_on_submit?: boolean | null;
   notify_member_ids?: number[] | null;
 };
 
 type Submission = {
   id: number;
+  deal_id?: number | null;
   submitter_name?: string | null;
 };
 
@@ -71,11 +73,55 @@ const resolveAppBaseUrl = (fallback?: string | null) => {
   return "";
 };
 
+const buildNotificationMessage = (
+  instance: FormInstance,
+  submission: Submission,
+  submissionPath: string,
+  baseUrl: string,
+  answers?: Record<string, unknown>,
+) => {
+  if (instance.slug === "project-resources" && answers) {
+    const logoCount = Array.isArray(answers.logos) ? answers.logos.length : 0;
+    const services = Array.isArray(answers.services) ? answers.services.length : 0;
+    const servicePhotos =
+      answers.service_photos &&
+      typeof answers.service_photos === "object" &&
+      !Array.isArray(answers.service_photos)
+        ? Object.values(answers.service_photos as Record<string, unknown[]>)
+        : [];
+    const totalPhotos = servicePhotos.reduce(
+      (sum, group) => sum + (Array.isArray(group) ? group.length : 0),
+      0,
+    );
+    const companyName =
+      String(answers.company_name ?? submission.submitter_name ?? "Client").trim() ||
+      "Client";
+    const dealPath =
+      submission.deal_id != null && baseUrl
+        ? `${baseUrl}/projects/${submission.deal_id}/show`
+        : submissionPath;
+
+    return `📸 ${companyName} uploaded assets: ${logoCount} logo(s), ${services} service(s), ${totalPhotos} photo(s). View: ${dealPath}`.slice(
+      0,
+      1600,
+    );
+  }
+
+  const submitter = submission.submitter_name?.trim() || "Someone";
+  return `New ${instance.name}: ${submitter}. View: ${submissionPath}`.slice(
+    0,
+    1600,
+  );
+};
+
 export async function notifyTeamOnSubmit(
   supabase: SupabaseClient,
   instance: FormInstance,
   submission: Submission,
-  options?: { appBaseUrl?: string | null },
+  options?: {
+    appBaseUrl?: string | null;
+    answers?: Record<string, unknown>;
+  },
 ) {
   if (!instance.notify_on_submit) return;
 
@@ -107,12 +153,13 @@ export async function notifyTeamOnSubmit(
   const submissionPath = baseUrl
     ? `${baseUrl}/forms-v2/submissions/${submission.id}`
     : `submission #${submission.id}`;
-  const submitter = submission.submitter_name?.trim() || "Someone";
-  const body =
-    `New ${instance.name}: ${submitter}. View: ${submissionPath}`.slice(
-      0,
-      1600,
-    );
+  const body = buildNotificationMessage(
+    instance,
+    submission,
+    submissionPath,
+    baseUrl,
+    options?.answers,
+  );
 
   for (const memberId of memberIds) {
     const to = await resolveMemberPhone(supabase, memberId);
