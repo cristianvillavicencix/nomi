@@ -292,7 +292,7 @@ const ProjectBriefPublicForm = ({
   );
 };
 
-const PublicFormRendererContent = () => {
+export const PublicFormRenderer = () => {
   const { slug: token = "" } = useParams();
   const [searchParams] = useSearchParams();
   const notify = useNotify();
@@ -779,5 +779,3 @@ const PublicFormRendererContent = () => {
     </FormBrandingShell>
   );
 };
-
-export { PublicFormRendererContent as PublicFormRenderer };
