@@ -1,4 +1,5 @@
 // DEPRECATED - use forms-v2 instead (`src/lbs/forms-v2/`). Kept until v2 is fully verified.
+import { useGetIdentity, useListContext } from "ra-core";
 import { Link, useNavigate } from "react-router";
 import { Plus } from "lucide-react";
 import { DataTable } from "@/components/admin/data-table";
