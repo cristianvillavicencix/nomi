@@ -555,6 +555,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="client_portal_deal_access" />
           <Resource name="deal_approvals" />
           <Resource name="report_web_agency_metrics" />
+          <Resource name="deal_activity_unified" />
         </>
       ) : null}
       <Resource name="contacts" {...contacts} />
