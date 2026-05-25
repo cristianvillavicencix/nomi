@@ -29,10 +29,12 @@ export const useSendFormRecipient = (context: SendFormContext) => {
     { enabled: Boolean(context.company_id) && !context.contact_id },
   );
 
+  const primaryContactId = company?.primary_contact_id;
+
   const { data: primaryContact } = useGetOne<Contact>(
     "contacts",
-    { id: company?.primary_contact_id! },
-    { enabled: Boolean(company?.primary_contact_id) && !context.contact_id },
+    { id: primaryContactId ?? "" },
+    { enabled: primaryContactId != null && !context.contact_id },
   );
 
   const { data: deal } = useGetOne<Deal>(
