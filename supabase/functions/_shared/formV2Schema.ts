@@ -1,3 +1,8 @@
+import {
+  evaluateCondition,
+  type VisibleWhen,
+} from "./conditionalLogic.ts";
+
 export type FormFieldDef = {
   key: string;
   type?: string;
@@ -8,14 +13,14 @@ export type FormFieldDef = {
   max?: number;
   regex?: string;
   regex_message?: string;
-  visible_when?: Record<string, string | string[]>;
+  visible_when?: VisibleWhen;
 };
 
 export type FormSectionDef = {
   id: string;
   title?: string;
   fields: FormFieldDef[];
-  visible_when?: Record<string, string | string[]>;
+  visible_when?: VisibleWhen;
 };
 
 export type FormSchema = {
@@ -29,21 +34,6 @@ const readString = (value: unknown): string => {
     return String(value).trim();
   }
   return "";
-};
-
-const matchesVisibleWhen = (
-  visibleWhen: Record<string, string | string[]> | undefined,
-  answers: Record<string, unknown>,
-): boolean => {
-  if (!visibleWhen || Object.keys(visibleWhen).length === 0) return true;
-
-  return Object.entries(visibleWhen).every(([fieldKey, expected]) => {
-    const actual = readString(answers[fieldKey]);
-    if (Array.isArray(expected)) {
-      return expected.includes(actual);
-    }
-    return actual === readString(expected);
-  });
 };
 
 export const extractFieldValue = (
@@ -70,10 +60,11 @@ export const validateAnswersAgainstSchema = (
   const sections = schema?.sections ?? [];
 
   for (const section of sections) {
-    if (!matchesVisibleWhen(section.visible_when, answers)) continue;
+    if (!evaluateCondition(section.visible_when, answers)) continue;
 
     for (const field of section.fields ?? []) {
-      if (!matchesVisibleWhen(field.visible_when, answers)) continue;
+      if (field.type === "formula") continue;
+      if (!evaluateCondition(field.visible_when, answers)) continue;
 
       const value = answers[field.key];
       const label = field.label ?? field.key;

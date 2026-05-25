@@ -1,29 +1,15 @@
+import { evaluateCondition } from "@/lib/forms-v2/conditionalLogic";
 import type {
   FormFieldDef,
   FormSchemaV2,
   FormSectionDef,
+  VisibleWhen,
 } from "@/lbs/forms-v2/types";
 
-const readValue = (answers: Record<string, unknown>, key: string): string => {
-  const value = answers[key];
-  if (value == null) return "";
-  return String(value).trim();
-};
-
 export const matchesVisibleWhen = (
-  visibleWhen: Record<string, string | string[]> | undefined,
+  visibleWhen: VisibleWhen | undefined,
   answers: Record<string, unknown>,
-): boolean => {
-  if (!visibleWhen || Object.keys(visibleWhen).length === 0) return true;
-
-  return Object.entries(visibleWhen).every(([fieldKey, expected]) => {
-    const actual = readValue(answers, fieldKey);
-    if (Array.isArray(expected)) {
-      return expected.includes(actual);
-    }
-    return actual === String(expected).trim();
-  });
-};
+): boolean => evaluateCondition(visibleWhen, answers);
 
 export const getVisibleSections = (
   schema: FormSchemaV2 | undefined,
@@ -37,8 +23,20 @@ export const getVisibleFields = (
   section: FormSectionDef,
   answers: Record<string, unknown>,
 ): FormFieldDef[] =>
-  (section.fields ?? []).filter((field) =>
-    matchesVisibleWhen(field.visible_when, answers),
+  (section.fields ?? []).filter(
+    (field) =>
+      field.type !== "formula" &&
+      matchesVisibleWhen(field.visible_when, answers),
+  );
+
+export const getVisibleFormulaFields = (
+  section: FormSectionDef,
+  answers: Record<string, unknown>,
+): FormFieldDef[] =>
+  (section.fields ?? []).filter(
+    (field) =>
+      field.type === "formula" &&
+      matchesVisibleWhen(field.visible_when, answers),
   );
 
 export const validateSection = (
@@ -46,6 +44,20 @@ export const validateSection = (
   answers: Record<string, unknown>,
 ): string[] => {
   const errors: string[] = [];
+  for (const [fieldKey, message] of Object.entries(
+    validateSectionFields(section, answers),
+  )) {
+    void fieldKey;
+    errors.push(message);
+  }
+  return errors;
+};
+
+export const validateSectionFields = (
+  section: FormSectionDef,
+  answers: Record<string, unknown>,
+): Record<string, string> => {
+  const errors: Record<string, string> = {};
   for (const field of getVisibleFields(section, answers)) {
     if (!field.required) continue;
     const value = answers[field.key];
@@ -54,7 +66,7 @@ export const validateSection = (
       String(value).trim() === "" ||
       (Array.isArray(value) && value.length === 0);
     if (empty) {
-      errors.push(`${field.label ?? field.key} is required`);
+      errors[field.key] = `${field.label ?? field.key} is required`;
     }
   }
   return errors;
@@ -62,3 +74,22 @@ export const validateSection = (
 
 export const isLikelyFormToken = (value: string) =>
   /^[a-f0-9]{64}$/i.test(value.trim());
+
+export type WizardMode = "auto" | "on" | "off";
+
+export const resolveWizardEnabled = (
+  schema: FormSchemaV2 | undefined,
+): boolean => {
+  const sections = schema?.sections ?? [];
+  const mode = schema?.settings?.wizard_mode ?? "auto";
+  const allTitled =
+    sections.length > 0 &&
+    sections.every((section) => Boolean(section.title?.trim()));
+
+  if (mode === "on") return sections.length > 0;
+  if (mode === "off") return false;
+  return sections.length > 1 && allTitled;
+};
+
+export const formProgressStorageKey = (token: string) =>
+  `form_progress_${token}`;

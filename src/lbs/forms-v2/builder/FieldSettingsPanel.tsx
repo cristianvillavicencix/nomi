@@ -1,9 +1,18 @@
 import { Copy, Trash2 } from "lucide-react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { ConditionalLogicEditor } from "@/lbs/forms-v2/builder/ConditionalLogicEditor";
 import { useFormBuilder } from "@/lbs/forms-v2/builder/FormBuilderContext";
 
 export const FieldSettingsPanel = () => {
@@ -34,6 +43,19 @@ export const FieldSettingsPanel = () => {
     String(field.type),
   );
 
+  const priorFields = useMemo(() => {
+    const result: { key: string; label: string }[] = [];
+    for (const section of schema.sections ?? []) {
+      for (const item of section.fields ?? []) {
+        if (item.key === field.key) return result;
+        if (item.type !== "formula" && item.type !== "hidden") {
+          result.push({ key: item.key, label: item.label ?? item.key });
+        }
+      }
+    }
+    return result;
+  }, [schema.sections, field.key]);
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -63,22 +85,25 @@ export const FieldSettingsPanel = () => {
         <Switch
           id="field-required"
           checked={Boolean(field.required)}
+          disabled={field.type === "formula"}
           onCheckedChange={(checked) =>
             updateField(field.key, { required: checked })
           }
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="field-placeholder">Placeholder</Label>
-        <Input
-          id="field-placeholder"
-          value={field.placeholder ?? ""}
-          onChange={(event) =>
-            updateField(field.key, { placeholder: event.target.value })
-          }
-        />
-      </div>
+      {field.type !== "formula" ? (
+        <div className="space-y-2">
+          <Label htmlFor="field-placeholder">Placeholder</Label>
+          <Input
+            id="field-placeholder"
+            value={field.placeholder ?? ""}
+            onChange={(event) =>
+              updateField(field.key, { placeholder: event.target.value })
+            }
+          />
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="field-help">Help text</Label>
@@ -136,6 +161,52 @@ export const FieldSettingsPanel = () => {
             />
           </div>
         </div>
+      ) : null}
+
+      {field.type === "formula" ? (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="field-formula">Formula</Label>
+            <Input
+              id="field-formula"
+              value={field.formula ?? ""}
+              placeholder="{quantity} * {price}"
+              onChange={(event) =>
+                updateField(field.key, { formula: event.target.value })
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Use {"{field_key}"} placeholders, e.g. {"{a} + {b}"}.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="field-format">Display format</Label>
+            <Select
+              value={field.format ?? "number"}
+              onValueChange={(value: "number" | "currency") =>
+                updateField(field.key, { format: value })
+              }
+            >
+              <SelectTrigger id="field-format">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="number">Number</SelectItem>
+                <SelectItem value="currency">Currency</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      ) : null}
+
+      {field.type !== "formula" ? (
+        <ConditionalLogicEditor
+          visibleWhen={field.visible_when}
+          priorFields={priorFields}
+          onChange={(visible_when) =>
+            updateField(field.key, { visible_when })
+          }
+        />
       ) : null}
 
       <div className="flex gap-2 pt-2">

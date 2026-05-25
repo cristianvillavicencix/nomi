@@ -1,3 +1,11 @@
+import type {
+  ConditionGroup,
+  LegacyVisibleWhen,
+  VisibleWhen,
+} from "@/lib/forms-v2/conditionalLogic";
+
+export type { ConditionGroup, LegacyVisibleWhen, VisibleWhen };
+
 export type FormFieldType =
   | "text"
   | "textarea"
@@ -14,7 +22,10 @@ export type FormFieldType =
   | "file"
   | "file_multi"
   | "signature"
-  | "hidden";
+  | "hidden"
+  | "formula";
+
+export type FormulaFormat = "number" | "currency";
 
 export type FormFieldDef = {
   key: string;
@@ -28,7 +39,9 @@ export type FormFieldDef = {
   max?: number;
   labels?: { min?: string; max?: string };
   accept?: string;
-  visible_when?: Record<string, string | string[]>;
+  formula?: string;
+  format?: FormulaFormat;
+  visible_when?: VisibleWhen;
 };
 
 export type FormSectionDef = {
@@ -36,11 +49,16 @@ export type FormSectionDef = {
   title?: string;
   description?: string;
   fields: FormFieldDef[];
-  visible_when?: Record<string, string | string[]>;
+  visible_when?: VisibleWhen;
+};
+
+export type FormSchemaSettings = {
+  wizard_mode?: "auto" | "on" | "off";
 };
 
 export type FormSchemaV2 = {
   sections?: FormSectionDef[];
+  settings?: FormSchemaSettings;
 };
 
 export type PublicFormPayload = {
