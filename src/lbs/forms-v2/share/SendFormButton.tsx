@@ -42,7 +42,11 @@ export const SendFormButton = ({
           <FileText className="size-4" />
           {label}
         </DropdownMenuItem>
-        <SendFormDialog open={open} onOpenChange={setOpen} context={resolvedContext} />
+        <SendFormDialog
+          open={open}
+          onOpenChange={setOpen}
+          context={resolvedContext}
+        />
       </>
     );
   }
@@ -57,9 +61,17 @@ export const SendFormButton = ({
         onClick={() => setOpen(true)}
       >
         <FileText className="size-4" />
-        {variant === "button" ? label : <span className="sr-only">{label}</span>}
+        {variant === "button" ? (
+          label
+        ) : (
+          <span className="sr-only">{label}</span>
+        )}
       </Button>
-      <SendFormDialog open={open} onOpenChange={setOpen} context={resolvedContext} />
+      <SendFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        context={resolvedContext}
+      />
     </>
   );
 };

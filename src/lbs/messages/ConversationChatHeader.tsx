@@ -12,6 +12,7 @@ import type {
 import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
 import { ConversationActionsMenu } from "@/lbs/messages/ConversationActionsMenu";
 import { ChangeStatusDropdown } from "@/lbs/messages/status/ChangeStatusDropdown";
+import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 import { cn } from "@/lib/utils";
 
 export const ConversationChatHeader = ({
@@ -98,14 +99,29 @@ export const ConversationChatHeader = ({
           </p>
         </div>
 
-        <ConversationActionsMenu
-          conversation={conversation}
-          members={members}
-          dealHref={display.dealHref}
-          dealLabel={conversation.type === "client" ? "Open" : "Project"}
-          contextOpen={contextOpen}
-          onToggleContext={onToggleContext}
-        />
+        <div className="flex shrink-0 items-center gap-1">
+          {conversation.type === "client" && conversation.contact_id ? (
+            <SendFormButton
+              variant="icon"
+              context={{
+                type: "conversation",
+                conversation_id: Number(conversation.id),
+                contact_id: Number(conversation.contact_id),
+                deal_id: conversation.deal_id
+                  ? Number(conversation.deal_id)
+                  : undefined,
+              }}
+            />
+          ) : null}
+          <ConversationActionsMenu
+            conversation={conversation}
+            members={members}
+            dealHref={display.dealHref}
+            dealLabel={conversation.type === "client" ? "Open" : "Project"}
+            contextOpen={contextOpen}
+            onToggleContext={onToggleContext}
+          />
+        </div>
       </div>
     </div>
   );

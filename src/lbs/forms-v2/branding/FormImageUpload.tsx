@@ -58,9 +58,7 @@ export const FormImageUpload = ({
         onChange(data.publicUrl);
       } catch (uploadError) {
         setError(
-          uploadError instanceof Error
-            ? uploadError.message
-            : "Upload failed",
+          uploadError instanceof Error ? uploadError.message : "Upload failed",
         );
       } finally {
         setUploading(false);

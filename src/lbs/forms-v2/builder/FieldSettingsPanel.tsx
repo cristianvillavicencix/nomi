@@ -203,9 +203,7 @@ export const FieldSettingsPanel = () => {
         <ConditionalLogicEditor
           visibleWhen={field.visible_when}
           priorFields={priorFields}
-          onChange={(visible_when) =>
-            updateField(field.key, { visible_when })
-          }
+          onChange={(visible_when) => updateField(field.key, { visible_when })}
         />
       ) : null}
 

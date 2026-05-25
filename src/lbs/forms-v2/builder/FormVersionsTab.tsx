@@ -129,7 +129,8 @@ export const FormVersionsTab = ({
     <div className="space-y-4 pt-4">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <History className="size-4" />
-        Previous schema snapshots are saved automatically when you edit and save.
+        Previous schema snapshots are saved automatically when you edit and
+        save.
       </div>
 
       {versions.length === 0 ? (

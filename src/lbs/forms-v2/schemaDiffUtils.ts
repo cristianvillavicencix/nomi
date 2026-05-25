@@ -6,12 +6,17 @@ export type SchemaDiffEntry = {
   detail?: string;
 };
 
-const collectFieldPaths = (schema: FormSchemaV2 | undefined): Map<string, string> => {
+const collectFieldPaths = (
+  schema: FormSchemaV2 | undefined,
+): Map<string, string> => {
   const paths = new Map<string, string>();
   for (const section of schema?.sections ?? []) {
     for (const field of section.fields ?? []) {
       if (!field.key) continue;
-      paths.set(field.key, `${section.title || section.id} → ${field.label || field.key}`);
+      paths.set(
+        field.key,
+        `${section.title || section.id} → ${field.label || field.key}`,
+      );
     }
   }
   return paths;

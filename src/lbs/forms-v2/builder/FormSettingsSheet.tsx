@@ -395,7 +395,8 @@ export const FormSettingsSheet = ({
                 <div>
                   <Label>Auto-create contact</Label>
                   <p className="text-xs text-muted-foreground">
-                    Create or match a contact from email/phone in the submission.
+                    Create or match a contact from email/phone in the
+                    submission.
                   </p>
                 </div>
                 <Switch
@@ -474,7 +475,9 @@ export const FormSettingsSheet = ({
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="task-title-template">Task title template</Label>
+                    <Label htmlFor="task-title-template">
+                      Task title template
+                    </Label>
                     <Input
                       id="task-title-template"
                       value={

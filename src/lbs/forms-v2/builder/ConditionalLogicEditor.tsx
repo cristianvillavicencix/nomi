@@ -99,9 +99,7 @@ export const ConditionalLogicEditor = ({
               return;
             }
             onChange(
-              isConditionGroup(visibleWhen)
-                ? visibleWhen
-                : emptyGroup(),
+              isConditionGroup(visibleWhen) ? visibleWhen : emptyGroup(),
             );
           }}
         />
@@ -248,8 +246,7 @@ export const ConditionalLogicEditor = ({
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Preview: this field will{" "}
-              {previewVisible ? "show" : "hide"} when{" "}
+              Preview: this field will {previewVisible ? "show" : "hide"} when{" "}
               {group.conditions
                 .filter((condition) => condition.field)
                 .map((condition) => describeCondition(condition, priorFields))
