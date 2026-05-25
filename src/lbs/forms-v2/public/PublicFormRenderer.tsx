@@ -45,6 +45,15 @@ import {
   publicFormContentClassName,
   usePublicFormEmbed,
 } from "@/lbs/forms-v2/public/PublicFormEmbedProvider";
+import { expandWizardSteps } from "@/lbs/forms-v2/wizardStepUtils";
+import {
+  DynamicFileGroupsField,
+  WizardSummaryStep,
+} from "@/lbs/forms-v2/public/fields/DynamicFileGroupsField";
+import {
+  ProjectResourcesPreflightStep,
+  type ProjectLinkMode,
+} from "@/lbs/forms-v2/public/ProjectResourcesPreflightStep";
 
 const PreviewBanner = ({ isPreview }: { isPreview?: boolean }) =>
   isPreview ? (
@@ -61,6 +70,7 @@ const renderFormSection = ({
   answers,
   fieldErrors,
   formId,
+  token,
   formulaAnswers,
   onChange,
 }: {
@@ -68,6 +78,7 @@ const renderFormSection = ({
   answers: Record<string, unknown>;
   fieldErrors: Record<string, string>;
   formId: number;
+  token?: string;
   formulaAnswers: Record<string, unknown>;
   onChange: (key: string, next: unknown) => void;
 }) => (
@@ -84,6 +95,7 @@ const renderFormSection = ({
           field={field}
           value={answers[field.key]}
           formId={formId}
+          token={token}
           onChange={(next) => onChange(field.key, next)}
         />
         {fieldErrors[field.key] ? (
@@ -306,6 +318,11 @@ const PublicFormRendererContent = () => {
     redirect_url?: string | null;
     preview?: boolean;
   } | null>(null);
+  const [preflightComplete, setPreflightComplete] = useState(false);
+  const [projectLinkMode, setProjectLinkMode] = useState<ProjectLinkMode | null>(
+    null,
+  );
+  const [projectCode, setProjectCode] = useState("");
 
   const {
     data: payload,
@@ -373,7 +390,23 @@ const PublicFormRendererContent = () => {
     [formPayload?.form.schema, answers],
   );
   const isWizard = resolveWizardEnabled(formPayload?.form.schema);
-  const currentSection = isWizard ? sections[step] : sections[0];
+  const wizardSteps = useMemo(
+    () =>
+      isWizard ? expandWizardSteps(formPayload?.form.schema, answers) : [],
+    [answers, formPayload?.form.schema, isWizard],
+  );
+  const needsPreflight =
+    formPayload?.form.slug === "project-resources" &&
+    !formPayload.links?.deal_id &&
+    !formPayload?.is_preview;
+  const showPreflight = needsPreflight && !preflightComplete;
+  const currentWizardStep = isWizard ? wizardSteps[step] : null;
+  const currentSection =
+    isWizard && currentWizardStep?.kind === "section"
+      ? currentWizardStep.section
+      : isWizard
+        ? undefined
+        : sections[0];
   const formulaAnswers = useMemo(
     () => buildFormulaAnswers(formPayload?.form.schema, answers),
     [formPayload?.form.schema, answers],
@@ -490,6 +523,12 @@ const PublicFormRendererContent = () => {
   }
 
   const validateCurrentStep = () => {
+    if (showPreflight) {
+      notify("Complete the project selection step first", { type: "warning" });
+      return false;
+    }
+    if (currentWizardStep?.kind === "summary") return true;
+    if (currentWizardStep?.kind === "dynamic_file_group") return true;
     if (!currentSection) return true;
     const nextErrors = validateSectionFields(currentSection, answers);
     setFieldErrors(nextErrors);
@@ -580,43 +619,29 @@ const PublicFormRendererContent = () => {
         </div>
       ) : null}
 
-      {isWizard ? (
+      {isWizard && !showPreflight ? (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>
-              Step {Math.min(step + 1, sections.length || 1)} of{" "}
-              {sections.length || 1}
-              {currentSection?.title ? `: ${currentSection.title}` : ""}
+              Step {Math.min(step + 1, wizardSteps.length || 1)} of{" "}
+              {wizardSteps.length || 1}
+              {currentWizardStep?.kind === "section" && currentWizardStep.section.title
+                ? `: ${currentWizardStep.section.title}`
+                : currentWizardStep?.kind === "dynamic_file_group"
+                  ? `: ${currentWizardStep.groupKey}`
+                  : currentWizardStep?.kind === "summary"
+                    ? ": Resumen"
+                    : ""}
             </span>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            {sections.map((section, index) => (
-              <button
-                key={section.id}
-                type="button"
-                disabled={index > step}
-                className={
-                  index === step
-                    ? "font-medium text-foreground"
-                    : index < step
-                      ? "text-foreground underline-offset-2 hover:underline"
-                      : "cursor-not-allowed opacity-60"
-                }
-                onClick={() => {
-                  if (index <= step) setStep(index);
-                }}
-              >
-                {index < step ? "✓ " : index === step ? "● " : "○ "}
-                {section.title || `Step ${index + 1}`}
-              </button>
-            ))}
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
               className="h-full bg-primary transition-all"
               style={{
                 width: `${
-                  sections.length > 0 ? ((step + 1) / sections.length) * 100 : 0
+                  wizardSteps.length > 0
+                    ? ((step + 1) / wizardSteps.length) * 100
+                    : 0
                 }%`,
               }}
             />
@@ -624,11 +649,30 @@ const PublicFormRendererContent = () => {
         </div>
       ) : null}
 
+      {showPreflight ? (
+        <ProjectResourcesPreflightStep
+          mode={projectLinkMode}
+          projectCode={projectCode}
+          onModeChange={setProjectLinkMode}
+          onProjectCodeChange={setProjectCode}
+          onContinue={() => {
+            if (!projectLinkMode) return;
+            setAnswers((current) => ({
+              ...current,
+              project_link_mode: projectLinkMode,
+              project_code: projectCode.trim(),
+            }));
+            setPreflightComplete(true);
+          }}
+        />
+      ) : null}
+
+      {!showPreflight ? (
       <form
         className="space-y-6"
         onSubmit={(event) => {
           event.preventDefault();
-          if (isWizard && step < sections.length - 1) {
+          if (isWizard && step < wizardSteps.length - 1) {
             if (!validateCurrentStep()) return;
             setStep((current) => current + 1);
             setFieldErrors({});
@@ -651,16 +695,47 @@ const PublicFormRendererContent = () => {
           />
         ) : null}
 
-        {isWizard && currentSection
+        {isWizard && currentWizardStep?.kind === "section" && currentSection
           ? renderFormSection({
               section: currentSection,
               answers,
               fieldErrors,
               formId: formPayload.form.id,
+              token: formPayload.token,
               formulaAnswers,
               onChange: setAnswer,
             })
           : null}
+
+        {isWizard && currentWizardStep?.kind === "dynamic_file_group" ? (
+          <section className="space-y-4 rounded-lg border p-4">
+            {currentWizardStep.section.title ? (
+              <h2 className="text-base font-semibold">
+                {currentWizardStep.section.title}
+              </h2>
+            ) : null}
+            {currentWizardStep.section.description ? (
+              <p className="text-sm text-muted-foreground">
+                {currentWizardStep.section.description}
+              </p>
+            ) : null}
+            <DynamicFileGroupsField
+              field={currentWizardStep.field}
+              groupKey={currentWizardStep.groupKey}
+              value={answers[currentWizardStep.field.key]}
+              token={formPayload.token}
+              onChange={(next) => setAnswer(currentWizardStep.field.key, next)}
+              onSkip={() => {
+                setStep((current) => current + 1);
+                setFieldErrors({});
+              }}
+            />
+          </section>
+        ) : null}
+
+        {isWizard && currentWizardStep?.kind === "summary" ? (
+          <WizardSummaryStep answers={answers} />
+        ) : null}
 
         {!isWizard
           ? sections.map((section) => (
@@ -670,6 +745,7 @@ const PublicFormRendererContent = () => {
                   answers,
                   fieldErrors,
                   formId: formPayload.form.id,
+                  token: formPayload.token,
                   formulaAnswers,
                   onChange: setAnswer,
                 })}
@@ -695,12 +771,13 @@ const PublicFormRendererContent = () => {
           <Button type="submit" disabled={isPending}>
             {isPending
               ? "Submitting…"
-              : isWizard && step < sections.length - 1
+              : isWizard && step < wizardSteps.length - 1
                 ? "Next"
                 : "Submit"}
           </Button>
         </div>
       </form>
+      ) : null}
     </FormBrandingShell>
   );
 };
