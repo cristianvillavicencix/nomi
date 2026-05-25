@@ -37,8 +37,6 @@ import { supabase } from "../providers/supabase/supabase";
 import type { CrmDataProvider } from "../providers/types";
 import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 import { ProfileNotificationsSection } from "./ProfileNotificationsSection";
-import { isLbsMode } from "@/lbs/productMode";
-import { ClientPortalProfileSection } from "@/lbs/portal/ClientPortalProfileSection";
 
 export const ProfilePage = () => {
   const [isEditMode, setEditMode] = useState(false);
@@ -219,7 +217,6 @@ const ProfileForm = ({
         </CardContent>
       </Card>
       <ProfileNotificationsSection />
-      {isLbsMode() ? <ClientPortalProfileSection /> : null}
       <Dialog
         open={passwordDialogOpen}
         onOpenChange={(open) => {

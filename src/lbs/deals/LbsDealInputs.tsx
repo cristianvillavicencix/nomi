@@ -23,7 +23,6 @@ import {
   lbsProjectContactName,
   lbsProjectContactOptionText,
 } from "@/lbs/deals/LbsProjectContactOption";
-import { WebsiteBriefFormSections } from "@/lbs/deals/WebsiteBriefFormSections";
 import { optionalGithubRepo } from "@/lbs/deals/githubRepo";
 import {
   getLbsProjectScopeMode,
@@ -75,15 +74,6 @@ const optionalPositiveCurrency = (value: unknown) => {
   return undefined;
 };
 
-const optionalUrl = (url?: string) => {
-  if (!url?.trim()) return;
-  const urlRegex =
-    /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([-.]{1}[a-z0-9]+)*\.[a-z]{2,}(:[0-9]{1,5})?(\/.*)?$/i;
-  if (!urlRegex.test(url.trim())) {
-    return "Must be a valid URL";
-  }
-};
-
 const FormSectionDivider = () => (
   <div
     className="h-px w-full bg-gradient-to-r from-transparent via-border/80 to-transparent"
@@ -113,8 +103,8 @@ const FormSection = ({
 
 export const LbsDealInputs = ({
   createStep,
-}: { createStep?: 1 | 2 | 3 | 4 } = {}) => {
-  const showStep = (step: 1 | 2 | 3 | 4) => !createStep || createStep === step;
+}: { createStep?: 1 | 2 } = {}) => {
+  const showStep = (step: 1 | 2) => !createStep || createStep === step;
   const isMobile = useIsMobile();
   const { dealCategories } = useConfigurationContext();
   const { control, setValue, getValues } = useFormContext<
@@ -391,30 +381,17 @@ export const LbsDealInputs = ({
                 />
               </ReferenceArrayInput>
             </div>
+            <div className={isMobile ? undefined : "md:col-span-2"}>
+              <TextInput
+                source="notes"
+                label="Internal notes"
+                multiline
+                rows={3}
+                helperText="The full brief is filled out separately in the project's Brief tab or sent to the client as a web form."
+                placeholder="Discovery notes, client requests, or next steps"
+              />
+            </div>
           </div>
-        </FormSection>
-      ) : null}
-
-      {showStep(3) ? (
-        <FormSection title="Project brief" showDivider={false}>
-          <WebsiteBriefFormSections
-            gridClass={`grid gap-4 ${gridClass}`}
-            validateUrl={optionalUrl}
-            showSecurityHint={false}
-          />
-        </FormSection>
-      ) : null}
-
-      {showStep(4) ? (
-        <FormSection title="Notes">
-          <TextInput
-            source="notes"
-            label="Internal notes"
-            multiline
-            rows={4}
-            helperText={false}
-            placeholder="Discovery notes, client requests, or next steps"
-          />
         </FormSection>
       ) : null}
     </div>

@@ -6,7 +6,6 @@ import {
   useNotify,
   useRedirect,
 } from "ra-core";
-import { useFormContext, useWatch } from "react-hook-form";
 import { useSearchParams } from "react-router";
 import { Create } from "@/components/admin/create";
 import { SaveButton } from "@/components/admin/form";
@@ -22,7 +21,6 @@ import type { Deal } from "@/components/atomic-crm/types";
 import { normalizeProjectPayload } from "@/components/atomic-crm/deals/projectForm";
 import { LbsDealInputs } from "@/lbs/deals/LbsDealInputs";
 import {
-  getAgencyProjectTypeLabel,
   LBS_DEFAULT_AGENCY_PROJECT_TYPE,
   LBS_DEFAULT_AGENCY_STAGE,
   LBS_DEFAULT_DELIVERY_STATUS,
@@ -38,56 +36,14 @@ import type { LbsDeal } from "@/lbs/types";
 const CREATE_STEPS = [
   { id: 1 as const, label: "Client & basics" },
   { id: 2 as const, label: "Timeline & team" },
-  { id: 3 as const, label: "Brief" },
-  { id: 4 as const, label: "Review" },
 ];
-
-const AgencyProjectCreateReview = () => {
-  const { control } = useFormContext<Deal>();
-  const name = useWatch({ control, name: "name" });
-  const projectType = useWatch({ control, name: "project_type" });
-  const companyId = useWatch({ control, name: "company_id" });
-  const contactId = useWatch({ control, name: "contact_id" });
-  const stage = useWatch({ control, name: "stage" });
-  const priority = useWatch({ control, name: "priority" });
-  const expectedEnd = useWatch({ control, name: "expected_end_date" });
-  const team = useWatch({ control, name: "salesperson_ids" });
-
-  return (
-    <div className="rounded-lg border bg-muted/20 p-4 text-sm space-y-2">
-      <p className="font-medium">Review before creating</p>
-      <ul className="space-y-1 text-muted-foreground">
-        <li>
-          <span className="text-foreground">{name || "Untitled project"}</span>
-          {" · "}
-          {getAgencyProjectTypeLabel(String(projectType ?? ""))}
-        </li>
-        <li>
-          Client #{contactId ?? "—"} · Company #{companyId ?? "—"}
-        </li>
-        <li>
-          Stage {stage ?? "setup"} · Priority {priority ?? "normal"}
-          {expectedEnd ? ` · Delivery ${expectedEnd}` : ""}
-        </li>
-        <li>
-          Team members:{" "}
-          {Array.isArray(team) && team.length > 0 ? team.length : 0}
-        </li>
-      </ul>
-      <p className="text-xs text-muted-foreground">
-        Starter tasks will be created automatically based on project type and
-        stage.
-      </p>
-    </div>
-  );
-};
 
 const AgencyProjectCreateStepToolbar = ({
   step,
   onBack,
   onNext,
 }: {
-  step: 1 | 2 | 3 | 4;
+  step: 1 | 2;
   onBack: () => void;
   onNext: () => void;
 }) => (
@@ -101,7 +57,7 @@ const AgencyProjectCreateStepToolbar = ({
       >
         Back
       </Button>
-      {step < 4 ? (
+      {step < 2 ? (
         <Button type="button" onClick={onNext}>
           Next
         </Button>
@@ -128,7 +84,7 @@ export const AgencyProjectCreateForm = ({
   const dataProvider = useDataProvider();
   const { identity } = useGetIdentity();
   const [searchParams] = useSearchParams();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2>(1);
 
   const presetCompanyId = searchParams.get("company_id");
   const presetContactId = searchParams.get("contact_id");
@@ -214,21 +170,16 @@ export const AgencyProjectCreateForm = ({
             }}
           >
             <LbsDealInputs createStep={step} />
-            {step === 4 ? (
-              <div className="mt-4 space-y-4">
-                <AgencyProjectCreateReview />
-              </div>
-            ) : null}
             <AgencyProjectCreateStepToolbar
               step={step}
               onBack={() =>
                 setStep((current) =>
-                  current > 1 ? ((current - 1) as 1 | 2 | 3 | 4) : current,
+                  current > 1 ? ((current - 1) as 1 | 2) : current,
                 )
               }
               onNext={() =>
                 setStep((current) =>
-                  current < 4 ? ((current + 1) as 1 | 2 | 3 | 4) : current,
+                  current < 2 ? ((current + 1) as 1 | 2) : current,
                 )
               }
             />
