@@ -16,15 +16,28 @@ type Submission = {
   submitter_name?: string | null;
 };
 
+const toE164 = (phone: string): string | null => {
+  const trimmed = phone.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("+") && /^\+[1-9]\d{1,14}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return normalizeUsPhoneToE164(trimmed);
+};
+
 const resolveMemberPhone = async (
   supabase: SupabaseClient,
   memberId: number,
 ): Promise<string | null> => {
   const { data: member } = await supabase
     .from("organization_members")
-    .select("user_id")
+    .select("notification_phone, user_id")
     .eq("id", memberId)
     .maybeSingle();
+
+  if (member?.notification_phone) {
+    return toE164(member.notification_phone);
+  }
 
   if (!member?.user_id) return null;
 
@@ -33,13 +46,20 @@ const resolveMemberPhone = async (
   );
   if (error || !authData?.user) return null;
 
-  const phone =
-    authData.user.phone?.trim() ||
-    (typeof authData.user.user_metadata?.phone === "string"
-      ? authData.user.user_metadata.phone.trim()
-      : "");
+  const authPhone = authData.user.phone?.trim();
+  if (authPhone) {
+    return toE164(authPhone);
+  }
 
-  return phone ? normalizeUsPhoneToE164(phone) : null;
+  const metaPhone =
+    typeof authData.user.user_metadata?.phone === "string"
+      ? authData.user.user_metadata.phone.trim()
+      : "";
+  if (metaPhone) {
+    return toE164(metaPhone);
+  }
+
+  return null;
 };
 
 const resolveAppBaseUrl = (fallback?: string | null) => {
@@ -97,7 +117,10 @@ export async function notifyTeamOnSubmit(
   for (const memberId of memberIds) {
     const to = await resolveMemberPhone(supabase, memberId);
     if (!to) {
-      console.warn("[notifyFormSubmission] no phone for member", { memberId });
+      console.warn("[notifyFormSubmission] Member has no phone configured", {
+        member_id: memberId,
+        form_id: instance.id,
+      });
       continue;
     }
 
