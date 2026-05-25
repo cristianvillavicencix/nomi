@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCreate, useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import type {
   Conversation,
   ConversationMessage,
 } from "@/lbs/types";
+import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { formatMessageTime } from "@/lbs/messages/conversationUtils";
 import { useConversationMessages } from "@/lbs/messages/useConversationMessages";
 import { useMarkConversationRead } from "@/lbs/messages/useMarkConversationRead";
@@ -19,6 +20,8 @@ import {
 } from "@/lbs/messages/ClientSmsComposer";
 import { getContactDisplayName } from "@/lbs/messages/messageContactUtils";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { parseMessageBodyWithSignature } from "@/lib/signatures/signatureExpansion";
+import { useOrganizationSmsSignature } from "@/lbs/settings/useOrganizationSmsSignature";
 import { cn } from "@/lib/utils";
 
 const SEND_MESSAGES_CAPABILITY = "messaging.send";
@@ -38,8 +41,17 @@ const MessageBubble = ({
   message: ConversationMessage;
   isOwn: boolean;
 }) => {
+  const { settings } = useOrganizationSmsSignature();
+  const { content, signature } = useMemo(
+    () =>
+      message.direction === "outbound" && !message.is_internal_note
+        ? parseMessageBodyWithSignature(message.body ?? "")
+        : { content: message.body ?? "", signature: null },
+    [message.body, message.direction, message.is_internal_note],
+  );
+
   return (
-    <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+    <div className={cn("flex flex-col", isOwn ? "items-end" : "items-start")}>
       <div
         className={cn(
           "max-w-[min(78%,560px)] rounded-2xl px-3.5 py-2.5 text-[15px] leading-snug",
@@ -61,8 +73,18 @@ const MessageBubble = ({
             alt={message.body || "Attachment"}
           />
         ) : null}
-        {message.body ? (
-          <div className="whitespace-pre-wrap break-words">{message.body}</div>
+        {content ? (
+          <div className="whitespace-pre-wrap break-words">{content}</div>
+        ) : null}
+        {signature ? (
+          <p
+            className={cn(
+              "mt-2 text-xs italic",
+              isOwn ? "text-primary-foreground/70" : "text-muted-foreground/70",
+            )}
+          >
+            {signature}
+          </p>
         ) : null}
         <div
           className={cn(
@@ -73,6 +95,13 @@ const MessageBubble = ({
           {formatMessageTime(message.created_at)}
         </div>
       </div>
+      {message.direction === "outbound" &&
+      message.author_member_id &&
+      !message.is_internal_note ? (
+        <div className="mt-1 flex justify-end">
+          <AuthorBadge memberId={message.author_member_id} size="sm" />
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -269,10 +298,7 @@ export const ConversationThread = ({
             onSent={({ conversation: nextConversation, message }) => {
               onClientSmsSent?.(nextConversation);
               if (message?.created_at && nextConversation?.id != null) {
-                markConversationRead?.(
-                  nextConversation.id,
-                  message.created_at,
-                );
+                markConversationRead?.(nextConversation.id, message.created_at);
               }
               if (message && nextConversation?.id != null) {
                 void refetch();
