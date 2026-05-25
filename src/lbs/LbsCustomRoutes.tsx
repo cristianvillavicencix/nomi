@@ -14,6 +14,7 @@ import { ShortUrlRedirect } from "@/lbs/forms-v2/public/ShortUrlRedirect";
 import { FormsListPage } from "@/lbs/forms-v2/FormsListPage";
 import { FormBuilderPage } from "@/lbs/forms-v2/builder/FormBuilderPage";
 import { SubmissionsListPage } from "@/lbs/forms-v2/submissions/SubmissionsListPage";
+import { SubmissionDetailPage } from "@/lbs/forms-v2/submissions/SubmissionDetailPage";
 import {
   ContractsPlaceholderPage,
   ProposalsPlaceholderPage,
@@ -255,6 +256,14 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="forms" action="edit">
             <FormBuilderPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/forms-v2/submissions/:id"
+        element={
+          <ProtectedRoute resource="forms" action="list">
+            <SubmissionDetailPage />
           </ProtectedRoute>
         }
       />

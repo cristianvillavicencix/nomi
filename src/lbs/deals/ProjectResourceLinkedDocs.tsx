@@ -3,7 +3,8 @@ import { ListChecks } from "lucide-react";
 import { useGetList } from "ra-core";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
-import type { Contract, FormSubmission, LbsDeal, Proposal } from "@/lbs/types";
+import type { Contract, LbsDeal, Proposal } from "@/lbs/types";
+import type { FormSubmissionV2 } from "@/lbs/forms-v2/types";
 
 const formatMoney = (value?: number | null) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
@@ -101,12 +102,12 @@ export const ProjectResourceLinkedDocs = ({
     );
 
   const { data: submissions = [], isPending: submissionsPending } =
-    useGetList<FormSubmission>(
-      "form_submissions",
+    useGetList<FormSubmissionV2>(
+      "form_submissions_v2",
       {
         filter: { "deal_id@eq": dealId },
         pagination: { page: 1, perPage: 50 },
-        sort: { field: "created_at", order: "DESC" },
+        sort: { field: "submitted_at", order: "DESC" },
       },
       { staleTime: 30_000 },
     );
@@ -144,7 +145,7 @@ export const ProjectResourceLinkedDocs = ({
           {submissions.map((submission) => (
             <Link
               key={submission.id}
-              to={`/web-forms/${submission.form_id}/show`}
+              to={`/forms-v2/submissions/${submission.id}`}
               className="flex items-center justify-between rounded-lg border p-4 text-sm hover:bg-muted/50"
             >
               <div>
@@ -152,8 +153,8 @@ export const ProjectResourceLinkedDocs = ({
                   Form submission #{submission.id}
                 </div>
                 <div className="mt-1 text-muted-foreground">
-                  {submission.created_at
-                    ? new Date(submission.created_at).toLocaleString()
+                  {submission.submitted_at
+                    ? new Date(submission.submitted_at).toLocaleString()
                     : "—"}
                 </div>
               </div>

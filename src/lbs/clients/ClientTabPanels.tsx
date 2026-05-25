@@ -25,7 +25,8 @@ import { NoteCreate } from "@/components/atomic-crm/notes";
 import { findDealLabel } from "@/components/atomic-crm/deals/deal";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import type { Company, ContactNote, Deal } from "@/components/atomic-crm/types";
-import type { Contract, FormSubmission, Proposal, Ticket } from "@/lbs/types";
+import type { Contract, Proposal, Ticket } from "@/lbs/types";
+import type { FormSubmissionV2 } from "@/lbs/forms-v2/types";
 import { ClientTabEmpty } from "@/lbs/clients/ClientContactsTab";
 import { formatDateTime } from "@/lbs/clients/clientShowUtils";
 import { MoneyText } from "@/lib/permissions/MoneyText";
@@ -310,7 +311,7 @@ export const ClientSupportTab = ({
       <ClientTicketsTab companyId={companyId} />
     </section>
     <section className="space-y-3">
-      <h3 className="text-base font-semibold">Web forms</h3>
+      <h3 className="text-base font-semibold">Form submissions</h3>
       <ClientWebFormsTab companyId={companyId} />
     </section>
   </div>
@@ -321,12 +322,12 @@ export const ClientWebFormsTab = ({
 }: {
   companyId: Company["id"];
 }) => {
-  const { data = [], isPending } = useGetList<FormSubmission>(
-    "form_submissions",
+  const { data = [], isPending } = useGetList<FormSubmissionV2>(
+    "form_submissions_v2",
     {
       filter: { "company_id@eq": companyId },
       pagination: { page: 1, perPage: 50 },
-      sort: { field: "created_at", order: "DESC" },
+      sort: { field: "submitted_at", order: "DESC" },
     },
     { staleTime: 30_000 },
   );
@@ -335,7 +336,7 @@ export const ClientWebFormsTab = ({
 
   if (data.length === 0) {
     return (
-      <ClientTabEmpty message="No website intake submissions linked to this client yet." />
+      <ClientTabEmpty message="No form submissions linked to this client yet." />
     );
   }
 
@@ -347,7 +348,7 @@ export const ClientWebFormsTab = ({
             <TableHead>Submission</TableHead>
             <TableHead className="hidden md:table-cell">Summary</TableHead>
             <TableHead>Submitted</TableHead>
-            <TableHead className="text-right">Form</TableHead>
+            <TableHead className="text-right">Detail</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -355,17 +356,17 @@ export const ClientWebFormsTab = ({
             <TableRow key={submission.id}>
               <TableCell className="font-medium">#{submission.id}</TableCell>
               <TableCell className="hidden max-w-md truncate md:table-cell text-muted-foreground">
-                {summarizeSubmission(submission.data)}
+                {summarizeSubmission(submission.answers)}
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {formatDateTime(submission.created_at)}
+                {formatDateTime(submission.submitted_at)}
               </TableCell>
               <TableCell className="text-right">
                 <Link
-                  to={`/web-forms/${submission.form_id}/show?submission=${submission.id}`}
+                  to={`/forms-v2/submissions/${submission.id}`}
                   className="link-action text-sm"
                 >
-                  View form
+                  View
                 </Link>
               </TableCell>
             </TableRow>

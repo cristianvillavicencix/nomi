@@ -101,8 +101,20 @@ export type FormSubmissionV2 = {
   contact_id?: number | null;
   company_id?: number | null;
   status?: string;
+  submitter_email?: string | null;
+  submitter_phone?: string | null;
+  submitter_name?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  source_url?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
   submitted_at?: string;
+  reviewed_at?: string | null;
+  reviewed_by_member_id?: number | null;
   created_at?: string;
+  updated_at?: string;
 };
 
 export type FormInstance = {

@@ -1,7 +1,7 @@
 import { useGetList, type Identifier } from "ra-core";
 import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
-import type { Contract, FormSubmission, Proposal, Ticket } from "@/lbs/types";
+import type { FormSubmissionV2 } from "@/lbs/forms-v2/types";
 
 const countQuery = (resource: string, filter: Record<string, unknown>) => ({
   filter,
@@ -38,9 +38,9 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
     countQuery("tickets", { "company_id@eq": companyId }),
     { staleTime, enabled },
   );
-  const { total: webForms = 0 } = useGetList<FormSubmission>(
-    "form_submissions",
-    countQuery("form_submissions", { "company_id@eq": companyId }),
+  const { total: webForms = 0 } = useGetList<FormSubmissionV2>(
+    "form_submissions_v2",
+    countQuery("form_submissions_v2", { "company_id@eq": companyId }),
     { staleTime, enabled },
   );
 
