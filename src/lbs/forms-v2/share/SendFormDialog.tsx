@@ -99,8 +99,7 @@ export const SendFormDialog = ({
 
   const previewMessage = useMemo(() => {
     const url =
-      generatedUrl ||
-      buildFormShortUrl(window.location.origin, "example123");
+      generatedUrl || buildFormShortUrl(window.location.origin, "example123");
     return `${customMessage.trim()}\n\n${url}`.trim();
   }, [customMessage, generatedUrl]);
 
@@ -120,9 +119,12 @@ export const SendFormDialog = ({
       setGeneratedUrl(resolveShareUrl(result, window.location.origin));
     },
     onError: (error) => {
-      notify(error instanceof Error ? error.message : "Failed to generate link", {
-        type: "error",
-      });
+      notify(
+        error instanceof Error ? error.message : "Failed to generate link",
+        {
+          type: "error",
+        },
+      );
     },
   });
 
@@ -259,7 +261,11 @@ export const SendFormDialog = ({
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <div className="flex flex-wrap gap-2">

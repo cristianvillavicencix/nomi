@@ -76,7 +76,8 @@ export const useSendFormRecipient = (context: SendFormContext) => {
             : deal?.company_id != null
               ? Number(deal.company_id)
               : undefined),
-      dealId: context.deal_id ?? (deal?.id != null ? Number(deal.id) : undefined),
+      dealId:
+        context.deal_id ?? (deal?.id != null ? Number(deal.id) : undefined),
       conversationId: context.conversation_id,
       recipientName,
       recipientEmail,
