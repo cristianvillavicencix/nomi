@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   useGetOne,
+  useGetIdentity,
   useNotify,
   useRefresh,
   useUpdate,
@@ -37,6 +38,7 @@ import {
   isSubmissionStatus,
 } from "@/lbs/forms-v2/submissions/submissionConstants";
 import { exportSubmissionPdf } from "@/lbs/forms-v2/submissions/submissionPdfExport";
+import { buildSubmissionStatusPatch } from "@/lbs/forms-v2/submissions/submissionStatusUpdate";
 import type { FormInstance, FormSubmissionV2 } from "@/lbs/forms-v2/types";
 
 const formatEventLabel = (event: FormSubmissionEvent) => {
@@ -72,6 +74,7 @@ export const SubmissionDetailPage = () => {
   const notify = useNotify();
   const refresh = useRefresh();
   const [update] = useUpdate();
+  const { identity } = useGetIdentity();
 
   const { data: submission, isPending } = useGetOne<FormSubmissionV2>(
     "form_submissions_v2",
@@ -98,11 +101,11 @@ export const SubmissionDetailPage = () => {
         "form_submissions_v2",
         {
           id: submission.id,
-          data: {
+          data: buildSubmissionStatusPatch(
             status,
-            reviewed_at:
-              status === "reviewed" ? new Date().toISOString() : submission.reviewed_at,
-          },
+            submission,
+            identity?.id != null ? Number(identity.id) : null,
+          ),
           previousData: submission,
         },
         { mutationMode: "pessimistic" },

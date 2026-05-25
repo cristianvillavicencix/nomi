@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   useDelete,
+  useGetIdentity,
   useGetList,
   useNotify,
   useRefresh,
@@ -58,6 +59,7 @@ import {
   SUBMISSION_STATUS_VARIANT,
   isSubmissionStatus,
 } from "@/lbs/forms-v2/submissions/submissionConstants";
+import { buildSubmissionStatusPatch } from "@/lbs/forms-v2/submissions/submissionStatusUpdate";
 import type { FormInstance, FormSubmissionV2 } from "@/lbs/forms-v2/types";
 
 export const SubmissionsListPage = () => {
@@ -68,6 +70,7 @@ export const SubmissionsListPage = () => {
   const refresh = useRefresh();
   const [update] = useUpdate();
   const [deleteOne] = useDelete();
+  const { identity } = useGetIdentity();
   const [filters, setFilters] = useState<SubmissionListFilters>(() => ({
     ...defaultSubmissionFilters(),
     formIds: initialFormId ? [Number(initialFormId)].filter(Boolean) : [],
@@ -142,11 +145,11 @@ export const SubmissionsListPage = () => {
       "form_submissions_v2",
       {
         id,
-        data: {
+        data: buildSubmissionStatusPatch(
           status,
-          reviewed_at:
-            status === "reviewed" ? new Date().toISOString() : previous.reviewed_at,
-        },
+          previous,
+          identity?.id != null ? Number(identity.id) : null,
+        ),
         previousData: previous,
       },
       { mutationMode: "pessimistic" },
@@ -169,13 +172,11 @@ export const SubmissionsListPage = () => {
             "form_submissions_v2",
             {
               id: submission.id,
-              data: {
-                status: action,
-                reviewed_at:
-                  action === "reviewed"
-                    ? new Date().toISOString()
-                    : submission.reviewed_at,
-              },
+              data: buildSubmissionStatusPatch(
+                action,
+                submission,
+                identity?.id != null ? Number(identity.id) : null,
+              ),
               previousData: submission,
             },
             { mutationMode: "pessimistic" },
