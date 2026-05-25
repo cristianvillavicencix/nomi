@@ -11,6 +11,7 @@ export type FormFieldDef = {
   options?: string[];
   min?: number;
   max?: number;
+  min_items?: number;
   regex?: string;
   regex_message?: string;
   visible_when?: VisibleWhen;
@@ -68,6 +69,21 @@ export const validateAnswersAgainstSchema = (
 
       const value = answers[field.key];
       const label = field.label ?? field.key;
+
+      if (field.type === "dynamic_file_groups") {
+        continue;
+      }
+
+      if (field.type === "dynamic_list") {
+        const items = Array.isArray(value)
+          ? value.map((entry) => readString(entry)).filter(Boolean)
+          : [];
+        const minItems = field.min_items ?? (field.required ? 1 : 0);
+        if (items.length < minItems) {
+          errors.push(`${label} requires at least ${minItems} item(s)`);
+        }
+        continue;
+      }
 
       if (field.required && isEmptyValue(value)) {
         errors.push(`${label} is required`);

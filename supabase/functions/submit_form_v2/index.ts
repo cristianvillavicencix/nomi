@@ -8,6 +8,11 @@ import {
   type FormSchema,
 } from "../_shared/formV2Schema.ts";
 import { handlePostSubmitActions } from "../_shared/formV2PostSubmit.ts";
+import {
+  createProjectResourcesLeadDeal,
+  processProjectResourcesSubmission,
+  resolveProjectResourcesDealId,
+} from "../_shared/formV2ProjectResources.ts";
 import { notifyTeamOnSubmit } from "../_shared/notifyFormSubmission.ts";
 
 type SubmitBody = {
@@ -178,6 +183,36 @@ Deno.serve(
         );
       }
 
+      const orgId = Number(formInstance.org_id);
+      let resolvedDealId =
+        tokenData.deal_id != null ? Number(tokenData.deal_id) : null;
+
+      if (formInstance.slug === "project-resources") {
+        resolvedDealId = await resolveProjectResourcesDealId(
+          supabaseAdmin,
+          orgId,
+          resolvedDealId,
+          answers,
+        );
+
+        if (!resolvedDealId && answers.project_link_mode === "new") {
+          resolvedDealId = await createProjectResourcesLeadDeal(
+            supabaseAdmin,
+            orgId,
+            answers,
+            tokenData.contact_id,
+            tokenData.company_id,
+          );
+        }
+
+        if (
+          answers.project_link_mode === "existing" &&
+          !resolvedDealId
+        ) {
+          return jsonResponse({ error: "Project code not found" }, 400);
+        }
+      }
+
       const { data: submission, error: insertError } = await supabaseAdmin
         .from("form_submissions_v2")
         .insert({
@@ -186,7 +221,7 @@ Deno.serve(
           answers,
           contact_id: tokenData.contact_id,
           company_id: tokenData.company_id,
-          deal_id: tokenData.deal_id,
+          deal_id: resolvedDealId,
           submitter_email: extractFieldValue(answers, [
             "email",
             "respondent_email",
@@ -199,6 +234,7 @@ Deno.serve(
             "name",
             "full_name",
             "submitter_name",
+            "company_name",
           ]),
           ip_address: clientIp,
           user_agent: userAgent,
@@ -269,6 +305,21 @@ Deno.serve(
         }
       }
 
+      if (
+        formInstance.slug === "project-resources" &&
+        submission.deal_id
+      ) {
+        await processProjectResourcesSubmission(
+          supabaseAdmin,
+          {
+            id: submission.id,
+            org_id: Number(submission.org_id),
+            deal_id: submission.deal_id,
+          },
+          answers,
+        );
+      }
+
       if (formInstance.notify_on_submit) {
         await notifyTeamOnSubmit(
           supabaseAdmin,
@@ -276,11 +327,15 @@ Deno.serve(
             id: number;
             org_id: number;
             name: string;
+            slug?: string | null;
             notify_on_submit?: boolean | null;
             notify_member_ids?: number[] | null;
           },
           submission,
-          { appBaseUrl: body.metadata?.app_base_url },
+          {
+            appBaseUrl: body.metadata?.app_base_url,
+            answers,
+          },
         );
       }
 
