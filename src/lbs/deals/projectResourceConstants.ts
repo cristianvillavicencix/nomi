@@ -1,18 +1,23 @@
 export const PROJECT_RESOURCES_SLUG = "project-resources";
 
+export const BASE_PROJECT_RESOURCE_TABS = [
+  "logo",
+  "team",
+  "document",
+  "other",
+] as const;
+
 export type ProjectResourceTabCategory =
-  | "logo"
-  | "service-photo"
-  | "team"
-  | "document"
-  | "other";
+  | (typeof BASE_PROJECT_RESOURCE_TABS)[number]
+  | "service-photo";
 
 /** Legacy values still stored on older records. */
 export type LegacyProjectResourceCategory = "location" | "brand";
 
 export type ProjectResourceCategory =
   | ProjectResourceTabCategory
-  | LegacyProjectResourceCategory;
+  | LegacyProjectResourceCategory
+  | `service:${string}`;
 
 export const PROJECT_RESOURCE_TAB_CATEGORIES: Array<{
   id: ProjectResourceTabCategory;
@@ -65,20 +70,54 @@ export const isProjectResourceTabCategory = (
 ): category is ProjectResourceTabCategory =>
   PROJECT_RESOURCE_TAB_CATEGORIES.some((entry) => entry.id === category);
 
+export const slugifyServiceName = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "service";
+
+export const buildServiceCategory = (serviceName: string) =>
+  `${SERVICE_CATEGORY_PREFIX}${slugifyServiceName(serviceName)}`;
+
+const SERVICE_CATEGORY_PREFIX = "service:";
+
+export const parseServiceCategorySlug = (category?: string | null) => {
+  if (!category?.startsWith(SERVICE_CATEGORY_PREFIX)) return null;
+  return category.slice(SERVICE_CATEGORY_PREFIX.length);
+};
+
+export const formatServiceCategoryLabel = (slug: string) =>
+  slug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
 export const getResourceTabCategory = (
   category?: string | null,
 ): ProjectResourceTabCategory => {
+  if (category?.startsWith(SERVICE_CATEGORY_PREFIX)) {
+    return "service-photo";
+  }
   if (category && isProjectResourceTabCategory(category)) {
     return category;
   }
   return "other";
 };
 
-export const getProjectResourceCategoryLabel = (category: string) =>
-  PROJECT_RESOURCE_TAB_CATEGORIES.find((entry) => entry.id === category)
-    ?.label ??
-  LEGACY_CATEGORY_LABELS[category as LegacyProjectResourceCategory] ??
-  category.replace(/-/g, " ");
+export const getProjectResourceCategoryLabel = (category: string) => {
+  const serviceSlug = parseServiceCategorySlug(category);
+  if (serviceSlug) {
+    return formatServiceCategoryLabel(serviceSlug);
+  }
+  return (
+    PROJECT_RESOURCE_TAB_CATEGORIES.find((entry) => entry.id === category)
+      ?.label ??
+    LEGACY_CATEGORY_LABELS[category as LegacyProjectResourceCategory] ??
+    category.replace(/-/g, " ")
+  );
+};
 
 export type ProjectResourceFile = {
   title: string;

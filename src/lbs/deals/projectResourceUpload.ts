@@ -1,5 +1,6 @@
 import type { Identifier } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { optimizeImageForUpload } from "@/lbs/deals/projectResourceImageOptimize";
 import type {
   ProjectResourceCategory,
   ProjectResourceFile,
@@ -25,16 +26,17 @@ export const uploadProjectResourceFile = async (
   file: File,
   orgId?: Identifier | null,
 ): Promise<ProjectResourceFile> => {
-  const ext = file.name.includes(".")
-    ? file.name.slice(file.name.lastIndexOf("."))
+  const optimized = await optimizeImageForUpload(file);
+  const ext = optimized.name.includes(".")
+    ? optimized.name.slice(optimized.name.lastIndexOf("."))
     : "";
   const orgSegment = orgId != null ? String(orgId) : "unknown";
   const path = `${orgSegment}/${dealId}/${crypto.randomUUID()}${ext}`;
 
   const { error } = await supabase.storage
     .from(PROJECT_FILES_BUCKET)
-    .upload(path, file, {
-      contentType: file.type || "application/octet-stream",
+    .upload(path, optimized, {
+      contentType: optimized.type || "application/octet-stream",
       upsert: false,
     });
   if (error) {
@@ -42,8 +44,8 @@ export const uploadProjectResourceFile = async (
     const legacyPath = `project-resources/${dealId}/${crypto.randomUUID()}${ext}`;
     const legacy = await supabase.storage
       .from("attachments")
-      .upload(legacyPath, file, {
-        contentType: file.type || "application/octet-stream",
+      .upload(legacyPath, optimized, {
+        contentType: optimized.type || "application/octet-stream",
         upsert: false,
       });
     if (legacy.error) throw legacy.error;
@@ -51,8 +53,8 @@ export const uploadProjectResourceFile = async (
       .from("attachments")
       .getPublicUrl(legacyPath);
     return {
-      title: file.name,
-      type: file.type || "application/octet-stream",
+      title: optimized.name,
+      type: optimized.type || "application/octet-stream",
       path: legacyPath,
       src: data.publicUrl,
       bucket: "attachments",
@@ -64,8 +66,8 @@ export const uploadProjectResourceFile = async (
     .createSignedUrl(path, 3600);
 
   return {
-    title: file.name,
-    type: file.type || "application/octet-stream",
+    title: optimized.name,
+    type: optimized.type || "application/octet-stream",
     path,
     src: signed.data?.signedUrl ?? "",
     bucket: PROJECT_FILES_BUCKET,

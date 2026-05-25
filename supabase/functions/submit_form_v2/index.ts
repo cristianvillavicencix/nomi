@@ -138,14 +138,14 @@ Deno.serve(
         }
       }
 
-      if (formInstance.recaptcha_enabled && RECAPTCHA_SECRET) {
-        if (!body.recaptcha_token) {
-          return jsonResponse(
-            { error: "reCAPTCHA verification required" },
-            400,
-          );
-        }
-
+      // Verify reCAPTCHA only when the client could obtain a token (site key
+      // configured in the frontend build). Signed token links already have
+      // rate limits, honeypot, expiry, and max-uses protection.
+      if (
+        formInstance.recaptcha_enabled &&
+        RECAPTCHA_SECRET &&
+        body.recaptcha_token
+      ) {
         const recaptchaResponse = await fetch(
           "https://www.google.com/recaptcha/api/siteverify",
           {

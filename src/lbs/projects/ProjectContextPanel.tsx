@@ -8,6 +8,7 @@ import {
 } from "@/lbs/deals/lbsAgencyProjectModel";
 import { getProjectBriefProgress } from "@/lbs/deals/projectBriefProgress";
 import { getLbsProjectStageLabel } from "@/lbs/deals/lbsProjectConstants";
+import { getProjectDisplayStageLabel } from "@/lbs/projects/projectDisplayPipeline";
 import { BriefProgressBar } from "@/lbs/deals/BriefProgressBar";
 import { SendProjectResourcesDialog } from "@/lbs/deals/SendProjectResourcesDialog";
 import { useState } from "react";
@@ -44,6 +45,9 @@ export const ProjectContextPanel = ({
           <div>
             <div className="text-muted-foreground">Stage</div>
             <div className="font-medium">
+              {getProjectDisplayStageLabel(record.stage)}
+            </div>
+            <div className="text-xs text-muted-foreground">
               {getLbsProjectStageLabel(record.stage)}
             </div>
           </div>

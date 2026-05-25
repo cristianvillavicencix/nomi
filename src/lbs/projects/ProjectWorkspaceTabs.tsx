@@ -34,6 +34,7 @@ import {
   isSupabaseSchemaMissingError,
   supabaseTableQueryOptions,
 } from "@/lbs/deals/supabaseSchemaErrors";
+import { useDealResourcesRealtime } from "@/lbs/deals/useDealResourcesRealtime";
 import type { DealResource, LbsDeal, Task as TaskRecord } from "@/lbs/types";
 import { ProjectContextPanel } from "@/lbs/projects/ProjectContextPanel";
 
@@ -47,14 +48,14 @@ const ProjectContentTab = lazy(() =>
     default: m.ProjectContentTab,
   })),
 );
-const ProjectScheduleTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectScheduleTab").then((m) => ({
-    default: m.ProjectScheduleTab,
+const ProjectDeliveryTab = lazy(() =>
+  import("@/lbs/projects/tabs/ProjectDeliveryTab").then((m) => ({
+    default: m.ProjectDeliveryTab,
   })),
 );
-const ProjectPaymentsTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectPaymentsTab").then((m) => ({
-    default: m.ProjectPaymentsTab,
+const ProjectFinancialsTab = lazy(() =>
+  import("@/lbs/projects/tabs/ProjectFinancialsTab").then((m) => ({
+    default: m.ProjectFinancialsTab,
   })),
 );
 const ProjectActivityTab = lazy(() =>
@@ -70,31 +71,6 @@ const ProjectSettingsTab = lazy(() =>
 const ProjectMessagesTab = lazy(() =>
   import("@/lbs/projects/tabs/ProjectMessagesTab").then((m) => ({
     default: m.ProjectMessagesTab,
-  })),
-);
-const ProjectExpensesTab = lazy(() =>
-  import("@/lbs/projects/financials/ExpensesTab").then((m) => ({
-    default: m.ExpensesTab,
-  })),
-);
-const ProjectChangeOrdersTab = lazy(() =>
-  import("@/lbs/projects/financials/ChangeOrdersTab").then((m) => ({
-    default: m.ChangeOrdersTab,
-  })),
-);
-const ProjectCommissionsTab = lazy(() =>
-  import("@/lbs/projects/financials/CommissionsTab").then((m) => ({
-    default: m.CommissionsTab,
-  })),
-);
-const LaunchChecklistTabLazy = lazy(() =>
-  import("@/lbs/projects/launch/LaunchChecklistTab").then((m) => ({
-    default: m.LaunchChecklistTab,
-  })),
-);
-const MaintenanceTabLazy = lazy(() =>
-  import("@/lbs/projects/tabs/MaintenanceTab").then((m) => ({
-    default: m.MaintenanceTab,
   })),
 );
 
@@ -181,6 +157,14 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
     [openTasksCount, doneTasksCount],
   );
 
+  const canViewFinancials =
+    canViewExpenses ||
+    canViewChangeOrders ||
+    canViewPayments ||
+    canViewCommissions;
+
+  useDealResourcesRealtime(record.id, !resourcesSchemaMissing);
+
   const handleTabChange = (tab: string) => {
     const nextTab = getValidProjectTab(tab);
     setVisited((prev) => new Set(prev).add(nextTab));
@@ -231,38 +215,17 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   <span>Tasks</span>
                   <BriefTabProgress percent={tasksProgress.percent} />
                 </TabsTrigger>
-                <TabsTrigger value="schedule" className="shrink-0">
-                  Schedule
-                </TabsTrigger>
-                <TabsTrigger value="launch" className="shrink-0">
-                  Launch
+                <TabsTrigger value="delivery" className="shrink-0">
+                  Delivery
                 </TabsTrigger>
                 <TabsTrigger value="messages" className="shrink-0">
                   Messages
                 </TabsTrigger>
-                {canViewExpenses ? (
-                  <TabsTrigger value="expenses" className="shrink-0">
-                    Expenses
+                {canViewFinancials ? (
+                  <TabsTrigger value="financials" className="shrink-0">
+                    Financials
                   </TabsTrigger>
                 ) : null}
-                {canViewChangeOrders ? (
-                  <TabsTrigger value="change_orders" className="shrink-0">
-                    Change orders
-                  </TabsTrigger>
-                ) : null}
-                {canViewPayments ? (
-                  <TabsTrigger value="payments" className="shrink-0">
-                    Payments
-                  </TabsTrigger>
-                ) : null}
-                {canViewCommissions ? (
-                  <TabsTrigger value="commissions" className="shrink-0">
-                    Commissions
-                  </TabsTrigger>
-                ) : null}
-                <TabsTrigger value="maintenance" className="shrink-0">
-                  Maintenance
-                </TabsTrigger>
                 <TabsTrigger value="activity" className="shrink-0">
                   Activity
                 </TabsTrigger>
@@ -298,17 +261,10 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
               <TabsContent value="tasks" className="pt-4">
                 <ProjectTasksPanel record={record} contactIds={contactIds} />
               </TabsContent>
-              <TabsContent value="schedule" className="pt-4">
-                {showTab("schedule") ? (
+              <TabsContent value="delivery" className="pt-4">
+                {showTab("delivery") ? (
                   <Suspense fallback={<TabFallback />}>
-                    <ProjectScheduleTab record={record} />
-                  </Suspense>
-                ) : null}
-              </TabsContent>
-              <TabsContent value="launch" className="pt-4">
-                {showTab("launch") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <LaunchChecklistTabLazy record={record} />
+                    <ProjectDeliveryTab record={record} />
                   </Suspense>
                 ) : null}
               </TabsContent>
@@ -319,49 +275,15 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   </Suspense>
                 ) : null}
               </TabsContent>
-              {canViewExpenses ? (
-                <TabsContent value="expenses" className="pt-4">
-                  {showTab("expenses") ? (
+              {canViewFinancials ? (
+                <TabsContent value="financials" className="pt-4">
+                  {showTab("financials") ? (
                     <Suspense fallback={<TabFallback />}>
-                      <ProjectExpensesTab record={record} />
+                      <ProjectFinancialsTab record={record} />
                     </Suspense>
                   ) : null}
                 </TabsContent>
               ) : null}
-              {canViewChangeOrders ? (
-                <TabsContent value="change_orders" className="pt-4">
-                  {showTab("change_orders") ? (
-                    <Suspense fallback={<TabFallback />}>
-                      <ProjectChangeOrdersTab record={record} />
-                    </Suspense>
-                  ) : null}
-                </TabsContent>
-              ) : null}
-              {canViewPayments ? (
-                <TabsContent value="payments" className="pt-4">
-                  {showTab("payments") ? (
-                    <Suspense fallback={<TabFallback />}>
-                      <ProjectPaymentsTab record={record} />
-                    </Suspense>
-                  ) : null}
-                </TabsContent>
-              ) : null}
-              {canViewCommissions ? (
-                <TabsContent value="commissions" className="pt-4">
-                  {showTab("commissions") ? (
-                    <Suspense fallback={<TabFallback />}>
-                      <ProjectCommissionsTab record={record} />
-                    </Suspense>
-                  ) : null}
-                </TabsContent>
-              ) : null}
-              <TabsContent value="maintenance" className="pt-4">
-                {showTab("maintenance") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <MaintenanceTabLazy record={record} />
-                  </Suspense>
-                ) : null}
-              </TabsContent>
               <TabsContent value="activity" className="pt-4">
                 {showTab("activity") ? (
                   <Suspense fallback={<TabFallback />}>

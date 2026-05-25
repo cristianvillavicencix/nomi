@@ -16,6 +16,10 @@ import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { FormInstance } from "@/lbs/forms-v2/types";
 import { PROJECT_RESOURCES_SLUG } from "@/lbs/deals/projectResourceConstants";
+import {
+  appendRequestScopeToUrl,
+  type ResourceRequestScope,
+} from "@/lbs/deals/projectResourceRequestScope";
 import { mailtoHref } from "@/lib/linking";
 
 const resolveShareUrl = (
@@ -39,6 +43,7 @@ type SendProjectResourcesDialogProps = {
   clientEmail?: string;
   clientName?: string;
   projectName?: string;
+  requestScope?: ResourceRequestScope;
 };
 
 export const SendProjectResourcesDialog = ({
@@ -50,6 +55,7 @@ export const SendProjectResourcesDialog = ({
   clientEmail,
   clientName,
   projectName,
+  requestScope,
 }: SendProjectResourcesDialogProps) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -101,8 +107,9 @@ export const SendProjectResourcesDialog = ({
 
   const formUrl = useMemo(() => {
     if (!generateLink.data) return "";
-    return resolveShareUrl(generateLink.data, window.location.origin);
-  }, [generateLink.data]);
+    const base = resolveShareUrl(generateLink.data, window.location.origin);
+    return requestScope ? appendRequestScopeToUrl(base, requestScope) : base;
+  }, [generateLink.data, requestScope]);
 
   const handleCopy = async () => {
     if (!formUrl) return;
@@ -130,8 +137,9 @@ export const SendProjectResourcesDialog = ({
         <DialogHeader>
           <DialogTitle>Request files from client</DialogTitle>
           <DialogDescription>
-            Send this link so your client can upload logos, service photos, and
-            other assets through the Project Resources wizard.
+            {requestScope
+              ? "This link asks only for the selected categories (logo, team, or a specific service)."
+              : "Send this link so your client can upload logos, team photos, service photos, and other assets through the Project Resources wizard."}
           </DialogDescription>
         </DialogHeader>
 

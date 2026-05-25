@@ -1042,16 +1042,13 @@ const dataProviderWithCustomMethods = {
       },
     });
 
-    if (error) {
-      console.error("submit_form_v2.error", error);
-      throw new Error("Failed to submit form");
-    }
-
-    if (!data?.ok) {
+    if (error || !data?.ok) {
       const detail = data?.details?.length
         ? `: ${data.details.join(", ")}`
         : "";
-      throw new Error((data?.error ?? "Failed to submit form") + detail);
+      const message = (data?.error ?? "Failed to submit form") + detail;
+      console.error("submit_form_v2.error", error ?? message);
+      throw new Error(message);
     }
 
     return data;

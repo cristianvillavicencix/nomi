@@ -70,7 +70,11 @@ export const validateAnswersAgainstSchema = (
       const value = answers[field.key];
       const label = field.label ?? field.key;
 
-      if (field.type === "dynamic_file_groups") {
+      if (
+        field.type === "dynamic_file_groups" ||
+        field.type === "file" ||
+        field.type === "file_multi"
+      ) {
         continue;
       }
 
@@ -179,7 +183,7 @@ export const validateAnswersAgainstSchema = (
 export const generateSecureToken = (): string => {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "hex")).join(
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
     "",
   );
 };

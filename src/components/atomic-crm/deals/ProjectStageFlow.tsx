@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -50,6 +50,8 @@ const getTextColor = (state: StageVisualState) => {
   return "hsl(0 0% 100%)";
 };
 
+const CHEVRON_DEPTH = "var(--stage-chevron-depth, 18px)";
+
 const getSegmentClipPath = (index: number, total: number) => {
   const isFirst = index === 0;
   const isLast = index === total - 1;
@@ -58,12 +60,22 @@ const getSegmentClipPath = (index: number, total: number) => {
     return "polygon(0 0, 100% 0, 100% 100%, 0 100%)";
   }
   if (isFirst) {
-    return "polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%)";
+    return `polygon(0 0, calc(100% - ${CHEVRON_DEPTH}) 0, 100% 50%, calc(100% - ${CHEVRON_DEPTH}) 100%, 0 100%)`;
   }
   if (isLast) {
-    return "polygon(0 0, 100% 0, 100% 100%, 0 100%, 18px 50%)";
+    return `polygon(0 0, 100% 0, 100% 100%, 0 100%, ${CHEVRON_DEPTH} 50%)`;
   }
-  return "polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%, 18px 50%)";
+  return `polygon(0 0, calc(100% - ${CHEVRON_DEPTH}) 0, 100% 50%, calc(100% - ${CHEVRON_DEPTH}) 100%, 0 100%, ${CHEVRON_DEPTH} 50%)`;
+};
+
+const getSegmentTextPaddingClass = (index: number, total: number) => {
+  const isFirst = index === 0;
+  const isLast = index === total - 1;
+
+  if (isFirst && isLast) return "";
+  if (isFirst) return "pr-[var(--stage-chevron-depth)]";
+  if (isLast) return "pl-[var(--stage-chevron-depth)]";
+  return "px-[calc(var(--stage-chevron-depth)*0.5)]";
 };
 
 export const ProjectStageFlow = (props: {
@@ -104,11 +116,17 @@ const ProjectStageFlowInner = ({
   }, [activeStageId]);
 
   return (
-    <div className={cn("mb-4 w-full rounded-xl bg-card p-2.5", className)}>
-      <div className="overflow-x-auto pb-0.5">
-        <div className="flex min-w-[680px] w-full items-stretch">
-          <TooltipProvider>
-            {stages.map((stage, index) => {
+    <div
+      className={cn("mb-4 w-full rounded-xl bg-card p-2 sm:p-2.5", className)}
+      style={
+        {
+          "--stage-chevron-depth": "clamp(8px, 2.2vw, 18px)",
+        } as CSSProperties
+      }
+    >
+      <div className="flex w-full min-w-0 items-stretch">
+        <TooltipProvider>
+          {stages.map((stage, index) => {
               const state = getStageVisualState(index, activeIndex);
               const background = getProgressColor(index, stages.length, state);
               const textColor = getTextColor(state);
@@ -132,14 +150,19 @@ const ProjectStageFlowInner = ({
                         canChangeToStage && onStageChange?.(stage.id)
                       }
                       disabled={!canChangeToStage}
-                      className={`relative h-12 flex-1 min-w-[140px] px-6 text-left text-sm font-medium transition-all duration-300 ${
+                      className={cn(
+                        "relative flex h-9 min-w-0 flex-1 items-center justify-center px-1 text-[10px] font-medium transition-all duration-300 sm:h-11 sm:px-1.5 sm:text-xs md:h-12 md:text-sm",
+                        getSegmentTextPaddingClass(index, stages.length),
                         canChangeToStage
                           ? "cursor-pointer hover:brightness-95"
-                          : "cursor-default"
-                      }`}
+                          : "cursor-default",
+                      )}
                       style={{
                         clipPath,
-                        marginLeft: index === 0 ? 0 : -10,
+                        marginLeft:
+                          index === 0
+                            ? 0
+                            : "calc(var(--stage-chevron-depth) * -0.56)",
                         zIndex: stages.length - index,
                         background,
                         color: textColor,
@@ -155,8 +178,11 @@ const ProjectStageFlowInner = ({
                             : "inset 0 0 0 1px rgba(255,255,255,0.35)",
                       }}
                       aria-current={isCurrent ? "step" : undefined}
+                      title={stage.label}
                     >
-                      <span className="line-clamp-1">{stage.label}</span>
+                      <span className="w-full truncate text-center leading-tight">
+                        {stage.label}
+                      </span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent
@@ -181,8 +207,7 @@ const ProjectStageFlowInner = ({
                 </Tooltip>
               );
             })}
-          </TooltipProvider>
-        </div>
+        </TooltipProvider>
       </div>
     </div>
   );

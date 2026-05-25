@@ -33,11 +33,11 @@ export const ResourceMediaCard = ({
         className="block w-full text-left"
       >
         {isImage ? (
-          <div className="aspect-[4/3] overflow-hidden bg-muted/20">
+          <div className="flex aspect-square items-center justify-center overflow-hidden bg-[linear-gradient(45deg,hsl(var(--muted)/0.55)_25%,transparent_25%,transparent_75%,hsl(var(--muted)/0.55)_75%,hsl(var(--muted)/0.55)),linear-gradient(45deg,hsl(var(--muted)/0.55)_25%,transparent_25%,transparent_75%,hsl(var(--muted)/0.55)_75%,hsl(var(--muted)/0.55))] bg-[length:16px_16px] bg-[position:0_0,8px_8px] p-2">
             <img
               src={file.src}
               alt={title}
-              className="size-full object-cover transition-transform group-hover:scale-[1.03]"
+              className="max-h-full max-w-full rounded-sm object-contain transition-transform group-hover:scale-[1.02]"
             />
           </div>
         ) : (
@@ -106,7 +106,7 @@ const ResourceGrid = ({
   onDelete: (resource: DealResource) => void;
   deletingId?: string | number | null;
 }) => (
-  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
     {items.map((resource) => (
       <ResourceMediaCard
         key={String(resource.id)}

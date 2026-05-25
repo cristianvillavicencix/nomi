@@ -13,13 +13,14 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
   PROJECT_RESOURCE_TAB_CATEGORIES,
-  type ProjectResourceTabCategory,
+  parseServiceCategorySlug,
 } from "@/lbs/deals/projectResourceConstants";
 
 type ResourceUploadDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  category: ProjectResourceTabCategory;
+  category: string;
+  categoryLabel?: string;
   label: string;
   onLabelChange: (label: string) => void;
   files: File[];
@@ -46,6 +47,7 @@ export const ResourceUploadDialog = ({
   open,
   onOpenChange,
   category,
+  categoryLabel,
   label,
   onLabelChange,
   files,
@@ -58,6 +60,12 @@ export const ResourceUploadDialog = ({
   const categoryDef = PROJECT_RESOURCE_TAB_CATEGORIES.find(
     (entry) => entry.id === category,
   );
+  const resolvedTitle =
+    categoryLabel ??
+    categoryDef?.label ??
+    (parseServiceCategorySlug(category)
+      ? category.replace(/^service:/, "").replace(/-/g, " ")
+      : "Resources");
 
   const handleFiles = (incoming: File[]) => {
     if (incoming.length === 0) return;
@@ -74,9 +82,7 @@ export const ResourceUploadDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            Upload to {categoryDef?.label ?? "Resources"}
-          </DialogTitle>
+          <DialogTitle>Upload to {resolvedTitle}</DialogTitle>
           {categoryDef?.description ? (
             <p className="text-sm text-muted-foreground">
               {categoryDef.description}
@@ -84,7 +90,7 @@ export const ResourceUploadDialog = ({
           ) : null}
         </DialogHeader>
         <div className="space-y-4 py-1">
-          {category === "service-photo" ? (
+          {parseServiceCategorySlug(category) || category === "service-photo" ? (
             <div className="space-y-2">
               <Label htmlFor="resource-service-label">Service name *</Label>
               <Input

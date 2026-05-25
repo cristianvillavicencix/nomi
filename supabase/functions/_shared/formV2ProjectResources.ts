@@ -137,6 +137,23 @@ export async function processProjectResourcesSubmission(
     });
   }
 
+  const teamPhotos = Array.isArray(answers.team_photos)
+    ? (answers.team_photos as UploadedAnswerFile[])
+    : [];
+  for (const photo of teamPhotos) {
+    resourcesToInsert.push({
+      org_id: submission.org_id,
+      deal_id: dealId,
+      category: "team",
+      label: photo.original_name ?? photo.name ?? "Team photo",
+      file: toDealResourceFile(photo),
+      visibility: "internal",
+      mime_kind: inferMimeKind(photo.mime_type ?? photo.type ?? ""),
+      source: "project_resources_wizard",
+      submitted_by_form: submission.id,
+    });
+  }
+
   for (const service of services) {
     const photos = servicePhotos[service] ?? [];
     for (const photo of photos) {

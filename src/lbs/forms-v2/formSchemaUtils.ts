@@ -87,8 +87,9 @@ export const validateSectionFields = (
   return errors;
 };
 
+/** v2 public links use 64-char tokens (legacy slugs are short, e.g. project-resources). */
 export const isLikelyFormToken = (value: string) =>
-  /^[a-f0-9]{64}$/i.test(value.trim());
+  value.trim().length === 64;
 
 export type WizardMode = "auto" | "on" | "off";
 

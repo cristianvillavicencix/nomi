@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const token = String(url.searchParams.get("token") ?? "").trim();
-  if (!/^[a-f0-9]{64}$/i.test(token)) {
+  if (token.length !== 64) {
     return createErrorResponse(400, "Invalid form token");
   }
 

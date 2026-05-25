@@ -10,21 +10,12 @@ import {
 } from "ra-core";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router";
-import { DeleteButton } from "@/components/admin/delete-button";
-import { EditButton } from "@/components/admin/edit-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DealsExplorerPanel } from "@/components/atomic-crm/deals/DealsExplorerPanel";
-import { getPipelineStages } from "@/components/atomic-crm/deals/pipelines";
 import { ProjectStageFlow } from "@/components/atomic-crm/deals/ProjectStageFlow";
 import { useNavigationLayoutPreference } from "@/components/atomic-crm/layout/navigationLayoutPreference";
-import { canUseCrmPermission } from "@/components/atomic-crm/providers/commons/crmPermissions";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
-import type { Deal } from "@/components/atomic-crm/types";
 import { deliveryStatusForStage } from "@/lbs/deals/lbsAgencyProjectModel";
-import { DealClientSmsButton } from "@/lbs/deals/DealClientSmsButton";
-import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 import { LbsDealHeaderOverview } from "@/lbs/deals/LbsDealHeaderOverview";
 import { LbsProjectDeliveryUrgency } from "@/lbs/deals/LbsProjectDeliveryUrgency";
 import {
@@ -40,6 +31,12 @@ import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
 import { getBriefStageAdvanceCheck } from "@/lbs/deals/projectBriefProgress";
 import { getLaunchStageAdvanceCheck } from "@/lbs/projects/launch/launchChecklistGate";
 import { runProjectStageAutomations } from "@/lbs/projects/projectStageAutomations";
+import { ProjectActionsMenu } from "@/lbs/projects/ProjectActionsMenu";
+import {
+  getProjectDisplayPipelineStages,
+  getProjectDisplayStageForDealStage,
+  resolveProjectDisplayStageChange,
+} from "@/lbs/projects/projectDisplayPipeline";
 import { ProjectWorkspaceTabs } from "@/lbs/projects/ProjectWorkspaceTabs";
 import type { LbsDeal } from "@/lbs/types";
 
@@ -49,76 +46,7 @@ const ArchivedTitle = () => (
   </div>
 );
 
-const ArchiveButton = ({ record }: { record: Deal }) => {
-  const [update] = useUpdate();
-  const notify = useNotify();
-  const refresh = useRefresh();
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={() =>
-        update(
-          "deals",
-          {
-            id: record.id,
-            data: { archived_at: new Date().toISOString() },
-            previousData: record,
-          },
-          {
-            onSuccess: () => {
-              notify("Project archived", { type: "info" });
-              refresh();
-            },
-            onError: () =>
-              notify("Could not archive project", { type: "error" }),
-          },
-        )
-      }
-    >
-      Archive
-    </Button>
-  );
-};
-
-const UnarchiveButton = ({ record }: { record: Deal }) => {
-  const [update] = useUpdate();
-  const notify = useNotify();
-  const refresh = useRefresh();
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={() =>
-        update(
-          "deals",
-          {
-            id: record.id,
-            data: { archived_at: null },
-            previousData: record,
-          },
-          {
-            onSuccess: () => {
-              notify("Project restored", { type: "info" });
-              refresh();
-            },
-            onError: () =>
-              notify("Could not restore project", { type: "error" }),
-          },
-        )
-      }
-    >
-      Restore
-    </Button>
-  );
-};
-
 const ProjectShowContent = () => {
-  const config = useConfigurationContext();
   const record = useRecordContext<LbsDeal>();
   const { data: identity } = useGetIdentity();
   const dataProvider = useDataProvider();
@@ -126,19 +54,16 @@ const ProjectShowContent = () => {
   const refresh = useRefresh();
   const [update, { isPending: isUpdatingStage }] = useUpdate();
 
-  const pipelineStages = useMemo(
-    () => getPipelineStages(config, record?.pipeline_id),
-    [config, record?.pipeline_id],
-  );
+  const displayStages = useMemo(() => getProjectDisplayPipelineStages(), []);
+  const displayCurrentStage = getProjectDisplayStageForDealStage(record?.stage);
 
   if (!record) return null;
 
-  const canManageSales = canUseCrmPermission(
-    identity as Parameters<typeof canUseCrmPermission>[0],
-    "sales.manage",
-  );
-
-  const handleStageChange = async (stageId: string) => {
+  const handleStageChange = async (displayStageId: string) => {
+    const stageId = resolveProjectDisplayStageChange(
+      displayStageId,
+      record.stage,
+    );
     if (isUpdatingStage || stageId === record.stage) return;
 
     const briefCheck = getBriefStageAdvanceCheck(record, stageId);
@@ -271,48 +196,13 @@ const ProjectShowContent = () => {
           )}
         >
           <LbsProjectDeliveryUrgency record={record} />
-          <div className="flex flex-wrap gap-2">
-            <SendFormButton
-              context={{
-                type: "deal",
-                deal_id: Number(record.id),
-                company_id:
-                  record.company_id != null ? Number(record.company_id) : undefined,
-                contact_id:
-                  record.contact_id != null
-                    ? Number(record.contact_id)
-                    : Array.isArray(record.contact_ids) &&
-                        record.contact_ids.length > 0
-                      ? Number(record.contact_ids[0])
-                      : undefined,
-                resourceName: record.name,
-              }}
-            />
-            <DealClientSmsButton record={record} />
-            <ShareRecordModal
-              resourceType="deals"
-              resourceId={record.id}
-              orgId={(record as { org_id?: number }).org_id}
-            />
-            {record.archived_at && canManageSales ? (
-              <>
-                <UnarchiveButton record={record} />
-                <DeleteButton />
-              </>
-            ) : null}
-            {!record.archived_at && canManageSales ? (
-              <>
-                <ArchiveButton record={record} />
-                <EditButton />
-              </>
-            ) : null}
-          </div>
+          <ProjectActionsMenu record={record} />
         </div>
       </div>
 
       <ProjectStageFlow
-        stages={pipelineStages}
-        currentStage={record.stage}
+        stages={displayStages}
+        currentStage={displayCurrentStage}
         onStageChange={handleStageChange}
         className="mb-1.5 rounded-b-none pb-2"
       />

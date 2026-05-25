@@ -47,6 +47,10 @@ import {
 } from "@/lbs/forms-v2/public/PublicFormEmbedProvider";
 import { expandWizardSteps } from "@/lbs/forms-v2/wizardStepUtils";
 import {
+  filterProjectResourcesSchema,
+  readRequestScopeFromLocation,
+} from "@/lbs/deals/projectResourceRequestScope";
+import {
   DynamicFileGroupsField,
   WizardSummaryStep,
 } from "@/lbs/forms-v2/public/fields/DynamicFileGroupsField";
@@ -383,15 +387,40 @@ export const PublicFormRenderer = () => {
     };
   }, [answers, token, formPayload?.is_preview, submitted]);
 
-  const sections = useMemo(
-    () => getVisibleSections(formPayload?.form.schema, answers),
-    [formPayload?.form.schema, answers],
+  const requestScope = useMemo(
+    () => readRequestScopeFromLocation(),
+    [searchParams],
   );
-  const isWizard = resolveWizardEnabled(formPayload?.form.schema);
+
+  const effectiveSchema = useMemo(() => {
+    if (formPayload?.form.slug !== "project-resources") {
+      return formPayload?.form.schema;
+    }
+    return (
+      filterProjectResourcesSchema(
+        formPayload?.form.schema,
+        requestScope.sections,
+      ) ?? formPayload?.form.schema
+    );
+  }, [formPayload?.form.schema, formPayload?.form.slug, requestScope.sections]);
+
+  useEffect(() => {
+    if (formPayload?.form.slug !== "project-resources") return;
+    if (requestScope.presetServices.length === 0) return;
+    setAnswers((current) => ({
+      ...current,
+      services: requestScope.presetServices,
+    }));
+  }, [formPayload?.form.slug, requestScope.presetServices]);
+
+  const sections = useMemo(
+    () => getVisibleSections(effectiveSchema, answers),
+    [answers, effectiveSchema],
+  );
+  const isWizard = resolveWizardEnabled(effectiveSchema);
   const wizardSteps = useMemo(
-    () =>
-      isWizard ? expandWizardSteps(formPayload?.form.schema, answers) : [],
-    [answers, formPayload?.form.schema, isWizard],
+    () => (isWizard ? expandWizardSteps(effectiveSchema, answers) : []),
+    [answers, effectiveSchema, isWizard],
   );
   const needsPreflight =
     formPayload?.form.slug === "project-resources" &&

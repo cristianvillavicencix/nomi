@@ -1,4 +1,5 @@
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { optimizeImageForUpload } from "@/lbs/deals/projectResourceImageOptimize";
 
 export type UploadedFormFile = {
   name: string;
@@ -29,13 +30,14 @@ export async function uploadFormFile(
       : options;
 
   if (resolved.token) {
+    const optimized = await optimizeImageForUpload(file);
     const formData = new FormData();
     formData.append("token", resolved.token);
     formData.append("field_key", resolved.fieldKey);
     if (resolved.groupKey) {
       formData.append("group_key", resolved.groupKey);
     }
-    formData.append("file", file);
+    formData.append("file", optimized);
 
     const { data, error } = await supabase.functions.invoke<UploadedFormFile>(
       "upload_form_file",

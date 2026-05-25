@@ -1,9 +1,19 @@
 import type { DealResource } from "@/lbs/types";
 import {
+  formatServiceCategoryLabel,
   getResourceTabCategory,
+  parseServiceCategorySlug,
   PROJECT_RESOURCE_TAB_CATEGORIES,
   type ProjectResourceTabCategory,
 } from "@/lbs/deals/projectResourceConstants";
+
+const getServicePhotoGroupLabel = (resource: DealResource) => {
+  const serviceSlug = parseServiceCategorySlug(resource.category);
+  if (serviceSlug) {
+    return formatServiceCategoryLabel(serviceSlug);
+  }
+  return resource.label?.trim() || "General";
+};
 
 export const groupResourcesByTabCategory = (resources: DealResource[]) => {
   const map = new Map<ProjectResourceTabCategory, DealResource[]>();
@@ -24,12 +34,12 @@ export const groupResourcesByCategory = groupResourcesByTabCategory;
 
 export const groupServicePhotosByLabel = (resources: DealResource[]) => {
   const servicePhotos = resources.filter(
-    (entry) => entry.category === "service-photo",
+    (entry) => getResourceTabCategory(entry.category) === "service-photo",
   );
   const groups = new Map<string, DealResource[]>();
 
   for (const resource of servicePhotos) {
-    const label = resource.label?.trim() || "General";
+    const label = getServicePhotoGroupLabel(resource);
     const bucket = groups.get(label) ?? [];
     bucket.push(resource);
     groups.set(label, bucket);

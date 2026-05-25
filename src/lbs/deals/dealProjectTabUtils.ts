@@ -5,14 +5,9 @@ export const LBS_PROJECT_TABS = [
   "content",
   "resources",
   "tasks",
-  "schedule",
-  "launch",
+  "delivery",
   "messages",
-  "expenses",
-  "change_orders",
-  "payments",
-  "commissions",
-  "maintenance",
+  "financials",
   "activity",
   "settings",
 ] as const;
@@ -30,6 +25,13 @@ const LEGACY_TAB_MAP: Record<string, LbsProjectTab> = {
   activity: "activity",
   security: "settings",
   tickets: "activity",
+  schedule: "delivery",
+  launch: "delivery",
+  maintenance: "delivery",
+  expenses: "financials",
+  change_orders: "financials",
+  payments: "financials",
+  commissions: "financials",
 };
 
 export const getValidProjectTab = (value: string | null): LbsProjectTab => {
