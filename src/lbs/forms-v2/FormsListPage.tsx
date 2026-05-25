@@ -8,7 +8,15 @@ import {
   useUpdate,
 } from "ra-core";
 import { Link, useNavigate } from "react-router";
-import { Copy, ExternalLink, Lock, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import {
+  Copy,
+  ExternalLink,
+  Lock,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  BarChart3,
+} from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -301,6 +309,14 @@ export const FormsListPage = () => {
                           >
                             <ExternalLink className="size-4" />
                             Copy public link
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigate(`/forms-v2/${form.id}/analytics`)
+                            }
+                          >
+                            <BarChart3 className="size-4" />
+                            Analytics
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>

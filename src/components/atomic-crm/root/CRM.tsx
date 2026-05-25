@@ -71,7 +71,6 @@ import { isLbsMode } from "@/lbs/productMode";
 import { ClientPortalPage } from "@/lbs/portal/ClientPortalPage";
 import proposals from "@/lbs/proposals";
 import contracts from "@/lbs/contracts";
-import webForms from "@/lbs/web-forms";
 import tickets from "@/lbs/tickets";
 import { ContactListMobile } from "../contacts/ContactList.tsx";
 import { ContactShow } from "../contacts/ContactShow.tsx";
@@ -529,10 +528,11 @@ const DesktopAdmin = (props: CoreAdminProps) => {
         <>
           <Resource name="proposals" {...proposals} />
           <Resource name="contracts" {...contracts} />
-          <Resource name="forms" {...webForms} />
+          <Resource name="forms" />
           <Resource name="form_submissions" />
           <Resource name="form_instances" />
           <Resource name="form_submissions_v2" />
+          <Resource name="form_submission_events" />
           <Resource name="public_form_tokens" />
           <Resource name="form_templates" />
           <Resource name="tickets" {...tickets} />

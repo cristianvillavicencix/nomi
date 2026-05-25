@@ -864,112 +864,6 @@ const dataProviderWithCustomMethods = {
 
     return { company_id: companyId, contact_id: contactId };
   },
-  async processWebsiteIntake(payload: {
-    formId: Identifier;
-    data: Record<string, unknown>;
-    companyName?: string;
-    contactEmail?: string;
-    contactFirstName?: string;
-    contactLastName?: string;
-    contactPhone?: string;
-    website?: string;
-    address?: string;
-    city?: string;
-    state?: string;
-    zipcode?: string;
-    country?: string;
-    attachments?: Array<{
-      name: string;
-      content: string;
-      content_type?: string;
-    }>;
-  }) {
-    const { data, error } = await invokeEdgeFunction<{
-      company_id: number;
-      contact_id: number;
-      deal_id: number;
-      created?: boolean;
-    }>("process_website_intake", {
-      method: "POST",
-      body: {
-        form_id: payload.formId,
-        data: payload.data,
-        company_name: payload.companyName,
-        contact_email: payload.contactEmail,
-        contact_first_name: payload.contactFirstName,
-        contact_last_name: payload.contactLastName,
-        contact_phone: payload.contactPhone,
-        website: payload.website,
-        address: payload.address,
-        city: payload.city,
-        state: payload.state,
-        zipcode: payload.zipcode,
-        country: payload.country,
-        attachments: payload.attachments,
-      },
-    });
-
-    if (error || !data) {
-      console.error("process_website_intake.error", error);
-      throw new Error("Failed to process website intake");
-    }
-
-    return data;
-  },
-  async submitPublicForm(payload: {
-    slug: string;
-    companyId?: string | number | null;
-    contactId?: string | number | null;
-    dealId?: string | number | null;
-    data: Record<string, unknown>;
-  }) {
-    const { data, error } = await supabase.functions.invoke<{
-      company_id: number;
-      contact_id: number;
-      deal_id: number;
-      created?: boolean;
-    }>("submit_public_form", {
-      body: {
-        slug: payload.slug,
-        company_id: payload.companyId ? Number(payload.companyId) : undefined,
-        contact_id: payload.contactId ? Number(payload.contactId) : undefined,
-        deal_id: payload.dealId ? Number(payload.dealId) : undefined,
-        data: payload.data,
-      },
-      headers: {
-        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
-      },
-    });
-
-    if (error || !data) {
-      console.error("submit_public_form.error", error);
-      throw new Error("Failed to submit form");
-    }
-
-    return data;
-  },
-  async getPublicForm(payload: { slug: string }) {
-    const { data, error } = await supabase.functions.invoke<{
-      name: string;
-      description?: string | null;
-      slug: string;
-      schema?: Record<string, unknown>;
-    }>("get_public_form", {
-      body: {
-        slug: payload.slug,
-      },
-      headers: {
-        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
-      },
-    });
-
-    if (error || !data) {
-      console.error("get_public_form.error", error);
-      throw new Error("Form not found");
-    }
-
-    return data;
-  },
   async getPublicDealBrief(payload: {
     dealId: string | number;
     companyId: string | number;
@@ -1198,6 +1092,32 @@ const dataProviderWithCustomMethods = {
     if (error || !data?.token) {
       console.error("generate_form_token.error", error);
       throw new Error("Failed to generate form link");
+    }
+
+    return data;
+  },
+  async recordFormEvent(payload: {
+    token: string;
+    event_type: "started" | "field_completed" | "field_focused" | "abandoned";
+    field_key?: string;
+  }) {
+    const { data, error } = await supabase.functions.invoke<{ ok?: boolean }>(
+      "record_form_event",
+      {
+        body: payload,
+        headers: {
+          apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+        },
+      },
+    );
+
+    if (error) {
+      console.error("record_form_event.error", error);
+      throw new Error("Failed to record form event");
+    }
+
+    if (!data?.ok) {
+      throw new Error("Failed to record form event");
     }
 
     return data;

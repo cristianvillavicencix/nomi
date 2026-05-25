@@ -40,11 +40,11 @@ import {
   useRecaptchaToken,
 } from "@/lbs/forms-v2/public/useRecaptcha";
 import type { FormSectionDef, PublicFormPayload } from "@/lbs/forms-v2/types";
+import { useFormEventRecorder } from "@/lbs/forms-v2/public/useFormEventRecorder";
 import {
-  PublicFormEmbedProvider,
   publicFormContentClassName,
   usePublicFormEmbed,
-} from "@/lbs/web-forms/PublicFormEmbedProvider";
+} from "@/lbs/forms-v2/public/PublicFormEmbedProvider";
 
 const PreviewBanner = ({ isPreview }: { isPreview?: boolean }) =>
   isPreview ? (
@@ -280,11 +280,7 @@ const ProjectBriefPublicForm = ({
   );
 };
 
-export const PublicFormRenderer = () => (
-  <PublicFormEmbedProvider>
-    <PublicFormRendererContent />
-  </PublicFormEmbedProvider>
-);
+export const PublicFormRenderer = PublicFormRendererContent;
 
 const PublicFormRendererContent = () => {
   const { slug: token = "" } = useParams();
@@ -323,6 +319,9 @@ const PublicFormRendererContent = () => {
   });
 
   const formPayload = payload as PublicFormPayload | undefined;
+  const { trackAnswerChange, markSubmitted } = useFormEventRecorder(token, {
+    isPreview: formPayload?.is_preview,
+  });
 
   useEffect(() => {
     if (!formPayload?.prefill) return;
@@ -380,15 +379,19 @@ const PublicFormRendererContent = () => {
     [formPayload?.form.schema, answers],
   );
 
-  const setAnswer = useCallback((key: string, next: unknown) => {
-    setAnswers((current) => ({ ...current, [key]: next }));
-    setFieldErrors((current) => {
-      if (!current[key]) return current;
-      const rest = { ...current };
-      delete rest[key];
-      return rest;
-    });
-  }, []);
+  const setAnswer = useCallback(
+    (key: string, next: unknown) => {
+      setAnswers((current) => ({ ...current, [key]: next }));
+      trackAnswerChange(key, next);
+      setFieldErrors((current) => {
+        if (!current[key]) return current;
+        const rest = { ...current };
+        delete rest[key];
+        return rest;
+      });
+    },
+    [trackAnswerChange],
+  );
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
@@ -409,6 +412,7 @@ const PublicFormRendererContent = () => {
       });
     },
     onSuccess: (result) => {
+      markSubmitted();
       try {
         localStorage.removeItem(formProgressStorageKey(token));
       } catch {
@@ -612,9 +616,7 @@ const PublicFormRendererContent = () => {
               className="h-full bg-primary transition-all"
               style={{
                 width: `${
-                  sections.length > 0
-                    ? ((step + 1) / sections.length) * 100
-                    : 0
+                  sections.length > 0 ? ((step + 1) / sections.length) * 100 : 0
                 }%`,
               }}
             />
