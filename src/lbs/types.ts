@@ -28,6 +28,7 @@ export type Proposal = {
   contact_id?: Identifier | null;
   deal_id?: Identifier | null;
   organization_member_id?: Identifier | null;
+  created_by_member_id?: Identifier | null;
   title: string;
   status: string;
   amount?: number | null;
@@ -57,6 +58,7 @@ export type Contract = {
   proposal_id?: Identifier | null;
   deal_id?: Identifier | null;
   organization_member_id?: Identifier | null;
+  created_by_member_id?: Identifier | null;
   title: string;
   status: string;
   signed_at?: string | null;
@@ -127,6 +129,7 @@ export type DealResource = {
   visibility?: "internal" | "client" | "public" | string;
   mime_kind?: string | null;
   organization_member_id?: Identifier | null;
+  created_by_member_id?: Identifier | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
 
@@ -140,8 +143,19 @@ export type DealAccessEntry = {
   has_password?: boolean;
   notes?: string | null;
   organization_member_id?: Identifier | null;
+  created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type DealActivityUnified = {
+  activity_type: string;
+  activity_id: string;
+  deal_id: Identifier;
+  member_id?: Identifier | null;
+  description: string;
+  created_at?: string;
+  org_id?: number;
 } & Pick<RaRecord, "id">;
 
 export type ConversationType = "team_dm" | "project" | "client";

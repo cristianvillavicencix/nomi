@@ -32,6 +32,7 @@ import type {
   DealCommission,
   Person,
 } from "@/components/atomic-crm/types";
+import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
@@ -206,11 +207,17 @@ export const CommissionsTab = ({ record }: { record: LbsDeal }) => {
       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
         <span>
           Earned:{" "}
-          <MoneyText value={totalEarned} className="font-semibold text-foreground" />
+          <MoneyText
+            value={totalEarned}
+            className="font-semibold text-foreground"
+          />
         </span>
         <span>
           Paid:{" "}
-          <MoneyText value={totalPaid} className="font-semibold text-foreground" />
+          <MoneyText
+            value={totalPaid}
+            className="font-semibold text-foreground"
+          />
         </span>
         <span>
           Payable:{" "}
@@ -238,7 +245,10 @@ export const CommissionsTab = ({ record }: { record: LbsDeal }) => {
                 </SelectTrigger>
                 <SelectContent>
                   {salespeople.map((person) => (
-                    <SelectItem key={String(person.id)} value={String(person.id)}>
+                    <SelectItem
+                      key={String(person.id)}
+                      value={String(person.id)}
+                    >
                       {person.first_name} {person.last_name}
                     </SelectItem>
                   ))}
@@ -295,6 +305,7 @@ export const CommissionsTab = ({ record }: { record: LbsDeal }) => {
               <TableHead>Rate</TableHead>
               <TableHead>Earned</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Created by</TableHead>
               {canManage ? <TableHead className="w-[88px]" /> : null}
             </TableRow>
           </TableHeader>
@@ -302,7 +313,7 @@ export const CommissionsTab = ({ record }: { record: LbsDeal }) => {
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canManage ? 5 : 4}
+                  colSpan={canManage ? 6 : 5}
                   className="text-muted-foreground"
                 >
                   No commissions on this project yet.
@@ -310,7 +321,8 @@ export const CommissionsTab = ({ record }: { record: LbsDeal }) => {
               </TableRow>
             ) : (
               rows.map(({ commission, earned }) => {
-                const person = salespersonById[Number(commission.salesperson_id)];
+                const person =
+                  salespersonById[Number(commission.salesperson_id)];
                 const isEditing = editingId === Number(commission.id);
                 return (
                   <TableRow key={String(commission.id)}>
@@ -345,6 +357,9 @@ export const CommissionsTab = ({ record }: { record: LbsDeal }) => {
                       <Badge variant={commission.paid ? "default" : "outline"}>
                         {commission.paid ? "Paid" : "Pending"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <AuthorBadge memberId={commission.created_by_member_id} />
                     </TableCell>
                     {canManage ? (
                       <TableCell>

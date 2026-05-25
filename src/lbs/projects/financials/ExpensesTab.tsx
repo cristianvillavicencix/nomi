@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import type { DealExpense } from "@/components/atomic-crm/types";
+import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
@@ -162,10 +163,18 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
         <span>
-          Total: <MoneyText value={totalExpenses} className="font-semibold text-foreground" />
+          Total:{" "}
+          <MoneyText
+            value={totalExpenses}
+            className="font-semibold text-foreground"
+          />
         </span>
         <span>
-          Paid: <MoneyText value={paidTotal} className="font-semibold text-foreground" />
+          Paid:{" "}
+          <MoneyText
+            value={paidTotal}
+            className="font-semibold text-foreground"
+          />
         </span>
         <span>
           Unpaid:{" "}
@@ -286,6 +295,7 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
               <TableHead>Description</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Date</TableHead>
+              <TableHead>Created by</TableHead>
               <TableHead>Status</TableHead>
               {canManage ? <TableHead className="w-[88px]" /> : null}
             </TableRow>
@@ -294,7 +304,7 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
             {expenses.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canManage ? 7 : 6}
+                  colSpan={canManage ? 8 : 7}
                   className="text-muted-foreground"
                 >
                   No expenses recorded for this project.
@@ -328,8 +338,8 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
                           </SelectContent>
                         </Select>
                       ) : (
-                        WEB_EXPENSE_CATEGORY_LABELS[entry.expense_type] ??
-                        entry.expense_type
+                        (WEB_EXPENSE_CATEGORY_LABELS[entry.expense_type] ??
+                        entry.expense_type)
                       )}
                     </TableCell>
                     <TableCell>
@@ -344,7 +354,7 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
                           }
                         />
                       ) : (
-                        entry.vendor ?? "—"
+                        (entry.vendor ?? "—")
                       )}
                     </TableCell>
                     <TableCell>
@@ -359,7 +369,7 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
                           }
                         />
                       ) : (
-                        entry.description ?? "—"
+                        (entry.description ?? "—")
                       )}
                     </TableCell>
                     <TableCell>
@@ -392,8 +402,11 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
                           }
                         />
                       ) : (
-                        entry.purchase_date ?? "—"
+                        (entry.purchase_date ?? "—")
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <AuthorBadge memberId={entry.created_by_member_id} />
                     </TableCell>
                     <TableCell>
                       {entry.paid ? (

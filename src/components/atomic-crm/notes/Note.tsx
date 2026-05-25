@@ -5,7 +5,6 @@ import {
   useNotify,
   useResourceContext,
   useUpdate,
-  WithRecord,
 } from "ra-core";
 import { useEffect, useRef, useState } from "react";
 import type { FieldValues, SubmitHandler } from "react-hook-form";
@@ -24,7 +23,8 @@ import { Markdown } from "../misc/Markdown";
 import { RelativeDate } from "../misc/RelativeDate";
 import { Status } from "../misc/Status";
 import { parseAssetLinkText } from "../misc/assetLinks";
-import { OrganizationMemberName } from "../organizationMembers/OrganizationMemberName";
+import { AuthorBadge } from "../accountability/AuthorBadge";
+import { useIsAdminLevel } from "@/lib/permissions/useIsAdminLevel";
 import type { ContactNote, DealNote } from "../types";
 import { NoteAttachments } from "./NoteAttachments";
 import { NoteInputs } from "./NoteInputs";
@@ -45,6 +45,7 @@ export const Note = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const resource = useResourceContext();
   const notify = useNotify();
+  const isAdminLevel = useIsAdminLevel();
 
   // Detect if content is truncated
   useEffect(() => {
@@ -100,18 +101,14 @@ export const Note = ({
           <CompanyAvatar width={20} height={20} />
         </ReferenceField>
         <div className="inline-flex h-full items-center text-sm text-muted-foreground">
-          <ReferenceField
-            record={note}
-            resource={resource}
-            source="organization_member_id"
-            reference="organization_members"
-            link={false}
-          >
-            <WithRecord
-              render={(record) => <OrganizationMemberName member={record} />}
-            />
-          </ReferenceField>{" "}
-          added a note{" "}
+          {isAdminLevel ? (
+            <>
+              <AuthorBadge memberId={note.organization_member_id} /> added a
+              note{" "}
+            </>
+          ) : (
+            <>Note added </>
+          )}
           {showStatus && note.status && (
             <Status className="ml-2" status={note.status} />
           )}

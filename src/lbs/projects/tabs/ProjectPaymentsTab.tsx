@@ -31,6 +31,7 @@ import type {
   DealChangeOrder,
   DealClientPayment,
 } from "@/components/atomic-crm/types";
+import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
@@ -124,8 +125,7 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
           deal_id: record.id,
           amount: parsed,
           status: "pending",
-          payment_date:
-            paymentDate || new Date().toISOString().slice(0, 10),
+          payment_date: paymentDate || new Date().toISOString().slice(0, 10),
           reference_number: reference.trim() || null,
         },
       },
@@ -152,7 +152,8 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
     setIsScheduling(true);
     try {
       for (const item of PAYMENT_SCHEDULE_SPLITS) {
-        const scheduledAmount = Math.round(projectAmount * (item.percent / 100) * 100) / 100;
+        const scheduledAmount =
+          Math.round(projectAmount * (item.percent / 100) * 100) / 100;
         await create(
           "deal_client_payments",
           {
@@ -281,6 +282,7 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Reference</TableHead>
+              <TableHead>Created by</TableHead>
               {canManage ? <TableHead className="w-[140px]" /> : null}
             </TableRow>
           </TableHeader>
@@ -288,7 +290,7 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
             {payments.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canManage ? 5 : 4}
+                  colSpan={canManage ? 6 : 5}
                   className="text-muted-foreground"
                 >
                   No payments recorded for this project.
@@ -309,6 +311,9 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
                   <TableCell>
                     {payment.reference_number ?? payment.notes ?? "—"}
                   </TableCell>
+                  <TableCell>
+                    <AuthorBadge memberId={payment.created_by_member_id} />
+                  </TableCell>
                   {canManage ? (
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -327,7 +332,10 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
                           </SelectTrigger>
                           <SelectContent>
                             {PAYMENT_STATUS_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
                                 {option.label}
                               </SelectItem>
                             ))}

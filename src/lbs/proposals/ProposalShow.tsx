@@ -11,6 +11,7 @@ import { useNavigate, useParams } from "react-router";
 import { ReferenceField } from "@/components/admin/reference-field";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
+import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +98,14 @@ const ProposalShowContent = () => {
             <span className="text-sm text-muted-foreground">
               <MoneyText value={record.amount} />
             </span>
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Created by:</span>
+            <AuthorBadge
+              memberId={
+                record.created_by_member_id ?? record.organization_member_id
+              }
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

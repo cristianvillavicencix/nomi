@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OrganizationMemberName } from "@/components/atomic-crm/organizationMembers/OrganizationMemberName";
+import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { TaskAssignedAvatars } from "@/components/atomic-crm/tasks/TaskAssignedAvatars";
 import {
   getTaskPriorityClassName,
@@ -198,6 +199,9 @@ export const Task = ({
                   }}
                 />
               ) : null}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              <AuthorBadge memberId={task.organization_member_id} />
             </div>
           </div>
         </div>

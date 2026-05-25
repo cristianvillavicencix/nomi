@@ -602,6 +602,7 @@ export type DealExpense = {
   paid: boolean;
   attachments?: RAFile[];
   notes?: string | null;
+  created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;
 } & Pick<RaRecord, "id">;
@@ -615,6 +616,7 @@ export type DealChangeOrder = {
   reason?: string | null;
   status: "draft" | "sent" | "approved" | "rejected";
   attachments?: RAFile[];
+  created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;
 } & Pick<RaRecord, "id">;
@@ -627,6 +629,7 @@ export type DealCommission = {
   basis: "payments_collected" | "custom";
   paid: boolean;
   notes?: string | null;
+  created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;
 } & Pick<RaRecord, "id">;
@@ -641,6 +644,7 @@ export type DealClientPayment = {
   status: "pending" | "cleared" | "bounced" | "deposited";
   attachments?: RAFile[];
   notes?: string | null;
+  created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;
 } & Pick<RaRecord, "id">;

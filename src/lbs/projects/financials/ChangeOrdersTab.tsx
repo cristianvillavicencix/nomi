@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import type { DealChangeOrder } from "@/components/atomic-crm/types";
+import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
@@ -110,7 +111,8 @@ export const ChangeOrdersTab = ({ record }: { record: LbsDeal }) => {
           deal_id: record.id,
           title: form.title.trim(),
           description: form.description.trim() || null,
-          change_date: form.change_date || new Date().toISOString().slice(0, 10),
+          change_date:
+            form.change_date || new Date().toISOString().slice(0, 10),
           amount,
           reason: form.reason.trim() || null,
           status: form.status,
@@ -184,7 +186,8 @@ export const ChangeOrdersTab = ({ record }: { record: LbsDeal }) => {
           refresh();
           notify("Change order updated", { type: "info" });
         },
-        onError: () => notify("Could not update change order", { type: "error" }),
+        onError: () =>
+          notify("Could not update change order", { type: "error" }),
       },
     );
   };
@@ -196,11 +199,17 @@ export const ChangeOrdersTab = ({ record }: { record: LbsDeal }) => {
       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
         <span>
           Approved:{" "}
-          <MoneyText value={approvedTotal} className="font-semibold text-foreground" />
+          <MoneyText
+            value={approvedTotal}
+            className="font-semibold text-foreground"
+          />
         </span>
         <span>
           Pending:{" "}
-          <MoneyText value={pendingTotal} className="font-semibold text-foreground" />
+          <MoneyText
+            value={pendingTotal}
+            className="font-semibold text-foreground"
+          />
         </span>
       </div>
 
@@ -283,6 +292,7 @@ export const ChangeOrdersTab = ({ record }: { record: LbsDeal }) => {
               <TableHead>Date</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Created by</TableHead>
               {canManage ? <TableHead className="w-[120px]" /> : null}
             </TableRow>
           </TableHeader>
@@ -290,7 +300,7 @@ export const ChangeOrdersTab = ({ record }: { record: LbsDeal }) => {
             {changeOrders.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canManage ? 6 : 5}
+                  colSpan={canManage ? 7 : 6}
                   className="text-muted-foreground"
                 >
                   No change orders for this project.
@@ -330,6 +340,9 @@ export const ChangeOrdersTab = ({ record }: { record: LbsDeal }) => {
                       <Badge variant={statusVariant(entry.status)}>
                         {entry.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <AuthorBadge memberId={entry.created_by_member_id} />
                     </TableCell>
                     {canManage ? (
                       <TableCell>
