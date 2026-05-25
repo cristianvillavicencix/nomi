@@ -13,7 +13,8 @@ export type FormFieldType =
   | "rating"
   | "file"
   | "file_multi"
-  | "signature";
+  | "signature"
+  | "hidden";
 
 export type FormFieldDef = {
   key: string;
@@ -128,5 +129,15 @@ export type PublicFormToken = {
   token: string;
   form_instance_id: number;
   deal_id?: number | null;
+  created_at?: string;
+};
+
+export type FormInstanceVersion = {
+  id: number;
+  form_instance_id: number;
+  version_number: number;
+  schema?: FormSchemaV2;
+  notes?: string | null;
+  created_by_member_id?: number | null;
   created_at?: string;
 };

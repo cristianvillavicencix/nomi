@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { useDataProvider, useNotify } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -228,6 +228,7 @@ export const PublicFormRenderer = () => (
 
 const PublicFormRendererContent = () => {
   const { slug: token = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const notify = useNotify();
   const { embedded } = usePublicFormEmbed();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -260,6 +261,14 @@ const PublicFormRendererContent = () => {
     if (!formPayload?.prefill) return;
     setAnswers((current) => ({ ...formPayload.prefill, ...current }));
   }, [formPayload?.prefill]);
+
+  useEffect(() => {
+    const urlPrefill: Record<string, string> = {};
+    const source = searchParams.get("source");
+    if (source) urlPrefill.source = source;
+    if (Object.keys(urlPrefill).length === 0) return;
+    setAnswers((current) => ({ ...urlPrefill, ...current }));
+  }, [searchParams]);
 
   const sections = useMemo(
     () => getVisibleSections(formPayload?.form.schema, answers),

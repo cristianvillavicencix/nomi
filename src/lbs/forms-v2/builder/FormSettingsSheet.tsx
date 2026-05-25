@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormBuilder } from "@/lbs/forms-v2/builder/FormBuilderContext";
+import { FormVersionsTab } from "@/lbs/forms-v2/builder/FormVersionsTab";
 import { MemberPhoneStatus } from "@/lbs/settings/MemberPhoneStatus";
 
 type FormSettingsSheetProps = {
@@ -36,7 +37,7 @@ export const FormSettingsSheet = ({
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [deleteOne] = useDelete();
-  const { formInstance, setFormInstance, save } = useFormBuilder();
+  const { formInstance, setFormInstance, save, schema } = useFormBuilder();
   const [notifyIds, setNotifyIds] = useState<number[]>(
     formInstance.notify_member_ids ?? [],
   );
@@ -168,6 +169,7 @@ export const FormSettingsSheet = ({
             <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="anti-spam">Anti-spam</TabsTrigger>
             <TabsTrigger value="distribution">Distribution</TabsTrigger>
+            <TabsTrigger value="versions">Versions</TabsTrigger>
             <TabsTrigger value="advanced">Advanced</TabsTrigger>
           </TabsList>
 
@@ -458,6 +460,13 @@ export const FormSettingsSheet = ({
                 </Button>
               ) : null}
             </div>
+          </TabsContent>
+
+          <TabsContent value="versions">
+            <FormVersionsTab
+              formInstanceId={Number(formInstance.id)}
+              currentSchema={schema}
+            />
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-4 pt-4">

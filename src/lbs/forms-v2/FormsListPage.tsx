@@ -8,7 +8,7 @@ import {
   useUpdate,
 } from "ra-core";
 import { Link, useNavigate } from "react-router";
-import { Copy, ExternalLink, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Lock, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -131,6 +131,30 @@ export const FormsListPage = () => {
     );
   };
 
+  const duplicateAsCustom = (form: FormInstance) => {
+    const copyName = `${form.name} (Copy)`;
+    const slug = `${toSlug(form.name)}-copy-${Date.now()}`;
+    create(
+      "form_instances",
+      {
+        data: {
+          name: copyName,
+          slug,
+          schema: form.schema,
+          template_id: null,
+          description: form.description ?? null,
+          is_active: true,
+          is_public: true,
+        },
+      },
+      {
+        onSuccess: () => notify("Custom copy created", { type: "info" }),
+        onError: () =>
+          notify("Failed to create custom copy", { type: "error" }),
+      },
+    );
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -191,17 +215,26 @@ export const FormsListPage = () => {
                 const template = form.template_id
                   ? templateById.get(Number(form.template_id))
                   : null;
+                const isSystemForm = Boolean(template?.is_system);
                 const stats = submissionStats.get(Number(form.id));
                 return (
                   <TableRow key={form.id}>
                     <TableCell className="font-medium">
-                      <button
-                        type="button"
-                        className="text-left hover:underline"
-                        onClick={() => navigate(`/forms-v2/${form.id}/edit`)}
-                      >
-                        {form.name}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="text-left hover:underline"
+                          onClick={() => navigate(`/forms-v2/${form.id}/edit`)}
+                        >
+                          {form.name}
+                        </button>
+                        {isSystemForm ? (
+                          <Badge variant="secondary" className="gap-1">
+                            <Lock className="size-3" />
+                            System
+                          </Badge>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
@@ -253,6 +286,14 @@ export const FormsListPage = () => {
                             <Copy className="size-4" />
                             Duplicate
                           </DropdownMenuItem>
+                          {isSystemForm ? (
+                            <DropdownMenuItem
+                              onClick={() => void duplicateAsCustom(form)}
+                            >
+                              <Copy className="size-4" />
+                              Duplicate as custom
+                            </DropdownMenuItem>
+                          ) : null}
                           <DropdownMenuItem
                             onClick={() =>
                               copyLinkMutation.mutate(Number(form.id))

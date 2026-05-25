@@ -52,6 +52,10 @@ export const FormFieldRenderer = ({
     <p className="text-xs text-muted-foreground">{field.help_text}</p>
   ) : null;
 
+  if (field.type === "hidden") {
+    return null;
+  }
+
   if (field.type === "textarea") {
     return (
       <div className="space-y-2">

@@ -260,6 +260,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/settings/ProfileNotificationsSection.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/settings/NewRolePresetDialog.tsx",
           "type": "registry:component"
         },
