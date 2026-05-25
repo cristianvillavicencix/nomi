@@ -37,6 +37,16 @@ import {
   usePublicFormEmbed,
 } from "@/lbs/web-forms/PublicFormEmbedProvider";
 
+const PreviewBanner = ({ isPreview }: { isPreview?: boolean }) =>
+  isPreview ? (
+    <div
+      role="status"
+      className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-900 dark:text-amber-100"
+    >
+      Preview mode — submissions won&apos;t be saved.
+    </div>
+  ) : null;
+
 const ProjectBriefPublicForm = ({
   payload,
   onSubmitted,
@@ -46,6 +56,7 @@ const ProjectBriefPublicForm = ({
     thank_you_title?: string;
     thank_you_message?: string;
     redirect_url?: string | null;
+    preview?: boolean;
   }) => void;
 }) => {
   const notify = useNotify();
@@ -113,6 +124,7 @@ const ProjectBriefPublicForm = ({
           className="mb-4 h-10 w-auto object-contain"
         />
       ) : null}
+      <PreviewBanner isPreview={payload.is_preview} />
       <div>
         <h1 className="text-2xl font-semibold">
           {payload.form.welcome_title || payload.form.name}
@@ -228,6 +240,7 @@ const PublicFormRendererContent = () => {
     thank_you_title?: string;
     thank_you_message?: string;
     redirect_url?: string | null;
+    preview?: boolean;
   } | null>(null);
 
   const {
@@ -270,7 +283,10 @@ const PublicFormRendererContent = () => {
       });
     },
     onSuccess: (result) => {
-      setSubmitted(result);
+      setSubmitted({
+        ...result,
+        preview: Boolean((result as { preview?: boolean }).preview),
+      });
       if (result.redirect_url) {
         window.setTimeout(() => {
           window.location.href = result.redirect_url!;
@@ -305,6 +321,7 @@ const PublicFormRendererContent = () => {
     if (submitted) {
       return (
         <div className={publicFormContentClassName(embedded) + " text-center"}>
+          {submitted.preview ? <PreviewBanner isPreview /> : null}
           <h1 className="text-2xl font-semibold">
             {submitted.thank_you_title || "Thank you"}
           </h1>
@@ -326,6 +343,7 @@ const PublicFormRendererContent = () => {
   if (submitted) {
     return (
       <div className={publicFormContentClassName(embedded) + " text-center"}>
+        {submitted.preview ? <PreviewBanner isPreview /> : null}
         <h1 className="text-2xl font-semibold">
           {submitted.thank_you_title || "Thank you"}
         </h1>
@@ -359,6 +377,8 @@ const PublicFormRendererContent = () => {
           className="mb-4 h-10 w-auto object-contain"
         />
       ) : null}
+
+      <PreviewBanner isPreview={formPayload.is_preview} />
 
       <div>
         <h1 className="text-2xl font-semibold">
@@ -437,6 +457,7 @@ const PublicFormRendererContent = () => {
                 key={field.key}
                 field={field}
                 value={answers[field.key]}
+                formId={formPayload.form.id}
                 onChange={(next) =>
                   setAnswers((current) => ({ ...current, [field.key]: next }))
                 }
