@@ -1048,6 +1048,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/accountability/AuthorBadge.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/supabase/set-password-page.tsx",
           "type": "registry:component"
         },
