@@ -29,6 +29,7 @@ Deno.serve(
           expires_at,
           max_uses,
           uses_count,
+          is_preview,
           contact_id,
           company_id,
           deal_id,
@@ -119,6 +120,7 @@ Deno.serve(
       return new Response(
         JSON.stringify({
           token,
+          is_preview: Boolean(tokenData.is_preview),
           form: {
             id: formInstance.id,
             name: formInstance.name,

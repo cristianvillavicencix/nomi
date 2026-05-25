@@ -15,6 +15,7 @@ type GenerateTokenBody = {
   expires_in_days?: number;
   max_uses?: number | null;
   base_url?: string;
+  is_preview?: boolean;
 };
 
 const resolveBaseUrl = (requested?: string) => {
@@ -71,17 +72,27 @@ Deno.serve((req: Request) =>
           return createErrorResponse(400, "Form is inactive");
         }
 
-        const expiresInDays = Number.isFinite(Number(body.expires_in_days))
-          ? Number(body.expires_in_days)
-          : 30;
-        const expiresAt = new Date(
-          Date.now() + expiresInDays * 24 * 60 * 60 * 1000,
-        ).toISOString();
+        const isPreview = body.is_preview === true;
+        const expiresInDays = Number(body.expires_in_days);
+        const expiresAt =
+          isPreview || expiresInDays === 0
+            ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+            : new Date(
+                Date.now() +
+                  (Number.isFinite(expiresInDays) ? expiresInDays : 30) *
+                    24 *
+                    60 *
+                    60 *
+                    1000,
+              ).toISOString();
 
-        const maxUses =
-          body.max_uses === null || body.max_uses === undefined
+        const maxUses = isPreview
+          ? 1
+          : body.max_uses === undefined
             ? 1
-            : Number(body.max_uses);
+            : body.max_uses === null
+              ? null
+              : Number(body.max_uses);
 
         const token = generateSecureToken();
         const { data: tokenRow, error: insertError } = await supabaseAdmin
@@ -94,7 +105,8 @@ Deno.serve((req: Request) =>
             company_id: body.company_id ?? null,
             deal_id: body.deal_id ?? null,
             expires_at: expiresAt,
-            max_uses: Number.isFinite(maxUses) ? maxUses : 1,
+            max_uses: Number.isFinite(maxUses as number) ? maxUses : maxUses,
+            is_preview: isPreview,
             created_by_member_id: member.id,
           })
           .select("token, expires_at, max_uses")

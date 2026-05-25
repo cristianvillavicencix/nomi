@@ -1068,6 +1068,7 @@ const dataProviderWithCustomMethods = {
   async getFormByToken(payload: { token: string }) {
     const { data, error } = await supabase.functions.invoke<{
       token: string;
+      is_preview?: boolean;
       form: {
         id: number;
         name: string;
@@ -1120,6 +1121,7 @@ const dataProviderWithCustomMethods = {
   }) {
     const { data, error } = await supabase.functions.invoke<{
       ok?: boolean;
+      preview?: boolean;
       error?: string;
       details?: string[];
       submission_id?: number;
@@ -1134,7 +1136,8 @@ const dataProviderWithCustomMethods = {
         honeypot: payload.honeypot,
         metadata: {
           ...payload.metadata,
-          app_base_url: payload.metadata?.app_base_url ?? window.location.origin,
+          app_base_url:
+            payload.metadata?.app_base_url ?? window.location.origin,
           source_url: payload.metadata?.source_url ?? window.location.href,
         },
       },
@@ -1165,6 +1168,7 @@ const dataProviderWithCustomMethods = {
     expiresInDays?: number;
     maxUses?: number | null;
     baseUrl?: string;
+    isPreview?: boolean;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       token: string;
@@ -1183,6 +1187,7 @@ const dataProviderWithCustomMethods = {
         expires_in_days: payload.expiresInDays ?? 30,
         max_uses: payload.maxUses ?? 1,
         base_url: payload.baseUrl ?? window.location.origin,
+        is_preview: payload.isPreview ?? false,
       },
     });
 
@@ -1621,16 +1626,15 @@ const dataProviderWithCustomMethods = {
     return data;
   },
   async getAccessEntryPassword(entryId: Identifier) {
-    const { data, error } = await invokeEdgeFunction<{ password?: string | null }>(
-      "access_entry_password",
-      {
-        method: "POST",
-        body: {
-          action: "get",
-          entry_id: Number(entryId),
-        },
+    const { data, error } = await invokeEdgeFunction<{
+      password?: string | null;
+    }>("access_entry_password", {
+      method: "POST",
+      body: {
+        action: "get",
+        entry_id: Number(entryId),
       },
-    );
+    });
     if (error) {
       throw new Error(
         (error as { message?: string }).message ??
