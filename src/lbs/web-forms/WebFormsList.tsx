@@ -1,4 +1,4 @@
-import { useGetIdentity, useListContext } from "ra-core";
+// DEPRECATED - use forms-v2 instead (`src/lbs/forms-v2/`). Kept until v2 is fully verified.
 import { Link, useNavigate } from "react-router";
 import { Plus } from "lucide-react";
 import { DataTable } from "@/components/admin/data-table";
@@ -27,6 +27,11 @@ export const WebFormsList = () => {
       actions={<WebFormsListActions />}
       pagination={<ListPagination rowsPerPageOptions={[10, 25, 50]} />}
     >
+      <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+        This legacy module will be replaced soon. New forms use signed links via{" "}
+        <code className="rounded bg-muted px-1">/forms/:token</code> and the
+        forms-v2 architecture.
+      </div>
       <WebFormsListLayout />
     </List>
   );

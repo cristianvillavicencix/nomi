@@ -1,3 +1,4 @@
+// DEPRECATED - use forms-v2 instead
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { decode } from "npm:base64-arraybuffer";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
