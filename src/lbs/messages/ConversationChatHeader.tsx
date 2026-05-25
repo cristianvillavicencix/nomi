@@ -13,6 +13,8 @@ import { getConversationDisplay } from "@/lbs/messages/conversationDisplay";
 import { ConversationActionsMenu } from "@/lbs/messages/ConversationActionsMenu";
 import { ChangeStatusDropdown } from "@/lbs/messages/status/ChangeStatusDropdown";
 import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
+import { useOrgPresence } from "@/lbs/messages/useOrgPresence";
+import { getOtherDmMemberId } from "@/lbs/messages/useDirectMessage";
 import { cn } from "@/lib/utils";
 
 export const ConversationChatHeader = ({
@@ -56,6 +58,20 @@ export const ConversationChatHeader = ({
     ? [assignee.first_name, assignee.last_name].filter(Boolean).join(" ")
     : null;
 
+  const { isOnline } = useOrgPresence();
+  const isDm = conversation.type === "team_dm";
+  const dmParticipantIds = isDm
+    ? dmParticipants
+        .filter(
+          (entry) => String(entry.conversation_id) === String(conversation.id),
+        )
+        .map((entry) => entry.member_id)
+    : [];
+  const otherMemberId = isDm
+    ? getOtherDmMemberId(conversation, dmParticipantIds, currentMemberId)
+    : null;
+  const otherMemberOnline = otherMemberId != null && isOnline(otherMemberId);
+
   return (
     <div
       className={cn(
@@ -77,14 +93,32 @@ export const ConversationChatHeader = ({
           </Button>
         ) : null}
 
-        <Avatar className="size-11 shrink-0">
-          {display.memberAvatarSrc ? (
-            <AvatarImage src={display.memberAvatarSrc} alt={display.title} />
+        <span className="relative inline-flex shrink-0">
+          <Avatar className="size-11">
+            {display.memberAvatarSrc ? (
+              <AvatarImage src={display.memberAvatarSrc} alt={display.title} />
+            ) : null}
+            <AvatarFallback className="text-sm font-medium">
+              {display.initials}
+            </AvatarFallback>
+          </Avatar>
+          {isDm && otherMemberId != null ? (
+            <>
+              <span
+                aria-hidden
+                className={cn(
+                  "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-background",
+                  otherMemberOnline
+                    ? "bg-emerald-500"
+                    : "bg-muted-foreground/30",
+                )}
+              />
+              <span className="sr-only">
+                {otherMemberOnline ? "Online" : "Offline"}
+              </span>
+            </>
           ) : null}
-          <AvatarFallback className="text-sm font-medium">
-            {display.initials}
-          </AvatarFallback>
-        </Avatar>
+        </span>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -94,7 +128,11 @@ export const ConversationChatHeader = ({
             <ChangeStatusDropdown conversation={conversation} />
           </div>
           <p className="truncate text-xs text-muted-foreground">
-            {display.typeLabel}
+            {isDm && otherMemberId != null
+              ? otherMemberOnline
+                ? "Online"
+                : "Offline"
+              : display.typeLabel}
             {assigneeLabel ? ` · Assigned to ${assigneeLabel}` : ""}
           </p>
         </div>

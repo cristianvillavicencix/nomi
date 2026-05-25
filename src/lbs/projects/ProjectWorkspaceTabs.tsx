@@ -50,6 +50,11 @@ const ProjectFinancialsTab = lazy(() =>
     default: m.ProjectFinancialsTab,
   })),
 );
+const ProjectMessagesTab = lazy(() =>
+  import("@/lbs/projects/tabs/ProjectMessagesTab").then((m) => ({
+    default: m.ProjectMessagesTab,
+  })),
+);
 const TabFallback = () => <Skeleton className="h-40 w-full rounded-lg" />;
 
 const _tabLabel = (label: string, count?: number) =>
@@ -185,6 +190,9 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   <span>Tasks</span>
                   <BriefTabProgress percent={tasksProgress.percent} />
                 </TabsTrigger>
+                <TabsTrigger value="chat" className="shrink-0">
+                  Chat
+                </TabsTrigger>
                 <TabsTrigger value="delivery" className="shrink-0">
                   Delivery
                 </TabsTrigger>
@@ -210,6 +218,13 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
               </TabsContent>
               <TabsContent value="tasks" className="pt-4">
                 <ProjectTasksPanel record={record} contactIds={contactIds} />
+              </TabsContent>
+              <TabsContent value="chat" className="pt-4">
+                {showTab("chat") ? (
+                  <Suspense fallback={<TabFallback />}>
+                    <ProjectMessagesTab record={record} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
               <TabsContent value="delivery" className="pt-4">
                 {showTab("delivery") ? (

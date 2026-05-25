@@ -218,6 +218,8 @@ export type ConversationParticipant = {
   created_at?: string;
 } & Pick<RaRecord, "id">;
 
+export type ConversationMessageKind = "user" | "system" | "internal_note";
+
 export type ConversationMessage = {
   conversation_id: Identifier;
   author_member_id?: Identifier | null;
@@ -227,6 +229,7 @@ export type ConversationMessage = {
   external_id?: string | null;
   media_url?: string | null;
   is_internal_note?: boolean;
+  kind?: ConversationMessageKind;
   reply_to_message_id?: Identifier | null;
   edited_at?: string | null;
   deleted_at?: string | null;

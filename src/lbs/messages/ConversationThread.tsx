@@ -34,6 +34,19 @@ const SendDisabledNotice = () => (
   </p>
 );
 
+const SystemMessageNote = ({ message }: { message: ConversationMessage }) => (
+  <div className="flex justify-center py-1">
+    <div className="max-w-[min(85%,560px)] rounded-full bg-muted/40 px-3 py-1 text-center text-xs text-muted-foreground">
+      <span>{message.body}</span>
+      {message.created_at ? (
+        <span className="ml-2 opacity-70">
+          · {formatMessageTime(message.created_at)}
+        </span>
+      ) : null}
+    </div>
+  </div>
+);
+
 const MessageBubble = ({
   message,
   isOwn,
@@ -272,17 +285,21 @@ export const ConversationThread = ({
             </p>
           </div>
         ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={String(message.id)}
-              message={message}
-              isOwn={
-                isClientSms
-                  ? message.direction === "outbound"
-                  : String(message.author_member_id) === String(identity?.id)
-              }
-            />
-          ))
+          messages.map((message) =>
+            message.kind === "system" ? (
+              <SystemMessageNote key={String(message.id)} message={message} />
+            ) : (
+              <MessageBubble
+                key={String(message.id)}
+                message={message}
+                isOwn={
+                  isClientSms
+                    ? message.direction === "outbound"
+                    : String(message.author_member_id) === String(identity?.id)
+                }
+              />
+            ),
+          )
         )}
         <div ref={bottomRef} />
       </div>
