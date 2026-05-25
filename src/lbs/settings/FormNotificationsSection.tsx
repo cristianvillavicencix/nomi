@@ -57,7 +57,11 @@ export const FormNotificationsSection = () => {
 
   useEffect(() => {
     if (!orgSettings) return;
-    setSelectedIds(orgSettings.default_form_notify_member_ids ?? []);
+    setSelectedIds(
+      (orgSettings.default_form_notify_member_ids ?? [])
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    );
   }, [orgSettings]);
 
   const memberOptions = useMemo(
@@ -83,9 +87,22 @@ export const FormNotificationsSection = () => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (orgSettings?.id == null) {
+        throw new Error("Organization not loaded");
+      }
+
+      const memberIds = [
+        ...new Set(
+          selectedIds
+            .map((id) => Number(id))
+            .filter((id) => Number.isInteger(id) && id > 0),
+        ),
+      ];
+
       const { data, error } = await supabase
         .from("organizations")
-        .update({ default_form_notify_member_ids: selectedIds })
+        .update({ default_form_notify_member_ids: memberIds })
+        .eq("id", orgSettings.id)
         .select("id, default_form_notify_member_ids")
         .single();
       if (error) throw error;
@@ -182,7 +199,7 @@ export const FormNotificationsSection = () => {
         <Button
           type="button"
           onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
+          disabled={saveMutation.isPending || orgSettings?.id == null}
         >
           {saveMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />

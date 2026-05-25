@@ -57,12 +57,17 @@ export const OrganizationSignatureSection = () => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (org?.id == null) {
+        throw new Error("Organization not loaded");
+      }
+
       const { data, error } = await supabase
         .from("organizations")
         .update({
           sms_signature_template: template.trim() || DEFAULT_TEMPLATE,
           sms_signature_enabled: enabled,
         })
+        .eq("id", org.id)
         .select("id, name, sms_signature_template, sms_signature_enabled")
         .single();
 
