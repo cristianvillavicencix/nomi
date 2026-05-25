@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormBuilder } from "@/lbs/forms-v2/builder/FormBuilderContext";
+import { MemberPhoneStatus } from "@/lbs/settings/MemberPhoneStatus";
 
 type FormSettingsSheetProps = {
   open: boolean;
@@ -73,6 +74,7 @@ export const FormSettingsSheet = ({
       members.map((member) => ({
         id: Number(member.id),
         label: `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim(),
+        notification_phone: member.notification_phone,
       })),
     [members],
   );
@@ -281,24 +283,36 @@ export const FormSettingsSheet = ({
                 </Button>
               </div>
               <div className="space-y-2">
-                {memberOptions.map((member) => (
-                  <label
-                    key={member.id}
-                    className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
-                  >
-                    <Checkbox
-                      checked={notifyIds.includes(member.id)}
-                      onCheckedChange={(checked) =>
-                        setNotifyIds((current) =>
-                          checked
-                            ? [...new Set([...current, member.id])]
-                            : current.filter((id) => id !== member.id),
-                        )
-                      }
-                    />
-                    {member.label}
-                  </label>
-                ))}
+                {memberOptions.map((member) => {
+                  const checked = notifyIds.includes(member.id);
+                  return (
+                    <label
+                      key={member.id}
+                      className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm"
+                    >
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={checked}
+                        onCheckedChange={(next) =>
+                          setNotifyIds((current) =>
+                            next
+                              ? [...new Set([...current, member.id])]
+                              : current.filter((id) => id !== member.id),
+                          )
+                        }
+                      />
+                      <span className="space-y-0.5">
+                        <span className="block font-medium">
+                          {member.label}
+                        </span>
+                        <MemberPhoneStatus
+                          phone={member.notification_phone}
+                          selected={checked}
+                        />
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </TabsContent>

@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import {
+  hasConfiguredNotificationPhone,
+  MemberPhoneStatus,
+} from "@/lbs/settings/MemberPhoneStatus";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -62,8 +66,19 @@ export const FormNotificationsSection = () => {
         id: Number(member.id),
         label: `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim(),
         email: member.email,
+        notification_phone: member.notification_phone,
       })),
     [members],
+  );
+
+  const selectedWithoutPhone = useMemo(
+    () =>
+      memberOptions.filter(
+        (member) =>
+          selectedIds.includes(member.id) &&
+          !hasConfiguredNotificationPhone(member.notification_phone),
+      ),
+    [memberOptions, selectedIds],
   );
 
   const saveMutation = useMutation({
@@ -113,6 +128,14 @@ export const FormNotificationsSection = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {selectedWithoutPhone.length > 0 ? (
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+            {selectedWithoutPhone.length} selected member
+            {selectedWithoutPhone.length === 1 ? "" : "s"}{" "}
+            {selectedWithoutPhone.length === 1 ? "has" : "have"} no notification
+            phone — they won&apos;t receive SMS until configured in Profile.
+          </p>
+        ) : null}
         <div className="space-y-3">
           {memberOptions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -145,6 +168,10 @@ export const FormNotificationsSection = () => {
                         {member.email}
                       </span>
                     ) : null}
+                    <MemberPhoneStatus
+                      phone={member.notification_phone}
+                      selected={checked}
+                    />
                   </span>
                 </label>
               );
