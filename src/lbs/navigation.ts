@@ -117,10 +117,10 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     action: "list",
   },
   {
-    to: "/web-forms",
-    label: "Web Forms",
+    to: "/forms-v2",
+    label: "Forms",
     icon: FormInput,
-    activePattern: "/web-forms/*",
+    activePattern: "/forms-v2/*",
     capability: "forms.manage",
     resource: "forms",
     action: "list",

@@ -10,6 +10,9 @@ import { LeadShowPage } from "@/lbs/leads/LeadShowPage";
 import { LbsContactShowPage } from "@/lbs/contacts/ContactShowPage";
 import { TicketCreate } from "@/lbs/tickets/TicketCreate";
 import { FormPublicEntry } from "@/lbs/forms-v2/public/FormPublicEntry";
+import { FormsListPage } from "@/lbs/forms-v2/FormsListPage";
+import { FormBuilderPage } from "@/lbs/forms-v2/builder/FormBuilderPage";
+import { SubmissionsListPage } from "@/lbs/forms-v2/submissions/SubmissionsListPage";
 import {
   ContractsPlaceholderPage,
   ProposalsPlaceholderPage,
@@ -224,6 +227,38 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="contracts" action="show">
             <ContractShow />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/forms-v2"
+        element={
+          <ProtectedRoute resource="forms" action="list">
+            <FormsListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/forms-v2/new"
+        element={
+          <ProtectedRoute resource="forms" action="create">
+            <FormBuilderPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/forms-v2/:id/edit"
+        element={
+          <ProtectedRoute resource="forms" action="edit">
+            <FormBuilderPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/forms-v2/submissions"
+        element={
+          <ProtectedRoute resource="forms" action="list">
+            <SubmissionsListPage />
           </ProtectedRoute>
         }
       />
