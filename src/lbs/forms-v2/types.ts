@@ -128,6 +128,8 @@ export type FormInstance = {
   auto_create_contact?: boolean;
   auto_create_lead?: boolean;
   auto_create_task?: boolean;
+  task_assignee_member_id?: number | null;
+  task_title_template?: string | null;
   expiration_date?: string | null;
   submission_limit?: number | null;
   recaptcha_enabled?: boolean;

@@ -241,10 +241,14 @@ Deno.serve(
         formInstance as {
           id: number;
           org_id: number;
+          name?: string | null;
+          slug?: string | null;
           auto_create_contact?: boolean | null;
           auto_create_lead?: boolean | null;
           auto_create_task?: boolean | null;
           notify_member_ids?: number[] | null;
+          task_assignee_member_id?: number | null;
+          task_title_template?: string | null;
         },
         submission,
         answers,

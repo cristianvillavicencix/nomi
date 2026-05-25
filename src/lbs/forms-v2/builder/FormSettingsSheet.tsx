@@ -390,32 +390,110 @@ export const FormSettingsSheet = ({
           </TabsContent>
 
           <TabsContent value="integrations" className="space-y-4 pt-4">
-            <div className="flex items-center justify-between">
-              <Label>Auto-create contact</Label>
-              <Switch
-                checked={Boolean(formInstance.auto_create_contact)}
-                onCheckedChange={(checked) =>
-                  setFormInstance({ auto_create_contact: checked })
-                }
-              />
+            <div className="space-y-2 rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto-create contact</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Create or match a contact from email/phone in the submission.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(formInstance.auto_create_contact)}
+                  onCheckedChange={(checked) =>
+                    setFormInstance({
+                      auto_create_contact: checked,
+                      ...(checked ? {} : { auto_create_lead: false }),
+                    })
+                  }
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <Label>Auto-create lead</Label>
-              <Switch
-                checked={Boolean(formInstance.auto_create_lead)}
-                onCheckedChange={(checked) =>
-                  setFormInstance({ auto_create_lead: checked })
-                }
-              />
+            <div className="space-y-2 rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto-create lead</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Create a deal in the lead stage when a contact is linked.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(formInstance.auto_create_lead)}
+                  disabled={!formInstance.auto_create_contact}
+                  onCheckedChange={(checked) =>
+                    setFormInstance({ auto_create_lead: checked })
+                  }
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <Label>Auto-create task</Label>
-              <Switch
-                checked={Boolean(formInstance.auto_create_task)}
-                onCheckedChange={(checked) =>
-                  setFormInstance({ auto_create_task: checked })
-                }
-              />
+            <div className="space-y-3 rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto-create follow-up task</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Assign a task due tomorrow when a form is submitted.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(formInstance.auto_create_task)}
+                  onCheckedChange={(checked) =>
+                    setFormInstance({ auto_create_task: checked })
+                  }
+                />
+              </div>
+              {formInstance.auto_create_task ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="task-assignee">Assignee</Label>
+                    <Select
+                      value={
+                        formInstance.task_assignee_member_id != null
+                          ? String(formInstance.task_assignee_member_id)
+                          : "default"
+                      }
+                      onValueChange={(value) =>
+                        setFormInstance({
+                          task_assignee_member_id:
+                            value === "default" ? null : Number(value),
+                        })
+                      }
+                    >
+                      <SelectTrigger id="task-assignee">
+                        <SelectValue placeholder="First SMS recipient" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">
+                          First SMS recipient
+                        </SelectItem>
+                        {memberOptions.map((member) => (
+                          <SelectItem key={member.id} value={String(member.id)}>
+                            {member.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="task-title-template">Task title template</Label>
+                    <Input
+                      id="task-title-template"
+                      value={
+                        formInstance.task_title_template ??
+                        "Follow up on {form_name} from {submitter_name}"
+                      }
+                      onChange={(event) =>
+                        setFormInstance({
+                          task_title_template: event.target.value,
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Variables: {"{form_name}"}, {"{submitter_name}"},{" "}
+                      {"{submitter_email}"}
+                    </p>
+                  </div>
+                </>
+              ) : null}
             </div>
           </TabsContent>
 
