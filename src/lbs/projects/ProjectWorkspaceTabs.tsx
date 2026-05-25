@@ -68,11 +68,6 @@ const ProjectSettingsTab = lazy(() =>
     default: m.ProjectSettingsTab,
   })),
 );
-const ProjectMessagesTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectMessagesTab").then((m) => ({
-    default: m.ProjectMessagesTab,
-  })),
-);
 
 const TabFallback = () => <Skeleton className="h-40 w-full rounded-lg" />;
 
@@ -218,9 +213,6 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                 <TabsTrigger value="delivery" className="shrink-0">
                   Delivery
                 </TabsTrigger>
-                <TabsTrigger value="messages" className="shrink-0">
-                  Messages
-                </TabsTrigger>
                 {canViewFinancials ? (
                   <TabsTrigger value="financials" className="shrink-0">
                     Financials
@@ -268,13 +260,6 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   </Suspense>
                 ) : null}
               </TabsContent>
-              <TabsContent value="messages" className="pt-4">
-                {showTab("messages") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <ProjectMessagesTab record={record} />
-                  </Suspense>
-                ) : null}
-              </TabsContent>
               {canViewFinancials ? (
                 <TabsContent value="financials" className="pt-4">
                   {showTab("financials") ? (
@@ -303,8 +288,8 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
         </CardContent>
       </Card>
 
-      <aside className="hidden xl:block">
-        <ProjectContextPanel record={record} resources={projectResources} />
+      <aside className="min-w-0">
+        <ProjectContextPanel record={record} />
       </aside>
     </div>
   );

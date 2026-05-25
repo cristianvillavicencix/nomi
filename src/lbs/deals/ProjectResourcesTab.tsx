@@ -11,6 +11,12 @@ import {
 import { Download, ImagePlus, Link2, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -331,50 +337,72 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
             ?.description
         }
       </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => openRequestDialog(scopeForResourceTab(requestTarget))}
-        >
-          <Link2 className="size-4" />
-          Request this tab
-        </Button>
-        {tabId !== "document" ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={downloadingTab || items.length === 0}
-            onClick={() => void handleDownloadItems(items, zipBaseName)}
-          >
-            <Download className="size-4" />
-            Download ZIP
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (tabId === "service-photo" && activeServiceTabDef) {
-              openUploadForCategory(
-                activeServiceTabDef.category,
-                activeServiceTabDef.label,
-              );
-            } else {
-              const def = PROJECT_RESOURCE_TAB_CATEGORIES.find(
-                (entry) => entry.id === tabId,
-              );
-              openUploadForCategory(tabId, def?.label ?? tabId);
-            }
-          }}
-        >
-          <Upload className="size-4" />
-          {uploadLabelText}
-        </Button>
-      </div>
+      <TooltipProvider>
+        <div className="flex flex-wrap gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8"
+                aria-label="Request this tab"
+                onClick={() =>
+                  openRequestDialog(scopeForResourceTab(requestTarget))
+                }
+              >
+                <Link2 className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Request this tab</TooltipContent>
+          </Tooltip>
+          {tabId !== "document" ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  aria-label="Download ZIP"
+                  disabled={downloadingTab || items.length === 0}
+                  onClick={() => void handleDownloadItems(items, zipBaseName)}
+                >
+                  <Download className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Download ZIP</TooltipContent>
+            </Tooltip>
+          ) : null}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8"
+                aria-label={uploadLabelText}
+                onClick={() => {
+                  if (tabId === "service-photo" && activeServiceTabDef) {
+                    openUploadForCategory(
+                      activeServiceTabDef.category,
+                      activeServiceTabDef.label,
+                    );
+                  } else {
+                    const def = PROJECT_RESOURCE_TAB_CATEGORIES.find(
+                      (entry) => entry.id === tabId,
+                    );
+                    openUploadForCategory(tabId, def?.label ?? tabId);
+                  }
+                }}
+              >
+                <Upload className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{uploadLabelText}</TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     </div>
   );
 
@@ -387,20 +415,39 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
             Photo services holds a tab per service (Roofing, etc.).
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => openRequestDialog(FULL_RESOURCE_REQUEST)}
-          >
-            <Link2 className="size-4" />
-            Request all
-          </Button>
-          <Button type="button" onClick={openUploadForCurrentView}>
-            <ImagePlus className="size-4" />
-            Upload files
-          </Button>
-        </div>
+        <TooltipProvider>
+          <div className="flex flex-wrap gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  aria-label="Request all"
+                  onClick={() => openRequestDialog(FULL_RESOURCE_REQUEST)}
+                >
+                  <Link2 className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Request all</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  className="size-8"
+                  aria-label="Upload files"
+                  onClick={openUploadForCurrentView}
+                >
+                  <ImagePlus className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Upload files</TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
       </div>
 
       <Tabs

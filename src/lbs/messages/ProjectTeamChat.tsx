@@ -3,8 +3,15 @@ import { useConfigurationContext } from "@/components/atomic-crm/root/Configurat
 import type { LbsDeal } from "@/lbs/types";
 import { ConversationThread } from "@/lbs/messages/ConversationThread";
 import { useEnsureProjectConversation } from "@/lbs/messages/useEnsureProjectConversation";
+import { cn } from "@/lib/utils";
 
-export const ProjectTeamChat = ({ record }: { record: LbsDeal }) => {
+export const ProjectTeamChat = ({
+  record,
+  variant = "default",
+}: {
+  record: LbsDeal;
+  variant?: "default" | "sidebar";
+}) => {
   const { dealStages } = useConfigurationContext();
   const projectTitle =
     record.name?.trim() || findDealLabel(dealStages, record.stage);
@@ -26,7 +33,14 @@ export const ProjectTeamChat = ({ record }: { record: LbsDeal }) => {
           thread.
         </p>
       </div>
-      <div className="h-[520px] p-3">
+      <div
+        className={cn(
+          "p-3",
+          variant === "sidebar"
+            ? "h-[min(520px,calc(100vh-16rem))]"
+            : "h-[520px]",
+        )}
+      >
         <ConversationThread
           conversation={conversation}
           emptyLabel="No team messages yet. Use this space for quick project updates."

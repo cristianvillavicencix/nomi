@@ -130,7 +130,7 @@ export const getConversationDisplay = ({
       activityAt,
       dealHref:
         conversation.deal_id != null
-          ? `/deals/${conversation.deal_id}/show?tab=messages`
+          ? `/deals/${conversation.deal_id}/show`
           : undefined,
     };
   }
