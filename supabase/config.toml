@@ -226,3 +226,6 @@ verify_jwt = false
 
 [functions.record_form_event]
 verify_jwt = false
+
+[functions.upload_form_file]
+verify_jwt = false
