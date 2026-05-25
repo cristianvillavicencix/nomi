@@ -21,6 +21,8 @@ export type FormFieldType =
   | "rating"
   | "file"
   | "file_multi"
+  | "dynamic_list"
+  | "dynamic_file_groups"
   | "signature"
   | "hidden"
   | "formula";
@@ -39,6 +41,16 @@ export type FormFieldDef = {
   max?: number;
   labels?: { min?: string; max?: string };
   accept?: string;
+  depends_on?: string;
+  min_items?: number;
+  max_files?: number;
+  max_files_per_group?: number;
+  soft_warn_after?: number;
+  soft_warn_message?: string;
+  item_label_template?: string;
+  item_placeholder?: string;
+  add_button_label?: string;
+  skip_button_label?: string;
   formula?: string;
   format?: FormulaFormat;
   visible_when?: VisibleWhen;
@@ -54,6 +66,7 @@ export type FormSectionDef = {
 
 export type FormSchemaSettings = {
   wizard_mode?: "auto" | "on" | "off";
+  show_summary_step?: boolean;
 };
 
 export type FormSchemaV2 = {

@@ -1,4 +1,5 @@
 import { evaluateCondition } from "@/lib/forms-v2/conditionalLogic";
+import { readStringList } from "@/lbs/forms-v2/wizardStepUtils";
 import type {
   FormFieldDef,
   FormSchemaV2,
@@ -59,6 +60,20 @@ export const validateSectionFields = (
 ): Record<string, string> => {
   const errors: Record<string, string> = {};
   for (const field of getVisibleFields(section, answers)) {
+    if (field.type === "dynamic_list") {
+      const items = readStringList(answers[field.key]);
+      const minItems = field.min_items ?? (field.required ? 1 : 0);
+      const filled = items.filter(Boolean);
+      if (field.required && filled.length < minItems) {
+        errors[field.key] = `${field.label ?? field.key} requires at least ${minItems} item(s)`;
+      }
+      continue;
+    }
+
+    if (field.type === "dynamic_file_groups") {
+      continue;
+    }
+
     if (!field.required) continue;
     const value = answers[field.key];
     const empty =
