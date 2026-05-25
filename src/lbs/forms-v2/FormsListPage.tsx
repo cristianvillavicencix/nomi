@@ -39,6 +39,7 @@ import {
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { CreateFormDialog } from "@/lbs/forms-v2/CreateFormDialog";
+import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 import { FORM_TYPE_LABELS } from "@/lbs/forms-v2/formBuilderConstants";
 import { relativeTime } from "@/lbs/forms-v2/formBuilderUtils";
 import type {
@@ -310,6 +311,12 @@ export const FormsListPage = () => {
                             <ExternalLink className="size-4" />
                             Copy public link
                           </DropdownMenuItem>
+                          <SendFormButton
+                            variant="menu-item"
+                            label="Send form"
+                            formInstanceId={Number(form.id)}
+                            context={{ type: "standalone" }}
+                          />
                           <DropdownMenuItem
                             onClick={() =>
                               navigate(`/forms-v2/${form.id}/analytics`)

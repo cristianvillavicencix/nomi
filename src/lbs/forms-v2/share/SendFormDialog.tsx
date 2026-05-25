@@ -77,12 +77,16 @@ export const SendFormDialog = ({
 
   useEffect(() => {
     if (!open || !forms.length || selectedFormId) return;
+    if (context.form_instance_id) {
+      setSelectedFormId(String(context.form_instance_id));
+      return;
+    }
     const preferred =
       context.type === "deal"
         ? (forms.find((form) => form.slug === "project_brief") ?? forms[0])
         : forms[0];
     setSelectedFormId(String(preferred.id));
-  }, [context.type, forms, open, selectedFormId]);
+  }, [context.form_instance_id, context.type, forms, open, selectedFormId]);
 
   useEffect(() => {
     if (!open) {

@@ -84,7 +84,9 @@ export const useSendFormRecipient = (context: SendFormContext) => {
       dialogTitle:
         context.type === "deal"
           ? `Send a form for ${deal?.name ?? context.resourceName ?? "this project"}`
-          : `Send a form to ${recipientName}`,
+          : context.type === "standalone"
+            ? "Share form link"
+            : `Send a form to ${recipientName}`,
     };
   }, [
     company?.id,

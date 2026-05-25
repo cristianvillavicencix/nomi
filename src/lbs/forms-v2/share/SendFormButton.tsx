@@ -13,6 +13,7 @@ type SendFormButtonProps = {
   variant?: SendFormButtonVariant;
   label?: string;
   className?: string;
+  formInstanceId?: number;
 };
 
 export const SendFormButton = ({
@@ -20,8 +21,13 @@ export const SendFormButton = ({
   variant = "button",
   label = "Send form",
   className,
+  formInstanceId,
 }: SendFormButtonProps) => {
   const [open, setOpen] = useState(false);
+  const resolvedContext = {
+    ...context,
+    form_instance_id: formInstanceId ?? context.form_instance_id,
+  };
 
   if (variant === "menu-item") {
     return (
@@ -36,7 +42,7 @@ export const SendFormButton = ({
           <FileText className="size-4" />
           {label}
         </DropdownMenuItem>
-        <SendFormDialog open={open} onOpenChange={setOpen} context={context} />
+        <SendFormDialog open={open} onOpenChange={setOpen} context={resolvedContext} />
       </>
     );
   }
@@ -53,7 +59,7 @@ export const SendFormButton = ({
         <FileText className="size-4" />
         {variant === "button" ? label : <span className="sr-only">{label}</span>}
       </Button>
-      <SendFormDialog open={open} onOpenChange={setOpen} context={context} />
+      <SendFormDialog open={open} onOpenChange={setOpen} context={resolvedContext} />
     </>
   );
 };

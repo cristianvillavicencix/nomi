@@ -3,7 +3,8 @@ export type SendFormContextType =
   | "company"
   | "deal"
   | "lead"
-  | "conversation";
+  | "conversation"
+  | "standalone";
 
 export type SendFormContext = {
   type: SendFormContextType;
@@ -11,6 +12,7 @@ export type SendFormContext = {
   company_id?: number;
   deal_id?: number;
   conversation_id?: number;
+  form_instance_id?: number;
   recipientName?: string;
   recipientEmail?: string;
   recipientPhone?: string;
