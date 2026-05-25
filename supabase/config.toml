@@ -229,3 +229,9 @@ verify_jwt = false
 
 [functions.generate_form_token]
 verify_jwt = false
+
+[functions.resolve_short_code]
+verify_jwt = false
+
+[functions.forms_embed_js]
+verify_jwt = false

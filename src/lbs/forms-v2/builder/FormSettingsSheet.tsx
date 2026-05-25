@@ -29,7 +29,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormBuilder } from "@/lbs/forms-v2/builder/FormBuilderContext";
 import { FormVersionsTab } from "@/lbs/forms-v2/builder/FormVersionsTab";
+import { FormImageUpload } from "@/lbs/forms-v2/branding/FormImageUpload";
+import { FormQRCode } from "@/lbs/forms-v2/share/FormQRCode";
+import {
+  buildFormEmbedIframeSnippet,
+  buildFormEmbedScriptSnippet,
+  buildFormEmbedUrl,
+  buildFormShortUrl,
+} from "@/lbs/forms-v2/share/formLinkUtils";
 import { MemberPhoneStatus } from "@/lbs/settings/MemberPhoneStatus";
+
+type GeneratedFormLink = {
+  token: string;
+  url: string;
+  shortCode?: string;
+  shortUrl?: string;
+};
 
 type FormSettingsSheetProps = {
   open: boolean;
@@ -50,19 +65,27 @@ export const FormSettingsSheet = ({
     formInstance.notify_member_ids ?? [],
   );
   const [publicUrl, setPublicUrl] = useState("");
+  const [generatedLink, setGeneratedLink] = useState<GeneratedFormLink | null>(
+    null,
+  );
 
-  const { data: orgDefaults } = useQuery({
-    queryKey: ["organization-form-notifications"],
+  const { data: orgSettings } = useQuery({
+    queryKey: ["organization-form-settings"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organizations")
-        .select("default_form_notify_member_ids")
+        .select("id, default_form_notify_member_ids")
         .single();
       if (error) throw error;
-      return (data?.default_form_notify_member_ids ?? []) as number[];
+      return data as {
+        id: number;
+        default_form_notify_member_ids?: number[] | null;
+      };
     },
     enabled: open,
   });
+
+  const orgDefaults = orgSettings?.default_form_notify_member_ids ?? [];
 
   const { data: members = [] } = useGetList<OrganizationMember>(
     "organization_members",
@@ -114,11 +137,24 @@ export const FormSettingsSheet = ({
         expiresInDays: 30,
         maxUses: null,
       });
-      setPublicUrl(
-        result.url.startsWith("http")
-          ? result.url
-          : `${window.location.origin}${result.url}`,
-      );
+      const origin = window.location.origin;
+      const url = result.url.startsWith("http")
+        ? result.url
+        : `${origin}${result.url}`;
+      const shortUrl = result.short_url
+        ? result.short_url.startsWith("http")
+          ? result.short_url
+          : `${origin}${result.short_url}`
+        : result.short_code
+          ? buildFormShortUrl(origin, result.short_code)
+          : undefined;
+      setPublicUrl(url);
+      setGeneratedLink({
+        token: result.token,
+        url,
+        shortCode: result.short_code,
+        shortUrl,
+      });
       return result;
     },
     onError: (error) => {
@@ -152,12 +188,16 @@ export const FormSettingsSheet = ({
     notify(message, { type: "info" });
   };
 
-  const embedIframe = publicUrl
-    ? `<iframe src="${publicUrl}" width="100%" height="720" frameborder="0"></iframe>`
+  const embedUrl = generatedLink
+    ? buildFormEmbedUrl(window.location.origin, generatedLink.token)
     : "";
-  const embedScript = publicUrl
-    ? `<script src="${window.location.origin}/embed/forms.js" data-form-url="${publicUrl}"></script>`
+  const embedIframe = embedUrl
+    ? buildFormEmbedIframeSnippet(embedUrl, formInstance.name)
     : "";
+  const embedScript = generatedLink
+    ? buildFormEmbedScriptSnippet(generatedLink.token)
+    : "";
+  const qrUrl = generatedLink?.shortUrl ?? publicUrl;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -212,6 +252,28 @@ export const FormSettingsSheet = ({
           </TabsContent>
 
           <TabsContent value="branding" className="space-y-4 pt-4">
+            {orgSettings?.id ? (
+              <>
+                <FormImageUpload
+                  label="Logo"
+                  folder={`${orgSettings.id}/logos`}
+                  value={formInstance.logo_url}
+                  recommendedSize="200×60"
+                  maxSizeKB={500}
+                  onChange={(url) => setFormInstance({ logo_url: url })}
+                />
+                <FormImageUpload
+                  label="Background image"
+                  folder={`${orgSettings.id}/backgrounds`}
+                  value={formInstance.background_image_url}
+                  recommendedSize="1920×1080"
+                  maxSizeKB={2000}
+                  onChange={(url) =>
+                    setFormInstance({ background_image_url: url })
+                  }
+                />
+              </>
+            ) : null}
             <div className="space-y-2">
               <Label>Primary color</Label>
               <Input
@@ -436,6 +498,24 @@ export const FormSettingsSheet = ({
                 </Button>
               ) : null}
             </div>
+            {generatedLink?.shortUrl ? (
+              <div className="space-y-2">
+                <Label>Short URL</Label>
+                <Input value={generatedLink.shortUrl} readOnly />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    void copyText(generatedLink.shortUrl!, "Short URL copied")
+                  }
+                >
+                  <Copy className="size-4" />
+                  Copy short URL
+                </Button>
+              </div>
+            ) : null}
+            <FormQRCode formUrl={qrUrl} slug={formInstance.slug} />
             <div className="space-y-2">
               <Label>Embed iframe</Label>
               <Textarea value={embedIframe} readOnly rows={3} />
@@ -506,6 +586,40 @@ export const FormSettingsSheet = ({
               <p className="text-xs text-muted-foreground">
                 Controls whether public forms show one step at a time or all
                 sections on one page.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="custom-font-url">Custom font URL</Label>
+              <Input
+                id="custom-font-url"
+                value={formInstance.custom_font_url ?? ""}
+                placeholder="https://fonts.googleapis.com/css2?family=Poppins"
+                onChange={(event) =>
+                  setFormInstance({
+                    custom_font_url: event.target.value || null,
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste a Google Fonts or other stylesheet URL.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="custom-css">Custom CSS</Label>
+              <Textarea
+                id="custom-css"
+                value={formInstance.custom_css ?? ""}
+                placeholder={`.form-title { font-size: 32px; }`}
+                rows={6}
+                onChange={(event) =>
+                  setFormInstance({
+                    custom_css: event.target.value || null,
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Applied on the public form only. Unsafe rules are stripped on
+                save/render.
               </p>
             </div>
             <div className="space-y-2">
