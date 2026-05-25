@@ -44,6 +44,10 @@ export const defaultFieldForType = (
   if (type === "file") {
     field.accept = ".pdf,.doc,.docx,.png,.jpg";
   }
+  if (type === "formula") {
+    field.formula = "{field_a} + {field_b}";
+    field.format = "currency";
+  }
 
   return field;
 };

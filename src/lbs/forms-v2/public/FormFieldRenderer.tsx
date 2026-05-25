@@ -56,6 +56,17 @@ export const FormFieldRenderer = ({
     return null;
   }
 
+  if (field.type === "formula") {
+    return (
+      <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+        {commonLabel}
+        <p className="text-lg font-semibold">{readString(value) || "—"}</p>
+        <p className="text-xs text-muted-foreground">(calculated)</p>
+        {helpText}
+      </div>
+    );
+  }
+
   if (field.type === "textarea") {
     return (
       <div className="space-y-2">

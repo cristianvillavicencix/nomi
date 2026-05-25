@@ -23,6 +23,7 @@ export const FIELD_PALETTE: PaletteItem[] = [
   { type: "signature", label: "Signature", category: "advanced" },
   { type: "file", label: "File upload", category: "advanced" },
   { type: "file_multi", label: "Multi-file", category: "advanced" },
+  { type: "formula", label: "Formula", category: "advanced" },
   { type: "section", label: "Section", category: "layout" },
   { type: "heading", label: "Heading", category: "layout" },
   { type: "divider", label: "Divider", category: "layout" },
