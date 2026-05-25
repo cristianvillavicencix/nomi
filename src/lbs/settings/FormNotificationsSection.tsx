@@ -82,7 +82,9 @@ export const FormNotificationsSection = () => {
     },
     onError: (error) => {
       notify(
-        error instanceof Error ? error.message : "Failed to save form notifications",
+        error instanceof Error
+          ? error.message
+          : "Failed to save form notifications",
         { type: "error" },
       );
     },
@@ -113,7 +115,9 @@ export const FormNotificationsSection = () => {
       <CardContent className="space-y-4">
         <div className="space-y-3">
           {memberOptions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No active team members.</p>
+            <p className="text-sm text-muted-foreground">
+              No active team members.
+            </p>
           ) : (
             memberOptions.map((member) => {
               const checked = selectedIds.includes(member.id);
@@ -133,7 +137,9 @@ export const FormNotificationsSection = () => {
                     }}
                   />
                   <span className="space-y-0.5">
-                    <span className="block text-sm font-medium">{member.label}</span>
+                    <span className="block text-sm font-medium">
+                      {member.label}
+                    </span>
                     {member.email ? (
                       <span className="block text-xs text-muted-foreground">
                         {member.email}
