@@ -78,8 +78,11 @@ export type PublicFormPayload = {
     welcome_message?: string | null;
     thank_you_title?: string | null;
     thank_you_message?: string | null;
+    redirect_url?: string | null;
     recaptcha_enabled?: boolean;
     honeypot_enabled?: boolean;
+    custom_font_url?: string | null;
+    custom_css?: string | null;
   };
   prefill?: Record<string, unknown>;
   links?: {
@@ -129,6 +132,8 @@ export type FormInstance = {
   submission_limit?: number | null;
   recaptcha_enabled?: boolean;
   honeypot_enabled?: boolean;
+  custom_font_url?: string | null;
+  custom_css?: string | null;
   rate_limit_per_ip_per_hour?: number;
 };
 

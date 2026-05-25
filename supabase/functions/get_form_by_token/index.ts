@@ -49,6 +49,8 @@ Deno.serve(
             thank_you_message,
             recaptcha_enabled,
             honeypot_enabled,
+            custom_font_url,
+            custom_css,
             is_active,
             template_id,
             form_templates ( type )
@@ -137,6 +139,8 @@ Deno.serve(
             thank_you_message: formInstance.thank_you_message,
             recaptcha_enabled: formInstance.recaptcha_enabled,
             honeypot_enabled: formInstance.honeypot_enabled,
+            custom_font_url: formInstance.custom_font_url,
+            custom_css: formInstance.custom_css,
           },
           prefill,
           links: {
