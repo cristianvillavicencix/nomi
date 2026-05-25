@@ -57,6 +57,7 @@ export const ClientSmsComposer = ({
   const [includeSignature, setIncludeSignature] = useState(
     orgSignatureSettings?.sms_signature_enabled ?? true,
   );
+  const [formPickerOpen, setFormPickerOpen] = useState(false);
   const canWriteInternalNotes = useMemberCapability(
     "messaging.internal_notes.write",
   );
@@ -103,9 +104,11 @@ export const ClientSmsComposer = ({
 
   const insertFormLink = (url: string, label: string) => {
     const snippet = `${label}: ${url}`;
-    setBody((current) =>
-      current.trim() ? `${current.trim()}\n${snippet}` : snippet,
-    );
+    setBody((current) => {
+      const trimmed = current.replace(/\/form\s*$/i, "").trimEnd();
+      return trimmed ? `${trimmed}\n${snippet}` : snippet;
+    });
+    setFormPickerOpen(false);
   };
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -277,12 +280,20 @@ export const ClientSmsComposer = ({
           dealId={dealId}
           onInsertLink={insertFormLink}
           disabled={disabled || isSending}
+          open={formPickerOpen}
+          onOpenChange={setFormPickerOpen}
         />
 
         <Textarea
           ref={textareaRef}
           value={body}
-          onChange={(event) => setBody(event.target.value)}
+          onChange={(event) => {
+            const next = event.target.value;
+            setBody(next);
+            if (/\/form\s*$/i.test(next)) {
+              setFormPickerOpen(true);
+            }
+          }}
           onPaste={handlePaste}
           placeholder="Write an SMS… paste text, photos, or form links"
           className="min-h-[44px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none field-sizing-fixed focus-visible:ring-0"

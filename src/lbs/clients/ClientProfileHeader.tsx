@@ -39,6 +39,7 @@ import { ClientExtraEmailsIndicator } from "@/lbs/clients/ClientExtraEmailsIndic
 import { ClientNewMenu } from "@/lbs/clients/ClientNewMenu";
 import { ClientSocialLinksDisplay } from "@/lbs/clients/ClientSocialLinksDisplay";
 import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
+import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 import { getClientEditPath, getClientsListPath } from "@/lbs/routing";
 import type { Contact } from "@/components/atomic-crm/types";
 
@@ -207,6 +208,19 @@ export const ClientProfileHeader = ({
           </div>
 
           <div className="flex shrink-0 items-center gap-2 lg:justify-end">
+            <SendFormButton
+              context={{
+                type: "company",
+                company_id: Number(record.id),
+                contact_id:
+                  record.primary_contact_id != null
+                    ? Number(record.primary_contact_id)
+                    : primaryContact?.id != null
+                      ? Number(primaryContact.id)
+                      : undefined,
+                resourceName: businessName || personName,
+              }}
+            />
             <OpenClientSmsButton contact={primaryContact} />
             <Button asChild variant="outline" size="sm">
               <Link to={getClientEditPath(record.id)}>Edit</Link>

@@ -15,6 +15,7 @@ import { ConvertLeadButton } from "@/lbs/leads/ConvertLeadButton";
 import { getClientShowPath } from "@/lbs/routing";
 import { isLbsMode } from "@/lbs/productMode";
 import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
+import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 
 export const ContactHeader = ({
   record,
@@ -141,6 +142,19 @@ export const ContactHeader = ({
               {!embedded ? <TagsListEdit buttonOnly /> : null}
               {!embedded ? <AddTask display="chip" /> : null}
               {isLbsMode() ? <OpenClientSmsButton contact={record} /> : null}
+              {isLbsMode() && !embedded ? (
+                <SendFormButton
+                  context={{
+                    type: record.status === "lead" ? "lead" : "contact",
+                    contact_id: Number(record.id),
+                    company_id:
+                      record.company_id != null
+                        ? Number(record.company_id)
+                        : undefined,
+                    resourceName: `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim(),
+                  }}
+                />
+              ) : null}
               <Button
                 onClick={onEdit}
                 size={embedded ? "sm" : "default"}

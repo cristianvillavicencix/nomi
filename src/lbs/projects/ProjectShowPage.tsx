@@ -24,6 +24,7 @@ import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordMo
 import type { Deal } from "@/components/atomic-crm/types";
 import { deliveryStatusForStage } from "@/lbs/deals/lbsAgencyProjectModel";
 import { DealClientSmsButton } from "@/lbs/deals/DealClientSmsButton";
+import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 import { LbsDealHeaderOverview } from "@/lbs/deals/LbsDealHeaderOverview";
 import { LbsProjectDeliveryUrgency } from "@/lbs/deals/LbsProjectDeliveryUrgency";
 import {
@@ -271,6 +272,22 @@ const ProjectShowContent = () => {
         >
           <LbsProjectDeliveryUrgency record={record} />
           <div className="flex flex-wrap gap-2">
+            <SendFormButton
+              context={{
+                type: "deal",
+                deal_id: Number(record.id),
+                company_id:
+                  record.company_id != null ? Number(record.company_id) : undefined,
+                contact_id:
+                  record.contact_id != null
+                    ? Number(record.contact_id)
+                    : Array.isArray(record.contact_ids) &&
+                        record.contact_ids.length > 0
+                      ? Number(record.contact_ids[0])
+                      : undefined,
+                resourceName: record.name,
+              }}
+            />
             <DealClientSmsButton record={record} />
             <ShareRecordModal
               resourceType="deals"
