@@ -18,9 +18,18 @@ export function shouldScopeMessagingToAssignedProjects(
 export function filterConversationsForAssignedProjects(
   conversations: Conversation[],
   allowedDealIds: Set<string>,
+  currentMemberId?: Identifier | null,
 ): Conversation[] {
+  const me = currentMemberId != null ? String(currentMemberId) : null;
   return conversations.filter((conversation) => {
     if (conversation.type === "team_dm") return true;
+    if (
+      me != null &&
+      conversation.assignee_member_id != null &&
+      String(conversation.assignee_member_id) === me
+    ) {
+      return true;
+    }
     if (conversation.deal_id == null) return false;
     return allowedDealIds.has(String(conversation.deal_id));
   });

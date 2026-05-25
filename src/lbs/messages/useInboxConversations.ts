@@ -117,10 +117,12 @@ export const useInboxConversations = (
     return filterConversationsForAssignedProjects(
       base,
       allowedDealIds ?? new Set(),
+      identity?.id,
     );
   }, [
     allowedDealIds,
     conversations,
+    identity?.id,
     isAssignedDealsPending,
     participantConversationIds,
     scopeToProjects,
