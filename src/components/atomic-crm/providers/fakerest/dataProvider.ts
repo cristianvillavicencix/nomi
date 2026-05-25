@@ -59,7 +59,7 @@ import type { CrmDataProvider } from "../types";
 import {
   parseCustomFormSchema,
   validateCustomFormValues,
-} from "@/lbs/web-forms/customFormSchema";
+} from "@/lib/forms-v2/customFormSchemaLegacy";
 import { authProvider, USER_STORAGE_KEY } from "./authProvider";
 import generateData from "./dataGenerator";
 import { enrichCompanySummary } from "@/lbs/clients/clientProfile";

@@ -20,17 +20,12 @@ import {
   ContractsPlaceholderPage,
   ProposalsPlaceholderPage,
   TicketsPlaceholderPage,
-  WebFormsPlaceholderPage,
 } from "@/lbs/placeholders";
 import { ProposalsList } from "@/lbs/proposals/ProposalsList";
 import { ProposalCreate } from "@/lbs/proposals/ProposalCreate";
 import { ProposalShow } from "@/lbs/proposals/ProposalShow";
 import { ContractsList } from "@/lbs/contracts/ContractsList";
 import { ContractShow } from "@/lbs/contracts/ContractShow";
-import { WebFormsList } from "@/lbs/web-forms/WebFormsList";
-import { WebFormShow } from "@/lbs/web-forms/WebFormShow";
-import { WebFormEdit } from "@/lbs/web-forms/WebFormEdit";
-import { WebFormCreate } from "@/lbs/web-forms/WebFormCreate";
 import { TicketsList } from "@/lbs/tickets/TicketsList";
 import { TicketShow } from "@/lbs/tickets/TicketShow";
 import { lazy, Suspense } from "react";
@@ -284,38 +279,8 @@ export const renderLbsCustomRoutes = ({
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/web-forms"
-        element={
-          <ProtectedRoute resource="forms" action="list">
-            <WebFormsList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/web-forms/create"
-        element={
-          <ProtectedRoute resource="forms" action="create">
-            <WebFormCreate />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/web-forms/:id/show"
-        element={
-          <ProtectedRoute resource="forms" action="show">
-            <WebFormShow />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/web-forms/:id/edit"
-        element={
-          <ProtectedRoute resource="forms" action="edit">
-            <WebFormEdit />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/web-forms" element={<Navigate to="/forms-v2" replace />} />
+      <Route path="/web-forms/*" element={<Navigate to="/forms-v2" replace />} />
       <Route
         path="/tickets"
         element={
@@ -340,10 +305,6 @@ export const renderLbsCustomRoutes = ({
       <Route
         path="/contracts-placeholder"
         element={<ContractsPlaceholderPage />}
-      />
-      <Route
-        path="/web-forms-placeholder"
-        element={<WebFormsPlaceholderPage />}
       />
       <Route path="/tickets-placeholder" element={<TicketsPlaceholderPage />} />
     </>

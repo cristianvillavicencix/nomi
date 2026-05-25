@@ -188,19 +188,7 @@ verify_jwt = false
 [functions.accept_proposal]
 verify_jwt = false
 
-[functions.process_website_intake]
-verify_jwt = false
-
-[functions.submit_public_form]
-verify_jwt = false
-
 [functions.get_public_deal_brief]
-verify_jwt = false
-
-[functions.get_public_form]
-verify_jwt = false
-
-[functions.submit_project_resources]
 verify_jwt = false
 
 [functions.get_github_repo_status]
@@ -234,4 +222,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.forms_embed_js]
+verify_jwt = false
+
+[functions.record_form_event]
 verify_jwt = false

@@ -1,4 +1,4 @@
-import { appendWebFormEmbedParam } from "@/lbs/web-forms/webFormEmbed";
+import { appendWebFormEmbedParam } from "@/lbs/forms-v2/public/formEmbedUtils";
 
 const supabaseUrl = () =>
   String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
@@ -12,10 +12,7 @@ export const buildFormShortUrl = (origin: string, shortCode: string) =>
 export const buildFormEmbedUrl = (origin: string, token: string) =>
   appendWebFormEmbedParam(buildFormPublicUrl(origin, token));
 
-export const buildFormEmbedIframeSnippet = (
-  embedUrl: string,
-  title = "Form",
-) =>
+export const buildFormEmbedIframeSnippet = (embedUrl: string, title = "Form") =>
   `<iframe\n  src="${embedUrl}"\n  title="${title.replace(/"/g, "&quot;")}"\n  style="width:100%;border:0;display:block;min-height:600px"\n  loading="lazy"\n></iframe>`;
 
 export const buildFormEmbedScriptSnippet = (token: string) => {
