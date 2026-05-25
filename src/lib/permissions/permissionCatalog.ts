@@ -293,8 +293,8 @@ export const RESOURCE_ACTION_TO_CAPABILITY: Record<
   conversation_participants: {
     list: "messaging.conversations.view",
     show: "messaging.conversations.view",
-    create: "messaging.send",
-    edit: "messaging.send",
+    create: "messaging.conversations.view",
+    edit: "messaging.conversations.view",
     delete: "messaging.send",
   },
   conversation_messages: {

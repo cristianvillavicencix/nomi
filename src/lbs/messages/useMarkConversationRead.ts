@@ -12,6 +12,10 @@ import {
   persistConversationRead,
 } from "@/lbs/messages/persistConversationRead";
 
+const isPermissionDeniedError = (error: unknown) =>
+  error instanceof Error &&
+  error.message.includes("No tienes permiso para esta acción");
+
 export const useMarkConversationRead = (
   conversationId: Identifier | null | undefined,
   _conversationType?: ConversationType | null,
@@ -22,6 +26,11 @@ export const useMarkConversationRead = (
   const { identity } = useGetIdentity();
   const memberId = identity?.id;
   const inFlightRef = useRef<string | null>(null);
+  const persistBlockedRef = useRef<Identifier | null>(null);
+  const fallbackReadAtRef = useRef<{
+    conversationId: Identifier;
+    readAt: string;
+  } | null>(null);
 
   const { data: participants = [] } = useGetList<ConversationParticipant>(
     "conversation_participants",
@@ -50,7 +59,21 @@ export const useMarkConversationRead = (
       return;
     }
 
-    const effectiveReadAt = readAt ?? new Date().toISOString();
+    if (persistBlockedRef.current === conversationId) {
+      return;
+    }
+
+    let effectiveReadAt = readAt ?? undefined;
+    if (!effectiveReadAt) {
+      if (
+        fallbackReadAtRef.current?.conversationId === conversationId
+      ) {
+        effectiveReadAt = fallbackReadAtRef.current.readAt;
+      } else {
+        effectiveReadAt = new Date().toISOString();
+        fallbackReadAtRef.current = { conversationId, readAt: effectiveReadAt };
+      }
+    }
 
     if (isReadThrough(lastReadAt, effectiveReadAt)) {
       return;
@@ -68,10 +91,16 @@ export const useMarkConversationRead = (
       conversationId,
       memberId,
       readAt: effectiveReadAt,
-    }).finally(() => {
-      if (inFlightRef.current === inFlightKey) {
-        inFlightRef.current = null;
-      }
-    });
+    })
+      .catch((error) => {
+        if (isPermissionDeniedError(error)) {
+          persistBlockedRef.current = conversationId;
+        }
+      })
+      .finally(() => {
+        if (inFlightRef.current === inFlightKey) {
+          inFlightRef.current = null;
+        }
+      });
   }, [conversationId, dataProvider, lastReadAt, memberId, queryClient, readAt]);
 };

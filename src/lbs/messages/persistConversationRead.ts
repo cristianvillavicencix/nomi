@@ -93,20 +93,27 @@ export const persistConversationRead = async ({
     return false;
   }
 
-  if (participant?.id) {
-    await dataProvider.update("conversation_participants", {
-      id: participant.id,
-      data: { last_read_at: readAt },
-      previousData: participant,
+  try {
+    if (participant?.id) {
+      await dataProvider.update("conversation_participants", {
+        id: participant.id,
+        data: { last_read_at: readAt },
+        previousData: participant,
+      });
+    } else {
+      await dataProvider.create("conversation_participants", {
+        data: {
+          conversation_id: conversationId,
+          member_id: memberId,
+          last_read_at: readAt,
+        },
+      });
+    }
+  } catch (error) {
+    await queryClient.invalidateQueries({
+      queryKey: ["conversation_participants"],
     });
-  } else {
-    await dataProvider.create("conversation_participants", {
-      data: {
-        conversation_id: conversationId,
-        member_id: memberId,
-        last_read_at: readAt,
-      },
-    });
+    throw error;
   }
 
   await queryClient.invalidateQueries({
