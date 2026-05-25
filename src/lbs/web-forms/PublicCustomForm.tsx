@@ -44,6 +44,7 @@ export const PublicCustomForm = ({ slug }: { slug: string }) => {
     queryKey: ["public-form", slug],
     enabled: Boolean(slug && canLoad),
     staleTime: 60_000,
+    retry: false,
     queryFn: () =>
       (
         dataProvider as CrmDataProvider & {
