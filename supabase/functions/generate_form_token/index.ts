@@ -44,10 +44,16 @@ Deno.serve((req: Request) =>
         return createErrorResponse(403, "Organization not found");
       }
 
-      if (!hasMemberCapability(member, "forms.manage")) {
+      const canShareForms =
+        member.administrator === true ||
+        hasMemberCapability(member, "forms.manage") ||
+        (hasMemberCapability(member, "forms.submissions.view") &&
+          hasMemberCapability(member, "messaging.send"));
+
+      if (!canShareForms) {
         return createErrorResponse(
           403,
-          "You don't have permission to manage forms",
+          "You don't have permission to share forms with clients",
         );
       }
 
