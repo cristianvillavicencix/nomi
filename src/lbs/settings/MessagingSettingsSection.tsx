@@ -13,6 +13,7 @@ import { VoiceSettingsCard } from "@/lbs/settings/communications/VoiceSettingsCa
 import { BusinessHoursSettingsCard } from "@/lbs/settings/communications/BusinessHoursSettingsCard";
 import { TestSmsButton } from "@/lbs/settings/communications/TestSmsButton";
 import { OrganizationSignatureSection } from "@/lbs/settings/OrganizationSignatureSection";
+import { FormNotificationsSection } from "@/lbs/settings/FormNotificationsSection";
 
 export const MessagingSettingsSection = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -236,6 +237,8 @@ export const MessagingSettingsSection = () => {
       )}
 
       <OrganizationSignatureSection />
+
+      <FormNotificationsSection />
 
       <WhatsAppSettingsCard />
       <VoiceSettingsCard />
