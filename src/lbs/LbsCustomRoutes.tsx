@@ -9,7 +9,7 @@ import { LeadCreatePage } from "@/lbs/leads/LeadCreatePage";
 import { LeadShowPage } from "@/lbs/leads/LeadShowPage";
 import { LbsContactShowPage } from "@/lbs/contacts/ContactShowPage";
 import { TicketCreate } from "@/lbs/tickets/TicketCreate";
-import { PublicFormPage } from "@/lbs/web-forms/PublicFormPage";
+import { FormPublicEntry } from "@/lbs/forms-v2/public/FormPublicEntry";
 import {
   ContractsPlaceholderPage,
   ProposalsPlaceholderPage,
@@ -47,7 +47,7 @@ type ProtectedRouteProps = {
 };
 
 export const renderLbsPublicFormRoute = () => (
-  <Route path="/forms/:slug" element={<PublicFormPage />} />
+  <Route path="/forms/:slug" element={<FormPublicEntry />} />
 );
 
 export const renderLbsCustomRoutes = ({

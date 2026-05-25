@@ -1065,6 +1065,134 @@ const dataProviderWithCustomMethods = {
 
     return data;
   },
+  async getFormByToken(payload: { token: string }) {
+    const { data, error } = await supabase.functions.invoke<{
+      token: string;
+      form: {
+        id: number;
+        name: string;
+        slug: string;
+        description?: string | null;
+        schema: Record<string, unknown>;
+        type: string;
+        logo_url?: string | null;
+        primary_color?: string | null;
+        background_image_url?: string | null;
+        welcome_title?: string | null;
+        welcome_message?: string | null;
+        thank_you_title?: string | null;
+        thank_you_message?: string | null;
+        recaptcha_enabled?: boolean;
+        honeypot_enabled?: boolean;
+      };
+      prefill?: Record<string, unknown>;
+      links?: {
+        contact_id?: number | null;
+        company_id?: number | null;
+        deal_id?: number | null;
+      };
+    }>("get_form_by_token", {
+      body: { token: payload.token },
+      headers: {
+        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+      },
+    });
+
+    if (error || !data?.form) {
+      console.error("get_form_by_token.error", error);
+      throw new Error("Form not found or link expired");
+    }
+
+    return data;
+  },
+  async submitFormV2(payload: {
+    token: string;
+    answers: Record<string, unknown>;
+    recaptchaToken?: string;
+    honeypot?: string;
+    metadata?: {
+      source_url?: string;
+      utm_source?: string;
+      utm_medium?: string;
+      utm_campaign?: string;
+      app_base_url?: string;
+    };
+  }) {
+    const { data, error } = await supabase.functions.invoke<{
+      ok?: boolean;
+      error?: string;
+      details?: string[];
+      submission_id?: number;
+      thank_you_title?: string;
+      thank_you_message?: string;
+      redirect_url?: string | null;
+    }>("submit_form_v2", {
+      body: {
+        token: payload.token,
+        answers: payload.answers,
+        recaptcha_token: payload.recaptchaToken,
+        honeypot: payload.honeypot,
+        metadata: {
+          ...payload.metadata,
+          app_base_url: payload.metadata?.app_base_url ?? window.location.origin,
+          source_url: payload.metadata?.source_url ?? window.location.href,
+        },
+      },
+      headers: {
+        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
+      },
+    });
+
+    if (error) {
+      console.error("submit_form_v2.error", error);
+      throw new Error("Failed to submit form");
+    }
+
+    if (!data?.ok) {
+      const detail = data?.details?.length
+        ? `: ${data.details.join(", ")}`
+        : "";
+      throw new Error((data?.error ?? "Failed to submit form") + detail);
+    }
+
+    return data;
+  },
+  async generateFormToken(payload: {
+    formInstanceId: number;
+    contactId?: number | null;
+    companyId?: number | null;
+    dealId?: number | null;
+    expiresInDays?: number;
+    maxUses?: number | null;
+    baseUrl?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      token: string;
+      url: string;
+      expires_at: string;
+      max_uses: number | null;
+      form_instance_id: number;
+      form_name: string;
+    }>("generate_form_token", {
+      method: "POST",
+      body: {
+        form_instance_id: payload.formInstanceId,
+        contact_id: payload.contactId ?? null,
+        company_id: payload.companyId ?? null,
+        deal_id: payload.dealId ?? null,
+        expires_in_days: payload.expiresInDays ?? 30,
+        max_uses: payload.maxUses ?? 1,
+        base_url: payload.baseUrl ?? window.location.origin,
+      },
+    });
+
+    if (error || !data?.token) {
+      console.error("generate_form_token.error", error);
+      throw new Error("Failed to generate form link");
+    }
+
+    return data;
+  },
   /**
    * Usa el cliente de Supabase con `.maybeSingle()` en lugar de `getOne` del data provider.
    * Sin sesión, RLS no devuelve filas: PostgREST respondía 406 (Accept object+json) al esperar
