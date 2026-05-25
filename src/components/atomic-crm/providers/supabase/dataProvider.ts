@@ -1043,11 +1043,24 @@ const dataProviderWithCustomMethods = {
     });
 
     if (error || !data?.ok) {
-      const detail = data?.details?.length
-        ? `: ${data.details.join(", ")}`
+      let responseBody = data;
+      if (error && !responseBody?.error) {
+        try {
+          const context = (error as { context?: Response }).context;
+          if (context) {
+            responseBody = (await context.json()) as typeof data;
+          }
+        } catch {
+          // ignore malformed error body
+        }
+      }
+      const detail = responseBody?.details?.length
+        ? `: ${responseBody.details.join(", ")}`
         : "";
-      const message = (data?.error ?? "Failed to submit form") + detail;
-      console.error("submit_form_v2.error", error ?? message);
+      const message =
+        (responseBody?.error ?? error?.message ?? "Failed to submit form") +
+        detail;
+      console.error("submit_form_v2.error", error ?? message, responseBody);
       throw new Error(message);
     }
 
@@ -1641,6 +1654,54 @@ const dataProviderWithCustomMethods = {
       );
     }
     return data?.migrated ?? 0;
+  },
+  async deliverProject(payload: {
+    deal_id: number;
+    site_url?: string;
+    plan_name?: string;
+    project_start_date?: string;
+    delivery_date?: string;
+    hosting_renewal_date?: string;
+    hosting_status?: string;
+    site_language?: string;
+    included_pages?: string[];
+    maintenance_plan?: Record<string, unknown>;
+    enabled_sections?: string[];
+    checklist_snapshot?: Record<string, unknown>;
+    notify_email?: boolean;
+    notify_whatsapp?: boolean;
+    notify_portal?: boolean;
+    share_credential_entry_ids?: number[];
+    domain?: {
+      domain?: string;
+      registrar?: string | null;
+      registered_at?: string | null;
+      renewal_date?: string | null;
+      managed_by?: "lbs" | "client";
+      auto_renew?: boolean;
+      dns_servers?: string[];
+    };
+    corporate_emails?: Array<{
+      email?: string;
+      config_notes?: string | null;
+    }>;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      delivery?: { id: number; delivered_at: string };
+    }>("deliver_project", {
+      method: "POST",
+      body: payload,
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to deliver project",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Failed to deliver project");
+    }
+    return data;
   },
   async sendClientSms(params: {
     conversationId?: Identifier;

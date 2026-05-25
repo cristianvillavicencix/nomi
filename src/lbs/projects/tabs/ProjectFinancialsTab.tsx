@@ -2,8 +2,14 @@ import { lazy, Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { ProfitSummaryCard } from "@/lbs/projects/financials/ProfitSummaryCard";
 import type { LbsDeal } from "@/lbs/types";
 
+const ProjectScopeTab = lazy(() =>
+  import("@/lbs/projects/tabs/ProjectScopeTab").then((m) => ({
+    default: m.ProjectScopeTab,
+  })),
+);
 const ProjectExpensesTab = lazy(() =>
   import("@/lbs/projects/financials/ExpensesTab").then((m) => ({
     default: m.ExpensesTab,
@@ -38,6 +44,9 @@ export const ProjectFinancialsTab = ({ record }: { record: LbsDeal }) => {
   const canViewCommissions = useMemberCapability(
     "deal_financials.commissions.view",
   );
+  const canViewCollections = useMemberCapability(
+    "deal_financials.collections.view",
+  );
 
   const defaultTab = canViewPayments
     ? "payments"
@@ -52,9 +61,16 @@ export const ProjectFinancialsTab = ({ record }: { record: LbsDeal }) => {
       <div>
         <h3 className="text-base font-semibold">Financials</h3>
         <p className="text-sm text-muted-foreground">
-          Payments, expenses, change orders, and commissions for this project.
+          Sold scope, profit summary, payments, expenses, change orders, and
+          commissions.
         </p>
       </div>
+
+      <Suspense fallback={<TabFallback />}>
+        <ProjectScopeTab record={record} />
+      </Suspense>
+
+      {canViewCollections ? <ProfitSummaryCard record={record} /> : null}
 
       <Tabs defaultValue={defaultTab}>
         <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">

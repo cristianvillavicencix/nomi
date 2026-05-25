@@ -1,14 +1,11 @@
 export const LBS_PROJECT_TABS = [
   "overview",
-  "scope",
   "website-brief",
-  "content",
   "resources",
   "tasks",
   "delivery",
   "financials",
-  "activity",
-  "settings",
+  "security",
 ] as const;
 
 export type LbsProjectTab = (typeof LBS_PROJECT_TABS)[number];
@@ -18,12 +15,14 @@ const LEGACY_TAB_MAP: Record<string, LbsProjectTab> = {
   files: "resources",
   documents: "resources",
   assets: "resources",
-  proposals: "scope",
-  contracts: "scope",
+  scope: "financials",
+  proposals: "financials",
+  contracts: "financials",
+  content: "overview",
   "web-forms": "resources",
-  activity: "activity",
-  security: "settings",
-  tickets: "activity",
+  activity: "overview",
+  settings: "security",
+  tickets: "overview",
   schedule: "delivery",
   launch: "delivery",
   maintenance: "delivery",
@@ -35,13 +34,19 @@ const LEGACY_TAB_MAP: Record<string, LbsProjectTab> = {
 };
 
 export const getValidProjectTab = (value: string | null): LbsProjectTab => {
+  if (value && LBS_PROJECT_TABS.includes(value as LbsProjectTab)) {
+    return value as LbsProjectTab;
+  }
   if (value && LEGACY_TAB_MAP[value]) {
     return LEGACY_TAB_MAP[value];
   }
-  return LBS_PROJECT_TABS.includes(value as LbsProjectTab)
-    ? (value as LbsProjectTab)
-    : "overview";
+  return "overview";
 };
+
+export const resolveProjectTabSelection = (tab: string): LbsProjectTab =>
+  LBS_PROJECT_TABS.includes(tab as LbsProjectTab)
+    ? (tab as LbsProjectTab)
+    : getValidProjectTab(tab);
 
 export const formatTabCount = (count?: number) =>
   count != null && count > 0 ? ` (${count})` : "";

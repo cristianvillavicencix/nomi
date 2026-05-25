@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { buildBriefPrefillFromCrm } from "../_shared/briefPrefill.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
@@ -99,16 +100,37 @@ Deno.serve(
       if (tokenData.deal_id) {
         const { data: deal } = await supabaseAdmin
           .from("deals")
-          .select("website_brief, project_type, name")
+          .select("website_brief, project_type, name, company_id, contact_id")
           .eq("id", tokenData.deal_id)
           .maybeSingle();
 
-        if (deal?.website_brief && typeof deal.website_brief === "object") {
-          prefill = {
-            ...(deal.website_brief as Record<string, unknown>),
-            project_type: deal.project_type ?? undefined,
-          };
+        let contact = null;
+        const contactId = tokenData.contact_id ?? deal?.contact_id;
+        if (contactId) {
+          const { data } = await supabaseAdmin
+            .from("contacts")
+            .select(
+              "first_name, last_name, email_jsonb, phone_jsonb, address",
+            )
+            .eq("id", contactId)
+            .maybeSingle();
+          contact = data;
         }
+
+        let company = null;
+        const companyId = tokenData.company_id ?? deal?.company_id;
+        if (companyId) {
+          const { data } = await supabaseAdmin
+            .from("companies")
+            .select(
+              "name, website, phone_number, address, city, state_abbr, zipcode",
+            )
+            .eq("id", companyId)
+            .maybeSingle();
+          company = data;
+        }
+
+        prefill = buildBriefPrefillFromCrm({ deal, contact, company });
       }
 
       const templateJoin = formInstance.form_templates as

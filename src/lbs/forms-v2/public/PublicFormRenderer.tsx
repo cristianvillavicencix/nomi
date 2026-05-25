@@ -5,20 +5,24 @@ import { useDataProvider, useNotify } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import {
   emptyWebsiteIntakeValues,
   getVisibleBriefSections,
-  lbsProjectTypeChoices,
+  type WebsiteBriefFieldDef,
+  type WebsiteBriefSectionDef,
 } from "@/lbs/deals/websiteBriefSchema";
+import { usesContractorBriefForm } from "@/lbs/deals/contractorBriefSchema";
+import {
+  filterBriefSections,
+  parseBriefSectionsParam,
+} from "@/lbs/deals/projectBriefRequestScope";
+import { ContractorBriefSectionFields } from "@/lbs/deals/ContractorBriefFields";
+import {
+  computeYearsExperience,
+  sanitizeBriefAnswersForSubmit,
+} from "@/lbs/deals/briefFormUtils";
 import { mergeDealIntoIntakeValues } from "@/lbs/deals/projectBriefProgress";
 import {
   buildFormulaAnswers,
@@ -39,7 +43,7 @@ import {
   recaptchaConfigured,
   useRecaptchaToken,
 } from "@/lbs/forms-v2/public/useRecaptcha";
-import type { FormSectionDef, PublicFormPayload } from "@/lbs/forms-v2/types";
+import type { FormFieldDef, FormSectionDef, PublicFormPayload } from "@/lbs/forms-v2/types";
 import { useFormEventRecorder } from "@/lbs/forms-v2/public/useFormEventRecorder";
 import {
   publicFormContentClassName,
@@ -58,6 +62,10 @@ import {
   ProjectResourcesPreflightStep,
   type ProjectLinkMode,
 } from "@/lbs/forms-v2/public/ProjectResourcesPreflightStep";
+import {
+  ProjectBriefThankYou,
+  PROJECT_BRIEF_THANK_YOU_REDIRECT,
+} from "@/lbs/forms-v2/public/ProjectBriefThankYou";
 
 const PreviewBanner = ({ isPreview }: { isPreview?: boolean }) =>
   isPreview ? (
@@ -123,6 +131,29 @@ const renderFormSection = ({
   </section>
 );
 
+const toBriefFormField = (field: WebsiteBriefFieldDef): FormFieldDef => ({
+  key: field.key,
+  type: field.fieldType ?? (field.multiline ? "textarea" : "text"),
+  label: field.label,
+  required: field.required,
+  placeholder: field.placeholder,
+  help_text:
+    typeof field.helperText === "string" ? field.helperText : undefined,
+  options: field.options,
+  accept: field.accept,
+  max_files: field.maxFiles,
+  visible_when: field.visibleWhen,
+});
+
+const briefSectionToFormSection = (
+  section: WebsiteBriefSectionDef,
+): FormSectionDef => ({
+  id: section.id,
+  title: section.title,
+  description: section.description,
+  fields: section.fields.map(toBriefFormField),
+});
+
 const ProjectBriefPublicForm = ({
   payload,
   onSubmitted,
@@ -137,6 +168,7 @@ const ProjectBriefPublicForm = ({
 }) => {
   const notify = useNotify();
   const { embedded } = usePublicFormEmbed();
+  const [searchParams] = useSearchParams();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const getRecaptchaToken = useRecaptchaToken(
     Boolean(payload.form.recaptcha_enabled && recaptchaConfigured),
@@ -145,44 +177,151 @@ const ProjectBriefPublicForm = ({
   const initialValues = useMemo(() => {
     const merged = mergeDealIntoIntakeValues(
       {
-        project_type: String(payload.prefill?.project_type ?? ""),
+        project_type: String(payload.prefill?.project_type ?? "website"),
         website_brief: payload.prefill as Record<string, string | null>,
       },
-      emptyWebsiteIntakeValues,
+      emptyWebsiteIntakeValues(),
     );
-    return { ...merged, ...(payload.prefill as Record<string, string>) };
+    return { ...merged, ...payload.prefill } as Record<string, unknown>;
   }, [payload.prefill]);
 
-  const [values, setValues] = useState<Record<string, string>>(initialValues);
+  const [values, setValues] =
+    useState<Record<string, unknown>>(initialValues);
   const [honeypot, setHoneypot] = useState("");
+  const [step, setStep] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const projectType = values.project_type || "new-website";
-  const sections = useMemo(
-    () => getVisibleBriefSections(projectType),
-    [projectType],
+  const projectType = String(values.project_type ?? "website");
+  const isContractorBrief = usesContractorBriefForm(projectType);
+  const briefSectionScope = useMemo(
+    () => parseBriefSectionsParam(searchParams.get("sections")),
+    [searchParams],
   );
+  const sections = useMemo(
+    () =>
+      filterBriefSections(
+        getVisibleBriefSections(projectType),
+        briefSectionScope,
+      ),
+    [briefSectionScope, projectType],
+  );
+  const currentSection = sections[step];
+
+  useEffect(() => {
+    setStep(0);
+  }, [briefSectionScope]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
       const recaptchaToken = await getRecaptchaToken();
+      const answers = isContractorBrief
+        ? sanitizeBriefAnswersForSubmit(values)
+        : values;
       return dataProvider.submitFormV2({
         token: payload.token,
-        answers: values,
+        answers,
         recaptchaToken,
         honeypot,
       });
     },
     onSuccess: (result) => {
-      onSubmitted(result);
-      notify("Form submitted. Thank you!", { type: "info" });
+      onSubmitted({
+        ...result,
+        redirect_url: result.redirect_url ?? PROJECT_BRIEF_THANK_YOU_REDIRECT,
+      });
+      notify("Brief submitted. Thank you!", { type: "info" });
     },
     onError: (error: Error) => {
-      notify(error.message || "Failed to submit form", { type: "error" });
+      notify(error.message || "Could not submit the form", {
+        type: "error",
+      });
     },
   });
 
-  const setField = (key: string, next: string) =>
-    setValues((current) => ({ ...current, [key]: next }));
+  const setField = (key: string, next: unknown) =>
+    setValues((current) => {
+      const updated = { ...current, [key]: next };
+      if (key === "company_founded_year") {
+        const years = computeYearsExperience(next);
+        if (years != null) updated.years_experience = years;
+      }
+      return updated;
+    });
+
+  const validateCurrentSection = () => {
+    if (!currentSection) return true;
+    const nextErrors = validateSectionFields(
+      briefSectionToFormSection(currentSection),
+      values,
+    );
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      notify(Object.values(nextErrors)[0] ?? "Please complete the required fields", {
+        type: "warning",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const validateAllSections = () => {
+    const nextErrors: Record<string, string> = {};
+    for (const section of sections) {
+      Object.assign(
+        nextErrors,
+        validateSectionFields(briefSectionToFormSection(section), values),
+      );
+    }
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isContractorBrief && step < sections.length - 1) {
+      if (!validateCurrentSection()) return;
+      setStep((current) => current + 1);
+      return;
+    }
+    if (!validateAllSections()) {
+      notify("Review required fields before submitting", {
+        type: "warning",
+      });
+      return;
+    }
+    mutate();
+  };
+
+  const renderSectionFields = (section: WebsiteBriefSectionDef) => {
+    const formSection = briefSectionToFormSection(section);
+    if (isContractorBrief) {
+      return (
+        <ContractorBriefSectionFields
+          section={section}
+          formSection={formSection}
+          values={values}
+          fieldErrors={fieldErrors}
+          formId={payload.form.id}
+          token={payload.token}
+          setField={setField}
+        />
+      );
+    }
+    return getVisibleFields(formSection, values).map((field) => (
+      <div key={field.key} className="space-y-1">
+        <FormFieldRenderer
+          field={field}
+          value={values[field.key]}
+          formId={payload.form.id}
+          token={payload.token}
+          onChange={(next) => setField(field.key, next)}
+        />
+        {fieldErrors[field.key] ? (
+          <p className="text-xs text-destructive">{fieldErrors[field.key]}</p>
+        ) : null}
+      </div>
+    ));
+  };
 
   return (
     <FormBrandingShell
@@ -203,21 +342,21 @@ const ProjectBriefPublicForm = ({
       <PreviewBanner isPreview={payload.is_preview} />
       <div>
         <h1 className="text-2xl font-semibold">
-          {payload.form.welcome_title || payload.form.name}
+          {payload.form.welcome_title ||
+            payload.form.name ||
+            "Project brief"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {payload.form.welcome_message ||
-            "Answer what you can — fields change based on your project type."}
+            (briefSectionScope?.length
+              ? "Complete only the sections below. Fields we already have are pre-filled."
+              : isContractorBrief
+                ? "Confirm or complete your details. Fields we already have are pre-filled."
+                : "Answer what you can — some questions change based on project type.")}
         </p>
       </div>
 
-      <form
-        className="space-y-8"
-        onSubmit={(event) => {
-          event.preventDefault();
-          mutate();
-        }}
-      >
+      <form className="space-y-6" onSubmit={handleSubmit}>
         {payload.form.honeypot_enabled ? (
           <input
             type="text"
@@ -231,66 +370,84 @@ const ProjectBriefPublicForm = ({
           />
         ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor="project_type">Project type</Label>
-          <Select
-            value={projectType}
-            onValueChange={(next) => setField("project_type", next)}
-          >
-            <SelectTrigger id="project_type">
-              <SelectValue placeholder="Select project type" />
-            </SelectTrigger>
-            <SelectContent>
-              {lbsProjectTypeChoices.map((choice) => (
-                <SelectItem key={choice.value} value={choice.value}>
-                  {choice.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {isContractorBrief && sections.length > 1 ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Step {step + 1} of {sections.length}
+              </span>
+              <span>{currentSection?.title}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{
+                  width: `${Math.round(((step + 1) / sections.length) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
 
-        {sections.map((section) => (
-          <section key={section.id} className="space-y-4 rounded-lg border p-4">
+        {isContractorBrief && currentSection ? (
+          <section className="space-y-4 rounded-lg border p-4">
             <div>
-              <h2 className="text-base font-semibold">{section.title}</h2>
-              {section.description ? (
+              <h2 className="text-base font-semibold">{currentSection.title}</h2>
+              {currentSection.description ? (
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {section.description}
+                  {currentSection.description}
                 </p>
               ) : null}
             </div>
-            {section.fields.map((field) => (
-              <div key={field.key} className="space-y-2">
-                <Label htmlFor={field.key}>{field.label}</Label>
-                {field.multiline ? (
-                  <Textarea
-                    id={field.key}
-                    value={values[field.key] ?? ""}
-                    onChange={(event) =>
-                      setField(field.key, event.target.value)
-                    }
-                    placeholder={field.placeholder}
-                    rows={field.rows ?? 3}
-                  />
-                ) : (
-                  <Input
-                    id={field.key}
-                    value={values[field.key] ?? ""}
-                    onChange={(event) =>
-                      setField(field.key, event.target.value)
-                    }
-                    placeholder={field.placeholder}
-                  />
-                )}
-              </div>
-            ))}
+            {renderSectionFields(currentSection)}
           </section>
-        ))}
+        ) : sections.length === 0 ? (
+          <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            This link does not include any valid brief sections. Contact your
+            project team for a new link.
+          </p>
+        ) : (
+          sections.map((section) => (
+            <section
+              key={section.id}
+              className="space-y-4 rounded-lg border p-4"
+            >
+              <div>
+                <h2 className="text-base font-semibold">{section.title}</h2>
+                {section.description ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {section.description}
+                  </p>
+                ) : null}
+              </div>
+              {renderSectionFields(section)}
+            </section>
+          ))
+        )}
 
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Submitting…" : "Submit project details"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {isContractorBrief && step > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              onClick={() => setStep((current) => Math.max(0, current - 1))}
+            >
+              Previous
+            </Button>
+          ) : null}
+          <Button
+            type="submit"
+            disabled={isPending || sections.length === 0}
+            className="min-h-11"
+          >
+            {isPending
+              ? "Submitting…"
+              : isContractorBrief && step < sections.length - 1
+                ? "Next"
+                : "Submit brief"}
+          </Button>
+        </div>
       </form>
     </FormBrandingShell>
   );
@@ -515,15 +672,20 @@ export const PublicFormRenderer = () => {
   if (formPayload.form.type === "project_brief") {
     if (submitted) {
       return (
-        <div className={publicFormContentClassName(embedded) + " text-center"}>
-          {submitted.preview ? <PreviewBanner isPreview /> : null}
-          <h1 className="text-2xl font-semibold">
-            {submitted.thank_you_title || "Thank you"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {submitted.thank_you_message || "We received your project details."}
-          </p>
-        </div>
+        <FormBrandingShell
+          primaryColor={formPayload.form.primary_color}
+          backgroundImageUrl={formPayload.form.background_image_url}
+          customFontUrl={formPayload.form.custom_font_url}
+          customCss={formPayload.form.custom_css}
+          embedded={embedded}
+          className={publicFormContentClassName(embedded)}
+        >
+          <ProjectBriefThankYou
+            embedded={embedded}
+            preview={submitted.preview}
+            className={publicFormContentClassName(embedded)}
+          />
+        </FormBrandingShell>
       );
     }
 

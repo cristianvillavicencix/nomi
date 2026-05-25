@@ -10,7 +10,6 @@ import {
   getLbsProjectStageLabel,
   lbsProjectTypeChoices,
 } from "@/lbs/deals/lbsProjectConstants";
-import { BriefProgressBar } from "@/lbs/deals/BriefProgressBar";
 import {
   formatProjectDeliveryDate,
   getProjectDeliveryCountdown,
@@ -18,12 +17,8 @@ import {
   getProjectDeliveryUrgencyClassName,
   getProjectDeliveryUrgency,
 } from "@/lbs/deals/projectDeliveryDate";
-import { getProjectBriefProgress } from "@/lbs/deals/projectBriefProgress";
 import { ProjectCalendarEventsList } from "@/lbs/calendar/ProjectCalendarEventsList";
-import { ProjectGithubLink } from "@/lbs/deals/ProjectGithubLink";
-import { ProfitSummaryCard } from "@/lbs/projects/financials/ProfitSummaryCard";
-import { ProjectDeploymentCard } from "@/lbs/projects/ProjectDeploymentCard";
-import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { ProjectActivityTab } from "@/lbs/projects/tabs/ProjectActivityTab";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
 
@@ -49,9 +44,6 @@ const OverviewField = ({
 
 export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
   const { dealStages } = useConfigurationContext();
-  const canViewCollections = useMemberCapability(
-    "deal_financials.collections.view",
-  );
   const stageLabel =
     getLbsProjectStageLabel(record.stage) ||
     dealStages.find((stage) => stage.value === record.stage)?.label ||
@@ -82,7 +74,6 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
     stage: record.stage,
     actualCompletionDate: record.actual_completion_date,
   });
-  const briefProgress = getProjectBriefProgress(record);
 
   return (
     <div className="space-y-6">
@@ -116,28 +107,6 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
             </OverviewField>
           </div>
 
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-semibold">Project brief</h3>
-                <p className="text-sm text-muted-foreground">
-                  {briefProgress.percent}% complete
-                </p>
-              </div>
-              <Link
-                to={`/deals/${record.id}/show?tab=website-brief`}
-                className="text-sm link-action"
-              >
-                Open brief
-              </Link>
-            </div>
-            <BriefProgressBar
-              percent={briefProgress.percent}
-              showLabel
-              className="mt-3"
-            />
-          </div>
-
           {String(record.description ?? record.notes ?? "").trim() ? (
             <OverviewField label="Internal notes">
               <span className="whitespace-pre-wrap font-normal">
@@ -145,45 +114,43 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
               </span>
             </OverviewField>
           ) : null}
-
-          <ProjectDeploymentCard record={record} />
         </div>
 
         <div className="rounded-lg border p-4 lg:sticky lg:top-4 space-y-6">
-          {canViewCollections ? <ProfitSummaryCard record={record} /> : null}
           <div>
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-base font-semibold">Next tasks due</h3>
-            <Link
-              to={`/deals/${record.id}/show?tab=tasks`}
-              className="text-sm link-action"
-            >
-              View all tasks
-            </Link>
-          </div>
-          {openTasks.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              No open tasks on this project.
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {openTasks.map((task) => (
-                <li
-                  key={String(task.id)}
-                  className="flex items-start justify-between gap-3 text-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <TaskDescriptionCell text={task.text} useMentions />
-                  </div>
-                  <span
-                    className={`shrink-0 text-xs ${isTaskOverdue(task) ? "font-medium text-red-600" : "text-muted-foreground"}`}
+              <Link
+                to={`/deals/${record.id}/show?tab=tasks`}
+                className="text-sm link-action"
+              >
+                View all tasks
+              </Link>
+            </div>
+            {openTasks.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                No open tasks on this project.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {openTasks.map((task) => (
+                  <li
+                    key={String(task.id)}
+                    className="flex items-start justify-between gap-3 text-sm"
                   >
-                    {formatDue(task.due_date)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+                    <div className="min-w-0 flex-1">
+                      <TaskDescriptionCell text={task.text} useMentions />
+                    </div>
+                    <span
+                      className={`shrink-0 text-xs ${isTaskOverdue(task) ? "font-medium text-red-600" : "text-muted-foreground"}`}
+                    >
+                      {formatDue(task.due_date)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           <div className="border-t pt-4">
             <div className="flex items-center justify-between gap-3">
@@ -199,11 +166,20 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
               emptyMessage="No events linked to this project."
             />
           </div>
-          </div>
         </div>
       </div>
 
-      <ProjectGithubLink record={record} showEditLink />
+      <div className="overflow-hidden rounded-md border">
+        <div className="border-b bg-muted/20 px-4 py-3">
+          <h3 className="text-sm font-semibold">Activity</h3>
+          <p className="text-xs text-muted-foreground">
+            Recent updates on this project.
+          </p>
+        </div>
+        <div className="p-4">
+          <ProjectActivityTab record={record} />
+        </div>
+      </div>
     </div>
   );
 };

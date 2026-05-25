@@ -14,6 +14,8 @@ import {
   resolveProjectResourcesDealId,
 } from "../_shared/formV2ProjectResources.ts";
 import { notifyTeamOnSubmit } from "../_shared/notifyFormSubmission.ts";
+import { processProjectBriefSubmission } from "../_shared/formV2ProjectBrief.ts";
+import { syncBriefApprovalsFromSchema } from "../_shared/briefSectionApprovals.ts";
 
 type SubmitBody = {
   token?: string;
@@ -298,10 +300,39 @@ Deno.serve(
           .single();
 
         if (template?.type === "project_brief") {
+          const { data: existingDeal } = await supabaseAdmin
+            .from("deals")
+            .select("website_brief")
+            .eq("id", submission.deal_id)
+            .maybeSingle();
+
+          const previousBrief =
+            existingDeal?.website_brief &&
+            typeof existingDeal.website_brief === "object" &&
+            !Array.isArray(existingDeal.website_brief)
+              ? (existingDeal.website_brief as Record<string, unknown>)
+              : {};
+
+          const mergedBrief = { ...previousBrief, ...answers };
+          const syncedBrief = syncBriefApprovalsFromSchema(
+            mergedBrief,
+            formInstance.schema as FormSchema,
+          );
+
           await supabaseAdmin
             .from("deals")
-            .update({ website_brief: answers })
+            .update({ website_brief: syncedBrief })
             .eq("id", submission.deal_id);
+
+          await processProjectBriefSubmission(
+            supabaseAdmin,
+            {
+              id: submission.id,
+              org_id: Number(submission.org_id),
+              deal_id: submission.deal_id,
+            },
+            answers,
+          );
         }
       }
 

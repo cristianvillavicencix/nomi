@@ -142,10 +142,33 @@ export type DealAccessEntry = {
   password?: string | null;
   has_password?: boolean;
   notes?: string | null;
+  shared_with_client?: boolean;
+  managed_by?: "lbs" | "client" | string | null;
+  service_kind?: string | null;
+  portal_sort_order?: number | null;
+  password_updated_at?: string | null;
   organization_member_id?: Identifier | null;
   created_by_member_id?: Identifier | null;
   created_at?: string;
   updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ProjectDelivery = {
+  org_id?: number;
+  deal_id: Identifier;
+  delivered_at?: string;
+  delivered_by_member_id?: Identifier | null;
+  site_url?: string | null;
+  plan_name?: string | null;
+  project_start_date?: string | null;
+  delivery_date?: string | null;
+  hosting_renewal_date?: string | null;
+  hosting_status?: string | null;
+  site_language?: string | null;
+  included_pages?: string[];
+  maintenance_plan?: Record<string, unknown>;
+  enabled_sections?: string[];
+  revoked_at?: string | null;
 } & Pick<RaRecord, "id">;
 
 export type DealActivityUnified = {

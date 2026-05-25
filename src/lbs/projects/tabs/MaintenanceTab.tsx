@@ -16,13 +16,22 @@ const currentBillingPeriod = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 };
 
+const getNextMaintenanceDate = (billingDay: number) => {
+  const safeDay = Math.min(Math.max(billingDay, 1), 28);
+  const now = new Date();
+  let candidate = new Date(now.getFullYear(), now.getMonth(), safeDay, 12);
+  if (candidate.getTime() <= now.getTime()) {
+    candidate = new Date(now.getFullYear(), now.getMonth() + 1, safeDay, 12);
+  }
+  return candidate;
+};
+
 export const MaintenanceTab = ({ record }: { record: LbsDeal }) => {
   const notify = useNotify();
   const refresh = useRefresh();
   const canEdit = useMemberCapability("deal_financials.expenses.edit");
   const [hoursForm, setHoursForm] = useState({ hours: "", description: "" });
   const [create] = useCreate();
-  const [update] = useUpdate();
 
   const { data: retainers = [] } = useGetList<MaintenanceRetainer>(
     "maintenance_retainers",
@@ -134,17 +143,32 @@ export const MaintenanceTab = ({ record }: { record: LbsDeal }) => {
   }
 
   const included = Number(retainer.monthly_hours_included ?? 0);
+  const nextMaintenanceDate = getNextMaintenanceDate(
+    Number(retainer.billing_day ?? 1),
+  );
 
   return (
     <div className="space-y-6">
       <div className="rounded-lg border p-4">
-        <div className="text-sm text-muted-foreground">This month</div>
+        <div className="text-sm text-muted-foreground">Next maintenance cycle</div>
         <div className="mt-1 text-2xl font-semibold">
-          {hoursUsed.toFixed(1)} / {included.toFixed(1)} hours
+          {nextMaintenanceDate.toLocaleDateString(undefined, {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}
         </div>
         <div className="mt-2 text-sm text-muted-foreground">
-          Retainer: <MoneyText value={Number(retainer.monthly_amount ?? 0)} /> ·
-          Billing day {retainer.billing_day}
+          Billing day {retainer.billing_day} ·{" "}
+          {included.toFixed(1)} hours included ·{" "}
+          <MoneyText value={Number(retainer.monthly_amount ?? 0)} />
+        </div>
+      </div>
+
+      <div className="rounded-lg border p-4">
+        <div className="text-sm text-muted-foreground">This month</div>
+        <div className="mt-1 text-2xl font-semibold">
+          {hoursUsed.toFixed(1)} / {included.toFixed(1)} hours used
         </div>
       </div>
 

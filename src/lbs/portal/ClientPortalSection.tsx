@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   useDataProvider,
-  useGetList,
   useNotify,
   useRefresh,
 } from "ra-core";
@@ -9,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
-import type { ClientPortalAccount, LbsDeal } from "@/lbs/types";
+import { useProjectPortalLink } from "@/lbs/portal/useProjectPortalLink";
+import type { LbsDeal } from "@/lbs/types";
 
 const randomToken = () =>
   crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
@@ -20,26 +20,7 @@ export const ClientPortalSection = ({ record }: { record: LbsDeal }) => {
   const dataProvider = useDataProvider();
   const canEdit = useMemberCapability("crm.pipeline.edit");
   const [email, setEmail] = useState("");
-
-  const contactId = record.contact_id ?? record.contact_ids?.[0];
-
-  const { data: accounts = [] } = useGetList<ClientPortalAccount>(
-    "client_portal_accounts",
-    {
-      filter: contactId ? { "contact_id@eq": contactId } : { id: -1 },
-      pagination: { page: 1, perPage: 5 },
-      sort: { field: "id", order: "DESC" },
-    },
-    { enabled: !!contactId },
-  );
-
-  const portalLink = useMemo(() => {
-    const account = accounts[0];
-    if (!account?.invitation_token) return null;
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
-    return `${origin}/portal?token=${encodeURIComponent(account.invitation_token)}`;
-  }, [accounts]);
+  const { contactId, portalLink } = useProjectPortalLink(record);
 
   const handleInvite = async () => {
     if (!record.org_id || !contactId) {

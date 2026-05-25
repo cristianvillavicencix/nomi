@@ -1,4 +1,9 @@
 import {
+  CONTRACTOR_BRIEF_SECTIONS,
+  getVisibleContractorBriefSections,
+  usesContractorBriefForm,
+} from "@/lbs/deals/contractorBriefSchema";
+import {
   getLbsProjectScopeMode,
   lbsProjectTypeChoices,
   type LbsProjectScopeMode,
@@ -41,6 +46,12 @@ export type WebsiteBriefFieldDef = {
   multiline?: boolean;
   rows?: number;
   fullWidth?: boolean;
+  fieldType?: string;
+  required?: boolean;
+  options?: string[];
+  accept?: string;
+  maxFiles?: number;
+  visibleWhen?: import("@/lib/forms-v2/conditionalLogic").VisibleWhen;
   isVisible?: (projectType: string, scopeMode: LbsProjectScopeMode) => boolean;
 };
 
@@ -451,6 +462,28 @@ export const isBriefSectionVisible = (
 
 export const getVisibleBriefSections = (projectType?: string | null) => {
   const normalized = projectType || "new-website";
+  if (usesContractorBriefForm(normalized)) {
+    return getVisibleContractorBriefSections(normalized).map((section) => ({
+      id: section.id,
+      title: section.title ?? section.id,
+      description: section.description,
+      fields: section.fields.map((entry) => ({
+        key: entry.key,
+        label: entry.label ?? entry.key,
+        placeholder: entry.placeholder,
+        helperText: entry.help_text,
+        multiline: entry.type === "textarea",
+        rows: entry.type === "textarea" ? 3 : undefined,
+        fullWidth: true,
+        fieldType: entry.type,
+        required: entry.required,
+        options: entry.options,
+        accept: entry.accept,
+        maxFiles: entry.max_files,
+        visibleWhen: entry.visible_when,
+      })),
+    }));
+  }
   const scopeMode = getLbsProjectScopeMode(normalized);
   return WEBSITE_BRIEF_SECTIONS.filter((section) =>
     isBriefSectionVisible(section, normalized, scopeMode),
@@ -474,9 +507,13 @@ export const getBriefSectionStats = (
   brief: Record<string, string | null | undefined> = {},
 ): BriefSectionStats => {
   const total = section.fields.length;
-  const filled = section.fields.filter((field) =>
-    Boolean(String(brief[field.key] ?? "").trim()),
-  ).length;
+  const filled = section.fields.filter((field) => {
+    const value = brief[field.key];
+    if (value == null) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "boolean") return value;
+    return Boolean(String(value).trim());
+  }).length;
   return {
     filled,
     total,
@@ -526,12 +563,17 @@ export const getAllBriefFieldKeys = () => {
       keys.add(entry.key);
     }
   }
+  for (const section of CONTRACTOR_BRIEF_SECTIONS) {
+    for (const entry of section.fields) {
+      keys.add(entry.key);
+    }
+  }
   keys.add("scope");
   return Array.from(keys);
 };
 
 export const emptyWebsiteBriefValues = (): Record<string, string> => {
-  const values: Record<string, string> = { project_type: "new-website" };
+  const values: Record<string, string> = { project_type: "website" };
   for (const key of getAllBriefFieldKeys()) {
     values[key] = "";
   }
@@ -633,6 +675,24 @@ export const requestBriefSectionRevision = (
       },
     ],
   };
+};
+
+/** When a section reaches 100% completion, mark it approved automatically. */
+export const syncBriefApprovalsForCompleteSections = (
+  brief: WebsiteBriefWithApprovals,
+  projectType?: string | null,
+  memberId?: number | null,
+): WebsiteBriefWithApprovals => {
+  let next = brief;
+  for (const section of getVisibleBriefSections(projectType)) {
+    const stats = getBriefSectionStats(section, next);
+    if (!stats.isComplete) continue;
+    if (getBriefSectionApproval(next, section.id)?.status === "approved") {
+      continue;
+    }
+    next = approveBriefSection(next, section.id, memberId);
+  }
+  return next;
 };
 
 export { lbsProjectTypeChoices };

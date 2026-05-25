@@ -29,25 +29,17 @@ import { useMemberCapability } from "@/components/atomic-crm/providers/commons/u
 import {
   formatTabCount,
   getValidProjectTab,
+  resolveProjectTabSelection,
 } from "@/lbs/deals/dealProjectTabUtils";
+import { ProjectSecurityWorkspaceTab } from "@/lbs/projects/tabs/ProjectSecurityTab";
 import {
   isSupabaseSchemaMissingError,
   supabaseTableQueryOptions,
 } from "@/lbs/deals/supabaseSchemaErrors";
+import { useDealsRealtime } from "@/components/atomic-crm/deals/useDealsRealtime";
 import { useDealResourcesRealtime } from "@/lbs/deals/useDealResourcesRealtime";
 import type { DealResource, LbsDeal, Task as TaskRecord } from "@/lbs/types";
-import { ProjectContextPanel } from "@/lbs/projects/ProjectContextPanel";
 
-const ProjectScopeTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectScopeTab").then((m) => ({
-    default: m.ProjectScopeTab,
-  })),
-);
-const ProjectContentTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectContentTab").then((m) => ({
-    default: m.ProjectContentTab,
-  })),
-);
 const ProjectDeliveryTab = lazy(() =>
   import("@/lbs/projects/tabs/ProjectDeliveryTab").then((m) => ({
     default: m.ProjectDeliveryTab,
@@ -58,17 +50,6 @@ const ProjectFinancialsTab = lazy(() =>
     default: m.ProjectFinancialsTab,
   })),
 );
-const ProjectActivityTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectActivityTab").then((m) => ({
-    default: m.ProjectActivityTab,
-  })),
-);
-const ProjectSettingsTab = lazy(() =>
-  import("@/lbs/projects/tabs/ProjectSettingsTab").then((m) => ({
-    default: m.ProjectSettingsTab,
-  })),
-);
-
 const TabFallback = () => <Skeleton className="h-40 w-full rounded-lg" />;
 
 const _tabLabel = (label: string, count?: number) =>
@@ -158,10 +139,11 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
     canViewPayments ||
     canViewCommissions;
 
+  useDealsRealtime();
   useDealResourcesRealtime(record.id, !resourcesSchemaMissing);
 
   const handleTabChange = (tab: string) => {
-    const nextTab = getValidProjectTab(tab);
+    const nextTab = resolveProjectTabSelection(tab);
     setVisited((prev) => new Set(prev).add(nextTab));
     const nextSearchParams = new URLSearchParams(searchParams);
     if (nextTab === "overview") nextSearchParams.delete("tab");
@@ -172,8 +154,7 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   const showTab = (tab: string) => visited.has(tab) || currentTab === tab;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-      <Card className="gap-0 rounded-t-none border-t-0 pt-0 -mt-px min-w-0">
+    <Card className="gap-0 rounded-t-none border-t-0 pt-0 -mt-px min-w-0">
         <CardContent className="px-4 pt-1 sm:px-6">
           <Tabs value={currentTab} onValueChange={handleTabChange}>
             <StickyTabsBar className="pb-1">
@@ -181,18 +162,12 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                 <TabsTrigger value="overview" className="shrink-0">
                   Overview
                 </TabsTrigger>
-                <TabsTrigger value="scope" className="shrink-0">
-                  Scope
-                </TabsTrigger>
                 <TabsTrigger
                   value="website-brief"
                   className={progressTabTriggerClassName}
                 >
                   <span>Brief</span>
                   <BriefTabProgress percent={briefProgress.percent} />
-                </TabsTrigger>
-                <TabsTrigger value="content" className="shrink-0">
-                  Content
                 </TabsTrigger>
                 <TabsTrigger
                   value="resources"
@@ -218,11 +193,8 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                     Financials
                   </TabsTrigger>
                 ) : null}
-                <TabsTrigger value="activity" className="shrink-0">
-                  Activity
-                </TabsTrigger>
-                <TabsTrigger value="settings" className="shrink-0">
-                  Settings
+                <TabsTrigger value="security" className="shrink-0">
+                  Security
                 </TabsTrigger>
               </TabsList>
             </StickyTabsBar>
@@ -230,22 +202,8 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
               <TabsContent value="overview" className="pt-4">
                 <LbsProjectOverviewTab record={record} />
               </TabsContent>
-              <TabsContent value="scope" className="pt-4">
-                {showTab("scope") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <ProjectScopeTab record={record} />
-                  </Suspense>
-                ) : null}
-              </TabsContent>
               <TabsContent value="website-brief" className="pt-4">
                 <WebsiteBriefTab record={record} />
-              </TabsContent>
-              <TabsContent value="content" className="pt-4">
-                {showTab("content") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <ProjectContentTab record={record} />
-                  </Suspense>
-                ) : null}
               </TabsContent>
               <TabsContent value="resources" className="pt-4">
                 <ProjectResourcesTab record={record} />
@@ -269,29 +227,13 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   ) : null}
                 </TabsContent>
               ) : null}
-              <TabsContent value="activity" className="pt-4">
-                {showTab("activity") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <ProjectActivityTab record={record} />
-                  </Suspense>
-                ) : null}
-              </TabsContent>
-              <TabsContent value="settings" className="pt-4">
-                {showTab("settings") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <ProjectSettingsTab record={record} />
-                  </Suspense>
-                ) : null}
+              <TabsContent value="security" className="pt-4">
+                <ProjectSecurityWorkspaceTab record={record} />
               </TabsContent>
             </ScrollableContentArea>
           </Tabs>
         </CardContent>
       </Card>
-
-      <aside className="min-w-0">
-        <ProjectContextPanel record={record} />
-      </aside>
-    </div>
   );
 };
 

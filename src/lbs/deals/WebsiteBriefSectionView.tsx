@@ -8,6 +8,7 @@ import {
   lbsProjectTypeChoices,
   type WebsiteBriefSectionDef,
 } from "@/lbs/deals/websiteBriefSchema";
+import { BriefSectionApprovalActions } from "@/lbs/deals/BriefSectionApprovalActions";
 import type { LbsDeal } from "@/lbs/types";
 import type { WebsiteBriefSheetTarget } from "@/lbs/deals/WebsiteBriefSectionSheet";
 
@@ -119,6 +120,11 @@ export const WebsiteBriefSectionView = ({
           {target.section.description}
         </p>
       ) : null}
+      <BriefSectionApprovalActions
+        record={record}
+        sectionId={target.section.id}
+        sectionTitle={target.section.title}
+      />
       <SectionDetail section={target.section} brief={brief} />
       <div className="flex justify-end pt-2">
         <Button type="button" onClick={onEdit}>

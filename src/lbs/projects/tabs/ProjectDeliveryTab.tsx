@@ -1,6 +1,12 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
+import { Rocket } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProjectGithubLink } from "@/lbs/deals/ProjectGithubLink";
+import { ClientPortalSection } from "@/lbs/portal/ClientPortalSection";
+import { ProjectDeploymentCard } from "@/lbs/projects/ProjectDeploymentCard";
+import { DeliverProjectDialog } from "@/lbs/projects/delivery/DeliverProjectDialog";
 import type { LbsDeal } from "@/lbs/types";
 
 const ProjectScheduleTab = lazy(() =>
@@ -21,12 +27,32 @@ const MaintenanceTab = lazy(() =>
 
 const TabFallback = () => <Skeleton className="h-40 w-full rounded-lg" />;
 
-export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => (
-  <div className="space-y-4">
+export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => {
+  const [deliverOpen, setDeliverOpen] = useState(false);
+
+  return (
+  <div className="space-y-6">
+    <ClientPortalSection record={record} />
+
+    <div className="flex flex-col gap-3 rounded-lg border border-[#1E5FA8]/20 bg-[#1E5FA8]/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 className="text-base font-semibold">Client handoff</h3>
+        <p className="text-sm text-muted-foreground">
+          Deliver the project to unlock <strong>Mi Sitio Web</strong> in the
+          client portal with URLs, files, and credentials.
+        </p>
+      </div>
+      <Button type="button" onClick={() => setDeliverOpen(true)}>
+        <Rocket className="size-4" />
+        Deliver project
+      </Button>
+    </div>
+
     <div>
       <h3 className="text-base font-semibold">Delivery</h3>
       <p className="text-sm text-muted-foreground">
-        Schedule, launch checklist, and ongoing maintenance.
+        Portal invite, handoff, schedule, launch checklist, maintenance, and
+        deployment URLs.
       </p>
     </div>
 
@@ -59,5 +85,15 @@ export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => (
         </Suspense>
       </TabsContent>
     </Tabs>
+
+    <ProjectDeploymentCard record={record} />
+    <ProjectGithubLink record={record} showEditLink />
+
+    <DeliverProjectDialog
+      open={deliverOpen}
+      onClose={() => setDeliverOpen(false)}
+      record={record}
+    />
   </div>
-);
+  );
+};

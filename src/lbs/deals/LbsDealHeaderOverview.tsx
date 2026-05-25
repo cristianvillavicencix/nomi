@@ -3,13 +3,15 @@ import { useMemo } from "react";
 import { useGetOne } from "ra-core";
 import { Github } from "lucide-react";
 import { Link } from "react-router";
-import type { Contact, Deal } from "@/components/atomic-crm/types";
+import type { Contact } from "@/components/atomic-crm/types";
 import {
   getContactEmail,
   getContactFullName,
   getContactPhone,
 } from "@/lbs/clients/clientShowUtils";
 import { getGithubRepoLabel, getGithubRepoUrl } from "@/lbs/deals/githubRepo";
+import { ProjectPortalLinkButton } from "@/lbs/portal/ProjectPortalLinkButton";
+import type { LbsDeal } from "@/lbs/types";
 
 const CompactLine = ({
   left,
@@ -29,7 +31,7 @@ const CompactLine = ({
   </div>
 );
 
-export const LbsDealHeaderOverview = ({ record }: { record: Deal }) => {
+export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
   const mainContactId = useMemo(() => {
     if (record.contact_id != null) return Number(record.contact_id);
     if (Array.isArray(record.contact_ids) && record.contact_ids.length > 0) {
@@ -73,6 +75,7 @@ export const LbsDealHeaderOverview = ({ record }: { record: Deal }) => {
             <Github className="size-4" />
           </a>
         ) : null}
+        <ProjectPortalLinkButton record={record} />
       </div>
 
       <CompactLine

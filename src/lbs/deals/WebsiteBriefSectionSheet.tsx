@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Form, useNotify, useUpdate } from "ra-core";
+import { Form, useGetIdentity, useNotify, useUpdate } from "ra-core";
 import { SaveButton } from "@/components/admin/form";
 import { DateInput } from "@/components/admin/date-input";
 import { SelectInput } from "@/components/admin/select-input";
@@ -14,6 +14,10 @@ import { lbsProjectTypeChoices } from "@/lbs/deals/lbsProjectConstants";
 import { WebsiteBriefFormSections } from "@/lbs/deals/WebsiteBriefFormSections";
 import { WebsiteBriefSectionView } from "@/lbs/deals/WebsiteBriefSectionView";
 import type { WebsiteBriefSectionDef } from "@/lbs/deals/websiteBriefSchema";
+import {
+  syncBriefApprovalsForCompleteSections,
+  type WebsiteBriefWithApprovals,
+} from "@/lbs/deals/websiteBriefSchema";
 import type { LbsDeal } from "@/lbs/types";
 
 const optionalUrl = (url?: string) => {
@@ -46,6 +50,7 @@ export const WebsiteBriefSectionSheet = ({
   const [mode, setMode] = useState<"view" | "edit">(initialMode);
   const [update, { isPending }] = useUpdate();
   const notify = useNotify();
+  const { data: identity } = useGetIdentity();
   const open = target != null;
 
   useEffect(() => {
@@ -103,9 +108,25 @@ export const WebsiteBriefSectionSheet = ({
             record={record}
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
             onSubmit={async (data: LbsDeal) => {
+              const rawBrief = (data.website_brief ??
+                record.website_brief ??
+                {}) as WebsiteBriefWithApprovals;
+              const memberId =
+                identity?.id != null && Number.isFinite(Number(identity.id))
+                  ? Number(identity.id)
+                  : null;
+              const website_brief = syncBriefApprovalsForCompleteSections(
+                rawBrief,
+                data.project_type ?? record.project_type,
+                memberId,
+              );
               await update(
                 "deals",
-                { id: record.id, data, previousData: record },
+                {
+                  id: record.id,
+                  data: { ...data, website_brief },
+                  previousData: record,
+                },
                 {
                   onSuccess: () => {
                     notify("Brief saved");

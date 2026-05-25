@@ -2,8 +2,13 @@ import { useMemo, useState } from "react";
 import { useGetList, useGetOne } from "ra-core";
 import { ChevronRight, Link2, Mail, Pencil } from "lucide-react";
 import type { Contact } from "@/components/atomic-crm/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -18,7 +23,12 @@ import {
   getContactFullName,
 } from "@/lbs/clients/clientShowUtils";
 import { BriefProgressBar } from "@/lbs/deals/BriefProgressBar";
+import { BriefSectionApprovalActions } from "@/lbs/deals/BriefSectionApprovalActions";
 import { SendProjectWebFormDialog } from "@/lbs/deals/SendProjectWebFormDialog";
+import {
+  scopeForBriefSection,
+  type BriefRequestScope,
+} from "@/lbs/deals/projectBriefRequestScope";
 import {
   formatProjectDeliveryDate,
   getProjectDeliveryDate,
@@ -30,7 +40,6 @@ import {
 import {
   getBriefSectionPreview,
   getBriefSectionStats,
-  getBriefSectionApproval,
   getVisibleBriefSections,
   lbsProjectTypeChoices,
 } from "@/lbs/deals/websiteBriefSchema";
@@ -55,9 +64,15 @@ const formatActivityDate = (value?: string) => {
 
 export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
   const [sendOpen, setSendOpen] = useState(false);
+  const [sendScope, setSendScope] = useState<BriefRequestScope | undefined>();
   const [sheetTarget, setSheetTarget] =
     useState<WebsiteBriefSheetTarget | null>(null);
   const [sheetMode, setSheetMode] = useState<"view" | "edit">("view");
+
+  const openRequestDialog = (scope?: BriefRequestScope) => {
+    setSendScope(scope);
+    setSendOpen(true);
+  };
 
   const contactId =
     record.contact_id ??
@@ -127,7 +142,7 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
         <Button
           type="button"
           variant="outline"
-          onClick={() => setSendOpen(true)}
+          onClick={() => openRequestDialog()}
         >
           <Link2 className="size-4" />
           Send to client
@@ -166,7 +181,7 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setSendOpen(true)}
+            onClick={() => openRequestDialog()}
           >
             <Mail className="size-4" />
             Send reminder
@@ -181,7 +196,8 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
               <TableHead>Section</TableHead>
               <TableHead className="w-[160px]">Progress</TableHead>
               <TableHead>Summary</TableHead>
-              <TableHead className="w-[120px]">Approval</TableHead>
+              <TableHead className="w-[96px]">Approval</TableHead>
+              <TableHead className="w-[72px]">Request</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -198,6 +214,7 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
                 {setupPreview || "Not started"}
               </TableCell>
               <TableCell>—</TableCell>
+              <TableCell>—</TableCell>
               <TableCell>
                 <ChevronRight className="size-4 text-muted-foreground" />
               </TableCell>
@@ -209,7 +226,6 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
                 stats.filled,
                 stats.total,
               );
-              const approval = getBriefSectionApproval(brief, section.id);
               return (
                 <TableRow
                   key={section.id}
@@ -230,16 +246,35 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
                   >
                     {getBriefSectionPreview(section, brief)}
                   </TableCell>
+                  <TableCell onClick={(event) => event.stopPropagation()}>
+                    <BriefSectionApprovalActions
+                      record={record}
+                      sectionId={section.id}
+                      sectionTitle={section.title}
+                      variant="menu"
+                    />
+                  </TableCell>
                   <TableCell>
-                    {approval?.status === "approved" ? (
-                      <Badge variant="secondary">Approved</Badge>
-                    ) : approval?.status === "revision_requested" ? (
-                      <Badge variant="outline">Revision</Badge>
-                    ) : approval?.status === "client_review" ? (
-                      <Badge variant="outline">Client review</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            aria-label={`Request ${section.title} from client`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openRequestDialog(scopeForBriefSection(section.id));
+                            }}
+                          >
+                            <Link2 className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Request this section</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell>
                     <ChevronRight className="size-4 text-muted-foreground" />
@@ -260,13 +295,19 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
 
       <SendProjectWebFormDialog
         open={sendOpen}
-        onClose={() => setSendOpen(false)}
+        onClose={() => {
+          setSendOpen(false);
+          setSendScope(undefined);
+        }}
         dealId={record.id}
         companyId={record.company_id}
         contactId={contactId}
         clientEmail={contact ? getContactEmail(contact) : undefined}
         clientName={contact ? getContactFullName(contact) : undefined}
         projectName={record.name}
+        projectType={record.project_type}
+        dealRecord={record}
+        requestScope={sendScope}
       />
     </div>
   );

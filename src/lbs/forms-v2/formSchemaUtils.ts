@@ -60,6 +60,8 @@ export const validateSectionFields = (
 ): Record<string, string> => {
   const errors: Record<string, string> = {};
   for (const field of getVisibleFields(section, answers)) {
+    const value = answers[field.key];
+
     if (field.type === "dynamic_list") {
       const items = readStringList(answers[field.key]);
       const minItems = field.min_items ?? (field.required ? 1 : 0);
@@ -74,8 +76,21 @@ export const validateSectionFields = (
       continue;
     }
 
+    if (
+      field.type === "checkbox" &&
+      !(field.options && field.options.length > 0)
+    ) {
+      if (field.required) {
+        const checked =
+          value === true || value === "true" || value === "on";
+        if (!checked) {
+          errors[field.key] = `${field.label ?? field.key} is required`;
+        }
+      }
+      continue;
+    }
+
     if (!field.required) continue;
-    const value = answers[field.key];
     const empty =
       value == null ||
       String(value).trim() === "" ||

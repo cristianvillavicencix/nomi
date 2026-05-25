@@ -63,9 +63,12 @@ export const ProjectDeploymentCard = ({ record }: { record: LbsDeal }) => {
   };
 
   return (
-    <div className="rounded-lg border p-4 space-y-4">
-      <div className="font-medium">Deployment</div>
+    <div className="overflow-hidden rounded-md border">
+      <div className="border-b bg-muted/20 px-4 py-3">
+        <h3 className="text-sm font-semibold">Deployment</h3>
+      </div>
 
+      <div className="space-y-4 p-4">
       <div className="space-y-2">
         <div className="text-sm text-muted-foreground">Tech stack</div>
         <div className="flex flex-wrap gap-2">
@@ -159,6 +162,7 @@ export const ProjectDeploymentCard = ({ record }: { record: LbsDeal }) => {
           </div>
         );
       })}
+      </div>
     </div>
   );
 };

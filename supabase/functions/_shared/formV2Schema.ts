@@ -2,6 +2,7 @@ import {
   evaluateCondition,
   type VisibleWhen,
 } from "./conditionalLogic.ts";
+import { isFlexibleUrl } from "./urlValidation.ts";
 
 export type FormFieldDef = {
   key: string;
@@ -53,6 +54,12 @@ const isEmptyValue = (value: unknown): boolean =>
   readString(value) === "" ||
   (Array.isArray(value) && value.length === 0);
 
+const isTruthyCheckbox = (value: unknown): boolean =>
+  value === true || value === "true" || value === "on";
+
+const isSingleCheckboxField = (field: FormFieldDef): boolean =>
+  field.type === "checkbox" && !(field.options && field.options.length > 0);
+
 export const validateAnswersAgainstSchema = (
   answers: Record<string, unknown>,
   schema: FormSchema | null | undefined,
@@ -75,6 +82,13 @@ export const validateAnswersAgainstSchema = (
         field.type === "file" ||
         field.type === "file_multi"
       ) {
+        continue;
+      }
+
+      if (isSingleCheckboxField(field)) {
+        if (field.required && !isTruthyCheckbox(value)) {
+          errors.push(`${label} is required`);
+        }
         continue;
       }
 
@@ -105,14 +119,12 @@ export const validateAnswersAgainstSchema = (
           }
           break;
         case "phone":
-          if (!/^[\d\s\-+()]{7,20}$/.test(stringValue)) {
+          if (!/^[\d\s\-+().x]{7,25}$/i.test(stringValue)) {
             errors.push(`${label} must be a valid phone number`);
           }
           break;
         case "url":
-          try {
-            new URL(stringValue);
-          } catch {
+          if (!isFlexibleUrl(stringValue)) {
             errors.push(`${label} must be a valid URL`);
           }
           break;
@@ -146,6 +158,17 @@ export const validateAnswersAgainstSchema = (
           }
           break;
         case "checkbox":
+          if (!Array.isArray(value)) {
+            errors.push(`${label} must be a list`);
+          } else if (field.options) {
+            const invalid = value.filter(
+              (item) => !field.options!.includes(String(item)),
+            );
+            if (invalid.length > 0) {
+              errors.push(`${label} has invalid options`);
+            }
+          }
+          break;
         case "multi_select":
           if (!Array.isArray(value)) {
             errors.push(`${label} must be a list`);

@@ -203,6 +203,12 @@ verify_jwt = false
 [functions.client_portal]
 verify_jwt = false
 
+[functions.deliver_project]
+verify_jwt = false
+
+[functions.client_portal_credentials]
+verify_jwt = false
+
 [functions.send_client_sms]
 verify_jwt = false
 

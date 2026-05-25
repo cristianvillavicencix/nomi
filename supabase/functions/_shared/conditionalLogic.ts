@@ -65,8 +65,14 @@ export const evaluateSingleCondition = (
     case "not_equals":
       return stringValue !== readString(condition.value);
     case "contains":
+      if (Array.isArray(value)) {
+        return value.map(String).includes(readString(condition.value));
+      }
       return stringValue.includes(readString(condition.value));
     case "not_contains":
+      if (Array.isArray(value)) {
+        return !value.map(String).includes(readString(condition.value));
+      }
       return !stringValue.includes(readString(condition.value));
     case "greater_than":
       return Number(value) > Number(condition.value);
@@ -109,6 +115,27 @@ export const evaluateCondition = (
     return visibleWhen.operator === "or"
       ? results.some(Boolean)
       : results.every(Boolean);
+  }
+
+  if (
+    typeof visibleWhen === "object" &&
+    "field" in visibleWhen &&
+    typeof (visibleWhen as { field?: unknown }).field === "string"
+  ) {
+    const shorthand = visibleWhen as {
+      field: string;
+      operator?: ConditionOperator;
+      op?: ConditionOperator;
+      value?: string | number | boolean | string[];
+    };
+    return evaluateSingleCondition(
+      {
+        field: shorthand.field,
+        op: shorthand.operator ?? shorthand.op ?? "equals",
+        value: shorthand.value,
+      },
+      answers,
+    );
   }
 
   return Object.entries(visibleWhen).every(([fieldKey, expected]) => {

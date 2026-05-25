@@ -46,6 +46,7 @@ import {
   buildProjectResourceRecord,
   uploadProjectResourceFile,
 } from "@/lbs/deals/projectResourceUpload";
+import { serviceSlugsFromBrief } from "@/lbs/deals/projectBriefServiceSlugs";
 import {
   buildMainResourceTabs,
   buildServiceSubTabs,
@@ -131,9 +132,17 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
   );
 
   const mainTabs = useMemo(() => buildMainResourceTabs(), []);
+  const briefServiceSlugs = useMemo(
+    () => serviceSlugsFromBrief(record.website_brief),
+    [record.website_brief],
+  );
   const serviceSubTabs = useMemo(
-    () => buildServiceSubTabs(resources, pendingServiceSlugs),
-    [pendingServiceSlugs, resources],
+    () =>
+      buildServiceSubTabs(resources, [
+        ...pendingServiceSlugs,
+        ...briefServiceSlugs,
+      ]),
+    [briefServiceSlugs, pendingServiceSlugs, resources],
   );
   const mainTabCounts = useMemo(
     () => getMainTabCounts(resources),
