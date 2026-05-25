@@ -34,6 +34,7 @@ import {
   validateSectionFields,
 } from "@/lbs/forms-v2/formSchemaUtils";
 import { FormFieldRenderer } from "@/lbs/forms-v2/public/FormFieldRenderer";
+import { FormBrandingShell } from "@/lbs/forms-v2/public/FormBrandingShell";
 import {
   recaptchaConfigured,
   useRecaptchaToken,
@@ -168,13 +169,13 @@ const ProjectBriefPublicForm = ({
     setValues((current) => ({ ...current, [key]: next }));
 
   return (
-    <div
+    <FormBrandingShell
+      primaryColor={payload.form.primary_color}
+      backgroundImageUrl={payload.form.background_image_url}
+      customFontUrl={payload.form.custom_font_url}
+      customCss={payload.form.custom_css}
+      embedded={embedded}
       className={publicFormContentClassName(embedded)}
-      style={
-        payload.form.primary_color
-          ? { ["--form-primary-color" as string]: payload.form.primary_color }
-          : undefined
-      }
     >
       {payload.form.logo_url ? (
         <img
@@ -275,7 +276,7 @@ const ProjectBriefPublicForm = ({
           {isPending ? "Submitting…" : "Submit project details"}
         </Button>
       </form>
-    </div>
+    </FormBrandingShell>
   );
 };
 
@@ -509,16 +510,13 @@ const PublicFormRendererContent = () => {
   };
 
   return (
-    <div
+    <FormBrandingShell
+      primaryColor={formPayload.form.primary_color}
+      backgroundImageUrl={formPayload.form.background_image_url}
+      customFontUrl={formPayload.form.custom_font_url}
+      customCss={formPayload.form.custom_css}
+      embedded={embedded}
       className={publicFormContentClassName(embedded)}
-      style={
-        formPayload.form.primary_color
-          ? {
-              ["--form-primary-color" as string]:
-                formPayload.form.primary_color,
-            }
-          : undefined
-      }
     >
       {formPayload.form.logo_url ? (
         <img
@@ -701,6 +699,6 @@ const PublicFormRendererContent = () => {
           </Button>
         </div>
       </form>
-    </div>
+    </FormBrandingShell>
   );
 };
