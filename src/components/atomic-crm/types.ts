@@ -94,6 +94,9 @@ export type OrganizationMember = {
    */
   email: string;
 
+  /** E.164 SMS destination for forms and alerts; separate from auth.users.phone */
+  notification_phone?: string | null;
+
   /**
    * This is used by the fake rest provider to store the password
    * DO NOT USE this field in your code besides the fake rest provider

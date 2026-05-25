@@ -36,6 +36,7 @@ import ImageEditorField from "../misc/ImageEditorField";
 import { supabase } from "../providers/supabase/supabase";
 import type { CrmDataProvider } from "../providers/types";
 import type { OrganizationMember, OrganizationMemberFormData } from "../types";
+import { ProfileNotificationsSection } from "./ProfileNotificationsSection";
 
 export const ProfilePage = () => {
   const [isEditMode, setEditMode] = useState(false);
@@ -215,6 +216,7 @@ const ProfileForm = ({
           </div>
         </CardContent>
       </Card>
+      <ProfileNotificationsSection />
       <Dialog
         open={passwordDialogOpen}
         onOpenChange={(open) => {
