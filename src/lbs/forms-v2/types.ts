@@ -44,6 +44,7 @@ export type FormSchemaV2 = {
 
 export type PublicFormPayload = {
   token: string;
+  is_preview?: boolean;
   form: {
     id: number;
     name: string;
@@ -90,7 +91,36 @@ export type FormInstance = {
   slug: string;
   description?: string | null;
   schema?: FormSchemaV2;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  background_image_url?: string | null;
+  welcome_title?: string | null;
+  welcome_message?: string | null;
+  thank_you_title?: string | null;
+  thank_you_message?: string | null;
+  redirect_url?: string | null;
   is_active?: boolean;
+  is_public?: boolean;
+  notify_on_submit?: boolean;
+  notify_member_ids?: number[];
+  auto_create_contact?: boolean;
+  auto_create_lead?: boolean;
+  auto_create_task?: boolean;
+  expiration_date?: string | null;
+  submission_limit?: number | null;
+  recaptcha_enabled?: boolean;
+  honeypot_enabled?: boolean;
+  rate_limit_per_ip_per_hour?: number;
+};
+
+export type FormTemplate = {
+  id: number;
+  slug: string;
+  name: string;
+  description?: string | null;
+  type?: string;
+  schema?: FormSchemaV2;
+  is_system?: boolean;
 };
 
 export type PublicFormToken = {
