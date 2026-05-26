@@ -1,11 +1,4 @@
-import {
-  FileText,
-  FolderKanban,
-  MessageSquare,
-  Plus,
-  Ticket,
-  UserPlus,
-} from "lucide-react";
+import { FileText, MessageSquare, Plus, Ticket, UserPlus } from "lucide-react";
 import { Link } from "react-router";
 import { type Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
@@ -15,10 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  getClientDealCreatePath,
-  getClientProposalCreatePath,
-} from "@/lbs/routing";
+import { getClientProposalCreatePath } from "@/lbs/routing";
 import type { Contact } from "@/lbs/types";
 import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
 import { useMessagesQuickAccess } from "@/lbs/messages/MessagesQuickAccessProvider";
@@ -87,12 +77,6 @@ export const ClientNewMenu = ({
         <DropdownMenuItem onClick={onAddContact}>
           <UserPlus className="size-4" />
           Add contact
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to={getClientDealCreatePath(companyId, primaryContactId)}>
-            <FolderKanban className="size-4" />
-            New project
-          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link to={getClientProposalCreatePath(companyId, primaryContactId)}>
