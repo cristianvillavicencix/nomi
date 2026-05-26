@@ -1,4 +1,4 @@
-import { required } from "ra-core";
+import { required, useGetIdentity, useRecordContext } from "ra-core";
 import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CancelButton, SaveButton } from "@/components/admin";
@@ -15,6 +15,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { getCompanyPaySchedule } from "@/payroll/rules";
+import { AvatarPickerField } from "@/components/avatar/AvatarPickerField";
+import type { Person } from "@/components/atomic-crm/types";
 import {
   bankAccountTypeChoices,
   compensationModeChoices,
@@ -296,6 +298,38 @@ export const PeopleForm = () => {
     | undefined;
   const [subcontractorSpecialties, setSubcontractorSpecialties] =
     useState(specialtyChoices);
+  const record = useRecordContext<Person>();
+  const { identity } = useGetIdentity();
+  const watchedFirstName = useWatch({ name: "first_name" }) as
+    | string
+    | undefined;
+  const watchedLastName = useWatch({ name: "last_name" }) as string | undefined;
+  const watchedEmail = useWatch({ name: "email" }) as string | undefined;
+
+  const avatarPickerRecord = useMemo(
+    () => ({
+      ...(record ?? {}),
+      first_name: watchedFirstName ?? record?.first_name ?? null,
+      last_name: watchedLastName ?? record?.last_name ?? null,
+      email: watchedEmail ?? record?.email ?? null,
+    }),
+    [record, watchedEmail, watchedFirstName, watchedLastName],
+  );
+
+  const avatarCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Avatar</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <AvatarPickerField
+          record={avatarPickerRecord}
+          authUserId={identity?.id != null ? String(identity.id) : null}
+          folder="people"
+        />
+      </CardContent>
+    </Card>
+  );
 
   const allowCompensationAmount = type === "employee";
   const isSalariedCompensation =
@@ -365,6 +399,7 @@ export const PeopleForm = () => {
   return (
     <div className="space-y-6">
       <SyncEmployeePayScheduleFromSettings />
+      {avatarCard}
       {type === "employee" ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <div className="space-y-6">

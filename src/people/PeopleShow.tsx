@@ -15,7 +15,8 @@ import { ChevronLeft, Edit, ExternalLink, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { resolveAvatarUrl } from "@/components/avatar/resolveAvatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -977,6 +978,10 @@ export const PeopleProfileDetailsContent = ({
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-4">
                   <Avatar className="size-16">
+                    <AvatarImage
+                      src={resolveAvatarUrl(record, 192)}
+                      alt="avatar"
+                    />
                     <AvatarFallback>{getInitials(record)}</AvatarFallback>
                   </Avatar>
                   <div className="space-y-2">
@@ -1446,6 +1451,10 @@ export const PeopleProfileDetailsContent = ({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex items-start gap-4">
                 <Avatar className="size-16">
+                  <AvatarImage
+                    src={resolveAvatarUrl(record, 192)}
+                    alt="avatar"
+                  />
                   <AvatarFallback>{getInitials(record)}</AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">

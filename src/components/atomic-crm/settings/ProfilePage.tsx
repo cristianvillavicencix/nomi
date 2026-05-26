@@ -37,6 +37,8 @@ import { supabase } from "../providers/supabase/supabase";
 import type { CrmDataProvider } from "../providers/types";
 import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 import { ProfileNotificationsSection } from "./ProfileNotificationsSection";
+import { EditAvatarDialog } from "@/components/avatar/EditAvatarDialog";
+import { Sparkles } from "lucide-react";
 
 export const ProfilePage = () => {
   const [isEditMode, setEditMode] = useState(false);
@@ -96,6 +98,7 @@ const ProfileForm = ({
   const { isDirty } = useFormState();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -179,6 +182,16 @@ const ProfileForm = ({
               onSave={handleAvatarUpdate}
               linkPosition="right"
             />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setAvatarDialogOpen(true)}
+              className="gap-2"
+            >
+              <Sparkles className="size-4" />
+              Choose Open Peeps avatar
+            </Button>
             <TextRender source="first_name" isEditMode={isEditMode} />
             <TextRender source="last_name" isEditMode={isEditMode} />
             <TextRender source="email" isEditMode={isEditMode} />
@@ -217,6 +230,15 @@ const ProfileForm = ({
         </CardContent>
       </Card>
       <ProfileNotificationsSection />
+      {record ? (
+        <EditAvatarDialog
+          open={avatarDialogOpen}
+          onOpenChange={setAvatarDialogOpen}
+          record={record}
+          target={{ kind: "organization_member", id: record.id }}
+          folder="organization_members"
+        />
+      ) : null}
       <Dialog
         open={passwordDialogOpen}
         onOpenChange={(open) => {

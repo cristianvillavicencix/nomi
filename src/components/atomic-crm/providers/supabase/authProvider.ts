@@ -5,6 +5,7 @@ import { isPlatformConsolePath } from "@/platform/platformConsolePaths";
 import { canAccess } from "../commons/canAccess";
 import type { MemberModulePermissions } from "../../types";
 import { supabase } from "./supabase";
+import { resolveAvatarUrl } from "@/components/avatar/resolveAvatar";
 
 const baseAuthProvider = supabaseAuthProvider(supabase, {
   getIdentity: async () => {
@@ -18,7 +19,7 @@ const baseAuthProvider = supabaseAuthProvider(supabase, {
       id: sale.id,
       org_id: sale.org_id ?? null,
       fullName: `${sale.first_name} ${sale.last_name}`,
-      avatar: sale.avatar?.src,
+      avatar: resolveAvatarUrl(sale as any, 96),
       administrator: sale.administrator === true,
       role: sale.administrator ? "admin" : (sale.roles?.[0] ?? "user"),
       roles: sale.roles ?? (sale.administrator ? ["admin"] : []),
@@ -72,7 +73,7 @@ const fetchSale = async () => {
   const { data: dataSale, error: errorSale } = await supabase
     .from("organization_members")
     .select(
-      "id, org_id, first_name, last_name, avatar, administrator, roles, module_permissions",
+      "id, org_id, first_name, last_name, email, user_id, avatar, avatar_type, avatar_url, administrator, roles, module_permissions",
     )
     .match({ user_id: dataSession?.session?.user.id })
     .single();
@@ -133,10 +134,7 @@ export const authProvider: AuthProvider = {
       return;
     }
 
-    if (
-      error?.status === 400 &&
-      error?.name === "AuthSessionMissingError"
-    ) {
+    if (error?.status === 400 && error?.name === "AuthSessionMissingError") {
       return Promise.reject();
     }
 

@@ -85,6 +85,8 @@ export type OrganizationMember = {
   /** Non-null ⇒ use module switches; backend mirrors roles[] for RLS. */
   module_permissions?: MemberModulePermissions | null;
   avatar?: RAFile;
+  avatar_type?: "peep" | "upload" | "default" | null;
+  avatar_url?: string | null;
   disabled?: boolean;
   user_id: string;
 
@@ -375,6 +377,9 @@ export type Person = {
   /** First day the person starts work; company pay schedule lives in org Payment Settings. */
   employment_start_date?: string | null;
   default_work_days?: number[] | null;
+  avatar?: { src?: string | null } | null;
+  avatar_type?: "peep" | "upload" | "default" | null;
+  avatar_url?: string | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
 
