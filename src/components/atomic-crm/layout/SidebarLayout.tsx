@@ -226,6 +226,28 @@ const SidebarNavigation = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
+            <div className="relative hidden h-10 items-center justify-center group-data-[collapsible=icon]:flex">
+              <Link
+                to="/"
+                className="absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-150 ease-out group-hover:opacity-0 group-hover:scale-95"
+              >
+                <img
+                  className="[.light_&]:hidden h-6"
+                  src={darkModeLogo}
+                  alt={title}
+                />
+                <img
+                  className="[.dark_&]:hidden h-6"
+                  src={lightModeLogo}
+                  alt={title}
+                />
+              </Link>
+              <SidebarTrigger
+                className="absolute inset-0 m-auto opacity-0 pointer-events-none transition-[opacity,transform] duration-150 ease-out scale-95 group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto"
+                variant="ghost"
+                size="icon"
+              />
+            </div>
             <SidebarTrigger
               className="absolute top-1.5 right-1.5 opacity-100 transition-opacity group-data-[collapsible=icon]:hidden"
               variant="ghost"
