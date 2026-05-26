@@ -52,6 +52,7 @@ import {
   type LbsClientUpsertInput,
   type LbsClientUpsertResult,
 } from "@/lbs/clients/lbsClientUpsert";
+import { lbsProjectTypeChoices } from "@/lbs/deals/lbsProjectConstants";
 
 if (import.meta.env.VITE_SUPABASE_URL === undefined) {
   throw new Error("Please set the VITE_SUPABASE_URL environment variable");
@@ -767,9 +768,17 @@ const dataProviderWithCustomMethods = {
   async convertLeadToClient({
     contactId,
     companyName,
+    createDeal = true,
+    dealOptions,
   }: {
     contactId: Identifier;
     companyName: string;
+    createDeal?: boolean;
+    dealOptions?: {
+      projectType?: string | null;
+      amount?: number | null;
+      name?: string | null;
+    };
   }) {
     const trimmedName = companyName.trim();
     if (trimmedName.length < 2) {
@@ -779,7 +788,7 @@ const dataProviderWithCustomMethods = {
     const { data: contact, error: contactError } = await supabase
       .from("contacts")
       .select(
-        "id, first_name, last_name, organization_member_id, company_id, org_id",
+        "id, first_name, last_name, organization_member_id, company_id, org_id, interested_service, lead_value_estimate",
       )
       .eq("id", contactId)
       .single();
@@ -862,7 +871,75 @@ const dataProviderWithCustomMethods = {
         .eq("id", companyId);
     }
 
-    return { company_id: companyId, contact_id: contactId };
+    // ---- Optional: create the initial deal for this conversion ----
+    let dealId: number | null = null;
+    if (createDeal) {
+      const effectiveProjectType =
+        dealOptions?.projectType ?? contact.interested_service ?? null;
+      const effectiveAmount =
+        dealOptions?.amount ??
+        (contact.lead_value_estimate != null
+          ? Number(contact.lead_value_estimate)
+          : null);
+      const projectTypeLabel = effectiveProjectType
+        ? (lbsProjectTypeChoices.find((c) => c.value === effectiveProjectType)
+            ?.label ?? effectiveProjectType)
+        : null;
+      const dealName =
+        dealOptions?.name?.trim() ||
+        `${projectTypeLabel ?? "Initial service"} – ${trimmedName}`;
+
+      const hasUsefulInfo =
+        effectiveProjectType != null ||
+        (effectiveAmount != null && effectiveAmount > 0) ||
+        (dealOptions?.name?.trim()?.length ?? 0) > 0;
+
+      if (hasUsefulInfo) {
+        const { data: newDeal, error: dealError } = await supabase
+          .from("deals")
+          .insert({
+            name: dealName,
+            stage: "closed_won",
+            lifecycle_phase: "closed",
+            amount: effectiveAmount ?? 0,
+            estimated_value: effectiveAmount ?? 0,
+            company_id: companyId,
+            contact_id: contactId,
+            contact_ids: [String(contactId)],
+            project_type: effectiveProjectType,
+            organization_member_id: contact.organization_member_id,
+            org_id: contact.org_id,
+            converted_from_contact_id: contactId,
+          })
+          .select("id")
+          .single();
+
+        if (dealError) {
+          throw new Error(
+            `Lead converted, but failed to create deal: ${dealError.message}`,
+          );
+        }
+        dealId = newDeal?.id ?? null;
+        // The DB trigger trg_sync_deal_to_lead_stage will set
+        // contacts.lead_stage='won' and snooze_until='2099-12-31' automatically
+        // because the deal was inserted with stage='closed_won'.
+      }
+    }
+
+    // Fallback: if no deal was created (createDeal=false or hasUsefulInfo=false),
+    // the trigger never fired. Apply the same lead_stage/snooze_until directly
+    // so the contact still exits the Anti-Olvido radar.
+    if (dealId == null) {
+      await supabase
+        .from("contacts")
+        .update({
+          lead_stage: "won",
+          snooze_until: "2099-12-31T00:00:00+00:00",
+        })
+        .eq("id", contactId);
+    }
+
+    return { company_id: companyId, contact_id: contactId, deal_id: dealId };
   },
   async getPublicDealBrief(payload: {
     dealId: string | number;
