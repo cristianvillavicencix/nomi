@@ -57,7 +57,7 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     to: "/deals",
     label: "Deals",
     icon: Briefcase,
-    activePattern: "/deals*",
+    activePattern: "/deals/*",
     capability: "crm.pipeline.view",
     resource: "deals",
     action: "list",
