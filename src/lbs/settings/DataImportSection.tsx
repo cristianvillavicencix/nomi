@@ -1,14 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useGetIdentity, useNotify } from "ra-core";
 import { Link } from "react-router";
 import {
+  Building2,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  CircleDot,
   Database,
   Download,
   ExternalLink,
   GitMerge,
   Loader2,
+  LogOut,
   RefreshCcw,
+  User,
+  Briefcase,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +29,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+
+type ModuleKey = "Accounts" | "Contacts" | "Deals";
 
 type ZohoStatus = {
   ok: boolean;
@@ -44,19 +53,7 @@ type ZohoStatus = {
   };
 };
 
-type ZohoTestResult = {
-  ok: boolean;
-  api_domain: string;
-  total_in_response: number;
-  sample: Array<{
-    id: string;
-    full_name: string;
-    email: string | null;
-    account: string | null;
-  }>;
-};
-
-type ZohoSyncResult = {
+type SyncResult = {
   ok: boolean;
   modules_synced: string[];
   summary: Record<
@@ -70,78 +67,99 @@ type ZohoSyncResult = {
   >;
 };
 
-type ZohoPromoteResult = {
+type PromoteResult = {
   ok: boolean;
   dry_run: boolean;
-  pending_implementation?: boolean;
-  message?: string;
-  pending_counts?: {
-    accounts_to_promote: number;
-    contacts_to_promote: number;
-    deals_to_promote: number;
-  };
+  modules: ModuleKey[];
+  summary: Record<
+    ModuleKey,
+    {
+      inserted: number;
+      updated: number;
+      skipped: number;
+      errors: string[];
+    }
+  >;
 };
 
-type BusyKey =
-  | "status"
-  | "connect"
-  | "test"
-  | "sync"
-  | "promote-dry"
-  | "promote"
-  | null;
+type ActivityEntry = {
+  at: number;
+  text: string;
+  tone: "info" | "success" | "error";
+};
 
-async function callZohoFn<T>(
+async function callZoho<T>(
   subPath: string,
-  options: {
-    method?: "GET" | "POST";
-    body?: Record<string, unknown>;
-  } = {},
+  options: { method?: "GET" | "POST"; body?: Record<string, unknown> } = {},
 ) {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  if (!token) {
-    throw new Error("Not signed in. Refresh and try again.");
-  }
+  if (!token) throw new Error("Not signed in. Refresh the page.");
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   const apikey = import.meta.env.VITE_SB_PUBLISHABLE_KEY as string | undefined;
   if (!supabaseUrl || !apikey) {
     throw new Error(
-      "Supabase environment variables missing (VITE_SUPABASE_URL / VITE_SB_PUBLISHABLE_KEY).",
+      "Missing VITE_SUPABASE_URL / VITE_SB_PUBLISHABLE_KEY in environment.",
     );
   }
-  const url = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/zoho_oneshot_import${subPath}`;
-  const res = await fetch(url, {
-    method: options.method ?? "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      apikey,
-      "Content-Type": "application/json",
+  const res = await fetch(
+    `${supabaseUrl.replace(/\/$/, "")}/functions/v1/zoho_oneshot_import${subPath}`,
+    {
+      method: options.method ?? "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey,
+        "Content-Type": "application/json",
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  );
   const text = await res.text();
-  let json: unknown = null;
+  let parsed: unknown = null;
   try {
-    json = text ? JSON.parse(text) : {};
+    parsed = text ? JSON.parse(text) : {};
   } catch {
-    json = { message: text };
+    parsed = { message: text };
   }
   if (!res.ok) {
     const message =
-      (json && typeof json === "object" && "message" in json
-        ? String((json as { message: unknown }).message)
-        : null) ?? `HTTP ${res.status}`;
+      parsed && typeof parsed === "object" && "message" in parsed
+        ? String((parsed as { message: unknown }).message)
+        : `HTTP ${res.status}`;
     throw new Error(message);
   }
-  return json as T;
+  return parsed as T;
 }
 
-const STAGING_LABELS: Record<keyof ZohoStatus["staging"], string> = {
-  contacts_raw: "Contacts",
-  accounts_raw: "Companies",
-  deals_raw: "Deals",
-};
+const MODULE_CONFIG: Array<{
+  key: ModuleKey;
+  label: string;
+  description: string;
+  icon: typeof Building2;
+  stagingField: keyof ZohoStatus["staging"];
+}> = [
+  {
+    key: "Accounts",
+    label: "Companies",
+    description: "Imported first — companies are referenced by contacts and deals.",
+    icon: Building2,
+    stagingField: "accounts_raw",
+  },
+  {
+    key: "Contacts",
+    label: "Contacts",
+    description: "Linked to their company by Zoho Account reference.",
+    icon: User,
+    stagingField: "contacts_raw",
+  },
+  {
+    key: "Deals",
+    label: "Deals (Projects)",
+    description: "Linked to their company and primary contact.",
+    icon: Briefcase,
+    stagingField: "deals_raw",
+  },
+];
 
 export const DataImportSection = () => {
   const { identity } = useGetIdentity();
@@ -152,26 +170,28 @@ export const DataImportSection = () => {
 
   const [status, setStatus] = useState<ZohoStatus | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<BusyKey>(null);
-  const [grantToken, setGrantToken] = useState("");
-  const [region, setRegion] = useState("com");
-  const [testResult, setTestResult] = useState<ZohoTestResult | null>(null);
-  const [syncResult, setSyncResult] = useState<ZohoSyncResult | null>(null);
-  const [promoteResult, setPromoteResult] = useState<ZohoPromoteResult | null>(
-    null,
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const logActivity = useCallback(
+    (text: string, tone: ActivityEntry["tone"] = "info") => {
+      setActivity((prev) => [{ at: Date.now(), text, tone }, ...prev].slice(0, 12));
+    },
+    [],
   );
 
   const refreshStatus = useCallback(async () => {
-    setBusy("status");
+    setStatusLoading(true);
     setStatusError(null);
     try {
-      const next = await callZohoFn<ZohoStatus>("/");
+      const next = await callZoho<ZohoStatus>("/");
       setStatus(next);
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      setStatusError(message);
+      setStatusError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBusy(null);
+      setStatusLoading(false);
     }
   }, []);
 
@@ -185,119 +205,13 @@ export const DataImportSection = () => {
       <div className="space-y-4 max-w-3xl">
         <h2 className="text-lg font-semibold">Data Import</h2>
         <p className="text-sm text-muted-foreground">
-          Only administrators can configure the data import.
+          Only administrators can configure data imports.
         </p>
       </div>
     );
   }
 
-  const handleConnect = async () => {
-    const trimmed = grantToken.trim();
-    if (!trimmed) {
-      notify("Paste the Zoho Grant Token first", { type: "error" });
-      return;
-    }
-    setBusy("connect");
-    try {
-      await callZohoFn("/setup-credentials", {
-        method: "POST",
-        body: { grant_token: trimmed, region },
-      });
-      setGrantToken("");
-      notify("Connected to Zoho", { type: "success" });
-      await refreshStatus();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      notify(message, { type: "error", multiLine: true });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleTest = async () => {
-    setBusy("test");
-    setTestResult(null);
-    try {
-      const r = await callZohoFn<ZohoTestResult>("/test-connection", {
-        method: "POST",
-      });
-      setTestResult(r);
-      notify(`Pulled ${r.total_in_response} sample contacts from Zoho`, {
-        type: "success",
-      });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      notify(message, { type: "error", multiLine: true });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleSync = async () => {
-    if (!window.confirm("Pull ALL Contacts, Accounts and Deals from Zoho into staging tables. This may take a few minutes for large CRMs. Continue?")) {
-      return;
-    }
-    setBusy("sync");
-    setSyncResult(null);
-    try {
-      const r = await callZohoFn<ZohoSyncResult>("/sync-all", {
-        method: "POST",
-        body: {},
-      });
-      setSyncResult(r);
-      notify("Zoho sync complete", { type: "success" });
-      await refreshStatus();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      notify(message, { type: "error", multiLine: true });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handlePromote = async (dryRun: boolean) => {
-    if (!dryRun) {
-      if (
-        !window.confirm(
-          "Promote staged Zoho records into Companies, Contacts and Deals. This is destructive on duplicates. Continue?",
-        )
-      ) {
-        return;
-      }
-    }
-    setBusy(dryRun ? "promote-dry" : "promote");
-    setPromoteResult(null);
-    try {
-      const r = await callZohoFn<ZohoPromoteResult>("/promote", {
-        method: "POST",
-        body: { dry_run: dryRun },
-      });
-      setPromoteResult(r);
-      if (r.pending_implementation) {
-        notify(
-          "Promotion endpoint is not wired yet — staging only. Coming next.",
-          { type: "warning", multiLine: true },
-        );
-      } else {
-        notify(dryRun ? "Dry-run complete" : "Promotion complete", {
-          type: "success",
-        });
-      }
-      await refreshStatus();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      notify(message, { type: "error", multiLine: true });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const isConnected =
-    status?.credentials.configured === true ? true : false;
-  const stagingTotal =
-    (status?.staging.contacts_raw.total ?? 0) +
-    (status?.staging.accounts_raw.total ?? 0) +
-    (status?.staging.deals_raw.total ?? 0);
+  const connected = status?.credentials.configured === true;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -312,15 +226,18 @@ export const DataImportSection = () => {
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" /> Import from Zoho CRM
-              </CardTitle>
-              <CardDescription>
-                One-shot import. Connect once with a Zoho Grant Token, then
-                sync every Contact, Account and Deal into staging — and finally
-                promote into your CRM.
-              </CardDescription>
+            <div className="flex items-start gap-3">
+              <div className="rounded-md border bg-muted/40 p-2">
+                <Database className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Zoho CRM</CardTitle>
+                <CardDescription>
+                  {connected
+                    ? "Connected · click a module to sync, then promote into the CRM."
+                    : "Connect once with a Zoho Grant Token, then sync any combination of Accounts, Contacts and Deals."}
+                </CardDescription>
+              </div>
             </div>
             <Button
               type="button"
@@ -330,7 +247,7 @@ export const DataImportSection = () => {
               disabled={busy !== null}
               aria-label="Refresh status"
             >
-              {busy === "status" ? (
+              {statusLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCcw className="h-4 w-4" />
@@ -345,66 +262,102 @@ export const DataImportSection = () => {
             </div>
           ) : null}
 
-          {status == null && !statusError ? (
+          {statusLoading && !status ? (
             <p className="text-sm text-muted-foreground inline-flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Loading Zoho status…
             </p>
           ) : null}
 
-          {status != null && !isConnected ? (
-            <ConnectForm
-              grantToken={grantToken}
-              setGrantToken={setGrantToken}
-              region={region}
-              setRegion={setRegion}
-              onConnect={handleConnect}
+          {!statusLoading && status && !connected ? (
+            <NotConnectedPanel
               busy={busy === "connect"}
-              disabled={busy !== null && busy !== "connect"}
+              showAdvanced={showAdvanced}
+              setShowAdvanced={setShowAdvanced}
+              onConnect={async (grantToken, region) => {
+                setBusy("connect");
+                try {
+                  await callZoho("/setup-credentials", {
+                    method: "POST",
+                    body: { grant_token: grantToken, region },
+                  });
+                  notify("Connected to Zoho", { type: "success" });
+                  logActivity("Connected to Zoho", "success");
+                  await refreshStatus();
+                } catch (e) {
+                  const message = e instanceof Error ? e.message : String(e);
+                  notify(message, { type: "error", multiLine: true });
+                  logActivity(message, "error");
+                } finally {
+                  setBusy(null);
+                }
+              }}
             />
           ) : null}
 
-          {status != null && isConnected ? (
+          {!statusLoading && status && connected ? (
             <ConnectedPanel
               status={status}
               busy={busy}
-              stagingTotal={stagingTotal}
-              onTest={handleTest}
-              onSync={handleSync}
-              onPromote={handlePromote}
-              testResult={testResult}
-              syncResult={syncResult}
-              promoteResult={promoteResult}
+              setBusy={setBusy}
+              refreshStatus={refreshStatus}
+              logActivity={logActivity}
+              notify={notify}
             />
           ) : null}
         </CardContent>
       </Card>
 
+      {activity.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Recent activity</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <ul className="space-y-1.5">
+              {activity.map((a) => (
+                <li key={a.at} className="flex items-start gap-2">
+                  <span
+                    className={
+                      a.tone === "success"
+                        ? "text-emerald-600"
+                        : a.tone === "error"
+                          ? "text-destructive"
+                          : "text-muted-foreground"
+                    }
+                  >
+                    <CircleDot className="h-3.5 w-3.5 mt-0.5" />
+                  </span>
+                  <span className="text-muted-foreground tabular-nums w-20 shrink-0">
+                    {new Date(a.at).toLocaleTimeString()}
+                  </span>
+                  <span>{a.text}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
             <Download className="h-5 w-5" /> Import from CSV
           </CardTitle>
           <CardDescription>
-            Upload CSV files for contacts, companies or projects. The unified
-            CSV importer is on the way — until then, use the per-module Import
-            inside Contacts and Companies.
+            Unified CSV importer is on the way. For now, keep using the
+            per-module CSV import inside Contacts and Companies.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Coming in a follow-up release.
-          </p>
-        </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
             <GitMerge className="h-5 w-5" /> Find duplicates
           </CardTitle>
           <CardDescription>
-            After importing, this tool finds candidate duplicate contacts
-            (same email, phone, or name) so you can merge them manually.
+            After importing, find contacts that share email, phone, or name and
+            merge them in a single click.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -417,291 +370,411 @@ export const DataImportSection = () => {
   );
 };
 
-const ConnectForm = ({
-  grantToken,
-  setGrantToken,
-  region,
-  setRegion,
+// ----------------------------------- Not connected -----------------------------------
+
+const NotConnectedPanel = ({
+  busy,
+  showAdvanced,
+  setShowAdvanced,
   onConnect,
-  busy,
-  disabled,
 }: {
-  grantToken: string;
-  setGrantToken: (v: string) => void;
-  region: string;
-  setRegion: (v: string) => void;
-  onConnect: () => void;
   busy: boolean;
-  disabled: boolean;
-}) => (
-  <div className="space-y-4">
-    <div className="rounded-md border bg-amber-50 dark:bg-amber-950/30 p-3 text-sm space-y-2">
-      <p className="font-medium">Generate a Grant Token from Zoho first:</p>
-      <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
-        <li>
-          Open{" "}
-          <a
-            href="https://api-console.zoho.com"
-            target="_blank"
-            rel="noreferrer"
-            className="text-primary underline inline-flex items-center gap-1"
-          >
-            Zoho API Console <ExternalLink className="h-3 w-3" />
-          </a>
-        </li>
-        <li>Select your Self Client application</li>
-        <li>
-          Use scope{" "}
-          <code className="rounded bg-muted px-1 py-0.5">
-            ZohoCRM.modules.ALL,ZohoCRM.org.READ,ZohoCRM.users.READ
-          </code>
-        </li>
-        <li>Time duration: 10 minutes</li>
-        <li>Copy the generated code and paste it here within 10 minutes</li>
-      </ol>
-    </div>
-
-    <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
-      <div className="space-y-1.5">
-        <Label htmlFor="zoho-grant-token">Grant Token</Label>
-        <Input
-          id="zoho-grant-token"
-          value={grantToken}
-          onChange={(e) => setGrantToken(e.target.value)}
-          placeholder="1000.xxxxxxxxxxxxxxxx"
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="zoho-region">Region</Label>
-        <select
-          id="zoho-region"
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-        >
-          <option value="com">.com (USA)</option>
-          <option value="eu">.eu</option>
-          <option value="in">.in</option>
-          <option value="au">.com.au</option>
-          <option value="jp">.jp</option>
-          <option value="ca">.ca</option>
-        </select>
-      </div>
-    </div>
-
-    <Button
-      type="button"
-      onClick={onConnect}
-      disabled={busy || disabled || !grantToken.trim()}
-    >
-      {busy ? (
-        <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting…
-        </>
-      ) : (
-        "Connect to Zoho"
-      )}
-    </Button>
-  </div>
-);
-
-const ConnectedPanel = ({
-  status,
-  busy,
-  stagingTotal,
-  onTest,
-  onSync,
-  onPromote,
-  testResult,
-  syncResult,
-  promoteResult,
-}: {
-  status: ZohoStatus;
-  busy: BusyKey;
-  stagingTotal: number;
-  onTest: () => void;
-  onSync: () => void;
-  onPromote: (dryRun: boolean) => void;
-  testResult: ZohoTestResult | null;
-  syncResult: ZohoSyncResult | null;
-  promoteResult: ZohoPromoteResult | null;
+  showAdvanced: boolean;
+  setShowAdvanced: (v: boolean) => void;
+  onConnect: (grantToken: string, region: string) => void;
 }) => {
-  if (status.credentials.configured !== true) return null;
-  const creds = status.credentials;
-
-  const formatDate = (iso?: string | null) =>
-    iso ? new Date(iso).toLocaleString() : "—";
+  const [grantToken, setGrantToken] = useState("");
+  const [region, setRegion] = useState("com");
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/30 p-3 text-sm space-y-1">
-        <p className="font-medium flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
-          <CheckCircle2 className="h-4 w-4" /> Connected to Zoho
+    <div className="space-y-4">
+      <div className="rounded-md border bg-muted/30 p-4 text-sm space-y-2">
+        <p className="font-medium">⚪ Not connected to Zoho</p>
+        <p className="text-muted-foreground">
+          A direct{" "}
+          <strong>Sign in with Zoho</strong> button is on the way (waits on the
+          Zoho API Console registration). Until then, paste a Grant Token to
+          connect once — the refresh token is stored in this CRM and reused
+          forever after.
         </p>
-        <dl className="grid grid-cols-[8rem_1fr] gap-x-2 gap-y-0.5 text-muted-foreground">
-          <dt>Region</dt>
-          <dd>
-            <code className="rounded bg-muted px-1">{creds.region}</code>
-          </dd>
-          <dt>API domain</dt>
-          <dd className="truncate">{creds.api_domain ?? "—"}</dd>
-          <dt>Scope</dt>
-          <dd className="truncate break-all">{creds.scope ?? "—"}</dd>
-          <dt>Last refresh</dt>
-          <dd>{formatDate(creds.last_refreshed_at)}</dd>
-          <dt>Token expires</dt>
-          <dd>{formatDate(creds.access_token_expires_at)}</dd>
-        </dl>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {(Object.keys(STAGING_LABELS) as Array<keyof typeof STAGING_LABELS>).map(
-          (key) => (
-            <StagingStat
-              key={key}
-              label={STAGING_LABELS[key]}
-              total={status.staging[key].total}
-              promoted={status.staging[key].promoted}
-            />
-          ),
+      <button
+        type="button"
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        {showAdvanced ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <ChevronRight className="h-4 w-4" />
         )}
-      </div>
+        Connect via Grant Token (manual)
+      </button>
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onTest}
-          disabled={busy !== null}
-        >
-          {busy === "test" ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : null}
-          Test connection
-        </Button>
-        <Button type="button" onClick={onSync} disabled={busy !== null}>
-          {busy === "sync" ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : null}
-          Sync everything from Zoho
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onPromote(true)}
-          disabled={busy !== null || stagingTotal === 0}
-        >
-          {busy === "promote-dry" ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : null}
-          Dry-run promote
-        </Button>
-        <Button
-          type="button"
-          onClick={() => onPromote(false)}
-          disabled={busy !== null || stagingTotal === 0}
-        >
-          {busy === "promote" ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : null}
-          Promote to CRM
-        </Button>
-      </div>
+      {showAdvanced ? (
+        <div className="space-y-4 rounded-md border p-4">
+          <ol className="list-decimal pl-5 space-y-1 text-sm text-muted-foreground">
+            <li>
+              Open{" "}
+              <a
+                href="https://api-console.zoho.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline inline-flex items-center gap-1"
+              >
+                Zoho API Console <ExternalLink className="h-3 w-3" />
+              </a>
+            </li>
+            <li>Select your Self Client application</li>
+            <li>
+              Scope:{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                ZohoCRM.modules.ALL,ZohoCRM.org.READ,ZohoCRM.users.READ
+              </code>
+            </li>
+            <li>Time duration: 10 minutes</li>
+            <li>Paste the generated code below within 10 minutes</li>
+          </ol>
 
-      {testResult ? (
-        <details className="rounded-md border p-3 text-xs">
-          <summary className="font-medium cursor-pointer">
-            Test connection: {testResult.total_in_response} sample contacts
-          </summary>
-          <ul className="mt-2 space-y-1">
-            {testResult.sample.map((c) => (
-              <li key={c.id} className="truncate text-muted-foreground">
-                <span className="font-medium text-foreground">
-                  {c.full_name || "(no name)"}
-                </span>
-                {c.email ? ` · ${c.email}` : ""}
-                {c.account ? ` · ${c.account}` : ""}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
-
-      {syncResult ? (
-        <details className="rounded-md border p-3 text-xs" open>
-          <summary className="font-medium cursor-pointer">
-            Last sync · modules: {syncResult.modules_synced.join(", ")}
-          </summary>
-          <div className="mt-2 space-y-2">
-            {Object.entries(syncResult.summary).map(([mod, info]) => (
-              <div key={mod} className="grid grid-cols-[6rem_1fr] gap-2">
-                <span className="font-medium">{mod}</span>
-                <span className="text-muted-foreground">
-                  fetched <code>{info.totalFetched}</code> · upserted{" "}
-                  <code>{info.totalUpserted}</code> · pages{" "}
-                  <code>{info.lastPage}</code>
-                  {info.errors.length > 0 ? (
-                    <span className="text-destructive">
-                      {" "}· errors: {info.errors.length}
-                    </span>
-                  ) : null}
-                </span>
-              </div>
-            ))}
+          <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+            <div className="space-y-1.5">
+              <Label htmlFor="zoho-grant-token">Grant Token</Label>
+              <Input
+                id="zoho-grant-token"
+                value={grantToken}
+                onChange={(e) => setGrantToken(e.target.value)}
+                placeholder="1000.xxxxxxxxxxxxxxxx"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="zoho-region">Region</Label>
+              <select
+                id="zoho-region"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+              >
+                <option value="com">.com (USA)</option>
+                <option value="eu">.eu</option>
+                <option value="in">.in</option>
+                <option value="au">.com.au</option>
+                <option value="jp">.jp</option>
+                <option value="ca">.ca</option>
+              </select>
+            </div>
           </div>
-        </details>
-      ) : null}
 
-      {promoteResult ? (
-        <details className="rounded-md border p-3 text-xs" open>
-          <summary className="font-medium cursor-pointer">
-            Promote {promoteResult.dry_run ? "(dry-run)" : ""}
-          </summary>
-          {promoteResult.message ? (
-            <p className="mt-2 text-muted-foreground">
-              {promoteResult.message}
-            </p>
-          ) : null}
-          {promoteResult.pending_counts ? (
-            <ul className="mt-2 text-muted-foreground space-y-0.5">
-              <li>
-                Accounts pending:{" "}
-                <code>{promoteResult.pending_counts.accounts_to_promote}</code>
-              </li>
-              <li>
-                Contacts pending:{" "}
-                <code>{promoteResult.pending_counts.contacts_to_promote}</code>
-              </li>
-              <li>
-                Deals pending:{" "}
-                <code>{promoteResult.pending_counts.deals_to_promote}</code>
-              </li>
-            </ul>
-          ) : null}
-        </details>
+          <Button
+            type="button"
+            disabled={busy || !grantToken.trim()}
+            onClick={() => onConnect(grantToken.trim(), region)}
+          >
+            {busy ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting…
+              </>
+            ) : (
+              "Connect to Zoho"
+            )}
+          </Button>
+        </div>
       ) : null}
     </div>
   );
 };
 
-const StagingStat = ({
-  label,
-  total,
-  promoted,
+// ----------------------------------- Connected -----------------------------------
+
+const ConnectedPanel = ({
+  status,
+  busy,
+  setBusy,
+  refreshStatus,
+  logActivity,
+  notify,
 }: {
-  label: string;
-  total: number;
-  promoted: number;
-}) => (
-  <div className="rounded-md border p-3">
-    <p className="text-xs uppercase text-muted-foreground tracking-wide">
-      {label}
-    </p>
-    <p className="text-2xl font-semibold tabular-nums">{total}</p>
-    <p className="text-xs text-muted-foreground">
-      {promoted} already promoted
-    </p>
-  </div>
-);
+  status: ZohoStatus;
+  busy: string | null;
+  setBusy: (v: string | null) => void;
+  refreshStatus: () => Promise<void>;
+  logActivity: (text: string, tone?: ActivityEntry["tone"]) => void;
+  notify: ReturnType<typeof useNotify>;
+}) => {
+  if (status.credentials.configured !== true) return null;
+  const creds = status.credentials;
+
+  const stagingTotal = useMemo(
+    () =>
+      status.staging.accounts_raw.total +
+      status.staging.contacts_raw.total +
+      status.staging.deals_raw.total,
+    [status],
+  );
+  const promotableTotal = useMemo(
+    () =>
+      status.staging.accounts_raw.total -
+      status.staging.accounts_raw.promoted +
+      (status.staging.contacts_raw.total -
+        status.staging.contacts_raw.promoted) +
+      (status.staging.deals_raw.total - status.staging.deals_raw.promoted),
+    [status],
+  );
+
+  const runSync = async (modules: ModuleKey[]) => {
+    setBusy(`sync:${modules.join(",")}`);
+    try {
+      const result = await callZoho<SyncResult>("/sync-all", {
+        method: "POST",
+        body: { modules },
+      });
+      const totalFetched = Object.values(result.summary ?? {}).reduce(
+        (sum, m) => sum + (m?.totalFetched ?? 0),
+        0,
+      );
+      const totalUpserted = Object.values(result.summary ?? {}).reduce(
+        (sum, m) => sum + (m?.totalUpserted ?? 0),
+        0,
+      );
+      const tone =
+        Object.values(result.summary ?? {}).some(
+          (m) => (m?.errors?.length ?? 0) > 0,
+        )
+          ? "error"
+          : "success";
+      logActivity(
+        `Synced ${modules.join(", ")}: fetched ${totalFetched}, upserted ${totalUpserted}`,
+        tone,
+      );
+      notify("Sync complete", { type: "success" });
+      await refreshStatus();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      notify(message, { type: "error", multiLine: true });
+      logActivity(`Sync failed: ${message}`, "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runPromote = async (modules: ModuleKey[], dryRun: boolean) => {
+    if (!dryRun) {
+      const txt = modules.length === 3 ? "all 3 modules" : modules.join(", ");
+      if (
+        !window.confirm(
+          `Promote staged ${txt} into the CRM? Companies, contacts and deals matching by Zoho id will be updated; new ones inserted.`,
+        )
+      ) {
+        return;
+      }
+    }
+    setBusy(`promote:${modules.join(",")}:${dryRun ? "dry" : "live"}`);
+    try {
+      const result = await callZoho<PromoteResult>("/promote", {
+        method: "POST",
+        body: { modules, dry_run: dryRun },
+      });
+      const totals = Object.entries(result.summary ?? {}).map(
+        ([k, v]) => `${k}: ${v.inserted}+, ${v.updated}~, ${v.skipped}-`,
+      );
+      logActivity(
+        `${dryRun ? "Dry-run " : ""}Promoted ${modules.join(", ")} — ${totals.join(" · ")}`,
+        Object.values(result.summary ?? {}).some(
+          (m) => (m?.errors?.length ?? 0) > 0,
+        )
+          ? "error"
+          : "success",
+      );
+      notify(dryRun ? "Dry-run complete" : "Promotion complete", {
+        type: "success",
+      });
+      await refreshStatus();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      notify(message, { type: "error", multiLine: true });
+      logActivity(`Promote failed: ${message}`, "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runDisconnect = async () => {
+    if (
+      !window.confirm(
+        "Disconnect Zoho? The refresh token will be deleted. You'll need a new Grant Token to reconnect. Staging data is preserved.",
+      )
+    ) {
+      return;
+    }
+    setBusy("disconnect");
+    try {
+      await callZoho("/disconnect", { method: "POST" });
+      notify("Disconnected from Zoho", { type: "success" });
+      logActivity("Disconnected from Zoho", "info");
+      await refreshStatus();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      notify(message, { type: "error", multiLine: true });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-md border border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/30 p-3 text-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="font-medium flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
+              <CheckCircle2 className="h-4 w-4" /> Connected to Zoho
+            </p>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-muted-foreground text-xs">
+              <dt>Region</dt>
+              <dd className="font-mono">{creds.region}</dd>
+              <dt>API domain</dt>
+              <dd className="truncate font-mono">{creds.api_domain ?? "—"}</dd>
+              <dt>Connected</dt>
+              <dd>
+                {creds.created_at
+                  ? new Date(creds.created_at).toLocaleString()
+                  : "—"}
+              </dd>
+              <dt>Last refresh</dt>
+              <dd>
+                {creds.last_refreshed_at
+                  ? new Date(creds.last_refreshed_at).toLocaleString()
+                  : "—"}
+              </dd>
+            </dl>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={runDisconnect}
+            disabled={busy !== null}
+            className="text-destructive hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4 mr-1" /> Disconnect
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          onClick={() => runSync(["Accounts", "Contacts", "Deals"])}
+          disabled={busy !== null}
+        >
+          {busy?.startsWith("sync:Accounts,Contacts,Deals") ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : null}
+          Sync everything
+        </Button>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => runPromote(["Accounts", "Contacts", "Deals"], false)}
+          disabled={busy !== null || promotableTotal === 0}
+          title={
+            promotableTotal === 0
+              ? "Nothing to promote — sync first"
+              : `${promotableTotal} pending rows`
+          }
+        >
+          {busy?.startsWith("promote:Accounts,Contacts,Deals:live") ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : null}
+          Promote everything ({promotableTotal})
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => runPromote(["Accounts", "Contacts", "Deals"], true)}
+          disabled={busy !== null || stagingTotal === 0}
+        >
+          Dry-run promote
+        </Button>
+      </div>
+
+      <ul className="space-y-3">
+        {MODULE_CONFIG.map((mod) => {
+          const staging = status.staging[mod.stagingField];
+          const pending = staging.total - staging.promoted;
+          const isSyncing = busy === `sync:${mod.key}`;
+          const isPromoting = busy === `promote:${mod.key}:live`;
+          const Icon = mod.icon;
+          return (
+            <li
+              key={mod.key}
+              className="rounded-md border p-3 flex items-start gap-3"
+            >
+              <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1 min-w-0 space-y-2">
+                <div>
+                  <p className="font-medium">{mod.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {mod.description}
+                  </p>
+                </div>
+                <div className="text-xs text-muted-foreground tabular-nums">
+                  In staging:{" "}
+                  <span className="font-medium text-foreground">
+                    {staging.total}
+                  </span>{" "}
+                  · Promoted to CRM:{" "}
+                  <span className="font-medium text-foreground">
+                    {staging.promoted}
+                  </span>
+                  {pending > 0 ? (
+                    <>
+                      {" "}
+                      · Pending:{" "}
+                      <span className="font-medium text-amber-600 dark:text-amber-400">
+                        {pending}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy !== null}
+                    onClick={() => runSync([mod.key])}
+                  >
+                    {isSyncing ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : null}
+                    Sync from Zoho
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy !== null || pending === 0}
+                    onClick={() => runPromote([mod.key], false)}
+                  >
+                    {isPromoting ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : null}
+                    Promote to CRM
+                  </Button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="text-xs text-muted-foreground">
+        Tip: Companies sync first, then Contacts (linked to their company),
+        then Deals (linked to company + contact). Promotion respects the same
+        order automatically — picking only Deals when no Companies are in
+        staging will leave them un-linked.
+      </p>
+    </div>
+  );
+};

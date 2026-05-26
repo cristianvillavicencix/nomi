@@ -532,7 +532,7 @@ async function handleSyncAll(req: Request, member: Member) {
 }
 
 async function handlePromote(req: Request, member: Member) {
-  const body = (await req.json().catch(() => ({}))) as { dry_run?: boolean };
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const dryRun = body?.dry_run === true;
   const orgId = member.org_id;
 
@@ -554,23 +554,509 @@ async function handlePromote(req: Request, member: Member) {
       .is("promoted_at", null),
   ]);
 
-  // Promotion logic intentionally deferred. We need to confirm dedup rules
-  // (match on email vs name vs domain, what to do with conflicting fields,
-  // how to map Zoho stages to deal stages, etc.) against a real sample
-  // before writing irreversible promotions. After /sync-all populates the
-  // *_raw tables, we'll inspect a few rows together and wire promote.
+  return runPromote(
+    orgId,
+    dryRun,
+    parseModulesParam(body),
+    { accounts: acc.count ?? 0, contacts: con.count ?? 0, deals: deal.count ?? 0 },
+  );
+}
+
+// ---------------------------- promote helpers ----------------------------
+
+type PromoteCounters = {
+  inserted: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+};
+
+type StageInfo = {
+  defaultPipelineId: string;
+  defaultStageKey: string;
+  wonStageKey: string;
+  lostStageKey: string;
+  validStages: Set<string>;
+};
+
+const pickString = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const pickRefId = (value: unknown): string | null => {
+  if (value && typeof value === "object" && "id" in value) {
+    return pickString((value as { id: unknown }).id);
+  }
+  return null;
+};
+
+const buildAddress = (...parts: Array<unknown>): string | null => {
+  const filtered = parts.map((p) => pickString(p)).filter((p): p is string => !!p);
+  return filtered.length > 0 ? filtered.join(", ") : null;
+};
+
+const buildPhoneJsonb = (entries: Array<{ number: unknown; type: string }>) => {
+  const result = entries
+    .map((e) => {
+      const num = pickString(e.number);
+      return num ? { number: num, type: e.type } : null;
+    })
+    .filter((x): x is { number: string; type: string } => x !== null);
+  return result.length > 0 ? result : null;
+};
+
+const buildEmailJsonb = (entries: Array<{ email: unknown; type: string }>) => {
+  const result = entries
+    .map((e) => {
+      const em = pickString(e.email);
+      return em ? { email: em, type: e.type } : null;
+    })
+    .filter((x): x is { email: string; type: string } => x !== null);
+  return result.length > 0 ? result : null;
+};
+
+const mapZohoStage = (zohoStage: string | null, info: StageInfo) => {
+  const lower = (zohoStage ?? "").toLowerCase().trim();
+  // Closed states first
+  if (lower.includes("closed won") || lower === "won") {
+    return { stage: info.wonStageKey, lifecycle_phase: "closed" };
+  }
+  if (lower.includes("closed lost") || lower === "lost") {
+    return { stage: info.lostStageKey, lifecycle_phase: "closed" };
+  }
+  // Try a direct match against any pipeline stage (case insensitive)
+  for (const key of info.validStages) {
+    if (key.toLowerCase() === lower) {
+      return { stage: key, lifecycle_phase: "opportunity" };
+    }
+  }
+  // Heuristic mapping
+  if (lower.includes("design")) return { stage: "design", lifecycle_phase: "delivery" };
+  if (lower.includes("development") || lower.includes("dev"))
+    return { stage: "development", lifecycle_phase: "delivery" };
+  if (lower.includes("review")) return { stage: "review", lifecycle_phase: "delivery" };
+  if (lower.includes("launch")) return { stage: "launch", lifecycle_phase: "delivery" };
+  if (lower.includes("maintenance")) return { stage: "maintenance", lifecycle_phase: "delivery" };
+  if (lower.includes("proposal") || lower.includes("quote"))
+    return { stage: "proposal_sent", lifecycle_phase: "opportunity" };
+  if (lower.includes("discovery") || lower.includes("analysis"))
+    return { stage: "discovery", lifecycle_phase: "opportunity" };
+  return { stage: info.defaultStageKey, lifecycle_phase: "opportunity" };
+};
+
+const safeNumber = (value: unknown): number | null => {
+  if (value == null) return null;
+  const num = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+async function loadStageInfo(orgId: number): Promise<StageInfo> {
+  const { data: stages } = await supabaseAdmin
+    .from("organization_pipeline_stages")
+    .select("pipeline_id, key, is_won, is_lost, order_index")
+    .eq("org_id", orgId)
+    .order("order_index", { ascending: true });
+
+  const first = stages?.[0];
+  const won = stages?.find((s) => s.is_won === true);
+  const lost = stages?.find((s) => s.is_lost === true);
+  return {
+    defaultPipelineId: first?.pipeline_id ?? "default",
+    defaultStageKey: first?.key ?? "lead",
+    wonStageKey: won?.key ?? "closed_won",
+    lostStageKey: lost?.key ?? "closed_lost",
+    validStages: new Set((stages ?? []).map((s) => s.key as string)),
+  };
+}
+
+function parseModulesParam(body: Record<string, unknown>): Array<"Accounts" | "Contacts" | "Deals"> {
+  const requested = Array.isArray(body.modules)
+    ? (body.modules as unknown[]).filter((m): m is string => typeof m === "string")
+    : ["Accounts", "Contacts", "Deals"];
+  const ordered: Array<"Accounts" | "Contacts" | "Deals"> = [];
+  for (const m of ["Accounts", "Contacts", "Deals"] as const) {
+    if (requested.includes(m)) ordered.push(m);
+  }
+  return ordered;
+}
+
+async function promoteAccount(
+  orgId: number,
+  rawId: number,
+  zohoId: string,
+  payload: Record<string, unknown>,
+  dryRun: boolean,
+  counters: PromoteCounters,
+) {
+  const name = pickString(payload.Account_Name);
+  if (!name) {
+    counters.skipped += 1;
+    return;
+  }
+
+  const writable = {
+    org_id: orgId,
+    zoho_id: zohoId,
+    name,
+    website: pickString(payload.Website),
+    phone_number: pickString(payload.Phone),
+    sector: pickString(payload.Industry),
+    description: pickString(payload.Description),
+    address: buildAddress(
+      payload.Billing_Street,
+      payload.Billing_City,
+      payload.Billing_State,
+      payload.Billing_Code,
+      payload.Billing_Country,
+    ),
+    city: pickString(payload.Billing_City),
+    state_abbr: pickString(payload.Billing_State)?.slice(0, 6) ?? null,
+    zipcode: pickString(payload.Billing_Code),
+    country: pickString(payload.Billing_Country),
+  };
+
+  const { data: existing } = await supabaseAdmin
+    .from("companies")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("zoho_id", zohoId)
+    .maybeSingle();
+
+  if (existing) {
+    counters.updated += 1;
+    if (!dryRun) {
+      await supabaseAdmin.from("companies").update(writable).eq("id", existing.id);
+      await supabaseAdmin
+        .from("zoho_accounts_raw")
+        .update({
+          promoted_at: new Date().toISOString(),
+          promoted_company_id: existing.id,
+        })
+        .eq("id", rawId);
+    }
+    return;
+  }
+
+  counters.inserted += 1;
+  if (!dryRun) {
+    const { data: inserted, error } = await supabaseAdmin
+      .from("companies")
+      .insert(writable)
+      .select("id")
+      .single();
+    if (error) throw new Error(`insert company: ${error.message}`);
+    if (inserted) {
+      await supabaseAdmin
+        .from("zoho_accounts_raw")
+        .update({
+          promoted_at: new Date().toISOString(),
+          promoted_company_id: inserted.id,
+        })
+        .eq("id", rawId);
+    }
+  }
+}
+
+async function promoteContact(
+  orgId: number,
+  rawId: number,
+  zohoId: string,
+  payload: Record<string, unknown>,
+  dryRun: boolean,
+  counters: PromoteCounters,
+) {
+  const firstName = pickString(payload.First_Name);
+  const lastName = pickString(payload.Last_Name) ?? pickString(payload.Full_Name) ?? "(no name)";
+
+  // Resolve company via Account reference
+  const accountZohoId = pickRefId(payload.Account_Name);
+  let companyId: number | null = null;
+  if (accountZohoId) {
+    const { data: company } = await supabaseAdmin
+      .from("companies")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("zoho_id", accountZohoId)
+      .maybeSingle();
+    companyId = company?.id ?? null;
+  }
+
+  const emailJsonb = buildEmailJsonb([
+    { email: payload.Email, type: "Work" },
+    { email: payload.Secondary_Email, type: "Other" },
+  ]);
+  const phoneJsonb = buildPhoneJsonb([
+    { number: payload.Phone, type: "Work" },
+    { number: payload.Mobile, type: "Mobile" },
+    { number: payload.Home_Phone, type: "Home" },
+  ]);
+
+  const writable = {
+    org_id: orgId,
+    zoho_id: zohoId,
+    first_name: firstName,
+    last_name: lastName,
+    title: pickString(payload.Title),
+    company_id: companyId,
+    email_jsonb: emailJsonb,
+    phone_jsonb: phoneJsonb,
+    address: buildAddress(
+      payload.Mailing_Street,
+      payload.Mailing_City,
+      payload.Mailing_State,
+      payload.Mailing_Zip,
+      payload.Mailing_Country,
+    ),
+    background: pickString(payload.Description),
+    lead_source: pickString(payload.Lead_Source),
+    status: "contact",
+  };
+
+  const { data: existing } = await supabaseAdmin
+    .from("contacts")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("zoho_id", zohoId)
+    .maybeSingle();
+
+  if (existing) {
+    counters.updated += 1;
+    if (!dryRun) {
+      await supabaseAdmin.from("contacts").update(writable).eq("id", existing.id);
+      await supabaseAdmin
+        .from("zoho_contacts_raw")
+        .update({
+          promoted_at: new Date().toISOString(),
+          promoted_contact_id: existing.id,
+        })
+        .eq("id", rawId);
+    }
+    return;
+  }
+
+  counters.inserted += 1;
+  if (!dryRun) {
+    const { data: inserted, error } = await supabaseAdmin
+      .from("contacts")
+      .insert(writable)
+      .select("id")
+      .single();
+    if (error) throw new Error(`insert contact: ${error.message}`);
+    if (inserted) {
+      await supabaseAdmin
+        .from("zoho_contacts_raw")
+        .update({
+          promoted_at: new Date().toISOString(),
+          promoted_contact_id: inserted.id,
+        })
+        .eq("id", rawId);
+    }
+  }
+}
+
+async function promoteDeal(
+  orgId: number,
+  rawId: number,
+  zohoId: string,
+  payload: Record<string, unknown>,
+  stageInfo: StageInfo,
+  dryRun: boolean,
+  counters: PromoteCounters,
+) {
+  const name = pickString(payload.Deal_Name) ?? "(unnamed deal)";
+
+  const accountZohoId = pickRefId(payload.Account_Name);
+  let companyId: number | null = null;
+  if (accountZohoId) {
+    const { data } = await supabaseAdmin
+      .from("companies")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("zoho_id", accountZohoId)
+      .maybeSingle();
+    companyId = data?.id ?? null;
+  }
+
+  const contactZohoId = pickRefId(payload.Contact_Name);
+  let contactId: number | null = null;
+  if (contactZohoId) {
+    const { data } = await supabaseAdmin
+      .from("contacts")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("zoho_id", contactZohoId)
+      .maybeSingle();
+    contactId = data?.id ?? null;
+  }
+
+  const amount = safeNumber(payload.Amount);
+  const { stage, lifecycle_phase } = mapZohoStage(pickString(payload.Stage), stageInfo);
+
+  const closingRaw = pickString(payload.Closing_Date);
+  let expectedClosing: string | null = null;
+  if (closingRaw) {
+    const parsed = new Date(closingRaw);
+    expectedClosing = isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  const writable = {
+    org_id: orgId,
+    zoho_id: zohoId,
+    name,
+    company_id: companyId,
+    contact_id: contactId,
+    contact_ids: contactId ? [contactId] : [],
+    description: pickString(payload.Description),
+    notes: pickString(payload.Description),
+    amount: amount != null ? Math.round(amount) : null,
+    estimated_value: amount,
+    expected_closing_date: expectedClosing,
+    pipeline_id: stageInfo.defaultPipelineId,
+    stage,
+    lifecycle_phase,
+    priority: "medium",
+    value_includes_material: false,
+    website_content: {},
+    tech_stack: {},
+    salesperson_ids: [],
+    subcontractor_ids: [],
+    worker_ids: [],
+  };
+
+  const { data: existing } = await supabaseAdmin
+    .from("deals")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("zoho_id", zohoId)
+    .maybeSingle();
+
+  if (existing) {
+    counters.updated += 1;
+    if (!dryRun) {
+      // On update, don't reset the workflow defaults set by humans
+      const updatable = {
+        name: writable.name,
+        company_id: writable.company_id,
+        contact_id: writable.contact_id,
+        contact_ids: writable.contact_ids,
+        description: writable.description,
+        notes: writable.notes,
+        amount: writable.amount,
+        estimated_value: writable.estimated_value,
+        expected_closing_date: writable.expected_closing_date,
+        stage: writable.stage,
+        lifecycle_phase: writable.lifecycle_phase,
+      };
+      await supabaseAdmin.from("deals").update(updatable).eq("id", existing.id);
+      await supabaseAdmin
+        .from("zoho_deals_raw")
+        .update({
+          promoted_at: new Date().toISOString(),
+          promoted_deal_id: existing.id,
+        })
+        .eq("id", rawId);
+    }
+    return;
+  }
+
+  counters.inserted += 1;
+  if (!dryRun) {
+    const { data: inserted, error } = await supabaseAdmin
+      .from("deals")
+      .insert(writable)
+      .select("id")
+      .single();
+    if (error) throw new Error(`insert deal: ${error.message}`);
+    if (inserted) {
+      await supabaseAdmin
+        .from("zoho_deals_raw")
+        .update({
+          promoted_at: new Date().toISOString(),
+          promoted_deal_id: inserted.id,
+        })
+        .eq("id", rawId);
+    }
+  }
+}
+
+async function runPromote(
+  orgId: number,
+  dryRun: boolean,
+  modules: Array<"Accounts" | "Contacts" | "Deals">,
+  pending: { accounts: number; contacts: number; deals: number },
+) {
+  const stageInfo = await loadStageInfo(orgId);
+  const summary: Record<string, PromoteCounters> = {};
+
+  for (const moduleName of modules) {
+    const counters: PromoteCounters = {
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [],
+    };
+    summary[moduleName] = counters;
+    const rawTable =
+      moduleName === "Accounts"
+        ? "zoho_accounts_raw"
+        : moduleName === "Contacts"
+          ? "zoho_contacts_raw"
+          : "zoho_deals_raw";
+
+    const { data: rows, error } = await supabaseAdmin
+      .from(rawTable)
+      .select("id, zoho_id, payload")
+      .eq("org_id", orgId)
+      .is("promoted_at", null)
+      .limit(5000);
+
+    if (error) {
+      counters.errors.push(`fetch ${moduleName}: ${error.message}`);
+      continue;
+    }
+
+    for (const row of rows ?? []) {
+      try {
+        const payload = (row.payload ?? {}) as Record<string, unknown>;
+        if (moduleName === "Accounts") {
+          await promoteAccount(orgId, row.id as number, row.zoho_id as string, payload, dryRun, counters);
+        } else if (moduleName === "Contacts") {
+          await promoteContact(orgId, row.id as number, row.zoho_id as string, payload, dryRun, counters);
+        } else {
+          await promoteDeal(
+            orgId,
+            row.id as number,
+            row.zoho_id as string,
+            payload,
+            stageInfo,
+            dryRun,
+            counters,
+          );
+        }
+      } catch (e: unknown) {
+        counters.errors.push(`${row.zoho_id}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  }
+
   return json({
     ok: true,
     dry_run: dryRun,
-    pending_implementation: true,
-    message:
-      "Promotion not yet wired. Populate staging via /sync-all first; the actual dedup + insert logic will be added in a follow-up commit after we inspect a sample of real Zoho data.",
-    pending_counts: {
-      accounts_to_promote: acc.count ?? 0,
-      contacts_to_promote: con.count ?? 0,
-      deals_to_promote:    deal.count ?? 0,
-    },
+    modules,
+    pending_before: pending,
+    summary,
   });
+}
+
+async function handleDisconnect(member: Member) {
+  const { error } = await supabaseAdmin
+    .from("zoho_oauth_credentials")
+    .delete()
+    .eq("org_id", member.org_id);
+  if (error) return createErrorResponse(400, error.message);
+  return json({ ok: true, disconnected: true });
 }
 
 // ---------------------------- router ----------------------------
@@ -603,6 +1089,9 @@ Deno.serve(async (req) => {
     }
     if (req.method === "POST" && route === "setup-credentials") {
       return await handleSetupCredentials(req, member);
+    }
+    if (req.method === "POST" && route === "disconnect") {
+      return await handleDisconnect(member);
     }
     if (req.method === "POST" && route === "test-connection") {
       return await handleTestConnection(member);
