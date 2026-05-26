@@ -18,7 +18,7 @@ import {
 
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
