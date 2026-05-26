@@ -30,6 +30,7 @@ import type { DealPipeline, DealPipelineStage } from "../types";
 import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import { UsersSettingsSection } from "./UsersSettingsSection";
 import { MessagingSettingsSection } from "@/lbs/settings/MessagingSettingsSection";
+import { DataImportSection } from "@/lbs/settings/DataImportSection";
 import { isLbsMode } from "@/lbs/productMode";
 import { useLbsPipelineConfig } from "@/lbs/deals/useLbsPipelineConfig";
 
@@ -49,6 +50,7 @@ const LBS_SETTINGS_TAB_IDS = [
   "projects",
   "notes",
   "tasks",
+  "data",
 ] as const;
 
 const SETTINGS_TAB_IDS = isLbsMode()
@@ -64,6 +66,7 @@ const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = isLbsMode()
       { id: "projects", label: "Project Stages" },
       { id: "notes", label: "Lead Statuses" },
       { id: "tasks", label: "Task Types" },
+      { id: "data", label: "Data Import" },
     ]
   : [
       { id: "general", label: "General" },
@@ -460,6 +463,7 @@ const SettingsFormFields = () => {
       {activeTab === "messaging" && isLbsMode() ? (
         <MessagingSettingsSection />
       ) : null}
+      {activeTab === "data" && isLbsMode() ? <DataImportSection /> : null}
       {activeTab === "payments" && !isLbsMode() ? (
         <div className="space-y-8 max-w-6xl">
           <h2 className="text-sm font-medium text-muted-foreground">
@@ -626,7 +630,9 @@ const SettingsFormFields = () => {
         </div>
       ) : null}
 
-      {activeTab !== "users" && activeTab !== "messaging" ? (
+      {activeTab !== "users" &&
+      activeTab !== "messaging" &&
+      activeTab !== "data" ? (
         <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <div className="flex w-full min-w-0 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <Button

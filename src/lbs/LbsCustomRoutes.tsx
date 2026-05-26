@@ -5,6 +5,7 @@ import { ClientsListPage } from "@/lbs/clients/ClientsListPage";
 import { ClientShowPage } from "@/lbs/clients/ClientShowPage";
 import { ClientCreatePage } from "@/lbs/clients/ClientCreatePage";
 import { ClientEditPage } from "@/lbs/clients/ClientEditPage";
+import { FindDuplicatesPage } from "@/lbs/clients/FindDuplicatesPage";
 import { LeadCreatePage } from "@/lbs/leads/LeadCreatePage";
 import { LeadShowPage } from "@/lbs/leads/LeadShowPage";
 import { LbsContactShowPage } from "@/lbs/contacts/ContactShowPage";
@@ -164,6 +165,14 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="companies" action="list">
             <ClientsListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/clients/find-duplicates"
+        element={
+          <ProtectedRoute resource="contacts" action="edit">
+            <FindDuplicatesPage />
           </ProtectedRoute>
         }
       />
