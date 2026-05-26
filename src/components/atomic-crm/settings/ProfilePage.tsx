@@ -13,6 +13,7 @@ import { useFormState } from "react-hook-form";
 import { RecordField } from "@/components/admin/record-field";
 import { EmailInput } from "@/components/admin/email-input";
 import { TextInput } from "@/components/admin/text-input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -32,13 +33,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import ImageEditorField from "../misc/ImageEditorField";
 import { supabase } from "../providers/supabase/supabase";
 import type { CrmDataProvider } from "../providers/types";
 import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 import { ProfileNotificationsSection } from "./ProfileNotificationsSection";
 import { EditAvatarDialog } from "@/components/avatar/EditAvatarDialog";
-import { Sparkles } from "lucide-react";
+import {
+  initialsOf,
+  resolveAvatarUrl,
+} from "@/components/avatar/resolveAvatar";
 
 export const ProfilePage = () => {
   const [isEditMode, setEditMode] = useState(false);
@@ -94,31 +97,14 @@ const ProfileForm = ({
 }) => {
   const notify = useNotify();
   const record = useRecordContext<OrganizationMember>();
-  const { identity, refetch } = useGetIdentity();
+  const { identity, refetch: refetchIdentity } = useGetIdentity();
   const { isDirty } = useFormState();
-  const dataProvider = useDataProvider<CrmDataProvider>();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
 
-  const { mutate: mutateSale } = useMutation({
-    mutationKey: ["signup"],
-    mutationFn: async (data: OrganizationMemberFormData) => {
-      if (!record) {
-        throw new Error("Record not found");
-      }
-      return dataProvider.organizationMemberUpdate(record.id, data);
-    },
-    onSuccess: () => {
-      refetch();
-      notify("Your profile has been updated");
-    },
-    onError: () => {
-      notify("An error occurred. Please try again.");
-    },
-  });
   if (!identity) return null;
 
   const resetPasswordForm = () => {
@@ -161,9 +147,8 @@ const ProfileForm = ({
     }
   };
 
-  const handleAvatarUpdate = async (values: any) => {
-    mutateSale(values);
-  };
+  const avatarPreviewUrl = record ? resolveAvatarUrl(record, 96) : null;
+  const avatarInitials = initialsOf(record);
 
   return (
     <div className="space-y-4">
@@ -176,22 +161,26 @@ const ProfileForm = ({
           </div>
 
           <div className="space-y-4 mb-4">
-            <ImageEditorField
-              source="avatar"
-              type="avatar"
-              onSave={handleAvatarUpdate}
-              linkPosition="right"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setAvatarDialogOpen(true)}
-              className="gap-2"
-            >
-              <Sparkles className="size-4" />
-              Choose Open Peeps avatar
-            </Button>
+            <div className="flex flex-row items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setAvatarDialogOpen(true)}
+                className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label="Change avatar"
+              >
+                <Avatar className="size-[50px]">
+                  <AvatarImage src={avatarPreviewUrl ?? undefined} />
+                  <AvatarFallback>{avatarInitials}</AvatarFallback>
+                </Avatar>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAvatarDialogOpen(true)}
+                className="text-xs underline hover:no-underline cursor-pointer"
+              >
+                Change
+              </button>
+            </div>
             <TextRender source="first_name" isEditMode={isEditMode} />
             <TextRender source="last_name" isEditMode={isEditMode} />
             <TextRender source="email" isEditMode={isEditMode} />
@@ -233,7 +222,14 @@ const ProfileForm = ({
       {record ? (
         <EditAvatarDialog
           open={avatarDialogOpen}
-          onOpenChange={setAvatarDialogOpen}
+          onOpenChange={(next) => {
+            setAvatarDialogOpen(next);
+            if (!next) {
+              // Re-pull identity so the sidebar avatar updates right away
+              // after the picker closes.
+              void refetchIdentity?.();
+            }
+          }}
           record={record}
           target={{ kind: "organization_member", id: record.id }}
           folder="organization_members"

@@ -441,8 +441,47 @@ const dataProviderWithCustomMethods = {
       roles,
       module_permissions,
       avatar,
+      avatar_type,
+      avatar_url,
       disabled,
-    } = data;
+    } = data as Partial<Omit<OrganizationMemberFormData, "password">> & {
+      avatar_type?: string | null;
+      avatar_url?: string | null;
+    };
+
+    // Open Peeps / upload selections only touch two plain columns and don't
+    // need to go through the privileged `users` edge function. Persist them
+    // with a direct PostgREST update — the row's own RLS policy
+    // (`organization_members_update_same_org`) lets the user update their
+    // own row.
+    const hasAvatarPickerUpdate =
+      avatar_type !== undefined || avatar_url !== undefined;
+    const hasOtherFields =
+      email !== undefined ||
+      first_name !== undefined ||
+      last_name !== undefined ||
+      administrator !== undefined ||
+      roles !== undefined ||
+      module_permissions !== undefined ||
+      avatar !== undefined ||
+      disabled !== undefined;
+
+    if (hasAvatarPickerUpdate && !hasOtherFields) {
+      const patch: Record<string, unknown> = {};
+      if (avatar_type !== undefined) patch.avatar_type = avatar_type;
+      if (avatar_url !== undefined) patch.avatar_url = avatar_url;
+      const { data: row, error: patchError } = await supabase
+        .from("organization_members")
+        .update(patch)
+        .eq("id", orgMemberId)
+        .select()
+        .maybeSingle();
+      if (patchError) {
+        console.error("organizationMemberUpdate.avatar.error", patchError);
+        throw new Error(patchError.message ?? "Failed to update avatar");
+      }
+      return row as OrganizationMember;
+    }
 
     let persistedAvatar = avatar;
     if (persistedAvatar?.rawFile instanceof File) {
@@ -463,6 +502,8 @@ const dataProviderWithCustomMethods = {
         ...(module_permissions !== undefined ? { module_permissions } : {}),
         disabled,
         avatar: persistedAvatar,
+        ...(avatar_type !== undefined ? { avatar_type } : {}),
+        ...(avatar_url !== undefined ? { avatar_url } : {}),
       },
     });
 
