@@ -1,6 +1,6 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router";
-import { Mail, Phone } from "lucide-react";
+import { GripVertical, Mail, Phone } from "lucide-react";
 
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { Card } from "@/components/ui/card";
@@ -34,25 +34,33 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
   return (
     <Draggable draggableId={String(lead.id)} index={index}>
       {(provided, snapshot) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-        >
-          <Link
-            to={getLeadShowPath(lead.id)}
+        <div ref={provided.innerRef} {...provided.draggableProps}>
+          <Card
             className={cn(
-              "block focus-visible:outline-none",
-              snapshot.isDragging ? "rotate-1" : "",
+              "group relative gap-2 p-3 shadow-sm transition-shadow",
+              snapshot.isDragging
+                ? "rotate-1 shadow-xl ring-2 ring-primary/40"
+                : "hover:shadow-md",
             )}
           >
-            <Card
+            <div
+              {...provided.dragHandleProps}
               className={cn(
-                "gap-2 p-3 shadow-sm transition-shadow hover:shadow-md",
-                snapshot.isDragging ? "shadow-xl ring-2 ring-primary/40" : "",
+                "absolute right-1 top-1 grid size-6 cursor-grab place-items-center rounded-md text-muted-foreground opacity-0 transition-opacity",
+                "group-hover:opacity-100 focus-visible:opacity-100",
+                "hover:bg-muted hover:text-foreground active:cursor-grabbing",
               )}
+              aria-label="Arrastrar lead"
+              role="button"
+              tabIndex={0}
             >
-              <div className="flex items-start gap-2.5">
+              <GripVertical className="size-3.5" />
+            </div>
+            <Link
+              to={getLeadShowPath(lead.id)}
+              className="block focus-visible:outline-none"
+            >
+              <div className="flex items-start gap-2.5 pr-6">
                 <Avatar record={lead} width={32} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium leading-tight">
@@ -67,13 +75,13 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
               </div>
 
               {lead.interested_service ? (
-                <p className="line-clamp-2 text-xs text-muted-foreground">
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                   {lead.interested_service}
                 </p>
               ) : null}
 
               {(email || phone) && (
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                   {email ? (
                     <span className="inline-flex max-w-full items-center gap-1 truncate">
                       <Mail className="size-3 shrink-0" />
@@ -88,8 +96,8 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                   ) : null}
                 </div>
               )}
-            </Card>
-          </Link>
+            </Link>
+          </Card>
         </div>
       )}
     </Draggable>

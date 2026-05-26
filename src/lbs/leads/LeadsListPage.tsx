@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useGetIdentity, useListContext } from "ra-core";
-import { KanbanSquare, List as ListIcon, Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useGetIdentity, useListContext, useListFilterContext } from "ra-core";
+import { KanbanSquare, List as ListIcon, Plus, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable } from "@/components/admin/data-table";
@@ -82,71 +82,82 @@ const LeadsListActions = ({
   onNewLead: () => void;
   view: LeadsView;
   onViewChange: (view: LeadsView) => void;
-}) => (
-  <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-    <ToggleGroup
-      type="single"
-      value={view}
-      onValueChange={(value) => {
-        if (value === "table" || value === "kanban") {
-          onViewChange(value);
+}) => {
+  const { total } = useListContext<Contact>();
+  const { identity } = useGetIdentity();
+  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
+
+  const myFilterKey = "organization_member_id@eq";
+  const myFilterActive = useMemo(() => {
+    const value = filterValues?.[myFilterKey];
+    if (value == null || identity?.id == null) return false;
+    return String(value) === String(identity.id);
+  }, [filterValues, identity?.id]);
+
+  const toggleMyLeads = () => {
+    if (identity?.id == null) return;
+    const next = { ...(filterValues ?? {}) };
+    if (myFilterActive) {
+      delete next[myFilterKey];
+    } else {
+      next[myFilterKey] = identity.id;
+    }
+    setFilters(next, displayedFilters);
+  };
+
+  const countLabel = total != null ? ` (${total})` : "";
+
+  return (
+    <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
+      <ToggleGroup
+        type="single"
+        value={view}
+        onValueChange={(value) => {
+          if (value === "table" || value === "kanban") {
+            onViewChange(value);
+          }
+        }}
+        variant="outline"
+        size="sm"
+        className="mr-auto"
+      >
+        <ToggleGroupItem value="table" aria-label="Vista tabla">
+          <ListIcon className="size-4" />
+          Tabla{countLabel}
+        </ToggleGroupItem>
+        <ToggleGroupItem value="kanban" aria-label="Vista Kanban">
+          <KanbanSquare className="size-4" />
+          Kanban{countLabel}
+        </ToggleGroupItem>
+      </ToggleGroup>
+      <Button
+        type="button"
+        variant={myFilterActive ? "default" : "outline"}
+        size="sm"
+        onClick={toggleMyLeads}
+        disabled={identity?.id == null}
+        title={
+          myFilterActive ? "Mostrando solo tus leads" : "Filtrar solo tus leads"
         }
-      }}
-      variant="outline"
-      size="sm"
-      className="mr-auto"
-    >
-      <ToggleGroupItem value="table" aria-label="Vista tabla">
-        <ListIcon className="size-4" />
-        Tabla
-      </ToggleGroupItem>
-      <ToggleGroupItem value="kanban" aria-label="Vista Kanban">
-        <KanbanSquare className="size-4" />
-        Kanban
-      </ToggleGroupItem>
-    </ToggleGroup>
-    <SpotlightSearchButton
-      title="Buscar leads"
-      placeholder="Buscar por nombre, empresa, email o teléfono…"
-      resource="contacts"
-      filter={{
-        "status@in": `(${LBS_LEAD_STATUSES.map((status) => `"${status}"`).join(",")})`,
-      }}
-      getHref={(record) => getLeadShowPath(record.id)}
-      renderItem={(record) => {
-        const lead = record as Contact;
-        const name =
-          `${lead.first_name ?? ""} ${lead.last_name ?? ""}`.trim() ||
-          lead.company_name ||
-          "Sin nombre";
-        return (
-          <>
-            <Avatar record={lead} width={28} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {[lead.company_name, lead.lead_stage]
-                  .filter(Boolean)
-                  .join(" · ") || "—"}
-              </p>
-            </div>
-          </>
-        );
-      }}
-    />
-    {view === "table" ? (
-      <SortButton fields={["first_name", "last_name", "last_seen"]} />
-    ) : null}
-    <Button variant="outline" onClick={onNewLead}>
-      <Plus />
-      New lead
-    </Button>
-    <ModuleInfoPopover
-      title="Leads"
-      description="Potential opportunities before they become client contacts."
-    />
-  </TopToolbar>
-);
+      >
+        <UserCheck className="size-4" />
+        {myFilterActive ? "Mis leads" : "Todos"}
+      </Button>
+      <SpotlightSearchButton />
+      {view === "table" ? (
+        <SortButton fields={["first_name", "last_name", "last_seen"]} />
+      ) : null}
+      <Button variant="outline" onClick={onNewLead}>
+        <Plus />
+        New lead
+      </Button>
+      <ModuleInfoPopover
+        title="Leads"
+        description="Potential opportunities before they become client contacts."
+      />
+    </TopToolbar>
+  );
+};
 
 const LeadsListLayout = ({ view }: { view: LeadsView }) => {
   const { data, isPending } = useListContext<Contact>();

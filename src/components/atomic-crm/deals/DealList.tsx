@@ -277,31 +277,7 @@ const ProjectSearchField = () => {
     return () => clearTimeout(timeoutId);
   }, [displayedFilters, filterValues, setFilters, value]);
 
-  return (
-    <SpotlightSearchButton
-      title="Buscar proyectos"
-      placeholder="Buscar por nombre, categoría o descripción…"
-      value={value}
-      onValueChange={setValue}
-      resource="deals"
-      getHref={(record) => `/deals/${record.id}/show`}
-      renderItem={(record) => {
-        const r = record as any;
-        return (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {r.name || "Sin nombre"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {[r.company_name, r.category, r.stage]
-                .filter(Boolean)
-                .join(" · ") || "—"}
-            </p>
-          </div>
-        );
-      }}
-    />
-  );
+  return <SpotlightSearchButton />;
 };
 
 const OnlyMineSwitch = () => {

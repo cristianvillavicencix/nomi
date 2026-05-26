@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, type MouseEvent } from "react";
 import {
   useCreatePath,
   useGetIdentity,
@@ -228,48 +228,18 @@ const PeopleListActions = ({
   const { data: identity } = useGetIdentity();
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
   const canManagePeople = canUseCrmPermission(identity as any, "people.manage");
-  const [query, setQuery] = useState("");
 
   useEffect(() => {
-    // Clean stale `q` filters from previous implementations. For people search
-    // we now use an explicit @or filter against real columns.
-    if (typeof filterValues.q === "string") {
-      const nextFilterValues = { ...filterValues };
-      delete nextFilterValues.q;
-      setFilters(nextFilterValues, displayedFilters);
-    }
+    // Strip any stale `q` / `@or` filters left over from the older per-page
+    // search box. Global search has replaced in-page text filtering.
+    const hasStale =
+      typeof filterValues.q === "string" || filterValues["@or"] != null;
+    if (!hasStale) return;
+    const nextFilterValues = { ...filterValues };
+    delete nextFilterValues.q;
+    delete nextFilterValues["@or"];
+    setFilters(nextFilterValues, displayedFilters);
   }, [displayedFilters, filterValues, setFilters]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const nextFilterValues = { ...filterValues };
-      delete nextFilterValues.q;
-
-      const nextQuery = query.trim();
-      const currentOr = filterValues["@or"];
-      if (nextQuery) {
-        const ilikeValue = `%${nextQuery}%`;
-        const nextOr = {
-          "first_name@ilike": ilikeValue,
-          "last_name@ilike": ilikeValue,
-          "email@ilike": ilikeValue,
-          "business_name@ilike": ilikeValue,
-          "specialty@ilike": ilikeValue,
-        };
-        if (JSON.stringify(currentOr) === JSON.stringify(nextOr)) {
-          return;
-        }
-        nextFilterValues["@or"] = nextOr;
-      } else {
-        if (currentOr == null) {
-          return;
-        }
-        delete nextFilterValues["@or"];
-      }
-      setFilters(nextFilterValues, displayedFilters);
-    }, 250);
-    return () => clearTimeout(timeoutId);
-  }, [displayedFilters, filterValues, query, setFilters]);
 
   return (
     <TopToolbar className="w-full justify-between items-center">
@@ -286,32 +256,7 @@ const PeopleListActions = ({
         </TabsList>
       </Tabs>
       <div className="flex items-center gap-2">
-        <SpotlightSearchButton
-          title="Buscar personas"
-          placeholder="Buscar empleados, vendedores o subcontratistas…"
-          value={query}
-          onValueChange={setQuery}
-          resource="people"
-          filter={{ "type@eq": activeType }}
-          getHref={(record) => `/people/${record.id}/show`}
-          renderItem={(record) => {
-            const r = record as Person;
-            const name =
-              `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim() ||
-              r.business_name ||
-              "Sin nombre";
-            return (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{name}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {[personTypeLabels[r.type], r.email, r.phone]
-                    .filter(Boolean)
-                    .join(" · ") || "—"}
-                </p>
-              </div>
-            );
-          }}
-        />
+        <SpotlightSearchButton />
         <ExportButton />
         {canManagePeople ? (
           <Button asChild variant="outline">

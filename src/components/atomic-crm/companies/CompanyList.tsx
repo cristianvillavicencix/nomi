@@ -190,29 +190,7 @@ const CompanyListActions = () => {
   return (
     <TopToolbar className="w-full flex-wrap items-center justify-end gap-2">
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <SpotlightSearchButton
-          title="Buscar empresas"
-          placeholder="Buscar por nombre, sector o web…"
-          value={query}
-          onValueChange={setQuery}
-          resource="companies"
-          getHref={(record) => `/companies/${record.id}/show`}
-          renderItem={(record) => (
-            <>
-              <CompanyAvatar record={record as any} width={28} height={28} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {(record as any).name || "Sin nombre"}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {[(record as any).sector, (record as any).website]
-                    .filter(Boolean)
-                    .join(" · ") || "—"}
-                </p>
-              </div>
-            </>
-          )}
-        />
+        <SpotlightSearchButton />
         <SortButton fields={["name", "created_at", "nb_contacts"]} />
         <ExportButton />
         {canManageSales ? <CreateButton label="New Company" /> : null}
