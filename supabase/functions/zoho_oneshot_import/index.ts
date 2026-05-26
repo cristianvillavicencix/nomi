@@ -1059,6 +1059,225 @@ async function handleDisconnect(member: Member) {
   return json({ ok: true, disconnected: true });
 }
 
+// ---------------------------- OAuth redirect flow ----------------------------
+
+const ZOHO_OAUTH_SCOPES =
+  "ZohoCRM.modules.ALL,ZohoCRM.org.READ,ZohoCRM.users.READ";
+
+function buildOAuthCallbackUrl(): string {
+  const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "");
+  return `${base}/functions/v1/zoho_oneshot_import/oauth-callback`;
+}
+
+function randomState(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function handleStartOAuth(req: Request, member: Member) {
+  if (!ZOHO_CLIENT_ID || !ZOHO_CLIENT_SECRET) {
+    return createErrorResponse(
+      500,
+      "Server missing ZOHO_CLIENT_ID or ZOHO_CLIENT_SECRET environment variables",
+    );
+  }
+  const body = (await req.json().catch(() => ({}))) as {
+    region?: string;
+    redirect_after?: string;
+  };
+  const region = (body.region ?? "com").toLowerCase();
+  if (!(region in ZOHO_REGION_DOMAINS)) {
+    return createErrorResponse(400, `Unsupported region: ${region}`);
+  }
+
+  const state = randomState();
+  const { error: insertError } = await supabaseAdmin
+    .from("zoho_oauth_states")
+    .insert({
+      org_id: member.org_id,
+      state,
+      region,
+      redirect_after: body.redirect_after ?? null,
+      initiated_by: member.user_id,
+    });
+  if (insertError) return createErrorResponse(500, insertError.message);
+
+  const { accounts } = getRegionDomains(region);
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: ZOHO_CLIENT_ID,
+    scope: ZOHO_OAUTH_SCOPES,
+    redirect_uri: buildOAuthCallbackUrl(),
+    state,
+    access_type: "offline",
+    prompt: "consent",
+  });
+  return json({
+    ok: true,
+    authorize_url: `${accounts}/oauth/v2/auth?${params.toString()}`,
+    state,
+  });
+}
+
+function renderCallbackHtml(redirectTo: string, message: string): Response {
+  const safeRedirect = redirectTo.replace(/"/g, "%22");
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Zoho connection</title>
+<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f8fafc;color:#0f172a}.card{padding:2rem;background:#fff;border:1px solid #e2e8f0;border-radius:12px;text-align:center;max-width:420px;box-shadow:0 1px 2px rgba(0,0,0,0.05)}p{margin:0.5rem 0}</style>
+</head><body>
+<div class="card">
+  <h2>${message}</h2>
+  <p>Redirecting back to Nomi CRM…</p>
+  <p><a href="${safeRedirect}">Click here if it doesn't redirect automatically</a></p>
+</div>
+<script>setTimeout(function(){window.location.href="${safeRedirect}"},700);</script>
+</body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders },
+  });
+}
+
+function appendQuery(url: string, extra: Record<string, string>): string {
+  try {
+    const u = new URL(url);
+    for (const [k, v] of Object.entries(extra)) u.searchParams.set(k, v);
+    return u.toString();
+  } catch {
+    const sep = url.includes("?") ? "&" : "?";
+    const tail = Object.entries(extra)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join("&");
+    return `${url}${sep}${tail}`;
+  }
+}
+
+async function handleOAuthCallback(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const errorParam = url.searchParams.get("error");
+  const accountsServer = url.searchParams.get("accounts-server");
+  const fallbackRedirect =
+    Deno.env.get("ZOHO_DEFAULT_REDIRECT_AFTER") ??
+    "https://www.nomicrm.com/settings?tab=data";
+
+  if (!state) {
+    return renderCallbackHtml(
+      appendQuery(fallbackRedirect, { zoho_error: "missing_state" }),
+      "Missing state parameter",
+    );
+  }
+
+  const { data: stateRow } = await supabaseAdmin
+    .from("zoho_oauth_states")
+    .select("*")
+    .eq("state", state)
+    .maybeSingle();
+
+  const redirectBase =
+    (stateRow?.redirect_after as string | null) ?? fallbackRedirect;
+
+  if (!stateRow) {
+    return renderCallbackHtml(
+      appendQuery(redirectBase, { zoho_error: "invalid_state" }),
+      "Invalid state",
+    );
+  }
+  if (stateRow.used_at) {
+    return renderCallbackHtml(
+      appendQuery(redirectBase, { zoho_error: "state_already_used" }),
+      "State already used",
+    );
+  }
+  if (new Date(stateRow.expires_at).getTime() < Date.now()) {
+    return renderCallbackHtml(
+      appendQuery(redirectBase, { zoho_error: "state_expired" }),
+      "State expired — please try again",
+    );
+  }
+
+  if (errorParam) {
+    await supabaseAdmin
+      .from("zoho_oauth_states")
+      .update({ used_at: new Date().toISOString() })
+      .eq("id", stateRow.id);
+    return renderCallbackHtml(
+      appendQuery(redirectBase, { zoho_error: errorParam }),
+      `Zoho denied the request: ${errorParam}`,
+    );
+  }
+
+  if (!code) {
+    return renderCallbackHtml(
+      appendQuery(redirectBase, { zoho_error: "missing_code" }),
+      "Missing authorization code",
+    );
+  }
+
+  // Determine region: prefer the accounts-server query (set by Zoho) — falls
+  // back to whatever the user picked when starting the flow.
+  let region: string = (stateRow.region as string) ?? "com";
+  if (accountsServer) {
+    for (const [key, domains] of Object.entries(ZOHO_REGION_DOMAINS)) {
+      if (accountsServer.startsWith(domains.accounts)) {
+        region = key;
+        break;
+      }
+    }
+  }
+
+  try {
+    const exchanged = await exchangeGrantToken(
+      code,
+      region,
+      buildOAuthCallbackUrl(),
+    );
+    const expiresAt = new Date(
+      Date.now() + exchanged.expires_in * 1000,
+    ).toISOString();
+    const { error: upsertError } = await supabaseAdmin
+      .from("zoho_oauth_credentials")
+      .upsert(
+        {
+          org_id: stateRow.org_id,
+          region,
+          access_token: exchanged.access_token,
+          refresh_token: exchanged.refresh_token,
+          access_token_expires_at: expiresAt,
+          api_domain: exchanged.api_domain,
+          scope: exchanged.scope ?? null,
+          last_refreshed_at: new Date().toISOString(),
+        },
+        { onConflict: "org_id" },
+      );
+    if (upsertError) throw upsertError;
+
+    await supabaseAdmin
+      .from("zoho_oauth_states")
+      .update({ used_at: new Date().toISOString() })
+      .eq("id", stateRow.id);
+
+    return renderCallbackHtml(
+      appendQuery(redirectBase, { zoho_connected: "1" }),
+      "Connected to Zoho",
+    );
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    await supabaseAdmin
+      .from("zoho_oauth_states")
+      .update({ used_at: new Date().toISOString() })
+      .eq("id", stateRow.id);
+    return renderCallbackHtml(
+      appendQuery(redirectBase, { zoho_error: "exchange_failed" }),
+      `Token exchange failed: ${message.slice(0, 200)}`,
+    );
+  }
+}
+
 // ---------------------------- router ----------------------------
 
 Deno.serve(async (req) => {
@@ -1076,6 +1295,21 @@ Deno.serve(async (req) => {
     return handleHealth();
   }
 
+  // OAuth callback — Zoho redirects the user's browser here. No Bearer
+  // token is available; we identify the org via the `state` query param
+  // which was issued by /start-oauth (admin-authenticated).
+  if (req.method === "GET" && route === "oauth-callback") {
+    try {
+      return await handleOAuthCallback(req);
+    } catch (e: unknown) {
+      console.error("[zoho_oneshot_import] oauth-callback error", e);
+      return createErrorResponse(
+        500,
+        e instanceof Error ? e.message : String(e),
+      );
+    }
+  }
+
   // Every other endpoint requires admin auth
   const auth = await authenticate(req);
   if ("error" in auth) {
@@ -1086,6 +1320,9 @@ Deno.serve(async (req) => {
   try {
     if (req.method === "GET" && (route === "" || route === "status")) {
       return await handleStatus(member);
+    }
+    if (req.method === "POST" && route === "start-oauth") {
+      return await handleStartOAuth(req, member);
     }
     if (req.method === "POST" && route === "setup-credentials") {
       return await handleSetupCredentials(req, member);

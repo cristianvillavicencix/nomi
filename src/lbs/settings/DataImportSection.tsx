@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useGetIdentity, useNotify } from "ra-core";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
+  AlertTriangle,
   Building2,
   CheckCircle2,
   ChevronDown,
@@ -12,6 +13,7 @@ import {
   ExternalLink,
   GitMerge,
   Loader2,
+  LogIn,
   LogOut,
   RefreshCcw,
   User,
@@ -164,6 +166,7 @@ const MODULE_CONFIG: Array<{
 export const DataImportSection = () => {
   const { identity } = useGetIdentity();
   const notify = useNotify();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isAdmin =
     (identity as { administrator?: boolean } | undefined)?.administrator ===
     true;
@@ -174,6 +177,11 @@ export const DataImportSection = () => {
   const [busy, setBusy] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [oauthBanner, setOauthBanner] = useState<
+    | { tone: "success"; message: string }
+    | { tone: "error"; message: string }
+    | null
+  >(null);
 
   const logActivity = useCallback(
     (text: string, tone: ActivityEntry["tone"] = "info") => {
@@ -199,6 +207,32 @@ export const DataImportSection = () => {
     if (!isAdmin) return;
     void refreshStatus();
   }, [isAdmin, refreshStatus]);
+
+  // Pick up ?zoho_connected=1 / ?zoho_error=… returned by /oauth-callback.
+  useEffect(() => {
+    const connected = searchParams.get("zoho_connected");
+    const error = searchParams.get("zoho_error");
+    if (!connected && !error) return;
+
+    if (connected === "1") {
+      setOauthBanner({
+        tone: "success",
+        message: "Connected to Zoho. Refresh token stored — you can sync now.",
+      });
+      logActivity("Connected to Zoho via OAuth", "success");
+      void refreshStatus();
+    } else if (error) {
+      setOauthBanner({
+        tone: "error",
+        message: `Zoho connection failed: ${error}`,
+      });
+      logActivity(`Zoho connection failed: ${error}`, "error");
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("zoho_connected");
+    next.delete("zoho_error");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, logActivity, refreshStatus]);
 
   if (!isAdmin) {
     return (
@@ -268,12 +302,55 @@ export const DataImportSection = () => {
             </p>
           ) : null}
 
+          {oauthBanner ? (
+            <div
+              className={
+                oauthBanner.tone === "success"
+                  ? "rounded-md border border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/30 p-3 text-sm flex items-start gap-2 text-emerald-800 dark:text-emerald-200"
+                  : "rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm flex items-start gap-2 text-destructive"
+              }
+            >
+              {oauthBanner.tone === "success" ? (
+                <CheckCircle2 className="h-4 w-4 mt-0.5" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 mt-0.5" />
+              )}
+              <span className="flex-1">{oauthBanner.message}</span>
+              <button
+                type="button"
+                onClick={() => setOauthBanner(null)}
+                className="text-xs opacity-60 hover:opacity-100"
+              >
+                Dismiss
+              </button>
+            </div>
+          ) : null}
+
           {!statusLoading && status && !connected ? (
             <NotConnectedPanel
-              busy={busy === "connect"}
+              busy={busy}
               showAdvanced={showAdvanced}
               setShowAdvanced={setShowAdvanced}
-              onConnect={async (grantToken, region) => {
+              onSignIn={async (region) => {
+                setBusy("oauth");
+                try {
+                  const redirectAfter = `${window.location.origin}/settings?tab=data`;
+                  const result = await callZoho<{
+                    ok: boolean;
+                    authorize_url: string;
+                  }>("/start-oauth", {
+                    method: "POST",
+                    body: { region, redirect_after: redirectAfter },
+                  });
+                  window.location.href = result.authorize_url;
+                } catch (e) {
+                  const message = e instanceof Error ? e.message : String(e);
+                  notify(message, { type: "error", multiLine: true });
+                  logActivity(`OAuth start failed: ${message}`, "error");
+                  setBusy(null);
+                }
+              }}
+              onConnectGrantToken={async (grantToken, region) => {
                 setBusy("connect");
                 try {
                   await callZoho("/setup-credentials", {
@@ -281,7 +358,7 @@ export const DataImportSection = () => {
                     body: { grant_token: grantToken, region },
                   });
                   notify("Connected to Zoho", { type: "success" });
-                  logActivity("Connected to Zoho", "success");
+                  logActivity("Connected to Zoho (Grant Token)", "success");
                   await refreshStatus();
                 } catch (e) {
                   const message = e instanceof Error ? e.message : String(e);
@@ -372,31 +449,77 @@ export const DataImportSection = () => {
 
 // ----------------------------------- Not connected -----------------------------------
 
+const REGION_OPTIONS = [
+  { value: "com", label: ".com (USA)" },
+  { value: "eu", label: ".eu" },
+  { value: "in", label: ".in" },
+  { value: "au", label: ".com.au" },
+  { value: "jp", label: ".jp" },
+  { value: "ca", label: ".ca" },
+];
+
 const NotConnectedPanel = ({
   busy,
   showAdvanced,
   setShowAdvanced,
-  onConnect,
+  onSignIn,
+  onConnectGrantToken,
 }: {
-  busy: boolean;
+  busy: string | null;
   showAdvanced: boolean;
   setShowAdvanced: (v: boolean) => void;
-  onConnect: (grantToken: string, region: string) => void;
+  onSignIn: (region: string) => void;
+  onConnectGrantToken: (grantToken: string, region: string) => void;
 }) => {
-  const [grantToken, setGrantToken] = useState("");
   const [region, setRegion] = useState("com");
+  const [grantToken, setGrantToken] = useState("");
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-md border bg-muted/30 p-4 text-sm space-y-2">
+    <div className="space-y-5">
+      <div className="rounded-md border bg-muted/30 p-4 text-sm space-y-3">
         <p className="font-medium">⚪ Not connected to Zoho</p>
         <p className="text-muted-foreground">
-          A direct{" "}
-          <strong>Sign in with Zoho</strong> button is on the way (waits on the
-          Zoho API Console registration). Until then, paste a Grant Token to
-          connect once — the refresh token is stored in this CRM and reused
-          forever after.
+          One click takes you to Zoho, you approve the connection, and Zoho
+          sends you back. The refresh token is stored permanently so you
+          never have to do it again.
         </p>
+
+        <div className="grid gap-3 sm:grid-cols-[1fr_140px] items-end">
+          <Button
+            type="button"
+            size="lg"
+            onClick={() => onSignIn(region)}
+            disabled={busy !== null}
+            className="sm:self-end"
+          >
+            {busy === "oauth" ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Redirecting to
+                Zoho…
+              </>
+            ) : (
+              <>
+                <LogIn className="h-4 w-4 mr-2" /> Sign in with Zoho
+              </>
+            )}
+          </Button>
+          <div className="space-y-1.5">
+            <Label htmlFor="zoho-region-primary">Region</Label>
+            <select
+              id="zoho-region-primary"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              disabled={busy !== null}
+            >
+              {REGION_OPTIONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       <button
@@ -409,12 +532,16 @@ const NotConnectedPanel = ({
         ) : (
           <ChevronRight className="h-4 w-4" />
         )}
-        Connect via Grant Token (manual)
+        Advanced: connect via Grant Token (manual fallback)
       </button>
 
       {showAdvanced ? (
         <div className="space-y-4 rounded-md border p-4">
-          <ol className="list-decimal pl-5 space-y-1 text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
+            Only needed if the OAuth redirect can't reach this CRM (e.g. local
+            development with a non-https origin).
+          </p>
+          <ol className="list-decimal pl-5 space-y-1 text-xs text-muted-foreground">
             <li>
               Open{" "}
               <a
@@ -426,10 +553,10 @@ const NotConnectedPanel = ({
                 Zoho API Console <ExternalLink className="h-3 w-3" />
               </a>
             </li>
-            <li>Select your Self Client application</li>
+            <li>Open the Self Client (not the Server-based one)</li>
             <li>
               Scope:{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-xs">
+              <code className="rounded bg-muted px-1 py-0.5 text-[10px]">
                 ZohoCRM.modules.ALL,ZohoCRM.org.READ,ZohoCRM.users.READ
               </code>
             </li>
@@ -457,27 +584,27 @@ const NotConnectedPanel = ({
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
               >
-                <option value="com">.com (USA)</option>
-                <option value="eu">.eu</option>
-                <option value="in">.in</option>
-                <option value="au">.com.au</option>
-                <option value="jp">.jp</option>
-                <option value="ca">.ca</option>
+                {REGION_OPTIONS.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           <Button
             type="button"
-            disabled={busy || !grantToken.trim()}
-            onClick={() => onConnect(grantToken.trim(), region)}
+            variant="outline"
+            disabled={busy !== null || !grantToken.trim()}
+            onClick={() => onConnectGrantToken(grantToken.trim(), region)}
           >
-            {busy ? (
+            {busy === "connect" ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting…
               </>
             ) : (
-              "Connect to Zoho"
+              "Connect via Grant Token"
             )}
           </Button>
         </div>
