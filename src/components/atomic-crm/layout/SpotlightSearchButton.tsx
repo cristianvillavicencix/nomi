@@ -14,7 +14,6 @@ import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { resolveEffectiveModules } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import type { Company, Contact, Person } from "@/components/atomic-crm/types";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LBS_CONTACT_STATUSES, LBS_LEAD_STATUSES } from "@/lbs/navigation";
 import { isLbsMode } from "@/lbs/productMode";
@@ -449,19 +448,25 @@ export const SpotlightSearchButton = ({
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       {variant === "hidden" ? null : (
         <DialogPrimitive.Trigger asChild>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 gap-2 px-2.5 text-muted-foreground"
             aria-label="Buscar"
+            className={cn(
+              "group flex h-9 items-center gap-2 rounded-md border bg-muted/40 px-3",
+              "text-sm text-muted-foreground transition-colors",
+              "hover:bg-muted hover:text-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "sm:min-w-[220px] md:min-w-[260px]",
+            )}
           >
-            <Search className="size-4" />
-            <span className="hidden sm:inline">Buscar</span>
-            <kbd className="ml-1 hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
+            <Search className="size-4 shrink-0" />
+            <span className="hidden flex-1 truncate text-left sm:inline">
+              Buscar en NOMI…
+            </span>
+            <kbd className="ml-auto hidden shrink-0 rounded border bg-background px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
               ⌘K
             </kbd>
-          </Button>
+          </button>
         </DialogPrimitive.Trigger>
       )}
       <DialogPrimitive.Portal>

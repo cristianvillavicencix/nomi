@@ -498,9 +498,9 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         <SidebarNavigation />
         <main className="ml-auto flex h-svh min-h-0 w-full max-w-full flex-col overflow-hidden peer-data-[state=collapsed]:w-[calc(100%-var(--sidebar-width-icon)-1rem)] peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))] sm:transition-[width] sm:duration-200 sm:ease-linear print:h-auto print:w-full print:overflow-visible">
           {!isMessagesShell ? (
-            <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
-              <PageActionsSlot className="flex min-w-0 flex-1 flex-wrap items-center gap-2" />
-              <div className="ml-auto flex items-center gap-2">
+            <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
+              <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
+              <div className="flex shrink-0 items-center">
                 <SpotlightSearchButton />
               </div>
             </header>
