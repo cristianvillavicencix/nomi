@@ -287,11 +287,30 @@ const PeopleListActions = ({
       </Tabs>
       <div className="flex items-center gap-2">
         <SpotlightSearchButton
-          title="Search People"
-          description="Find employees, salespeople, or subcontractors in one focused search."
-          placeholder="Search people..."
+          title="Buscar personas"
+          placeholder="Buscar empleados, vendedores o subcontratistas…"
           value={query}
           onValueChange={setQuery}
+          resource="people"
+          filter={{ "type@eq": activeType }}
+          getHref={(record) => `/people/${record.id}/show`}
+          renderItem={(record) => {
+            const r = record as Person;
+            const name =
+              `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim() ||
+              r.business_name ||
+              "Sin nombre";
+            return (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {[personTypeLabels[r.type], r.email, r.phone]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
+                </p>
+              </div>
+            );
+          }}
         />
         <ExportButton />
         {canManagePeople ? (

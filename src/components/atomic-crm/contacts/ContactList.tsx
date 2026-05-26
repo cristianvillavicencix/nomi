@@ -159,11 +159,26 @@ const ContactListActions = () => {
     <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <SpotlightSearchButton
-          title="Search Contacts"
-          description="Find contacts by name or company without leaving the page."
-          placeholder="Search name, company..."
+          title="Buscar contactos"
+          placeholder="Buscar por nombre o empresa…"
           value={query}
           onValueChange={setQuery}
+          resource="contacts"
+          getHref={(record) => `/contacts/${record.id}/show`}
+          renderItem={(record) => {
+            const r = record as any;
+            const name =
+              `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim() ||
+              "Sin nombre";
+            return (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {[r.company_name, r.title].filter(Boolean).join(" · ") || "—"}
+                </p>
+              </div>
+            );
+          }}
         />
         <SortButton fields={["first_name", "last_name", "last_seen"]} />
         {canManageSales ? <ContactImportButton /> : null}

@@ -106,9 +106,33 @@ const LeadsListActions = ({
       </ToggleGroupItem>
     </ToggleGroup>
     <SpotlightSearchButton
-      title="Search Leads"
-      description="Find leads by name, company, email, or phone."
-      placeholder="Search leads..."
+      title="Buscar leads"
+      placeholder="Buscar por nombre, empresa, email o teléfono…"
+      resource="contacts"
+      filter={{
+        "status@in": `(${LBS_LEAD_STATUSES.map((status) => `"${status}"`).join(",")})`,
+      }}
+      getHref={(record) => getLeadShowPath(record.id)}
+      renderItem={(record) => {
+        const lead = record as Contact;
+        const name =
+          `${lead.first_name ?? ""} ${lead.last_name ?? ""}`.trim() ||
+          lead.company_name ||
+          "Sin nombre";
+        return (
+          <>
+            <Avatar record={lead} width={28} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {[lead.company_name, lead.lead_stage]
+                  .filter(Boolean)
+                  .join(" · ") || "—"}
+              </p>
+            </div>
+          </>
+        );
+      }}
     />
     {view === "table" ? (
       <SortButton fields={["first_name", "last_name", "last_seen"]} />

@@ -132,11 +132,30 @@ const CompaniesActions = () => {
       <ClientsTabsBar />
       <div className="ml-auto flex flex-wrap items-center gap-3">
         <SpotlightSearchButton
-          title="Search Clients"
-          description="Find clients by business name, contact name, email, or phone."
-          placeholder="Search clients..."
+          title="Buscar clientes"
+          placeholder="Buscar por nombre, web o sector…"
           value={query}
           onValueChange={setQuery}
+          resource="companies"
+          getHref={(record) => getClientShowPath(record.id)}
+          renderItem={(record) => {
+            const company = record as Company;
+            return (
+              <>
+                <CompanyAvatar record={company} width={28} height={28} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {company.name || "Sin nombre"}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {[company.sector, company.website]
+                      .filter(Boolean)
+                      .join(" · ") || "—"}
+                  </p>
+                </div>
+              </>
+            );
+          }}
         />
         <SortButton fields={["name", "website"]} />
         <Link
@@ -282,11 +301,35 @@ const ContactsActions = () => {
       <ClientsTabsBar />
       <div className="ml-auto flex flex-wrap items-center gap-3">
         <SpotlightSearchButton
-          title="Search Contacts"
-          description="Find contacts across every client company."
-          placeholder="Search contacts..."
+          title="Buscar contactos"
+          placeholder="Buscar por nombre, empresa, email o teléfono…"
           value={query}
           onValueChange={setQuery}
+          resource="contacts"
+          filter={{
+            "status@in": `(${LBS_CONTACT_STATUSES.map((status) => `"${status}"`).join(",")})`,
+          }}
+          getHref={(record) => getPersonShowPath(record.id)}
+          renderItem={(record) => {
+            const contact = record as Contact;
+            const name =
+              `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+              contact.company_name ||
+              "Sin nombre";
+            return (
+              <>
+                <ContactAvatar record={contact} width={28} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {[contact.company_name, contact.title]
+                      .filter(Boolean)
+                      .join(" · ") || "—"}
+                  </p>
+                </div>
+              </>
+            );
+          }}
         />
         <SortButton fields={["first_name", "last_name", "last_seen"]} />
         <ModuleInfoPopover
@@ -322,7 +365,9 @@ const ContactsLayout = () => {
         label=""
         disableSort
         className="w-[52px]"
-        render={(record: Contact) => <ContactAvatar record={record} width={25} />}
+        render={(record: Contact) => (
+          <ContactAvatar record={record} width={25} />
+        )}
       />
       <DataTable.Col
         source="first_name"

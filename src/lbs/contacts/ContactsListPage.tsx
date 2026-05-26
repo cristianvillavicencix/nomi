@@ -46,9 +46,33 @@ export const ContactsListPage = () => {
 const ContactsListActions = () => (
   <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
     <SpotlightSearchButton
-      title="Search Contacts"
-      description="Find contacts by name, company, email, or phone."
-      placeholder="Search contacts..."
+      title="Buscar contactos"
+      placeholder="Buscar por nombre, empresa, email o teléfono…"
+      resource="contacts"
+      filter={{
+        "status@in": `(${LBS_CONTACT_STATUSES.map((status) => `"${status}"`).join(",")})`,
+      }}
+      getHref={(record) => getContactShowPath(record.id)}
+      renderItem={(record) => {
+        const contact = record as Contact;
+        const name =
+          `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+          contact.company_name ||
+          "Sin nombre";
+        return (
+          <>
+            <Avatar record={contact} width={28} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {[contact.company_name, contact.title]
+                  .filter(Boolean)
+                  .join(" · ") || "—"}
+              </p>
+            </div>
+          </>
+        );
+      }}
     />
     <SortButton fields={["first_name", "last_name", "company_name"]} />
     <ModuleInfoPopover
