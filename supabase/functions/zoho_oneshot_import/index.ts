@@ -296,6 +296,15 @@ async function handleStatus(member: Member) {
       .select("*", { count: "exact", head: true })
       .eq("org_id", orgId)
       .not("promoted_at", "is", null),
+    supabaseAdmin
+      .from("zoho_leads_raw")
+      .select("*", { count: "exact", head: true })
+      .eq("org_id", orgId),
+    supabaseAdmin
+      .from("zoho_leads_raw")
+      .select("*", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .not("promoted_at", "is", null),
   ]);
 
   return json({
@@ -326,6 +335,10 @@ async function handleStatus(member: Member) {
       deals_raw: {
         total:    counts[2].count ?? 0,
         promoted: counts[5].count ?? 0,
+      },
+      leads_raw: {
+        total:    counts[6].count ?? 0,
+        promoted: counts[7].count ?? 0,
       },
     },
   });
@@ -425,8 +438,12 @@ async function handleTestConnection(member: Member) {
 }
 
 async function pageThroughModule(
-  module: "Contacts" | "Accounts" | "Deals",
-  rawTable: "zoho_contacts_raw" | "zoho_accounts_raw" | "zoho_deals_raw",
+  module: "Contacts" | "Accounts" | "Deals" | "Leads",
+  rawTable:
+    | "zoho_contacts_raw"
+    | "zoho_accounts_raw"
+    | "zoho_deals_raw"
+    | "zoho_leads_raw",
   orgId: number,
   accessToken: string,
   apiDomain: string,
@@ -488,10 +505,10 @@ async function handleSyncAll(req: Request, member: Member) {
     ? (body.modules as unknown[]).filter(
         (m): m is string => typeof m === "string",
       )
-    : ["Contacts", "Accounts", "Deals"];
+    : ["Contacts", "Accounts", "Deals", "Leads"];
   const modules = requestedModules.filter((m) =>
-    ["Contacts", "Accounts", "Deals"].includes(m),
-  ) as Array<"Contacts" | "Accounts" | "Deals">;
+    ["Contacts", "Accounts", "Deals", "Leads"].includes(m),
+  ) as Array<"Contacts" | "Accounts" | "Deals" | "Leads">;
 
   const maxPages =
     typeof body.max_pages === "number" && body.max_pages > 0
@@ -512,7 +529,9 @@ async function handleSyncAll(req: Request, member: Member) {
           ? "zoho_contacts_raw"
           : module === "Accounts"
             ? "zoho_accounts_raw"
-            : "zoho_deals_raw";
+            : module === "Deals"
+              ? "zoho_deals_raw"
+              : "zoho_leads_raw";
       summary[module] = await pageThroughModule(
         module,
         rawTable,
@@ -536,7 +555,7 @@ async function handlePromote(req: Request, member: Member) {
   const dryRun = body?.dry_run === true;
   const orgId = member.org_id;
 
-  const [acc, con, deal] = await Promise.all([
+  const [acc, con, deal, lead] = await Promise.all([
     supabaseAdmin
       .from("zoho_accounts_raw")
       .select("*", { count: "exact", head: true })
@@ -552,14 +571,19 @@ async function handlePromote(req: Request, member: Member) {
       .select("*", { count: "exact", head: true })
       .eq("org_id", orgId)
       .is("promoted_at", null),
+    supabaseAdmin
+      .from("zoho_leads_raw")
+      .select("*", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .is("promoted_at", null),
   ]);
 
-  return runPromote(
-    orgId,
-    dryRun,
-    parseModulesParam(body),
-    { accounts: acc.count ?? 0, contacts: con.count ?? 0, deals: deal.count ?? 0 },
-  );
+  return runPromote(orgId, dryRun, parseModulesParam(body), {
+    accounts: acc.count ?? 0,
+    contacts: con.count ?? 0,
+    deals: deal.count ?? 0,
+    leads: lead.count ?? 0,
+  });
 }
 
 // ---------------------------- promote helpers ----------------------------
@@ -671,15 +695,165 @@ async function loadStageInfo(orgId: number): Promise<StageInfo> {
   };
 }
 
-function parseModulesParam(body: Record<string, unknown>): Array<"Accounts" | "Contacts" | "Deals"> {
+function parseModulesParam(body: Record<string, unknown>): Array<"Accounts" | "Contacts" | "Deals" | "Leads"> {
   const requested = Array.isArray(body.modules)
     ? (body.modules as unknown[]).filter((m): m is string => typeof m === "string")
-    : ["Accounts", "Contacts", "Deals"];
-  const ordered: Array<"Accounts" | "Contacts" | "Deals"> = [];
-  for (const m of ["Accounts", "Contacts", "Deals"] as const) {
+    : ["Accounts", "Contacts", "Deals", "Leads"];
+  // FK order: Accounts -> Contacts -> Deals (deals link to companies+contacts).
+  // Leads is independent; insert it last so its company-name lookup can match
+  // any Accounts that were just promoted.
+  const ordered: Array<"Accounts" | "Contacts" | "Deals" | "Leads"> = [];
+  for (const m of ["Accounts", "Contacts", "Deals", "Leads"] as const) {
     if (requested.includes(m)) ordered.push(m);
   }
   return ordered;
+}
+
+// Zoho Lead_Status -> Nomi contacts.lead_stage (valid: new, contacted, talking,
+// quoted, closing, paused, won, lost). Falls back to "new" on no match so the
+// lead remains visible in Anti-Olvido for triage.
+function mapZohoLeadStatus(status: string | null): string {
+  const lower = (status ?? "").toLowerCase().trim();
+  if (!lower) return "new";
+  if (lower.includes("closed won") || lower === "won") return "won";
+  if (lower.includes("closed lost") || lower === "lost") return "lost";
+  if (lower.includes("junk") || lower.includes("not qualified")) return "lost";
+  if (lower.includes("negotiation") || lower.includes("closing"))
+    return "closing";
+  if (
+    lower.includes("qualified") ||
+    lower.includes("proposal") ||
+    lower.includes("quote")
+  )
+    return "quoted";
+  if (
+    lower.includes("contacted") ||
+    lower.includes("follow") ||
+    lower.includes("talking") ||
+    lower.includes("attempted")
+  )
+    return "contacted";
+  if (lower.includes("new") || lower.includes("opportunity")) return "new";
+  return "new";
+}
+
+async function promoteLead(
+  orgId: number,
+  rawId: number,
+  zohoId: string,
+  payload: Record<string, unknown>,
+  dryRun: boolean,
+  counters: PromoteCounters,
+) {
+  const firstName = pickString(payload.First_Name);
+  const lastName =
+    pickString(payload.Last_Name) ??
+    pickString(payload.Full_Name) ??
+    pickString(payload.Company) ??
+    "(no name)";
+
+  // Resolve company by name match (Zoho Leads only has a Company STRING,
+  // not a FK to Accounts). Best-effort: case-insensitive exact match.
+  const companyName = pickString(payload.Company);
+  let companyId: number | null = null;
+  if (companyName) {
+    const { data: matched } = await supabaseAdmin
+      .from("companies")
+      .select("id")
+      .eq("org_id", orgId)
+      .ilike("name", companyName)
+      .limit(1)
+      .maybeSingle();
+    companyId = matched?.id ?? null;
+  }
+
+  const emailJsonb = buildEmailJsonb([
+    { email: payload.Email, type: "Work" },
+    { email: payload.Secondary_Email, type: "Other" },
+  ]);
+  const phoneJsonb = buildPhoneJsonb([
+    { number: payload.Phone, type: "Work" },
+    { number: payload.Mobile, type: "Mobile" },
+  ]);
+
+  const leadStage = mapZohoLeadStatus(pickString(payload.Lead_Status));
+
+  // Set a default next_followup_at = today + 7 days so the lead surfaces in
+  // Anti-Olvido on import. Skip when the lead is already terminal (won/lost).
+  let nextFollowupAt: string | null = null;
+  if (leadStage !== "won" && leadStage !== "lost") {
+    nextFollowupAt = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+  }
+
+  const writable = {
+    org_id: orgId,
+    lead_zoho_id: zohoId,
+    first_name: firstName,
+    last_name: lastName,
+    title: pickString(payload.Title),
+    company_id: companyId,
+    email_jsonb: emailJsonb,
+    phone_jsonb: phoneJsonb,
+    address: buildAddress(
+      payload.Street,
+      payload.City,
+      payload.State,
+      payload.Zip_Code,
+      payload.Country,
+    ),
+    background: pickString(payload.Description),
+    lead_source: pickString(payload.Lead_Source),
+    lead_stage: leadStage,
+    next_followup_at: nextFollowupAt,
+    status: "lead",
+  };
+
+  const { data: existing } = await supabaseAdmin
+    .from("contacts")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("lead_zoho_id", zohoId)
+    .maybeSingle();
+
+  if (existing) {
+    if (!dryRun) {
+      const { error: updateError } = await supabaseAdmin
+        .from("contacts")
+        .update(writable)
+        .eq("id", existing.id);
+      if (updateError) throw new Error(`update lead: ${updateError.message}`);
+      await supabaseAdmin
+        .from("zoho_leads_raw")
+        .update({
+          promoted_at: new Date().toISOString(),
+          promoted_contact_id: existing.id,
+        })
+        .eq("id", rawId);
+    }
+    counters.updated += 1;
+    return;
+  }
+
+  if (!dryRun) {
+    const { data: inserted, error } = await supabaseAdmin
+      .from("contacts")
+      .insert(writable)
+      .select("id")
+      .single();
+    if (error) throw new Error(`insert lead: ${error.message}`);
+    if (inserted) {
+      await supabaseAdmin
+        .from("zoho_leads_raw")
+        .update({
+          promoted_at: new Date().toISOString(),
+          promoted_contact_id: inserted.id,
+        })
+        .eq("id", rawId);
+    }
+  }
+  counters.inserted += 1;
 }
 
 async function promoteAccount(
@@ -996,8 +1170,13 @@ async function promoteDeal(
 async function runPromote(
   orgId: number,
   dryRun: boolean,
-  modules: Array<"Accounts" | "Contacts" | "Deals">,
-  pending: { accounts: number; contacts: number; deals: number },
+  modules: Array<"Accounts" | "Contacts" | "Deals" | "Leads">,
+  pending: {
+    accounts: number;
+    contacts: number;
+    deals: number;
+    leads: number;
+  },
 ) {
   const stageInfo = await loadStageInfo(orgId);
   const summary: Record<string, PromoteCounters> = {};
@@ -1015,7 +1194,9 @@ async function runPromote(
         ? "zoho_accounts_raw"
         : moduleName === "Contacts"
           ? "zoho_contacts_raw"
-          : "zoho_deals_raw";
+          : moduleName === "Deals"
+            ? "zoho_deals_raw"
+            : "zoho_leads_raw";
 
     const { data: rows, error } = await supabaseAdmin
       .from(rawTable)
@@ -1032,20 +1213,24 @@ async function runPromote(
     for (const row of rows ?? []) {
       try {
         const payload = (row.payload ?? {}) as Record<string, unknown>;
+        const rawId = row.id as number;
+        const zohoId = row.zoho_id as string;
         if (moduleName === "Accounts") {
-          await promoteAccount(orgId, row.id as number, row.zoho_id as string, payload, dryRun, counters);
+          await promoteAccount(orgId, rawId, zohoId, payload, dryRun, counters);
         } else if (moduleName === "Contacts") {
-          await promoteContact(orgId, row.id as number, row.zoho_id as string, payload, dryRun, counters);
-        } else {
+          await promoteContact(orgId, rawId, zohoId, payload, dryRun, counters);
+        } else if (moduleName === "Deals") {
           await promoteDeal(
             orgId,
-            row.id as number,
-            row.zoho_id as string,
+            rawId,
+            zohoId,
             payload,
             stageInfo,
             dryRun,
             counters,
           );
+        } else {
+          await promoteLead(orgId, rawId, zohoId, payload, dryRun, counters);
         }
       } catch (e: unknown) {
         counters.errors.push(`${row.zoho_id}: ${e instanceof Error ? e.message : String(e)}`);

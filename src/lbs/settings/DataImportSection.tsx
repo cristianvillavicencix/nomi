@@ -16,6 +16,7 @@ import {
   LogIn,
   LogOut,
   RefreshCcw,
+  Target,
   User,
   Briefcase,
 } from "lucide-react";
@@ -32,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 
-type ModuleKey = "Accounts" | "Contacts" | "Deals";
+type ModuleKey = "Accounts" | "Contacts" | "Deals" | "Leads";
 
 type ZohoStatus = {
   ok: boolean;
@@ -52,6 +53,7 @@ type ZohoStatus = {
     contacts_raw: { total: number; promoted: number };
     accounts_raw: { total: number; promoted: number };
     deals_raw: { total: number; promoted: number };
+    leads_raw?: { total: number; promoted: number };
   };
 };
 
@@ -143,7 +145,8 @@ const MODULE_CONFIG: Array<{
   {
     key: "Accounts",
     label: "Companies",
-    description: "Imported first — companies are referenced by contacts and deals.",
+    description:
+      "Imported first — companies are referenced by contacts and deals.",
     icon: Building2,
     stagingField: "accounts_raw",
   },
@@ -161,7 +164,17 @@ const MODULE_CONFIG: Array<{
     icon: Briefcase,
     stagingField: "deals_raw",
   },
+  {
+    key: "Leads",
+    label: "Leads",
+    description:
+      "Zoho's pre-sales module — imported as contacts with status=lead so they enter Anti-Olvido for follow-up.",
+    icon: Target,
+    stagingField: "leads_raw",
+  },
 ];
+
+const ALL_MODULES: ModuleKey[] = ["Accounts", "Contacts", "Deals", "Leads"];
 
 export const DataImportSection = () => {
   const { identity } = useGetIdentity();
@@ -635,18 +648,18 @@ const ConnectedPanel = ({
 
   const stagingTotal = useMemo(
     () =>
-      status.staging.accounts_raw.total +
-      status.staging.contacts_raw.total +
-      status.staging.deals_raw.total,
+      MODULE_CONFIG.reduce(
+        (sum, mod) => sum + (status.staging[mod.stagingField]?.total ?? 0),
+        0,
+      ),
     [status],
   );
   const promotableTotal = useMemo(
     () =>
-      status.staging.accounts_raw.total -
-      status.staging.accounts_raw.promoted +
-      (status.staging.contacts_raw.total -
-        status.staging.contacts_raw.promoted) +
-      (status.staging.deals_raw.total - status.staging.deals_raw.promoted),
+      MODULE_CONFIG.reduce((sum, mod) => {
+        const s = status.staging[mod.stagingField];
+        return sum + ((s?.total ?? 0) - (s?.promoted ?? 0));
+      }, 0),
     [status],
   );
 
@@ -810,10 +823,10 @@ const ConnectedPanel = ({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          onClick={() => runSync(["Accounts", "Contacts", "Deals"])}
+          onClick={() => runSync(ALL_MODULES)}
           disabled={busy !== null}
         >
-          {busy?.startsWith("sync:Accounts,Contacts,Deals") ? (
+          {busy === `sync:${ALL_MODULES.join(",")}` ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : null}
           Sync everything
@@ -821,7 +834,7 @@ const ConnectedPanel = ({
         <Button
           type="button"
           variant="default"
-          onClick={() => runPromote(["Accounts", "Contacts", "Deals"], false)}
+          onClick={() => runPromote(ALL_MODULES, false)}
           disabled={busy !== null || promotableTotal === 0}
           title={
             promotableTotal === 0
@@ -829,7 +842,7 @@ const ConnectedPanel = ({
               : `${promotableTotal} pending rows`
           }
         >
-          {busy?.startsWith("promote:Accounts,Contacts,Deals:live") ? (
+          {busy === `promote:${ALL_MODULES.join(",")}:live` ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : null}
           Promote everything ({promotableTotal})
@@ -837,7 +850,7 @@ const ConnectedPanel = ({
         <Button
           type="button"
           variant="outline"
-          onClick={() => runPromote(["Accounts", "Contacts", "Deals"], true)}
+          onClick={() => runPromote(ALL_MODULES, true)}
           disabled={busy !== null || stagingTotal === 0}
         >
           Dry-run promote
@@ -846,7 +859,10 @@ const ConnectedPanel = ({
 
       <ul className="space-y-3">
         {MODULE_CONFIG.map((mod) => {
-          const staging = status.staging[mod.stagingField];
+          const staging = status.staging[mod.stagingField] ?? {
+            total: 0,
+            promoted: 0,
+          };
           const pending = staging.total - staging.promoted;
           const isSyncing = busy === `sync:${mod.key}`;
           const isPromoting = busy === `promote:${mod.key}:live`;
