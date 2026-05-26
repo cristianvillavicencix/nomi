@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetIdentity, useListContext } from "ra-core";
-import { Plus } from "lucide-react";
+import { KanbanSquare, List as ListIcon, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { SortButton } from "@/components/admin/sort-button";
@@ -16,6 +17,16 @@ import { LBS_LEAD_STATUSES } from "@/lbs/navigation";
 import { getLeadShowPath } from "@/lbs/routing";
 import { Status } from "@/components/atomic-crm/misc/Status";
 import { NewLeadDialog } from "@/lbs/leads/NewLeadDialog";
+import { LeadsKanban } from "@/lbs/leads/LeadsKanban";
+
+const VIEW_STORAGE_KEY = "lbs.leads.view";
+type LeadsView = "table" | "kanban";
+
+const readPersistedView = (): LeadsView => {
+  if (typeof window === "undefined") return "table";
+  const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+  return stored === "kanban" ? "kanban" : "table";
+};
 
 const getPrimaryPhone = (contact: Contact) =>
   contact.phone_jsonb?.find((phone) => String(phone.number ?? "").trim())
@@ -28,6 +39,13 @@ const getPrimaryEmail = (contact: Contact) =>
 export const LeadsListPage = () => {
   const { identity } = useGetIdentity();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [view, setView] = useState<LeadsView>(() => readPersistedView());
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(VIEW_STORAGE_KEY, view);
+  }, [view]);
+
   if (!identity) return null;
 
   return (
@@ -36,28 +54,65 @@ export const LeadsListPage = () => {
         resource="contacts"
         title="Leads"
         disableBreadcrumb
-        perPage={25}
+        perPage={view === "kanban" ? 200 : 25}
         sort={{ field: "last_seen", order: "DESC" }}
         filterDefaultValues={{
           "status@in": `(${LBS_LEAD_STATUSES.map((status) => `"${status}"`).join(",")})`,
         }}
-        actions={<LeadsListActions onNewLead={() => setDialogOpen(true)} />}
+        actions={
+          <LeadsListActions
+            onNewLead={() => setDialogOpen(true)}
+            view={view}
+            onViewChange={setView}
+          />
+        }
       >
-        <LeadsListLayout />
+        <LeadsListLayout view={view} />
       </List>
       <NewLeadDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </>
   );
 };
 
-const LeadsListActions = ({ onNewLead }: { onNewLead: () => void }) => (
+const LeadsListActions = ({
+  onNewLead,
+  view,
+  onViewChange,
+}: {
+  onNewLead: () => void;
+  view: LeadsView;
+  onViewChange: (view: LeadsView) => void;
+}) => (
   <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
+    <ToggleGroup
+      type="single"
+      value={view}
+      onValueChange={(value) => {
+        if (value === "table" || value === "kanban") {
+          onViewChange(value);
+        }
+      }}
+      variant="outline"
+      size="sm"
+      className="mr-auto"
+    >
+      <ToggleGroupItem value="table" aria-label="Vista tabla">
+        <ListIcon className="size-4" />
+        Tabla
+      </ToggleGroupItem>
+      <ToggleGroupItem value="kanban" aria-label="Vista Kanban">
+        <KanbanSquare className="size-4" />
+        Kanban
+      </ToggleGroupItem>
+    </ToggleGroup>
     <SpotlightSearchButton
       title="Search Leads"
       description="Find leads by name, company, email, or phone."
       placeholder="Search leads..."
     />
-    <SortButton fields={["first_name", "last_name", "last_seen"]} />
+    {view === "table" ? (
+      <SortButton fields={["first_name", "last_name", "last_seen"]} />
+    ) : null}
     <Button variant="outline" onClick={onNewLead}>
       <Plus />
       New lead
@@ -69,10 +124,13 @@ const LeadsListActions = ({ onNewLead }: { onNewLead: () => void }) => (
   </TopToolbar>
 );
 
-const LeadsListLayout = () => {
+const LeadsListLayout = ({ view }: { view: LeadsView }) => {
   const { data, isPending } = useListContext<Contact>();
 
   if (isPending) return null;
+  if (view === "kanban") {
+    return <LeadsKanban />;
+  }
   if (!data?.length) return <ContactEmpty />;
 
   return (

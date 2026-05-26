@@ -168,6 +168,8 @@ export type Contact = {
   phone_jsonb: PhoneNumberAndType[];
   lead_source?: string | null;
   lead_source_other?: string | null;
+  lead_stage?: string | null;
+  snooze_until?: string | null;
   interested_service?: string | null;
   referred_by_contact_id?: Identifier | null;
   referred_by_company_id?: Identifier | null;
