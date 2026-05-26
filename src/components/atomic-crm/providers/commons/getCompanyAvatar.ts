@@ -1,21 +1,36 @@
 import type { Company } from "../../types";
 
+/**
+ * Returns a normalized domain like "example.com" extracted from any kind of
+ * website URL the user might have typed (with/without https, with/without
+ * www, with trailing slashes, paths, query strings, etc.). Returns null if
+ * we can't make sense of it.
+ */
+const extractDomain = (website?: string | null): string | null => {
+  const value = website?.trim();
+  if (!value) return null;
+  const stripped = value
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .split(/[/?#]/)[0]
+    .trim();
+  return stripped || null;
+};
+
+const faviconUrlFor = (domain: string) =>
+  `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+
 // Main function to get the avatar URL
 export async function getCompanyAvatar(record: Partial<Company>): Promise<{
   src: string;
   title: string;
 } | null> {
-  // TODO: Step 1: Try to get image from LinkedIn.
-
-  // Step 2: Fallback to the favicon from website domain
-  if (!record.website) {
+  const domain = extractDomain(record.website);
+  if (!domain) {
     return null;
   }
-  const websiteUrlWithoutScheme = record.website
-    .replace(/^https?:\/\//, "")
-    .replace(/\/$/, "");
   return {
-    src: `https://favicon.show/${websiteUrlWithoutScheme}`,
+    src: faviconUrlFor(domain),
     title: "Company favicon",
   };
 }
@@ -26,11 +41,9 @@ export const getCompanyFaviconSrc = (
   if (record.logo?.src) {
     return record.logo.src;
   }
-  if (!record.website?.trim()) {
+  const domain = extractDomain(record.website);
+  if (!domain) {
     return undefined;
   }
-  const websiteUrlWithoutScheme = record.website
-    .replace(/^https?:\/\//, "")
-    .replace(/\/$/, "");
-  return `https://favicon.show/${websiteUrlWithoutScheme}`;
+  return faviconUrlFor(domain);
 };

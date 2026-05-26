@@ -38,10 +38,10 @@ async function getFaviconUrl(domain: string): Promise<string | null> {
 
 /**
  * Synchronous best-effort avatar URL for a contact, used when the contact
- * does not have an explicit `avatar.src` uploaded. We do not try Gravatar
+ * does not have an explicit `avatar.src` uploaded. We don't try Gravatar
  * here because it requires async hashing; falling back to the favicon of
- * the email domain (via favicon.show) keeps the avatar component pure
- * synchronous while still showing something meaningful for imported
+ * the email domain (via icons.duckduckgo.com) keeps the avatar component
+ * fully synchronous while still showing something meaningful for imported
  * records (e.g. Zoho contacts) that only have an email on file.
  */
 export const getContactAvatarSrc = (
@@ -56,11 +56,11 @@ export const getContactAvatarSrc = (
   if (!firstEmail) {
     return undefined;
   }
-  const domain = firstEmail.split("@")[1]?.trim();
+  const domain = firstEmail.split("@")[1]?.trim().replace(/^www\./i, "");
   if (!domain) {
     return undefined;
   }
-  return `https://favicon.show/${domain}`;
+  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
 };
 
 // Main function to get the avatar URL
