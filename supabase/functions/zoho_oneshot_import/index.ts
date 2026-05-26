@@ -1122,22 +1122,14 @@ async function handleStartOAuth(req: Request, member: Member) {
   });
 }
 
-function renderCallbackHtml(redirectTo: string, message: string): Response {
-  const safeRedirect = redirectTo.replace(/"/g, "%22");
-  const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Zoho connection</title>
-<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f8fafc;color:#0f172a}.card{padding:2rem;background:#fff;border:1px solid #e2e8f0;border-radius:12px;text-align:center;max-width:420px;box-shadow:0 1px 2px rgba(0,0,0,0.05)}p{margin:0.5rem 0}</style>
-</head><body>
-<div class="card">
-  <h2>${message}</h2>
-  <p>Redirecting back to Nomi CRM…</p>
-  <p><a href="${safeRedirect}">Click here if it doesn't redirect automatically</a></p>
-</div>
-<script>setTimeout(function(){window.location.href="${safeRedirect}"},700);</script>
-</body></html>`;
-  return new Response(html, {
-    status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders },
+function renderCallbackHtml(redirectTo: string, _message: string): Response {
+  // Supabase wraps edge-function HTML responses in a sandboxed frame
+  // without `allow-scripts`, so any client-side redirect (window.location,
+  // meta refresh sometimes too) gets blocked. A plain 302 happens at the
+  // HTTP layer before any rendering, so it always works.
+  return new Response(null, {
+    status: 302,
+    headers: { Location: redirectTo, ...corsHeaders },
   });
 }
 
