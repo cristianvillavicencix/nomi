@@ -6,6 +6,7 @@ export const CLIENT_TABS = [
   "projects",
   "financial",
   "activity",
+  "referrals",
 ] as const;
 
 export type ClientTab = (typeof CLIENT_TABS)[number];

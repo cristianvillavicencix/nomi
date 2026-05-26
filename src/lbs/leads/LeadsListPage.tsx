@@ -1,7 +1,7 @@
+import { useState } from "react";
 import { useGetIdentity, useListContext } from "ra-core";
 import { Plus } from "lucide-react";
-import { Link } from "react-router";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { SortButton } from "@/components/admin/sort-button";
@@ -15,7 +15,7 @@ import type { Contact } from "@/components/atomic-crm/types";
 import { LBS_LEAD_STATUSES } from "@/lbs/navigation";
 import { getLeadShowPath } from "@/lbs/routing";
 import { Status } from "@/components/atomic-crm/misc/Status";
-import { cn } from "@/lib/utils";
+import { NewLeadDialog } from "@/lbs/leads/NewLeadDialog";
 
 const getPrimaryPhone = (contact: Contact) =>
   contact.phone_jsonb?.find((phone) => String(phone.number ?? "").trim())
@@ -27,26 +27,30 @@ const getPrimaryEmail = (contact: Contact) =>
 
 export const LeadsListPage = () => {
   const { identity } = useGetIdentity();
+  const [dialogOpen, setDialogOpen] = useState(false);
   if (!identity) return null;
 
   return (
-    <List
-      resource="contacts"
-      title="Leads"
-      disableBreadcrumb
-      perPage={25}
-      sort={{ field: "last_seen", order: "DESC" }}
-      filterDefaultValues={{
-        "status@in": `(${LBS_LEAD_STATUSES.map((status) => `"${status}"`).join(",")})`,
-      }}
-      actions={<LeadsListActions />}
-    >
-      <LeadsListLayout />
-    </List>
+    <>
+      <List
+        resource="contacts"
+        title="Leads"
+        disableBreadcrumb
+        perPage={25}
+        sort={{ field: "last_seen", order: "DESC" }}
+        filterDefaultValues={{
+          "status@in": `(${LBS_LEAD_STATUSES.map((status) => `"${status}"`).join(",")})`,
+        }}
+        actions={<LeadsListActions onNewLead={() => setDialogOpen(true)} />}
+      >
+        <LeadsListLayout />
+      </List>
+      <NewLeadDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+    </>
   );
 };
 
-const LeadsListActions = () => (
+const LeadsListActions = ({ onNewLead }: { onNewLead: () => void }) => (
   <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
     <SpotlightSearchButton
       title="Search Leads"
@@ -54,13 +58,10 @@ const LeadsListActions = () => (
       placeholder="Search leads..."
     />
     <SortButton fields={["first_name", "last_name", "last_seen"]} />
-    <Link
-      to="/leads/create"
-      className={cn(buttonVariants({ variant: "outline" }))}
-    >
+    <Button variant="outline" onClick={onNewLead}>
       <Plus />
       New lead
-    </Link>
+    </Button>
     <ModuleInfoPopover
       title="Leads"
       description="Potential opportunities before they become client contacts."

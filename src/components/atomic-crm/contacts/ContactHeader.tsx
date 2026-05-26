@@ -1,18 +1,18 @@
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Handshake, Mail, MapPin, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router";
 
 import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
-import { useGetIdentity } from "ra-core";
-import type { Contact } from "../types";
+import { useGetIdentity, useGetOne } from "ra-core";
+import type { Company, Contact } from "../types";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { AddTask } from "../tasks/AddTask";
 import { TagsListEdit } from "./TagsListEdit";
 import { Avatar } from "./Avatar";
 import { ConvertLeadButton } from "@/lbs/leads/ConvertLeadButton";
-import { getClientShowPath } from "@/lbs/routing";
+import { getClientShowPath, getPersonShowPath } from "@/lbs/routing";
 import { isLbsMode } from "@/lbs/productMode";
 import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
 import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
@@ -127,6 +127,7 @@ export const ContactHeader = ({
                 )}
               </span>
             </div>
+            <ReferredByLine record={record} />
           </div>
         </div>
 
@@ -171,6 +172,50 @@ export const ContactHeader = ({
           ) : null}
         </div>
       </div>
+    </div>
+  );
+};
+
+const ReferredByLine = ({ record }: { record: Contact }) => {
+  const refContactId = record.referred_by_contact_id;
+  const refCompanyId = record.referred_by_company_id;
+
+  const { data: refContact } = useGetOne<Contact>(
+    "contacts",
+    { id: refContactId ?? "" },
+    { enabled: refContactId != null },
+  );
+  const { data: refCompany } = useGetOne<Company>(
+    "companies",
+    { id: refCompanyId ?? "" },
+    { enabled: refCompanyId != null },
+  );
+
+  if (!refContact && !refCompany) return null;
+
+  const contactName = refContact
+    ? `${refContact.first_name ?? ""} ${refContact.last_name ?? ""}`.trim() ||
+      "Unnamed"
+    : null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+      <Handshake className="size-4 shrink-0" />
+      <span>Referido por:</span>
+      {refContact ? (
+        <Link
+          to={getPersonShowPath(refContact)}
+          className="link-action"
+        >
+          {contactName}
+        </Link>
+      ) : null}
+      {refContact && refCompany ? <span>·</span> : null}
+      {refCompany ? (
+        <Link to={getClientShowPath(refCompany.id)} className="link-action">
+          {refCompany.name}
+        </Link>
+      ) : null}
     </div>
   );
 };

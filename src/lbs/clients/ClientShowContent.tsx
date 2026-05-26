@@ -16,6 +16,7 @@ import { ClientOverviewTab } from "@/lbs/clients/ClientOverviewTab";
 import { ClientProfileHeader } from "@/lbs/clients/ClientProfileHeader";
 import { ClientProjectsTab } from "@/lbs/clients/ClientTabPanels";
 import { ContactShowSheet } from "@/lbs/clients/ContactShowSheet";
+import { ReferralsTab } from "@/lbs/leads/ReferralsTab";
 import {
   formatTabCount,
   getValidClientTab,
@@ -106,6 +107,9 @@ export const ClientShowContent = () => {
                 <TabsTrigger value="activity" className="shrink-0">
                   {tabLabel("activity", "Activity", activityCount)}
                 </TabsTrigger>
+                <TabsTrigger value="referrals" className="shrink-0">
+                  {tabLabel("referrals", "Referidos", counts.referrals)}
+                </TabsTrigger>
               </TabsList>
             </StickyTabsBar>
             <ScrollableContentArea>
@@ -150,6 +154,9 @@ export const ClientShowContent = () => {
                     webForms: counts.webForms,
                   }}
                 />
+              </TabsContent>
+              <TabsContent value="referrals" className="pt-4">
+                <ReferralsTab referrerCompanyId={record.id} />
               </TabsContent>
             </ScrollableContentArea>
           </Tabs>

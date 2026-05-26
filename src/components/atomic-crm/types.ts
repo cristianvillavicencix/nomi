@@ -165,7 +165,10 @@ export type Contact = {
   background: string;
   phone_jsonb: PhoneNumberAndType[];
   lead_source?: string | null;
+  lead_source_other?: string | null;
   interested_service?: string | null;
+  referred_by_contact_id?: Identifier | null;
+  referred_by_company_id?: Identifier | null;
   nb_tasks?: number;
   company_name?: string;
   is_primary_contact?: boolean;

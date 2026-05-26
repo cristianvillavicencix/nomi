@@ -4,9 +4,29 @@ import { EditBase, Form, useEditContext } from "ra-core";
 import type { Contact } from "../types";
 import { ContactInputs } from "./ContactInputs";
 import { FormToolbar } from "../layout/FormToolbar";
+import {
+  LBS_LEAD_SOURCE_OTHER,
+  LBS_LEAD_SOURCE_REFERRAL,
+} from "@/lbs/leads/leadFormConstants";
 
 export const ContactEdit = () => (
-  <EditBase redirect="show">
+  <EditBase
+    redirect="show"
+    transform={(data: Contact) => {
+      const isReferral = data.lead_source === LBS_LEAD_SOURCE_REFERRAL;
+      const isOther = data.lead_source === LBS_LEAD_SOURCE_OTHER;
+      return {
+        ...data,
+        referred_by_contact_id: isReferral
+          ? (data.referred_by_contact_id ?? null)
+          : null,
+        referred_by_company_id: isReferral
+          ? (data.referred_by_company_id ?? null)
+          : null,
+        lead_source_other: isOther ? (data.lead_source_other ?? null) : null,
+      };
+    }}
+  >
     <ContactEditContent />
   </EditBase>
 );

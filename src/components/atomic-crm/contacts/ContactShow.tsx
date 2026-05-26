@@ -55,10 +55,11 @@ import { ContactEditModal } from "./ContactEditModal";
 import { ContactHeader } from "./ContactHeader";
 import { isLbsMode } from "@/lbs/productMode";
 import { getPersonListPath } from "@/lbs/routing";
+import { ReferralsTab } from "@/lbs/leads/ReferralsTab";
 
 const CONTACT_TABS = ["activities", "projects", "financials"] as const;
-const LBS_CONTACT_TABS = ["activities", "projects"] as const;
-type ContactTab = (typeof CONTACT_TABS)[number];
+const LBS_CONTACT_TABS = ["activities", "projects", "referrals"] as const;
+type ContactTab = (typeof CONTACT_TABS)[number] | "referrals";
 
 type ActivityFeedItem =
   | { id: string; type: "note"; date: string; note: ContactNote }
@@ -184,6 +185,15 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
     },
     { staleTime: 30_000 },
   );
+  const { total: referralsCount = 0 } = useGetList<Contact>(
+    "contacts",
+    {
+      filter: { "referred_by_contact_id@eq": record.id },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "id", order: "DESC" },
+    },
+    { staleTime: 30_000, enabled: lbsMode },
+  );
 
   const handleTabChange = (tab: string) => {
     const nextTab = getValidTab(tab);
@@ -202,7 +212,7 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
         <TabsList
           className={cn(
             "grid h-10 w-full",
-            lbsMode ? "grid-cols-2" : "grid-cols-3",
+            lbsMode ? "grid-cols-3" : "grid-cols-3",
           )}
         >
           <TabsTrigger value="activities">Activities</TabsTrigger>
@@ -210,9 +220,14 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
             Projects
             {typeof projectsCount === "number" ? ` (${projectsCount})` : ""}
           </TabsTrigger>
-          {!lbsMode ? (
+          {lbsMode ? (
+            <TabsTrigger value="referrals">
+              Referidos
+              {referralsCount > 0 ? ` (${referralsCount})` : ""}
+            </TabsTrigger>
+          ) : (
             <TabsTrigger value="financials">Financials</TabsTrigger>
-          ) : null}
+          )}
         </TabsList>
       </StickyTabsBar>
 
@@ -225,11 +240,15 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
           <ContactProjectsTab record={record} />
         </TabsContent>
 
-        {!lbsMode ? (
+        {lbsMode ? (
+          <TabsContent value="referrals" className="pt-2">
+            <ReferralsTab referrerContactId={record.id} />
+          </TabsContent>
+        ) : (
           <TabsContent value="financials" className="pt-2">
             <ContactFinancialsTab record={record} />
           </TabsContent>
-        ) : null}
+        )}
       </ScrollableContentArea>
     </Tabs>
   );

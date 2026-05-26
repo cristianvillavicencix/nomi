@@ -15,6 +15,9 @@ import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.
 import { isLinkedinUrl } from "../misc/isLinkedInUrl";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { isLbsMode } from "@/lbs/productMode";
+import { InterestedServiceInput } from "@/lbs/leads/InterestedServiceInput";
+import { LBS_LEAD_SOURCE_CHOICES } from "@/lbs/leads/leadFormConstants";
+import { LeadReferrerInputs } from "@/lbs/leads/LeadReferrerInputs";
 import type { OrganizationMember } from "../types";
 
 export const ContactInputs = () => {
@@ -40,6 +43,7 @@ export const ContactInputs = () => {
 };
 
 const ContactBasicsSection = () => {
+  const lbsMode = isLbsMode();
   return (
     <div className="flex flex-col gap-4">
       <h6 className="text-lg font-semibold">Contact</h6>
@@ -55,8 +59,8 @@ const ContactBasicsSection = () => {
           helperText={false}
         />
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <TextInput source="title" helperText={false} />
+      <div className={lbsMode ? "" : "grid gap-4 md:grid-cols-2"}>
+        {lbsMode ? null : <TextInput source="title" helperText={false} />}
         <ReferenceInput source="company_id" reference="companies" perPage={10}>
           <AutocompleteCompanyInput />
         </ReferenceInput>
@@ -154,12 +158,14 @@ const ContactPersonalInformationInputs = () => {
         </SimpleFormIterator>
       </ArrayInput>
       <TextInput source="address" helperText={false} />
-      <TextInput
-        source="linkedin_url"
-        label="Linkedin URL"
-        helperText={false}
-        validate={isLinkedinUrl}
-      />
+      {isLbsMode() ? null : (
+        <TextInput
+          source="linkedin_url"
+          label="Linkedin URL"
+          helperText={false}
+          validate={isLinkedinUrl}
+        />
+      )}
     </div>
   );
 };
@@ -184,16 +190,17 @@ const ContactManagementInputs = () => {
       />
       {isLbsMode() ? (
         <>
-          <TextInput
+          <SelectInput
             source="lead_source"
             label="Lead source"
+            choices={LBS_LEAD_SOURCE_CHOICES.map((entry) => ({
+              id: entry.id,
+              name: entry.name,
+            }))}
             helperText={false}
           />
-          <TextInput
-            source="interested_service"
-            label="Service interested in"
-            helperText={false}
-          />
+          <LeadReferrerInputs />
+          <InterestedServiceInput />
         </>
       ) : null}
       <ReferenceInput

@@ -43,6 +43,11 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
     countQuery("form_submissions_v2", { "company_id@eq": companyId }),
     { staleTime, enabled },
   );
+  const { total: referrals = 0 } = useGetList<Contact>(
+    "contacts",
+    countQuery("contacts", { "referred_by_company_id@eq": companyId }),
+    { staleTime, enabled },
+  );
 
   const { data: companyDeals = [] } = useGetList<Deal>(
     "deals",
@@ -103,6 +108,7 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
     notes,
     webForms,
     payments,
+    referrals,
     contactIds: contactIds as Identifier[],
   };
 };
