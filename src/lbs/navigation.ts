@@ -1,16 +1,15 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Briefcase,
   Building2,
   CalendarDays,
   FileSignature,
   FileText,
-  FolderKanban,
   FormInput,
   Home,
   ListChecks,
   Settings,
   Ticket,
-  TrendingUp,
   UserPlus,
   Video,
   MessageSquare,
@@ -21,12 +20,6 @@ export type LbsNavItem = {
   label: string;
   icon: LucideIcon;
   activePattern: string;
-  /**
-   * Optional search-param constraints that must all match for this nav item
-   * to be considered active. Used to disambiguate sub-views that share the
-   * same pathname (e.g. /deals?view=sales vs /deals?view=projects).
-   */
-  matchSearch?: Record<string, string>;
   capability?: string;
   resource?: string;
   action?: string;
@@ -61,21 +54,10 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     action: "list",
   },
   {
-    to: "/deals?view=sales",
-    label: "Sales Pipeline",
-    icon: TrendingUp,
+    to: "/deals",
+    label: "Deals",
+    icon: Briefcase,
     activePattern: "/deals*",
-    matchSearch: { view: "sales" },
-    capability: "crm.pipeline.view",
-    resource: "deals",
-    action: "list",
-  },
-  {
-    to: "/deals?view=projects",
-    label: "Active Projects",
-    icon: FolderKanban,
-    activePattern: "/deals*",
-    matchSearch: { view: "projects" },
     capability: "crm.pipeline.view",
     resource: "deals",
     action: "list",

@@ -889,41 +889,34 @@ const dataProviderWithCustomMethods = {
         dealOptions?.name?.trim() ||
         `${projectTypeLabel ?? "Initial service"} – ${trimmedName}`;
 
-      const hasUsefulInfo =
-        effectiveProjectType != null ||
-        (effectiveAmount != null && effectiveAmount > 0) ||
-        (dealOptions?.name?.trim()?.length ?? 0) > 0;
+      const { data: newDeal, error: dealError } = await supabase
+        .from("deals")
+        .insert({
+          name: dealName,
+          stage: "closed_won",
+          lifecycle_phase: "closed",
+          amount: effectiveAmount ?? 0,
+          estimated_value: effectiveAmount ?? 0,
+          company_id: companyId,
+          contact_id: contactId,
+          contact_ids: [String(contactId)],
+          project_type: effectiveProjectType,
+          organization_member_id: contact.organization_member_id,
+          org_id: contact.org_id,
+          converted_from_contact_id: contactId,
+        })
+        .select("id")
+        .single();
 
-      if (hasUsefulInfo) {
-        const { data: newDeal, error: dealError } = await supabase
-          .from("deals")
-          .insert({
-            name: dealName,
-            stage: "closed_won",
-            lifecycle_phase: "closed",
-            amount: effectiveAmount ?? 0,
-            estimated_value: effectiveAmount ?? 0,
-            company_id: companyId,
-            contact_id: contactId,
-            contact_ids: [String(contactId)],
-            project_type: effectiveProjectType,
-            organization_member_id: contact.organization_member_id,
-            org_id: contact.org_id,
-            converted_from_contact_id: contactId,
-          })
-          .select("id")
-          .single();
-
-        if (dealError) {
-          throw new Error(
-            `Lead converted, but failed to create deal: ${dealError.message}`,
-          );
-        }
-        dealId = newDeal?.id ?? null;
-        // The DB trigger trg_sync_deal_to_lead_stage will set
-        // contacts.lead_stage='won' and snooze_until='2099-12-31' automatically
-        // because the deal was inserted with stage='closed_won'.
+      if (dealError) {
+        throw new Error(
+          `Lead converted, but failed to create deal: ${dealError.message}`,
+        );
       }
+      dealId = newDeal?.id ?? null;
+      // The DB trigger trg_sync_deal_to_lead_stage automatically sets
+      // contacts.lead_stage='won' + snooze_until='2099-12-31' because the
+      // deal was inserted with stage='closed_won'.
     }
 
     // Fallback: if no deal was created (createDeal=false or hasUsefulInfo=false),

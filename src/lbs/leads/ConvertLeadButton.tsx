@@ -16,34 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { isLbsMode } from "@/lbs/productMode";
 import { LBS_LEAD_STATUSES } from "@/lbs/navigation";
-import { lbsProjectTypeChoices } from "@/lbs/deals/lbsProjectConstants";
-
-type LeadContact = Contact & {
-  lead_value_estimate?: number | string | null;
-};
 
 export const ConvertLeadButton = ({ record }: { record: Contact }) => {
-  const lead = record as LeadContact;
   const [open, setOpen] = useState(false);
   const [companyName, setCompanyName] = useState(record.company_name ?? "");
   const [createDeal, setCreateDeal] = useState(true);
-  const [serviceType, setServiceType] = useState<string>(
-    record.interested_service ?? "",
-  );
-  const initialAmount =
-    lead.lead_value_estimate != null && lead.lead_value_estimate !== ""
-      ? String(lead.lead_value_estimate)
-      : "";
-  const [amount, setAmount] = useState<string>(initialAmount);
   const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
   const navigate = useNavigate();
@@ -77,26 +56,18 @@ export const ConvertLeadButton = ({ record }: { record: Contact }) => {
 
   useEffect(() => {
     if (open) {
-      setServiceType(record.interested_service ?? "");
-      setAmount(initialAmount);
       setCreateDeal(true);
     }
-  }, [open, record.interested_service, initialAmount]);
+  }, [open]);
 
   const { mutate: convertLead, isPending } = useMutation({
-    mutationFn: () => {
-      const parsedAmount = Number.parseFloat(amount);
-      return (
+    mutationFn: () =>
+      (
         dataProvider as CrmDataProvider & {
           convertLeadToClient: (params: {
             contactId: Contact["id"];
             companyName: string;
             createDeal?: boolean;
-            dealOptions?: {
-              projectType?: string | null;
-              amount?: number | null;
-              name?: string | null;
-            };
           }) => Promise<{
             company_id: number;
             contact_id: number;
@@ -109,17 +80,10 @@ export const ConvertLeadButton = ({ record }: { record: Contact }) => {
           ? resolvedCompanyName || record.company_name || ""
           : companyName,
         createDeal,
-        dealOptions: createDeal
-          ? {
-              projectType: serviceType.trim() ? serviceType : null,
-              amount: Number.isFinite(parsedAmount) ? parsedAmount : null,
-            }
-          : undefined,
-      });
-    },
+      }),
     onSuccess: ({ company_id, deal_id }) => {
       if (deal_id != null) {
-        notify("Lead converted to client and deal created");
+        notify("Lead converted to client and project created");
       } else {
         notify("Lead converted to client");
       }
@@ -177,62 +141,25 @@ export const ConvertLeadButton = ({ record }: { record: Contact }) => {
                 />
               </div>
             ) : null}
-            <div className="space-y-3 rounded-md border bg-muted/30 p-3">
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="create-deal"
-                  checked={createDeal}
-                  onCheckedChange={(value) => setCreateDeal(value === true)}
-                />
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="create-deal"
-                    className="cursor-pointer font-medium"
-                  >
-                    Create initial deal for this client
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    A deal in stage{" "}
-                    <span className="font-medium">Closed Won</span> will be
-                    created and linked to this client.
-                  </p>
-                </div>
+            <div className="flex items-start gap-2 rounded-md border bg-muted/30 p-3">
+              <Checkbox
+                id="create-deal"
+                checked={createDeal}
+                onCheckedChange={(value) => setCreateDeal(value === true)}
+              />
+              <div className="space-y-1">
+                <Label
+                  htmlFor="create-deal"
+                  className="cursor-pointer font-medium"
+                >
+                  Also create a project for this client
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Recommended. A project is opened in stage{" "}
+                  <span className="font-medium">Closed Won</span> so it shows up
+                  in Deals right away. You can edit details afterwards.
+                </p>
               </div>
-              {createDeal ? (
-                <div className="grid gap-3 pl-7 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="service-type">Service type</Label>
-                    <Select
-                      value={serviceType}
-                      onValueChange={(value) => setServiceType(value)}
-                    >
-                      <SelectTrigger id="service-type">
-                        <SelectValue placeholder="Choose a service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lbsProjectTypeChoices.map((choice) => (
-                          <SelectItem key={choice.value} value={choice.value}>
-                            {choice.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="deal-amount">Estimated amount ($)</Label>
-                    <Input
-                      id="deal-amount"
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step={1}
-                      value={amount}
-                      onChange={(event) => setAmount(event.target.value)}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-              ) : null}
             </div>
           </div>
           <DialogFooter>

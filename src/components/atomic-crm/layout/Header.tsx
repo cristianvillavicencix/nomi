@@ -138,26 +138,16 @@ const Header = () => {
                       })
                     : true,
               ).map((item) => {
-                const pathnameActive =
+                const isActive =
                   item.activePattern === "/"
                     ? location.pathname === "/"
                     : !!matchPath(item.activePattern, location.pathname);
-                let searchActive = true;
-                if (item.matchSearch) {
-                  const params = new URLSearchParams(location.search);
-                  for (const [key, value] of Object.entries(item.matchSearch)) {
-                    if (params.get(key) !== value) {
-                      searchActive = false;
-                      break;
-                    }
-                  }
-                }
                 return (
                   <NavigationTab
                     key={item.to}
                     label={item.label}
                     to={item.to}
-                    isActive={pathnameActive && searchActive}
+                    isActive={isActive}
                   />
                 );
               })}

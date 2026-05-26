@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { useGetIdentity, useListContext, useListFilterContext } from "ra-core";
 import { Plus } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { buttonVariants } from "@/components/ui/button";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { SortButton } from "@/components/admin/sort-button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { CompanyEmpty } from "@/components/atomic-crm/companies/CompanyEmpty";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
-import type { Company } from "@/components/atomic-crm/types";
+import { Avatar as ContactAvatar } from "@/components/atomic-crm/contacts/Avatar";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import {
   collectBusinessSocialLinks,
   collectClientEmails,
@@ -22,28 +24,73 @@ import {
 } from "@/lbs/clients/clientProfile";
 import { ClientSocialLinksDisplay } from "@/lbs/clients/ClientSocialLinksDisplay";
 import { cn } from "@/lib/utils";
-import { getClientCreatePath, getClientShowPath } from "@/lbs/routing";
+import {
+  getClientCreatePath,
+  getClientShowPath,
+  getPersonShowPath,
+} from "@/lbs/routing";
+import { LBS_CONTACT_STATUSES } from "@/lbs/navigation";
+
+const CLIENTS_TABS = ["companies", "contacts"] as const;
+type ClientsTab = (typeof CLIENTS_TABS)[number];
+
+const parseTab = (raw: string | null): ClientsTab =>
+  raw === "contacts" ? "contacts" : "companies";
+
+const getPrimaryPhone = (contact: Contact) =>
+  contact.phone_jsonb?.find((phone) => phone.number?.trim())?.number ?? "—";
+
+const getPrimaryEmail = (contact: Contact) =>
+  contact.email_jsonb?.find((email) => email.email?.trim())?.email ?? "—";
 
 export const ClientsListPage = () => {
   const { identity } = useGetIdentity();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = parseTab(searchParams.get("tab"));
+
   if (!identity) return null;
 
+  const handleTabChange = (next: string) => {
+    if (!(CLIENTS_TABS as readonly string[]).includes(next)) return;
+    const nextParams = new URLSearchParams(searchParams);
+    if (next === "companies") {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", next);
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
   return (
-    <List
-      resource="companies"
-      title="Clients"
-      disableBreadcrumb
-      perPage={25}
-      sort={{ field: "name", order: "ASC" }}
-      actions={<ClientsListActions />}
-      pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
-    >
-      <ClientsListLayout />
-    </List>
+    <div className="w-full space-y-3">
+      <Tabs value={currentTab} onValueChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger value="companies">Empresas</TabsTrigger>
+          <TabsTrigger value="contacts">Contactos</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {currentTab === "companies" ? <CompaniesTab /> : <ContactsTab />}
+    </div>
   );
 };
 
-const ClientsListActions = () => {
+// ---------------- Empresas (companies) tab ----------------
+
+const CompaniesTab = () => (
+  <List
+    resource="companies"
+    title={false}
+    disableBreadcrumb
+    perPage={25}
+    sort={{ field: "name", order: "ASC" }}
+    actions={<CompaniesActions />}
+    pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
+  >
+    <CompaniesLayout />
+  </List>
+);
+
+const CompaniesActions = () => {
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
   const [query, setQuery] = useState(() =>
     typeof filterValues.q === "string" ? filterValues.q : "",
@@ -58,9 +105,7 @@ const ClientsListActions = () => {
       const currentQ =
         typeof filterValues.q === "string" ? filterValues.q : undefined;
       const nextQ = query.trim() ? query : undefined;
-      if (currentQ === nextQ) {
-        return;
-      }
+      if (currentQ === nextQ) return;
       const nextFilterValues = { ...filterValues };
       if (nextQ) {
         nextFilterValues.q = nextQ;
@@ -97,7 +142,7 @@ const ClientsListActions = () => {
   );
 };
 
-const ClientsListLayout = () => {
+const CompaniesLayout = () => {
   const { data, isPending, filterValues } =
     useListContext<CompanyWithPrimaryContact>();
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
@@ -160,7 +205,6 @@ const ClientsListLayout = () => {
         render={(record: CompanyWithPrimaryContact) => {
           const links = collectBusinessSocialLinks(record);
           if (links.length === 0) return "—";
-
           return (
             <ClientSocialLinksDisplay
               links={links}
@@ -169,6 +213,124 @@ const ClientsListLayout = () => {
             />
           );
         }}
+      />
+    </DataTable>
+  );
+};
+
+// ---------------- Contactos (contacts) tab ----------------
+
+const ContactsTab = () => (
+  <List
+    resource="contacts"
+    title={false}
+    disableBreadcrumb
+    perPage={25}
+    sort={{ field: "last_seen", order: "DESC" }}
+    filter={{
+      "status@in": `(${LBS_CONTACT_STATUSES.map((s) => `"${s}"`).join(",")})`,
+    }}
+    actions={<ContactsActions />}
+    pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
+  >
+    <ContactsLayout />
+  </List>
+);
+
+const ContactsActions = () => {
+  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
+  const [query, setQuery] = useState(() =>
+    typeof filterValues.q === "string" ? filterValues.q : "",
+  );
+
+  useEffect(() => {
+    setQuery(typeof filterValues.q === "string" ? filterValues.q : "");
+  }, [filterValues.q]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const currentQ =
+        typeof filterValues.q === "string" ? filterValues.q : undefined;
+      const nextQ = query.trim() ? query : undefined;
+      if (currentQ === nextQ) return;
+      const nextFilterValues = { ...filterValues };
+      if (nextQ) {
+        nextFilterValues.q = nextQ;
+      } else {
+        delete nextFilterValues.q;
+      }
+      setFilters(nextFilterValues, displayedFilters);
+    }, 250);
+    return () => clearTimeout(timeoutId);
+  }, [displayedFilters, filterValues, query, setFilters]);
+
+  return (
+    <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
+      <SpotlightSearchButton
+        title="Search Contacts"
+        description="Find contacts across every client company."
+        placeholder="Search contacts..."
+        value={query}
+        onValueChange={setQuery}
+      />
+      <SortButton fields={["first_name", "last_name", "last_seen"]} />
+      <ModuleInfoPopover
+        title="Contacts"
+        description="Every person linked to a client company. New contacts are added from the client profile."
+      />
+    </TopToolbar>
+  );
+};
+
+const ContactsLayout = () => {
+  const { data, isPending, filterValues } = useListContext<Contact>();
+  const hasFilters = filterValues && Object.keys(filterValues).length > 0;
+
+  if (isPending) return null;
+  if (!data?.length && !hasFilters) {
+    return (
+      <div className="rounded-md border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
+        No contacts yet. Add contacts from inside a client profile.
+      </div>
+    );
+  }
+
+  return (
+    <DataTable
+      rowClick={(_id, _resource, record) =>
+        getPersonShowPath(record as Contact)
+      }
+      rowClassName={() => "[&_td]:py-2.5"}
+    >
+      <DataTable.Col
+        label=""
+        disableSort
+        className="w-[52px]"
+        render={(record: Contact) => <ContactAvatar record={record} width={25} />}
+      />
+      <DataTable.Col
+        source="first_name"
+        label="Contact"
+        render={(record: Contact) =>
+          `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim() || "—"
+        }
+      />
+      <DataTable.Col
+        source="company_name"
+        label="Company"
+        render={(record: Contact) => record.company_name?.trim() || "—"}
+      />
+      <DataTable.Col
+        source="phone_jsonb"
+        label="Phone"
+        disableSort
+        render={(record: Contact) => getPrimaryPhone(record)}
+      />
+      <DataTable.Col
+        source="email_jsonb"
+        label="Email"
+        disableSort
+        render={(record: Contact) => getPrimaryEmail(record)}
       />
     </DataTable>
   );
