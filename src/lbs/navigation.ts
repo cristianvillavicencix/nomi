@@ -10,6 +10,7 @@ import {
   ListChecks,
   Settings,
   Ticket,
+  TrendingUp,
   UserPlus,
   Video,
   MessageSquare,
@@ -20,6 +21,12 @@ export type LbsNavItem = {
   label: string;
   icon: LucideIcon;
   activePattern: string;
+  /**
+   * Optional search-param constraints that must all match for this nav item
+   * to be considered active. Used to disambiguate sub-views that share the
+   * same pathname (e.g. /deals?view=sales vs /deals?view=projects).
+   */
+  matchSearch?: Record<string, string>;
   capability?: string;
   resource?: string;
   action?: string;
@@ -54,10 +61,21 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     action: "list",
   },
   {
-    to: "/deals",
-    label: "Projects",
+    to: "/deals?view=sales",
+    label: "Sales Pipeline",
+    icon: TrendingUp,
+    activePattern: "/deals*",
+    matchSearch: { view: "sales" },
+    capability: "crm.pipeline.view",
+    resource: "deals",
+    action: "list",
+  },
+  {
+    to: "/deals?view=projects",
+    label: "Active Projects",
     icon: FolderKanban,
-    activePattern: "/deals/*",
+    activePattern: "/deals*",
+    matchSearch: { view: "projects" },
     capability: "crm.pipeline.view",
     resource: "deals",
     action: "list",
@@ -174,14 +192,16 @@ export const LBS_PLACEHOLDER_MODULES = {
   },
 } as const;
 
-/** Lead pipeline statuses (contacts table, no separate leads table). */
-export const LBS_LEAD_STATUSES = [
-  "new",
-  "contacted",
-  "qualified",
-  "proposal-sent",
-  "lost",
-] as const;
+/**
+ * Status values on `contacts` that mark the row as a "lead" (vs. a client
+ * contact). The pipeline position itself lives in `contacts.lead_stage`
+ * (new/contacted/talking/quoted/closing/paused/won/lost) — these are just
+ * the lifecycle bucket markers.
+ *
+ * Legacy values ('warm', 'cold', 'prospect') are kept so existing rows
+ * stay visible until migrated.
+ */
+export const LBS_LEAD_STATUSES = ["lead", "warm", "cold", "prospect"] as const;
 
 /** People linked to client companies (post-conversion or assigned). */
 export const LBS_CONTACT_STATUSES = ["client", "contact"] as const;

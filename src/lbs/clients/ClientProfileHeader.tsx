@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ChevronLeft, ExternalLink, MoreHorizontal, Trash } from "lucide-react";
+import {
+  ChevronLeft,
+  ExternalLink,
+  MoreHorizontal,
+  Plus,
+  Trash,
+} from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import {
   RecordContextProvider,
@@ -40,7 +46,11 @@ import { ClientNewMenu } from "@/lbs/clients/ClientNewMenu";
 import { ClientSocialLinksDisplay } from "@/lbs/clients/ClientSocialLinksDisplay";
 import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
 import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
-import { getClientEditPath, getClientsListPath } from "@/lbs/routing";
+import {
+  getClientDealCreatePath,
+  getClientEditPath,
+  getClientsListPath,
+} from "@/lbs/routing";
 import type { Contact } from "@/components/atomic-crm/types";
 
 type ClientProfileHeaderProps = {
@@ -224,6 +234,17 @@ export const ClientProfileHeader = ({
             <OpenClientSmsButton contact={primaryContact} />
             <Button asChild variant="outline" size="sm">
               <Link to={getClientEditPath(record.id)}>Edit</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link
+                to={getClientDealCreatePath(
+                  record.id,
+                  record.primary_contact_id,
+                )}
+              >
+                <Plus className="size-4" />
+                New deal
+              </Link>
             </Button>
             <ClientNewMenu
               companyId={record.id}

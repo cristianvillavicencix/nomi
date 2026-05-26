@@ -193,11 +193,19 @@ const SidebarNavigation = () => {
     resource: "reports",
   });
 
-  const isActive = (pattern: string) => {
+  const isActive = (pattern: string, matchSearch?: Record<string, string>) => {
     if (pattern === "/") {
-      return location.pathname === "/";
+      if (location.pathname !== "/") return false;
+    } else if (!matchPath(pattern, location.pathname)) {
+      return false;
     }
-    return !!matchPath(pattern, location.pathname);
+    if (matchSearch) {
+      const params = new URLSearchParams(location.search);
+      for (const [key, value] of Object.entries(matchSearch)) {
+        if (params.get(key) !== value) return false;
+      }
+    }
+    return true;
   };
 
   if (isLbsMode()) {
@@ -276,7 +284,7 @@ const SidebarNavigation = () => {
                     to={item.to}
                     label={item.label}
                     icon={<Icon className="h-4 w-4" />}
-                    active={isActive(item.activePattern)}
+                    active={isActive(item.activePattern, item.matchSearch)}
                     badgeCount={
                       item.to === "/messages" ? messagesUnreadCount : 0
                     }

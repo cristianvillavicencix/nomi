@@ -137,14 +137,30 @@ const Header = () => {
                         action: item.action ?? "list",
                       })
                     : true,
-              ).map((item) => (
-                <NavigationTab
-                  key={item.to}
-                  label={item.label}
-                  to={item.to}
-                  isActive={!!matchPath(item.activePattern, location.pathname)}
-                />
-              ))}
+              ).map((item) => {
+                const pathnameActive =
+                  item.activePattern === "/"
+                    ? location.pathname === "/"
+                    : !!matchPath(item.activePattern, location.pathname);
+                let searchActive = true;
+                if (item.matchSearch) {
+                  const params = new URLSearchParams(location.search);
+                  for (const [key, value] of Object.entries(item.matchSearch)) {
+                    if (params.get(key) !== value) {
+                      searchActive = false;
+                      break;
+                    }
+                  }
+                }
+                return (
+                  <NavigationTab
+                    key={item.to}
+                    label={item.label}
+                    to={item.to}
+                    isActive={pathnameActive && searchActive}
+                  />
+                );
+              })}
             </nav>
             <div className="flex items-center gap-2">
               <ThemeModeToggle />
