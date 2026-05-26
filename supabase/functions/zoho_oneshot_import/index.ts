@@ -725,9 +725,12 @@ async function promoteAccount(
     .maybeSingle();
 
   if (existing) {
-    counters.updated += 1;
     if (!dryRun) {
-      await supabaseAdmin.from("companies").update(writable).eq("id", existing.id);
+      const { error: updateError } = await supabaseAdmin
+        .from("companies")
+        .update(writable)
+        .eq("id", existing.id);
+      if (updateError) throw new Error(`update company: ${updateError.message}`);
       await supabaseAdmin
         .from("zoho_accounts_raw")
         .update({
@@ -736,10 +739,10 @@ async function promoteAccount(
         })
         .eq("id", rawId);
     }
+    counters.updated += 1;
     return;
   }
 
-  counters.inserted += 1;
   if (!dryRun) {
     const { data: inserted, error } = await supabaseAdmin
       .from("companies")
@@ -757,6 +760,7 @@ async function promoteAccount(
         .eq("id", rawId);
     }
   }
+  counters.inserted += 1;
 }
 
 async function promoteContact(
@@ -822,9 +826,12 @@ async function promoteContact(
     .maybeSingle();
 
   if (existing) {
-    counters.updated += 1;
     if (!dryRun) {
-      await supabaseAdmin.from("contacts").update(writable).eq("id", existing.id);
+      const { error: updateError } = await supabaseAdmin
+        .from("contacts")
+        .update(writable)
+        .eq("id", existing.id);
+      if (updateError) throw new Error(`update contact: ${updateError.message}`);
       await supabaseAdmin
         .from("zoho_contacts_raw")
         .update({
@@ -833,10 +840,10 @@ async function promoteContact(
         })
         .eq("id", rawId);
     }
+    counters.updated += 1;
     return;
   }
 
-  counters.inserted += 1;
   if (!dryRun) {
     const { data: inserted, error } = await supabaseAdmin
       .from("contacts")
@@ -854,6 +861,7 @@ async function promoteContact(
         .eq("id", rawId);
     }
   }
+  counters.inserted += 1;
 }
 
 async function promoteDeal(
@@ -916,7 +924,7 @@ async function promoteDeal(
     pipeline_id: stageInfo.defaultPipelineId,
     stage,
     lifecycle_phase,
-    priority: "medium",
+    priority: "normal",
     value_includes_material: false,
     website_content: {},
     tech_stack: {},
@@ -933,7 +941,6 @@ async function promoteDeal(
     .maybeSingle();
 
   if (existing) {
-    counters.updated += 1;
     if (!dryRun) {
       // On update, don't reset the workflow defaults set by humans
       const updatable = {
@@ -949,7 +956,11 @@ async function promoteDeal(
         stage: writable.stage,
         lifecycle_phase: writable.lifecycle_phase,
       };
-      await supabaseAdmin.from("deals").update(updatable).eq("id", existing.id);
+      const { error: updateError } = await supabaseAdmin
+        .from("deals")
+        .update(updatable)
+        .eq("id", existing.id);
+      if (updateError) throw new Error(`update deal: ${updateError.message}`);
       await supabaseAdmin
         .from("zoho_deals_raw")
         .update({
@@ -958,10 +969,10 @@ async function promoteDeal(
         })
         .eq("id", rawId);
     }
+    counters.updated += 1;
     return;
   }
 
-  counters.inserted += 1;
   if (!dryRun) {
     const { data: inserted, error } = await supabaseAdmin
       .from("deals")
@@ -979,6 +990,7 @@ async function promoteDeal(
         .eq("id", rawId);
     }
   }
+  counters.inserted += 1;
 }
 
 async function runPromote(

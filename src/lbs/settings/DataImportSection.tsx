@@ -706,17 +706,35 @@ const ConnectedPanel = ({
       const totals = Object.entries(result.summary ?? {}).map(
         ([k, v]) => `${k}: ${v.inserted}+, ${v.updated}~, ${v.skipped}-`,
       );
-      logActivity(
-        `${dryRun ? "Dry-run " : ""}Promoted ${modules.join(", ")} — ${totals.join(" · ")}`,
-        Object.values(result.summary ?? {}).some(
-          (m) => (m?.errors?.length ?? 0) > 0,
-        )
-          ? "error"
-          : "success",
+      const allErrors = Object.entries(result.summary ?? {}).flatMap(
+        ([k, v]) => (v.errors ?? []).map((err) => `${k}: ${err}`),
       );
-      notify(dryRun ? "Dry-run complete" : "Promotion complete", {
-        type: "success",
-      });
+      const hasErrors = allErrors.length > 0;
+      logActivity(
+        `${dryRun ? "Dry-run " : ""}Promoted ${modules.join(", ")} — ${totals.join(" · ")}${
+          hasErrors ? ` · ${allErrors.length} errors` : ""
+        }`,
+        hasErrors ? "error" : "success",
+      );
+      if (hasErrors) {
+        for (const err of allErrors.slice(0, 3)) {
+          logActivity(err, "error");
+        }
+        if (allErrors.length > 3) {
+          logActivity(
+            `(+${allErrors.length - 3} more errors — see edge function logs for full list)`,
+            "error",
+          );
+        }
+        notify(
+          `Promotion finished with ${allErrors.length} error(s) — check the activity log`,
+          { type: "error", multiLine: true },
+        );
+      } else {
+        notify(dryRun ? "Dry-run complete" : "Promotion complete", {
+          type: "success",
+        });
+      }
       await refreshStatus();
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
