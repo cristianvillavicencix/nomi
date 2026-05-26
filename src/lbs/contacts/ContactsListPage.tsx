@@ -2,7 +2,10 @@ import { useGetIdentity, useListContext } from "ra-core";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { SortButton } from "@/components/admin/sort-button";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { ContactEmpty } from "@/components/atomic-crm/contacts/ContactEmpty";
@@ -44,7 +47,7 @@ export const ContactsListPage = () => {
 
 const ContactsListActions = () => (
   <PageActions>
-    <h1 className="mr-2 text-sm font-semibold">Contactos</h1>
+    <PageTitle label="Contactos" />
     <div className="ml-auto flex items-center gap-2">
       <SortButton fields={["first_name", "last_name", "company_name"]} />
       <ModuleInfoPopover

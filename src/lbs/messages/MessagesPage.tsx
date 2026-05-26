@@ -84,13 +84,6 @@ export const MessagesPage = () => {
 
   return (
     <PageLayout className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border/40 bg-background shadow-sm">
-      <header className="shrink-0 border-b border-border/30 bg-background/80 px-4 py-2.5 backdrop-blur-sm md:px-5">
-        <h1 className="text-base font-semibold tracking-tight">Messages</h1>
-        <p className="text-xs text-muted-foreground">
-          Team chat, projects, and client SMS
-        </p>
-      </header>
-
       <MessagesWorkspace
         conversations={conversations}
         deals={deals}

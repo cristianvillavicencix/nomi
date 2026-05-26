@@ -504,11 +504,13 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
                 <SpotlightSearchButton />
               </div>
             </header>
-          ) : null}
+          ) : (
+            <SpotlightSearchButton variant="hidden" />
+          )}
           <div
             className={cn(
               "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
-              isMessagesShell ? "gap-2 p-2 pl-1" : "gap-4 px-4 pt-3 pb-2",
+              isMessagesShell ? "gap-2 p-2 pl-1" : "gap-4 px-4 pt-2 pb-2",
             )}
           >
             {currentDealId ? (

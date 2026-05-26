@@ -25,7 +25,7 @@ import {
   ContactListFilterSummary,
   ContactListFilter,
 } from "./ContactListFilter";
-import { PageActions } from "../layout/PageActions";
+import { PageActions, PageTitle } from "../layout/PageActions";
 import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
 import { InfinitePagination } from "../misc/InfinitePagination";
 import MobileHeader from "../layout/MobileHeader";
@@ -127,7 +127,7 @@ const ContactListActions = () => {
 
   return (
     <PageActions>
-      <h1 className="mr-2 text-sm font-semibold">Contacts</h1>
+      <PageTitle label="Contacts" />
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <SortButton fields={["first_name", "last_name", "last_seen"]} />
         {canManageSales ? <ContactImportButton /> : null}

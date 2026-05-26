@@ -648,6 +648,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/layout/PageActions.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/layout/ModuleInfoPopover.tsx",
           "type": "registry:component"
         },

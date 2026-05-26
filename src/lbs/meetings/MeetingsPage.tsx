@@ -15,9 +15,12 @@ import {
 import {
   PageLayout,
   ScrollableContentArea,
-  StickyPageHeader,
 } from "@/components/atomic-crm/layout/page-shell";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import type {
   CalendarEventRecord,
   Contact,
@@ -130,28 +133,8 @@ export const MeetingsPage = () => {
 
   return (
     <PageLayout>
-      <StickyPageHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold">Meetings</h1>
-            <ModuleInfoPopover
-              title="Video meetings"
-              description="Schedule Jitsi video calls with clients. Pick a contact first — the title and link are generated from that person."
-            />
-          </div>
-          <Button
-            type="button"
-            onClick={() => {
-              setEditId(null);
-              setEditDateKey(todayKey);
-              setScheduleOpen(true);
-            }}
-          >
-            <Plus className="size-4" />
-            Schedule meeting
-          </Button>
-        </div>
-
+      <PageActions>
+        <PageTitle label="Meetings" count={filteredMeetings.length} />
         <Tabs
           value={tab}
           onValueChange={(value) => setTab(value as MeetingsTab)}
@@ -161,7 +144,25 @@ export const MeetingsPage = () => {
             <TabsTrigger value="past">Past</TabsTrigger>
           </TabsList>
         </Tabs>
-      </StickyPageHeader>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setEditId(null);
+              setEditDateKey(todayKey);
+              setScheduleOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            Schedule meeting
+          </Button>
+          <ModuleInfoPopover
+            title="Video meetings"
+            description="Schedule Jitsi video calls with clients. Pick a contact first — the title and link are generated from that person."
+          />
+        </div>
+      </PageActions>
 
       <ScrollableContentArea>
         {isPending ? null : filteredMeetings.length === 0 ? (

@@ -133,10 +133,17 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
   const { hasCreate } = useResourceDefinition({ resource });
   const hasDashboard = useHasDashboard();
 
+  // When the page publishes its title/actions into the global top bar (via
+  // PageActions), `title={false}` collapses the in-page header to almost
+  // nothing — we still keep an `actions` slot in case a page mixes both,
+  // and the FilterForm is rendered without extra vertical padding so the
+  // table can sit directly under the global bar.
+  const hidesPageChrome = finalTitle === false && disableBreadcrumb;
+
   return (
     <PageLayout>
       <FilterContext.Provider value={filters}>
-        <StickyPageHeader className="pb-2">
+        <StickyPageHeader className={cn(hidesPageChrome ? "pb-0" : "pb-2")}>
           {!disableBreadcrumb && (
             <Breadcrumb>
               {hasDashboard && (
@@ -149,32 +156,45 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
               <BreadcrumbPage>{resourceLabel}</BreadcrumbPage>
             </Breadcrumb>
           )}
-          <div className="my-2 flex min-w-0 w-full flex-wrap items-start justify-between gap-2">
-            {finalTitle !== false ? (
-              <h2 className="text-2xl font-bold tracking-tight mb-2">
-                {finalTitle}
-              </h2>
-            ) : null}
-            {actions ?? (
-              <div className="flex items-center gap-2">
-                {filters && filters.length > 0 ? <FilterButton /> : null}
-                {hasCreate ? <CreateButton /> : null}
-                {<ExportButton />}
-              </div>
-            )}
-          </div>
+          {hidesPageChrome && !actions ? null : (
+            <div
+              className={cn(
+                "flex min-w-0 w-full flex-wrap items-start justify-between gap-2",
+                hidesPageChrome ? "my-0" : "my-2",
+              )}
+            >
+              {finalTitle !== false ? (
+                <h2 className="text-2xl font-bold tracking-tight mb-2">
+                  {finalTitle}
+                </h2>
+              ) : null}
+              {actions ?? (
+                <div className="flex items-center gap-2">
+                  {filters && filters.length > 0 ? <FilterButton /> : null}
+                  {hasCreate ? <CreateButton /> : null}
+                  {<ExportButton />}
+                </div>
+              )}
+            </div>
+          )}
           <FilterForm />
         </StickyPageHeader>
 
         {contentScrollable ? (
-          <ScrollableContentArea className={cn("my-2", props.className)}>
+          <ScrollableContentArea
+            className={cn(
+              hidesPageChrome ? "mt-1 mb-2" : "my-2",
+              props.className,
+            )}
+          >
             {children}
             {pagination}
           </ScrollableContentArea>
         ) : (
           <div
             className={cn(
-              "my-2 min-h-0 flex-1 overflow-hidden",
+              hidesPageChrome ? "mt-1 mb-2" : "my-2",
+              "min-h-0 flex-1 overflow-hidden",
               props.className,
             )}
           >

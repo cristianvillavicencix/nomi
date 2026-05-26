@@ -16,6 +16,7 @@ import {
   PanelLeftClose,
   PanelRightOpen,
   Search,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
 import {
@@ -26,10 +27,19 @@ import {
   ListPagination,
   ReferenceField,
 } from "@/components/admin";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Person, TimeEntry } from "@/components/atomic-crm/types";
 import { cn } from "@/lib/utils";
@@ -337,86 +347,142 @@ const TimeEntriesListActions = () => {
     setFilters(base, displayedFilters);
   };
 
+  const activeFilterCount = [
+    selectedPersonToolbarId,
+    selectedProjectId,
+    datePreset !== "all" ? datePreset : "",
+    selectedStatus !== "all" ? selectedStatus : "",
+  ].filter(Boolean).length;
+
   return (
     <>
       <PageActions>
-        <select
-          className="h-9 min-w-0 w-full max-w-full shrink rounded-md border border-input bg-background px-3 text-sm sm:w-[min(100%,220px)] sm:max-w-[220px] md:shrink-0 lg:max-w-[280px] lg:w-[min(100%,280px)]"
-          value={selectedPersonToolbarId}
-          onChange={(event) => handleToolbarEmployeeChange(event.target.value)}
-          aria-label="Filter by employee"
-        >
-          <option value="">All employees</option>
-          {toolbarEmployees.map((person) => (
-            <option key={person.id} value={String(person.id)}>
-              {employeeOptionText(person)}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-9 min-w-0 w-full max-w-full shrink rounded-md border border-input bg-background px-3 text-sm sm:w-[min(100%,220px)] sm:max-w-[220px] md:shrink-0 lg:max-w-[280px] lg:w-[min(100%,280px)]"
-          value={selectedProjectId}
-          onChange={(event) => handleProjectChange(event.target.value)}
-          aria-label="Filter by project"
-        >
-          <option value="">All projects</option>
-          {projects.map((project) => (
-            <option key={project.id} value={String(project.id)}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-9 w-full min-w-[8rem] shrink rounded-md border border-input bg-background px-3 text-sm sm:w-[140px] md:shrink-0"
-          value={datePreset}
-          onChange={(event) =>
-            handlePresetChange(event.target.value as DatePreset)
-          }
-          aria-label="Date range preset"
-        >
-          <option value="all">All dates</option>
-          <option value="last_week">Last week</option>
-          <option value="two_weeks_ago">Two weeks ago</option>
-          <option value="this_month">This month</option>
-          <option value="custom">Custom range</option>
-        </select>
-        <Input
-          type="date"
-          className="h-9 w-full min-w-0 shrink sm:w-[150px] md:shrink-0"
-          value={customFrom}
-          onChange={(event) => handleCustomFromChange(event.target.value)}
-          disabled={datePreset !== "custom"}
-        />
-        <Input
-          type="date"
-          className="h-9 w-full min-w-0 shrink sm:w-[150px] md:shrink-0"
-          value={customTo}
-          onChange={(event) => handleCustomToChange(event.target.value)}
-          disabled={datePreset !== "custom"}
-        />
-        <select
-          className="h-9 w-full min-w-[10rem] shrink rounded-md border border-input bg-background px-3 text-sm sm:w-[min(100%,200px)] md:w-[200px] md:shrink-0"
-          value={selectedStatus}
-          onChange={(event) => handleStatusChange(event.target.value)}
-          aria-label="Entry status filter"
-        >
-          {statusChoices.map((status) => (
-            <option key={status.id} value={status.id}>
-              {status.name}
-            </option>
-          ))}
-        </select>
-        <ExportButton className="shrink-0" />
-        {canManageHours ? (
-          <Button
-            type="button"
-            className="shrink-0 whitespace-nowrap"
-            onClick={() => setBulkModalOpen(true)}
-          >
-            New Time Entry
-          </Button>
-        ) : null}
-        <div className="shrink-0">
+        <PageTitle label="Hours" />
+        <div className="ml-auto flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <SlidersHorizontal className="size-4" />
+                Filters
+                {activeFilterCount > 0 ? (
+                  <Badge
+                    variant="secondary"
+                    className="ml-1 h-5 px-1.5 text-[10px]"
+                  >
+                    {activeFilterCount}
+                  </Badge>
+                ) : null}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Employee
+                </label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={selectedPersonToolbarId}
+                  onChange={(event) =>
+                    handleToolbarEmployeeChange(event.target.value)
+                  }
+                >
+                  <option value="">All employees</option>
+                  {toolbarEmployees.map((person) => (
+                    <option key={person.id} value={String(person.id)}>
+                      {employeeOptionText(person)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Project
+                </label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={selectedProjectId}
+                  onChange={(event) => handleProjectChange(event.target.value)}
+                >
+                  <option value="">All projects</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={String(project.id)}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Date range
+                </label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={datePreset}
+                  onChange={(event) =>
+                    handlePresetChange(event.target.value as DatePreset)
+                  }
+                >
+                  <option value="all">All dates</option>
+                  <option value="last_week">Last week</option>
+                  <option value="two_weeks_ago">Two weeks ago</option>
+                  <option value="this_month">This month</option>
+                  <option value="custom">Custom range</option>
+                </select>
+                {datePreset === "custom" ? (
+                  <div className="mt-1 grid grid-cols-2 gap-2">
+                    <Input
+                      type="date"
+                      className="h-9"
+                      value={customFrom}
+                      onChange={(event) =>
+                        handleCustomFromChange(event.target.value)
+                      }
+                    />
+                    <Input
+                      type="date"
+                      className="h-9"
+                      value={customTo}
+                      onChange={(event) =>
+                        handleCustomToChange(event.target.value)
+                      }
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Status
+                </label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={selectedStatus}
+                  onChange={(event) => handleStatusChange(event.target.value)}
+                >
+                  {statusChoices.map((status) => (
+                    <option key={status.id} value={status.id}>
+                      {status.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <ExportButton className="shrink-0" />
+          {canManageHours ? (
+            <Button
+              type="button"
+              size="sm"
+              className="shrink-0 whitespace-nowrap"
+              onClick={() => setBulkModalOpen(true)}
+            >
+              New Time Entry
+            </Button>
+          ) : null}
           <ModuleInfoPopover
             title="Hours"
             description="Log work by person, project, and date. Entries must be approved before they can feed payroll or payment runs."

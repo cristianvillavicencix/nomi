@@ -5,7 +5,10 @@ import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { SortButton } from "@/components/admin/sort-button";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Contract } from "@/lbs/types";
@@ -43,7 +46,7 @@ export const ContractsList = () => {
 
 const ContractsListActions = () => (
   <PageActions>
-    <h1 className="mr-2 text-sm font-semibold">Contracts</h1>
+    <PageTitle label="Contracts" />
     <div className="ml-auto flex items-center gap-2">
       <SortButton fields={["title", "status", "expires_at", "updated_at"]} />
       <ModuleInfoPopover

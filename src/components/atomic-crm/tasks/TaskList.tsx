@@ -1,5 +1,5 @@
 import { List } from "@/components/admin/list";
-import { PageActions } from "../layout/PageActions";
+import { PageActions, PageTitle } from "../layout/PageActions";
 import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
 import { AddTask } from "./AddTask";
 import { TasksPageContent } from "./TasksPageContent";
@@ -17,7 +17,7 @@ export const TaskList = () => (
 
 const TaskListActions = () => (
   <PageActions>
-    <h1 className="mr-2 text-sm font-semibold">Tasks</h1>
+    <PageTitle label="Tasks" />
     <div className="ml-auto flex items-center gap-2">
       <AddTask display="chip" selectContact />
       <ModuleInfoPopover

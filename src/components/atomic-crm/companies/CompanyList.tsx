@@ -9,7 +9,7 @@ import { SortButton } from "@/components/admin/sort-button";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { normalizePhoneForTel } from "@/lib/linking";
 
-import { PageActions } from "../layout/PageActions";
+import { PageActions, PageTitle } from "../layout/PageActions";
 import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
 import { CompanyEmpty } from "./CompanyEmpty";
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -161,7 +161,7 @@ const CompanyListActions = () => {
 
   return (
     <PageActions>
-      <h1 className="mr-2 text-sm font-semibold">Companies</h1>
+      <PageTitle label="Companies" />
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <SortButton fields={["name", "created_at", "nb_contacts"]} />
         <ExportButton />

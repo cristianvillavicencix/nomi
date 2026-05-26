@@ -7,7 +7,10 @@ import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { SortButton } from "@/components/admin/sort-button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { CompanyEmpty } from "@/components/atomic-crm/companies/CompanyEmpty";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
@@ -100,6 +103,7 @@ const CompaniesTab = () => (
 
 const CompaniesActions = () => (
   <PageActions>
+    <PageTitle label="Clients" />
     <ClientsTabsBar />
     <div className="ml-auto flex flex-wrap items-center gap-2">
       <SortButton fields={["name", "website"]} />
@@ -215,6 +219,7 @@ const ContactsTab = () => (
 
 const ContactsActions = () => (
   <PageActions>
+    <PageTitle label="Clients" />
     <ClientsTabsBar />
     <div className="ml-auto flex flex-wrap items-center gap-2">
       <SortButton fields={["first_name", "last_name", "last_seen"]} />

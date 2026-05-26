@@ -6,7 +6,10 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { SortButton } from "@/components/admin/sort-button";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { ContactEmpty } from "@/components/atomic-crm/contacts/ContactEmpty";
@@ -104,11 +107,9 @@ const LeadsListActions = ({
     setFilters(next, displayedFilters);
   };
 
-  const countLabel = total != null ? ` (${total})` : "";
-
   return (
     <PageActions>
-      <h1 className="mr-2 text-sm font-semibold">Leads{countLabel}</h1>
+      <PageTitle label="Leads" count={total ?? null} />
       <ToggleGroup
         type="single"
         value={view}

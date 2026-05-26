@@ -14,9 +14,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PageLayout,
   ScrollableContentArea,
-  StickyPageHeader,
 } from "@/components/atomic-crm/layout/page-shell";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { AddTask } from "@/components/atomic-crm/tasks/AddTask";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
 import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
@@ -172,133 +175,128 @@ export const CalendarPage = () => {
 
   return (
     <PageLayout>
-      <StickyPageHeader className="pb-2">
-        <div className="flex flex-col gap-3 px-4 pt-4 md:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex shrink-0 items-center gap-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-8"
-                onClick={() => shiftPeriod(-1)}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <div className="min-w-0 px-1 text-center text-xs font-medium tabular-nums whitespace-nowrap sm:text-sm">
-                {periodLabel}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-8"
-                onClick={() => shiftPeriod(1)}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <CalendarProjectFilter
-                value={projectId}
-                onChange={(nextProjectId) =>
-                  setPreferences({ projectId: nextProjectId })
-                }
-              />
-
-              <Tabs
-                value={view}
-                onValueChange={(value) =>
-                  setPreferences({ view: value as CalendarView })
-                }
-              >
-                <TabsList>
-                  <TabsTrigger value="month">Month</TabsTrigger>
-                  <TabsTrigger value="week">Week</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <SlidersHorizontal className="size-4" />
-                    Filter
-                    {hasActiveFilters ? (
-                      <span
-                        className="size-2 rounded-full bg-primary"
-                        aria-hidden
-                      />
-                    ) : null}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="calendar-show-completed-tasks">
-                        Show completed tasks
-                      </Label>
-                      <Switch
-                        id="calendar-show-completed-tasks"
-                        checked={includeDoneTasks}
-                        onCheckedChange={(checked) =>
-                          setPreferences({ includeDoneTasks: checked })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="calendar-show-done-events">
-                        Show done events
-                      </Label>
-                      <Switch
-                        id="calendar-show-done-events"
-                        checked={includeCompletedReminders}
-                        onCheckedChange={(checked) =>
-                          setPreferences({ includeCompletedReminders: checked })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="calendar-show-saturday">
-                        Show Saturday
-                      </Label>
-                      <Switch
-                        id="calendar-show-saturday"
-                        checked={showSaturday}
-                        onCheckedChange={(checked) =>
-                          setPreferences({ showSaturday: checked })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="calendar-show-sunday">Show Sunday</Label>
-                      <Switch
-                        id="calendar-show-sunday"
-                        checked={showSunday}
-                        onCheckedChange={(checked) =>
-                          setPreferences({ showSunday: checked })
-                        }
-                      />
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <ModuleInfoPopover
-                title="Calendar"
-                description="Click a day to add a task or event. Use the project filter to focus on one project."
-              />
-            </div>
+      <PageActions>
+        <PageTitle label="Calendar" />
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-8"
+            onClick={() => shiftPeriod(-1)}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <div className="min-w-0 px-1 text-center text-xs font-medium tabular-nums whitespace-nowrap sm:text-sm">
+            {periodLabel}
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-8"
+            onClick={() => shiftPeriod(1)}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
         </div>
-      </StickyPageHeader>
 
-      <ScrollableContentArea className="px-4 pb-6 md:px-6">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <CalendarProjectFilter
+            value={projectId}
+            onChange={(nextProjectId) =>
+              setPreferences({ projectId: nextProjectId })
+            }
+          />
+
+          <Tabs
+            value={view}
+            onValueChange={(value) =>
+              setPreferences({ view: value as CalendarView })
+            }
+          >
+            <TabsList>
+              <TabsTrigger value="month">Month</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <SlidersHorizontal className="size-4" />
+                Filters
+                {hasActiveFilters ? (
+                  <span
+                    className="size-2 rounded-full bg-primary"
+                    aria-hidden
+                  />
+                ) : null}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="calendar-show-completed-tasks">
+                    Show completed tasks
+                  </Label>
+                  <Switch
+                    id="calendar-show-completed-tasks"
+                    checked={includeDoneTasks}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ includeDoneTasks: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="calendar-show-done-events">
+                    Show done events
+                  </Label>
+                  <Switch
+                    id="calendar-show-done-events"
+                    checked={includeCompletedReminders}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ includeCompletedReminders: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="calendar-show-saturday">Show Saturday</Label>
+                  <Switch
+                    id="calendar-show-saturday"
+                    checked={showSaturday}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ showSaturday: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="calendar-show-sunday">Show Sunday</Label>
+                  <Switch
+                    id="calendar-show-sunday"
+                    checked={showSunday}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ showSunday: checked })
+                    }
+                  />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <ModuleInfoPopover
+            title="Calendar"
+            description="Click a day to add a task or event. Use the project filter to focus on one project."
+          />
+        </div>
+      </PageActions>
+
+      <ScrollableContentArea className="px-4 pb-6 md:px-6 md:pt-2">
         {isPending ? (
           <div className="space-y-3">
             <Skeleton className="h-10 w-full" />

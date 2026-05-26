@@ -37,6 +37,12 @@ export type SpotlightSearchButtonProps = {
   /** Soft cap per-module (defaults to 5). */
   perModuleLimit?: number;
   /**
+   * "hidden" mounts the component without a visible trigger button —
+   * useful for routes (like Messages) that suppress the global top bar
+   * but still need the ⌘K listener to work.
+   */
+  variant?: "default" | "hidden";
+  /**
    * Legacy backward-compat props kept so existing call sites don't break.
    * They are ignored by the global behavior but accepted to avoid churn.
    */
@@ -84,6 +90,7 @@ const truncatedJoin = (parts: Array<string | null | undefined>) =>
 export const SpotlightSearchButton = ({
   placeholder = "Buscar en todo NOMI…",
   perModuleLimit = DEFAULT_LIMIT,
+  variant = "default",
 }: SpotlightSearchButtonProps = {}) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -440,21 +447,23 @@ export const SpotlightSearchButton = ({
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
-      <DialogPrimitive.Trigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 gap-2 px-2.5 text-muted-foreground"
-          aria-label="Buscar"
-        >
-          <Search className="size-4" />
-          <span className="hidden sm:inline">Buscar</span>
-          <kbd className="ml-1 hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
-            ⌘K
-          </kbd>
-        </Button>
-      </DialogPrimitive.Trigger>
+      {variant === "hidden" ? null : (
+        <DialogPrimitive.Trigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2 px-2.5 text-muted-foreground"
+            aria-label="Buscar"
+          >
+            <Search className="size-4" />
+            <span className="hidden sm:inline">Buscar</span>
+            <kbd className="ml-1 hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
+              ⌘K
+            </kbd>
+          </Button>
+        </DialogPrimitive.Trigger>
+      )}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className={cn(

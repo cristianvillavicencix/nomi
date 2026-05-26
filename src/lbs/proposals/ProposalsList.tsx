@@ -6,7 +6,10 @@ import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { SortButton } from "@/components/admin/sort-button";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Proposal } from "@/lbs/types";
@@ -44,7 +47,7 @@ export const ProposalsList = () => {
 
 const ProposalsListActions = () => (
   <PageActions>
-    <h1 className="mr-2 text-sm font-semibold">Proposals</h1>
+    <PageTitle label="Proposals" />
     <div className="ml-auto flex items-center gap-2">
       <SortButton
         fields={["title", "status", "amount", "valid_until", "updated_at"]}

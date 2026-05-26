@@ -15,7 +15,10 @@ import { List } from "@/components/admin/list";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { FilterButton } from "@/components/admin/filter-form";
 import { SelectInput } from "@/components/admin/select-input";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { Button } from "@/components/ui/button";
 import {
@@ -162,6 +165,7 @@ const DealActions = () => {
 
   return (
     <PageActions>
+      <PageTitle label="Deals" />
       <div className="flex min-w-0 items-center gap-2">
         {!lbsMode ? (
           <>

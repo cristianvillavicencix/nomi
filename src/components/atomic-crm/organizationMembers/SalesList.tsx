@@ -7,11 +7,11 @@ import { List } from "@/components/admin/list";
 import { SearchInput } from "@/components/admin/search-input";
 import { Badge } from "@/components/ui/badge";
 
-import { PageActions } from "../layout/PageActions";
+import { PageActions, PageTitle } from "../layout/PageActions";
 
 const SalesListActions = () => (
   <PageActions>
-    <h1 className="mr-2 text-sm font-semibold">Users</h1>
+    <PageTitle label="Users" />
     <div className="ml-auto flex items-center gap-2">
       <ExportButton />
       <CreateButton label="New user" />

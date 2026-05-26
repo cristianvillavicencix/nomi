@@ -6,7 +6,10 @@ import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { SortButton } from "@/components/admin/sort-button";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Form } from "@/lbs/types";
@@ -40,7 +43,7 @@ export const WebFormsList = () => {
 
 const WebFormsListActions = () => (
   <PageActions>
-    <h1 className="mr-2 text-sm font-semibold">Web forms</h1>
+    <PageTitle label="Web forms" />
     <div className="ml-auto flex items-center gap-2">
       <SortButton fields={["name", "slug", "updated_at"]} />
       <Button type="button" variant="outline" size="sm" asChild>

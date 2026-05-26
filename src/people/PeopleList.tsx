@@ -16,7 +16,10 @@ import {
   List,
   SelectInput,
 } from "@/components/admin";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -242,6 +245,7 @@ const PeopleListActions = ({
 
   return (
     <PageActions>
+      <PageTitle label="People" />
       <Tabs
         value={activeType}
         onValueChange={(value) => onTypeChange(value as Person["type"])}

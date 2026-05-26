@@ -8,7 +8,10 @@ import {
   TextField,
 } from "@/components/admin";
 import { Badge } from "@/components/ui/badge";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { useRecordContext } from "ra-core";
 import type { EmployeeLoan } from "@/components/atomic-crm/types";
@@ -20,7 +23,7 @@ import {
 
 const LoansListActions = () => (
   <PageActions>
-    <h1 className="mr-2 text-sm font-semibold">Loans</h1>
+    <PageTitle label="Loans" />
     <div className="ml-auto flex items-center gap-2">
       <CreateButton label="New Advance / Loan" />
       <ModuleInfoPopover

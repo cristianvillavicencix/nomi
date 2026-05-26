@@ -18,7 +18,10 @@ import {
   Search,
 } from "lucide-react";
 import { DateField, List, ListPagination } from "@/components/admin";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -96,7 +99,7 @@ const PayrollRunsActions = () => {
 
   return (
     <PageActions>
-      <h1 className="mr-2 text-sm font-semibold">Payroll</h1>
+      <PageTitle label="Payroll" />
       <div className="ml-auto flex items-center gap-2">
         {canManagePayroll ? (
           <Button asChild size="sm">
