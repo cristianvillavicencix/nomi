@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/tooltip"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+// Persist the sidebar preference for a year so it survives idle weeks.
+const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
@@ -69,7 +70,16 @@ function SidebarProvider({
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
+  // Initial value comes from the persisted cookie when available so the
+  // collapsed/expanded preference survives reloads and new sessions.
+  const [_open, _setOpen] = React.useState(() => {
+    if (typeof document === "undefined") return defaultOpen
+    const match = document.cookie.match(
+      new RegExp(`(?:^|; )${SIDEBAR_COOKIE_NAME}=([^;]+)`)
+    )
+    if (!match) return defaultOpen
+    return match[1] === "true"
+  })
   const open = openProp ?? _open
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
