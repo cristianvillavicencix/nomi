@@ -1,5 +1,5 @@
 import { SlidersHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useDataProvider,
   useGetIdentity,
@@ -7,7 +7,7 @@ import {
   useListFilterContext,
   useNotify,
 } from "ra-core";
-import { matchPath, useLocation, useSearchParams } from "react-router";
+import { matchPath, useLocation } from "react-router";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { CreateButton } from "@/components/admin/create-button";
 import { ExportButton } from "@/components/admin/export-button";
@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import {
@@ -50,51 +49,11 @@ import { LbsDealBoardContent } from "@/lbs/deals/LbsDealBoardContent";
 import { getDefaultPipeline, getPipelineById } from "./pipelines";
 import { useDealsViewPreference } from "./useDealsViewPreference";
 
-const DEAL_VIEWS = ["sales", "projects", "closed", "archived"] as const;
-type DealView = (typeof DEAL_VIEWS)[number];
-
-const DEFAULT_DEAL_VIEW: DealView = "sales";
-
-const DEAL_VIEW_LABELS: Record<DealView, string> = {
-  sales: "Sales Pipeline",
-  projects: "Active Projects",
-  closed: "Closed",
-  archived: "Archived",
-};
-
-const DEAL_VIEW_FILTERS: Record<DealView, Record<string, unknown>> = {
-  sales: { lifecycle_phase: "opportunity", "archived_at@is": null },
-  projects: { lifecycle_phase: "delivery", "archived_at@is": null },
-  closed: { lifecycle_phase: "closed", "archived_at@is": null },
-  archived: { "archived_at@not.is": null },
-};
-
-const parseDealView = (value: string | null): DealView =>
-  (DEAL_VIEWS as readonly string[]).includes(value ?? "")
-    ? (value as DealView)
-    : DEFAULT_DEAL_VIEW;
-
 const DealList = () => {
   const location = useLocation();
   const matchShow = matchPath("/deals/:id/show", location.pathname);
   const { identity } = useGetIdentity();
   const { dealCategories } = useConfigurationContext();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const rawView = searchParams.get("view");
-  const currentView = parseDealView(rawView);
-
-  const listFilter = useMemo(
-    () => DEAL_VIEW_FILTERS[currentView],
-    [currentView],
-  );
-
-  useEffect(() => {
-    if (matchShow) return;
-    if (rawView === currentView) return;
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("view", currentView);
-    setSearchParams(nextParams, { replace: true });
-  }, [currentView, matchShow, rawView, searchParams, setSearchParams]);
 
   if (!identity) return null;
   if (matchShow) {
@@ -115,38 +74,18 @@ const DealList = () => {
   ];
 
   return (
-    <div className="w-full space-y-3">
-      <Tabs
-        value={currentView}
-        onValueChange={(next) => {
-          if (!(DEAL_VIEWS as readonly string[]).includes(next)) return;
-          const nextParams = new URLSearchParams(searchParams);
-          nextParams.set("view", next);
-          setSearchParams(nextParams, { replace: true });
-        }}
-      >
-        <TabsList>
-          {DEAL_VIEWS.map((viewId) => (
-            <TabsTrigger key={viewId} value={viewId}>
-              {DEAL_VIEW_LABELS[viewId]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <List
-        key={currentView}
-        perPage={100}
-        filter={listFilter}
-        title={false}
-        disableBreadcrumb
-        sort={{ field: "index", order: "DESC" }}
-        filters={dealFilters}
-        actions={<DealActions />}
-        pagination={null}
-      >
-        <DealLayout />
-      </List>
-    </div>
+    <List
+      perPage={100}
+      filter={{ "archived_at@is": null }}
+      title={false}
+      disableBreadcrumb
+      sort={{ field: "index", order: "DESC" }}
+      filters={dealFilters}
+      actions={<DealActions />}
+      pagination={null}
+    >
+      <DealLayout />
+    </List>
   );
 };
 
