@@ -36,6 +36,33 @@ async function getFaviconUrl(domain: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * Synchronous best-effort avatar URL for a contact, used when the contact
+ * does not have an explicit `avatar.src` uploaded. We do not try Gravatar
+ * here because it requires async hashing; falling back to the favicon of
+ * the email domain (via favicon.show) keeps the avatar component pure
+ * synchronous while still showing something meaningful for imported
+ * records (e.g. Zoho contacts) that only have an email on file.
+ */
+export const getContactAvatarSrc = (
+  record: Partial<Contact>,
+): string | undefined => {
+  if (record.avatar?.src) {
+    return record.avatar.src;
+  }
+  const firstEmail = record.email_jsonb?.find(
+    (entry) => typeof entry?.email === "string" && entry.email.trim().length > 0,
+  )?.email;
+  if (!firstEmail) {
+    return undefined;
+  }
+  const domain = firstEmail.split("@")[1]?.trim();
+  if (!domain) {
+    return undefined;
+  }
+  return `https://favicon.show/${domain}`;
+};
+
 // Main function to get the avatar URL
 export async function getContactAvatar(
   record: Partial<Contact>,

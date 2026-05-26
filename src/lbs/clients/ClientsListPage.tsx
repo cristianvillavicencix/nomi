@@ -43,12 +43,11 @@ const getPrimaryPhone = (contact: Contact) =>
 const getPrimaryEmail = (contact: Contact) =>
   contact.email_jsonb?.find((email) => email.email?.trim())?.email ?? "—";
 
-export const ClientsListPage = () => {
-  const { identity } = useGetIdentity();
+// Shared tab switcher rendered inside each tab's toolbar, so the tabs and the
+// search/sort/actions live on the same row and the data table can shift up.
+const ClientsTabsBar = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = parseTab(searchParams.get("tab"));
-
-  if (!identity) return null;
 
   const handleTabChange = (next: string) => {
     if (!(CLIENTS_TABS as readonly string[]).includes(next)) return;
@@ -62,13 +61,24 @@ export const ClientsListPage = () => {
   };
 
   return (
+    <Tabs value={currentTab} onValueChange={handleTabChange}>
+      <TabsList>
+        <TabsTrigger value="companies">Empresas</TabsTrigger>
+        <TabsTrigger value="contacts">Contactos</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+};
+
+export const ClientsListPage = () => {
+  const { identity } = useGetIdentity();
+  const [searchParams] = useSearchParams();
+  const currentTab = parseTab(searchParams.get("tab"));
+
+  if (!identity) return null;
+
+  return (
     <div className="w-full space-y-3">
-      <Tabs value={currentTab} onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="companies">Empresas</TabsTrigger>
-          <TabsTrigger value="contacts">Contactos</TabsTrigger>
-        </TabsList>
-      </Tabs>
       {currentTab === "companies" ? <CompaniesTab /> : <ContactsTab />}
     </div>
   );
@@ -118,26 +128,29 @@ const CompaniesActions = () => {
   }, [displayedFilters, filterValues, query, setFilters]);
 
   return (
-    <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-      <SpotlightSearchButton
-        title="Search Clients"
-        description="Find clients by business name, contact name, email, or phone."
-        placeholder="Search clients..."
-        value={query}
-        onValueChange={setQuery}
-      />
-      <SortButton fields={["name", "website"]} />
-      <Link
-        to={getClientCreatePath()}
-        className={cn(buttonVariants({ variant: "outline" }))}
-      >
-        <Plus />
-        New client
-      </Link>
-      <ModuleInfoPopover
-        title="Clients"
-        description="Business profiles with linked contacts, projects, contracts, and support."
-      />
+    <TopToolbar className="w-full flex-wrap items-center gap-3">
+      <ClientsTabsBar />
+      <div className="ml-auto flex flex-wrap items-center gap-3">
+        <SpotlightSearchButton
+          title="Search Clients"
+          description="Find clients by business name, contact name, email, or phone."
+          placeholder="Search clients..."
+          value={query}
+          onValueChange={setQuery}
+        />
+        <SortButton fields={["name", "website"]} />
+        <Link
+          to={getClientCreatePath()}
+          className={cn(buttonVariants({ variant: "outline" }))}
+        >
+          <Plus />
+          New client
+        </Link>
+        <ModuleInfoPopover
+          title="Clients"
+          description="Business profiles with linked contacts, projects, contracts, and support."
+        />
+      </div>
     </TopToolbar>
   );
 };
@@ -265,19 +278,22 @@ const ContactsActions = () => {
   }, [displayedFilters, filterValues, query, setFilters]);
 
   return (
-    <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-      <SpotlightSearchButton
-        title="Search Contacts"
-        description="Find contacts across every client company."
-        placeholder="Search contacts..."
-        value={query}
-        onValueChange={setQuery}
-      />
-      <SortButton fields={["first_name", "last_name", "last_seen"]} />
-      <ModuleInfoPopover
-        title="Contacts"
-        description="Every person linked to a client company. New contacts are added from the client profile."
-      />
+    <TopToolbar className="w-full flex-wrap items-center gap-3">
+      <ClientsTabsBar />
+      <div className="ml-auto flex flex-wrap items-center gap-3">
+        <SpotlightSearchButton
+          title="Search Contacts"
+          description="Find contacts across every client company."
+          placeholder="Search contacts..."
+          value={query}
+          onValueChange={setQuery}
+        />
+        <SortButton fields={["first_name", "last_name", "last_seen"]} />
+        <ModuleInfoPopover
+          title="Contacts"
+          description="Every person linked to a client company. New contacts are added from the client profile."
+        />
+      </div>
     </TopToolbar>
   );
 };

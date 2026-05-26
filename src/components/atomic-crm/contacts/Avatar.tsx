@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/avatar";
 import { useRecordContext } from "ra-core";
 
+import { getContactAvatarSrc } from "../providers/commons/getContactAvatar";
 import type { Contact } from "../types";
 
 export const Avatar = (props: {
@@ -28,9 +29,11 @@ export const Avatar = (props: {
         ? "w-[25px] h-[25px]"
         : "w-10 h-10";
 
+  const avatarSrc = getContactAvatarSrc(record);
+
   return (
     <ShadcnAvatar className={sizeClass} title={props.title}>
-      <AvatarImage src={record.avatar?.src ?? undefined} />
+      <AvatarImage src={avatarSrc} />
       <AvatarFallback className={size && size < 40 ? "text-[10px]" : "text-sm"}>
         {record.first_name?.charAt(0).toUpperCase()}
         {record.last_name?.charAt(0).toUpperCase()}
