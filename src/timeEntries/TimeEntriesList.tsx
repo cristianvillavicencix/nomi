@@ -26,7 +26,7 @@ import {
   ListPagination,
   ReferenceField,
 } from "@/components/admin";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -339,7 +339,7 @@ const TimeEntriesListActions = () => {
 
   return (
     <>
-      <TopToolbar className="min-w-0 w-full max-w-full flex-wrap items-stretch justify-start gap-2 whitespace-normal sm:items-end sm:justify-end md:flex-nowrap md:overflow-x-auto md:pb-0.5">
+      <PageActions>
         <select
           className="h-9 min-w-0 w-full max-w-full shrink rounded-md border border-input bg-background px-3 text-sm sm:w-[min(100%,220px)] sm:max-w-[220px] md:shrink-0 lg:max-w-[280px] lg:w-[min(100%,280px)]"
           value={selectedPersonToolbarId}
@@ -428,7 +428,7 @@ const TimeEntriesListActions = () => {
             ]}
           />
         </div>
-      </TopToolbar>
+      </PageActions>
       <TimeEntriesBulkCreateModal
         open={bulkModalOpen}
         onOpenChange={setBulkModalOpen}

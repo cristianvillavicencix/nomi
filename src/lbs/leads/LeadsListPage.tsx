@@ -6,9 +6,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { SortButton } from "@/components/admin/sort-button";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { ContactEmpty } from "@/components/atomic-crm/contacts/ContactEmpty";
 import { InfinitePagination } from "@/components/atomic-crm/misc/InfinitePagination";
@@ -52,7 +51,7 @@ export const LeadsListPage = () => {
     <>
       <List
         resource="contacts"
-        title="Leads"
+        title={false}
         disableBreadcrumb
         perPage={view === "kanban" ? 200 : 25}
         sort={{ field: "last_seen", order: "DESC" }}
@@ -108,7 +107,8 @@ const LeadsListActions = ({
   const countLabel = total != null ? ` (${total})` : "";
 
   return (
-    <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
+    <PageActions>
+      <h1 className="mr-2 text-sm font-semibold">Leads{countLabel}</h1>
       <ToggleGroup
         type="single"
         value={view}
@@ -119,15 +119,14 @@ const LeadsListActions = ({
         }}
         variant="outline"
         size="sm"
-        className="mr-auto"
       >
         <ToggleGroupItem value="table" aria-label="Vista tabla">
           <ListIcon className="size-4" />
-          Tabla{countLabel}
+          Tabla
         </ToggleGroupItem>
         <ToggleGroupItem value="kanban" aria-label="Vista Kanban">
           <KanbanSquare className="size-4" />
-          Kanban{countLabel}
+          Kanban
         </ToggleGroupItem>
       </ToggleGroup>
       <Button
@@ -143,19 +142,20 @@ const LeadsListActions = ({
         <UserCheck className="size-4" />
         {myFilterActive ? "Mis leads" : "Todos"}
       </Button>
-      <SpotlightSearchButton />
-      {view === "table" ? (
-        <SortButton fields={["first_name", "last_name", "last_seen"]} />
-      ) : null}
-      <Button variant="outline" onClick={onNewLead}>
-        <Plus />
-        New lead
-      </Button>
-      <ModuleInfoPopover
-        title="Leads"
-        description="Potential opportunities before they become client contacts."
-      />
-    </TopToolbar>
+      <div className="ml-auto flex items-center gap-2">
+        {view === "table" ? (
+          <SortButton fields={["first_name", "last_name", "last_seen"]} />
+        ) : null}
+        <Button variant="outline" size="sm" onClick={onNewLead}>
+          <Plus className="size-4" />
+          New lead
+        </Button>
+        <ModuleInfoPopover
+          title="Leads"
+          description="Potential opportunities before they become client contacts."
+        />
+      </div>
+    </PageActions>
   );
 };
 

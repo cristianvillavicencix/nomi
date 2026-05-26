@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useGetIdentity, useListContext, useListFilterContext } from "ra-core";
+import { useGetIdentity, useListContext } from "ra-core";
 import { Plus } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { buttonVariants } from "@/components/ui/button";
@@ -8,9 +7,8 @@ import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { SortButton } from "@/components/admin/sort-button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { CompanyEmpty } from "@/components/atomic-crm/companies/CompanyEmpty";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { Avatar as ContactAvatar } from "@/components/atomic-crm/contacts/Avatar";
@@ -100,54 +98,25 @@ const CompaniesTab = () => (
   </List>
 );
 
-const CompaniesActions = () => {
-  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
-  const [query, setQuery] = useState(() =>
-    typeof filterValues.q === "string" ? filterValues.q : "",
-  );
-
-  useEffect(() => {
-    setQuery(typeof filterValues.q === "string" ? filterValues.q : "");
-  }, [filterValues.q]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const currentQ =
-        typeof filterValues.q === "string" ? filterValues.q : undefined;
-      const nextQ = query.trim() ? query : undefined;
-      if (currentQ === nextQ) return;
-      const nextFilterValues = { ...filterValues };
-      if (nextQ) {
-        nextFilterValues.q = nextQ;
-      } else {
-        delete nextFilterValues.q;
-      }
-      setFilters(nextFilterValues, displayedFilters);
-    }, 250);
-    return () => clearTimeout(timeoutId);
-  }, [displayedFilters, filterValues, query, setFilters]);
-
-  return (
-    <TopToolbar className="w-full flex-wrap items-center gap-3">
-      <ClientsTabsBar />
-      <div className="ml-auto flex flex-wrap items-center gap-3">
-        <SpotlightSearchButton />
-        <SortButton fields={["name", "website"]} />
-        <Link
-          to={getClientCreatePath()}
-          className={cn(buttonVariants({ variant: "outline" }))}
-        >
-          <Plus />
-          New client
-        </Link>
-        <ModuleInfoPopover
-          title="Clients"
-          description="Business profiles with linked contacts, projects, contracts, and support."
-        />
-      </div>
-    </TopToolbar>
-  );
-};
+const CompaniesActions = () => (
+  <PageActions>
+    <ClientsTabsBar />
+    <div className="ml-auto flex flex-wrap items-center gap-2">
+      <SortButton fields={["name", "website"]} />
+      <Link
+        to={getClientCreatePath()}
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+      >
+        <Plus className="size-4" />
+        New client
+      </Link>
+      <ModuleInfoPopover
+        title="Clients"
+        description="Business profiles with linked contacts, projects, contracts, and support."
+      />
+    </div>
+  </PageActions>
+);
 
 const CompaniesLayout = () => {
   const { data, isPending, filterValues } =
@@ -244,47 +213,18 @@ const ContactsTab = () => (
   </List>
 );
 
-const ContactsActions = () => {
-  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
-  const [query, setQuery] = useState(() =>
-    typeof filterValues.q === "string" ? filterValues.q : "",
-  );
-
-  useEffect(() => {
-    setQuery(typeof filterValues.q === "string" ? filterValues.q : "");
-  }, [filterValues.q]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const currentQ =
-        typeof filterValues.q === "string" ? filterValues.q : undefined;
-      const nextQ = query.trim() ? query : undefined;
-      if (currentQ === nextQ) return;
-      const nextFilterValues = { ...filterValues };
-      if (nextQ) {
-        nextFilterValues.q = nextQ;
-      } else {
-        delete nextFilterValues.q;
-      }
-      setFilters(nextFilterValues, displayedFilters);
-    }, 250);
-    return () => clearTimeout(timeoutId);
-  }, [displayedFilters, filterValues, query, setFilters]);
-
-  return (
-    <TopToolbar className="w-full flex-wrap items-center gap-3">
-      <ClientsTabsBar />
-      <div className="ml-auto flex flex-wrap items-center gap-3">
-        <SpotlightSearchButton />
-        <SortButton fields={["first_name", "last_name", "last_seen"]} />
-        <ModuleInfoPopover
-          title="Contacts"
-          description="Every person linked to a client company. New contacts are added from the client profile."
-        />
-      </div>
-    </TopToolbar>
-  );
-};
+const ContactsActions = () => (
+  <PageActions>
+    <ClientsTabsBar />
+    <div className="ml-auto flex flex-wrap items-center gap-2">
+      <SortButton fields={["first_name", "last_name", "last_seen"]} />
+      <ModuleInfoPopover
+        title="Contacts"
+        description="Every person linked to a client company. New contacts are added from the client profile."
+      />
+    </div>
+  </PageActions>
+);
 
 const ContactsLayout = () => {
   const { data, isPending, filterValues } = useListContext<Contact>();

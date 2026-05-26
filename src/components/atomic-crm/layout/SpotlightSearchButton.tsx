@@ -382,6 +382,28 @@ export const SpotlightSearchButton = ({
     setActiveIndex(0);
   }, [trimmedQuery]);
 
+  // Global Cmd+K / Ctrl+K toggle. Skip when typing in an input/textarea
+  // so it doesn't hijack normal form interactions.
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "k" && event.key !== "K") return;
+      if (!(event.metaKey || event.ctrlKey)) return;
+      const target = event.target as HTMLElement | null;
+      const inEditable =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      // Allow toggling even from an input — that's the whole point of
+      // ⌘K. We just need to make sure we don't *also* type the letter.
+      event.preventDefault();
+      setOpen((prev) => !prev);
+      void inEditable;
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const handleSelect = useCallback(
     (s: ResolvedSuggestion) => {
       setOpen(false);
@@ -422,11 +444,15 @@ export const SpotlightSearchButton = ({
         <Button
           type="button"
           variant="outline"
-          size="icon"
-          className="h-9 w-9 shrink-0"
+          size="sm"
+          className="h-9 gap-2 px-2.5 text-muted-foreground"
           aria-label="Buscar"
         >
-          <Search className="h-4 w-4" />
+          <Search className="size-4" />
+          <span className="hidden sm:inline">Buscar</span>
+          <kbd className="ml-1 hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
+            ⌘K
+          </kbd>
         </Button>
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>

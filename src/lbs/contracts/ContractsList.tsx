@@ -5,7 +5,7 @@ import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { SortButton } from "@/components/admin/sort-button";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Contract } from "@/lbs/types";
@@ -29,7 +29,7 @@ export const ContractsList = () => {
   return (
     <List
       resource="contracts"
-      title="Contracts"
+      title={false}
       disableBreadcrumb
       perPage={25}
       sort={{ field: "updated_at", order: "DESC" }}
@@ -42,13 +42,16 @@ export const ContractsList = () => {
 };
 
 const ContractsListActions = () => (
-  <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-    <SortButton fields={["title", "status", "expires_at", "updated_at"]} />
-    <ModuleInfoPopover
-      title={LBS_PLACEHOLDER_MODULES.contracts.title}
-      description={LBS_PLACEHOLDER_MODULES.contracts.description}
-    />
-  </TopToolbar>
+  <PageActions>
+    <h1 className="mr-2 text-sm font-semibold">Contracts</h1>
+    <div className="ml-auto flex items-center gap-2">
+      <SortButton fields={["title", "status", "expires_at", "updated_at"]} />
+      <ModuleInfoPopover
+        title={LBS_PLACEHOLDER_MODULES.contracts.title}
+        description={LBS_PLACEHOLDER_MODULES.contracts.description}
+      />
+    </div>
+  </PageActions>
 );
 
 const ContractsListLayout = () => {

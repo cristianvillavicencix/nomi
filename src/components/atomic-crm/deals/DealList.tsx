@@ -15,12 +15,8 @@ import { List } from "@/components/admin/list";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { FilterButton } from "@/components/admin/filter-form";
 import { SelectInput } from "@/components/admin/select-input";
-import {
-  TopToolbar,
-  ACTION_BAR_SURFACE_CLASSNAME,
-} from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -165,66 +161,47 @@ const DealActions = () => {
   }, [displayedFilters, filterValues, selectedPipelineId, setFilters]);
 
   return (
-    <div className="w-full">
-      <TopToolbar
-        surface={false}
-        className={`w-full items-center justify-between gap-3 overflow-x-auto ${ACTION_BAR_SURFACE_CLASSNAME}`}
-      >
-        <div className="flex min-w-max items-center gap-2">
-          <ProjectSearchField />
-          {!lbsMode ? (
-            <>
-              <PipelineSelect />
-              <OnlyMineSwitch />
-              {canManageSales ? (
-                <ManageStagesButton pipelineId={selectedPipelineId} />
-              ) : null}
-            </>
-          ) : null}
-        </div>
-        <div className="flex min-w-max items-center gap-2">
-          <span className="hidden text-sm text-muted-foreground xl:inline">
-            View
-          </span>
-          <ToggleGroup
-            type="single"
-            value={view}
-            onValueChange={(nextView) => {
-              if (nextView === "board" || nextView === "list") {
-                setView(nextView);
-              }
-            }}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="board">Board</ToggleGroupItem>
-            <ToggleGroupItem value="list">List</ToggleGroupItem>
-          </ToggleGroup>
-          <div className="xl:hidden">
-            <FilterButton size="icon" showLabel={false} />
-          </div>
-          <div className="hidden xl:block">
-            <FilterButton />
-          </div>
-          <div className="xl:hidden">
-            <ExportButton showLabel={false} className="px-2.5" />
-          </div>
-          <div className="hidden xl:block">
-            <ExportButton />
-          </div>
-          {canManageSales ? (
-            <CreateButton
-              label="New Deal"
-              className="bg-black text-white hover:bg-black/90 border-black"
-            />
-          ) : null}
-          <ModuleInfoPopover
-            title="Deals"
-            description="Pipeline control for every deal, from setup to delivered."
+    <PageActions>
+      <div className="flex min-w-0 items-center gap-2">
+        {!lbsMode ? (
+          <>
+            <PipelineSelect />
+            <OnlyMineSwitch />
+            {canManageSales ? (
+              <ManageStagesButton pipelineId={selectedPipelineId} />
+            ) : null}
+          </>
+        ) : null}
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        <ToggleGroup
+          type="single"
+          value={view}
+          onValueChange={(nextView) => {
+            if (nextView === "board" || nextView === "list") {
+              setView(nextView);
+            }
+          }}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="board">Board</ToggleGroupItem>
+          <ToggleGroupItem value="list">List</ToggleGroupItem>
+        </ToggleGroup>
+        <FilterButton size="icon" showLabel={false} />
+        <ExportButton showLabel={false} className="px-2.5" />
+        {canManageSales ? (
+          <CreateButton
+            label="New Deal"
+            className="bg-black text-white hover:bg-black/90 border-black"
           />
-        </div>
-      </TopToolbar>
-    </div>
+        ) : null}
+        <ModuleInfoPopover
+          title="Deals"
+          description="Pipeline control for every deal, from setup to delivered."
+        />
+      </div>
+    </PageActions>
   );
 };
 
@@ -248,36 +225,6 @@ const ManageStagesButton = ({ pipelineId }: { pipelineId: string }) => {
       />
     </>
   );
-};
-
-const ProjectSearchField = () => {
-  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
-  const [value, setValue] = useState(() => String(filterValues.q ?? ""));
-
-  useEffect(() => {
-    setValue(String(filterValues.q ?? ""));
-  }, [filterValues.q]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const currentQ =
-        typeof filterValues.q === "string" ? filterValues.q : undefined;
-      const nextQ = value.trim() ? value : undefined;
-      if (currentQ === nextQ) {
-        return;
-      }
-      const nextFilterValues = { ...filterValues };
-      if (nextQ) {
-        nextFilterValues.q = nextQ;
-      } else {
-        delete nextFilterValues.q;
-      }
-      setFilters(nextFilterValues, displayedFilters);
-    }, 250);
-    return () => clearTimeout(timeoutId);
-  }, [displayedFilters, filterValues, setFilters, value]);
-
-  return <SpotlightSearchButton />;
 };
 
 const OnlyMineSwitch = () => {

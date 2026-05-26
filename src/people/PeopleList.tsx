@@ -16,9 +16,8 @@ import {
   List,
   SelectInput,
 } from "@/components/admin";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -242,7 +241,7 @@ const PeopleListActions = ({
   }, [displayedFilters, filterValues, setFilters]);
 
   return (
-    <TopToolbar className="w-full justify-between items-center">
+    <PageActions>
       <Tabs
         value={activeType}
         onValueChange={(value) => onTypeChange(value as Person["type"])}
@@ -255,11 +254,10 @@ const PeopleListActions = ({
           ))}
         </TabsList>
       </Tabs>
-      <div className="flex items-center gap-2">
-        <SpotlightSearchButton />
+      <div className="ml-auto flex items-center gap-2">
         <ExportButton />
         {canManagePeople ? (
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" size="sm">
             <Link to={`/people/create?type=${activeType}`}>
               New {personTypeLabels[activeType]}
             </Link>
@@ -270,7 +268,7 @@ const PeopleListActions = ({
           description="Unified team records for employees, salespeople, and subcontractors."
         />
       </div>
-    </TopToolbar>
+    </PageActions>
   );
 };
 

@@ -48,6 +48,11 @@ import { LBS_NAV_ITEMS } from "@/lbs/navigation";
 import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
 import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
+import {
+  PageActionsProvider,
+  PageActionsSlot,
+} from "@/components/atomic-crm/layout/PageActions";
+import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();
   const activeTheme = theme === "dark" ? "dark" : "light";
@@ -489,37 +494,47 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <SidebarProvider className="h-svh overflow-hidden print:h-auto print:overflow-visible">
-      <SidebarNavigation />
-      <main className="ml-auto flex h-svh min-h-0 w-full max-w-full flex-col overflow-hidden peer-data-[state=collapsed]:w-[calc(100%-var(--sidebar-width-icon)-1rem)] peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))] sm:transition-[width] sm:duration-200 sm:ease-linear print:h-auto print:w-full print:overflow-visible">
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
-            isMessagesShell ? "gap-2 p-2 pl-1" : "gap-4 px-4 pt-4 pb-2",
-          )}
-        >
-          {currentDealId ? (
-            <DealsExplorerPanel currentDealId={currentDealId} />
+      <PageActionsProvider>
+        <SidebarNavigation />
+        <main className="ml-auto flex h-svh min-h-0 w-full max-w-full flex-col overflow-hidden peer-data-[state=collapsed]:w-[calc(100%-var(--sidebar-width-icon)-1rem)] peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))] sm:transition-[width] sm:duration-200 sm:ease-linear print:h-auto print:w-full print:overflow-visible">
+          {!isMessagesShell ? (
+            <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
+              <PageActionsSlot className="flex min-w-0 flex-1 flex-wrap items-center gap-2" />
+              <div className="ml-auto flex items-center gap-2">
+                <SpotlightSearchButton />
+              </div>
+            </header>
           ) : null}
           <div
             className={cn(
-              "min-h-0 min-w-0 flex-1",
-              isMessagesShell
-                ? "overflow-hidden"
-                : "overflow-y-auto overscroll-contain pr-1",
+              "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
+              isMessagesShell ? "gap-2 p-2 pl-1" : "gap-4 px-4 pt-3 pb-2",
             )}
           >
-            <ErrorBoundary FallbackComponent={Error}>
-              <Suspense
-                fallback={<Skeleton className="h-12 w-12 rounded-full" />}
-              >
-                {children}
-              </Suspense>
-            </ErrorBoundary>
+            {currentDealId ? (
+              <DealsExplorerPanel currentDealId={currentDealId} />
+            ) : null}
+            <div
+              className={cn(
+                "min-h-0 min-w-0 flex-1",
+                isMessagesShell
+                  ? "overflow-hidden"
+                  : "overflow-y-auto overscroll-contain pr-1",
+              )}
+            >
+              <ErrorBoundary FallbackComponent={Error}>
+                <Suspense
+                  fallback={<Skeleton className="h-12 w-12 rounded-full" />}
+                >
+                  {children}
+                </Suspense>
+              </ErrorBoundary>
+            </div>
           </div>
-        </div>
-      </main>
-      <GlobalMessagesBadge className="fixed right-3 bottom-3 z-50 print:hidden max-[768px]:bottom-[max(0.75rem,env(safe-area-inset-bottom))]" />
-      <Notification />
+        </main>
+        <GlobalMessagesBadge className="fixed right-3 bottom-3 z-50 print:hidden max-[768px]:bottom-[max(0.75rem,env(safe-area-inset-bottom))]" />
+        <Notification />
+      </PageActionsProvider>
     </SidebarProvider>
   );
 };

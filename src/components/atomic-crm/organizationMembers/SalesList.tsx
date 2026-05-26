@@ -7,13 +7,16 @@ import { List } from "@/components/admin/list";
 import { SearchInput } from "@/components/admin/search-input";
 import { Badge } from "@/components/ui/badge";
 
-import { TopToolbar } from "../layout/TopToolbar";
+import { PageActions } from "../layout/PageActions";
 
 const SalesListActions = () => (
-  <TopToolbar className="w-full flex-wrap items-center justify-end gap-2">
-    <ExportButton />
-    <CreateButton label="New user" />
-  </TopToolbar>
+  <PageActions>
+    <h1 className="mr-2 text-sm font-semibold">Users</h1>
+    <div className="ml-auto flex items-center gap-2">
+      <ExportButton />
+      <CreateButton label="New user" />
+    </div>
+  </PageActions>
 );
 
 const filters = [<SearchInput source="q" alwaysOn />];
@@ -46,7 +49,7 @@ const OptionsField = (_props: { label?: string | boolean }) => {
 export function SalesList() {
   return (
     <List
-      title="Users"
+      title={false}
       filters={filters}
       actions={<SalesListActions />}
       sort={{ field: "first_name", order: "ASC" }}

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useGetIdentity, useListContext, useListFilterContext } from "ra-core";
+import { useMemo } from "react";
+import { useGetIdentity, useListContext } from "ra-core";
 import { CreateButton } from "@/components/admin/create-button";
 import { DataTable } from "@/components/admin/data-table";
 import { ExportButton } from "@/components/admin/export-button";
@@ -9,9 +9,8 @@ import { SortButton } from "@/components/admin/sort-button";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { normalizePhoneForTel } from "@/lib/linking";
 
-import { TopToolbar } from "../layout/TopToolbar";
+import { PageActions } from "../layout/PageActions";
 import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
-import { SpotlightSearchButton } from "../layout/SpotlightSearchButton";
 import { CompanyEmpty } from "./CompanyEmpty";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CompanyAvatar } from "./CompanyAvatar";
@@ -158,39 +157,12 @@ const CompaniesRowsList = () => {
 
 const CompanyListActions = () => {
   const { identity } = useGetIdentity();
-  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
   const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
-  const [query, setQuery] = useState(() =>
-    typeof filterValues.q === "string" ? filterValues.q : "",
-  );
-
-  useEffect(() => {
-    setQuery(typeof filterValues.q === "string" ? filterValues.q : "");
-  }, [filterValues.q]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const currentQ =
-        typeof filterValues.q === "string" ? filterValues.q : undefined;
-      const nextQ = query.trim() ? query : undefined;
-      if (currentQ === nextQ) {
-        return;
-      }
-      const nextFilterValues = { ...filterValues };
-      if (nextQ) {
-        nextFilterValues.q = nextQ;
-      } else {
-        delete nextFilterValues.q;
-      }
-      setFilters(nextFilterValues, displayedFilters);
-    }, 250);
-    return () => clearTimeout(timeoutId);
-  }, [displayedFilters, filterValues, query, setFilters]);
 
   return (
-    <TopToolbar className="w-full flex-wrap items-center justify-end gap-2">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <SpotlightSearchButton />
+    <PageActions>
+      <h1 className="mr-2 text-sm font-semibold">Companies</h1>
+      <div className="ml-auto flex flex-wrap items-center gap-2">
         <SortButton fields={["name", "created_at", "nb_contacts"]} />
         <ExportButton />
         {canManageSales ? <CreateButton label="New Company" /> : null}
@@ -199,6 +171,6 @@ const CompanyListActions = () => {
           description="A single source of truth for every company account."
         />
       </div>
-    </TopToolbar>
+    </PageActions>
   );
 };

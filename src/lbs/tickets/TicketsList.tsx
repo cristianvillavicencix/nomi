@@ -5,7 +5,7 @@ import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { SortButton } from "@/components/admin/sort-button";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import { CreateTicketButton } from "@/lbs/tickets/CreateTicketButton";
@@ -19,7 +19,7 @@ export const TicketsList = () => {
   return (
     <List
       resource="tickets"
-      title="Tickets"
+      title={false}
       disableBreadcrumb
       perPage={25}
       sort={{ field: "updated_at", order: "DESC" }}
@@ -32,14 +32,17 @@ export const TicketsList = () => {
 };
 
 const TicketsListActions = () => (
-  <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-    <SortButton fields={["subject", "status", "priority", "updated_at"]} />
-    <CreateTicketButton />
-    <ModuleInfoPopover
-      title={LBS_PLACEHOLDER_MODULES.tickets.title}
-      description={LBS_PLACEHOLDER_MODULES.tickets.description}
-    />
-  </TopToolbar>
+  <PageActions>
+    <h1 className="mr-2 text-sm font-semibold">Tickets</h1>
+    <div className="ml-auto flex items-center gap-2">
+      <SortButton fields={["subject", "status", "priority", "updated_at"]} />
+      <CreateTicketButton />
+      <ModuleInfoPopover
+        title={LBS_PLACEHOLDER_MODULES.tickets.title}
+        description={LBS_PLACEHOLDER_MODULES.tickets.description}
+      />
+    </div>
+  </PageActions>
 );
 
 const TicketsListLayout = () => {

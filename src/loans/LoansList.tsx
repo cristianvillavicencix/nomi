@@ -8,7 +8,7 @@ import {
   TextField,
 } from "@/components/admin";
 import { Badge } from "@/components/ui/badge";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { useRecordContext } from "ra-core";
 import type { EmployeeLoan } from "@/components/atomic-crm/types";
@@ -19,18 +19,21 @@ import {
 } from "./helpers";
 
 const LoansListActions = () => (
-  <TopToolbar className="w-full flex-wrap items-center justify-end gap-2">
-    <CreateButton label="New Advance / Loan" />
-    <ModuleInfoPopover
-      title="Loans"
-      description="Advances and loans are tied to a person. Repayments usually happen automatically on payroll runs until the balance is zero."
-      bullets={[
-        "Create a loan and set installment amount and dates.",
-        "Keep the loan active unless you pause it.",
-        "Payroll applies deductions and updates the remaining balance.",
-      ]}
-    />
-  </TopToolbar>
+  <PageActions>
+    <h1 className="mr-2 text-sm font-semibold">Loans</h1>
+    <div className="ml-auto flex items-center gap-2">
+      <CreateButton label="New Advance / Loan" />
+      <ModuleInfoPopover
+        title="Loans"
+        description="Advances and loans are tied to a person. Repayments usually happen automatically on payroll runs until the balance is zero."
+        bullets={[
+          "Create a loan and set installment amount and dates.",
+          "Keep the loan active unless you pause it.",
+          "Payroll applies deductions and updates the remaining balance.",
+        ]}
+      />
+    </div>
+  </PageActions>
 );
 
 const LoanTypeField = () => {

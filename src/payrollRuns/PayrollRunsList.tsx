@@ -18,7 +18,7 @@ import {
   Search,
 } from "lucide-react";
 import { DateField, List, ListPagination } from "@/components/admin";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,43 +95,46 @@ const PayrollRunsActions = () => {
   );
 
   return (
-    <TopToolbar className="-mx-1 w-auto flex-wrap justify-end gap-2">
-      {canManagePayroll ? (
-        <Button asChild>
-          <Link
-            to={
-              selectedEmployeeId
-                ? `/payroll_runs/create?employee_id=${selectedEmployeeId}`
-                : "/payroll_runs/create"
-            }
-          >
-            {selectedEmployeeId
-              ? "New Payroll For Employee"
-              : "New Payroll Run"}
-          </Link>
-        </Button>
-      ) : null}
-      <ModuleInfoPopover
-        title="Payroll"
-        description="Payroll runs are the official cycle for a period: they roll up approved hours and salaries, apply loan repayments, and track status through paid."
-        bullets={[
-          "Approved hours: click a row to review — then create a run; register payout in Payments when ready.",
-          "Payroll runs: saved periods — open a row for detail.",
-          "Payments tab: payment runs and lines (same as the full Payments flow).",
-        ]}
-        contextTitle="Typical flow"
-        contextDescription={
-          <>
-            Approve hours in <strong>Hours</strong>, then check the{" "}
-            <strong>Approved hours</strong> tab. Create a run from there or from
-            the <strong>Payroll runs</strong> tab. When you have paid people
-            outside the app, <strong>register</strong> that payout in the{" "}
-            <strong>Payments</strong> tab to close the batch and keep a record.
-            Loans deduct on payroll when active.
-          </>
-        }
-      />
-    </TopToolbar>
+    <PageActions>
+      <h1 className="mr-2 text-sm font-semibold">Payroll</h1>
+      <div className="ml-auto flex items-center gap-2">
+        {canManagePayroll ? (
+          <Button asChild size="sm">
+            <Link
+              to={
+                selectedEmployeeId
+                  ? `/payroll_runs/create?employee_id=${selectedEmployeeId}`
+                  : "/payroll_runs/create"
+              }
+            >
+              {selectedEmployeeId
+                ? "New Payroll For Employee"
+                : "New Payroll Run"}
+            </Link>
+          </Button>
+        ) : null}
+        <ModuleInfoPopover
+          title="Payroll"
+          description="Payroll runs are the official cycle for a period: they roll up approved hours and salaries, apply loan repayments, and track status through paid."
+          bullets={[
+            "Approved hours: click a row to review — then create a run; register payout in Payments when ready.",
+            "Payroll runs: saved periods — open a row for detail.",
+            "Payments tab: payment runs and lines (same as the full Payments flow).",
+          ]}
+          contextTitle="Typical flow"
+          contextDescription={
+            <>
+              Approve hours in <strong>Hours</strong>, then check the{" "}
+              <strong>Approved hours</strong> tab. Create a run from there or
+              from the <strong>Payroll runs</strong> tab. When you have paid
+              people outside the app, <strong>register</strong> that payout in
+              the <strong>Payments</strong> tab to close the batch and keep a
+              record. Loans deduct on payroll when active.
+            </>
+          }
+        />
+      </div>
+    </PageActions>
   );
 };
 

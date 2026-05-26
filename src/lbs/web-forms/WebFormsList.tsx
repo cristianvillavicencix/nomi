@@ -6,7 +6,7 @@ import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { SortButton } from "@/components/admin/sort-button";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Form } from "@/lbs/types";
@@ -21,7 +21,7 @@ export const WebFormsList = () => {
   return (
     <List
       resource="forms"
-      title="Web Forms"
+      title={false}
       disableBreadcrumb
       perPage={25}
       sort={{ field: "name", order: "ASC" }}
@@ -39,19 +39,22 @@ export const WebFormsList = () => {
 };
 
 const WebFormsListActions = () => (
-  <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-    <SortButton fields={["name", "slug", "updated_at"]} />
-    <Button type="button" variant="outline" asChild>
-      <Link to="/web-forms/create">
-        <Plus className="size-4" />
-        New form
-      </Link>
-    </Button>
-    <ModuleInfoPopover
-      title={LBS_PLACEHOLDER_MODULES.webForms.title}
-      description="Manage client-facing forms for project briefs and file uploads."
-    />
-  </TopToolbar>
+  <PageActions>
+    <h1 className="mr-2 text-sm font-semibold">Web forms</h1>
+    <div className="ml-auto flex items-center gap-2">
+      <SortButton fields={["name", "slug", "updated_at"]} />
+      <Button type="button" variant="outline" size="sm" asChild>
+        <Link to="/web-forms/create">
+          <Plus className="size-4" />
+          New form
+        </Link>
+      </Button>
+      <ModuleInfoPopover
+        title={LBS_PLACEHOLDER_MODULES.webForms.title}
+        description="Manage client-facing forms for project briefs and file uploads."
+      />
+    </div>
+  </PageActions>
 );
 
 const WebFormsListLayout = () => {

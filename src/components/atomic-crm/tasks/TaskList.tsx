@@ -1,12 +1,12 @@
 import { List } from "@/components/admin/list";
-import { TopToolbar } from "../layout/TopToolbar";
+import { PageActions } from "../layout/PageActions";
 import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
 import { AddTask } from "./AddTask";
 import { TasksPageContent } from "./TasksPageContent";
 
 export const TaskList = () => (
   <List
-    title="Tasks"
+    title={false}
     perPage={50}
     disableBreadcrumb
     actions={<TaskListActions />}
@@ -16,11 +16,14 @@ export const TaskList = () => (
 );
 
 const TaskListActions = () => (
-  <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-    <AddTask display="chip" selectContact />
-    <ModuleInfoPopover
-      title="Tasks"
-      description="Track follow-ups and internal work across leads and projects."
-    />
-  </TopToolbar>
+  <PageActions>
+    <h1 className="mr-2 text-sm font-semibold">Tasks</h1>
+    <div className="ml-auto flex items-center gap-2">
+      <AddTask display="chip" selectContact />
+      <ModuleInfoPopover
+        title="Tasks"
+        description="Track follow-ups and internal work across leads and projects."
+      />
+    </div>
+  </PageActions>
 );

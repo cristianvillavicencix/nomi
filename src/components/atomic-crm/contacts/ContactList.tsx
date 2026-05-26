@@ -5,10 +5,8 @@ import {
   InfiniteListBase,
   useGetIdentity,
   useListContext,
-  useListFilterContext,
   type Exporter,
 } from "ra-core";
-import { useEffect, useState } from "react";
 import { BulkActionsToolbar } from "@/components/admin/bulk-actions-toolbar";
 import { CreateButton } from "@/components/admin/create-button";
 import { DataTable } from "@/components/admin/data-table";
@@ -27,9 +25,8 @@ import {
   ContactListFilterSummary,
   ContactListFilter,
 } from "./ContactListFilter";
-import { TopToolbar } from "../layout/TopToolbar";
+import { PageActions } from "../layout/PageActions";
 import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
-import { SpotlightSearchButton } from "../layout/SpotlightSearchButton";
 import { InfinitePagination } from "../misc/InfinitePagination";
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
@@ -126,39 +123,12 @@ const ContactListLayoutDesktop = () => {
 
 const ContactListActions = () => {
   const { identity } = useGetIdentity();
-  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
   const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
-  const [query, setQuery] = useState(() =>
-    typeof filterValues.q === "string" ? filterValues.q : "",
-  );
-
-  useEffect(() => {
-    setQuery(typeof filterValues.q === "string" ? filterValues.q : "");
-  }, [filterValues.q]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const currentQ =
-        typeof filterValues.q === "string" ? filterValues.q : undefined;
-      const nextQ = query.trim() ? query : undefined;
-      if (currentQ === nextQ) {
-        return;
-      }
-      const nextFilterValues = { ...filterValues };
-      if (nextQ) {
-        nextFilterValues.q = nextQ;
-      } else {
-        delete nextFilterValues.q;
-      }
-      setFilters(nextFilterValues, displayedFilters);
-    }, 250);
-    return () => clearTimeout(timeoutId);
-  }, [displayedFilters, filterValues, query, setFilters]);
 
   return (
-    <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <SpotlightSearchButton />
+    <PageActions>
+      <h1 className="mr-2 text-sm font-semibold">Contacts</h1>
+      <div className="ml-auto flex flex-wrap items-center gap-2">
         <SortButton fields={["first_name", "last_name", "last_seen"]} />
         {canManageSales ? <ContactImportButton /> : null}
         <ExportButton exporter={exporter} />
@@ -168,7 +138,7 @@ const ContactListActions = () => {
           description="Your clean, searchable directory of clients and stakeholders."
         />
       </div>
-    </TopToolbar>
+    </PageActions>
   );
 };
 

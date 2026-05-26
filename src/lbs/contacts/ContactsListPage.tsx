@@ -2,9 +2,8 @@ import { useGetIdentity, useListContext } from "ra-core";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { SortButton } from "@/components/admin/sort-button";
-import { TopToolbar } from "@/components/atomic-crm/layout/TopToolbar";
+import { PageActions } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { ContactEmpty } from "@/components/atomic-crm/contacts/ContactEmpty";
 import { InfinitePagination } from "@/components/atomic-crm/misc/InfinitePagination";
@@ -29,7 +28,7 @@ export const ContactsListPage = () => {
   return (
     <List
       resource="contacts"
-      title="Contacts"
+      title={false}
       disableBreadcrumb
       perPage={25}
       sort={{ field: "last_name", order: "ASC" }}
@@ -44,14 +43,16 @@ export const ContactsListPage = () => {
 };
 
 const ContactsListActions = () => (
-  <TopToolbar className="w-full flex-wrap items-center justify-end gap-3">
-    <SpotlightSearchButton />
-    <SortButton fields={["first_name", "last_name", "company_name"]} />
-    <ModuleInfoPopover
-      title="Contacts"
-      description="People linked to client companies, including primary contacts."
-    />
-  </TopToolbar>
+  <PageActions>
+    <h1 className="mr-2 text-sm font-semibold">Contactos</h1>
+    <div className="ml-auto flex items-center gap-2">
+      <SortButton fields={["first_name", "last_name", "company_name"]} />
+      <ModuleInfoPopover
+        title="Contacts"
+        description="People linked to client companies, including primary contacts."
+      />
+    </div>
+  </PageActions>
 );
 
 const ContactsListLayout = () => {
