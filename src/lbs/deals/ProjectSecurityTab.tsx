@@ -350,7 +350,7 @@ const AccessEntryDialog = ({
         </DialogHeader>
         <div className="space-y-4 py-1">
           <div className="space-y-2">
-            <Label>What is this for?</Label>
+            <Label>Type</Label>
             <Select
               value={presetMatch}
               onValueChange={(next) => {
