@@ -157,7 +157,7 @@ export const GooglePlacesAutocompleteInput = ({
       ) : (
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
           {fetchError
-            ? "No hay resultados o la API no respondió. Revisa VITE_GOOGLE_PLACES_API_KEY."
+            ? "Sin resultados. Si ves 403 en consola, habilita Places API (New) y Places API en Google Cloud."
             : "Escribe al menos 3 caracteres."}
         </div>
       )}

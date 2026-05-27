@@ -172,7 +172,17 @@ Import `test-data/contacts.csv` via the Contacts page → Import button.
 
 ### Google Places autocomplete
 
-Address and business-name fields can suggest results from the Google Places API (New) when `VITE_GOOGLE_PLACES_API_KEY` is set in the Vite env (local `.env.development` and production host). Restrict the key by HTTP referrer in Google Cloud Console. Shared helpers live in `src/lib/googlePlaces/`; form control: `GooglePlacesAutocompleteInput` in `src/components/admin/`.
+Address and business-name fields use `VITE_GOOGLE_PLACES_API_KEY` (`.env.development` + Vercel). Shared code: `src/lib/googlePlaces/`, UI: `GooglePlacesAutocompleteInput`.
+
+If the **Places API (New)** endpoint returns **403**, the app automatically retries with the **legacy Places API** (must be enabled separately in Google Cloud).
+
+**Fix 403 permanently (Google Cloud Console):**
+
+1. [APIs & Services → Library](https://console.cloud.google.com/apis/library) → enable **Places API (New)** (`places.googleapis.com`).
+2. Also enable **Places API** (legacy) if you rely on the fallback.
+3. [Credentials](https://console.cloud.google.com/apis/credentials) → your browser key → **API restrictions**: allow both Places APIs (or “Don’t restrict” for testing).
+4. **Application restrictions**: HTTP referrers — add `http://localhost:5173/*`, `https://lbs.bz/*`, and your Vercel preview URLs.
+5. Ensure **billing** is enabled on the GCP project.
 
 ### Accessing Local Services During Development
 
