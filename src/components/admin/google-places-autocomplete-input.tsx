@@ -72,7 +72,7 @@ export const GooglePlacesAutocompleteInput = ({
 
   const query = String(field.value ?? "").trim();
   const placesEnabled = isGooglePlacesEnabled();
-  const showPanel = open && placesEnabled && query.length >= 3;
+  const canShowSuggestions = placesEnabled && query.length >= 3;
 
   useEffect(() => {
     if (!placesEnabled || query.length < 3) {
@@ -175,7 +175,7 @@ export const GooglePlacesAutocompleteInput = ({
         </FormLabel>
       ) : null}
       <FormControl>
-        <Popover open={showPanel} onOpenChange={setOpen} modal>
+        <Popover open={open} onOpenChange={setOpen} modal>
           <PopoverAnchor asChild>
             <div className="relative w-full">
               {multiline ? (
@@ -188,7 +188,7 @@ export const GooglePlacesAutocompleteInput = ({
                   placeholder={placeholder ?? defaultPlaceholder}
                   className="min-h-9 max-h-24 resize-y py-2 leading-snug"
                   onFocus={() => {
-                    if (query.length >= 3) setOpen(true);
+                    if (canShowSuggestions) setOpen(true);
                   }}
                   onChange={(event) => {
                     field.onChange(event.target.value);
@@ -208,7 +208,7 @@ export const GooglePlacesAutocompleteInput = ({
                   readOnly={readOnly}
                   placeholder={placeholder ?? defaultPlaceholder}
                   onFocus={() => {
-                    if (query.length >= 3) setOpen(true);
+                    if (canShowSuggestions) setOpen(true);
                   }}
                   onChange={(event) => {
                     field.onChange(event.target.value);
@@ -226,14 +226,16 @@ export const GooglePlacesAutocompleteInput = ({
               ) : null}
             </div>
           </PopoverAnchor>
-          <PopoverContent
-            className="max-h-72 w-[var(--radix-popover-trigger-width)] overflow-y-auto p-2"
-            align="start"
-            sideOffset={6}
-            onOpenAutoFocus={(event) => event.preventDefault()}
-          >
-            {panelContent}
-          </PopoverContent>
+          {open && canShowSuggestions ? (
+            <PopoverContent
+              className="max-h-72 w-[var(--radix-popover-trigger-width)] overflow-y-auto p-2"
+              align="start"
+              sideOffset={6}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+            >
+              {panelContent}
+            </PopoverContent>
+          ) : null}
         </Popover>
       </FormControl>
       <InputHelperText
