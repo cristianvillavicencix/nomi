@@ -1,5 +1,11 @@
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
+import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
+import {
+  applyGoogleAddressToClientForm,
+  applyGoogleBusinessToClientForm,
+} from "@/lbs/clients/applyGooglePlaceToClientForm";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
@@ -60,6 +66,9 @@ const optionalUrl = (url?: string) => {
 };
 
 export const ClientCreateFormFields = () => {
+  const { setValue } = useFormContext<ClientCreateFormValues>();
+  const placesEnabled = isGooglePlacesEnabled();
+
   return (
     <div className="flex flex-col gap-6 p-1">
       <section className="space-y-4">
@@ -67,12 +76,25 @@ export const ClientCreateFormFields = () => {
         <p className="text-sm text-muted-foreground">
           The client account is tied to this business.
         </p>
-        <TextInput
-          source="company_name"
-          label="Business name"
-          validate={requiredName}
-          helperText={false}
-        />
+        {placesEnabled ? (
+          <GooglePlacesAutocompleteInput
+            source="company_name"
+            label="Business name"
+            mode="business"
+            validate={requiredName}
+            helperText={false}
+            onPlaceDetails={(details) =>
+              applyGoogleBusinessToClientForm(setValue, details)
+            }
+          />
+        ) : (
+          <TextInput
+            source="company_name"
+            label="Business name"
+            validate={requiredName}
+            helperText={false}
+          />
+        )}
         <ClientChannelsInput
           source="company_emails"
           kind="email"
@@ -119,12 +141,25 @@ export const ClientCreateFormFields = () => {
           kind="phone"
           label="Phone"
         />
-        <TextInput
-          source="primary_address"
-          label="Address"
-          helperText={false}
-          multiline
-        />
+        {placesEnabled ? (
+          <GooglePlacesAutocompleteInput
+            source="primary_address"
+            label="Address"
+            mode="address"
+            multiline
+            helperText={false}
+            onPlaceDetails={(details) =>
+              applyGoogleAddressToClientForm(setValue, details, "primary")
+            }
+          />
+        ) : (
+          <TextInput
+            source="primary_address"
+            label="Address"
+            helperText={false}
+            multiline
+          />
+        )}
         <SelectInput
           source="primary_lead_source"
           label="How did they hear about us?"
@@ -177,15 +212,34 @@ const AddressFields = ({
 }: {
   prefix: "company" | "billing";
   readOnly: boolean;
-}) => (
+}) => {
+  const { setValue } = useFormContext<ClientCreateFormValues>();
+  const placesEnabled = isGooglePlacesEnabled();
+  const addressSource =
+    prefix === "company" ? "company_address" : "billing_address";
+
+  return (
   <div className="grid gap-4">
-    <TextInput
-      source={`${prefix}_address`}
-      label="Address"
-      helperText={false}
-      multiline
-      readOnly={readOnly}
-    />
+    {placesEnabled && !readOnly ? (
+      <GooglePlacesAutocompleteInput
+        source={addressSource}
+        label="Address"
+        mode="address"
+        multiline
+        helperText={false}
+        onPlaceDetails={(details) =>
+          applyGoogleAddressToClientForm(setValue, details, prefix)
+        }
+      />
+    ) : (
+      <TextInput
+        source={addressSource}
+        label="Address"
+        helperText={false}
+        multiline
+        readOnly={readOnly}
+      />
+    )}
     <div className="grid gap-4 md:grid-cols-2">
       <TextInput
         source={`${prefix}_city`}
@@ -213,7 +267,8 @@ const AddressFields = ({
       />
     </div>
   </div>
-);
+  );
+};
 
 const CompanyAddressFields = () => {
   const companySameAsPrimary = useWatch<

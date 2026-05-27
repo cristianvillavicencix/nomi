@@ -170,6 +170,10 @@ Import `test-data/contacts.csv` via the Contacts page → Import button.
 
 - Pre-commit: Automatically runs `make registry-gen` to update `registry.json`
 
+### Google Places autocomplete
+
+Address and business-name fields can suggest results from the Google Places API (New) when `VITE_GOOGLE_PLACES_API_KEY` is set in the Vite env (local `.env.development` and production host). Restrict the key by HTTP referrer in Google Cloud Console. Shared helpers live in `src/lib/googlePlaces/`; form control: `GooglePlacesAutocompleteInput` in `src/components/admin/`.
+
 ### Accessing Local Services During Development
 
 - Frontend: http://localhost:5173/

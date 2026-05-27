@@ -1,7 +1,15 @@
 import { required, useRecordContext } from "ra-core";
+import { useFormContext } from "react-hook-form";
+import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { PhoneInput } from "@/components/admin/phone-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { TextInput } from "@/components/admin/text-input";
+import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
+import { isLbsMode } from "@/lbs/productMode";
+import {
+  applyGoogleAddressToCompanyForm,
+  applyGoogleBusinessToCompanyForm,
+} from "./applyGooglePlaceToCompanyForm";
 import { SelectInput } from "@/components/admin/select-input";
 import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
@@ -49,6 +57,9 @@ export const CompanyInputs = () => {
 
 const CompanyDisplayInputs = () => {
   const record = useRecordContext<Company>();
+  const { setValue } = useFormContext<Company>();
+  const placesEnabled = isLbsMode() && isGooglePlacesEnabled();
+
   return (
     <div className="flex gap-4 flex-1 flex-row">
       <ImageEditorField
@@ -59,13 +70,28 @@ const CompanyDisplayInputs = () => {
         emptyText={getCompanyAvatarFallback(record)}
         linkPosition="bottom"
       />
-      <TextInput
-        source="name"
-        className="w-full h-fit"
-        validate={required()}
-        helperText={false}
-        placeholder="Company name"
-      />
+      {placesEnabled ? (
+        <GooglePlacesAutocompleteInput
+          source="name"
+          label={false}
+          mode="business"
+          className="w-full h-fit"
+          validate={required()}
+          helperText={false}
+          placeholder="Company name"
+          onPlaceDetails={(details) =>
+            applyGoogleBusinessToCompanyForm(setValue, details)
+          }
+        />
+      ) : (
+        <TextInput
+          source="name"
+          className="w-full h-fit"
+          validate={required()}
+          helperText={false}
+          placeholder="Company name"
+        />
+      )}
     </div>
   );
 };
@@ -105,10 +131,26 @@ const CompanyContextInputs = () => {
 };
 
 const CompanyAddressInputs = () => {
+  const { setValue } = useFormContext<Company>();
+  const placesEnabled = isLbsMode() && isGooglePlacesEnabled();
+
   return (
     <div className="flex flex-col gap-4">
       <h6 className="text-lg font-semibold">Address</h6>
-      <TextInput source="address" helperText={false} />
+      {placesEnabled ? (
+        <GooglePlacesAutocompleteInput
+          source="address"
+          label={false}
+          mode="address"
+          multiline
+          helperText={false}
+          onPlaceDetails={(details) =>
+            applyGoogleAddressToCompanyForm(setValue, details)
+          }
+        />
+      ) : (
+        <TextInput source="address" helperText={false} />
+      )}
       <TextInput source="city" helperText={false} />
       <TextInput source="zipcode" helperText={false} />
       <TextInput source="state_abbr" helperText={false} />

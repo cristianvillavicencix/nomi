@@ -1,9 +1,15 @@
 import { useFormContext, useWatch } from "react-hook-form";
+import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { PhoneInput } from "@/components/admin/phone-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
+import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
 import { cn } from "@/lib/utils";
 import { LBS_COMPANY_INDUSTRY_CHOICES } from "./leadFormConstants";
+import {
+  applyGoogleAddressToLeadForm,
+  applyGoogleBusinessToLeadForm,
+} from "./applyGoogleBusinessToLeadForm";
 import type { NewLeadFormValues } from "./newLeadFormTypes";
 
 const AddContactChoice = ({
@@ -51,15 +57,30 @@ export const LeadCompanySection = () => {
   const addPrimaryContact = useWatch<NewLeadFormValues, "add_primary_contact">({
     name: "add_primary_contact",
   });
+  const placesEnabled = isGooglePlacesEnabled();
 
   return (
     <div className="space-y-3">
-      <TextInput
-        source="company_draft_name"
-        label="Nombre de la empresa"
-        helperText={false}
-        placeholder="Ej. Acme Landscaping"
-      />
+      {placesEnabled ? (
+        <GooglePlacesAutocompleteInput
+          source="company_draft_name"
+          label="Nombre de la empresa"
+          mode="business"
+          helperText={false}
+          placeholder="Ej. Acme Landscaping"
+          onPlaceDetails={(details) =>
+            applyGoogleBusinessToLeadForm(setValue, details)
+          }
+        />
+      ) : (
+        <TextInput
+          source="company_draft_name"
+          label="Nombre de la empresa"
+          helperText={false}
+          placeholder="Ej. Acme Landscaping"
+        />
+      )}
+
       <TextInput
         source="company_draft_website"
         label="Sitio web"
@@ -71,12 +92,27 @@ export const LeadCompanySection = () => {
         label="Teléfono de la empresa"
         helperText={false}
       />
-      <TextInput
-        source="company_draft_address"
-        label="Dirección"
-        helperText={false}
-        multiline
-      />
+
+      {placesEnabled ? (
+        <GooglePlacesAutocompleteInput
+          source="company_draft_address"
+          label="Dirección"
+          mode="address"
+          multiline
+          helperText={false}
+          onPlaceDetails={(details) =>
+            applyGoogleAddressToLeadForm(setValue, details)
+          }
+        />
+      ) : (
+        <TextInput
+          source="company_draft_address"
+          label="Dirección"
+          helperText={false}
+          multiline
+        />
+      )}
+
       <SelectInput
         source="company_draft_sector"
         label="Industria"

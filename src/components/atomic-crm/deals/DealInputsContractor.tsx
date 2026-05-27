@@ -28,11 +28,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput";
 import { contactOptionText } from "../misc/ContactOption";
+import {
+  fetchPlacesAutocomplete,
+  isGooglePlacesEnabled,
+} from "@/lib/googlePlaces";
 import type { Contact, Deal, Person } from "../types";
-
-const GOOGLE_PLACES_API_KEY =
-  import.meta.env.VITE_GOOGLE_PLACES_API_KEY ??
-  "AIzaSyCOI-vWlZI24dGycSZLoPWEx5_6RTFKkAI";
 
 const projectCategoryChoices = [
   { value: "retail", label: "Retail" },
@@ -57,8 +57,6 @@ const projectStageChoices = [
   { value: "completed", label: "Completed" },
   { value: "closed", label: "Closed" },
 ];
-
-type GoogleAddressSuggestion = { placeId: string; text: string };
 
 const toNumber = (value: unknown): number | null => {
   const parsed = Number(value);
@@ -122,7 +120,7 @@ const AddressAutocompleteInput = ({
   });
   const [open, setOpen] = useState(false);
   const [googleSuggestions, setGoogleSuggestions] = useState<
-    GoogleAddressSuggestion[]
+    Array<{ placeId: string; text: string }>
   >([]);
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
   const query = String(field.value ?? "").trim();
@@ -139,7 +137,7 @@ const AddressAutocompleteInput = ({
   }, [existingAddressOptions, query]);
 
   useEffect(() => {
-    if (!open || query.length < 3 || !GOOGLE_PLACES_API_KEY) {
+    if (!open || query.length < 3 || !isGooglePlacesEnabled()) {
       setGoogleSuggestions([]);
       setIsLoadingGoogle(false);
       return;
@@ -149,40 +147,11 @@ const AddressAutocompleteInput = ({
     const timer = setTimeout(async () => {
       setIsLoadingGoogle(true);
       try {
-        const response = await fetch(
-          "https://places.googleapis.com/v1/places:autocomplete",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
-              "X-Goog-FieldMask":
-                "suggestions.placePrediction.placeId,suggestions.placePrediction.text.text",
-            },
-            body: JSON.stringify({
-              input: query,
-              languageCode: "en",
-              regionCode: "US",
-            }),
-            signal: controller.signal,
-          },
+        const nextSuggestions = await fetchPlacesAutocomplete(
+          query,
+          "address",
+          controller.signal,
         );
-        if (!response.ok) {
-          setGoogleSuggestions([]);
-          return;
-        }
-        const payload = (await response.json()) as {
-          suggestions?: Array<{
-            placePrediction?: { placeId?: string; text?: { text?: string } };
-          }>;
-        };
-        const nextSuggestions =
-          payload.suggestions
-            ?.map((item) => ({
-              placeId: String(item.placePrediction?.placeId ?? ""),
-              text: String(item.placePrediction?.text?.text ?? ""),
-            }))
-            .filter((item) => item.placeId && item.text) ?? [];
         setGoogleSuggestions(nextSuggestions.slice(0, 6));
       } catch {
         setGoogleSuggestions([]);

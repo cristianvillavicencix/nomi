@@ -52,6 +52,10 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Person, TimeEntry } from "@/components/atomic-crm/types";
 import { compensationTypeLabels, formatMoney } from "@/people/constants";
 import { cn } from "@/lib/utils";
+import {
+  fetchPlacesAutocomplete,
+  isGooglePlacesEnabled,
+} from "@/lib/googlePlaces";
 
 type Props = {
   open: boolean;
@@ -61,8 +65,6 @@ type Props = {
 type EntryMode = "single_day" | "full_week" | "custom_range";
 type ProjectLite = { id: number; name: string; company_id?: number | null };
 type GoogleAddressSuggestion = { placeId: string; text: string };
-
-const GOOGLE_PLACES_API_KEY = "AIzaSyCOI-vWlZI24dGycSZLoPWEx5_6RTFKkAI";
 
 /** Spanish note in address column when the day is not a worked shift. */
 const absentDayAddressNoteEs = (
@@ -339,46 +341,20 @@ export const TimeEntriesBulkCreateModal = ({ open, onOpenChange }: Props) => {
     }
 
     const controller = new AbortController();
+    if (!isGooglePlacesEnabled()) {
+      setGoogleAddressSuggestions([]);
+      setIsLoadingGoogleSuggestions(false);
+      return;
+    }
+
     const timer = setTimeout(async () => {
       setIsLoadingGoogleSuggestions(true);
       try {
-        const response = await fetch(
-          "https://places.googleapis.com/v1/places:autocomplete",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
-              "X-Goog-FieldMask":
-                "suggestions.placePrediction.placeId,suggestions.placePrediction.text.text",
-            },
-            body: JSON.stringify({
-              input: activeAddressQuery,
-              languageCode: "en",
-              regionCode: "US",
-            }),
-            signal: controller.signal,
-          },
+        const nextSuggestions = await fetchPlacesAutocomplete(
+          activeAddressQuery,
+          "address",
+          controller.signal,
         );
-        if (!response.ok) {
-          setGoogleAddressSuggestions([]);
-          return;
-        }
-        const json = (await response.json()) as {
-          suggestions?: Array<{
-            placePrediction?: {
-              placeId?: string;
-              text?: { text?: string };
-            };
-          }>;
-        };
-        const nextSuggestions =
-          json.suggestions
-            ?.map((item) => ({
-              placeId: String(item.placePrediction?.placeId ?? ""),
-              text: String(item.placePrediction?.text?.text ?? ""),
-            }))
-            .filter((item) => item.placeId && item.text) ?? [];
         setGoogleAddressSuggestions(nextSuggestions.slice(0, 6));
       } catch {
         setGoogleAddressSuggestions([]);

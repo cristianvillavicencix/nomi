@@ -6,7 +6,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
+import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { TextInput } from "@/components/admin/text-input";
+import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
 import { SelectInput } from "@/components/admin/select-input";
 import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
@@ -157,7 +159,17 @@ const ContactPersonalInformationInputs = () => {
           />
         </SimpleFormIterator>
       </ArrayInput>
-      <TextInput source="address" helperText={false} />
+      {isLbsMode() && isGooglePlacesEnabled() ? (
+        <GooglePlacesAutocompleteInput
+          source="address"
+          label="Address"
+          mode="address"
+          multiline
+          helperText={false}
+        />
+      ) : (
+        <TextInput source="address" helperText={false} />
+      )}
       {isLbsMode() ? null : (
         <TextInput
           source="linkedin_url"
