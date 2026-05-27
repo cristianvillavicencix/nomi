@@ -155,6 +155,19 @@ export type DealAccessEntry = {
   updated_at?: string;
 } & Pick<RaRecord, "id">;
 
+export type DealSecret = {
+  org_id?: number;
+  deal_id: Identifier;
+  label: string;
+  secret_label?: string | null;
+  has_secret?: boolean;
+  notes?: string | null;
+  organization_member_id?: Identifier | null;
+  created_by_member_id?: Identifier | null;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
 export type ProjectDelivery = {
   org_id?: number;
   deal_id: Identifier;

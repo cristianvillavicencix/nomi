@@ -60,7 +60,7 @@ import {
   supabaseTableQueryOptions,
 } from "@/lbs/deals/supabaseSchemaErrors";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { DealAccessEntry, LbsDeal } from "@/lbs/types";
+import type { DealAccessEntry, DealSecret, LbsDeal } from "@/lbs/types";
 
 const inferKindFromEntry = (entry: DealAccessEntry) => {
   if (entry.kind) return String(entry.kind);
@@ -68,6 +68,13 @@ const inferKindFromEntry = (entry: DealAccessEntry) => {
   if (label.includes("api key")) return "api_key";
   return "login";
 };
+
+const emptySecretFormValues = () => ({
+  label: "",
+  secret_label: "API key",
+  value: "",
+  notes: "",
+});
 
 const copyToClipboard = async (
   value: string,
@@ -492,6 +499,221 @@ const AccessEntryDialog = ({
   );
 };
 
+const SecretDialog = ({
+  open,
+  title,
+  values,
+  onChange,
+  onClose,
+  onSave,
+  isSaving,
+  isEditing,
+}: {
+  open: boolean;
+  title: string;
+  values: { label: string; secret_label: string; value: string; notes: string };
+  onChange: (values: { label: string; secret_label: string; value: string; notes: string }) => void;
+  onClose: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+  isEditing: boolean;
+}) => (
+  <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+    <DialogContent className="sm:max-w-lg">
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4 py-1">
+        <div className="space-y-2">
+          <Label htmlFor="secret-label">Label</Label>
+          <Input
+            id="secret-label"
+            value={values.label}
+            onChange={(event) => onChange({ ...values, label: event.target.value })}
+            placeholder="Place API key"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="secret-kind">Secret label (optional)</Label>
+          <Input
+            id="secret-kind"
+            value={values.secret_label}
+            onChange={(event) => onChange({ ...values, secret_label: event.target.value })}
+            placeholder="API key / Token / Secret"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="secret-value">{values.secret_label?.trim() || "Secret"}</Label>
+          <Input
+            id="secret-value"
+            type="password"
+            autoComplete="new-password"
+            value={values.value}
+            onChange={(event) => onChange({ ...values, value: event.target.value })}
+            placeholder={isEditing ? "Leave blank to keep unchanged" : "Paste value"}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="secret-notes">Notes (optional)</Label>
+          <Textarea
+            id="secret-notes"
+            value={values.notes}
+            onChange={(event) => onChange({ ...values, notes: event.target.value })}
+            rows={3}
+            placeholder="Where it’s used, scopes, rotation schedule, etc."
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={onSave}
+          disabled={isSaving || !values.label.trim()}
+        >
+          {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+          Save
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
+
+const SecretRow = ({
+  secret,
+  onEdit,
+  onDelete,
+  isDeleting,
+}: {
+  secret: DealSecret;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}) => {
+  const notify = useNotify();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const [revealed, setRevealed] = useState<string | null>(null);
+  const [show, setShow] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const hasSecret = secret.has_secret === true;
+
+  const reveal = async () => {
+    if (revealed != null) {
+      setShow(true);
+      return;
+    }
+    setIsRevealing(true);
+    try {
+      const value = await dataProvider.getDealSecretValue(secret.id);
+      setRevealed(value);
+      setShow(Boolean(value));
+      if (!value) {
+        notify("No secret stored for this entry", { type: "warning" });
+      }
+    } catch {
+      notify("Failed to reveal secret", { type: "error" });
+    } finally {
+      setIsRevealing(false);
+    }
+  };
+
+  const copy = async () => {
+    let value = revealed;
+    if (value == null && hasSecret) {
+      setIsRevealing(true);
+      try {
+        value = await dataProvider.getDealSecretValue(secret.id);
+        setRevealed(value);
+      } catch {
+        notify("Failed to copy secret", { type: "error" });
+        return;
+      } finally {
+        setIsRevealing(false);
+      }
+    }
+    if (!value?.trim()) return;
+    await copyToClipboard(value, notify);
+    try {
+      await dataProvider.logDealSecretAudit(secret.id, "copied");
+    } catch {
+      // Non-blocking
+    }
+  };
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium whitespace-nowrap">{secret.label}</TableCell>
+      <TableCell className="max-w-[220px]">
+        <span className="text-sm text-muted-foreground">
+          {(secret.secret_label || "Secret").trim()}
+        </span>
+      </TableCell>
+      <TableCell className="max-w-[240px]">
+        {hasSecret ? (
+          <div className="flex items-center gap-1">
+            <code className="truncate text-xs">
+              {show && revealed ? revealed : "••••••••"}
+            </code>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 shrink-0"
+              onClick={() => (show ? setShow(false) : void reveal())}
+              disabled={isRevealing}
+            >
+              {isRevealing ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : show ? (
+                <EyeOff className="size-3.5" />
+              ) : (
+                <Eye className="size-3.5" />
+              )}
+              <span className="sr-only">
+                {show ? "Hide secret" : "Reveal secret"}
+              </span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 shrink-0"
+              onClick={() => void copy()}
+              disabled={isRevealing}
+            >
+              <Copy className="size-3.5" />
+              <span className="sr-only">Copy secret</span>
+            </Button>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="w-[88px] text-right">
+        <div className="flex justify-end gap-1">
+          <Button type="button" variant="ghost" size="icon" className="size-8" onClick={onEdit}>
+            <Pencil className="size-4" />
+            <span className="sr-only">Edit</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 text-destructive"
+            onClick={onDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+            <span className="sr-only">Delete</span>
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
+
 export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   const notify = useNotify();
   const refresh = useRefresh();
@@ -499,12 +721,19 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   const [create, { isPending: isCreating }] = useCreate();
   const [update, { isPending: isUpdating }] = useUpdate();
   const [deleteOne, { isPending: isDeleting }] = useDelete();
+  const [createSecret, { isPending: isCreatingSecret }] = useCreate();
+  const [updateSecret, { isPending: isUpdatingSecret }] = useUpdate();
+  const [deleteSecret, { isPending: isDeletingSecret }] = useDelete();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<Identifier | null>(null);
   const [values, setValues] = useState<DealAccessFormValues>(
     emptyDealAccessFormValues(),
   );
+  const [secretDialogOpen, setSecretDialogOpen] = useState(false);
+  const [editingSecretId, setEditingSecretId] = useState<Identifier | null>(null);
+  const [secretValues, setSecretValues] = useState(() => emptySecretFormValues());
   const [deletingId, setDeletingId] = useState<Identifier | null>(null);
+  const [deletingSecretId, setDeletingSecretId] = useState<Identifier | null>(null);
   const [isMigratingLegacy, setIsMigratingLegacy] = useState(false);
 
   const {
@@ -520,6 +749,21 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       sort: { field: "created_at", order: "DESC" },
     },
     { staleTime: 15_000, ...supabaseTableQueryOptions("deal_access_entries") },
+  );
+
+  const {
+    data: secrets = [],
+    isPending: isSecretsPending,
+    isError: isSecretsError,
+    error: secretsError,
+  } = useGetList<DealSecret>(
+    "deal_secrets",
+    {
+      filter: { "deal_id@eq": record.id },
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "created_at", order: "DESC" },
+    },
+    { staleTime: 15_000, ...supabaseTableQueryOptions("deal_secrets") },
   );
 
   const { data: legacyCount = 0, refetch: refetchLegacyCount } = useQuery({
@@ -540,6 +784,12 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     setDialogOpen(true);
   };
 
+  const openCreateSecret = () => {
+    setEditingSecretId(null);
+    setSecretValues(emptySecretFormValues());
+    setSecretDialogOpen(true);
+  };
+
   const openEdit = (entry: DealAccessEntry) => {
     const inferredKind = inferKindFromEntry(entry);
     setEditingId(entry.id);
@@ -557,10 +807,27 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     setDialogOpen(true);
   };
 
+  const openEditSecret = (secret: DealSecret) => {
+    setEditingSecretId(secret.id);
+    setSecretValues({
+      label: secret.label ?? "",
+      secret_label: secret.secret_label ?? "API key",
+      value: "",
+      notes: secret.notes ?? "",
+    });
+    setSecretDialogOpen(true);
+  };
+
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingId(null);
     setValues(emptyDealAccessFormValues());
+  };
+
+  const closeSecretDialog = () => {
+    setSecretDialogOpen(false);
+    setEditingSecretId(null);
+    setSecretValues(emptySecretFormValues());
   };
 
   const handleSave = async () => {
@@ -639,6 +906,90 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     }
   };
 
+  const handleSaveSecret = async () => {
+    if (!secretValues.label.trim()) {
+      notify("Label is required", { type: "error" });
+      return;
+    }
+
+    const valueProvided = secretValues.value.trim().length > 0;
+    const payload = {
+      label: secretValues.label.trim(),
+      secret_label: secretValues.secret_label.trim() || null,
+      notes: secretValues.notes.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      if (editingSecretId != null) {
+        const previous = secrets.find((s) => s.id === editingSecretId) ?? null;
+        await updateSecret(
+          "deal_secrets",
+          {
+            id: editingSecretId,
+            data: payload,
+            previousData: previous ?? { id: editingSecretId },
+          },
+          { returnPromise: true },
+        );
+        if (valueProvided) {
+          await dataProvider.setDealSecretValue(
+            editingSecretId,
+            secretValues.value.trim(),
+          );
+        }
+        notify("Secret updated");
+      } else {
+        const created = await createSecret(
+          "deal_secrets",
+          {
+            data: {
+              deal_id: record.id,
+              ...payload,
+            },
+          },
+          { returnPromise: true },
+        );
+        const secretId = created?.id;
+        if (secretId != null && valueProvided) {
+          await dataProvider.setDealSecretValue(
+            secretId,
+            secretValues.value.trim(),
+          );
+        }
+        if (secretId != null) {
+          try {
+            await dataProvider.logDealSecretAudit(secretId, "created");
+          } catch {
+            // Non-blocking
+          }
+        }
+        notify("Secret created");
+      }
+      refresh();
+      closeSecretDialog();
+    } catch {
+      notify("Failed to save secret", { type: "error" });
+    }
+  };
+
+  const handleDeleteSecret = async (secret: DealSecret) => {
+    setDeletingSecretId(secret.id);
+    try {
+      await deleteSecret(
+        "deal_secrets",
+        { id: secret.id, previousData: secret },
+        { returnPromise: true },
+      );
+      notify("Secret deleted");
+      refresh();
+    } catch {
+      notify("Failed to delete secret", { type: "error" });
+    } finally {
+      setDeletingSecretId(null);
+    }
+  };
+
   const handleDelete = async (entry: DealAccessEntry) => {
     setDeletingId(entry.id);
     try {
@@ -694,10 +1045,10 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     );
   }
 
-  if (isError) {
+  if (isError || isSecretsError) {
     return (
       <p className="text-sm text-destructive">
-        Could not load access entries. Try refreshing the page.
+        Could not load credentials. Try refreshing the page.
       </p>
     );
   }
@@ -737,11 +1088,46 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
             and revealed on demand with an audit trail.
           </p>
         </div>
-        <Button type="button" onClick={openCreate} className="shrink-0">
-          <Plus className="size-4" />
-          Add access
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={openCreateSecret} className="shrink-0">
+            <Plus className="size-4" />
+            Add API key
+          </Button>
+          <Button type="button" onClick={openCreate} className="shrink-0">
+            <Plus className="size-4" />
+            Add login
+          </Button>
+        </div>
       </div>
+
+      {secrets.length === 0 ? null : (
+        <div className="overflow-x-auto rounded-md border">
+          <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
+            API keys & secrets
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Label</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Value</TableHead>
+                <TableHead className="w-[88px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {secrets.map((secret) => (
+                <SecretRow
+                  key={String(secret.id)}
+                  secret={secret}
+                  onEdit={() => openEditSecret(secret)}
+                  onDelete={() => void handleDeleteSecret(secret)}
+                  isDeleting={isDeletingSecret && deletingSecretId === secret.id}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {entries.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
@@ -754,6 +1140,9 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-md border">
+          <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
+            Logins
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -788,6 +1177,17 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
         onSave={() => void handleSave()}
         isSaving={isCreating || isUpdating}
         isEditing={Boolean(editingEntry)}
+      />
+
+      <SecretDialog
+        open={secretDialogOpen}
+        title={editingSecretId != null ? "Edit secret" : "Add secret"}
+        values={secretValues}
+        onChange={setSecretValues}
+        onClose={closeSecretDialog}
+        onSave={() => void handleSaveSecret()}
+        isSaving={isCreatingSecret || isUpdatingSecret}
+        isEditing={editingSecretId != null}
       />
     </div>
   );

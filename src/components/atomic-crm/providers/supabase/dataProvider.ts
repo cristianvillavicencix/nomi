@@ -1766,6 +1766,70 @@ const dataProviderWithCustomMethods = {
     }
     return data?.migrated ?? 0;
   },
+  async getDealSecretValue(secretId: Identifier) {
+    const { data, error } = await invokeEdgeFunction<{
+      value?: string | null;
+    }>("deal_secret_value", {
+      method: "POST",
+      body: {
+        action: "get",
+        secret_id: Number(secretId),
+      },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to reveal deal secret",
+      );
+    }
+    return data?.value ?? null;
+  },
+  async setDealSecretValue(secretId: Identifier, value: string | null) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
+      "deal_secret_value",
+      {
+        method: "POST",
+        body: {
+          action: "set",
+          secret_id: Number(secretId),
+          value,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to save deal secret",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Failed to save deal secret");
+    }
+    return data;
+  },
+  async logDealSecretAudit(
+    secretId: Identifier,
+    auditAction: "viewed" | "copied" | "created" | "updated" | "deleted",
+  ) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
+      "deal_secret_value",
+      {
+        method: "POST",
+        body: {
+          action: "audit",
+          secret_id: Number(secretId),
+          audit_action: auditAction,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to log secret access",
+      );
+    }
+    return data;
+  },
   async deliverProject(payload: {
     deal_id: number;
     site_url?: string;

@@ -544,6 +544,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="voice_calls" />
           <Resource name="deal_resources" />
           <Resource name="deal_access_entries" />
+          <Resource name="deal_secrets" />
           <Resource name="deal_expenses" />
           <Resource name="deal_change_orders" />
           <Resource name="deal_commissions" />
