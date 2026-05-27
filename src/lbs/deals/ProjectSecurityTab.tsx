@@ -62,10 +62,12 @@ import {
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { DealAccessEntry, LbsDeal } from "@/lbs/types";
 
-const isApiKeyLabel = (label?: string | null) =>
-  String(label ?? "")
-    .toLowerCase()
-    .includes("api key");
+const inferKindFromEntry = (entry: DealAccessEntry) => {
+  if (entry.kind) return String(entry.kind);
+  const label = String(entry.label ?? "").toLowerCase();
+  if (label.includes("api key")) return "api_key";
+  return "login";
+};
 
 const copyToClipboard = async (
   value: string,
@@ -145,7 +147,7 @@ const AccessEntryRow = ({
   const copyAll = async () => {
     const lines = [`Label: ${entry.label}`];
     if (entry.url?.trim()) lines.push(`URL: ${entry.url.trim()}`);
-    const apiKeyMode = isApiKeyLabel(entry.label);
+    const apiKeyMode = inferKindFromEntry(entry) === "api_key";
     if (!apiKeyMode && entry.username?.trim()) {
       lines.push(`Username: ${entry.username.trim()}`);
     }
@@ -161,7 +163,9 @@ const AccessEntryRow = ({
         }
       }
       if (password?.trim()) {
-        lines.push(apiKeyMode ? `API key: ${password.trim()}` : `Password: ${password.trim()}`);
+        const secretLabel = (entry.secret_label || "").trim();
+        const lineLabel = secretLabel || (apiKeyMode ? "API key" : "Password");
+        lines.push(`${lineLabel}: ${password.trim()}`);
       }
     }
     if (entry.notes?.trim()) lines.push(`Notes: ${entry.notes.trim()}`);
@@ -329,7 +333,7 @@ const AccessEntryDialog = ({
   )
     ? values.label
     : "Other";
-  const apiKeyMode = presetMatch === "API key";
+  const apiKeyMode = values.kind === "api_key";
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -343,9 +347,20 @@ const AccessEntryDialog = ({
             <Select
               value={presetMatch}
               onValueChange={(next) => {
+                const inferredKind =
+                  next === "API key"
+                    ? "api_key"
+                    : next === "Other"
+                      ? values.kind
+                      : "login";
                 onChange({
                   ...values,
                   label: next === "Other" ? values.label : next,
+                  kind: inferredKind,
+                  secret_label:
+                    inferredKind === "api_key"
+                      ? values.secret_label || "API key"
+                      : values.secret_label || "Password",
                 });
               }}
             >
@@ -373,7 +388,9 @@ const AccessEntryDialog = ({
           </div>
           {apiKeyMode ? (
             <div className="space-y-2">
-              <Label htmlFor="access-password">API key</Label>
+              <Label htmlFor="access-password">
+                {values.secret_label?.trim() || "API key"}
+              </Label>
               <Input
                 id="access-password"
                 type="password"
@@ -384,6 +401,19 @@ const AccessEntryDialog = ({
                 }
                 placeholder={isEditing ? "Leave blank to keep unchanged" : "Paste API key"}
               />
+              <div className="space-y-1">
+                <Label htmlFor="access-secret-label" className="text-xs text-muted-foreground">
+                  Secret label (optional)
+                </Label>
+                <Input
+                  id="access-secret-label"
+                  value={values.secret_label}
+                  onChange={(event) =>
+                    onChange({ ...values, secret_label: event.target.value })
+                  }
+                  placeholder="API key / Token / Secret"
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
                 Tip: puedes guardar keys, tokens o secrets aquí. URL y username no aplican.
               </p>
@@ -511,9 +541,14 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   };
 
   const openEdit = (entry: DealAccessEntry) => {
+    const inferredKind = inferKindFromEntry(entry);
     setEditingId(entry.id);
     setValues({
       label: entry.label ?? "",
+      kind: (inferredKind as DealAccessFormValues["kind"]) ?? "login",
+      secret_label:
+        entry.secret_label ??
+        (inferredKind === "api_key" ? "API key" : "Password"),
       url: entry.url ?? "",
       username: entry.username ?? "",
       password: "",
@@ -537,6 +572,8 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     const passwordProvided = values.password.trim().length > 0;
     const payload = {
       label: values.label.trim(),
+      kind: values.kind,
+      secret_label: values.secret_label.trim() || null,
       url: values.url.trim() || null,
       username: values.username.trim() || null,
       notes: values.notes.trim() || null,

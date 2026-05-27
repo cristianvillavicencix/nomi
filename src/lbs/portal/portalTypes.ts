@@ -35,6 +35,8 @@ export type PortalDelivery = {
 export type PortalCredential = {
   id: number;
   label: string;
+  kind?: string | null;
+  secret_label?: string | null;
   url?: string | null;
   username?: string | null;
   managed_by?: string | null;

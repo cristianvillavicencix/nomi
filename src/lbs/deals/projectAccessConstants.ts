@@ -18,6 +18,8 @@ export type ProjectAccessPreset = (typeof PROJECT_ACCESS_PRESETS)[number];
 
 export type DealAccessFormValues = {
   label: string;
+  kind: "login" | "api_key" | "link" | "note";
+  secret_label: string;
   url: string;
   username: string;
   password: string;
@@ -26,6 +28,8 @@ export type DealAccessFormValues = {
 
 export const emptyDealAccessFormValues = (): DealAccessFormValues => ({
   label: "",
+  kind: "login",
+  secret_label: "Password",
   url: "",
   username: "",
   password: "",

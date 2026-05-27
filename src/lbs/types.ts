@@ -137,6 +137,8 @@ export type DealAccessEntry = {
   org_id?: number;
   deal_id: Identifier;
   label: string;
+  kind?: "login" | "api_key" | "link" | "note" | string | null;
+  secret_label?: string | null;
   url?: string | null;
   username?: string | null;
   password?: string | null;
