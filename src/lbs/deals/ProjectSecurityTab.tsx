@@ -41,17 +41,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import {
   emptyDealAccessFormValues,
   normalizeAccessUrl,
-  PROJECT_ACCESS_PRESETS,
   type DealAccessFormValues,
 } from "@/lbs/deals/projectAccessConstants";
 import {
@@ -333,13 +324,6 @@ const AccessEntryDialog = ({
   isSaving: boolean;
   isEditing: boolean;
 }) => {
-  const presetMatch = PROJECT_ACCESS_PRESETS.includes(
-    values.label as (typeof PROJECT_ACCESS_PRESETS)[number],
-  )
-    ? values.label
-    : "Other";
-  const apiKeyMode = values.kind === "api_key";
-
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="sm:max-w-lg">
@@ -348,54 +332,39 @@ const AccessEntryDialog = ({
         </DialogHeader>
         <div className="space-y-4 py-1">
           <div className="space-y-2">
-            <Label>Type</Label>
-            <Select
-              value={presetMatch}
-              onValueChange={(next) => {
-                const inferredKind =
-                  next === "API key"
-                    ? "api_key"
-                    : next === "Other"
-                      ? values.kind
-                      : "login";
-                onChange({
-                  ...values,
-                  label: next === "Other" ? values.label : next,
-                  kind: inferredKind,
-                  secret_label:
-                    inferredKind === "api_key"
-                      ? values.secret_label || "API key"
-                      : values.secret_label || "Password",
-                });
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROJECT_ACCESS_PRESETS.map((preset) => (
-                  <SelectItem key={preset} value={preset}>
-                    {preset}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {presetMatch === "Other" ||
-            !PROJECT_ACCESS_PRESETS.includes(values.label as never) ? (
-              <Input
-                value={values.label}
-                onChange={(event) =>
-                  onChange({ ...values, label: event.target.value })
-                }
-                placeholder="Custom label, e.g. Shopify admin"
-              />
-            ) : null}
+            <Label htmlFor="access-label">Label</Label>
+            <Input
+              id="access-label"
+              value={values.label}
+              onChange={(event) =>
+                onChange({ ...values, label: event.target.value })
+              }
+              placeholder="Custom label, e.g. Shopify admin"
+            />
           </div>
-          {apiKeyMode ? (
+          <div className="space-y-2">
+            <Label htmlFor="access-url">Login URL</Label>
+            <Input
+              id="access-url"
+              value={values.url}
+              onChange={(event) => onChange({ ...values, url: event.target.value })}
+              placeholder="https://example.com/wp-admin"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="access-password">
-                {values.secret_label?.trim() || "API key"}
-              </Label>
+              <Label htmlFor="access-username">Username</Label>
+              <Input
+                id="access-username"
+                value={values.username}
+                onChange={(event) =>
+                  onChange({ ...values, username: event.target.value })
+                }
+                placeholder="admin@client.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="access-password">Password</Label>
               <Input
                 id="access-password"
                 type="password"
@@ -404,79 +373,11 @@ const AccessEntryDialog = ({
                 onChange={(event) =>
                   onChange({ ...values, password: event.target.value })
                 }
-                placeholder={isEditing ? "Leave blank to keep unchanged" : "Paste API key"}
+                placeholder={
+                  isEditing ? "Leave blank to keep unchanged" : "••••••••"
+                }
               />
-              <div className="space-y-1">
-                <Label htmlFor="access-secret-label" className="text-xs text-muted-foreground">
-                  Secret label (optional)
-                </Label>
-                <Input
-                  id="access-secret-label"
-                  value={values.secret_label}
-                  onChange={(event) =>
-                    onChange({ ...values, secret_label: event.target.value })
-                  }
-                  placeholder="API key / Token / Secret"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Tip: puedes guardar keys, tokens o secrets aquí. URL y username no aplican.
-              </p>
             </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="access-url">Login URL</Label>
-                <Input
-                  id="access-url"
-                  value={values.url}
-                  onChange={(event) =>
-                    onChange({ ...values, url: event.target.value })
-                  }
-                  placeholder="https://example.com/wp-admin"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="access-username">Username</Label>
-                  <Input
-                    id="access-username"
-                    value={values.username}
-                    onChange={(event) =>
-                      onChange({ ...values, username: event.target.value })
-                    }
-                    placeholder="admin@client.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="access-password">Password</Label>
-                  <Input
-                    id="access-password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={values.password}
-                    onChange={(event) =>
-                      onChange({ ...values, password: event.target.value })
-                    }
-                    placeholder={
-                      isEditing ? "Leave blank to keep unchanged" : "••••••••"
-                    }
-                  />
-                </div>
-              </div>
-            </>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="access-notes">Notes (optional)</Label>
-            <Textarea
-              id="access-notes"
-              value={values.notes}
-              onChange={(event) =>
-                onChange({ ...values, notes: event.target.value })
-              }
-              rows={3}
-              placeholder="2FA codes, recovery email, server IP, etc."
-            />
           </div>
         </div>
         <DialogFooter>
@@ -765,18 +666,12 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   };
 
   const openEdit = (entry: DealAccessEntry) => {
-    const inferredKind = inferKindFromEntry(entry);
     setEditingId(entry.id);
     setValues({
       label: entry.label ?? "",
-      kind: (inferredKind as DealAccessFormValues["kind"]) ?? "login",
-      secret_label:
-        entry.secret_label ??
-        (inferredKind === "api_key" ? "API key" : "Password"),
       url: entry.url ?? "",
       username: entry.username ?? "",
       password: "",
-      notes: entry.notes ?? "",
     });
     setDialogOpen(true);
   };
@@ -811,11 +706,11 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     const passwordProvided = values.password.trim().length > 0;
     const payload = {
       label: values.label.trim(),
-      kind: values.kind,
-      secret_label: values.secret_label.trim() || null,
       url: values.url.trim() || null,
       username: values.username.trim() || null,
-      notes: values.notes.trim() || null,
+      kind: "login",
+      secret_label: null,
+      notes: null,
       updated_at: new Date().toISOString(),
     };
 
