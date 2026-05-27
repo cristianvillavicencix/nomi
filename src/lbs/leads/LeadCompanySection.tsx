@@ -84,7 +84,6 @@ export const LeadCompanySection = () => {
         source="company_draft_address"
         label="Dirección"
         mode="address"
-        multiline
         helperText={false}
         onPlaceDetails={(details) =>
           applyGoogleAddressToLeadForm(setValue, details)

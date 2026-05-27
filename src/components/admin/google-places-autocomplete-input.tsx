@@ -128,8 +128,6 @@ export const GooglePlacesAutocompleteInput = ({
       ? "Busca el negocio en Google…"
       : "Busca la dirección en Google…";
 
-  const InputComponent = multiline ? Textarea : Input;
-
   const panelContent = (
     <>
       {suggestionHeader}
@@ -180,26 +178,49 @@ export const GooglePlacesAutocompleteInput = ({
         <Popover open={showPanel} onOpenChange={setOpen} modal>
           <PopoverAnchor asChild>
             <div className="relative w-full">
-              <InputComponent
-                {...field}
-                value={field.value ?? ""}
-                disabled={disabled || isFetchingDetails}
-                readOnly={readOnly}
-                placeholder={placeholder ?? defaultPlaceholder}
-                className={cn(multiline && "min-h-[72px]")}
-                onFocus={() => {
-                  if (query.length >= 3) setOpen(true);
-                }}
-                onChange={(event) => {
-                  field.onChange(event.target.value);
-                  onManualChange?.();
-                  if (event.target.value.trim().length >= 3) {
-                    setOpen(true);
-                  } else {
-                    setOpen(false);
-                  }
-                }}
-              />
+              {multiline ? (
+                <Textarea
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={disabled || isFetchingDetails}
+                  readOnly={readOnly}
+                  rows={2}
+                  placeholder={placeholder ?? defaultPlaceholder}
+                  className="min-h-9 max-h-24 resize-y py-2 leading-snug"
+                  onFocus={() => {
+                    if (query.length >= 3) setOpen(true);
+                  }}
+                  onChange={(event) => {
+                    field.onChange(event.target.value);
+                    onManualChange?.();
+                    if (event.target.value.trim().length >= 3) {
+                      setOpen(true);
+                    } else {
+                      setOpen(false);
+                    }
+                  }}
+                />
+              ) : (
+                <Input
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={disabled || isFetchingDetails}
+                  readOnly={readOnly}
+                  placeholder={placeholder ?? defaultPlaceholder}
+                  onFocus={() => {
+                    if (query.length >= 3) setOpen(true);
+                  }}
+                  onChange={(event) => {
+                    field.onChange(event.target.value);
+                    onManualChange?.();
+                    if (event.target.value.trim().length >= 3) {
+                      setOpen(true);
+                    } else {
+                      setOpen(false);
+                    }
+                  }}
+                />
+              )}
               {isFetchingDetails ? (
                 <Loader2 className="pointer-events-none absolute top-2.5 right-2 size-4 animate-spin text-muted-foreground" />
               ) : null}

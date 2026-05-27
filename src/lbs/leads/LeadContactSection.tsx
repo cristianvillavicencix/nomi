@@ -102,7 +102,6 @@ export const LeadContactSection = () => {
             : "Dirección del contacto"
         }
         mode="address"
-        multiline
         helperText={
           leadType === "individual"
             ? "Obligatoria para facturación futura."
