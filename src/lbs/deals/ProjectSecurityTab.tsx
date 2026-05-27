@@ -71,9 +71,7 @@ const inferKindFromEntry = (entry: DealAccessEntry) => {
 
 const emptySecretFormValues = () => ({
   label: "",
-  secret_label: "API key",
   value: "",
-  notes: "",
 });
 
 const copyToClipboard = async (
@@ -511,8 +509,8 @@ const SecretDialog = ({
 }: {
   open: boolean;
   title: string;
-  values: { label: string; secret_label: string; value: string; notes: string };
-  onChange: (values: { label: string; secret_label: string; value: string; notes: string }) => void;
+  values: { label: string; value: string };
+  onChange: (values: { label: string; value: string }) => void;
   onClose: () => void;
   onSave: () => void;
   isSaving: boolean;
@@ -534,16 +532,7 @@ const SecretDialog = ({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="secret-kind">Secret label (optional)</Label>
-          <Input
-            id="secret-kind"
-            value={values.secret_label}
-            onChange={(event) => onChange({ ...values, secret_label: event.target.value })}
-            placeholder="API key / Token / Secret"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="secret-value">{values.secret_label?.trim() || "Secret"}</Label>
+          <Label htmlFor="secret-value">API key</Label>
           <Input
             id="secret-value"
             type="password"
@@ -551,16 +540,6 @@ const SecretDialog = ({
             value={values.value}
             onChange={(event) => onChange({ ...values, value: event.target.value })}
             placeholder={isEditing ? "Leave blank to keep unchanged" : "Paste value"}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="secret-notes">Notes (optional)</Label>
-          <Textarea
-            id="secret-notes"
-            value={values.notes}
-            onChange={(event) => onChange({ ...values, notes: event.target.value })}
-            rows={3}
-            placeholder="Where it’s used, scopes, rotation schedule, etc."
           />
         </div>
       </div>
@@ -645,11 +624,6 @@ const SecretRow = ({
   return (
     <TableRow>
       <TableCell className="font-medium whitespace-nowrap">{secret.label}</TableCell>
-      <TableCell className="max-w-[220px]">
-        <span className="text-sm text-muted-foreground">
-          {(secret.secret_label || "Secret").trim()}
-        </span>
-      </TableCell>
       <TableCell className="max-w-[240px]">
         {hasSecret ? (
           <div className="flex items-center gap-1">
@@ -811,9 +785,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     setEditingSecretId(secret.id);
     setSecretValues({
       label: secret.label ?? "",
-      secret_label: secret.secret_label ?? "API key",
       value: "",
-      notes: secret.notes ?? "",
     });
     setSecretDialogOpen(true);
   };
@@ -915,8 +887,6 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     const valueProvided = secretValues.value.trim().length > 0;
     const payload = {
       label: secretValues.label.trim(),
-      secret_label: secretValues.secret_label.trim() || null,
-      notes: secretValues.notes.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -1105,7 +1075,6 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
             <TableHeader>
               <TableRow>
                 <TableHead>Label</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Value</TableHead>
                 <TableHead className="w-[88px] text-right">Actions</TableHead>
               </TableRow>
