@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { TextInput } from "@/components/admin/text-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +11,7 @@ import {
   LEAD_EMAIL_TYPES,
   LEAD_PHONE_TYPES,
 } from "./leadFormConstants";
+import { applyGoogleAddressToContactLeadForm } from "./applyGoogleBusinessToLeadForm";
 import type { NewLeadFormValues } from "./newLeadFormTypes";
 
 export const LeadContactSection = () => {
@@ -20,6 +22,9 @@ export const LeadContactSection = () => {
   });
   const companyDraftPhone = useWatch<NewLeadFormValues, "company_draft_phone">({
     name: "company_draft_phone",
+  });
+  const companyDraftAddress = useWatch<NewLeadFormValues, "company_draft_address">({
+    name: "company_draft_address",
   });
 
   const canCopyFromCompany =
@@ -34,7 +39,16 @@ export const LeadContactSection = () => {
       [{ number: companyDraftPhone.trim(), type: "Work" }],
       { shouldDirty: true },
     );
-  }, [useCompanyInfo, canCopyFromCompany, companyDraftPhone, setValue]);
+    if (companyDraftAddress?.trim()) {
+      setValue("address", companyDraftAddress.trim(), { shouldDirty: true });
+    }
+  }, [
+    useCompanyInfo,
+    canCopyFromCompany,
+    companyDraftPhone,
+    companyDraftAddress,
+    setValue,
+  ]);
 
   return (
     <div className="space-y-3">
@@ -53,8 +67,7 @@ export const LeadContactSection = () => {
             htmlFor="use-company-contact-info"
             className="cursor-pointer text-sm font-normal leading-snug"
           >
-            Usar la información de contacto de la empresa (copia el teléfono de
-            la empresa al contacto)
+            Usar teléfono y dirección de la empresa en el contacto
           </Label>
         </div>
       ) : null}
@@ -62,10 +75,10 @@ export const LeadContactSection = () => {
       <div className="grid gap-3 sm:grid-cols-2">
         <TextInput
           source="first_name"
-          label="First name"
+          label="Nombre"
           helperText={false}
         />
-        <TextInput source="last_name" label="Last name" helperText={false} />
+        <TextInput source="last_name" label="Apellido" helperText={false} />
       </div>
 
       <LeadChannelsInput
@@ -77,18 +90,37 @@ export const LeadContactSection = () => {
       <LeadChannelsInput
         source="phone_jsonb"
         kind="phone"
-        label="Phone"
+        label="Teléfono"
         typeChoices={[...LEAD_PHONE_TYPES]}
+      />
+
+      <GooglePlacesAutocompleteInput
+        source="address"
+        label={
+          leadType === "individual"
+            ? "Dirección (facturación / contacto)"
+            : "Dirección del contacto"
+        }
+        mode="address"
+        multiline
+        helperText={
+          leadType === "individual"
+            ? "Obligatoria para facturación futura."
+            : false
+        }
+        onPlaceDetails={(details) =>
+          applyGoogleAddressToContactLeadForm(setValue, details)
+        }
       />
 
       {leadType === "business" ? (
         <SelectInput
           source="title"
-          label="Role / Cargo"
+          label="Cargo"
           choices={[...LBS_CONTACT_ROLE_CHOICES]}
           optionText="name"
           helperText={false}
-          emptyText="Select role"
+          emptyText="Selecciona cargo"
         />
       ) : null}
     </div>

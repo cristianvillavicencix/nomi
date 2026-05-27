@@ -76,6 +76,7 @@ export const buildContactCreatePayload = (
   return {
     first_name: values.first_name.trim(),
     last_name: values.last_name.trim(),
+    address: values.address?.trim() || "",
     title: values.lead_type === "business" ? values.title?.trim() || "" : "",
     company_id: values.lead_type === "business" ? (companyId ?? null) : null,
     email_jsonb: cleanEmailJsonb(values.email_jsonb),

@@ -19,6 +19,8 @@ export type NewLeadFormValues = {
   use_company_contact_info: boolean;
   first_name: string;
   last_name: string;
+  /** Contact / billing address (persona individual, or primary contact). */
+  address: string;
   title: string;
   email_jsonb: { email: string; type: string }[];
   phone_jsonb: { number: string; type: string }[];
@@ -45,6 +47,7 @@ export const defaultNewLeadFormValues = (
   use_company_contact_info: false,
   first_name: "",
   last_name: "",
+  address: "",
   title: "",
   email_jsonb: [{ email: "", type: "Work" }],
   phone_jsonb: [{ number: "", type: "Work" }],

@@ -38,3 +38,12 @@ export const applyGoogleAddressToLeadForm = (
     setValue("company_draft_website", details.website, { shouldDirty: true });
   }
 };
+
+export const applyGoogleAddressToContactLeadForm = (
+  setValue: UseFormSetValue<NewLeadFormValues>,
+  details: GooglePlaceDetails,
+) => {
+  if (details.formattedAddress) {
+    setValue("address", details.formattedAddress, { shouldDirty: true });
+  }
+};

@@ -46,12 +46,18 @@ export const validateNewLeadForm = (
 
   if (showContact) {
     if (!values.first_name?.trim()) {
-      return { ok: false, message: "First name is required." };
+      return { ok: false, message: "El nombre es obligatorio." };
     }
     if (!hasContactChannel(values)) {
       return {
         ok: false,
-        message: "Add at least one email or phone number for the contact.",
+        message: "Agrega al menos un email o teléfono.",
+      };
+    }
+    if (values.lead_type === "individual" && !values.address?.trim()) {
+      return {
+        ok: false,
+        message: "La dirección es obligatoria (facturación y contacto).",
       };
     }
   }

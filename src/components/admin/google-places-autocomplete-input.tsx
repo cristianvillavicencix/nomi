@@ -9,6 +9,11 @@ import {
 } from "@/components/admin/form";
 import { InputHelperText } from "@/components/admin/input-helper-text";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
@@ -22,13 +27,11 @@ import {
 export type GooglePlacesAutocompleteInputProps = Omit<InputProps, "source"> &
   Pick<InputProps, "source"> & {
     mode: GooglePlacesAutocompleteMode;
-    /** Called after the user picks a suggestion and place details are loaded. */
     onPlaceDetails?: (details: GooglePlaceDetails) => void;
     onManualChange?: () => void;
     placeholder?: string;
     multiline?: boolean;
     className?: string;
-    /** Extra blocks shown at the top of the suggestion panel (e.g. CRM history). */
     suggestionHeader?: ReactNode;
     disabled?: boolean;
     readOnly?: boolean;
@@ -65,25 +68,31 @@ export const GooglePlacesAutocompleteInput = ({
   >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   const query = String(field.value ?? "").trim();
   const placesEnabled = isGooglePlacesEnabled();
+  const showPanel = open && placesEnabled && query.length >= 3;
 
   useEffect(() => {
-    if (!placesEnabled || !open || query.length < 3) {
+    if (!placesEnabled || query.length < 3) {
       setSuggestions([]);
       setIsLoading(false);
+      setFetchError(false);
       return;
     }
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setIsLoading(true);
+      setFetchError(false);
       try {
         const next = await fetchPlacesAutocomplete(query, mode, controller.signal);
         setSuggestions(next);
+        setFetchError(next.length === 0);
       } catch {
         setSuggestions([]);
+        setFetchError(true);
       } finally {
         setIsLoading(false);
       }
@@ -93,7 +102,7 @@ export const GooglePlacesAutocompleteInput = ({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [open, query, mode, placesEnabled]);
+  }, [query, mode, placesEnabled]);
 
   const handlePick = async (item: { placeId: string; text: string }) => {
     const displayValue =
@@ -121,6 +130,40 @@ export const GooglePlacesAutocompleteInput = ({
 
   const InputComponent = multiline ? Textarea : Input;
 
+  const panelContent = (
+    <>
+      {suggestionHeader}
+      {suggestionHeader ? <div className="my-2 border-t" /> : null}
+      <div className="mb-1 flex items-center gap-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <MapPin className="size-3" />
+        Sugerencias de Google
+      </div>
+      {isLoading ? (
+        <div className="px-2 py-1.5 text-xs text-muted-foreground">Buscando…</div>
+      ) : suggestions.length > 0 ? (
+        suggestions.map((item) => (
+          <button
+            key={item.placeId}
+            type="button"
+            className="mb-0.5 block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted/60"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              void handlePick(item);
+            }}
+          >
+            {item.text}
+          </button>
+        ))
+      ) : (
+        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+          {fetchError
+            ? "No hay resultados o la API no respondió. Revisa VITE_GOOGLE_PLACES_API_KEY."
+            : "Escribe al menos 3 caracteres."}
+        </div>
+      )}
+    </>
+  );
+
   return (
     <FormField id={id} name={field.name} className={className}>
       {label !== false ? (
@@ -134,70 +177,52 @@ export const GooglePlacesAutocompleteInput = ({
         </FormLabel>
       ) : null}
       <FormControl>
-        <div className="relative">
-          <InputComponent
-            {...field}
-            value={field.value ?? ""}
-            disabled={disabled || isFetchingDetails}
-            readOnly={readOnly}
-            placeholder={placeholder ?? defaultPlaceholder}
-            className={cn(multiline && "min-h-[72px]")}
-            onFocus={() => setOpen(true)}
-            onClick={() => setOpen(true)}
-            onBlur={() => {
-              setTimeout(() => setOpen(false), 150);
-            }}
-            onChange={(event) => {
-              field.onChange(event.target.value);
-              onManualChange?.();
-            }}
-          />
-          {isFetchingDetails ? (
-            <Loader2 className="absolute top-2.5 right-2 size-4 animate-spin text-muted-foreground" />
-          ) : null}
-          {open && placesEnabled ? (
-            <div className="absolute top-[calc(100%+6px)] z-50 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-2 shadow-md">
-              {suggestionHeader}
-              {suggestionHeader ? <div className="my-2 border-t" /> : null}
-              <div className="mb-1 flex items-center gap-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <MapPin className="size-3" />
-                Google
-              </div>
-              {isLoading ? (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  Buscando…
-                </div>
-              ) : suggestions.length > 0 ? (
-                suggestions.map((item) => (
-                  <button
-                    key={item.placeId}
-                    type="button"
-                    className="mb-0.5 block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted/60"
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      void handlePick(item);
-                    }}
-                  >
-                    {item.text}
-                  </button>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  Escribe al menos 3 caracteres.
-                </div>
-              )}
+        <Popover open={showPanel} onOpenChange={setOpen} modal>
+          <PopoverAnchor asChild>
+            <div className="relative w-full">
+              <InputComponent
+                {...field}
+                value={field.value ?? ""}
+                disabled={disabled || isFetchingDetails}
+                readOnly={readOnly}
+                placeholder={placeholder ?? defaultPlaceholder}
+                className={cn(multiline && "min-h-[72px]")}
+                onFocus={() => {
+                  if (query.length >= 3) setOpen(true);
+                }}
+                onChange={(event) => {
+                  field.onChange(event.target.value);
+                  onManualChange?.();
+                  if (event.target.value.trim().length >= 3) {
+                    setOpen(true);
+                  } else {
+                    setOpen(false);
+                  }
+                }}
+              />
+              {isFetchingDetails ? (
+                <Loader2 className="pointer-events-none absolute top-2.5 right-2 size-4 animate-spin text-muted-foreground" />
+              ) : null}
             </div>
-          ) : null}
-        </div>
+          </PopoverAnchor>
+          <PopoverContent
+            className="max-h-72 w-[var(--radix-popover-trigger-width)] overflow-y-auto p-2"
+            align="start"
+            sideOffset={6}
+            onOpenAutoFocus={(event) => event.preventDefault()}
+          >
+            {panelContent}
+          </PopoverContent>
+        </Popover>
       </FormControl>
       <InputHelperText
         helperText={
           helperText ??
           (placesEnabled
             ? mode === "business"
-              ? "Elige un resultado de Google para autocompletar web, teléfono y dirección."
-              : "Elige una dirección sugerida o escribe manualmente."
-            : "Configura VITE_GOOGLE_PLACES_API_KEY para sugerencias de Google.")
+              ? "Elige un resultado para autocompletar web, teléfono y dirección."
+              : "Elige una dirección o escribe manualmente."
+            : "Añade VITE_GOOGLE_PLACES_API_KEY en .env y reinicia Vite.")
         }
       />
       <FormError />

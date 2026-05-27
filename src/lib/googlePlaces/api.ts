@@ -6,12 +6,13 @@ import type {
   GooglePlaceSuggestion,
 } from "./types";
 
+/** Broader matching — strict types often return zero suggestions. */
 const AUTOCOMPLETE_PRIMARY_TYPES: Record<
   GooglePlacesAutocompleteMode,
   string[] | undefined
 > = {
-  business: ["establishment"],
-  address: ["street_address", "premise", "route", "locality"],
+  business: undefined,
+  address: undefined,
 };
 
 export const fetchPlacesAutocomplete = async (
@@ -49,6 +50,14 @@ export const fetchPlacesAutocomplete = async (
   );
 
   if (!response.ok) {
+    if (import.meta.env.DEV) {
+      const detail = await response.text().catch(() => "");
+      console.warn(
+        "[Google Places] autocomplete failed:",
+        response.status,
+        detail,
+      );
+    }
     return [];
   }
 
@@ -90,6 +99,10 @@ export const fetchGooglePlaceDetails = async (
   );
 
   if (!response.ok) {
+    if (import.meta.env.DEV) {
+      const detail = await response.text().catch(() => "");
+      console.warn("[Google Places] details failed:", response.status, detail);
+    }
     return null;
   }
 
