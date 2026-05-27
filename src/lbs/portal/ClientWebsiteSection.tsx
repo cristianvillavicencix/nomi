@@ -83,6 +83,8 @@ export const ClientWebsiteSection = ({
   resources = [],
   domains = [],
   corporateEmails = [],
+  activeView,
+  onViewChange,
 }: {
   project: PortalProject;
   delivery: PortalDelivery;
@@ -94,6 +96,8 @@ export const ClientWebsiteSection = ({
   resources?: PortalResource[];
   domains?: PortalDomain[];
   corporateEmails?: PortalCorporateEmail[];
+  activeView: PortalView;
+  onViewChange: (view: PortalView) => void;
 }) => {
   const [copied, setCopied] = useState(false);
   const siteUrl = delivery.site_url || project.production_url || "";
@@ -109,7 +113,7 @@ export const ClientWebsiteSection = ({
   const pages =
     delivery.included_pages?.length ? delivery.included_pages : DEFAULT_INCLUDED_PAGES;
   const enabled = new Set(delivery.enabled_sections ?? ["general"]);
-  const [activeTab, setActiveTab] = useState<PortalView>("general");
+  const activeTab = activeView;
 
   const handleCopy = async () => {
     if (!siteUrl) return;
@@ -194,12 +198,17 @@ export const ClientWebsiteSection = ({
         <div className="flex flex-wrap gap-6">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
+            const isDisabled = tab.id !== "general" && !enabled.has(tab.id);
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className="relative flex items-center gap-2 py-3 text-sm"
+                disabled={isDisabled}
+                onClick={() => onViewChange(tab.id)}
+                className={
+                  "relative flex items-center gap-2 py-3 text-sm " +
+                  (isDisabled ? "opacity-50 cursor-not-allowed" : "")
+                }
               >
                 <span className={isActive ? "text-[#1E5FA8]" : "text-muted-foreground"}>
                   {tab.icon}

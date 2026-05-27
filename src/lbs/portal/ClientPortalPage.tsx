@@ -103,8 +103,7 @@ export const ClientPortalPage = () => {
 
   const setView = (view: PortalView) => {
     const next = new URLSearchParams(searchParams);
-    if (view === "dashboard") next.delete("view");
-    else next.set("view", view);
+    next.set("view", view);
     setSearchParams(next, { replace: true });
   };
 
@@ -137,6 +136,8 @@ export const ClientPortalPage = () => {
         resources={payload.resources ?? []}
         domains={payload.domains ?? []}
         corporateEmails={payload.corporate_emails ?? []}
+        activeView={activeView}
+        onViewChange={setView}
       />
     );
   };
