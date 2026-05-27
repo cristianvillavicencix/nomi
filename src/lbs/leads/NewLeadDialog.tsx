@@ -1,20 +1,16 @@
 import {
   CreateBase,
   Form,
-  email,
   required,
   useGetIdentity,
   useNotify,
   useRefresh,
 } from "ra-core";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { SaveButton } from "@/components/admin/form";
-import { ArrayInput } from "@/components/admin/array-input";
-import { EmailInput } from "@/components/admin/email-input";
-import { PhoneInput } from "@/components/admin/phone-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { SelectInput } from "@/components/admin/select-input";
-import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,25 +21,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AutocompleteCompanyInput } from "@/components/atomic-crm/companies/AutocompleteCompanyInput";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 
 import { InterestedServiceInput } from "./InterestedServiceInput";
+import { LeadChannelsInput } from "./LeadChannelsInput";
+import { LeadCompanyField } from "./LeadCompanyField";
 import {
   LBS_LEAD_SOURCE_CHOICES,
   LBS_LEAD_SOURCE_OTHER,
   LBS_LEAD_SOURCE_REFERRAL,
 } from "./leadFormConstants";
 import { LeadReferrerInputs } from "./LeadReferrerInputs";
-
-const PERSONAL_INFO_TYPES = [
-  { id: "Work", name: "Work" },
-  { id: "Home", name: "Home" },
-  { id: "Other", name: "Other" },
-];
 
 type NewLeadDialogProps = {
   open: boolean;
@@ -62,12 +57,13 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
   const refresh = useRefresh();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const handleClose = () => onOpenChange(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <CreateBase
           resource="contacts"
           redirect={false}
@@ -117,14 +113,12 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
             <DialogHeader>
               <DialogTitle>New lead</DialogTitle>
               <DialogDescription>
-                Quick capture for a potential client. Required: name, lead
-                source, and assignee.
+                Name, company, contact info, and how they found you.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex flex-col gap-5 py-2">
-              {/* Basics: name + company (with inline create) */}
-              <div className="grid gap-3 md:grid-cols-2">
+            <div className="flex flex-col gap-4 py-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <TextInput
                   source="first_name"
                   label="First name"
@@ -138,74 +132,20 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
                   helperText={false}
                 />
               </div>
-              <ReferenceInput
-                source="company_id"
-                reference="companies"
-                perPage={20}
-                sort={{ field: "name", order: "ASC" }}
-              >
-                <AutocompleteCompanyInput />
-              </ReferenceInput>
 
-              <Separator />
+              <LeadCompanyField />
 
-              {/* Multi-email and multi-phone with + button */}
-              <ArrayInput source="email_jsonb" label="Email(s)" helperText={false}>
-                <SimpleFormIterator
-                  inline
-                  disableReordering
-                  disableClear
-                  className="[&>ul>li]:border-b-0 [&>ul>li]:pb-0"
-                >
-                  <EmailInput
-                    source="email"
-                    label={false}
-                    placeholder="Email"
-                    className="w-full"
-                    helperText={false}
-                    validate={email()}
-                  />
-                  <SelectInput
-                    source="type"
-                    label={false}
-                    optionText="id"
-                    choices={PERSONAL_INFO_TYPES}
-                    defaultValue="Work"
-                    helperText={false}
-                    className="w-24 min-w-24"
-                  />
-                </SimpleFormIterator>
-              </ArrayInput>
+              <LeadChannelsInput
+                source="email_jsonb"
+                kind="email"
+                label="Email"
+              />
+              <LeadChannelsInput
+                source="phone_jsonb"
+                kind="phone"
+                label="Phone"
+              />
 
-              <ArrayInput source="phone_jsonb" label="Phone(s)" helperText={false}>
-                <SimpleFormIterator
-                  inline
-                  disableReordering
-                  disableClear
-                  className="[&>ul>li]:border-b-0 [&>ul>li]:pb-0"
-                >
-                  <PhoneInput
-                    source="number"
-                    label={false}
-                    placeholder="(xxx) xxx-xxxx"
-                    className="w-full"
-                    helperText={false}
-                  />
-                  <SelectInput
-                    source="type"
-                    label={false}
-                    optionText="id"
-                    choices={PERSONAL_INFO_TYPES}
-                    defaultValue="Work"
-                    helperText={false}
-                    className="w-24 min-w-24"
-                  />
-                </SimpleFormIterator>
-              </ArrayInput>
-
-              <Separator />
-
-              {/* Management: source / service / assigned */}
               <SelectInput
                 source="lead_source"
                 label="Lead source"
@@ -217,41 +157,61 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
                 helperText={false}
               />
               <LeadReferrerInputs />
+
               <InterestedServiceInput />
 
-              <ReferenceInput
-                reference="organization_members"
-                source="organization_member_id"
-                sort={{ field: "last_name", order: "ASC" }}
-                filter={{ "disabled@neq": true }}
-              >
-                <SelectInput
-                  label="Assigned to"
-                  optionText={(choice: OrganizationMember) =>
-                    `${choice.first_name ?? ""} ${choice.last_name ?? ""}`.trim()
-                  }
-                  validate={required()}
-                  helperText={false}
-                />
-              </ReferenceInput>
-
-              <SelectInput
-                source="status"
-                label="Status"
-                choices={noteStatuses.map((status) => ({
-                  id: status.value,
-                  name: status.label,
-                }))}
-                validate={required()}
-                helperText={false}
-              />
-
-              <TextInput
-                source="background"
-                label="Background / notes"
-                multiline
-                helperText={false}
-              />
+              <div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-2 h-8 gap-1 px-2 text-muted-foreground"
+                  onClick={() => setMoreOpen((open) => !open)}
+                >
+                  <ChevronDown
+                    className={cn(
+                      "size-4 transition-transform",
+                      moreOpen && "rotate-180",
+                    )}
+                  />
+                  More options
+                </Button>
+                {moreOpen ? (
+                  <div className="mt-2 space-y-4 rounded-lg border bg-muted/20 p-3">
+                    <ReferenceInput
+                      reference="organization_members"
+                      source="organization_member_id"
+                      sort={{ field: "last_name", order: "ASC" }}
+                      filter={{ "disabled@neq": true }}
+                    >
+                      <SelectInput
+                        label="Assigned to"
+                        optionText={(choice: OrganizationMember) =>
+                          `${choice.first_name ?? ""} ${choice.last_name ?? ""}`.trim()
+                        }
+                        validate={required()}
+                        helperText={false}
+                      />
+                    </ReferenceInput>
+                    <SelectInput
+                      source="status"
+                      label="Status"
+                      choices={noteStatuses.map((status) => ({
+                        id: status.value,
+                        name: status.label,
+                      }))}
+                      validate={required()}
+                      helperText={false}
+                    />
+                    <TextInput
+                      source="background"
+                      label="Notes"
+                      multiline
+                      helperText={false}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <DialogFooter className={isMobile ? "flex-col gap-2" : ""}>

@@ -2,14 +2,12 @@ import { useMemo } from "react";
 import { useGetList } from "ra-core";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { interestedServiceChoices } from "@/lbs/constants/leadSource";
 import type { Contact } from "@/components/atomic-crm/types";
 
 /**
- * Service autocomplete for the lead form: choices are derived from the
- * distinct non-empty values of `interested_service` already saved on
- * contacts. The user can pick an existing service or type a new one — the
- * onCreate handler returns the typed value so the column ends up holding
- * the raw text (we don't have a separate services table on purpose).
+ * Service picker for leads: starts from LBS's standard service catalog and
+ * also surfaces values already used on other contacts.
  */
 export const InterestedServiceInput = () => {
   const isMobile = useIsMobile();
@@ -21,14 +19,19 @@ export const InterestedServiceInput = () => {
   });
 
   const choices = useMemo(() => {
-    const seen = new Set<string>();
+    const seen = new Map<string, string>();
+    interestedServiceChoices.forEach((entry) => {
+      seen.set(entry.value, entry.label);
+    });
     (contacts ?? []).forEach((contact) => {
       const value = contact.interested_service?.trim();
-      if (value) seen.add(value);
+      if (value && !seen.has(value)) {
+        seen.set(value, value);
+      }
     });
-    return Array.from(seen)
-      .sort((a, b) => a.localeCompare(b))
-      .map((value) => ({ id: value, name: value }));
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [contacts]);
 
   const handleCreate = (name?: string) => {
@@ -44,7 +47,7 @@ export const InterestedServiceInput = () => {
       optionText="name"
       choices={choices}
       onCreate={handleCreate}
-      createLabel="Start typing to add a new service"
+      createLabel="Pick a service or type a new one"
       createItemLabel='Use "%{item}"'
       helperText={false}
       modal={isMobile}
