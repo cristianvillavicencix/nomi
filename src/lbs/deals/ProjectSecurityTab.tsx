@@ -62,6 +62,11 @@ import {
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { DealAccessEntry, LbsDeal } from "@/lbs/types";
 
+const isApiKeyLabel = (label?: string | null) =>
+  String(label ?? "")
+    .toLowerCase()
+    .includes("api key");
+
 const copyToClipboard = async (
   value: string,
   notify: ReturnType<typeof useNotify>,
@@ -140,7 +145,10 @@ const AccessEntryRow = ({
   const copyAll = async () => {
     const lines = [`Label: ${entry.label}`];
     if (entry.url?.trim()) lines.push(`URL: ${entry.url.trim()}`);
-    if (entry.username?.trim()) lines.push(`Username: ${entry.username.trim()}`);
+    const apiKeyMode = isApiKeyLabel(entry.label);
+    if (!apiKeyMode && entry.username?.trim()) {
+      lines.push(`Username: ${entry.username.trim()}`);
+    }
     if (hasPassword) {
       let password = revealedPassword;
       if (password == null) {
@@ -152,7 +160,9 @@ const AccessEntryRow = ({
           return;
         }
       }
-      if (password?.trim()) lines.push(`Password: ${password.trim()}`);
+      if (password?.trim()) {
+        lines.push(apiKeyMode ? `API key: ${password.trim()}` : `Password: ${password.trim()}`);
+      }
     }
     if (entry.notes?.trim()) lines.push(`Notes: ${entry.notes.trim()}`);
     await navigator.clipboard.writeText(lines.join("\n"));
@@ -319,6 +329,7 @@ const AccessEntryDialog = ({
   )
     ? values.label
     : "Other";
+  const apiKeyMode = presetMatch === "API key";
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -360,31 +371,9 @@ const AccessEntryDialog = ({
               />
             ) : null}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="access-url">Login URL</Label>
-            <Input
-              id="access-url"
-              value={values.url}
-              onChange={(event) =>
-                onChange({ ...values, url: event.target.value })
-              }
-              placeholder="https://example.com/wp-admin"
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          {apiKeyMode ? (
             <div className="space-y-2">
-              <Label htmlFor="access-username">Username</Label>
-              <Input
-                id="access-username"
-                value={values.username}
-                onChange={(event) =>
-                  onChange({ ...values, username: event.target.value })
-                }
-                placeholder="admin@client.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="access-password">Password</Label>
+              <Label htmlFor="access-password">API key</Label>
               <Input
                 id="access-password"
                 type="password"
@@ -393,12 +382,55 @@ const AccessEntryDialog = ({
                 onChange={(event) =>
                   onChange({ ...values, password: event.target.value })
                 }
-                placeholder={
-                  isEditing ? "Leave blank to keep unchanged" : "••••••••"
-                }
+                placeholder={isEditing ? "Leave blank to keep unchanged" : "Paste API key"}
               />
+              <p className="text-xs text-muted-foreground">
+                Tip: puedes guardar keys, tokens o secrets aquí. URL y username no aplican.
+              </p>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="access-url">Login URL</Label>
+                <Input
+                  id="access-url"
+                  value={values.url}
+                  onChange={(event) =>
+                    onChange({ ...values, url: event.target.value })
+                  }
+                  placeholder="https://example.com/wp-admin"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="access-username">Username</Label>
+                  <Input
+                    id="access-username"
+                    value={values.username}
+                    onChange={(event) =>
+                      onChange({ ...values, username: event.target.value })
+                    }
+                    placeholder="admin@client.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="access-password">Password</Label>
+                  <Input
+                    id="access-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={values.password}
+                    onChange={(event) =>
+                      onChange({ ...values, password: event.target.value })
+                    }
+                    placeholder={
+                      isEditing ? "Leave blank to keep unchanged" : "••••••••"
+                    }
+                  />
+                </div>
+              </div>
+            </>
+          )}
           <div className="space-y-2">
             <Label htmlFor="access-notes">Notes (optional)</Label>
             <Textarea

@@ -3,6 +3,7 @@ export const PROJECT_ACCESS_PRESETS = [
   "Hosting / cPanel",
   "Domain registrar",
   "FTP / SFTP",
+  "API key",
   "Google Analytics",
   "Google Search Console",
   "Google Business Profile",
