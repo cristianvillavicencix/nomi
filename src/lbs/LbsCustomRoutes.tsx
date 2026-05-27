@@ -12,6 +12,7 @@ import { LbsContactShowPage } from "@/lbs/contacts/ContactShowPage";
 import { TicketCreate } from "@/lbs/tickets/TicketCreate";
 import { FormPublicEntry } from "@/lbs/forms-v2/public/FormPublicEntry";
 import { ShortUrlRedirect } from "@/lbs/forms-v2/public/ShortUrlRedirect";
+import { PortalShortUrlRedirect } from "@/lbs/portal/PortalShortUrlRedirect";
 import { FormsListPage } from "@/lbs/forms-v2/FormsListPage";
 import { FormBuilderPage } from "@/lbs/forms-v2/builder/FormBuilderPage";
 import { SubmissionsListPage } from "@/lbs/forms-v2/submissions/SubmissionsListPage";
@@ -51,6 +52,7 @@ type ProtectedRouteProps = {
 export const renderLbsPublicFormRoute = () => (
   <>
     <Route path="/f/:shortCode" element={<ShortUrlRedirect />} />
+    <Route path="/p/:shortCode" element={<PortalShortUrlRedirect />} />
     <Route path="/forms/:slug" element={<FormPublicEntry />} />
   </>
 );

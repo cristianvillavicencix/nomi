@@ -14,6 +14,12 @@ import type { LbsDeal } from "@/lbs/types";
 const randomToken = () =>
   crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
 
+const generateShortCode = (length = 8) => {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+};
+
 export const ClientPortalSection = ({ record }: { record: LbsDeal }) => {
   const notify = useNotify();
   const refresh = useRefresh();
@@ -35,6 +41,7 @@ export const ClientPortalSection = ({ record }: { record: LbsDeal }) => {
       return;
     }
     const token = randomToken();
+    const shortCode = generateShortCode();
     try {
       const account = await dataProvider.create("client_portal_accounts", {
         data: {
@@ -42,6 +49,7 @@ export const ClientPortalSection = ({ record }: { record: LbsDeal }) => {
           contact_id: contactId,
           email: nextEmail,
           invitation_token: token,
+          short_code: shortCode,
           invitation_sent_at: new Date().toISOString(),
           active: true,
         },

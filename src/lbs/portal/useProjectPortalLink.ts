@@ -7,6 +7,11 @@ export const getProjectPortalUrl = (token: string) => {
   return `${origin}/portal?token=${encodeURIComponent(token)}`;
 };
 
+export const getProjectPortalShortUrl = (shortCode: string) => {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/p/${encodeURIComponent(shortCode)}`;
+};
+
 export const useProjectPortalLink = (record: LbsDeal) => {
   const contactId = record.contact_id ?? record.contact_ids?.[0];
 
@@ -22,7 +27,13 @@ export const useProjectPortalLink = (record: LbsDeal) => {
 
   const portalLink = useMemo(() => {
     const account = accounts[0];
-    if (!account?.invitation_token) return null;
+    if (!account) return null;
+    const shortCode =
+      typeof (account as { short_code?: unknown }).short_code === "string"
+        ? ((account as { short_code?: string }).short_code ?? "").trim()
+        : "";
+    if (shortCode) return getProjectPortalShortUrl(shortCode);
+    if (!account.invitation_token) return null;
     return getProjectPortalUrl(account.invitation_token);
   }, [accounts]);
 

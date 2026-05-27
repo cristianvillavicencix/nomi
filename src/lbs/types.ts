@@ -379,6 +379,7 @@ export type ClientPortalAccount = {
   user_id?: string | null;
   email: string;
   invitation_token?: string | null;
+  short_code?: string | null;
   invitation_sent_at?: string | null;
   invitation_accepted_at?: string | null;
   last_login_at?: string | null;
