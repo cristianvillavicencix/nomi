@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ClientCredentialsSection } from "@/lbs/portal/ClientCredentialsSection";
 import { ClientCorporateEmailsSection } from "@/lbs/portal/ClientCorporateEmailsSection";
