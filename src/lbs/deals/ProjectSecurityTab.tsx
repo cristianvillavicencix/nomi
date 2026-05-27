@@ -1080,24 +1080,20 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 rounded-lg border border-amber-200/80 bg-amber-50/70 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
-        <div className="flex items-start gap-2 min-w-0">
-          <KeyRound className="mt-0.5 size-4 shrink-0" />
-          <p>
-            Only your team can see these credentials. Passwords are encrypted
-            and revealed on demand with an audit trail.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={openCreateSecret} className="shrink-0">
-            <Plus className="size-4" />
-            Add API key
-          </Button>
-          <Button type="button" onClick={openCreate} className="shrink-0">
-            <Plus className="size-4" />
-            Add login
-          </Button>
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={openCreateSecret}
+          className="shrink-0"
+        >
+          <Plus className="size-4" />
+          Add API key
+        </Button>
+        <Button type="button" onClick={openCreate} className="shrink-0">
+          <Plus className="size-4" />
+          Add login
+        </Button>
       </div>
 
       {secrets.length === 0 ? null : (
