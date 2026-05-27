@@ -46,6 +46,7 @@ export const revealPortalCredentialPassword = async (params: {
   sensitiveSession: string;
   dealId: number;
   entryId: number;
+  kind?: string | null;
 }) => {
   const data = await invokePortalCredentials({
     token: params.portalToken,
@@ -53,6 +54,7 @@ export const revealPortalCredentialPassword = async (params: {
     sensitive_session: params.sensitiveSession,
     deal_id: params.dealId,
     entry_id: params.entryId,
+    kind: params.kind ?? null,
   });
   return data.password != null ? String(data.password) : null;
 };
@@ -62,6 +64,7 @@ export const logPortalCredentialCopy = async (params: {
   sensitiveSession: string;
   dealId: number;
   entryId: number;
+  kind?: string | null;
 }) => {
   await invokePortalCredentials({
     token: params.portalToken,
@@ -69,5 +72,6 @@ export const logPortalCredentialCopy = async (params: {
     sensitive_session: params.sensitiveSession,
     deal_id: params.dealId,
     entry_id: params.entryId,
+    kind: params.kind ?? null,
   });
 };

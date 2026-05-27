@@ -56,11 +56,13 @@ export const ClientCredentialsSection = ({
     if (!sensitive.sensitiveSessionToken) return;
     setBusyId(entryId);
     try {
+      const credential = credentials.find((row) => row.id === entryId);
       const password = await revealPortalCredentialPassword({
         portalToken,
         sensitiveSession: sensitive.sensitiveSessionToken,
         dealId,
         entryId,
+        kind: credential?.kind ?? null,
       });
       setRevealed((current) => ({ ...current, [entryId]: password }));
       setVisibleIds((current) => new Set(current).add(entryId));
@@ -93,6 +95,7 @@ export const ClientCredentialsSection = ({
         sensitiveSession: sensitive.sensitiveSessionToken,
         dealId,
         entryId,
+        kind: entry.kind ?? null,
       });
     };
 
@@ -110,6 +113,7 @@ export const ClientCredentialsSection = ({
             sensitiveSession: sensitive.sensitiveSessionToken!,
             dealId,
             entryId,
+            kind: entry.kind ?? null,
           });
           setRevealed((current) => ({ ...current, [entryId]: password }));
           setVisibleIds((current) => new Set(current).add(entryId));

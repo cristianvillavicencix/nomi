@@ -711,6 +711,8 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       kind: "login",
       secret_label: null,
       notes: null,
+      shared_with_client: true,
+      managed_by: "lbs",
       updated_at: new Date().toISOString(),
     };
 
@@ -782,6 +784,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     const valueProvided = secretValues.value.trim().length > 0;
     const payload = {
       label: secretValues.label.trim(),
+      shared_with_client: true,
       updated_at: new Date().toISOString(),
     };
 

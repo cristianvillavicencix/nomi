@@ -230,7 +230,7 @@ Deno.serve(
           .is("revoked_at", null)
           .maybeSingle();
 
-        const { data: sharedCredentials = [] } = delivery
+        const { data: sharedLogins = [] } = delivery
           ? await supabaseAdmin
               .from("deal_access_entries")
               .select(
@@ -241,6 +241,33 @@ Deno.serve(
               .eq("shared_with_client", true)
               .order("portal_sort_order", { ascending: true })
           : { data: [] };
+
+        const { data: sharedSecrets = [] } = delivery
+          ? await supabaseAdmin
+              .from("deal_secrets")
+              .select("id, label, has_secret, updated_at")
+              .eq("deal_id", dealId)
+              .eq("org_id", account.org_id)
+              .eq("shared_with_client", true)
+              .order("created_at", { ascending: true })
+          : { data: [] };
+
+        const sharedCredentials = [
+          ...(sharedLogins ?? []),
+          ...(sharedSecrets ?? []).map((row) => ({
+            id: row.id,
+            label: row.label,
+            kind: "api_key",
+            secret_label: "API key",
+            url: null,
+            username: null,
+            managed_by: "lbs",
+            service_kind: null,
+            portal_sort_order: 999,
+            has_password: row.has_secret,
+            password_updated_at: row.updated_at,
+          })),
+        ];
 
         const { data: clientResources = [] } = delivery
           ? await supabaseAdmin

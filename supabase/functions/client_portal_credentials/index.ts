@@ -10,6 +10,7 @@ type ClientPortalCredentialsBody = {
   sensitive_session?: string;
   deal_id?: number;
   entry_id?: number;
+  kind?: "login" | "api_key" | string | null;
 };
 
 const SENSITIVE_SESSION_TTL_MS = 5 * 60 * 1000;
@@ -119,10 +120,28 @@ const loadSharedEntry = async (
   return entry;
 };
 
+const loadSharedSecret = async (orgId: number, dealId: number, secretId: number) => {
+  const { data: secret, error } = await supabaseAdmin
+    .from("deal_secrets")
+    .select("id, org_id, deal_id, label, has_secret, shared_with_client")
+    .eq("id", secretId)
+    .eq("deal_id", dealId)
+    .eq("org_id", orgId)
+    .eq("shared_with_client", true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!secret?.id) {
+    throw new Error("Credential not found or not shared with client");
+  }
+  return secret;
+};
+
 const insertClientCredentialAudit = async (params: {
   orgId: number;
   dealId: number;
-  entryId: number;
+  entryId?: number | null;
+  secretId?: number | null;
   portalAccountId: number;
   action: "view" | "copy";
   req: Request;
@@ -130,7 +149,8 @@ const insertClientCredentialAudit = async (params: {
   const { error } = await supabaseAdmin.from("client_credential_access_log").insert({
     org_id: params.orgId,
     deal_id: params.dealId,
-    access_entry_id: params.entryId,
+    access_entry_id: params.entryId ?? null,
+    secret_id: params.secretId ?? null,
     portal_account_id: params.portalAccountId,
     action: params.action,
     ip_address: getClientIp(params.req),
@@ -214,13 +234,18 @@ Deno.serve(
       }
 
       await assertDealAccess(account.id, account.org_id, dealId);
-      const entry = await loadSharedEntry(account.org_id, dealId, entryId);
+      const kind = (body.kind ?? "login") === "api_key" ? "api_key" : "login";
+      const entry =
+        kind === "api_key"
+          ? await loadSharedSecret(account.org_id, dealId, entryId)
+          : await loadSharedEntry(account.org_id, dealId, entryId);
 
       if (action === "log_copy") {
         await insertClientCredentialAudit({
           orgId: account.org_id,
           dealId,
-          entryId,
+          entryId: kind === "login" ? entryId : null,
+          secretId: kind === "api_key" ? entryId : null,
           portalAccountId: account.id,
           action: "copy",
           req,
@@ -231,23 +256,32 @@ Deno.serve(
       }
 
       if (action === "reveal_password") {
-        if (!entry.has_password) {
+        const cryptoKey = getPgcryptoKey();
+        const hasPassword =
+          kind === "api_key" ? Boolean((entry as { has_secret?: boolean }).has_secret) : Boolean((entry as { has_password?: boolean }).has_password);
+        if (!hasPassword) {
           return new Response(JSON.stringify({ password: null }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        const cryptoKey = getPgcryptoKey();
-        const { data: password, error: getError } = await supabaseAdmin.rpc(
-          "get_access_entry_password",
-          { p_entry_id: entryId, p_key: cryptoKey },
-        );
+        const { data: password, error: getError } =
+          kind === "api_key"
+            ? await supabaseAdmin.rpc("get_deal_secret_value", {
+                p_secret_id: entryId,
+                p_key: cryptoKey,
+              })
+            : await supabaseAdmin.rpc("get_access_entry_password", {
+                p_entry_id: entryId,
+                p_key: cryptoKey,
+              });
         if (getError) throw new Error(getError.message);
 
         await insertClientCredentialAudit({
           orgId: account.org_id,
           dealId,
-          entryId,
+          entryId: kind === "login" ? entryId : null,
+          secretId: kind === "api_key" ? entryId : null,
           portalAccountId: account.id,
           action: "view",
           req,
