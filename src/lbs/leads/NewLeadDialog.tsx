@@ -167,13 +167,13 @@ const NewLeadDialogFields = ({
           <LeadTypeToggle />
 
           {showCompany ? (
-            <LeadFormSection title="Empresa" defaultOpen>
+            <LeadFormSection title="Empresa" collapsible={false}>
               <LeadCompanySection />
             </LeadFormSection>
           ) : null}
 
           {showContact ? (
-            <LeadFormSection title="Contacto" defaultOpen>
+            <LeadFormSection title="Contacto" collapsible={false}>
               <LeadContactSection />
             </LeadFormSection>
           ) : null}
