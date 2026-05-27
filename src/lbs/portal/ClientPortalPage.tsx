@@ -1,20 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { getLbsProjectStageLabel } from "@/lbs/deals/lbsProjectConstants";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { ClientPortalLayout } from "@/lbs/portal/ClientPortalLayout";
 import { ClientWebsiteSection } from "@/lbs/portal/ClientWebsiteSection";
-import { ClientCredentialsSection } from "@/lbs/portal/ClientCredentialsSection";
-import { ClientFilesSection } from "@/lbs/portal/ClientFilesSection";
 import {
   getPortalCopy,
   PORTAL_LOCALE_KEY,
   type PortalLocale,
 } from "@/lbs/portal/portalI18n";
 import {
-  formatPortalDate,
   type PortalPayload,
   type PortalProject,
   type PortalView,
@@ -32,15 +27,16 @@ const fetchPortal = async (token: string, dealId?: number) => {
 
 const parseView = (value: string | null): PortalView => {
   const allowed: PortalView[] = [
-    "dashboard",
-    "projects",
-    "website",
-    "resources",
-    "security",
-    "billing",
-    "settings",
+    "general",
+    "credentials",
+    "corporate_email",
+    "domain_dns",
+    "files",
+    "marketing_seo",
+    "training",
+    "support",
   ];
-  return allowed.includes(value as PortalView) ? (value as PortalView) : "dashboard";
+  return allowed.includes(value as PortalView) ? (value as PortalView) : "general";
 };
 
 export const ClientPortalPage = () => {
@@ -79,7 +75,7 @@ export const ClientPortalPage = () => {
   useEffect(() => {
     if (!token.trim() || !payload) return;
     if (Number.isFinite(selectedDealId)) return;
-    if (activeView !== "website" && activeView !== "security" && activeView !== "resources") return;
+    // Auto-select first delivered project when a project-specific tab is opened.
     const deliveredProject = (payload.projects ?? []).find((project) => project.delivery);
     if (!deliveredProject) return;
     const next = new URLSearchParams(searchParams);
@@ -115,91 +111,6 @@ export const ClientPortalPage = () => {
   const headline = payload?.account?.email
     ? `${copy.welcome}, ${payload.account.email.split("@")[0]}`
     : copy.welcome;
-
-  const renderDashboard = () => (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0D3B6E]">{headline}</h1>
-        <p className="text-sm text-muted-foreground">{copy.portalSubtitle}</p>
-      </div>
-      {payload?.notifications?.length ? (
-        <div className="space-y-2">
-          {payload.notifications.slice(0, 3).map((notification) => (
-            <Card
-              key={notification.id}
-              className={
-                notification.read_at ? "" : "border-[#F59E0B]/40 bg-[#F59E0B]/5"
-              }
-            >
-              <CardContent className="py-4 text-sm">
-                <div className="font-medium">{notification.title}</div>
-                {notification.body ? (
-                  <p className="mt-1 text-muted-foreground">{notification.body}</p>
-                ) : null}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : null}
-      <div className="grid gap-4 md:grid-cols-2">
-        {projects.map((project) => (
-          <Card key={project.id}>
-            <CardHeader>
-              <CardTitle className="text-lg">{project.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div>
-                <span className="text-muted-foreground">{copy.projectStatus}: </span>
-                {getLbsProjectStageLabel(project.stage)}
-              </div>
-              {project.delivery?.site_url ? (
-                <div className="font-medium text-[#1E5FA8]">
-                  {project.delivery.site_url}
-                </div>
-              ) : null}
-              <Button type="button" size="sm" asChild>
-                <Link
-                  to={`/portal?token=${encodeURIComponent(token)}&project=${project.id}&view=website`}
-                >
-                  {project.delivery ? copy.myWebsite : copy.viewDetails}
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderProjects = () => (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-[#0D3B6E]">{copy.myProjects}</h1>
-      <div className="space-y-3">
-        {projects.map((project: PortalProject) => (
-          <Card key={project.id}>
-            <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="font-semibold">{project.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {getLbsProjectStageLabel(project.stage)}
-                  {project.expected_end_date
-                    ? ` · ${formatPortalDate(project.expected_end_date, locale === "es" ? "es-US" : "en-US")}`
-                    : ""}
-                </div>
-              </div>
-              <Button type="button" size="sm" variant="outline" asChild>
-                <Link
-                  to={`/portal?token=${encodeURIComponent(token)}&project=${project.id}`}
-                >
-                  {copy.viewDetails}
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
 
   const renderWebsite = () => {
     if (!activeProject) {
@@ -314,22 +225,8 @@ export const ClientPortalPage = () => {
         </div>
       );
     }
-    switch (activeView) {
-      case "projects":
-        return renderProjects();
-      case "website":
-        return renderWebsite();
-      case "resources":
-        return renderResources();
-      case "security":
-        return renderSecurity();
-      case "billing":
-        return renderPlaceholder(copy.billing);
-      case "settings":
-        return renderPlaceholder(copy.settings);
-      default:
-        return renderDashboard();
-    }
+    // New portal tabs are all rendered from a single website shell.
+    return renderWebsite();
   })();
 
   return (

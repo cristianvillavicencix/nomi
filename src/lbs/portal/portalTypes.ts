@@ -101,13 +101,14 @@ export type PortalPayload = {
 };
 
 export type PortalView =
-  | "dashboard"
-  | "projects"
-  | "website"
-  | "resources"
-  | "security"
-  | "billing"
-  | "settings";
+  | "general"
+  | "credentials"
+  | "corporate_email"
+  | "domain_dns"
+  | "files"
+  | "marketing_seo"
+  | "training"
+  | "support";
 
 export const DEFAULT_INCLUDED_PAGES = [
   "Home",
