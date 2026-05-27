@@ -5,8 +5,14 @@ import { createErrorResponse } from "../_shared/utils.ts";
 
 type ClientPortalCredentialsBody = {
   token?: string;
-  action?: "start_sensitive_session" | "reveal_password" | "log_copy";
+  action?:
+    | "request_sensitive_code"
+    | "verify_sensitive_code"
+    | "start_sensitive_session"
+    | "reveal_password"
+    | "log_copy";
   email_confirm?: string;
+  code?: string;
   sensitive_session?: string;
   deal_id?: number;
   entry_id?: number;
@@ -14,6 +20,49 @@ type ClientPortalCredentialsBody = {
 };
 
 const SENSITIVE_SESSION_TTL_MS = 5 * 60 * 1000;
+const SENSITIVE_CODE_TTL_MS = 10 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 8;
+
+const getPostmarkServerToken = () => Deno.env.get("POSTMARK_SERVER_TOKEN")?.trim();
+const getPostmarkFromEmail = () => Deno.env.get("POSTMARK_FROM_EMAIL")?.trim();
+
+const generateOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
+
+const sha256Hex = async (value: string) => {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+};
+
+const sendOtpEmail = async (to: string, code: string) => {
+  const token = getPostmarkServerToken();
+  const from = getPostmarkFromEmail();
+  if (!token || !from) {
+    throw new Error("Email provider is not configured");
+  }
+
+  const res = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": token,
+    },
+    body: JSON.stringify({
+      From: from,
+      To: to,
+      Subject: "Your Nomi verification code",
+      TextBody: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Failed to send verification email (${res.status}) ${text}`);
+  }
+};
 
 const getPgcryptoKey = () => {
   const key = Deno.env.get("PGCRYPTO_KEY")?.trim();
@@ -95,6 +144,18 @@ const loadSensitiveSession = async (
     return null;
   }
   return session;
+};
+
+const loadLatestOtpChallenge = async (portalAccountId: number) => {
+  const { data: challenge, error } = await supabaseAdmin
+    .from("client_portal_sensitive_sessions")
+    .select("id, otp_code_hash, otp_expires_at, otp_attempts")
+    .eq("portal_account_id", portalAccountId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return challenge ?? null;
 };
 
 const loadSharedEntry = async (
@@ -179,39 +240,107 @@ Deno.serve(
 
       const action = body.action ?? "start_sensitive_session";
 
-      if (action === "start_sensitive_session") {
-        const emailConfirm = body.email_confirm?.trim().toLowerCase();
-        const accountEmail = account.email?.trim().toLowerCase();
-        if (!emailConfirm || emailConfirm !== accountEmail) {
-          return createErrorResponse(403, "Email confirmation does not match");
+      if (action === "request_sensitive_code" || action === "start_sensitive_session") {
+        const accountEmail = account.email?.trim();
+        if (!accountEmail) {
+          return createErrorResponse(400, "Account email not found");
         }
 
+        // Purge expired sessions and old challenges.
         await supabaseAdmin
           .from("client_portal_sensitive_sessions")
           .delete()
           .eq("portal_account_id", account.id)
-          .lt("expires_at", new Date().toISOString());
+          .or(
+            `expires_at.lt.${new Date().toISOString()},otp_expires_at.lt.${new Date().toISOString()}`,
+          );
 
-        const sessionToken = randomSessionToken();
-        const expiresAt = new Date(Date.now() + SENSITIVE_SESSION_TTL_MS).toISOString();
+        const code = generateOtpCode();
+        const codeHash = await sha256Hex(code);
+        const otpExpiresAt = new Date(Date.now() + SENSITIVE_CODE_TTL_MS).toISOString();
 
+        // Store challenge row (session token will be created on verify).
         const { error: insertError } = await supabaseAdmin
           .from("client_portal_sensitive_sessions")
           .insert({
             portal_account_id: account.id,
-            session_token: sessionToken,
-            expires_at: expiresAt,
+            session_token: randomSessionToken(),
+            expires_at: new Date(Date.now() + SENSITIVE_SESSION_TTL_MS).toISOString(),
+            otp_code_hash: codeHash,
+            otp_expires_at: otpExpiresAt,
+            otp_sent_at: new Date().toISOString(),
+            otp_attempts: 0,
             ip_address: getClientIp(req),
             user_agent: req.headers.get("user-agent"),
           });
 
         if (insertError) throw new Error(insertError.message);
 
+        await sendOtpEmail(accountEmail, code);
+
+        return new Response(
+          JSON.stringify({ ok: true, sent: true, expires_at: otpExpiresAt }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      if (action === "verify_sensitive_code") {
+        const code = body.code?.trim();
+        if (!code || !/^\d{6}$/.test(code)) {
+          return createErrorResponse(400, "Invalid code");
+        }
+
+        const challenge = await loadLatestOtpChallenge(account.id);
+        if (
+          !challenge?.id ||
+          !challenge.otp_code_hash ||
+          !challenge.otp_expires_at
+        ) {
+          return createErrorResponse(401, "Verification code required");
+        }
+        if (challenge.otp_attempts != null && Number(challenge.otp_attempts) >= MAX_OTP_ATTEMPTS) {
+          return createErrorResponse(429, "Too many attempts. Request a new code.");
+        }
+        if (new Date(String(challenge.otp_expires_at)).getTime() < Date.now()) {
+          return createErrorResponse(401, "Code expired. Request a new code.");
+        }
+
+        const codeHash = await sha256Hex(code);
+        const nextAttempts = Number(challenge.otp_attempts ?? 0) + 1;
+
+        if (codeHash !== String(challenge.otp_code_hash)) {
+          await supabaseAdmin
+            .from("client_portal_sensitive_sessions")
+            .update({ otp_attempts: nextAttempts })
+            .eq("id", challenge.id);
+          return createErrorResponse(401, "Invalid code");
+        }
+
+        // Create session token by reusing the row's session_token, but mark OTP as consumed.
+        const { data: sessionRow, error: sessionError } = await supabaseAdmin
+          .from("client_portal_sensitive_sessions")
+          .select("session_token, expires_at")
+          .eq("id", challenge.id)
+          .maybeSingle();
+        if (sessionError) throw new Error(sessionError.message);
+        if (!sessionRow?.session_token || !sessionRow.expires_at) {
+          return createErrorResponse(500, "Session not found");
+        }
+
+        await supabaseAdmin
+          .from("client_portal_sensitive_sessions")
+          .update({
+            otp_code_hash: null,
+            otp_expires_at: null,
+            otp_attempts: nextAttempts,
+          })
+          .eq("id", challenge.id);
+
         return new Response(
           JSON.stringify({
             ok: true,
-            sensitive_session: sessionToken,
-            expires_at: expiresAt,
+            sensitive_session: String(sessionRow.session_token),
+            expires_at: String(sessionRow.expires_at),
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );

@@ -28,12 +28,28 @@ export const invokePortalCredentials = async (body: Record<string, unknown>) => 
 
 export const startPortalSensitiveSession = async (
   portalToken: string,
-  emailConfirm: string,
 ): Promise<PortalSensitiveSession> => {
+  throw new Error("Deprecated: use request/verify sensitive code");
+};
+
+export const requestPortalSensitiveCode = async (portalToken: string) => {
   const data = await invokePortalCredentials({
     token: portalToken,
-    action: "start_sensitive_session",
-    email_confirm: emailConfirm,
+    action: "request_sensitive_code",
+  });
+  return {
+    expires_at: String(data.expires_at ?? ""),
+  };
+};
+
+export const verifyPortalSensitiveCode = async (params: {
+  portalToken: string;
+  code: string;
+}): Promise<PortalSensitiveSession> => {
+  const data = await invokePortalCredentials({
+    token: params.portalToken,
+    action: "verify_sensitive_code",
+    code: params.code,
   });
   return {
     sensitive_session: String(data.sensitive_session ?? ""),

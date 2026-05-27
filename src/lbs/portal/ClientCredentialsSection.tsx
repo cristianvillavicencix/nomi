@@ -258,7 +258,10 @@ export const ClientCredentialsSection = ({
         accountEmail={accountEmail}
         confirming={sensitive.confirming}
         error={sensitive.confirmError}
-        onConfirm={sensitive.confirmEmail}
+        codeSent={sensitive.codeSent}
+        codeExpiresAt={sensitive.codeExpiresAt}
+        onRequestCode={() => void sensitive.requestCode()}
+        onVerifyCode={(code) => void sensitive.verifyCode(code)}
       />
     </div>
   );

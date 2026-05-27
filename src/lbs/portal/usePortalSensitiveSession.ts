@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  startPortalSensitiveSession,
+  requestPortalSensitiveCode,
+  verifyPortalSensitiveCode,
   type PortalSensitiveSession,
 } from "@/lbs/portal/portalCredentialsApi";
 
@@ -38,6 +39,8 @@ export const usePortalSensitiveSession = (
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [codeSent, setCodeSent] = useState(false);
+  const [codeExpiresAt, setCodeExpiresAt] = useState<string | null>(null);
 
   useEffect(() => {
     setSession(portalToken ? readStoredSession(portalToken) : null);
@@ -65,19 +68,37 @@ export const usePortalSensitiveSession = (
     setSession(null);
   }, [portalToken]);
 
-  const confirmEmail = useCallback(
-    async (emailConfirm: string) => {
+  const requestCode = useCallback(async () => {
+    setConfirming(true);
+    setConfirmError(null);
+    try {
+      const res = await requestPortalSensitiveCode(portalToken);
+      setCodeSent(true);
+      setCodeExpiresAt(res.expires_at);
+    } catch (error) {
+      setConfirmError(
+        error instanceof Error ? error.message : "Could not send code",
+      );
+    } finally {
+      setConfirming(false);
+    }
+  }, [portalToken]);
+
+  const verifyCode = useCallback(
+    async (code: string) => {
       setConfirming(true);
       setConfirmError(null);
       try {
-        const next = await startPortalSensitiveSession(portalToken, emailConfirm);
+        const next = await verifyPortalSensitiveCode({ portalToken, code });
         persistSession(next);
         setConfirmOpen(false);
+        setCodeSent(false);
+        setCodeExpiresAt(null);
         pendingAction?.();
         setPendingAction(null);
       } catch (error) {
         setConfirmError(
-          error instanceof Error ? error.message : "Could not verify email",
+          error instanceof Error ? error.message : "Could not verify code",
         );
       } finally {
         setConfirming(false);
@@ -110,7 +131,10 @@ export const usePortalSensitiveSession = (
     setConfirmOpen,
     confirming,
     confirmError,
-    confirmEmail,
+    requestCode,
+    verifyCode,
+    codeSent,
+    codeExpiresAt,
     requireSensitiveSession,
     clearSession,
     expiresLabel,

@@ -19,7 +19,10 @@ export const SensitiveSessionDialog = ({
   accountEmail,
   confirming,
   error,
-  onConfirm,
+  codeSent,
+  codeExpiresAt,
+  onRequestCode,
+  onVerifyCode,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,9 +30,12 @@ export const SensitiveSessionDialog = ({
   accountEmail?: string | null;
   confirming: boolean;
   error: string | null;
-  onConfirm: (email: string) => void;
+  codeSent: boolean;
+  codeExpiresAt: string | null;
+  onRequestCode: () => void;
+  onVerifyCode: (code: string) => void;
 }) => {
-  const [email, setEmail] = useState(accountEmail ?? "");
+  const [code, setCode] = useState("");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -39,27 +45,69 @@ export const SensitiveSessionDialog = ({
           <DialogDescription>{copy.sensitiveSessionDescription}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2 py-1">
-          <Label htmlFor="portal-email-confirm">{copy.confirmEmailLabel}</Label>
-          <Input
-            id="portal-email-confirm"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder={accountEmail ?? "client@email.com"}
-          />
+          {!codeSent ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                We’ll email a 6-digit code to{" "}
+                <span className="font-medium text-foreground">
+                  {accountEmail ?? "your email"}
+                </span>
+                .
+              </p>
+              <Button
+                type="button"
+                disabled={confirming}
+                onClick={() => onRequestCode()}
+              >
+                {confirming ? copy.verifying : "Send code"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Label htmlFor="portal-code">Code</Label>
+              <Input
+                id="portal-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={code}
+                onChange={(event) =>
+                  setCode(event.target.value.replace(/[^\d]/g, "").slice(0, 6))
+                }
+                placeholder="123456"
+              />
+              {codeExpiresAt ? (
+                <p className="text-xs text-muted-foreground">
+                  Expires at {new Date(codeExpiresAt).toLocaleTimeString()}
+                </p>
+              ) : null}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={confirming}
+                  onClick={() => onRequestCode()}
+                >
+                  Resend
+                </Button>
+                <Button
+                  type="button"
+                  disabled={confirming || code.trim().length !== 6}
+                  onClick={() => onVerifyCode(code.trim())}
+                >
+                  {confirming ? copy.verifying : "Verify"}
+                </Button>
+              </div>
+            </>
+          )}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            {copy.cancel}
-          </Button>
           <Button
             type="button"
-            disabled={!email.trim() || confirming}
-            onClick={() => onConfirm(email.trim())}
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
           >
-            {confirming ? copy.verifying : copy.continue}
+            {copy.cancel}
           </Button>
         </DialogFooter>
       </DialogContent>
