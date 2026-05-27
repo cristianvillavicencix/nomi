@@ -40,14 +40,8 @@ export const validateNewLeadForm = (
     values.lead_type === "individual" ||
     (values.lead_type === "business" && values.add_primary_contact);
 
-  if (values.lead_type === "business") {
-    if (values.company_is_new) {
-      if (!values.company_draft_name?.trim()) {
-        return { ok: false, message: "Company name is required." };
-      }
-    } else if (!values.company_id) {
-      return { ok: false, message: "Select or create a company." };
-    }
+  if (values.lead_type === "business" && !values.company_draft_name?.trim()) {
+    return { ok: false, message: "El nombre de la empresa es obligatorio." };
   }
 
   if (showContact) {

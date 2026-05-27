@@ -10,9 +10,6 @@ export type NewLeadFormValues = {
   interested_services: string[];
   status: string;
   organization_member_id: number | string;
-  company_id?: number | string | null;
-  /** True when user is registering a new company (not picking existing). */
-  company_is_new: boolean;
   add_primary_contact: boolean;
   company_draft_name: string;
   company_draft_website: string;
@@ -39,9 +36,6 @@ export const defaultNewLeadFormValues = (
   interested_services: [],
   status: "new",
   organization_member_id: organizationMemberId ?? "",
-  company_id: null,
-  /** New-lead B2B flow defaults to registering a new company. */
-  company_is_new: true,
   add_primary_contact: true,
   company_draft_name: "",
   company_draft_website: "",

@@ -1,11 +1,9 @@
 import { useEffect } from "react";
-import { useGetOne } from "ra-core";
 import { useFormContext, useWatch } from "react-hook-form";
 import { TextInput } from "@/components/admin/text-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import type { Company } from "@/components/atomic-crm/types";
 import { LeadChannelsInput } from "./LeadChannelsInput";
 import {
   LBS_CONTACT_ROLE_CHOICES,
@@ -20,35 +18,23 @@ export const LeadContactSection = () => {
   const useCompanyInfo = useWatch<NewLeadFormValues, "use_company_contact_info">({
     name: "use_company_contact_info",
   });
-  const companyId = useWatch<NewLeadFormValues, "company_id">({ name: "company_id" });
-  const companyIsNew = useWatch<NewLeadFormValues, "company_is_new">({
-    name: "company_is_new",
-  });
   const companyDraftPhone = useWatch<NewLeadFormValues, "company_draft_phone">({
     name: "company_draft_phone",
   });
 
-  const { data: selectedCompany } = useGetOne<Company>(
-    "companies",
-    { id: companyId! },
-    { enabled: Boolean(companyId) && !companyIsNew },
-  );
-
-  const companyPhone = companyIsNew
-    ? companyDraftPhone
-    : selectedCompany?.phone_number;
-
   const canCopyFromCompany =
-    leadType === "business" && Boolean(companyPhone?.trim());
+    leadType === "business" && Boolean(companyDraftPhone?.trim());
 
   useEffect(() => {
-    if (!useCompanyInfo || !canCopyFromCompany || !companyPhone?.trim()) return;
+    if (!useCompanyInfo || !canCopyFromCompany || !companyDraftPhone?.trim()) {
+      return;
+    }
     setValue(
       "phone_jsonb",
-      [{ number: companyPhone.trim(), type: "Work" }],
+      [{ number: companyDraftPhone.trim(), type: "Work" }],
       { shouldDirty: true },
     );
-  }, [useCompanyInfo, canCopyFromCompany, companyPhone, setValue]);
+  }, [useCompanyInfo, canCopyFromCompany, companyDraftPhone, setValue]);
 
   return (
     <div className="space-y-3">

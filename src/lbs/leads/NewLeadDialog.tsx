@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Form,
   useCreate,
-  useDataProvider,
   useGetIdentity,
   useNotify,
   useRefresh,
@@ -52,7 +51,6 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
   const notify = useNotify();
   const refresh = useRefresh();
   const navigate = useNavigate();
-  const dataProvider = useDataProvider();
   const [create] = useCreate();
 
   const handleClose = () => onOpenChange(false);
@@ -66,27 +64,19 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
 
     setIsSaving(true);
     try {
-      let companyId: number | string | null | undefined = values.company_id;
+      let companyId: number | string | null = null;
       let companyName = "";
 
       if (values.lead_type === "business") {
-        if (values.company_is_new) {
-          const created = (await create(
-            "companies",
-            {
-              data: buildCompanyCreateData(values, identity?.id),
-            },
-            { returnPromise: true },
-          )) as Company;
-          companyId = created?.id ?? null;
-          companyName = values.company_draft_name.trim();
-        } else if (companyId != null && companyId !== "") {
-          const { data: company } = await dataProvider.getOne<Company>(
-            "companies",
-            { id: companyId },
-          );
-          companyName = company.name;
-        }
+        const created = (await create(
+          "companies",
+          {
+            data: buildCompanyCreateData(values, identity?.id),
+          },
+          { returnPromise: true },
+        )) as Company;
+        companyId = created?.id ?? null;
+        companyName = values.company_draft_name.trim();
       }
 
       const payload = buildContactCreatePayload(values, companyId, companyName);
