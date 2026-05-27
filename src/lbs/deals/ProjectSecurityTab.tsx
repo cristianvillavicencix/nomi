@@ -18,7 +18,6 @@ import {
   KeyRound,
   Loader2,
   Pencil,
-  Plus,
   ShieldAlert,
   Trash2,
 } from "lucide-react";
@@ -31,19 +30,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  emptyDealAccessFormValues,
   normalizeAccessUrl,
-  type DealAccessFormValues,
 } from "@/lbs/deals/projectAccessConstants";
 import {
   getSupabaseSchemaMissingMessage,
@@ -52,13 +41,6 @@ import {
 } from "@/lbs/deals/supabaseSchemaErrors";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { DealAccessEntry, DealSecret, LbsDeal } from "@/lbs/types";
-
-const inferKindFromEntry = (entry: DealAccessEntry) => {
-  if (entry.kind) return String(entry.kind);
-  const label = String(entry.label ?? "").toLowerCase();
-  if (label.includes("api key")) return "api_key";
-  return "login";
-};
 
 const emptySecretFormValues = () => ({
   label: "",
@@ -143,8 +125,7 @@ const AccessEntryRow = ({
   const copyAll = async () => {
     const lines = [`Label: ${entry.label}`];
     if (entry.url?.trim()) lines.push(`URL: ${entry.url.trim()}`);
-    const apiKeyMode = inferKindFromEntry(entry) === "api_key";
-    if (!apiKeyMode && entry.username?.trim()) {
+    if (entry.username?.trim()) {
       lines.push(`Username: ${entry.username.trim()}`);
     }
     if (hasPassword) {
@@ -159,12 +140,9 @@ const AccessEntryRow = ({
         }
       }
       if (password?.trim()) {
-        const secretLabel = (entry.secret_label || "").trim();
-        const lineLabel = secretLabel || (apiKeyMode ? "API key" : "Password");
-        lines.push(`${lineLabel}: ${password.trim()}`);
+        lines.push(`Password: ${password.trim()}`);
       }
     }
-    if (entry.notes?.trim()) lines.push(`Notes: ${entry.notes.trim()}`);
     await navigator.clipboard.writeText(lines.join("\n"));
     notify("All credentials copied", { type: "info" });
     if (hasPassword) {
@@ -305,147 +283,55 @@ const AccessEntryRow = ({
   );
 };
 
-const AccessEntryDialog = ({
-  open,
-  title,
+const AccessEntryEditRow = ({
+  entry,
   values,
   onChange,
-  onClose,
+  onCancel,
   onSave,
   isSaving,
-  isEditing,
 }: {
-  open: boolean;
-  title: string;
-  values: DealAccessFormValues;
-  onChange: (values: DealAccessFormValues) => void;
-  onClose: () => void;
+  entry: DealAccessEntry;
+  values: { label: string; url: string; username: string; password: string };
+  onChange: (next: { label: string; url: string; username: string; password: string }) => void;
+  onCancel: () => void;
   onSave: () => void;
   isSaving: boolean;
-  isEditing: boolean;
-}) => {
-  return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-1">
-          <div className="space-y-2">
-            <Label htmlFor="access-label">Label</Label>
-            <Input
-              id="access-label"
-              value={values.label}
-              onChange={(event) =>
-                onChange({ ...values, label: event.target.value })
-              }
-              placeholder="Custom label, e.g. Shopify admin"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="access-url">Login URL</Label>
-            <Input
-              id="access-url"
-              value={values.url}
-              onChange={(event) => onChange({ ...values, url: event.target.value })}
-              placeholder="https://example.com/wp-admin"
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="access-username">Username</Label>
-              <Input
-                id="access-username"
-                value={values.username}
-                onChange={(event) =>
-                  onChange({ ...values, username: event.target.value })
-                }
-                placeholder="admin@client.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="access-password">Password</Label>
-              <Input
-                id="access-password"
-                type="password"
-                autoComplete="new-password"
-                value={values.password}
-                onChange={(event) =>
-                  onChange({ ...values, password: event.target.value })
-                }
-                placeholder={
-                  isEditing ? "Leave blank to keep unchanged" : "••••••••"
-                }
-              />
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={onSave}
-            disabled={isSaving || !values.label.trim()}
-          >
-            {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-const SecretDialog = ({
-  open,
-  title,
-  values,
-  onChange,
-  onClose,
-  onSave,
-  isSaving,
-  isEditing,
-}: {
-  open: boolean;
-  title: string;
-  values: { label: string; value: string };
-  onChange: (values: { label: string; value: string }) => void;
-  onClose: () => void;
-  onSave: () => void;
-  isSaving: boolean;
-  isEditing: boolean;
 }) => (
-  <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-    <DialogContent className="sm:max-w-lg">
-      <DialogHeader>
-        <DialogTitle>{title}</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-4 py-1">
-        <div className="space-y-2">
-          <Label htmlFor="secret-label">Label</Label>
-          <Input
-            id="secret-label"
-            value={values.label}
-            onChange={(event) => onChange({ ...values, label: event.target.value })}
-            placeholder="Place API key"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="secret-value">API key</Label>
-          <Input
-            id="secret-value"
-            type="password"
-            autoComplete="new-password"
-            value={values.value}
-            onChange={(event) => onChange({ ...values, value: event.target.value })}
-            placeholder={isEditing ? "Leave blank to keep unchanged" : "Paste value"}
-          />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onClose}>
+  <TableRow>
+    <TableCell className="font-medium whitespace-nowrap">
+      <Input
+        value={values.label}
+        onChange={(e) => onChange({ ...values, label: e.target.value })}
+        placeholder="Label"
+      />
+    </TableCell>
+    <TableCell className="max-w-[220px]">
+      <Input
+        value={values.url}
+        onChange={(e) => onChange({ ...values, url: e.target.value })}
+        placeholder="Login URL"
+      />
+    </TableCell>
+    <TableCell className="max-w-[160px]">
+      <Input
+        value={values.username}
+        onChange={(e) => onChange({ ...values, username: e.target.value })}
+        placeholder="Username"
+      />
+    </TableCell>
+    <TableCell className="max-w-[180px]">
+      <Input
+        type="password"
+        autoComplete="new-password"
+        value={values.password}
+        onChange={(e) => onChange({ ...values, password: e.target.value })}
+        placeholder="(optional) new password"
+      />
+    </TableCell>
+    <TableCell className="text-right">
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSaving}>
           Cancel
         </Button>
         <Button
@@ -456,9 +342,64 @@ const SecretDialog = ({
           {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
           Save
         </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+      </div>
+    </TableCell>
+  </TableRow>
+);
+
+const AccessEntryCreateRow = ({
+  values,
+  onChange,
+  onSave,
+  isSaving,
+}: {
+  values: { label: string; url: string; username: string; password: string };
+  onChange: (next: { label: string; url: string; username: string; password: string }) => void;
+  onSave: () => void;
+  isSaving: boolean;
+}) => (
+  <TableRow className="bg-muted/10">
+    <TableCell className="font-medium whitespace-nowrap">
+      <Input
+        value={values.label}
+        onChange={(e) => onChange({ ...values, label: e.target.value })}
+        placeholder="Label"
+      />
+    </TableCell>
+    <TableCell className="max-w-[220px]">
+      <Input
+        value={values.url}
+        onChange={(e) => onChange({ ...values, url: e.target.value })}
+        placeholder="Login URL"
+      />
+    </TableCell>
+    <TableCell className="max-w-[160px]">
+      <Input
+        value={values.username}
+        onChange={(e) => onChange({ ...values, username: e.target.value })}
+        placeholder="Username"
+      />
+    </TableCell>
+    <TableCell className="max-w-[180px]">
+      <Input
+        type="password"
+        autoComplete="new-password"
+        value={values.password}
+        onChange={(e) => onChange({ ...values, password: e.target.value })}
+        placeholder="Password"
+      />
+    </TableCell>
+    <TableCell className="text-right">
+      <Button
+        type="button"
+        onClick={onSave}
+        disabled={isSaving || !values.label.trim()}
+      >
+        {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+        Save
+      </Button>
+    </TableCell>
+  </TableRow>
 );
 
 const SecretRow = ({
@@ -589,6 +530,97 @@ const SecretRow = ({
   );
 };
 
+const SecretEditRow = ({
+  secret,
+  values,
+  onChange,
+  onCancel,
+  onSave,
+  isSaving,
+}: {
+  secret: DealSecret;
+  values: { label: string; value: string };
+  onChange: (next: { label: string; value: string }) => void;
+  onCancel: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+}) => (
+  <TableRow>
+    <TableCell className="font-medium whitespace-nowrap">
+      <Input
+        value={values.label}
+        onChange={(e) => onChange({ ...values, label: e.target.value })}
+        placeholder="Label"
+      />
+    </TableCell>
+    <TableCell className="max-w-[240px]">
+      <Input
+        type="password"
+        autoComplete="new-password"
+        value={values.value}
+        onChange={(e) => onChange({ ...values, value: e.target.value })}
+        placeholder="(optional) new API key"
+      />
+    </TableCell>
+    <TableCell className="w-[88px] text-right">
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={onSave}
+          disabled={isSaving || !values.label.trim()}
+        >
+          {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+          Save
+        </Button>
+      </div>
+    </TableCell>
+  </TableRow>
+);
+
+const SecretCreateRow = ({
+  values,
+  onChange,
+  onSave,
+  isSaving,
+}: {
+  values: { label: string; value: string };
+  onChange: (next: { label: string; value: string }) => void;
+  onSave: () => void;
+  isSaving: boolean;
+}) => (
+  <TableRow className="bg-muted/10">
+    <TableCell className="font-medium whitespace-nowrap">
+      <Input
+        value={values.label}
+        onChange={(e) => onChange({ ...values, label: e.target.value })}
+        placeholder="Label"
+      />
+    </TableCell>
+    <TableCell className="max-w-[240px]">
+      <Input
+        type="password"
+        autoComplete="new-password"
+        value={values.value}
+        onChange={(e) => onChange({ ...values, value: e.target.value })}
+        placeholder="API key"
+      />
+    </TableCell>
+    <TableCell className="w-[88px] text-right">
+      <Button
+        type="button"
+        onClick={onSave}
+        disabled={isSaving || !values.label.trim()}
+      >
+        {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+        Save
+      </Button>
+    </TableCell>
+  </TableRow>
+);
+
 export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   const notify = useNotify();
   const refresh = useRefresh();
@@ -599,14 +631,28 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
   const [createSecret, { isPending: isCreatingSecret }] = useCreate();
   const [updateSecret, { isPending: isUpdatingSecret }] = useUpdate();
   const [deleteSecret, { isPending: isDeletingSecret }] = useDelete();
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<Identifier | null>(null);
-  const [values, setValues] = useState<DealAccessFormValues>(
-    emptyDealAccessFormValues(),
-  );
-  const [secretDialogOpen, setSecretDialogOpen] = useState(false);
+  const [editValues, setEditValues] = useState<{
+    label: string;
+    url: string;
+    username: string;
+    password: string;
+  }>({ label: "", url: "", username: "", password: "" });
+  const [newValues, setNewValues] = useState<{
+    label: string;
+    url: string;
+    username: string;
+    password: string;
+  }>({ label: "", url: "", username: "", password: "" });
+
   const [editingSecretId, setEditingSecretId] = useState<Identifier | null>(null);
-  const [secretValues, setSecretValues] = useState(() => emptySecretFormValues());
+  const [editSecretValues, setEditSecretValues] = useState<{ label: string; value: string }>({
+    label: "",
+    value: "",
+  });
+  const [newSecretValues, setNewSecretValues] = useState<{ label: string; value: string }>(() =>
+    emptySecretFormValues(),
+  );
   const [deletingId, setDeletingId] = useState<Identifier | null>(null);
   const [deletingSecretId, setDeletingSecretId] = useState<Identifier | null>(null);
   const [isMigratingLegacy, setIsMigratingLegacy] = useState(false);
@@ -653,113 +699,55 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     [entries, editingId],
   );
 
-  const openCreate = () => {
-    setEditingId(null);
-    setValues(emptyDealAccessFormValues());
-    setDialogOpen(true);
-  };
-
-  const openCreateSecret = () => {
-    setEditingSecretId(null);
-    setSecretValues(emptySecretFormValues());
-    setSecretDialogOpen(true);
-  };
-
-  const openEdit = (entry: DealAccessEntry) => {
+  const startEdit = (entry: DealAccessEntry) => {
     setEditingId(entry.id);
-    setValues({
+    setEditValues({
       label: entry.label ?? "",
       url: entry.url ?? "",
       username: entry.username ?? "",
       password: "",
     });
-    setDialogOpen(true);
   };
 
-  const openEditSecret = (secret: DealSecret) => {
-    setEditingSecretId(secret.id);
-    setSecretValues({
-      label: secret.label ?? "",
-      value: "",
-    });
-    setSecretDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
+  const cancelEdit = () => {
     setEditingId(null);
-    setValues(emptyDealAccessFormValues());
+    setEditValues({ label: "", url: "", username: "", password: "" });
   };
 
-  const closeSecretDialog = () => {
-    setSecretDialogOpen(false);
-    setEditingSecretId(null);
-    setSecretValues(emptySecretFormValues());
-  };
-
-  const handleSave = async () => {
-    if (!values.label.trim()) {
+  const saveEdit = async () => {
+    if (editingEntry == null) return;
+    if (!editValues.label.trim()) {
       notify("Label is required", { type: "error" });
       return;
     }
-
-    const passwordProvided = values.password.trim().length > 0;
+    const passwordProvided = editValues.password.trim().length > 0;
     const payload = {
-      label: values.label.trim(),
-      url: values.url.trim() || null,
-      username: values.username.trim() || null,
+      label: editValues.label.trim(),
+      url: editValues.url.trim() || null,
+      username: editValues.username.trim() || null,
       kind: "login",
       secret_label: null,
       notes: null,
       updated_at: new Date().toISOString(),
     };
-
     try {
-      if (editingEntry) {
-        await update(
-          "deal_access_entries",
-          {
-            id: editingEntry.id,
-            data: payload,
-            previousData: editingEntry,
-          },
-          { returnPromise: true },
+      await update(
+        "deal_access_entries",
+        {
+          id: editingEntry.id,
+          data: payload,
+          previousData: editingEntry,
+        },
+        { returnPromise: true },
+      );
+      if (passwordProvided) {
+        await dataProvider.setAccessEntryPassword(
+          editingEntry.id,
+          editValues.password.trim(),
         );
-        if (passwordProvided) {
-          await dataProvider.setAccessEntryPassword(
-            editingEntry.id,
-            values.password.trim(),
-          );
-        }
-        notify("Access updated");
-      } else {
-        const created = await create(
-          "deal_access_entries",
-          {
-            data: {
-              deal_id: record.id,
-              ...payload,
-            },
-          },
-          { returnPromise: true },
-        );
-        const entryId = created?.id;
-        if (entryId != null && passwordProvided) {
-          await dataProvider.setAccessEntryPassword(
-            entryId,
-            values.password.trim(),
-          );
-        }
-        if (entryId != null) {
-          try {
-            await dataProvider.logAccessEntryAudit(entryId, "created");
-          } catch {
-            // Non-blocking.
-          }
-        }
-        notify("Access saved");
       }
-      closeDialog();
+      notify("Access updated");
+      cancelEdit();
       refresh();
       void refetchLegacyCount();
     } catch (saveError) {
@@ -773,66 +761,135 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     }
   };
 
-  const handleSaveSecret = async () => {
-    if (!secretValues.label.trim()) {
+  const saveNew = async () => {
+    if (!newValues.label.trim()) {
       notify("Label is required", { type: "error" });
       return;
     }
-
-    const valueProvided = secretValues.value.trim().length > 0;
+    const passwordProvided = newValues.password.trim().length > 0;
     const payload = {
-      label: secretValues.label.trim(),
+      label: newValues.label.trim(),
+      url: newValues.url.trim() || null,
+      username: newValues.username.trim() || null,
+      kind: "login",
+      secret_label: null,
+      notes: null,
       updated_at: new Date().toISOString(),
     };
-
     try {
-      if (editingSecretId != null) {
-        const previous = secrets.find((s) => s.id === editingSecretId) ?? null;
-        await updateSecret(
-          "deal_secrets",
-          {
-            id: editingSecretId,
-            data: payload,
-            previousData: previous ?? { id: editingSecretId },
-          },
-          { returnPromise: true },
+      const created = await create(
+        "deal_access_entries",
+        { data: { deal_id: record.id, ...payload } },
+        { returnPromise: true },
+      );
+      const entryId = created?.id;
+      if (entryId != null && passwordProvided) {
+        await dataProvider.setAccessEntryPassword(
+          entryId,
+          newValues.password.trim(),
         );
-        if (valueProvided) {
-          await dataProvider.setDealSecretValue(
-            editingSecretId,
-            secretValues.value.trim(),
-          );
-        }
-        notify("Secret updated");
-      } else {
-        const created = await createSecret(
-          "deal_secrets",
-          {
-            data: {
-              deal_id: record.id,
-              ...payload,
-            },
-          },
-          { returnPromise: true },
-        );
-        const secretId = created?.id;
-        if (secretId != null && valueProvided) {
-          await dataProvider.setDealSecretValue(
-            secretId,
-            secretValues.value.trim(),
-          );
-        }
-        if (secretId != null) {
-          try {
-            await dataProvider.logDealSecretAudit(secretId, "created");
-          } catch {
-            // Non-blocking
-          }
-        }
-        notify("Secret created");
       }
+      if (entryId != null) {
+        try {
+          await dataProvider.logAccessEntryAudit(entryId, "created");
+        } catch {
+          // Non-blocking
+        }
+      }
+      setNewValues({ label: "", url: "", username: "", password: "" });
+      notify("Access saved");
       refresh();
-      closeSecretDialog();
+      void refetchLegacyCount();
+    } catch (saveError) {
+      if (isSupabaseSchemaMissingError(saveError, "deal_access_entries")) {
+        notify(getSupabaseSchemaMissingMessage("deal_access_entries"), {
+          type: "error",
+        });
+        return;
+      }
+      notify("Failed to save access", { type: "error" });
+    }
+  };
+
+  const startEditSecret = (secret: DealSecret) => {
+    setEditingSecretId(secret.id);
+    setEditSecretValues({ label: secret.label ?? "", value: "" });
+  };
+
+  const cancelEditSecret = () => {
+    setEditingSecretId(null);
+    setEditSecretValues({ label: "", value: "" });
+  };
+
+  const saveEditSecret = async () => {
+    if (editingSecretId == null) return;
+    const secret = secrets.find((s) => s.id === editingSecretId) ?? null;
+    if (!editSecretValues.label.trim()) {
+      notify("Label is required", { type: "error" });
+      return;
+    }
+    const valueProvided = editSecretValues.value.trim().length > 0;
+    const payload = {
+      label: editSecretValues.label.trim(),
+      updated_at: new Date().toISOString(),
+    };
+    try {
+      await updateSecret(
+        "deal_secrets",
+        {
+          id: editingSecretId,
+          data: payload,
+          previousData: secret ?? { id: editingSecretId },
+        },
+        { returnPromise: true },
+      );
+      if (valueProvided) {
+        await dataProvider.setDealSecretValue(
+          editingSecretId,
+          editSecretValues.value.trim(),
+        );
+      }
+      notify("Secret updated");
+      cancelEditSecret();
+      refresh();
+    } catch {
+      notify("Failed to save secret", { type: "error" });
+    }
+  };
+
+  const saveNewSecret = async () => {
+    if (!newSecretValues.label.trim()) {
+      notify("Label is required", { type: "error" });
+      return;
+    }
+    const valueProvided = newSecretValues.value.trim().length > 0;
+    const payload = {
+      label: newSecretValues.label.trim(),
+      updated_at: new Date().toISOString(),
+    };
+    try {
+      const created = await createSecret(
+        "deal_secrets",
+        { data: { deal_id: record.id, ...payload } },
+        { returnPromise: true },
+      );
+      const secretId = created?.id;
+      if (secretId != null && valueProvided) {
+        await dataProvider.setDealSecretValue(
+          secretId,
+          newSecretValues.value.trim(),
+        );
+      }
+      if (secretId != null) {
+        try {
+          await dataProvider.logDealSecretAudit(secretId, "created");
+        } catch {
+          // Non-blocking
+        }
+      }
+      setNewSecretValues(emptySecretFormValues());
+      notify("Secret created");
+      refresh();
     } catch {
       notify("Failed to save secret", { type: "error" });
     }
@@ -945,49 +1002,49 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={openCreateSecret}
-          className="shrink-0"
-        >
-          <Plus className="size-4" />
-          Add API key
-        </Button>
-        <Button type="button" onClick={openCreate} className="shrink-0">
-          <Plus className="size-4" />
-          Add login
-        </Button>
-      </div>
-
-      {secrets.length === 0 ? null : (
-        <div className="overflow-x-auto rounded-md border">
-          <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
-            API keys & secrets
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Label</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead className="w-[88px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {secrets.map((secret) => (
+      <div className="overflow-x-auto rounded-md border">
+        <div className="border-b bg-muted/20 px-4 py-2 text-sm font-semibold">
+          API keys & secrets
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Label</TableHead>
+              <TableHead>Value</TableHead>
+              <TableHead className="w-[88px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {secrets.map((secret) =>
+              editingSecretId === secret.id ? (
+                <SecretEditRow
+                  key={String(secret.id)}
+                  secret={secret}
+                  values={editSecretValues}
+                  onChange={setEditSecretValues}
+                  onCancel={cancelEditSecret}
+                  onSave={() => void saveEditSecret()}
+                  isSaving={isUpdatingSecret}
+                />
+              ) : (
                 <SecretRow
                   key={String(secret.id)}
                   secret={secret}
-                  onEdit={() => openEditSecret(secret)}
+                  onEdit={() => startEditSecret(secret)}
                   onDelete={() => void handleDeleteSecret(secret)}
                   isDeleting={isDeletingSecret && deletingSecretId === secret.id}
                 />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+              ),
+            )}
+            <SecretCreateRow
+              values={newSecretValues}
+              onChange={setNewSecretValues}
+              onSave={() => void saveNewSecret()}
+              isSaving={isCreatingSecret}
+            />
+          </TableBody>
+        </Table>
+      </div>
 
       {entries.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
@@ -1014,41 +1071,37 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entries.map((entry) => (
-                <AccessEntryRow
-                  key={String(entry.id)}
-                  entry={entry}
-                  onEdit={() => openEdit(entry)}
-                  onDelete={() => handleDelete(entry)}
-                  isDeleting={isDeleting && deletingId === entry.id}
-                />
-              ))}
+              {entries.map((entry) =>
+                editingId === entry.id ? (
+                  <AccessEntryEditRow
+                    key={String(entry.id)}
+                    entry={entry}
+                    values={editValues}
+                    onChange={setEditValues}
+                    onCancel={cancelEdit}
+                    onSave={() => void saveEdit()}
+                    isSaving={isUpdating}
+                  />
+                ) : (
+                  <AccessEntryRow
+                    key={String(entry.id)}
+                    entry={entry}
+                    onEdit={() => startEdit(entry)}
+                    onDelete={() => handleDelete(entry)}
+                    isDeleting={isDeleting && deletingId === entry.id}
+                  />
+                ),
+              )}
+              <AccessEntryCreateRow
+                values={newValues}
+                onChange={setNewValues}
+                onSave={() => void saveNew()}
+                isSaving={isCreating}
+              />
             </TableBody>
           </Table>
         </div>
       )}
-
-      <AccessEntryDialog
-        open={dialogOpen}
-        title={editingEntry ? "Edit access" : "Add access"}
-        values={values}
-        onChange={setValues}
-        onClose={closeDialog}
-        onSave={() => void handleSave()}
-        isSaving={isCreating || isUpdating}
-        isEditing={Boolean(editingEntry)}
-      />
-
-      <SecretDialog
-        open={secretDialogOpen}
-        title={editingSecretId != null ? "Edit secret" : "Add secret"}
-        values={secretValues}
-        onChange={setSecretValues}
-        onClose={closeSecretDialog}
-        onSave={() => void handleSaveSecret()}
-        isSaving={isCreatingSecret || isUpdatingSecret}
-        isEditing={editingSecretId != null}
-      />
     </div>
   );
 };
