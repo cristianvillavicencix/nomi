@@ -40,7 +40,8 @@ export const defaultNewLeadFormValues = (
   status: "new",
   organization_member_id: organizationMemberId ?? "",
   company_id: null,
-  company_is_new: false,
+  /** New-lead B2B flow defaults to registering a new company. */
+  company_is_new: true,
   add_primary_contact: true,
   company_draft_name: "",
   company_draft_website: "",

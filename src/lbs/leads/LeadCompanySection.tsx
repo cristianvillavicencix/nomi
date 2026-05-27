@@ -9,9 +9,7 @@ import { TextInput } from "@/components/admin/text-input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import type { Company } from "@/components/atomic-crm/types";
-import {
-  LBS_COMPANY_INDUSTRY_CHOICES,
-} from "./leadFormConstants";
+import { LBS_COMPANY_INDUSTRY_CHOICES } from "./leadFormConstants";
 import type { NewLeadFormValues } from "./newLeadFormTypes";
 
 const AddContactChoice = ({
@@ -54,6 +52,43 @@ const AddContactChoice = ({
   </div>
 );
 
+const CompanyModeToggle = ({
+  isNew,
+  onSelectNew,
+  onSelectExisting,
+}: {
+  isNew: boolean;
+  onSelectNew: () => void;
+  onSelectExisting: () => void;
+}) => (
+  <div className="grid grid-cols-2 gap-2">
+    <button
+      type="button"
+      onClick={onSelectNew}
+      className={cn(
+        "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+        isNew
+          ? "border-primary bg-primary/5 font-medium"
+          : "border-border hover:bg-muted/50",
+      )}
+    >
+      Nueva empresa
+    </button>
+    <button
+      type="button"
+      onClick={onSelectExisting}
+      className={cn(
+        "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+        !isNew
+          ? "border-primary bg-primary/5 font-medium"
+          : "border-border hover:bg-muted/50",
+      )}
+    >
+      Ya en el CRM
+    </button>
+  </div>
+);
+
 export const LeadCompanySection = () => {
   const isMobile = useIsMobile();
   const { setValue } = useFormContext<NewLeadFormValues>();
@@ -64,9 +99,6 @@ export const LeadCompanySection = () => {
   const addPrimaryContact = useWatch<NewLeadFormValues, "add_primary_contact">({
     name: "add_primary_contact",
   });
-  const draftName = useWatch<NewLeadFormValues, "company_draft_name">({
-    name: "company_draft_name",
-  });
 
   const { data: selectedCompany } = useGetOne<Company>(
     "companies",
@@ -74,93 +106,101 @@ export const LeadCompanySection = () => {
     { enabled: Boolean(companyId) && !companyIsNew },
   );
 
-  const showDraftFields = companyIsNew || (!companyId && Boolean(draftName?.trim()));
+  const selectNewCompany = () => {
+    setValue("company_is_new", true, { shouldDirty: true });
+    setValue("company_id", null, { shouldDirty: true });
+  };
+
+  const selectExistingCompany = () => {
+    setValue("company_is_new", false, { shouldDirty: true });
+    setValue("company_draft_name", "", { shouldDirty: true });
+    setValue("company_draft_website", "", { shouldDirty: true });
+    setValue("company_draft_phone", "", { shouldDirty: true });
+    setValue("company_draft_address", "", { shouldDirty: true });
+    setValue("company_draft_sector", "", { shouldDirty: true });
+    setValue("use_company_contact_info", false, { shouldDirty: true });
+  };
 
   useEffect(() => {
-    if (companyId && !companyIsNew) {
+    if (companyIsNew) return;
+    if (companyId) {
       setValue("company_draft_name", "", { shouldDirty: false });
     }
   }, [companyId, companyIsNew, setValue]);
 
-  const beginNewCompany = (prefillName?: string) => {
-    setValue("company_id", null, { shouldDirty: true });
-    setValue("company_is_new", true, { shouldDirty: true });
-    if (prefillName?.trim()) {
-      setValue("company_draft_name", prefillName.trim(), { shouldDirty: true });
-    }
-  };
-
   return (
     <div className="space-y-3">
-      <ReferenceInput
-        source="company_id"
-        reference="companies"
-        perPage={25}
-        sort={{ field: "name", order: "ASC" }}
-      >
-        <AutocompleteInput
-          label="Company name"
-          optionText="name"
-          helperText={false}
-          modal={isMobile}
-          onChange={(value) => {
-            if (value != null && value !== "") {
-              setValue("company_is_new", false, { shouldDirty: true });
-            }
-          }}
-          onCreate={async (name?: string) => {
-            beginNewCompany(name);
-            return undefined;
-          }}
-          createItemLabel='Create "%{item}"'
-          createLabel="Search existing or type a new company"
-        />
-      </ReferenceInput>
+      <CompanyModeToggle
+        isNew={companyIsNew}
+        onSelectNew={selectNewCompany}
+        onSelectExisting={selectExistingCompany}
+      />
 
-      {showDraftFields ? (
+      {companyIsNew ? (
         <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
           <p className="text-xs text-muted-foreground">
-            New company — complete the essentials below.
+            Datos de la empresa que quieres registrar con este lead.
           </p>
-          {companyIsNew ? (
-            <TextInput
-              source="company_draft_name"
-              label="Business name"
-              helperText={false}
-            />
-          ) : null}
+          <TextInput
+            source="company_draft_name"
+            label="Nombre de la empresa"
+            helperText={false}
+            placeholder="Ej. Acme Landscaping"
+          />
           <TextInput
             source="company_draft_website"
-            label="Website"
+            label="Sitio web"
             helperText={false}
-            placeholder="www.example.com"
+            placeholder="www.ejemplo.com"
           />
           <PhoneInput
             source="company_draft_phone"
-            label="Company phone"
+            label="Teléfono de la empresa"
             helperText={false}
           />
           <TextInput
             source="company_draft_address"
-            label="Address"
+            label="Dirección"
             helperText={false}
             multiline
           />
           <SelectInput
             source="company_draft_sector"
-            label="Industry"
+            label="Industria"
             choices={[...LBS_COMPANY_INDUSTRY_CHOICES]}
             optionText="name"
             helperText={false}
-            emptyText="Select industry"
+            emptyText="Selecciona industria"
           />
         </div>
-      ) : selectedCompany ? (
-        <p className="text-xs text-muted-foreground">
-          Using existing company: <strong>{selectedCompany.name}</strong>
-          {selectedCompany.website ? ` · ${selectedCompany.website}` : ""}
-        </p>
-      ) : null}
+      ) : (
+        <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+          <p className="text-xs text-muted-foreground">
+            Solo si esta empresa ya está registrada en el CRM.
+          </p>
+          <ReferenceInput
+            source="company_id"
+            reference="companies"
+            perPage={25}
+            sort={{ field: "name", order: "ASC" }}
+          >
+            <AutocompleteInput
+              label="Buscar empresa"
+              optionText="name"
+              helperText={false}
+              modal={isMobile}
+              placeholder="Escribe el nombre…"
+              createLabel={false}
+            />
+          </ReferenceInput>
+          {selectedCompany ? (
+            <p className="text-xs text-muted-foreground">
+              Seleccionada: <strong>{selectedCompany.name}</strong>
+              {selectedCompany.website ? ` · ${selectedCompany.website}` : ""}
+            </p>
+          ) : null}
+        </div>
+      )}
 
       <AddContactChoice
         value={addPrimaryContact}

@@ -14,6 +14,10 @@ export const LeadTypeToggle = () => {
       setValue("company_id", null, { shouldDirty: true });
       setValue("company_is_new", false, { shouldDirty: true });
       setValue("add_primary_contact", true, { shouldDirty: true });
+    } else {
+      setValue("company_id", null, { shouldDirty: true });
+      setValue("company_is_new", true, { shouldDirty: true });
+      setValue("add_primary_contact", true, { shouldDirty: true });
     }
   };
 
