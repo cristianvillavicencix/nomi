@@ -70,7 +70,9 @@ export const ClientPortalPage = () => {
         setError(err instanceof Error ? err.message : "Could not load portal");
       })
       .finally(() => setLoading(false));
-  }, [activeView, selectedDealId, token]);
+    // NOTE: do not re-fetch when switching tabs (view).
+    // The portal payload already includes all sections for a project delivery.
+  }, [selectedDealId, token]);
 
   useEffect(() => {
     if (!token.trim() || !payload) return;
