@@ -1,228 +1,234 @@
+import { useState } from "react";
 import {
-  CreateBase,
   Form,
-  required,
+  useCreate,
+  useDataProvider,
   useGetIdentity,
   useNotify,
   useRefresh,
 } from "ra-core";
-import { useState } from "react";
+import { useWatch } from "react-hook-form";
 import { useNavigate } from "react-router";
-import { SaveButton } from "@/components/admin/form";
-import { ReferenceInput } from "@/components/admin/reference-input";
-import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronDown } from "lucide-react";
+import { X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import type {
-  Contact,
-  OrganizationMember,
-} from "@/components/atomic-crm/types";
-
-import { InterestedServiceInput } from "./InterestedServiceInput";
-import { LeadChannelsInput } from "./LeadChannelsInput";
-import { LeadCompanyField } from "./LeadCompanyField";
+import type { Company } from "@/components/atomic-crm/types";
 import {
-  LBS_LEAD_SOURCE_CHOICES,
-  LBS_LEAD_SOURCE_OTHER,
-  LBS_LEAD_SOURCE_REFERRAL,
-} from "./leadFormConstants";
-import { LeadReferrerInputs } from "./LeadReferrerInputs";
+  buildCompanyCreateData,
+  buildContactCreatePayload,
+} from "./buildCreateLeadPayload";
+import { LeadCompanySection } from "./LeadCompanySection";
+import { LeadContactSection } from "./LeadContactSection";
+import { LeadFormSection } from "./LeadFormSection";
+import { LeadInfoSection } from "./LeadInfoSection";
+import { LeadTypeToggle } from "./LeadTypeToggle";
+import {
+  defaultNewLeadFormValues,
+  type NewLeadFormValues,
+} from "./newLeadFormTypes";
+import { validateNewLeadForm } from "./newLeadFormValidation";
 
 type NewLeadDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
-type LeadFormValues = Partial<Contact> & {
-  email_jsonb?: { email: string; type: string }[];
-  phone_jsonb?: { number: string; type: string }[];
-};
-
 export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
+  const isMobile = useIsMobile();
+  const [isSaving, setIsSaving] = useState(false);
   const { identity } = useGetIdentity();
-  const { noteStatuses } = useConfigurationContext();
   const notify = useNotify();
   const refresh = useRefresh();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const [moreOpen, setMoreOpen] = useState(false);
+  const dataProvider = useDataProvider();
+  const [create] = useCreate();
 
   const handleClose = () => onOpenChange(false);
 
+  const handleSubmit = async (values: NewLeadFormValues) => {
+    const validation = validateNewLeadForm(values);
+    if (!validation.ok) {
+      notify(validation.message, { type: "warning" });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      let companyId: number | string | null | undefined = values.company_id;
+      let companyName = "";
+
+      if (values.lead_type === "business") {
+        if (values.company_is_new) {
+          const created = (await create(
+            "companies",
+            {
+              data: buildCompanyCreateData(values, identity?.id),
+            },
+            { returnPromise: true },
+          )) as Company;
+          companyId = created?.id ?? null;
+          companyName = values.company_draft_name.trim();
+        } else if (companyId != null && companyId !== "") {
+          const { data: company } = await dataProvider.getOne<Company>(
+            "companies",
+            { id: companyId },
+          );
+          companyName = company.name;
+        }
+      }
+
+      const payload = buildContactCreatePayload(values, companyId, companyName);
+      const contact = await create(
+        "contacts",
+        { data: payload },
+        { returnPromise: true },
+      );
+
+      notify("Lead created", { type: "info" });
+      refresh();
+      handleClose();
+      if (contact?.id != null) {
+        navigate(`/leads/${contact.id}/show`);
+      }
+    } catch {
+      notify("Failed to create lead", { type: "error" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <CreateBase
-          resource="contacts"
-          redirect={false}
-          transform={(values: LeadFormValues): Partial<Contact> => {
-            const now = new Date().toISOString();
-            const isReferral = values.lead_source === LBS_LEAD_SOURCE_REFERRAL;
-            const isOther = values.lead_source === LBS_LEAD_SOURCE_OTHER;
-            return {
-              ...values,
-              referred_by_contact_id: isReferral
-                ? (values.referred_by_contact_id ?? null)
-                : null,
-              referred_by_company_id: isReferral
-                ? (values.referred_by_company_id ?? null)
-                : null,
-              lead_source_other: isOther
-                ? (values.lead_source_other ?? null)
-                : null,
-              status: values.status ?? "new",
-              first_seen: now,
-              last_seen: now,
-              tags: [],
-            };
-          }}
-          mutationOptions={{
-            onSuccess: (data) => {
-              notify("Lead created", { type: "info" });
-              refresh();
-              handleClose();
-              if (data?.id != null) {
-                navigate(`/leads/${data.id}/show`);
-              }
-            },
-            onError: () => {
-              notify("Failed to create lead", { type: "error" });
-            },
-          }}
+      <DialogContent
+        showCloseButton={false}
+        className={cn(
+          "flex max-h-[min(92vh,44rem)] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0",
+          "sm:max-w-xl md:max-w-2xl",
+          isMobile &&
+            "top-auto bottom-0 left-1/2 max-h-[92vh] translate-x-[-50%] translate-y-0 rounded-b-none rounded-t-2xl",
+        )}
+      >
+        <Form
+          key={open ? "new-lead-open" : "new-lead-closed"}
+          className="flex min-h-0 flex-1 flex-col"
+          defaultValues={defaultNewLeadFormValues(identity?.id)}
+          onSubmit={handleSubmit}
         >
-          <Form
-            defaultValues={{
-              status: "new",
-              organization_member_id: identity?.id,
-              email_jsonb: [{ email: "", type: "Work" }],
-              phone_jsonb: [{ number: "", type: "Work" }],
-            }}
-          >
-            <DialogHeader>
-              <DialogTitle>New lead</DialogTitle>
-              <DialogDescription>
-                Name, company, contact info, and how they found you.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex flex-col gap-4 py-2">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <TextInput
-                  source="first_name"
-                  label="First name"
-                  validate={required()}
-                  helperText={false}
-                />
-                <TextInput
-                  source="last_name"
-                  label="Last name"
-                  validate={required()}
-                  helperText={false}
-                />
-              </div>
-
-              <LeadCompanyField />
-
-              <LeadChannelsInput
-                source="email_jsonb"
-                kind="email"
-                label="Email"
-              />
-              <LeadChannelsInput
-                source="phone_jsonb"
-                kind="phone"
-                label="Phone"
-              />
-
-              <SelectInput
-                source="lead_source"
-                label="Lead source"
-                choices={LBS_LEAD_SOURCE_CHOICES.map((entry) => ({
-                  id: entry.id,
-                  name: entry.name,
-                }))}
-                validate={required()}
-                helperText={false}
-              />
-              <LeadReferrerInputs />
-
-              <InterestedServiceInput />
-
-              <div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="-ml-2 h-8 gap-1 px-2 text-muted-foreground"
-                  onClick={() => setMoreOpen((open) => !open)}
-                >
-                  <ChevronDown
-                    className={cn(
-                      "size-4 transition-transform",
-                      moreOpen && "rotate-180",
-                    )}
-                  />
-                  More options
-                </Button>
-                {moreOpen ? (
-                  <div className="mt-2 space-y-4 rounded-lg border bg-muted/20 p-3">
-                    <ReferenceInput
-                      reference="organization_members"
-                      source="organization_member_id"
-                      sort={{ field: "last_name", order: "ASC" }}
-                      filter={{ "disabled@neq": true }}
-                    >
-                      <SelectInput
-                        label="Assigned to"
-                        optionText={(choice: OrganizationMember) =>
-                          `${choice.first_name ?? ""} ${choice.last_name ?? ""}`.trim()
-                        }
-                        validate={required()}
-                        helperText={false}
-                      />
-                    </ReferenceInput>
-                    <SelectInput
-                      source="status"
-                      label="Status"
-                      choices={noteStatuses.map((status) => ({
-                        id: status.value,
-                        name: status.label,
-                      }))}
-                      validate={required()}
-                      helperText={false}
-                    />
-                    <TextInput
-                      source="background"
-                      label="Notes"
-                      multiline
-                      helperText={false}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <DialogFooter className={isMobile ? "flex-col gap-2" : ""}>
-              <Button type="button" variant="ghost" onClick={handleClose}>
-                Cancel
-              </Button>
-              <SaveButton label="Create lead" />
-            </DialogFooter>
-          </Form>
-        </CreateBase>
+          <NewLeadDialogFields
+            isMobile={isMobile}
+            isSaving={isSaving}
+            onCancel={handleClose}
+          />
+        </Form>
       </DialogContent>
     </Dialog>
+  );
+};
+
+const NewLeadDialogFields = ({
+  isMobile,
+  isSaving,
+  onCancel,
+}: {
+  isMobile: boolean;
+  isSaving: boolean;
+  onCancel: () => void;
+}) => {
+  const leadType = useWatch<NewLeadFormValues, "lead_type">({ name: "lead_type" });
+  const addPrimaryContact = useWatch<NewLeadFormValues, "add_primary_contact">({
+    name: "add_primary_contact",
+  });
+
+  const showCompany = leadType === "business";
+  const showContact =
+    leadType === "individual" ||
+    (leadType === "business" && addPrimaryContact);
+
+  return (
+    <>
+      <DialogHeader className="relative shrink-0 space-y-1 border-b bg-background px-5 py-4 pr-12 text-left sm:px-6 sm:pr-14">
+        <DialogTitle>Nuevo lead</DialogTitle>
+        <DialogDescription>
+          Tipo de lead, empresa o contacto, origen y asignación.
+        </DialogDescription>
+        <DialogClose
+          className="absolute top-3.5 right-3.5 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+          disabled={isSaving}
+        >
+          <X className="size-4" />
+          <span className="sr-only">Cerrar</span>
+        </DialogClose>
+      </DialogHeader>
+
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
+        <div className="flex flex-col gap-4">
+          <LeadTypeToggle />
+
+          {showCompany ? (
+            <LeadFormSection title="Empresa" defaultOpen>
+              <LeadCompanySection />
+            </LeadFormSection>
+          ) : null}
+
+          {showContact ? (
+            <LeadFormSection title="Contacto" defaultOpen>
+              <LeadContactSection />
+            </LeadFormSection>
+          ) : null}
+
+          <LeadFormSection title="Información del lead" collapsible={false}>
+            <LeadInfoSection />
+          </LeadFormSection>
+
+          <LeadFormSection title="Notas" defaultOpen={false}>
+            <TextInput
+              source="background"
+              label="Notas"
+              multiline
+              helperText={false}
+            />
+          </LeadFormSection>
+        </div>
+      </div>
+
+      <DialogFooter
+        className={cn(
+          "shrink-0 gap-2 border-t bg-muted/30 px-5 py-4 sm:px-6",
+          isMobile && "flex-col-reverse sm:flex-col-reverse",
+        )}
+      >
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSaving}
+          className={isMobile ? "w-full" : ""}
+        >
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isSaving} className={isMobile ? "w-full" : ""}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Creando…
+            </>
+          ) : (
+            "Crear lead"
+          )}
+        </Button>
+      </DialogFooter>
+    </>
   );
 };

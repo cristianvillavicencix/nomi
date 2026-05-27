@@ -8,25 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { Contact } from "@/components/atomic-crm/types";
 
-const CHANNEL_TYPES = [
-  { id: "Work", name: "Work" },
-  { id: "Home", name: "Home" },
-  { id: "Other", name: "Other" },
-];
-
 type EmailRow = NonNullable<Contact["email_jsonb"]>[number];
 type PhoneRow = NonNullable<Contact["phone_jsonb"]>[number];
+
+type ChannelTypeChoice = { id: string; name: string };
 
 type LeadChannelsInputProps = {
   source: "email_jsonb" | "phone_jsonb";
   kind: "email" | "phone";
   label: string;
+  typeChoices: readonly ChannelTypeChoice[];
 };
 
 export const LeadChannelsInput = ({
   source,
   kind,
   label,
+  typeChoices,
 }: LeadChannelsInputProps) => {
   const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({ control, name: source });
@@ -58,7 +56,7 @@ export const LeadChannelsInput = ({
                 source={`${source}.${index}.type`}
                 label={false}
                 optionText="id"
-                choices={CHANNEL_TYPES}
+                choices={[...typeChoices]}
                 defaultValue="Work"
                 helperText={false}
               />
