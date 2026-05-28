@@ -124,12 +124,6 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         max: new Date().getFullYear(),
       }),
       field({
-        key: "years_experience",
-        type: "number",
-        label: "Years of experience (calculated)",
-        help_text: "Calculated automatically from the founding year.",
-      }),
-      field({
         key: "has_insurance",
         type: "radio",
         label: "Do you carry insurance?",
@@ -176,22 +170,6 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
           "e.g. We started in 2010 as a two-person family team and now serve the whole county…",
       }),
       field({
-        key: "company_tagline",
-        type: "text",
-        label: "Tagline or main headline",
-        placeholder:
-          'e.g. "Quality in every project" or "Your home, our priority"',
-      }),
-      field({
-        key: "why_choose_us",
-        type: "dynamic_list",
-        label: "Why should customers choose you?",
-        help_text: "Add 3–5 clear reasons (experience, warranty, speed, etc.).",
-        min_items: 0,
-        add_button_label: "Add reason",
-        item_placeholder: "e.g. 15 years of experience, licensed & insured…",
-      }),
-      field({
         key: "warranties_guarantees",
         type: "dynamic_list",
         label: "Warranties you offer",
@@ -201,11 +179,13 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         item_placeholder: "e.g. 10-year materials warranty…",
       }),
       field({
-        key: "customer_testimonials",
-        type: "textarea",
-        label: "Customer testimonials / reviews",
-        help_text: "Paste quotes from Google, Yelp, or anywhere. We'll use these on the site.",
-        placeholder: "\"Best roofing crew we've ever had!\" – John D.\n\"Fast, professional, and fair pricing.\" – Maria L.",
+        key: "differentiators",
+        type: "dynamic_list",
+        label: "What makes you different from competitors?",
+        help_text: "Add 3–5 bullet points.",
+        min_items: 0,
+        add_button_label: "Add differentiator",
+        item_placeholder: "e.g. Family-owned since 1998, lifetime workmanship guarantee…",
       }),
       field({
         key: "emergency_services",
@@ -219,6 +199,21 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
     id: "services",
     title: "Your services",
     fields: [
+      field({
+        key: "service_category",
+        type: "select",
+        label: "What type of contractor are you?",
+        help_text: "Selecting a category will pre-fill your most common services.",
+        options: [
+          "Roofing",
+          "Siding",
+          "Decking & Fencing",
+          "Painting",
+          "Gutters",
+          "General Home Improvements",
+          "Other",
+        ],
+      }),
       field({
         key: "services_offered",
         type: "multi_select",
@@ -253,19 +248,6 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         help_text: "Pick one of the services you selected above.",
       }),
       field({
-        key: "service_radius",
-        type: "select",
-        label: "How far do you travel for jobs?",
-        options: [
-          "Under 10 miles",
-          "10–25 miles",
-          "25–50 miles",
-          "50–100 miles",
-          "Statewide",
-          "National",
-        ],
-      }),
-      field({
         key: "free_offers",
         type: "multi_select",
         label: "Do you offer free inspections or estimates?",
@@ -288,15 +270,6 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         label: "Do you accept Xactimate?",
         options: ["Yes", "No"],
         visible_when: whenEquals("insurance_claims", "Yes"),
-      }),
-      field({
-        key: "differentiators",
-        type: "dynamic_list",
-        label: "What makes you different from competitors?",
-        help_text: "Add 3–5 bullet points.",
-        min_items: 0,
-        add_button_label: "Add differentiator",
-        item_placeholder: "e.g. Family-owned since 1998, lifetime workmanship guarantee…",
       }),
     ],
   },
