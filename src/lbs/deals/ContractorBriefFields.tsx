@@ -1,8 +1,21 @@
 import { useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Check, ChevronDown, ImageIcon, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -556,19 +569,28 @@ const ReferenceSitesField = ({
   );
 };
 
+type CertificationImage = { url: string; name: string };
+
 type CertificationEntry = {
   label: string;
   url: string;
-  image_url: string;
-  image_name?: string;
+  images: CertificationImage[];
 };
 
 const parseCertifications = (value: unknown): CertificationEntry[] => {
   if (!Array.isArray(value)) return [];
-  return value.filter(
-    (entry): entry is CertificationEntry =>
-      entry !== null && typeof entry === "object",
-  );
+  return value
+    .filter((entry): entry is Record<string, unknown> => entry !== null && typeof entry === "object")
+    .map((entry) => ({
+      label: String(entry.label ?? ""),
+      url: String(entry.url ?? ""),
+      // migrate old image_url field
+      images: Array.isArray(entry.images)
+        ? (entry.images as CertificationImage[])
+        : entry.image_url
+          ? [{ url: String(entry.image_url), name: String(entry.image_name ?? "") }]
+          : [],
+    }));
 };
 
 const CertificationsField = ({
@@ -581,98 +603,115 @@ const CertificationsField = ({
   onChange: (next: CertificationEntry[]) => void;
 }) => {
   const rows = parseCertifications(value);
+  const fileInputRefs = useMemo(
+    () => rows.map(() => ({ current: null as HTMLInputElement | null })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows.length],
+  );
 
-  const updateRow = (index: number, patch: Partial<CertificationEntry>) => {
-    const next = rows.map((row, i) => (i === index ? { ...row, ...patch } : row));
-    onChange(next);
-  };
+  const updateRow = (index: number, patch: Partial<CertificationEntry>) =>
+    onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 
-  const removeRow = (index: number) => {
+  const removeRow = (index: number) =>
     onChange(rows.filter((_, i) => i !== index));
-  };
 
   const handleImageUpload = async (index: number, fileList: FileList | null) => {
     const file = fileList?.[0];
     if (!file) return;
-    const uploaded = await uploadFormFile(file, {
-      token,
-      fieldKey: "certifications",
+    const uploaded = await uploadFormFile(file, { token, fieldKey: "certifications" });
+    const current = rows[index];
+    if (!current) return;
+    const images = [...(current.images ?? [])];
+    if (images.length < 2) images.push({ url: uploaded.url, name: uploaded.name });
+    updateRow(index, { images });
+  };
+
+  const removeImage = (rowIndex: number, imgIndex: number) => {
+    const current = rows[rowIndex];
+    if (!current) return;
+    updateRow(rowIndex, {
+      images: current.images.filter((_, i) => i !== imgIndex),
     });
-    updateRow(index, { image_url: uploaded.url, image_name: uploaded.name });
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <Label>Certifications &amp; awards (optional)</Label>
       <p className="text-xs text-muted-foreground">
-        Add each certification, award, or license. Include a link and upload a badge image if you have one.
+        Label, link, and up to 2 badge images per certification.
       </p>
-      {rows.map((row, index) => (
-        <div
-          key={`cert-${index}`}
-          className="space-y-3 rounded-md border p-3"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">
-              Certification {index + 1}
-            </span>
+      {rows.map((row, index) => {
+        const canAddImage = row.images.length < 2;
+        return (
+          <div key={`cert-${index}`} className="flex items-center gap-2">
+            <Input
+              value={row.label}
+              placeholder="BBB A+, GAF Certified…"
+              className="w-36 shrink-0"
+              onChange={(e) => updateRow(index, { label: e.target.value })}
+            />
+            <Input
+              value={row.url}
+              placeholder="https://bbb.org/…"
+              className="min-w-0 flex-1"
+              onChange={(e) => updateRow(index, { url: e.target.value })}
+            />
+            {row.images.map((img, imgIndex) => (
+              <div key={img.url} className="relative shrink-0">
+                <img
+                  src={img.url}
+                  alt={img.name}
+                  className="size-8 rounded border object-contain"
+                />
+                <button
+                  type="button"
+                  aria-label="Remove image"
+                  className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                  onClick={() => removeImage(index, imgIndex)}
+                >
+                  <X className="size-2.5" />
+                </button>
+              </div>
+            ))}
+            {canAddImage ? (
+              <>
+                <input
+                  ref={(el) => { if (fileInputRefs[index]) fileInputRefs[index].current = el; }}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.svg"
+                  className="hidden"
+                  onChange={(e) => void handleImageUpload(index, e.target.files)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8 shrink-0 text-muted-foreground"
+                  aria-label="Upload badge image"
+                  onClick={() => fileInputRefs[index]?.current?.click()}
+                >
+                  <ImageIcon className="size-4" />
+                </Button>
+              </>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="size-7 text-muted-foreground hover:text-destructive"
+              className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
               aria-label="Remove certification"
               onClick={() => removeRow(index)}
             >
-              <X className="size-3.5" />
+              <X className="size-4" />
             </Button>
           </div>
-          <Input
-            value={row.label}
-            placeholder="e.g. BBB A+, GAF Certified, NARI Member…"
-            onChange={(e) => updateRow(index, { label: e.target.value })}
-          />
-          <Input
-            value={row.url}
-            placeholder="https://bbb.org/your-listing"
-            onChange={(e) => updateRow(index, { url: e.target.value })}
-          />
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Badge / logo image (optional)</p>
-            <Input
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp,.svg"
-              onChange={(e) => void handleImageUpload(index, e.target.files)}
-            />
-            {row.image_url ? (
-              <div className="flex items-center gap-3">
-                <img
-                  src={row.image_url}
-                  alt={row.image_name ?? row.label}
-                  className="h-12 w-auto rounded border object-contain"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground hover:text-destructive"
-                  onClick={() => updateRow(index, { image_url: "", image_name: undefined })}
-                >
-                  <X className="size-3" />
-                  Remove image
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <Button
         type="button"
         variant="outline"
         size="sm"
-        onClick={() =>
-          onChange([...rows, { label: "", url: "", image_url: "" }])
-        }
+        onClick={() => onChange([...rows, { label: "", url: "", images: [] }])}
       >
         <Plus className="size-4" />
         Add certification
@@ -688,127 +727,80 @@ const BusinessHoursField = ({
   value: unknown;
   onChange: (next: string) => void;
 }) => {
-  const entries = parseBusinessHoursEntries(value);
-  const usedDays = new Set(entries.map((entry) => entry.day));
-  const availableDays = DAY_OPTIONS.filter(
-    (option) => !usedDays.has(option.value),
-  );
-  const [draftDay, setDraftDay] = useState(
-    () => availableDays[0]?.value ?? "Monday",
-  );
-  const [draftOpen, setDraftOpen] = useState("08:00");
-  const [draftClose, setDraftClose] = useState("17:00");
+  const saved = parseBusinessHoursEntries(value);
 
-  const commit = (next: BusinessHourEntry[]) => {
-    onChange(serializeBusinessHours(next));
-  };
-
-  const addEntry = () => {
-    if (!draftDay || usedDays.has(draftDay)) return;
-    commit(
-      [...entries, { day: draftDay, open: draftOpen, close: draftClose }].sort(
-        (left, right) =>
-          DAY_OPTIONS.findIndex((option) => option.value === left.day) -
-          DAY_OPTIONS.findIndex((option) => option.value === right.day),
-      ),
-    );
-    const nextDay = DAY_OPTIONS.find(
-      (option) =>
-        option.value !== draftDay && !usedDays.has(option.value),
-    );
-    if (nextDay) setDraftDay(nextDay.value);
-  };
-
-  const removeEntry = (index: number) => {
-    const next = entries.filter((_, entryIndex) => entryIndex !== index);
-    commit(next);
-    if (!next.some((entry) => entry.day === draftDay)) {
-      const firstAvailable = DAY_OPTIONS.find(
-        (option) => !next.some((entry) => entry.day === option.value),
-      );
-      if (firstAvailable) setDraftDay(firstAvailable.value);
+  type DayState = { enabled: boolean; open: string; close: string };
+  const [days, setDays] = useState<Record<string, DayState>>(() => {
+    const map: Record<string, DayState> = {};
+    for (const option of DAY_OPTIONS) {
+      const entry = saved.find((e) => e.day === option.value);
+      map[option.value] = entry
+        ? { enabled: true, open: entry.open, close: entry.close }
+        : { enabled: false, open: "08:00", close: "17:00" };
     }
+    return map;
+  });
+
+  const commit = (next: Record<string, DayState>) => {
+    const entries = DAY_OPTIONS.filter((o) => next[o.value]?.enabled).map(
+      (o) => ({ day: o.value, open: next[o.value]!.open, close: next[o.value]!.close }),
+    );
+    onChange(serializeBusinessHours(entries));
+  };
+
+  const update = (day: string, patch: Partial<DayState>) => {
+    const next = { ...days, [day]: { ...days[day]!, ...patch } };
+    setDays(next);
+    commit(next);
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <Label>Business hours</Label>
-      <p className="text-xs text-muted-foreground">
-        Add one day at a time. Skip days when you&apos;re closed.
-      </p>
-      {entries.length > 0 ? (
-        <ul className="space-y-2">
-          {entries.map((entry, index) => (
-            <li
-              key={entry.day}
-              className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+      <div className="divide-y rounded-md border">
+        {DAY_OPTIONS.map((option) => {
+          const state = days[option.value]!;
+          return (
+            <div
+              key={option.value}
+              className="flex items-center gap-3 px-3 py-2"
             >
-              <span>
-                <span className="font-medium">{entry.day}</span>
-                <span className="text-muted-foreground">
-                  {" "}
-                  · {entry.open} – {entry.close}
-                </span>
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0"
-                aria-label={`Remove ${entry.day}`}
-                onClick={() => removeEntry(index)}
+              <input
+                type="checkbox"
+                id={`bh-${option.value}`}
+                checked={state.enabled}
+                className="size-4 shrink-0 accent-primary"
+                onChange={(e) => update(option.value, { enabled: e.target.checked })}
+              />
+              <label
+                htmlFor={`bh-${option.value}`}
+                className={`w-8 shrink-0 text-sm font-medium ${state.enabled ? "" : "text-muted-foreground"}`}
               >
-                <X className="size-3.5" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-          No hours added yet.
-        </p>
-      )}
-      {availableDays.length > 0 ? (
-        <div className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-end">
-          <div className="min-w-[8rem] flex-1 space-y-1">
-            <Label className="text-xs">Day</Label>
-            <Select value={draftDay} onValueChange={setDraftDay}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {availableDays.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label} — {option.value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Opens</Label>
-            <Input
-              type="time"
-              className="h-9"
-              value={draftOpen}
-              onChange={(event) => setDraftOpen(event.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Closes</Label>
-            <Input
-              type="time"
-              className="h-9"
-              value={draftClose}
-              onChange={(event) => setDraftClose(event.target.value)}
-            />
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={addEntry}>
-            <Plus className="size-4" />
-            Add day
-          </Button>
-        </div>
-      ) : null}
+                {option.label}
+              </label>
+              {state.enabled ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    value={state.open}
+                    className="h-8 w-28 text-sm"
+                    onChange={(e) => update(option.value, { open: e.target.value })}
+                  />
+                  <span className="text-xs text-muted-foreground">–</span>
+                  <Input
+                    type="time"
+                    value={state.close}
+                    className="h-8 w-28 text-sm"
+                    onChange={(e) => update(option.value, { close: e.target.value })}
+                  />
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Closed</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -841,6 +833,179 @@ const BrandColorPickers = ({
     ))}
   </div>
 );
+
+const CreatableMultiSelect = ({
+  label,
+  options,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  options: string[];
+  value: string[];
+  placeholder?: string;
+  onChange: (next: string[]) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const trimmed = search.trim();
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(trimmed.toLowerCase()),
+  );
+  const canCreate =
+    trimmed.length > 0 &&
+    !options.some((o) => o.toLowerCase() === trimmed.toLowerCase()) &&
+    !value.some((v) => v.toLowerCase() === trimmed.toLowerCase());
+
+  const toggle = (option: string) => {
+    onChange(
+      value.includes(option)
+        ? value.filter((v) => v !== option)
+        : [...value, option],
+    );
+  };
+
+  const create = () => {
+    if (!trimmed) return;
+    onChange([...value, trimmed]);
+    setSearch("");
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate text-left">
+              {value.length === 0
+                ? (placeholder ?? "Select…")
+                : `${value.length} selected`}
+            </span>
+            <ChevronDown className="size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Search or add a service…"
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandGroup>
+                {filtered.map((option) => (
+                  <CommandItem
+                    key={option}
+                    value={option}
+                    onSelect={() => toggle(option)}
+                    className="flex items-center gap-2"
+                  >
+                    <Check
+                      className={`size-4 shrink-0 ${value.includes(option) ? "opacity-100" : "opacity-0"}`}
+                    />
+                    {option}
+                  </CommandItem>
+                ))}
+                {canCreate ? (
+                  <CommandItem
+                    value={`__create__${trimmed}`}
+                    onSelect={create}
+                    className="flex items-center gap-2 text-primary"
+                  >
+                    <Plus className="size-4 shrink-0" />
+                    Add &ldquo;{trimmed}&rdquo;
+                  </CommandItem>
+                ) : null}
+                {filtered.length === 0 && !canCreate ? (
+                  <CommandEmpty>No results.</CommandEmpty>
+                ) : null}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {value.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {value.map((v) => (
+            <span
+              key={v}
+              className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-0.5 text-xs"
+            >
+              {v}
+              <button
+                type="button"
+                aria-label={`Remove ${v}`}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => toggle(v)}
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const PrimaryServiceSelect = ({
+  services,
+  value,
+  onChange,
+}: {
+  services: string[];
+  value: string;
+  onChange: (next: string) => void;
+}) => {
+  if (services.length === 0) {
+    return (
+      <div className="space-y-2">
+        <Label>Primary / most profitable service</Label>
+        <Input
+          value={value}
+          placeholder="Your main service"
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Select services above to populate this list.
+        </p>
+      </div>
+    );
+  }
+
+  const isCustom = value && !services.includes(value);
+
+  return (
+    <div className="space-y-2">
+      <Label>Primary / most profitable service</Label>
+      <Select
+        value={isCustom ? "__custom__" : (value || "")}
+        onValueChange={(next) => {
+          if (next !== "__custom__") onChange(next === "__none__" ? "" : next);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Pick one…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">— None —</SelectItem>
+          {services.map((s) => (
+            <SelectItem key={s} value={s}>{s}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
 
 const renderField = (field: FormFieldDef, props: BriefSectionProps) => (
   <div key={field.key} className="space-y-1">
@@ -1008,6 +1173,40 @@ export const ContractorBriefSectionFields = (props: BriefSectionProps) => {
           value={values.business_hours}
           onChange={(next) => setField("business_hours", next)}
         />
+      </>
+    );
+  }
+
+  if (section.id === "services") {
+    const servicesField = visibleFields.find((f) => f.key === "services_offered");
+    const primaryField = visibleFields.find((f) => f.key === "primary_service");
+    const otherFields = visibleFields.filter(
+      (f) => f.key !== "services_offered" && f.key !== "primary_service",
+    );
+    const predefined = servicesField?.options ?? [];
+    const selectedServices = Array.isArray(values.services_offered)
+      ? values.services_offered.map(String).filter(Boolean)
+      : [];
+
+    return (
+      <>
+        {servicesField ? (
+          <CreatableMultiSelect
+            label={servicesField.label ?? "Services offered"}
+            options={predefined}
+            value={selectedServices}
+            placeholder="Select or add services…"
+            onChange={(next) => setField("services_offered", next)}
+          />
+        ) : null}
+        {otherFields.map((field) => renderField(field, props))}
+        {primaryField ? (
+          <PrimaryServiceSelect
+            services={selectedServices}
+            value={String(values.primary_service ?? "")}
+            onChange={(next) => setField("primary_service", next)}
+          />
+        ) : null}
       </>
     );
   }
