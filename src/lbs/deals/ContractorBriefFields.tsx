@@ -1088,35 +1088,51 @@ const SERVICE_PRESETS: ServicePreset[] = [
   },
 ];
 
-const CATEGORY_BRANDS: Record<string, string[]> = {
-  Roofing: [
-    "GAF", "Owens Corning", "CertainTeed", "Atlas Roofing",
-    "IKO", "TAMKO", "Malarkey", "Boral",
-  ],
-  Siding: [
-    "James Hardie", "LP SmartSide", "Alside", "Ply Gem",
-    "CertainTeed Siding", "Mastic", "Norandex",
-  ],
-  Painting: [
-    "Sherwin-Williams", "Benjamin Moore", "PPG Paints",
-    "Behr", "Valspar", "Dunn-Edwards",
-  ],
-  Gutters: [
-    "Amerimax", "Spectra Metals", "Mueller", "LeafGuard", "K-Guard",
-  ],
-  "Decking & Fencing": [
-    "Trex", "TimberTech", "Fiberon", "Azek", "Wolf Decking", "Deckorators",
-  ],
-  "General Home Improvements": [
-    "3M", "DAP", "Quikrete", "USG", "James Hardie",
-  ],
+type BrandCategoryDef = { all: string[]; top3: string[] };
+
+const CATEGORY_BRANDS: Record<string, BrandCategoryDef> = {
+  Roofing: {
+    top3: ["GAF", "Owens Corning", "CertainTeed"],
+    all:  ["GAF", "Owens Corning", "CertainTeed", "Atlas Roofing", "IKO", "TAMKO", "Malarkey", "Boral"],
+  },
+  Siding: {
+    top3: ["James Hardie", "LP SmartSide", "Alside"],
+    all:  ["James Hardie", "LP SmartSide", "Alside", "Ply Gem", "CertainTeed Siding", "Mastic", "Norandex"],
+  },
+  Painting: {
+    top3: ["Sherwin-Williams", "Benjamin Moore", "PPG Paints"],
+    all:  ["Sherwin-Williams", "Benjamin Moore", "PPG Paints", "Behr", "Valspar", "Dunn-Edwards"],
+  },
+  Gutters: {
+    top3: ["Amerimax", "Spectra Metals", "LeafGuard"],
+    all:  ["Amerimax", "Spectra Metals", "Mueller", "LeafGuard", "K-Guard"],
+  },
+  "Decking & Fencing": {
+    top3: ["Trex", "TimberTech", "Fiberon"],
+    all:  ["Trex", "TimberTech", "Fiberon", "Azek", "Wolf Decking", "Deckorators"],
+  },
+  "General Home Improvements": {
+    top3: ["Sherwin-Williams", "3M", "DAP"],
+    all:  ["3M", "DAP", "Quikrete", "USG", "James Hardie", "Sherwin-Williams"],
+  },
 };
 
 const getBrandsForCategories = (categories: string[]): string[] => {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const cat of categories.filter(Boolean)) {
-    for (const brand of CATEGORY_BRANDS[cat] ?? []) {
+    for (const brand of CATEGORY_BRANDS[cat]?.all ?? []) {
+      if (!seen.has(brand)) { seen.add(brand); result.push(brand); }
+    }
+  }
+  return result;
+};
+
+export const getDefaultBrandsForCategories = (categories: string[]): string[] => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const cat of categories.filter(Boolean)) {
+    for (const brand of CATEGORY_BRANDS[cat]?.top3 ?? []) {
       if (!seen.has(brand)) { seen.add(brand); result.push(brand); }
     }
   }
@@ -1128,6 +1144,10 @@ const parseBrands = (value: unknown): string[] => {
   return [];
 };
 
+const ALL_KNOWN_BRANDS = new Set(
+  Object.values(CATEGORY_BRANDS).flatMap((def) => def.all),
+);
+
 const BrandsField = ({
   categories,
   value,
@@ -1137,10 +1157,21 @@ const BrandsField = ({
   value: unknown;
   onChange: (next: string[]) => void;
 }) => {
-  const available = getBrandsForCategories(categories);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const availableOptions = getBrandsForCategories(categories);
   const selected = parseBrands(value);
 
-  if (available.length === 0) return null;
+  if (availableOptions.length === 0) return null;
+
+  const trimmed = search.trim();
+  const filtered = availableOptions.filter((b) =>
+    b.toLowerCase().includes(trimmed.toLowerCase()),
+  );
+  const canCreate =
+    trimmed.length > 0 &&
+    !availableOptions.some((b) => b.toLowerCase() === trimmed.toLowerCase()) &&
+    !selected.some((b) => b.toLowerCase() === trimmed.toLowerCase());
 
   const toggle = (brand: string) => {
     onChange(
@@ -1150,31 +1181,94 @@ const BrandsField = ({
     );
   };
 
+  const create = () => {
+    if (!trimmed) return;
+    onChange([...selected, trimmed]);
+    setSearch("");
+  };
+
   return (
     <div className="space-y-2">
       <Label>Brands / manufacturers you work with</Label>
-      <p className="text-xs text-muted-foreground">
-        Select the brands you prefer or are certified with.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {available.map((brand) => {
-          const active = selected.includes(brand);
-          return (
-            <button
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate text-left">
+              {selected.length === 0 ? "Select brands…" : `${selected.length} selected`}
+            </span>
+            <ChevronDown className="size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Search or add a brand…"
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandGroup>
+                {filtered.map((brand) => (
+                  <CommandItem
+                    key={brand}
+                    value={brand}
+                    onSelect={() => toggle(brand)}
+                    className="flex items-center gap-2"
+                  >
+                    <Check
+                      className={`size-4 shrink-0 ${selected.includes(brand) ? "opacity-100" : "opacity-0"}`}
+                    />
+                    {brand}
+                  </CommandItem>
+                ))}
+                {canCreate ? (
+                  <CommandItem
+                    value={`__create__${trimmed}`}
+                    onSelect={create}
+                    className="flex items-center gap-2 text-primary"
+                  >
+                    <Plus className="size-4 shrink-0" />
+                    Add &ldquo;{trimmed}&rdquo;
+                  </CommandItem>
+                ) : null}
+                {filtered.length === 0 && !canCreate ? (
+                  <CommandEmpty>No results.</CommandEmpty>
+                ) : null}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selected.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((brand) => (
+            <span
               key={brand}
-              type="button"
-              onClick={() => toggle(brand)}
-              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                active
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background hover:border-primary/50 hover:bg-muted"
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs ${
+                ALL_KNOWN_BRANDS.has(brand)
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border bg-muted"
               }`}
             >
               {brand}
-            </button>
-          );
-        })}
-      </div>
+              <button
+                type="button"
+                aria-label={`Remove ${brand}`}
+                className="opacity-60 hover:opacity-100"
+                onClick={() => toggle(brand)}
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -1540,13 +1634,26 @@ const ServicesSection = (props: BriefSectionProps) => {
   const applyCategories = (newCats: string[]) => {
     setField("service_categories", newCats);
     const activeCats = newCats.filter(Boolean);
+
+    // services_offered = preset services for new categories + user's custom ones
     const newPresetServices = getServicesForCategories(activeCats);
-    // New services_offered = preset services + custom services already added
     setField("services_offered", [
       ...newPresetServices,
       ...customServices.filter((s) => !newPresetServices.includes(s)),
     ]);
-    // Auto-fill from first category with a preset
+
+    // Auto-fill top 3 brands per category (preserving any custom brands already added)
+    const currentBrands = parseBrands(values.brands_used);
+    const allKnownBrands = new Set(getBrandsForCategories(activeCats));
+    const customBrands = currentBrands.filter((b) => !ALL_KNOWN_BRANDS.has(b));
+    const defaultBrands = getDefaultBrandsForCategories(activeCats);
+    setField("brands_used", [
+      ...defaultBrands,
+      ...customBrands.filter((b) => !defaultBrands.includes(b)),
+    ]);
+    void allKnownBrands; // used above for type narrowing
+
+    // Auto-fill from first category with a service preset
     const firstPreset = activeCats.map((c) => CATEGORY_PRESET_MAP[c]).find(Boolean);
     if (firstPreset) {
       setField("primary_service", firstPreset.primaryService);
