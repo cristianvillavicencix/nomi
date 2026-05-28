@@ -834,6 +834,304 @@ const BrandColorPickers = ({
   </div>
 );
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1939 }, (_, i) => CURRENT_YEAR - i);
+
+const YearSelectField = ({
+  value,
+  onChange,
+}: {
+  value: unknown;
+  onChange: (next: number | null) => void;
+}) => {
+  const year = value != null && Number(value) > 0 ? String(Number(value)) : "";
+  return (
+    <div className="space-y-2">
+      <Label>Year the company was founded</Label>
+      <Select
+        value={year}
+        onValueChange={(v) => onChange(v === "__none__" ? null : Number(v))}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select year…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">— Not sure —</SelectItem>
+          {YEAR_OPTIONS.map((y) => (
+            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+const parseChips = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (typeof value === "string" && value.trim()) {
+    return value.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+const ChipInput = ({
+  label,
+  value,
+  placeholder,
+  helpText,
+  onChange,
+}: {
+  label: string;
+  value: unknown;
+  placeholder?: string;
+  helpText?: string;
+  onChange: (next: string[]) => void;
+}) => {
+  const chips = parseChips(value);
+  const [draft, setDraft] = useState("");
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (!trimmed || chips.includes(trimmed)) { setDraft(""); return; }
+    onChange([...chips, trimmed]);
+    setDraft("");
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      {helpText ? <p className="text-xs text-muted-foreground">{helpText}</p> : null}
+      {chips.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {chips.map((chip) => (
+            <span key={chip} className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-0.5 text-xs">
+              {chip}
+              <button
+                type="button"
+                aria-label={`Remove ${chip}`}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => onChange(chips.filter((c) => c !== chip))}
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          placeholder={placeholder ?? "Type and press Enter…"}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(); }
+            if (e.key === "Backspace" && !draft && chips.length > 0) {
+              onChange(chips.slice(0, -1));
+            }
+          }}
+          onBlur={commit}
+        />
+      </div>
+    </div>
+  );
+};
+
+const parseBulletList = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string" && value.trim()) {
+    return value.split("\n").map((s) => s.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
+  }
+  return [];
+};
+
+const BulletListField = ({
+  label,
+  value,
+  placeholder,
+  addLabel,
+  helpText,
+  onChange,
+}: {
+  label: string;
+  value: unknown;
+  placeholder?: string;
+  addLabel?: string;
+  helpText?: string;
+  onChange: (next: string[]) => void;
+}) => {
+  const items = parseBulletList(value);
+  const visibleItems = items.length > 0 ? items : [""];
+
+  const update = (index: number, next: string) => {
+    const arr = [...items];
+    // expand if editing into the fallback slot
+    while (arr.length <= index) arr.push("");
+    arr[index] = next;
+    onChange(arr);
+  };
+
+  const remove = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      {helpText ? <p className="text-xs text-muted-foreground">{helpText}</p> : null}
+      <div className="space-y-2">
+        {visibleItems.map((item, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <span className="shrink-0 text-muted-foreground">•</span>
+            <Input
+              value={item}
+              placeholder={placeholder}
+              className="flex-1"
+              onChange={(e) => update(index, e.target.value)}
+            />
+            {visibleItems.length > 1 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => remove(index)}
+              >
+                <X className="size-4" />
+              </Button>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange([...items, ""])}
+      >
+        <Plus className="size-4" />
+        {addLabel ?? "Add item"}
+      </Button>
+    </div>
+  );
+};
+
+type ServicePreset = {
+  label: string;
+  services: string[];
+  primaryService: string;
+  insuranceClaims?: "Yes" | "No";
+  acceptsXactimate?: "Yes" | "No";
+  differentiators: string[];
+  freeInspection?: boolean;
+};
+
+const SERVICE_PRESETS: ServicePreset[] = [
+  {
+    label: "Roofing Contractor",
+    services: ["Roof Repairs", "Roof Replacements", "Gutter Cleaning", "Chimney Repairs", "Gutter Repairs"],
+    primaryService: "Roof Replacements",
+    insuranceClaims: "Yes",
+    acceptsXactimate: "Yes",
+    freeInspection: true,
+    differentiators: [
+      "Licensed & fully insured",
+      "Free storm damage inspections",
+      "Insurance claim specialists",
+      "Financing available",
+      "Lifetime workmanship warranty",
+    ],
+  },
+  {
+    label: "Siding Contractor",
+    services: ["Siding Repairs", "Siding Replacements", "Vinyl Siding Installation", "Exterior Painting"],
+    primaryService: "Siding Replacements",
+    insuranceClaims: "Yes",
+    freeInspection: true,
+    differentiators: [
+      "Manufacturer-certified installer",
+      "Wide selection of colors & materials",
+      "Free estimates",
+      "Same-week scheduling",
+    ],
+  },
+  {
+    label: "Deck & Fence Contractor",
+    services: ["Deck Repairs", "Deck Replacements", "New Deck Construction", "Composite Decking (Trex)", "Railing Systems"],
+    primaryService: "New Deck Construction",
+    differentiators: [
+      "Custom design options",
+      "Composite & wood options",
+      "Licensed & insured",
+      "5-year workmanship warranty",
+    ],
+  },
+  {
+    label: "Painting Contractor",
+    services: ["Exterior Painting", "Interior Painting", "Power Washing"],
+    primaryService: "Exterior Painting",
+    differentiators: [
+      "Premium paints (Sherwin-Williams)",
+      "Same-day quotes",
+      "Licensed & insured",
+      "Free color consultation",
+    ],
+  },
+  {
+    label: "Gutter Specialist",
+    services: ["Gutter Cleaning", "Gutter Repairs", "Gutter Replacements", "Gutter Installation"],
+    primaryService: "Gutter Replacements",
+    freeInspection: true,
+    differentiators: [
+      "Leaf-guard gutter systems available",
+      "Same-day service available",
+      "Licensed & insured",
+      "Free estimates",
+    ],
+  },
+];
+
+const detectPreset = (selected: string[]): ServicePreset | null => {
+  if (selected.length === 0) return null;
+  let best: ServicePreset | null = null;
+  let bestScore = 0;
+  for (const preset of SERVICE_PRESETS) {
+    const matches = selected.filter((s) => preset.services.includes(s)).length;
+    const score = matches / preset.services.length;
+    if (score > bestScore && score >= 0.3) {
+      bestScore = score;
+      best = preset;
+    }
+  }
+  return best;
+};
+
+const PresetBanner = ({
+  preset,
+  onApply,
+  onDismiss,
+}: {
+  preset: ServicePreset;
+  onApply: () => void;
+  onDismiss: () => void;
+}) => (
+  <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+    <div className="flex-1 space-y-1">
+      <p className="font-medium">Looks like a {preset.label}!</p>
+      <p className="text-xs text-muted-foreground">
+        We can pre-fill your top 5 services, primary service, and 5 differentiators — you can edit them after.
+      </p>
+    </div>
+    <div className="flex shrink-0 gap-2">
+      <Button type="button" size="sm" onClick={onApply}>
+        Apply
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
+        <X className="size-4" />
+      </Button>
+    </div>
+  </div>
+);
+
 const CreatableMultiSelect = ({
   label,
   options,
@@ -1094,18 +1392,29 @@ const VisualContentSection = (props: BriefSectionProps) => {
           ) : null}
         </div>
       ) : null}
+      {(() => {
+        const videoField = getFieldDef(fields, "video_url");
+        return videoField ? renderField(videoField, props) : null;
+      })()}
     </div>
   );
 };
+
+const BRAND_STYLE_HANDLED = new Set([
+  "brand_colors_option", "brand_color_1", "brand_color_2", "brand_color_3",
+  "reference_sites", "site_exclusions",
+]);
 
 const BrandStyleSection = (props: BriefSectionProps) => {
   const { formSection, values, setField } = props;
   const fields = formSection.fields;
   const colorsField = getFieldDef(fields, "brand_colors_option");
   const exclusionsField = getFieldDef(fields, "site_exclusions");
+  const extraFields = fields.filter((f) => !BRAND_STYLE_HANDLED.has(f.key));
 
   return (
     <div className="space-y-6">
+      {extraFields.map((field) => renderField(field, props))}
       {colorsField ? (
         <div className="space-y-3">
           {renderField(colorsField, props)}
@@ -1114,14 +1423,78 @@ const BrandStyleSection = (props: BriefSectionProps) => {
           ) : null}
         </div>
       ) : null}
-
       <ReferenceSitesField
         value={values.reference_sites ?? [""]}
         onChange={(next) => setField("reference_sites", next)}
       />
-
       {exclusionsField ? renderField(exclusionsField, props) : null}
     </div>
+  );
+};
+
+const ServicesSection = (props: BriefSectionProps) => {
+  const { formSection, values, setField } = props;
+  const visibleFields = getVisibleFields(formSection, values);
+  const servicesField = visibleFields.find((f) => f.key === "services_offered");
+  const primaryField = visibleFields.find((f) => f.key === "primary_service");
+  const otherFields = visibleFields.filter(
+    (f) => f.key !== "services_offered" && f.key !== "primary_service" && f.key !== "differentiators",
+  );
+  const predefined = servicesField?.options ?? [];
+  const selectedServices = Array.isArray(values.services_offered)
+    ? values.services_offered.map(String).filter(Boolean)
+    : [];
+
+  const detectedPreset = detectPreset(selectedServices);
+  const [dismissedPreset, setDismissedPreset] = useState<string | null>(null);
+  const showBanner =
+    detectedPreset !== null && detectedPreset.label !== dismissedPreset;
+
+  const applyPreset = (preset: ServicePreset) => {
+    setField("services_offered", preset.services);
+    setField("primary_service", preset.primaryService);
+    setField("differentiators", preset.differentiators);
+    if (preset.insuranceClaims) setField("insurance_claims", preset.insuranceClaims);
+    if (preset.acceptsXactimate) setField("accepts_xactimate", preset.acceptsXactimate);
+    if (preset.freeInspection) setField("free_offers", ["Free inspection", "Free estimate"]);
+    setDismissedPreset(preset.label);
+  };
+
+  return (
+    <>
+      {servicesField ? (
+        <CreatableMultiSelect
+          label={servicesField.label ?? "Services offered"}
+          options={predefined}
+          value={selectedServices}
+          placeholder="Select or add services…"
+          onChange={(next) => setField("services_offered", next)}
+        />
+      ) : null}
+      {showBanner && detectedPreset ? (
+        <PresetBanner
+          preset={detectedPreset}
+          onApply={() => applyPreset(detectedPreset)}
+          onDismiss={() => setDismissedPreset(detectedPreset.label)}
+        />
+      ) : null}
+      {primaryField ? (
+        <PrimaryServiceSelect
+          services={selectedServices}
+          value={String(values.primary_service ?? "")}
+          onChange={(next) => setField("primary_service", next)}
+        />
+      ) : null}
+      {otherFields.map((field) => renderField(field, props))}
+      <BulletListField
+        label="What makes you different from competitors?"
+        value={values.differentiators}
+        placeholder="e.g. Family-owned since 1998, lifetime workmanship guarantee…"
+        addLabel="Add differentiator"
+        helpText="3–5 bullet points."
+        onChange={(next) => setField("differentiators", next)}
+      />
+    </>
   );
 };
 
@@ -1147,14 +1520,10 @@ export const ContractorBriefSectionFields = (props: BriefSectionProps) => {
     const years = computeYearsExperience(values.company_founded_year);
     return (
       <>
-        {visibleFields
-          .filter(
-            (field) =>
-              field.key !== "business_hours" &&
-              field.key !== "years_experience" &&
-              field.key !== "certifications",
-          )
-          .map((field) => renderField(field, props))}
+        <YearSelectField
+          value={values.company_founded_year}
+          onChange={(next) => setField("company_founded_year", next)}
+        />
         {years != null ? (
           <div className="space-y-1 rounded-md border bg-muted/20 p-3">
             <Label>Years of experience</Label>
@@ -1164,6 +1533,23 @@ export const ContractorBriefSectionFields = (props: BriefSectionProps) => {
             </p>
           </div>
         ) : null}
+        {visibleFields
+          .filter(
+            (f) =>
+              f.key !== "company_founded_year" &&
+              f.key !== "years_experience" &&
+              f.key !== "service_areas" &&
+              f.key !== "certifications" &&
+              f.key !== "business_hours",
+          )
+          .map((field) => renderField(field, props))}
+        <ChipInput
+          label="Service areas / cities you work in"
+          value={values.service_areas}
+          placeholder="e.g. Dallas, Plano, Frisco…"
+          helpText="Press Enter or comma after each city."
+          onChange={(next) => setField("service_areas", next)}
+        />
         <CertificationsField
           value={values.certifications}
           token={props.token}
@@ -1177,38 +1563,34 @@ export const ContractorBriefSectionFields = (props: BriefSectionProps) => {
     );
   }
 
-  if (section.id === "services") {
-    const servicesField = visibleFields.find((f) => f.key === "services_offered");
-    const primaryField = visibleFields.find((f) => f.key === "primary_service");
-    const otherFields = visibleFields.filter(
-      (f) => f.key !== "services_offered" && f.key !== "primary_service",
-    );
-    const predefined = servicesField?.options ?? [];
-    const selectedServices = Array.isArray(values.services_offered)
-      ? values.services_offered.map(String).filter(Boolean)
-      : [];
-
+  if (section.id === "web_content") {
+    const bulletKeys = new Set(["why_choose_us", "warranties_guarantees", "differentiators"]);
     return (
       <>
-        {servicesField ? (
-          <CreatableMultiSelect
-            label={servicesField.label ?? "Services offered"}
-            options={predefined}
-            value={selectedServices}
-            placeholder="Select or add services…"
-            onChange={(next) => setField("services_offered", next)}
-          />
-        ) : null}
-        {otherFields.map((field) => renderField(field, props))}
-        {primaryField ? (
-          <PrimaryServiceSelect
-            services={selectedServices}
-            value={String(values.primary_service ?? "")}
-            onChange={(next) => setField("primary_service", next)}
-          />
-        ) : null}
+        {visibleFields
+          .filter((f) => !bulletKeys.has(f.key))
+          .map((field) => renderField(field, props))}
+        <BulletListField
+          label="Why should customers choose you?"
+          value={values.why_choose_us}
+          placeholder="e.g. 15 years of experience, licensed & insured…"
+          addLabel="Add reason"
+          helpText="3–5 clear selling points for the homepage."
+          onChange={(next) => setField("why_choose_us", next)}
+        />
+        <BulletListField
+          label="Warranties you offer"
+          value={values.warranties_guarantees}
+          placeholder="e.g. 10-year materials warranty…"
+          addLabel="Add warranty"
+          onChange={(next) => setField("warranties_guarantees", next)}
+        />
       </>
     );
+  }
+
+  if (section.id === "services") {
+    return <ServicesSection {...props} />;
   }
 
   if (section.id === "visual_content") {
