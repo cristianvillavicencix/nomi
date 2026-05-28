@@ -3,13 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { FormFieldDef } from "@/lbs/forms-v2/types";
-import { readStringList } from "@/lbs/forms-v2/wizardStepUtils";
 
 type DynamicListFieldProps = {
   field: FormFieldDef;
   value: unknown;
   disabled?: boolean;
   onChange: (next: string[]) => void;
+};
+
+const readItems = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => (typeof entry === "string" ? entry : ""));
 };
 
 const formatItemLabel = (field: FormFieldDef, index: number) =>
@@ -24,7 +28,7 @@ export const DynamicListField = ({
   disabled,
   onChange,
 }: DynamicListFieldProps) => {
-  const items = readStringList(value);
+  const items = readItems(value);
   const minItems = field.min_items ?? 1;
 
   const updateItem = (index: number, nextValue: string) => {
