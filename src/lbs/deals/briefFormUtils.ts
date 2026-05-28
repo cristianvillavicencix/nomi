@@ -47,6 +47,10 @@ export const enrichBriefAnswers = (
     if (normalized) next[key] = normalized;
   }
 
+  if (Array.isArray(next.service_categories)) {
+    next.service_categories = (next.service_categories as unknown[]).filter(Boolean);
+  }
+
   if (Array.isArray(next.social_links)) {
     next.social_links = next.social_links
       .map((entry) => {

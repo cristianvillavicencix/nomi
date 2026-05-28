@@ -1500,8 +1500,9 @@ const getServicesForCategories = (categories: string[]): string[] => {
 };
 
 const parseCategories = (value: unknown): string[] => {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  if (typeof value === "string" && value.trim()) return [value.trim()]; // migrate old single value
+  // Keep empty strings — they represent pending "choose a specialty" slots in the UI.
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string" && value.trim()) return [value.trim()];
   return [""];
 };
 
