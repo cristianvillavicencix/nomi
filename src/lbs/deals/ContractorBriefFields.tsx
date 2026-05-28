@@ -102,9 +102,11 @@ const parseSocialLinks = (value: unknown) => {
 };
 
 const serializeSocialLinks = (rows: Array<{ platform: string; url: string }>) =>
-  rows
-    .filter((row) => row.url.trim())
-    .map((row) => `${row.platform}|${normalizeFlexibleUrl(row.url)}`);
+  rows.map((row) =>
+    row.url.trim()
+      ? `${row.platform}|${normalizeFlexibleUrl(row.url)}`
+      : `${row.platform}|`,
+  );
 
 const parseReferenceSites = (value: unknown) => {
   const rows = Array.isArray(value) ? value.map(String) : [];

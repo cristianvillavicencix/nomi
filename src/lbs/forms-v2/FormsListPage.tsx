@@ -112,7 +112,7 @@ export const FormsListPage = () => {
         expiresInDays: 30,
       }),
     onSuccess: async (result) => {
-      await navigator.clipboard.writeText(result.url);
+      await navigator.clipboard.writeText(result.short_url ?? result.url);
       notify("Public form link copied", { type: "info" });
     },
     onError: () => notify("Failed to generate link", { type: "error" }),
