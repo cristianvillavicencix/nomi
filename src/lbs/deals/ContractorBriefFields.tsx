@@ -1392,65 +1392,150 @@ const CATEGORY_PRESET_MAP: Record<string, ServicePreset> = Object.fromEntries(
   SERVICE_PRESETS.map((p) => [p.label, p]),
 );
 
+const ALL_PRESET_SERVICES = new Set(SERVICE_PRESETS.flatMap((p) => p.services));
+
+const CATEGORY_OPTIONS = SERVICE_PRESETS.map((p) => p.label).concat("Other");
+
+// Returns the union of sub-services for the given categories (preserving order).
+const getServicesForCategories = (categories: string[]): string[] => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const cat of categories) {
+    for (const s of CATEGORY_PRESET_MAP[cat]?.services ?? []) {
+      if (!seen.has(s)) { seen.add(s); result.push(s); }
+    }
+  }
+  return result;
+};
+
+const parseCategories = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (typeof value === "string" && value.trim()) return [value.trim()]; // migrate old single value
+  return [""];
+};
+
 const ServicesSection = (props: BriefSectionProps) => {
   const { formSection, values, setField } = props;
   const visibleFields = getVisibleFields(formSection, values);
-  const categoryField = visibleFields.find((f) => f.key === "service_category");
   const servicesField = visibleFields.find((f) => f.key === "services_offered");
   const primaryField = visibleFields.find((f) => f.key === "primary_service");
   const otherFields = visibleFields.filter(
     (f) =>
-      f.key !== "service_category" &&
+      f.key !== "service_categories" &&
       f.key !== "services_offered" &&
       f.key !== "primary_service",
   );
-  const predefined = servicesField?.options ?? [];
+
+  // Parse categories — start with at least one empty slot
+  const categories = parseCategories(
+    (values.service_categories ?? values.service_category) as unknown,
+  );
+
   const selectedServices = Array.isArray(values.services_offered)
     ? values.services_offered.map(String).filter(Boolean)
     : [];
-  const currentCategory = String(values.service_category ?? "");
 
-  const handleCategoryChange = (category: string) => {
-    setField("service_category", category);
-    const preset = CATEGORY_PRESET_MAP[category];
-    if (!preset) return;
-    // Only auto-fill if services haven't been manually customised
-    setField("services_offered", preset.services);
-    setField("primary_service", preset.primaryService);
-    if (preset.insuranceClaims) setField("insurance_claims", preset.insuranceClaims);
-    if (preset.acceptsXactimate) setField("accepts_xactimate", preset.acceptsXactimate);
-    if (preset.freeInspection) setField("free_offers", ["Free inspection", "Free estimate"]);
+  // Services that the user manually added (not from any preset)
+  const customServices = selectedServices.filter((s) => !ALL_PRESET_SERVICES.has(s));
+
+  // Options for the multi-select = sub-services from selected categories + custom ones already added
+  const activeCategories = categories.filter(Boolean);
+  const categoryServiceOptions =
+    activeCategories.length > 0
+      ? getServicesForCategories(activeCategories)
+      : (servicesField?.options ?? []);
+
+  const applyCategories = (newCats: string[]) => {
+    setField("service_categories", newCats);
+    const activeCats = newCats.filter(Boolean);
+    const newPresetServices = getServicesForCategories(activeCats);
+    // New services_offered = preset services + custom services already added
+    setField("services_offered", [
+      ...newPresetServices,
+      ...customServices.filter((s) => !newPresetServices.includes(s)),
+    ]);
+    // Auto-fill from first category with a preset
+    const firstPreset = activeCats.map((c) => CATEGORY_PRESET_MAP[c]).find(Boolean);
+    if (firstPreset) {
+      setField("primary_service", firstPreset.primaryService);
+      if (firstPreset.insuranceClaims) setField("insurance_claims", firstPreset.insuranceClaims);
+      if (firstPreset.acceptsXactimate) setField("accepts_xactimate", firstPreset.acceptsXactimate);
+      if (firstPreset.freeInspection) setField("free_offers", ["Free inspection", "Free estimate"]);
+    }
+  };
+
+  const updateCategory = (index: number, newCat: string) => {
+    const next = [...categories];
+    next[index] = newCat;
+    applyCategories(next);
+  };
+
+  const removeCategory = (index: number) => {
+    const next = categories.filter((_, i) => i !== index);
+    applyCategories(next.length > 0 ? next : [""]);
+  };
+
+  const addCategory = () => {
+    applyCategories([...categories, ""]);
   };
 
   return (
     <>
-      {categoryField ? (
-        <div className="space-y-2">
-          <Label>{categoryField.label ?? "Type of contractor"}</Label>
-          {categoryField.help_text ? (
-            <p className="text-xs text-muted-foreground">{categoryField.help_text}</p>
-          ) : null}
-          <Select value={currentCategory} onValueChange={handleCategoryChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select your specialty…" />
-            </SelectTrigger>
-            <SelectContent>
-              {(categoryField.options ?? []).map((opt) => (
-                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
+      <div className="space-y-2">
+        <Label>What type of contractor are you?</Label>
+        <p className="text-xs text-muted-foreground">
+          Select your specialty — sub-services will auto-fill below.
+        </p>
+        {categories.map((cat, i) => (
+          <div key={i} className="flex gap-2">
+            <Select
+              value={cat}
+              onValueChange={(next) => updateCategory(i, next)}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select specialty…" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {categories.length > 1 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-10 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeCategory(i)}
+              >
+                <X className="size-4" />
+              </Button>
+            ) : null}
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addCategory}
+          disabled={categories[categories.length - 1] === ""}
+        >
+          <Plus className="size-4" />
+          Add another specialty
+        </Button>
+      </div>
+
       {servicesField ? (
         <CreatableMultiSelect
           label={servicesField.label ?? "Services offered"}
-          options={predefined}
+          options={categoryServiceOptions}
           value={selectedServices}
           placeholder="Select or add services…"
           onChange={(next) => setField("services_offered", next)}
         />
       ) : null}
+
       {primaryField ? (
         <PrimaryServiceSelect
           services={selectedServices}
@@ -1458,6 +1543,7 @@ const ServicesSection = (props: BriefSectionProps) => {
           onChange={(next) => setField("primary_service", next)}
         />
       ) : null}
+
       {otherFields.map((field) => renderField(field, props))}
     </>
   );

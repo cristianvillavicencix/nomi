@@ -95,7 +95,8 @@ export const CONTRACTOR_BRIEF_ANSWER_KEYS = new Set([
   // kept for backwards compat with old submissions
   "certifications_awards",
   "other_services",
-  "service_category",
+  "service_categories",
+  "service_category", // backwards compat
   "services_offered",
   "primary_service",
   "free_offers",

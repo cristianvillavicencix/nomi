@@ -200,19 +200,10 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
     title: "Your services",
     fields: [
       field({
-        key: "service_category",
-        type: "select",
+        key: "service_categories",
+        type: "text",
         label: "What type of contractor are you?",
-        help_text: "Selecting a category will pre-fill your most common services.",
-        options: [
-          "Roofing",
-          "Siding",
-          "Decking & Fencing",
-          "Painting",
-          "Gutters",
-          "General Home Improvements",
-          "Other",
-        ],
+        help_text: "Select your specialty — sub-services will auto-fill.",
       }),
       field({
         key: "services_offered",
