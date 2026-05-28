@@ -1088,8 +1088,6 @@ const SERVICE_PRESETS: ServicePreset[] = [
   },
 ];
 
-);
-
 const CreatableMultiSelect = ({
   label,
   options,
