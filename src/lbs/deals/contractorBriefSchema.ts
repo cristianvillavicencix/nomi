@@ -233,6 +233,12 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         ],
       }),
       field({
+        key: "brands_used",
+        type: "text",
+        label: "Brands / manufacturers you work with",
+        help_text: "Select the brands you prefer or are certified with.",
+      }),
+      field({
         key: "primary_service",
         type: "text",
         label: "Primary / most profitable service",

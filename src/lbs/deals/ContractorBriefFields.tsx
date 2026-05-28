@@ -1088,6 +1088,97 @@ const SERVICE_PRESETS: ServicePreset[] = [
   },
 ];
 
+const CATEGORY_BRANDS: Record<string, string[]> = {
+  Roofing: [
+    "GAF", "Owens Corning", "CertainTeed", "Atlas Roofing",
+    "IKO", "TAMKO", "Malarkey", "Boral",
+  ],
+  Siding: [
+    "James Hardie", "LP SmartSide", "Alside", "Ply Gem",
+    "CertainTeed Siding", "Mastic", "Norandex",
+  ],
+  Painting: [
+    "Sherwin-Williams", "Benjamin Moore", "PPG Paints",
+    "Behr", "Valspar", "Dunn-Edwards",
+  ],
+  Gutters: [
+    "Amerimax", "Spectra Metals", "Mueller", "LeafGuard", "K-Guard",
+  ],
+  "Decking & Fencing": [
+    "Trex", "TimberTech", "Fiberon", "Azek", "Wolf Decking", "Deckorators",
+  ],
+  "General Home Improvements": [
+    "3M", "DAP", "Quikrete", "USG", "James Hardie",
+  ],
+};
+
+const getBrandsForCategories = (categories: string[]): string[] => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const cat of categories.filter(Boolean)) {
+    for (const brand of CATEGORY_BRANDS[cat] ?? []) {
+      if (!seen.has(brand)) { seen.add(brand); result.push(brand); }
+    }
+  }
+  return result;
+};
+
+const parseBrands = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  return [];
+};
+
+const BrandsField = ({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: string[];
+  value: unknown;
+  onChange: (next: string[]) => void;
+}) => {
+  const available = getBrandsForCategories(categories);
+  const selected = parseBrands(value);
+
+  if (available.length === 0) return null;
+
+  const toggle = (brand: string) => {
+    onChange(
+      selected.includes(brand)
+        ? selected.filter((b) => b !== brand)
+        : [...selected, brand],
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>Brands / manufacturers you work with</Label>
+      <p className="text-xs text-muted-foreground">
+        Select the brands you prefer or are certified with.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {available.map((brand) => {
+          const active = selected.includes(brand);
+          return (
+            <button
+              key={brand}
+              type="button"
+              onClick={() => toggle(brand)}
+              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                active
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background hover:border-primary/50 hover:bg-muted"
+              }`}
+            >
+              {brand}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const CreatableMultiSelect = ({
   label,
   options,
@@ -1535,6 +1626,12 @@ const ServicesSection = (props: BriefSectionProps) => {
           onChange={(next) => setField("services_offered", next)}
         />
       ) : null}
+
+      <BrandsField
+        categories={activeCategories}
+        value={values.brands_used}
+        onChange={(next) => setField("brands_used", next)}
+      />
 
       {primaryField ? (
         <PrimaryServiceSelect

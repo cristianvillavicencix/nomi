@@ -98,6 +98,7 @@ export const CONTRACTOR_BRIEF_ANSWER_KEYS = new Set([
   "service_categories",
   "service_category", // backwards compat
   "services_offered",
+  "brands_used",
   "primary_service",
   "free_offers",
   "insurance_claims",
