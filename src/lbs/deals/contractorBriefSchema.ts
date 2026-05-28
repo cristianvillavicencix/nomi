@@ -142,6 +142,13 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         visible_when: whenEquals("has_insurance", "Yes"),
       }),
       field({
+        key: "certifications",
+        type: "text",
+        label: "Certifications & awards",
+        help_text:
+          "Add each certification, license, or award. Include a link and upload a badge image if you have one.",
+      }),
+      field({
         key: "service_areas",
         type: "textarea",
         label: "Service areas / cities you work in",

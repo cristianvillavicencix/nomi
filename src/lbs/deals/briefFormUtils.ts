@@ -79,6 +79,7 @@ export const CONTRACTOR_BRIEF_ANSWER_KEYS = new Set([
   "full_address",
   "existing_website",
   "social_links",
+  "certifications",
   "company_founded_year",
   "years_experience",
   "has_insurance",

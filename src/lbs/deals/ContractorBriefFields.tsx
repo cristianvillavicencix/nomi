@@ -556,6 +556,131 @@ const ReferenceSitesField = ({
   );
 };
 
+type CertificationEntry = {
+  label: string;
+  url: string;
+  image_url: string;
+  image_name?: string;
+};
+
+const parseCertifications = (value: unknown): CertificationEntry[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is CertificationEntry =>
+      entry !== null && typeof entry === "object",
+  );
+};
+
+const CertificationsField = ({
+  value,
+  token,
+  onChange,
+}: {
+  value: unknown;
+  token: string;
+  onChange: (next: CertificationEntry[]) => void;
+}) => {
+  const rows = parseCertifications(value);
+
+  const updateRow = (index: number, patch: Partial<CertificationEntry>) => {
+    const next = rows.map((row, i) => (i === index ? { ...row, ...patch } : row));
+    onChange(next);
+  };
+
+  const removeRow = (index: number) => {
+    onChange(rows.filter((_, i) => i !== index));
+  };
+
+  const handleImageUpload = async (index: number, fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file) return;
+    const uploaded = await uploadFormFile(file, {
+      token,
+      fieldKey: "certifications",
+    });
+    updateRow(index, { image_url: uploaded.url, image_name: uploaded.name });
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label>Certifications &amp; awards (optional)</Label>
+      <p className="text-xs text-muted-foreground">
+        Add each certification, award, or license. Include a link and upload a badge image if you have one.
+      </p>
+      {rows.map((row, index) => (
+        <div
+          key={`cert-${index}`}
+          className="space-y-3 rounded-md border p-3"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">
+              Certification {index + 1}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 text-muted-foreground hover:text-destructive"
+              aria-label="Remove certification"
+              onClick={() => removeRow(index)}
+            >
+              <X className="size-3.5" />
+            </Button>
+          </div>
+          <Input
+            value={row.label}
+            placeholder="e.g. BBB A+, GAF Certified, NARI Member…"
+            onChange={(e) => updateRow(index, { label: e.target.value })}
+          />
+          <Input
+            value={row.url}
+            placeholder="https://bbb.org/your-listing"
+            onChange={(e) => updateRow(index, { url: e.target.value })}
+          />
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Badge / logo image (optional)</p>
+            <Input
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,.svg"
+              onChange={(e) => void handleImageUpload(index, e.target.files)}
+            />
+            {row.image_url ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={row.image_url}
+                  alt={row.image_name ?? row.label}
+                  className="h-12 w-auto rounded border object-contain"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => updateRow(index, { image_url: "", image_name: undefined })}
+                >
+                  <X className="size-3" />
+                  Remove image
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange([...rows, { label: "", url: "", image_url: "" }])
+        }
+      >
+        <Plus className="size-4" />
+        Add certification
+      </Button>
+    </div>
+  );
+};
+
 const BusinessHoursField = ({
   value,
   onChange,
@@ -860,7 +985,9 @@ export const ContractorBriefSectionFields = (props: BriefSectionProps) => {
         {visibleFields
           .filter(
             (field) =>
-              field.key !== "business_hours" && field.key !== "years_experience",
+              field.key !== "business_hours" &&
+              field.key !== "years_experience" &&
+              field.key !== "certifications",
           )
           .map((field) => renderField(field, props))}
         {years != null ? (
@@ -872,6 +999,11 @@ export const ContractorBriefSectionFields = (props: BriefSectionProps) => {
             </p>
           </div>
         ) : null}
+        <CertificationsField
+          value={values.certifications}
+          token={props.token}
+          onChange={(next) => setField("certifications", next)}
+        />
         <BusinessHoursField
           value={values.business_hours}
           onChange={(next) => setField("business_hours", next)}
