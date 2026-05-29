@@ -121,9 +121,9 @@ const LeadsListActions = ({
         variant="outline"
         size="sm"
       >
-        <ToggleGroupItem value="table" aria-label="Vista tabla">
+        <ToggleGroupItem value="table" aria-label="Table view">
           <ListIcon className="size-4" />
-          Tabla
+          Table
         </ToggleGroupItem>
         <ToggleGroupItem value="kanban" aria-label="Vista Kanban">
           <KanbanSquare className="size-4" />
@@ -137,11 +137,11 @@ const LeadsListActions = ({
         onClick={toggleMyLeads}
         disabled={identity?.id == null}
         title={
-          myFilterActive ? "Mostrando solo tus leads" : "Filtrar solo tus leads"
+          myFilterActive ? "Showing only your leads" : "Filter to your leads only"
         }
       >
         <UserCheck className="size-4" />
-        {myFilterActive ? "Mis leads" : "Todos"}
+        {myFilterActive ? "My leads" : "All"}
       </Button>
       <div className="ml-auto flex items-center gap-2">
         {view === "table" ? (

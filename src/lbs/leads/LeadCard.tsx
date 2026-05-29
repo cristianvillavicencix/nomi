@@ -50,7 +50,7 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                 "group-hover:opacity-100 focus-visible:opacity-100",
                 "hover:bg-muted hover:text-foreground active:cursor-grabbing",
               )}
-              aria-label="Arrastrar lead"
+              aria-label="Drag lead"
               role="button"
               tabIndex={0}
             >

@@ -52,7 +52,7 @@ export const LeadColumn = ({ stage, leads }: LeadColumnProps) => {
             ))}
             {leads.length === 0 ? (
               <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                Suelta un lead aquí para mover a{" "}
+                Drop a lead here to move to{" "}
                 <span className="font-medium">{stage.label}</span>
               </p>
             ) : null}

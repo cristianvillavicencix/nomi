@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 
 import { LBS_CLIENT_STATUS } from "@/lbs/navigation";
 import {
+  getLeadStageDef,
   LBS_LEAD_KANBAN_STAGES,
   type LeadStageId,
   normalizeLeadStage,
@@ -62,8 +63,7 @@ const fullLeadName = (lead: Contact) =>
  * surrounding `<List resource="contacts">` so filters / search keep
  * working; on drop we patch the contact's stage (and freeze/unfreeze the
  * anti-olvido `snooze_until` when entering or leaving a terminal column).
- * Dropping a card in "Ganado" also offers to convert the lead to a
- * client right then and there.
+ * Dropping a card in "Won" also offers to convert the lead to a client.
  */
 export const LeadsKanban = () => {
   const { data, isPending, refetch } = useListContext<Contact>();
@@ -147,16 +147,16 @@ export const LeadsKanban = () => {
           // Offer the natural next step without forcing it.
           setConvertCandidate(movedUpdated);
         } else if (promoteToClient) {
-          notify("Lead promovido a cliente", { type: "success" });
+          notify("Lead promoted to client", { type: "success" });
           refresh();
         } else {
-          notify(`Lead movido a "${destStage}"`, { type: "info" });
+          notify(`Lead moved to "${destStageLabel}"`, { type: "info" });
         }
       })
       .catch((error: unknown) => {
         setLeadsByStage(previousState);
         const message =
-          error instanceof Error ? error.message : "No se pudo mover el lead";
+          error instanceof Error ? error.message : "Could not move lead";
         notify(message, { type: "error" });
       });
   };
@@ -166,7 +166,7 @@ export const LeadsKanban = () => {
   if (totalCount === 0) {
     return (
       <div className="rounded-lg border border-dashed bg-muted/30 p-12 text-center text-sm text-muted-foreground">
-        No hay leads que coincidan con los filtros actuales.
+        No leads match the current filters.
       </div>
     );
   }
@@ -250,14 +250,14 @@ const ConvertWonLeadDialog = ({
     onSuccess: ({ company_id, deal_id }) => {
       notify(
         deal_id != null
-          ? "Lead convertido a cliente y proyecto creado"
-          : "Lead convertido a cliente",
+          ? "Lead converted to client and project created"
+          : "Lead converted to client",
         { type: "info" },
       );
       onConverted(company_id);
     },
     onError: (error: Error) => {
-      notify(error.message || "No se pudo convertir el lead", {
+      notify(error.message || "Failed to convert lead", {
         type: "error",
       });
     },
@@ -278,22 +278,22 @@ const ConvertWonLeadDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />
-            ¿Convertir a cliente?
+            Convert to client?
           </DialogTitle>
           <DialogDescription>
-            Acabas de mover{" "}
+            You moved{" "}
             <span className="font-medium">
-              {lead ? fullLeadName(lead) : "este lead"}
+              {lead ? fullLeadName(lead) : "this lead"}
             </span>{" "}
-            a <span className="font-medium">Ganado</span>. ¿Quieres promoverlo a
-            cliente ahora?
+            to <span className="font-medium">Won</span>. Promote them to a
+            client now?
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {!hasExistingCompany ? (
             <div className="space-y-2">
               <Label htmlFor="kanban-won-company-name">
-                Nombre de la empresa cliente
+                Client company name
               </Label>
               <Input
                 id="kanban-won-company-name"
@@ -314,22 +314,22 @@ const ConvertWonLeadDialog = ({
                 htmlFor="kanban-won-create-deal"
                 className="cursor-pointer font-medium"
               >
-                Crear también un proyecto para este cliente
+                Also create a project for this client
               </Label>
               <p className="text-xs text-muted-foreground">
-                Recomendado. El proyecto se abre en{" "}
-                <span className="font-medium">Closed Won</span> para que ya
-                aparezca en Deals.
+                Recommended. The project opens in{" "}
+                <span className="font-medium">Closed Won</span> so it shows up
+                in Deals right away.
               </p>
             </div>
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={isPending}>
-            No, dejarlo como ganado
+            No, keep as won
           </Button>
           <Button onClick={() => mutate()} disabled={!canSubmit || isPending}>
-            {isPending ? "Convirtiendo…" : "Sí, convertir"}
+            {isPending ? "Converting…" : "Yes, convert"}
           </Button>
         </DialogFooter>
       </DialogContent>
