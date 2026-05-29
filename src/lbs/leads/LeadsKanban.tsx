@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { LBS_CLIENT_STATUS } from "@/lbs/navigation";
 import {
   LBS_LEAD_KANBAN_STAGES,
   type LeadStageId,
@@ -132,14 +133,22 @@ export const LeadsKanban = () => {
         data: {
           lead_stage: destStage,
           snooze_until: movedUpdated.snooze_until ?? null,
+          ...(promoteToClient ? { status: LBS_CLIENT_STATUS } : {}),
         },
         previousData: moved,
       })
       .then(() => {
         refetch();
-        if (destStage === "won" && sourceStage !== "won") {
+        if (
+          destStage === "won" &&
+          sourceStage !== "won" &&
+          !promoteToClient
+        ) {
           // Offer the natural next step without forcing it.
           setConvertCandidate(movedUpdated);
+        } else if (promoteToClient) {
+          notify("Lead promovido a cliente", { type: "success" });
+          refresh();
         } else {
           notify(`Lead movido a "${destStage}"`, { type: "info" });
         }

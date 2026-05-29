@@ -74,7 +74,14 @@ export const ClientProfileHeader = ({
     { enabled: !!record.primary_contact_id },
   );
 
-  const personName = getPrimaryContactFullName(record);
+  const personNameFromRecord = getPrimaryContactFullName(record);
+  const personNameFromContact = primaryContact
+    ? `${primaryContact.first_name ?? ""} ${primaryContact.last_name ?? ""}`.trim()
+    : "";
+  const personName =
+    personNameFromRecord !== "—"
+      ? personNameFromRecord
+      : personNameFromContact || "—";
   const businessName = record.name?.trim() || "";
   const contactEmail = getPrimaryContactEmailFromContact(primaryContact);
   const allEmails = collectClientEmails(record, primaryContact);
