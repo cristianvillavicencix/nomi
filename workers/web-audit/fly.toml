@@ -1,0 +1,36 @@
+# fly.toml app configuration file generated for nomi-web-audit on 2026-05-30T14:12:13-04:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'nomi-web-audit'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  PORT = '8787'
+  WEB_AUDIT_TIMEOUT_MS = '360000'
+  WEB_AUDIT_WORKER_ID = 'nomi-web-audit-fly'
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '1m0s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  memory = '2048mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 2048

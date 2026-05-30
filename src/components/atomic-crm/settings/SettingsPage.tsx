@@ -638,7 +638,8 @@ const SettingsFormFields = () => {
 
       {activeTab !== "users" &&
       activeTab !== "messaging" &&
-      activeTab !== "data" ? (
+      activeTab !== "data" &&
+      activeTab !== "web-monitor" ? (
         <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <div className="flex w-full min-w-0 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <Button

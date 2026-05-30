@@ -18,8 +18,11 @@ export const useWebsiteMonitorSettings = (enabled = true) =>
       const { data, error } = await supabase
         .from("organizations")
         .select("id, website_monitor_settings")
-        .single();
+        .maybeSingle();
       if (error) throw error;
+      if (!data) {
+        throw new Error("Organization not found");
+      }
       return {
         id: data.id as number,
         website_monitor_settings: parseWebsiteMonitorSettings(

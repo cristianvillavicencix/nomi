@@ -14,6 +14,21 @@ make stop             # Stop the stack
 make start-demo       # Start full-stack with FakeRest data provider
 ```
 
+### Hosted Supabase (no local Docker)
+
+**Default team workflow:** local Vite (`make start` / `npm run dev`) talks to the **hosted Supabase project** (`VITE_SUPABASE_URL` in `.env.development`), not a local Docker stack. Docker is optional and often not running.
+
+Implications for agents and scripts:
+
+- Apply migrations with **`npx supabase db push --project-ref <ref>`** or Supabase MCP `apply_migration` — not `supabase migration up` / `db reset` (those need local Docker).
+- Deploy edge functions with **`supabase functions deploy … --project-ref <ref>`** — not `supabase functions serve`.
+- Edge function secrets live in the **hosted** Dashboard / `supabase secrets set --project-ref …`.
+- **`WEB_AUDIT_WORKER_URL`** must be a URL reachable from Supabase Edge (public worker or tunnel), not `http://127.0.0.1` unless you tunnel.
+- **Web Report worker (Fly.io):** `workers/web-audit/` — deploy with `fly deploy`; set matching `WEB_AUDIT_WORKER_SECRET` on Fly and Supabase. See `workers/web-audit/README.md`.
+- Do **not** set hosted `SB_JWT_ISSUER` to `http://127.0.0.1:54321/auth/v1` (breaks JWT verification against production tokens).
+
+Optional local Supabase (Docker): see “Accessing Local Services” below — only if you explicitly start the local stack.
+
 ### Testing and Code Quality
 
 ```bash
@@ -185,6 +200,10 @@ If the **Places API (New)** endpoint returns **403**, the app automatically retr
 5. Ensure **billing** is enabled on the GCP project.
 
 ### Accessing Local Services During Development
+
+**Hosted Supabase (typical):** Dashboard and API at the project URL in `.env.development` (e.g. `https://<ref>.supabase.co`). No local ports required.
+
+**Optional local Supabase (Docker only, if running `supabase start`):**
 
 - Frontend: http://localhost:5173/
 - Supabase Dashboard: http://localhost:54323/

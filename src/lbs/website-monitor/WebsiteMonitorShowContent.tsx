@@ -19,7 +19,7 @@ import type {
   WebsiteMonitorChange,
 } from "@/lbs/website-monitor/types";
 import { WebsiteMonitorSummaryCard } from "@/lbs/website-monitor/WebsiteMonitorSummaryCard";
-import { WebsiteMonitorAlertSettings } from "@/lbs/website-monitor/WebsiteMonitorAlertSettings";
+import { WebsiteAuditPanel } from "@/lbs/website-monitor/audit/WebsiteAuditPanel";
 import { WebsiteStatusBadge } from "@/lbs/website-monitor/WebsiteStatusBadge";
 import {
   CHANGE_TYPE_LABELS,
@@ -166,7 +166,7 @@ const TabPanels = ({
 }) => (
   <>
     <TabsContent value="overview" className="space-y-4">
-      <WebsiteMonitorAlertSettings site={site} />
+      <WebsiteAuditPanel siteId={site.id} />
       <Card>
         <CardHeader>
           <CardTitle>Tiempo de respuesta</CardTitle>

@@ -51,9 +51,14 @@ Deno.serve((req: Request) =>
       }
 
       let forceAll = false;
+      let maxBatch = BATCH_SIZE;
       try {
         const body = await req.json();
         forceAll = Boolean(body?.force_all);
+        const requested = Number(body?.max_batch);
+        if (Number.isFinite(requested) && requested > 0) {
+          maxBatch = Math.min(Math.round(requested), BATCH_SIZE);
+        }
       } catch {
         forceAll = false;
       }
@@ -95,7 +100,7 @@ Deno.serve((req: Request) =>
               (site) => isWebsiteDueForCheck(site) || !site.hosting_provider,
             ),
       );
-      const batch = dueSites.slice(0, BATCH_SIZE);
+      const batch = dueSites.slice(0, maxBatch);
 
       let checked = 0;
       let failures = 0;

@@ -2182,7 +2182,7 @@ const dataProviderWithCustomMethods = {
     }
     return data ?? { ok: true };
   },
-  async websiteMonitorRunOrg(params?: { forceAll?: boolean }) {
+  async websiteMonitorRunOrg(params?: { forceAll?: boolean; maxBatch?: number }) {
     const { data, error } = await invokeEdgeFunction<{
       ok?: boolean;
       checked?: number;
@@ -2190,7 +2190,10 @@ const dataProviderWithCustomMethods = {
       due?: number;
     }>("website_monitor_run_org", {
       method: "POST",
-      body: { force_all: params?.forceAll ?? false },
+      body: {
+        force_all: params?.forceAll ?? false,
+        max_batch: params?.maxBatch ?? 3,
+      },
     });
     if (error) {
       throw new Error(
@@ -2230,6 +2233,40 @@ const dataProviderWithCustomMethods = {
       );
     }
     return data ?? { ok: true };
+  },
+  async websiteAuditEnqueue(params: {
+    monitoredWebsiteId: Identifier;
+    strategy?: "mobile" | "desktop";
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      reused?: boolean;
+      audit?: Record<string, unknown>;
+      worker?: { pushed?: boolean; error?: string };
+    }>("website_audit_enqueue", {
+      method: "POST",
+      body: {
+        monitored_website_id: Number(params.monitoredWebsiteId),
+        strategy: params.strategy ?? "mobile",
+      },
+    });
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to enqueue website audit",
+        ),
+      );
+    }
+    if (!data?.audit) {
+      throw new Error("Invalid audit enqueue response");
+    }
+    return {
+      ok: Boolean(data.ok),
+      reused: Boolean(data.reused),
+      audit: data.audit,
+      worker: data.worker,
+    };
   },
 } satisfies DataProvider;
 

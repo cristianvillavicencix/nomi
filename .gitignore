@@ -7,12 +7,14 @@
 
 # dependencies
 /node_modules
+workers/**/node_modules
 
 # testing
 /coverage
 
 # production
 /build
+workers/**/dist
 
 # misc
 .DS_Store
@@ -28,6 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 supabase/.branches
 supabase/.temp
+.supabase-functions.log
 
 dist/
 /lib/

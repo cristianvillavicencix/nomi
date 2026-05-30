@@ -34,6 +34,7 @@ import { CalendarPage } from "@/lbs/calendar/CalendarPage";
 import { MeetingsPage } from "@/lbs/meetings/MeetingsPage";
 import { WebsiteMonitorListPage } from "@/lbs/website-monitor/WebsiteMonitorListPage";
 import { WebsiteMonitorShowPage } from "@/lbs/website-monitor/WebsiteMonitorShowPage";
+import { WebsiteAuditReportPage } from "@/lbs/website-monitor/audit/WebsiteAuditReportPage";
 const MessagesPage = lazy(() =>
   import("@/lbs/messages/MessagesPage").then((module) => ({
     default: module.MessagesPage,
@@ -168,6 +169,14 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="monitored_websites" action="show">
             <WebsiteMonitorShowPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/web-monitor/:siteId/audit/:auditId"
+        element={
+          <ProtectedRoute resource="monitored_websites" action="show">
+            <WebsiteAuditReportPage />
           </ProtectedRoute>
         }
       />

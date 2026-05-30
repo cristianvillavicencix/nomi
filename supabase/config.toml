@@ -256,3 +256,9 @@ verify_jwt = false
 
 [functions.website_monitor_create]
 verify_jwt = false
+
+[functions.website_audit_enqueue]
+verify_jwt = false
+
+[functions.website_audit_callback]
+verify_jwt = false

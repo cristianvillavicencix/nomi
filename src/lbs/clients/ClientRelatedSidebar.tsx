@@ -16,6 +16,8 @@ import type { Ticket } from "@/lbs/types";
 import { ClientContactsTab } from "@/lbs/clients/ClientContactsTab";
 import { ClientProjectsTab, ClientTicketsTab } from "@/lbs/clients/ClientTabPanels";
 import { ReferralsTab } from "@/lbs/leads/ReferralsTab";
+import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
+import { WebsiteMonitorStatusWidget } from "@/lbs/website-monitor/WebsiteMonitorStatusWidget";
 import {
   getContactEmail,
   getContactFullName,
@@ -68,6 +70,7 @@ export const ClientRelatedSidebar = ({
 }: ClientRelatedSidebarProps) => {
   const [panel, setPanel] = useState<SidebarPanel>(null);
   const { dealStages } = useConfigurationContext();
+  const { enabled: webMonitorEnabled } = useWebsiteMonitorEnabled();
 
   const { data: contacts = [] } = useGetList<Contact>(
     "contacts",
@@ -146,6 +149,12 @@ export const ClientRelatedSidebar = ({
   return (
     <>
       <div className="space-y-6">
+        {webMonitorEnabled ? (
+          <RelatedSection title="Estado web" count={0} forceShow>
+            <WebsiteMonitorStatusWidget companyId={companyId} variant="plain" />
+          </RelatedSection>
+        ) : null}
+
         <RelatedSection
           title="Contacts"
           count={counts.contacts}

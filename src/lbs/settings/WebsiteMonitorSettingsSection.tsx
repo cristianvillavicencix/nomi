@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Save } from "lucide-react";
 import { Link } from "react-router";
-import { useGetList, useNotify } from "ra-core";
+import { useGetIdentity, useNotify } from "ra-core";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import {
   DEFAULT_WEBSITE_MONITOR_SETTINGS,
   type WebsiteMonitorOrgSettings,
@@ -26,8 +25,16 @@ import { useWebsiteMonitorSettings } from "@/lbs/settings/useWebsiteMonitorSetti
 export const WebsiteMonitorSettingsSection = () => {
   const notify = useNotify();
   const queryClient = useQueryClient();
-  const canManage = useMemberCapability("admin.settings.manage");
-  const { data: orgSettings, isPending } = useWebsiteMonitorSettings(canManage);
+  const { identity } = useGetIdentity();
+  const isAdmin =
+    (identity as { administrator?: boolean } | undefined)?.administrator ===
+    true;
+
+  const {
+    data: orgSettings,
+    isPending,
+    error,
+  } = useWebsiteMonitorSettings(isAdmin);
 
   const [settings, setSettings] = useState<WebsiteMonitorOrgSettings>(
     DEFAULT_WEBSITE_MONITOR_SETTINGS,
@@ -38,14 +45,19 @@ export const WebsiteMonitorSettingsSection = () => {
     setSettings(orgSettings.website_monitor_settings);
   }, [orgSettings]);
 
-  const { total: monitoredCount = 0 } = useGetList(
-    "monitored_websites",
-    {
-      filter: { "is_enabled@eq": true },
-      pagination: { page: 1, perPage: 1 },
+  const { data: monitoredCount = 0 } = useQuery({
+    queryKey: ["website-monitor-settings-site-count"],
+    queryFn: async () => {
+      const { count, error: countError } = await supabase
+        .from("monitored_websites")
+        .select("id", { count: "exact", head: true })
+        .eq("is_enabled", true);
+      if (countError) throw countError;
+      return count ?? 0;
     },
-    { enabled: canManage },
-  );
+    enabled: isAdmin,
+    staleTime: 30_000,
+  });
 
   const patchSetting = <K extends keyof WebsiteMonitorOrgSettings>(
     key: K,
@@ -76,10 +88,10 @@ export const WebsiteMonitorSettingsSection = () => {
       });
       notify("Configuración de Web Monitor guardada", { type: "success" });
     },
-    onError: (error) => {
+    onError: (saveError) => {
       notify(
-        error instanceof Error
-          ? error.message
+        saveError instanceof Error
+          ? saveError.message
           : "No se pudo guardar la configuración",
         { type: "error" },
       );
@@ -110,10 +122,10 @@ export const WebsiteMonitorSettingsSection = () => {
         type: "success",
       });
     },
-    onError: (error) => {
+    onError: (applyError) => {
       notify(
-        error instanceof Error
-          ? error.message
+        applyError instanceof Error
+          ? applyError.message
           : "No se pudieron aplicar los defaults",
         { type: "error" },
       );
@@ -129,19 +141,10 @@ export const WebsiteMonitorSettingsSection = () => {
     [settings],
   );
 
-  if (!canManage) {
+  if (!isAdmin) {
     return (
       <div className="max-w-3xl rounded-xl border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
         Solo administradores pueden configurar Web Monitor.
-      </div>
-    );
-  }
-
-  if (isPending) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        Cargando configuración de Web Monitor…
       </div>
     );
   }
@@ -167,6 +170,20 @@ export const WebsiteMonitorSettingsSection = () => {
           <Link to={getWebMonitorPath()}>Abrir Web Monitor</Link>
         </Button>
       </div>
+
+      {isPending ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Cargando configuración de Web Monitor…
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-6 text-sm text-destructive">
+          No se pudo cargar la configuración de Web Monitor. Verifica que la
+          migración de base de datos esté aplicada.
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -318,11 +335,11 @@ export const WebsiteMonitorSettingsSection = () => {
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 pb-4">
         <Button
           type="button"
           onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
+          disabled={saveMutation.isPending || isPending || Boolean(error)}
         >
           {saveMutation.isPending ? (
             <Loader2 className="mr-2 size-4 animate-spin" />
@@ -334,7 +351,9 @@ export const WebsiteMonitorSettingsSection = () => {
         <Button
           type="button"
           variant="outline"
-          disabled={!settings.enabled || applyDefaultsMutation.isPending}
+          disabled={
+            !settings.enabled || applyDefaultsMutation.isPending || isPending
+          }
           onClick={() => applyDefaultsMutation.mutate()}
         >
           Aplicar defaults a todos los sitios

@@ -34,7 +34,6 @@ import {
   type ClientSocialLinkValue,
 } from "@/lbs/clients/clientSocialLinks";
 import { formatDateTime } from "@/lbs/clients/clientShowUtils";
-import { WebsiteMonitorStatusWidget } from "@/lbs/website-monitor/WebsiteMonitorStatusWidget";
 
 type ClientSummaryCardProps = {
   record: CompanyWithPrimaryContact;
@@ -292,11 +291,6 @@ export const ClientSummaryCard = ({
             record={record}
             primaryContactId={record.primary_contact_id}
           />
-        </div>
-
-        <div className="mt-4 border-t border-border/60 pt-3">
-          <ProfileSectionTitle>Monitoreo web</ProfileSectionTitle>
-          <WebsiteMonitorStatusWidget companyId={record.id} />
         </div>
 
         <div className="mt-4 border-t border-border/60 pt-3">

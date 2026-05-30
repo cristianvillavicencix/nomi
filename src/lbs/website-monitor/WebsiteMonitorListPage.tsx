@@ -80,7 +80,6 @@ export const WebsiteMonitorListPage = () => {
   const [sectorFilter, setSectorFilter] = useState("all");
   const [checkingIds, setCheckingIds] = useState<Set<Identifier>>(() => new Set());
   const bootstrapStarted = useRef(false);
-  const pendingChecksStarted = useRef(false);
   const { enabled: moduleEnabled, isPending: settingsPending } =
     useWebsiteMonitorEnabled();
 
@@ -104,27 +103,6 @@ export const WebsiteMonitorListPage = () => {
       }
     })();
   }, [dataProvider, moduleEnabled, refetchSites]);
-
-  useEffect(() => {
-    if (!moduleEnabled || isInitialLoading || pendingChecksStarted.current) return;
-
-    const needsCheck = sites.some(
-      (site) =>
-        site.is_enabled &&
-        (!site.last_checked_at || !site.hosting_provider),
-    );
-    if (!needsCheck) return;
-
-    pendingChecksStarted.current = true;
-    void (async () => {
-      try {
-        await dataProvider.websiteMonitorRunOrg({ forceAll: false });
-        void refetchSites();
-      } catch {
-        // Background batch; user can refresh individual rows manually.
-      }
-    })();
-  }, [dataProvider, isInitialLoading, moduleEnabled, refetchSites, sites]);
 
   const filterOptions = useMemo(() => {
     return {

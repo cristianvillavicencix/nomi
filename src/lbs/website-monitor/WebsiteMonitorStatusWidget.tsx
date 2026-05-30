@@ -24,10 +24,12 @@ export const WebsiteMonitorStatusWidget = ({
   companyId,
   dealId,
   title = "Estado web",
+  variant = "card",
 }: {
   companyId?: Identifier | null;
   dealId?: Identifier | null;
   title?: string;
+  variant?: "card" | "plain";
 }) => {
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -66,9 +68,17 @@ export const WebsiteMonitorStatusWidget = ({
 
   if (!enabled) return null;
 
+  const isPlain = variant === "plain";
+
   if (isPending) {
     return (
-      <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+      <div
+        className={
+          isPlain
+            ? "text-sm text-muted-foreground"
+            : "rounded-lg border p-4 text-sm text-muted-foreground"
+        }
+      >
         <Loader2 className="mr-2 inline size-4 animate-spin" />
         Analizando sitio…
       </div>
@@ -77,18 +87,29 @@ export const WebsiteMonitorStatusWidget = ({
 
   if (!sites.length) {
     return (
-      <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+      <div
+        className={
+          isPlain
+            ? "text-sm text-muted-foreground"
+            : "rounded-lg border p-4 text-sm text-muted-foreground"
+        }
+      >
         Sin sitios monitoreados vinculados.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="text-sm font-medium">{title}</div>
+    <div className={isPlain ? "space-y-2" : "rounded-lg border p-4 space-y-3"}>
+      {!isPlain ? <div className="text-sm font-medium">{title}</div> : null}
       <div className="space-y-2">
         {sites.map((site) => (
-          <SiteRow key={site.id} site={site} onRefresh={() => refresh()} />
+          <SiteRow
+            key={site.id}
+            site={site}
+            onRefresh={() => refresh()}
+            variant={variant}
+          />
         ))}
       </div>
     </div>
@@ -98,11 +119,14 @@ export const WebsiteMonitorStatusWidget = ({
 const SiteRow = ({
   site,
   onRefresh,
+  variant = "card",
 }: {
   site: MonitoredWebsite;
   onRefresh: () => void;
+  variant?: "card" | "plain";
 }) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const isPlain = variant === "plain";
 
   const handleRefresh = async () => {
     await dataProvider.websiteMonitorCheck({ monitoredWebsiteId: site.id });
@@ -110,7 +134,13 @@ const SiteRow = ({
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border/60 px-3 py-2">
+    <div
+      className={
+        isPlain
+          ? "flex items-center gap-3 py-1"
+          : "flex items-center gap-3 rounded-md border border-border/60 px-3 py-2"
+      }
+    >
       <WebsiteMonitorFavicon url={site.url} label={site.display_name ?? site.url} size="sm" />
       <div className="min-w-0 flex-1">
         <Link
