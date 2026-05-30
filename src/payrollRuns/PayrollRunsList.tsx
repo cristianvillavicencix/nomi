@@ -506,7 +506,7 @@ const PayrollRunsTable = () => {
               </TableBody>
             </Table>
           </div>
-          <div className="shrink-0 border-t bg-background px-2 py-2">
+          <div className="shrink-0 border-t border-border/60 bg-background px-2 py-0">
             <ListPagination rowsPerPageOptions={[10, 15, 20]} />
           </div>
         </TabsContent>

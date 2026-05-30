@@ -44,13 +44,15 @@ import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
 import { isLbsMode } from "@/lbs/productMode";
-import { LBS_NAV_ITEMS } from "@/lbs/navigation";
+import { LBS_NAV_ITEMS, filterLbsNavItems } from "@/lbs/navigation";
+import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
 import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
 import {
   PageActionsProvider,
   PageActionsSlot,
+  PageActionsTrailingSlot,
 } from "@/components/atomic-crm/layout/PageActions";
 import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
@@ -171,6 +173,10 @@ const SidebarNavigation = () => {
   const location = useLocation();
   const { data: identity } = useGetIdentity();
   const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
+  const { enabled: websiteMonitorEnabled } = useWebsiteMonitorEnabled(isLbsMode());
+  const lbsNavItems = filterLbsNavItems(LBS_NAV_ITEMS, {
+    websiteMonitorEnabled,
+  });
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
   const canViewSales = canAccess(identity as any, {
     action: "list",
@@ -262,7 +268,7 @@ const SidebarNavigation = () => {
           <SidebarGroup>
             <SidebarGroupLabel>Workspace</SidebarGroupLabel>
             <SidebarMenu>
-              {LBS_NAV_ITEMS.filter((item) =>
+              {lbsNavItems.filter((item) =>
                 item.capability
                   ? hasMemberCapability(identity as any, item.capability)
                   : item.resource
@@ -500,8 +506,9 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
           {!isMessagesShell ? (
             <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
               <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
-              <div className="flex shrink-0 items-center">
+              <div className="flex shrink-0 items-center gap-1">
                 <SpotlightSearchButton />
+                <PageActionsTrailingSlot className="flex items-center" />
               </div>
             </header>
           ) : (
@@ -510,7 +517,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
           <div
             className={cn(
               "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
-              isMessagesShell ? "gap-2 p-2 pl-1" : "gap-4 px-4 pt-2 pb-2",
+              isMessagesShell ? "gap-2 p-2 pl-1" : "gap-4 px-4 pt-2 pb-0",
             )}
           >
             {currentDealId ? (

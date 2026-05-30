@@ -235,3 +235,24 @@ verify_jwt = false
 
 [functions.upload_form_file]
 verify_jwt = false
+
+[functions.notify_follow_up]
+verify_jwt = false
+
+[functions.send_calendar_reminders]
+verify_jwt = false
+
+[functions.website_monitor_check]
+verify_jwt = false
+
+[functions.website_monitor_run]
+verify_jwt = false
+
+[functions.website_monitor_sync]
+verify_jwt = false
+
+[functions.website_monitor_run_org]
+verify_jwt = false
+
+[functions.website_monitor_create]
+verify_jwt = false

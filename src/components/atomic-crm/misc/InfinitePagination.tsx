@@ -83,26 +83,23 @@ export const InfinitePagination = ({
     offline !== undefined;
 
   return (
-    <div ref={observerElem} className="py-2 text-center">
+    <>
+      <div ref={observerElem} className="h-px w-full shrink-0" aria-hidden />
       {showOffline ? (
-        offline
+        <div className="py-1 text-center">{offline}</div>
       ) : isFetchingNextPage && hasNextPage ? (
-        <Item variant="default">
-          <ItemMedia>
-            <Spinner />
-          </ItemMedia>
-          <ItemContent>
-            <ItemTitle className="line-clamp-1">Loading...</ItemTitle>
-          </ItemContent>
-        </Item>
-      ) : (
-        <Item variant="default">
-          <ItemContent>
-            <ItemTitle className="line-clamp-1">&nbsp;</ItemTitle>
-          </ItemContent>
-        </Item>
-      )}
-    </div>
+        <div className="py-1 text-center">
+          <Item variant="default">
+            <ItemMedia>
+              <Spinner />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle className="line-clamp-1">Loading...</ItemTitle>
+            </ItemContent>
+          </Item>
+        </div>
+      ) : null}
+    </>
   );
 };
 

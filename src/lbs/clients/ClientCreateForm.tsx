@@ -11,11 +11,8 @@ import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
-import {
-  interestedServiceChoices,
-  leadSourceChoices,
-} from "@/lbs/constants/leadSource";
 import { Separator } from "@/components/ui/separator";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { ClientChannelsInput } from "@/lbs/clients/ClientChannelsInput";
 import { getPrimaryChannelValue } from "@/lbs/clients/clientChannels";
 import type { ClientChannelFormValue } from "@/lbs/clients/clientChannels";
@@ -31,8 +28,9 @@ export type ClientCreateFormValues = {
   company_emails: ClientChannelFormValue[];
   company_phones: ClientChannelFormValue[];
   company_website: string;
+  company_sector: string;
   social_links: ClientSocialLinkValue[];
-  company_same_as_primary_address: boolean;
+  primary_same_as_company_address: boolean;
   company_address: string;
   company_city: string;
   company_state_abbr: string;
@@ -48,8 +46,6 @@ export type ClientCreateFormValues = {
   invoice_contact_name: string;
   invoice_email: string;
   invoice_phone: string;
-  primary_lead_source: string;
-  interested_service: string;
   notes: string;
 };
 
@@ -67,15 +63,13 @@ const optionalUrl = (url?: string) => {
 
 export const ClientCreateFormFields = () => {
   const { setValue } = useFormContext<ClientCreateFormValues>();
+  const { companySectors } = useConfigurationContext();
   const placesEnabled = isGooglePlacesEnabled();
 
   return (
     <div className="flex flex-col gap-6 p-1">
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Business information</h2>
-        <p className="text-sm text-muted-foreground">
-          The client account is tied to this business.
-        </p>
         {placesEnabled ? (
           <GooglePlacesAutocompleteInput
             source="company_name"
@@ -111,20 +105,22 @@ export const ClientCreateFormFields = () => {
           helperText={false}
           validate={optionalUrl}
         />
-        <BooleanInput
-          source="company_same_as_primary_address"
-          label="Use same address as primary contact"
+        <SelectInput
+          source="company_sector"
+          label="Tipo de empresa"
+          choices={companySectors}
+          optionText="label"
+          optionValue="value"
+          helperText={false}
+          emptyText="Selecciona tipo de empresa"
         />
-        <CompanyAddressFields />
+        <AddressFields prefix="company" readOnly={false} />
       </section>
 
       <Separator />
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Primary contact</h2>
-        <p className="text-sm text-muted-foreground">
-          Main person for this client. You can change this later in Contacts.
-        </p>
         <TextInput
           source="primary_full_name"
           label="Full name"
@@ -141,43 +137,11 @@ export const ClientCreateFormFields = () => {
           kind="phone"
           label="Phone"
         />
-        {placesEnabled ? (
-          <GooglePlacesAutocompleteInput
-            source="primary_address"
-            label="Address"
-            mode="address"
-            multiline
-            helperText={false}
-            onPlaceDetails={(details) =>
-              applyGoogleAddressToClientForm(setValue, details, "primary")
-            }
-          />
-        ) : (
-          <TextInput
-            source="primary_address"
-            label="Address"
-            helperText={false}
-            multiline
-          />
-        )}
-        <SelectInput
-          source="primary_lead_source"
-          label="How did they hear about us?"
-          choices={leadSourceChoices}
-          optionText="label"
-          optionValue="value"
-          helperText={false}
-          create
+        <BooleanInput
+          source="primary_same_as_company_address"
+          label="Use same address as business"
         />
-        <SelectInput
-          source="interested_service"
-          label="Service interested in"
-          choices={interestedServiceChoices}
-          optionText="label"
-          optionValue="value"
-          helperText={false}
-          create
-        />
+        <PrimaryAddressFields placesEnabled={placesEnabled} />
       </section>
 
       <Separator />
@@ -199,7 +163,7 @@ export const ClientCreateFormFields = () => {
       <Separator />
 
       <section className="space-y-4">
-        <ClientSocialLinksInput source="social_links" label="Social profile" />
+        <ClientSocialLinksInput source="social_links" />
         <TextInput source="notes" label="Notes" helperText={false} multiline />
       </section>
     </div>
@@ -218,9 +182,8 @@ const AddressFields = ({
   const addressSource =
     prefix === "company" ? "company_address" : "billing_address";
 
-  return (
-  <div className="grid gap-4">
-    {placesEnabled && !readOnly ? (
+  if (placesEnabled && !readOnly) {
+    return (
       <GooglePlacesAutocompleteInput
         source={addressSource}
         label="Address"
@@ -231,71 +194,78 @@ const AddressFields = ({
           applyGoogleAddressToClientForm(setValue, details, prefix)
         }
       />
-    ) : (
-      <TextInput
-        source={addressSource}
-        label="Address"
-        helperText={false}
-        multiline
-        readOnly={readOnly}
-      />
-    )}
-    <div className="grid gap-4 md:grid-cols-2">
-      <TextInput
-        source={`${prefix}_city`}
-        label="City"
-        helperText={false}
-        readOnly={readOnly}
-      />
-      <TextInput
-        source={`${prefix}_state_abbr`}
-        label="State"
-        helperText={false}
-        readOnly={readOnly}
-      />
-      <TextInput
-        source={`${prefix}_zipcode`}
-        label="Zip code"
-        helperText={false}
-        readOnly={readOnly}
-      />
-      <TextInput
-        source={`${prefix}_country`}
-        label="Country"
-        helperText={false}
-        readOnly={readOnly}
-      />
-    </div>
-  </div>
+    );
+  }
+
+  return (
+    <TextInput
+      source={addressSource}
+      label="Address"
+      helperText={false}
+      multiline
+      readOnly={readOnly}
+    />
   );
 };
 
-const CompanyAddressFields = () => {
-  const companySameAsPrimary = useWatch<
+export const formatCompanyAddressForPrimary = (
+  values: Pick<ClientCreateFormValues, "company_address">,
+) => values.company_address?.trim() ?? "";
+
+const PrimaryAddressFields = ({
+  placesEnabled,
+}: {
+  placesEnabled: boolean;
+}) => {
+  const primarySameAsCompany = useWatch<
     ClientCreateFormValues,
-    "company_same_as_primary_address"
+    "primary_same_as_company_address"
   >({
-    name: "company_same_as_primary_address",
+    name: "primary_same_as_company_address",
   });
   const { setValue } = useFormContext<ClientCreateFormValues>();
-  const primaryAddress = useWatch<ClientCreateFormValues, "primary_address">({
-    name: "primary_address",
+  const companyAddress = useWatch<ClientCreateFormValues, "company_address">({
+    name: "company_address",
   });
 
   useEffect(() => {
-    if (!companySameAsPrimary) return;
-    setValue("company_address", primaryAddress ?? "", { shouldDirty: true });
-    setValue("company_city", "", { shouldDirty: true });
-    setValue("company_state_abbr", "", { shouldDirty: true });
-    setValue("company_zipcode", "", { shouldDirty: true });
-    setValue("company_country", "", { shouldDirty: true });
-  }, [companySameAsPrimary, primaryAddress, setValue]);
+    if (!primarySameAsCompany) return;
+    setValue(
+      "primary_address",
+      formatCompanyAddressForPrimary({
+        company_address: companyAddress ?? "",
+      }),
+      { shouldDirty: true },
+    );
+  }, [primarySameAsCompany, companyAddress, setValue]);
 
-  if (companySameAsPrimary) {
+  if (primarySameAsCompany) {
     return null;
   }
 
-  return <AddressFields prefix="company" readOnly={false} />;
+  if (placesEnabled) {
+    return (
+      <GooglePlacesAutocompleteInput
+        source="primary_address"
+        label="Address"
+        mode="address"
+        multiline
+        helperText={false}
+        onPlaceDetails={(details) =>
+          applyGoogleAddressToClientForm(setValue, details, "primary")
+        }
+      />
+    );
+  }
+
+  return (
+    <TextInput
+      source="primary_address"
+      label="Address"
+      helperText={false}
+      multiline
+    />
+  );
 };
 
 const BillingAddressFields = () => {
@@ -309,54 +279,10 @@ const BillingAddressFields = () => {
   const companyAddress = useWatch<ClientCreateFormValues, "company_address">({
     name: "company_address",
   });
-  const companyCity = useWatch<ClientCreateFormValues, "company_city">({
-    name: "company_city",
-  });
-  const companyState = useWatch<ClientCreateFormValues, "company_state_abbr">({
-    name: "company_state_abbr",
-  });
-  const companyZip = useWatch<ClientCreateFormValues, "company_zipcode">({
-    name: "company_zipcode",
-  });
-  const companyCountry = useWatch<ClientCreateFormValues, "company_country">({
-    name: "company_country",
-  });
-  const companySameAsPrimary = useWatch<
-    ClientCreateFormValues,
-    "company_same_as_primary_address"
-  >({
-    name: "company_same_as_primary_address",
-  });
-  const primaryAddress = useWatch<ClientCreateFormValues, "primary_address">({
-    name: "primary_address",
-  });
-
   useEffect(() => {
     if (!billingSameAsBusiness) return;
-    if (companySameAsPrimary) {
-      setValue("billing_address", primaryAddress ?? "", { shouldDirty: true });
-      setValue("billing_city", "", { shouldDirty: true });
-      setValue("billing_state_abbr", "", { shouldDirty: true });
-      setValue("billing_zipcode", "", { shouldDirty: true });
-      setValue("billing_country", "", { shouldDirty: true });
-      return;
-    }
     setValue("billing_address", companyAddress ?? "", { shouldDirty: true });
-    setValue("billing_city", companyCity ?? "", { shouldDirty: true });
-    setValue("billing_state_abbr", companyState ?? "", { shouldDirty: true });
-    setValue("billing_zipcode", companyZip ?? "", { shouldDirty: true });
-    setValue("billing_country", companyCountry ?? "", { shouldDirty: true });
-  }, [
-    billingSameAsBusiness,
-    companySameAsPrimary,
-    primaryAddress,
-    companyAddress,
-    companyCity,
-    companyState,
-    companyZip,
-    companyCountry,
-    setValue,
-  ]);
+  }, [billingSameAsBusiness, companyAddress, setValue]);
 
   if (billingSameAsBusiness) {
     return null;

@@ -1,6 +1,6 @@
 import { ShowBase } from "ra-core";
 import { useParams } from "react-router";
-import { ContactShowContent } from "@/components/atomic-crm/contacts/ContactShow";
+import { LeadShowContent } from "@/lbs/leads/LeadShowContent";
 
 export const LeadShowPage = () => {
   const { id } = useParams();
@@ -8,7 +8,7 @@ export const LeadShowPage = () => {
 
   return (
     <ShowBase resource="contacts" id={id}>
-      <ContactShowContent />
+      <LeadShowContent />
     </ShowBase>
   );
 };

@@ -33,26 +33,4 @@ export const applyGoogleAddressToClientForm = (
       shouldDirty: true,
     });
   }
-  if (prefix === "primary") return;
-
-  if (details.city) {
-    setValue(`${prefix}_city` as "company_city", details.city, {
-      shouldDirty: true,
-    });
-  }
-  if (details.stateAbbr) {
-    setValue(`${prefix}_state_abbr` as "company_state_abbr", details.stateAbbr, {
-      shouldDirty: true,
-    });
-  }
-  if (details.zipcode) {
-    setValue(`${prefix}_zipcode` as "company_zipcode", details.zipcode, {
-      shouldDirty: true,
-    });
-  }
-  if (details.country) {
-    setValue(`${prefix}_country` as "company_country", details.country, {
-      shouldDirty: true,
-    });
-  }
 };

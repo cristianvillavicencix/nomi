@@ -53,6 +53,7 @@ import {
   type LbsClientUpsertResult,
 } from "@/lbs/clients/lbsClientUpsert";
 import { lbsProjectTypeChoices } from "@/lbs/deals/lbsProjectConstants";
+import { normalizePostgrestIlikeQuery } from "../commons/postgrestSearchQuery";
 
 if (import.meta.env.VITE_SUPABASE_URL === undefined) {
   throw new Error("Please set the VITE_SUPABASE_URL environment variable");
@@ -108,6 +109,24 @@ const invokeEdgeFunction = async <TData = unknown>(
   }
 
   return result;
+};
+
+const readEdgeFunctionErrorMessage = async (
+  error: { message?: string; context?: unknown },
+  fallback: string,
+): Promise<string> => {
+  const response = (error as { context?: Response }).context;
+  if (response instanceof Response) {
+    try {
+      const payload = (await response.clone().json()) as { message?: string };
+      if (payload?.message) {
+        return payload.message;
+      }
+    } catch {
+      // Fall through to generic message below.
+    }
+  }
+  return error.message || fallback;
 };
 
 const looksLikeUuid = (value: string) =>
@@ -363,6 +382,9 @@ const dataProviderWithCustomMethods = {
     if (resource === "contacts") {
       return baseDataProvider.getList("contacts_summary", request);
     }
+    if (resource === "monitored_websites") {
+      return baseDataProvider.getList("monitored_websites_summary", request);
+    }
 
     return baseDataProvider.getList(resource, request);
   },
@@ -390,6 +412,16 @@ const dataProviderWithCustomMethods = {
         return { data: summaryRecord };
       }
       return baseDataProvider.getOne("contacts", params);
+    }
+    if (resource === "monitored_websites") {
+      const summaryRecord = await getOneFromResourceMaybeSingle(
+        "monitored_websites_summary",
+        params.id,
+      );
+      if (summaryRecord) {
+        return { data: summaryRecord };
+      }
+      return baseDataProvider.getOne("monitored_websites", params);
     }
 
     return baseDataProvider.getOne(resource, params);
@@ -2083,6 +2115,122 @@ const dataProviderWithCustomMethods = {
 
     return created as import("@/lbs/types").Conversation;
   },
+  async notifyFollowUp(params: {
+    calendarEventId: Identifier;
+    kind?: "scheduled" | "reminder";
+    appBaseUrl?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      sent?: boolean;
+      reason?: string;
+      calendarEventId?: number;
+    }>("notify_follow_up", {
+      method: "POST",
+      body: {
+        calendar_event_id: Number(params.calendarEventId),
+        kind: params.kind ?? "scheduled",
+        app_base_url: params.appBaseUrl ?? undefined,
+      },
+    });
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to send follow-up notification",
+        ),
+      );
+    }
+    return data ?? { ok: true, sent: false };
+  },
+  async websiteMonitorSync() {
+    const { data, error } = await invokeEdgeFunction<{ synced?: number }>(
+      "website_monitor_sync",
+      { method: "POST", body: {} },
+    );
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(error, "Failed to sync websites"),
+      );
+    }
+    return data ?? { ok: true, synced: 0 };
+  },
+  async websiteMonitorCheck(params: {
+    monitoredWebsiteId: Identifier;
+    includeDeepMetadata?: boolean;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      status?: string;
+      responseMs?: number | null;
+      httpStatus?: number | null;
+      errorMessage?: string | null;
+    }>(
+      "website_monitor_check",
+      {
+        method: "POST",
+        body: {
+          monitored_website_id: Number(params.monitoredWebsiteId),
+          include_deep_metadata: params.includeDeepMetadata ?? true,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(error, "Failed to check website"),
+      );
+    }
+    return data ?? { ok: true };
+  },
+  async websiteMonitorRunOrg(params?: { forceAll?: boolean }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      checked?: number;
+      failures?: number;
+      due?: number;
+    }>("website_monitor_run_org", {
+      method: "POST",
+      body: { force_all: params?.forceAll ?? false },
+    });
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to run website checks",
+        ),
+      );
+    }
+    return data ?? { ok: true, checked: 0, failures: 0, due: 0 };
+  },
+  async websiteMonitorCreate(params: {
+    url: string;
+    displayName?: string;
+    notes?: string;
+    companyId?: Identifier;
+    dealId?: Identifier;
+    checkPaths?: string[];
+  }) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean; id?: number }>(
+      "website_monitor_create",
+      {
+        method: "POST",
+        body: {
+          url: params.url,
+          display_name: params.displayName,
+          notes: params.notes,
+          company_id: params.companyId != null ? Number(params.companyId) : null,
+          deal_id: params.dealId != null ? Number(params.dealId) : null,
+          check_paths: params.checkPaths,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(error, "Failed to add website"),
+      );
+    }
+    return data ?? { ok: true };
+  },
 } satisfies DataProvider;
 
 export type CrmDataProvider = typeof dataProviderWithCustomMethods;
@@ -2447,6 +2595,7 @@ const applyFullTextSearch =
     }
     const { useContactFtsColumns = true } = options;
     const { q, ...filter } = params.filter;
+    const searchTerm = normalizePostgrestIlikeQuery(String(q));
     return {
       ...params,
       filter: {
@@ -2455,17 +2604,17 @@ const applyFullTextSearch =
           if (useContactFtsColumns && column === "email")
             return {
               ...acc,
-              [`email_fts@ilike`]: q,
+              [`email_fts@ilike`]: searchTerm,
             };
           if (useContactFtsColumns && column === "phone")
             return {
               ...acc,
-              [`phone_fts@ilike`]: q,
+              [`phone_fts@ilike`]: searchTerm,
             };
           else
             return {
               ...acc,
-              [`${column}@ilike`]: q,
+              [`${column}@ilike`]: searchTerm,
             };
         }, {}),
       },

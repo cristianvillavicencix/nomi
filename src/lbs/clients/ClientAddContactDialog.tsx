@@ -32,7 +32,6 @@ type AddContactFormValues = {
   full_name: string;
   email: string;
   phone: string;
-  title: string;
 };
 
 export const ClientAddContactDialog = ({
@@ -60,7 +59,6 @@ export const ClientAddContactDialog = ({
             return {
               first_name: firstName,
               last_name: lastName || firstName,
-              title: values.title?.trim() || null,
               company_id: companyId,
               status: LBS_CLIENT_STATUS,
               organization_member_id: identity?.id,
@@ -91,7 +89,6 @@ export const ClientAddContactDialog = ({
               full_name: "",
               email: "",
               phone: "",
-              title: "",
             }}
           >
             <DialogHeader>
@@ -104,7 +101,6 @@ export const ClientAddContactDialog = ({
                 validate={(value) => (value?.trim() ? undefined : "Required")}
                 helperText={false}
               />
-              <TextInput source="title" label="Title" helperText={false} />
               <EmailInput source="email" helperText={false} />
               <PhoneInput source="phone" helperText={false} />
             </div>

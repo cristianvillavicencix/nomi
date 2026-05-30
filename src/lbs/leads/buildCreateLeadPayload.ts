@@ -1,6 +1,7 @@
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { NewLeadFormValues, CreatedLeadPayload } from "./newLeadFormTypes";
+import { applyLeadAssignmentFields } from "./leadAssignments";
 import { isOtherSource, isReferralSource } from "./leadFormConstants";
+import type { CreatedLeadPayload, NewLeadFormValues } from "./newLeadFormTypes";
 
 const normalizeWebsite = (raw: string) => {
   const trimmed = raw.trim();
@@ -48,7 +49,7 @@ export const buildContactCreatePayload = (
 
   if (!showContact) {
     const name = companyNameForPlaceholder?.trim() || "Company";
-    return {
+    return applyLeadAssignmentFields({
       first_name: name,
       last_name: "Lead",
       company_id: companyId ?? null,
@@ -64,16 +65,16 @@ export const buildContactCreatePayload = (
         : null,
       interested_service,
       status: values.status ?? "new",
-      organization_member_id: values.organization_member_id,
+      assigned_member_ids: values.assigned_member_ids,
       background: values.background?.trim() || "",
       first_seen: now,
       last_seen: now,
       tags: [],
       title: "",
-    };
+    });
   }
 
-  return {
+  return applyLeadAssignmentFields({
     first_name: values.first_name.trim(),
     last_name: values.last_name.trim(),
     address: values.address?.trim() || "",
@@ -91,10 +92,10 @@ export const buildContactCreatePayload = (
       : null,
     interested_service,
     status: values.status ?? "new",
-    organization_member_id: values.organization_member_id,
+    assigned_member_ids: values.assigned_member_ids,
     background: values.background?.trim() || "",
     first_seen: now,
     last_seen: now,
     tags: [],
-  };
+  });
 };

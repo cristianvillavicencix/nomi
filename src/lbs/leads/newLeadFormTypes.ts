@@ -9,7 +9,7 @@ export type NewLeadFormValues = {
   referred_by_company_id?: number | null;
   interested_services: string[];
   status: string;
-  organization_member_id: number | string;
+  assigned_member_ids: (number | string)[];
   add_primary_contact: boolean;
   company_draft_name: string;
   company_draft_website: string;
@@ -37,7 +37,10 @@ export const defaultNewLeadFormValues = (
   referred_by_company_id: null,
   interested_services: [],
   status: "new",
-  organization_member_id: organizationMemberId ?? "",
+  assigned_member_ids:
+    organizationMemberId != null && organizationMemberId !== ""
+      ? [organizationMemberId]
+      : [],
   add_primary_contact: true,
   company_draft_name: "",
   company_draft_website: "",

@@ -4,7 +4,7 @@ import { Link } from "react-router";
 import { useGetList, type Identifier } from "ra-core";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -29,7 +29,10 @@ import type { Contract, Proposal, Ticket } from "@/lbs/types";
 import type { FormSubmissionV2 } from "@/lbs/forms-v2/types";
 import { ClientTabEmpty } from "@/lbs/clients/ClientContactsTab";
 import { formatDateTime } from "@/lbs/clients/clientShowUtils";
+import { clientTableWrapperClassName } from "@/lbs/clients/ClientTabSectionCard";
 import { MoneyText } from "@/lib/permissions/MoneyText";
+import { isPipelineTransitionNote } from "@/lbs/leads/leadFollowUpUtils";
+import { PipelineUpdateBadge } from "@/lbs/shared/ContactActivityFeed";
 
 const TabLoading = () => (
   <div className="space-y-2">
@@ -41,30 +44,42 @@ const TabLoading = () => (
 
 export const ClientProjectsTab = ({
   companyId,
+  contactId,
 }: {
-  companyId: Company["id"];
+  companyId?: Company["id"];
+  contactId?: Company["id"];
 }) => {
   const { dealStages } = useConfigurationContext();
+  const filter = contactId
+    ? { "contact_ids@cs": `{${contactId}}` }
+    : { "company_id@eq": companyId };
+
   const { data: deals = [], isPending } = useGetList<Deal>(
     "deals",
     {
-      filter: { "company_id@eq": companyId },
+      filter,
       pagination: { page: 1, perPage: 100 },
       sort: { field: "updated_at", order: "DESC" },
     },
-    { staleTime: 30_000 },
+    { staleTime: 30_000, enabled: !!(contactId ?? companyId) },
   );
 
   if (isPending) return <TabLoading />;
 
   if (deals.length === 0) {
     return (
-      <ClientTabEmpty message="No projects for this client yet. Use the + button above to create one." />
+      <ClientTabEmpty
+        message={
+          contactId
+            ? "No projects linked to this contact yet."
+            : "No projects for this client yet. Use the + button above to create one."
+        }
+      />
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className={clientTableWrapperClassName}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -126,7 +141,7 @@ export const ClientProposalsTab = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className={clientTableWrapperClassName}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -192,7 +207,7 @@ export const ClientContractsTab = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className={clientTableWrapperClassName}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -256,7 +271,7 @@ export const ClientTicketsTab = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className={clientTableWrapperClassName}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -341,7 +356,7 @@ export const ClientWebFormsTab = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className={clientTableWrapperClassName}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -397,7 +412,7 @@ export const ClientFilesTab = ({ companyId }: { companyId: Company["id"] }) => {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className={clientTableWrapperClassName}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -430,7 +445,7 @@ export const ClientTasksTab = ({
   contactIds,
   primaryContactId,
 }: {
-  companyId: Company["id"];
+  companyId?: Company["id"];
   contactIds: Identifier[];
   primaryContactId?: Identifier | null;
 }) => {
@@ -482,19 +497,36 @@ export const ClientTasksTab = ({
         <AddTask selectContact contactFilter={contactFilter} display="chip" />
       )}
 
-      <Tabs
-        value={status}
-        onValueChange={(value) => setStatus(value as TaskStatusFilter)}
+      <div
+        className="inline-flex h-auto w-max justify-start gap-1 rounded-lg bg-muted p-1"
+        role="tablist"
       >
-        <TabsList className="inline-flex h-auto w-max justify-start gap-1 rounded-lg bg-muted p-1">
-          <TabsTrigger value="open" className="shrink-0">
-            Open
-          </TabsTrigger>
-          <TabsTrigger value="done" className="shrink-0">
-            Done
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+        {(
+          [
+            { value: "open", label: "Open" },
+            { value: "done", label: "Done" },
+          ] as const
+        ).map((option) => {
+          const active = status === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setStatus(option.value)}
+              className={cn(
+                "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap transition-[color,box-shadow]",
+                active
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
 
       <ContactCalendarEventsSection
         contactIds={contactIds}
@@ -554,7 +586,14 @@ export const ClientNotesTab = ({
       ) : (
         <div className="space-y-3">
           {notes.map((note) => (
-            <Note key={note.id} note={note} />
+            <div key={note.id} className="space-y-2">
+              {isPipelineTransitionNote(note) ? (
+                <div className="flex justify-end">
+                  <PipelineUpdateBadge />
+                </div>
+              ) : null}
+              <Note note={note} />
+            </div>
           ))}
         </div>
       )}

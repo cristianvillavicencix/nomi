@@ -1,15 +1,10 @@
 import type { Contact } from "@/components/atomic-crm/types";
 
-export const CLIENT_TABS = [
-  "overview",
-  "contacts",
-  "projects",
-  "financial",
-  "activity",
-  "referrals",
-] as const;
+export const CLIENT_TABS = ["projects", "financial", "activity"] as const;
 
 export type ClientTab = (typeof CLIENT_TABS)[number];
+
+export const DEFAULT_CLIENT_TAB: ClientTab = "projects";
 
 export const FINANCIAL_SECTIONS = [
   "summary",
@@ -20,7 +15,7 @@ export const FINANCIAL_SECTIONS = [
 
 export type FinancialSection = (typeof FINANCIAL_SECTIONS)[number];
 
-export const ACTIVITY_SECTIONS = ["feed", "notes", "tasks", "support"] as const;
+export const ACTIVITY_SECTIONS = ["feed", "notes", "tasks"] as const;
 
 export type ActivitySection = (typeof ACTIVITY_SECTIONS)[number];
 
@@ -28,10 +23,14 @@ const LEGACY_TAB_MAP: Record<
   string,
   { tab: ClientTab; section?: FinancialSection | ActivitySection }
 > = {
+  overview: { tab: "activity" },
+  informacion: { tab: "activity" },
+  referrals: { tab: "activity" },
+  contacts: { tab: "activity" },
+  tickets: { tab: "activity" },
   proposals: { tab: "financial", section: "proposals" },
   contracts: { tab: "financial", section: "contracts" },
-  tickets: { tab: "activity", section: "support" },
-  "web-forms": { tab: "activity", section: "support" },
+  "web-forms": { tab: "activity" },
   tasks: { tab: "activity", section: "tasks" },
   notes: { tab: "activity", section: "notes" },
   files: { tab: "projects" },
@@ -47,7 +46,9 @@ export const resolveClientTabFromUrl = (
 };
 
 export const getValidClientTab = (value: string | null): ClientTab =>
-  CLIENT_TABS.includes(value as ClientTab) ? (value as ClientTab) : "overview";
+  CLIENT_TABS.includes(value as ClientTab)
+    ? (value as ClientTab)
+    : DEFAULT_CLIENT_TAB;
 
 export const getValidFinancialSection = (
   value: string | null,

@@ -213,6 +213,7 @@ Or set **SKIP_USER_INVITE_BILLING** = `1` under **Dashboard â†’ Edge Functions â
 
 ## Important Notes
 
+- **Language:** The user may chat in Spanish, but the product UI, code comments, commits, and repo docs are **English**. See `.cursor/rules/english-ui.mdc`.
 - The codebase is intentionally small (~15,000 LOC in `src/components/atomic-crm`) for easy customization
 - Modify files in `src/components/admin` and `src/components/ui` directly - they are meant to be customized
 - User deletion is not supported to avoid data loss; use account disabling instead

@@ -225,6 +225,9 @@ const getMutationPermission = (
     resource === "contact_notes" ||
     resource === "tasks" ||
     resource === "calendar_events" ||
+    resource === "monitored_websites" ||
+    resource === "website_checks" ||
+    resource === "website_monitor_changes" ||
     resource === "deal_subcontractor_entries" ||
     resource === "deal_expenses" ||
     resource === "deal_change_orders" ||

@@ -1,6 +1,7 @@
 // Based on https://github.com/supabase/supabase/blob/master/examples/edge-functions/supabase/functions/_shared/jwt/default.ts
 import * as jose from "jsr:@panva/jose@6";
 import { type User } from "jsr:@supabase/supabase-js@2";
+import { corsHeaders } from "./cors.ts";
 import { createErrorResponse } from "./utils.ts";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
@@ -41,7 +42,9 @@ export const AuthMiddleware = async (
   req: Request,
   next: (req: Request) => Promise<Response>,
 ) => {
-  if (req.method === "OPTIONS") return await next(req);
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
   try {
     const token = getAuthToken(req);
@@ -63,7 +66,9 @@ export const UserMiddleware = async (
   req: Request,
   next: (req: Request, user?: User) => Promise<Response>,
 ) => {
-  if (req.method === "OPTIONS") return await next(req);
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
   try {
     const authHeader = req.headers.get("Authorization");

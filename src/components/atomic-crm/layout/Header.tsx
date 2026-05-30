@@ -16,7 +16,8 @@ import { hasMemberCapability } from "../providers/commons/memberModuleAccess";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { isLbsMode } from "@/lbs/productMode";
-import { LBS_NAV_ITEMS } from "@/lbs/navigation";
+import { LBS_NAV_ITEMS, filterLbsNavItems } from "@/lbs/navigation";
+import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 
 const TIME_AND_PAY_PATHS = new Set([
   "/time_entries",
@@ -38,6 +39,10 @@ const Header = () => {
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
   const location = useLocation();
   const { data: identity } = useGetIdentity();
+  const { enabled: websiteMonitorEnabled } = useWebsiteMonitorEnabled(isLbsMode());
+  const lbsNavItems = filterLbsNavItems(LBS_NAV_ITEMS, {
+    websiteMonitorEnabled,
+  });
   const canViewSales = canAccess(identity as any, {
     action: "list",
     resource: "deals",
@@ -128,7 +133,7 @@ const Header = () => {
               <h1 className="text-xl font-semibold">{title}</h1>
             </Link>
             <nav className="flex flex-wrap">
-              {LBS_NAV_ITEMS.filter((item) =>
+              {lbsNavItems.filter((item) =>
                 item.capability
                   ? hasMemberCapability(identity as any, item.capability)
                   : item.resource

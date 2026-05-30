@@ -1,18 +1,7 @@
-import { formatDistanceToNow } from "date-fns";
-import {
-  BriefcaseBusiness,
-  CalendarClock,
-  CircleDollarSign,
-  FileText,
-  FolderKanban,
-  ListChecks,
-  ReceiptText,
-  UserRoundPlus,
-} from "lucide-react";
+import { BriefcaseBusiness, CircleDollarSign, FolderKanban, ReceiptText } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   RecordRepresentation,
-  ResourceContextProvider,
   ShowBase,
   useGetList,
   useGetMany,
@@ -33,44 +22,23 @@ import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
 import { MobileBackButton } from "../misc/MobileBackButton";
 import { RelativeDate } from "../misc/RelativeDate";
-import { NoteCreate } from "../notes";
-import { Note } from "../notes/Note";
 import type {
-  CalendarEventRecord,
   Company,
   Contact,
-  ContactNote,
   Deal,
   Payment,
   PaymentLine,
-  Task,
 } from "../types";
-import {
-  formatEventTimeLabel,
-  formatRemindBeforeLabel,
-  getCalendarEntryKind,
-} from "@/lbs/calendar/calendarReminderOptions";
-import { getCalendarEventSortDate } from "@/lbs/calendar/ProjectCalendarEventsList";
 import { ContactEditModal } from "./ContactEditModal";
 import { ContactHeader } from "./ContactHeader";
 import { isLbsMode } from "@/lbs/productMode";
 import { getPersonListPath } from "@/lbs/routing";
 import { ReferralsTab } from "@/lbs/leads/ReferralsTab";
+import { ContactActivityFeed } from "@/lbs/shared/ContactActivityFeed";
 
 const CONTACT_TABS = ["activities", "projects", "financials"] as const;
 const LBS_CONTACT_TABS = ["activities", "projects", "referrals"] as const;
 type ContactTab = (typeof CONTACT_TABS)[number] | "referrals";
-
-type ActivityFeedItem =
-  | { id: string; type: "note"; date: string; note: ContactNote }
-  | { id: string; type: "task"; date: string; task: Task }
-  | {
-      id: string;
-      type: "calendar_event";
-      date: string;
-      calendarEvent: CalendarEventRecord;
-    }
-  | { id: string; type: "created"; date: string };
 
 export const ContactShow = () => {
   const isMobile = useIsMobile();
@@ -254,214 +222,9 @@ const ContactMainTabs = ({ record }: { record: Contact }) => {
   );
 };
 
-const ContactActivitiesTab = ({ record }: { record: Contact }) => {
-  const { data: notes, isPending: notesPending } = useGetList<ContactNote>(
-    "contact_notes",
-    {
-      filter: { "contact_id@eq": record.id },
-      sort: { field: "date", order: "DESC" },
-      pagination: { page: 1, perPage: 50 },
-    },
-  );
-  const { data: tasks, isPending: tasksPending } = useGetList<Task>("tasks", {
-    filter: { "contact_id@eq": record.id },
-    sort: { field: "due_date", order: "DESC" },
-    pagination: { page: 1, perPage: 50 },
-  });
-  const { data: calendarEvents = [], isPending: calendarEventsPending } =
-    useGetList<CalendarEventRecord>(
-      "calendar_events",
-      {
-        filter: { "contact_id@eq": record.id },
-        sort: { field: "event_date", order: "DESC" },
-        pagination: { page: 1, perPage: 50 },
-      },
-      { staleTime: 30_000 },
-    );
-
-  const events = useMemo<ActivityFeedItem[]>(() => {
-    const noteEvents =
-      notes?.map((note) => ({
-        id: `note-${note.id}`,
-        type: "note" as const,
-        date: note.date,
-        note,
-      })) ?? [];
-    const taskEvents =
-      tasks?.map((task) => ({
-        id: `task-${task.id}`,
-        type: "task" as const,
-        date: task.done_date ?? task.due_date,
-        task,
-      })) ?? [];
-    const calendarEventItems =
-      calendarEvents.map((calendarEvent) => ({
-        id: `calendar-${calendarEvent.id}`,
-        type: "calendar_event" as const,
-        date: getCalendarEventSortDate(calendarEvent),
-        calendarEvent,
-      })) ?? [];
-    const createdEvent: ActivityFeedItem[] = record.first_seen
-      ? [
-          {
-            id: `created-${record.id}`,
-            type: "created",
-            date: record.first_seen,
-          },
-        ]
-      : [];
-
-    return [
-      ...noteEvents,
-      ...taskEvents,
-      ...calendarEventItems,
-      ...createdEvent,
-    ].sort(
-      (left, right) =>
-        new Date(right.date).getTime() - new Date(left.date).getTime(),
-    );
-  }, [calendarEvents, notes, record.first_seen, record.id, tasks]);
-
-  if (notesPending || tasksPending || calendarEventsPending) {
-    return <TabEmptyState label="Loading activity..." />;
-  }
-
-  return (
-    <div className="space-y-4">
-      <NoteCreate reference="contacts" showStatus contactId={record.id} />
-      {events.length === 0 ? (
-        <TabEmptyState label="No activity yet for this contact." />
-      ) : (
-        <div className="space-y-4">
-          {events.map((event) => (
-            <ActivityFeedRow key={event.id} event={event} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ActivityFeedRow = ({ event }: { event: ActivityFeedItem }) => {
-  if (event.type === "note") {
-    return (
-      <div className="rounded-lg border border-border p-4">
-        <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          <FileText className="size-4" />
-          Note
-          <span className="normal-case tracking-normal">
-            <RelativeDate date={event.date} />
-          </span>
-        </div>
-        <ResourceContextProvider value="contact_notes">
-          <Note note={event.note} showStatus />
-        </ResourceContextProvider>
-      </div>
-    );
-  }
-
-  if (event.type === "task") {
-    return (
-      <div className="rounded-lg border border-border p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              <ListChecks className="size-4" />
-              {event.task.done_date ? "Task completed" : "Task scheduled"}
-            </div>
-            <p className="text-sm font-medium">{event.task.text}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {event.task.type !== "None" && event.task.type !== "none"
-                ? `${event.task.type} · `
-                : ""}
-              {event.task.done_date ? "Completed" : "Due"}{" "}
-              {formatDistanceToNow(new Date(event.date), {
-                addSuffix: true,
-              })}
-            </p>
-          </div>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            <RelativeDate date={event.date} />
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (event.type === "calendar_event") {
-    const timeLabel = formatEventTimeLabel(event.calendarEvent.event_time);
-    const remindLabel = formatRemindBeforeLabel(
-      event.calendarEvent.remind_before_minutes,
-    );
-    const entryKind = getCalendarEntryKind(event.calendarEvent);
-    const entryLabel =
-      entryKind === "activity"
-        ? "Activity"
-        : entryKind === "scheduled_task"
-          ? "Assigned task"
-          : "Calendar event";
-
-    return (
-      <div className="rounded-lg border border-border p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              <CalendarClock className="size-4" />
-              {event.calendarEvent.completed_at
-                ? `${entryLabel} done`
-                : entryLabel}
-            </div>
-            <p className="text-sm font-medium">{event.calendarEvent.title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {[
-                new Date(event.calendarEvent.event_date).toLocaleDateString(
-                  undefined,
-                  {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  },
-                ),
-                timeLabel,
-                remindLabel,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            {event.calendarEvent.description ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                {event.calendarEvent.description}
-              </p>
-            ) : null}
-          </div>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            <RelativeDate date={event.date} />
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border border-dashed border-border p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <UserRoundPlus className="size-4" />
-            Contact created
-          </div>
-          <p className="text-sm text-muted-foreground">
-            This contact was added{" "}
-            {formatDistanceToNow(new Date(event.date), { addSuffix: true })}.
-          </p>
-        </div>
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
-          <RelativeDate date={event.date} />
-        </span>
-      </div>
-    </div>
-  );
-};
+const ContactActivitiesTab = ({ record }: { record: Contact }) => (
+  <ContactActivityFeed contact={record} />
+);
 
 const ContactProjectsTab = ({ record }: { record: Contact }) => {
   const {

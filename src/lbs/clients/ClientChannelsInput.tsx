@@ -23,6 +23,8 @@ type ClientChannelsInputProps = {
   label: string;
 };
 
+const ACTION_SLOT = "size-8 shrink-0";
+
 export const ClientChannelsInput = ({
   source,
   kind,
@@ -34,34 +36,34 @@ export const ClientChannelsInput = ({
     name: source,
   });
 
+  const appendChannel = () =>
+    append({
+      value: "",
+      type: "Work",
+      isPrimary: fields.length === 0,
+    } satisfies ClientChannelFormValue);
+
   return (
-    <div className="space-y-4">
-      {fields.map((field, index) => (
-        <ChannelRow
-          key={field.id}
-          source={source}
-          index={index}
-          kind={kind}
-          label={index === 0 ? label : false}
-          canRemove={fields.length > 1}
-          onRemove={() => remove(index)}
-        />
-      ))}
-      <Button
-        type="button"
-        variant="link"
-        className="h-auto p-0 text-muted-foreground"
-        onClick={() =>
-          append({
-            value: "",
-            type: "Work",
-            isPrimary: fields.length === 0,
-          } satisfies ClientChannelFormValue)
-        }
-      >
-        <Plus className="size-4" />
-        Add another {kind}
-      </Button>
+    <div className="space-y-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_6.75rem] items-end gap-2">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-sm font-medium">Type</p>
+        <span className="sr-only">Actions</span>
+      </div>
+      <div className="space-y-2">
+        {fields.map((field, index) => (
+          <ChannelRow
+            key={field.id}
+            source={source}
+            index={index}
+            kind={kind}
+            canRemove={fields.length > 1}
+            showAdd={index === fields.length - 1}
+            onAdd={appendChannel}
+            onRemove={() => remove(index)}
+          />
+        ))}
+      </div>
     </div>
   );
 };
@@ -70,15 +72,17 @@ const ChannelRow = ({
   source,
   index,
   kind,
-  label,
   canRemove,
+  showAdd,
+  onAdd,
   onRemove,
 }: {
   source: ChannelsSource;
   index: number;
   kind: "email" | "phone";
-  label: string | false;
   canRemove: boolean;
+  showAdd: boolean;
+  onAdd: () => void;
   onRemove: () => void;
 }) => {
   const { setValue, getValues } = useFormContext<ClientCreateFormValues>();
@@ -96,58 +100,78 @@ const ChannelRow = ({
   };
 
   return (
-    <div className="flex items-end gap-2">
-      <div className="grid min-w-0 flex-1 gap-4 md:grid-cols-[minmax(0,1fr)_6.5rem]">
+    <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_6.75rem] items-center gap-2">
+      <div className="min-w-0">
         {kind === "email" ? (
           <EmailInput
             source={`${source}.${index}.value`}
-            label={label || false}
+            label={false}
             helperText={false}
           />
         ) : (
           <PhoneInput
             source={`${source}.${index}.value`}
-            label={label || false}
+            label={false}
             helperText={false}
           />
         )}
-        <SelectInput
-          source={`${source}.${index}.type`}
-          label={label ? "Type" : false}
-          choices={[...CHANNEL_TYPE_CHOICES]}
-          helperText={false}
-        />
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "mb-0.5 size-8 shrink-0",
-          isPrimary
-            ? "text-amber-500 hover:text-amber-600"
-            : "text-muted-foreground",
+      <SelectInput
+        source={`${source}.${index}.type`}
+        label={false}
+        choices={[...CHANNEL_TYPE_CHOICES]}
+        helperText={false}
+      />
+      <div className="flex items-center justify-end gap-0.5">
+        {showAdd ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(ACTION_SLOT, "text-muted-foreground")}
+            onClick={onAdd}
+            aria-label={`Add another ${kind}`}
+            title={`Add another ${kind}`}
+          >
+            <Plus className="size-4" />
+          </Button>
+        ) : (
+          <div aria-hidden className={ACTION_SLOT} />
         )}
-        onClick={setPrimary}
-        aria-label={isPrimary ? "Primary" : "Set as primary"}
-        title={isPrimary ? "Primary" : "Set as primary"}
-      >
-        <Star className={cn("size-4", isPrimary && "fill-current")} />
-      </Button>
-      {canRemove ? (
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="mb-0.5 size-8 shrink-0 text-muted-foreground hover:text-destructive"
-          onClick={onRemove}
-          aria-label={`Remove ${kind}`}
+          className={cn(
+            ACTION_SLOT,
+            isPrimary
+              ? "text-amber-500 hover:text-amber-600"
+              : "text-muted-foreground",
+          )}
+          onClick={setPrimary}
+          aria-label={isPrimary ? "Primary" : "Set as primary"}
+          title={isPrimary ? "Primary" : "Set as primary"}
         >
-          <Trash2 className="size-4" />
+          <Star className={cn("size-4", isPrimary && "fill-current")} />
         </Button>
-      ) : (
-        <div className="size-8 shrink-0" />
-      )}
+        {canRemove ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              ACTION_SLOT,
+              "text-muted-foreground hover:text-destructive",
+            )}
+            onClick={onRemove}
+            aria-label={`Remove ${kind}`}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        ) : (
+          <div aria-hidden className={ACTION_SLOT} />
+        )}
+      </div>
     </div>
   );
 };

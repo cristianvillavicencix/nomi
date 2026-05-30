@@ -2,6 +2,11 @@ import { useGetList, type Identifier } from "ra-core";
 import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
 import type { FormSubmissionV2 } from "@/lbs/forms-v2/types";
+import type { Contract, Proposal, Ticket } from "@/lbs/types";
+import {
+  CONTACT_STATUS_FILTER,
+  LEAD_STATUS_FILTER,
+} from "@/lbs/shared/relatedFilters";
 
 const countQuery = (resource: string, filter: Record<string, unknown>) => ({
   filter,
@@ -15,7 +20,18 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
 
   const { total: contacts = 0 } = useGetList<Contact>(
     "contacts",
-    countQuery("contacts", { "company_id@eq": companyId }),
+    countQuery("contacts", {
+      "company_id@eq": companyId,
+      "status@in": CONTACT_STATUS_FILTER,
+    }),
+    { staleTime, enabled },
+  );
+  const { total: leads = 0 } = useGetList<Contact>(
+    "contacts",
+    countQuery("contacts", {
+      "company_id@eq": companyId,
+      "status@in": LEAD_STATUS_FILTER,
+    }),
     { staleTime, enabled },
   );
   const { total: projects = 0 } = useGetList<Deal>(
@@ -100,6 +116,7 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
 
   return {
     contacts,
+    leads,
     projects,
     proposals,
     contracts,

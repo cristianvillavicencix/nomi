@@ -6,6 +6,7 @@ import {
   FileSignature,
   FileText,
   FormInput,
+  Globe,
   Home,
   ListChecks,
   Settings,
@@ -24,6 +25,18 @@ export type LbsNavItem = {
   resource?: string;
   action?: string;
 };
+
+export const filterLbsNavItems = (
+  items: LbsNavItem[],
+  options?: { websiteMonitorEnabled?: boolean },
+) =>
+  items.filter(
+    (item) =>
+      !(
+        item.to === "/web-monitor" &&
+        options?.websiteMonitorEnabled === false
+      ),
+  );
 
 export const LBS_NAV_ITEMS: LbsNavItem[] = [
   {
@@ -51,6 +64,15 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     activePattern: "/clients/*",
     capability: "crm.companies.view",
     resource: "companies",
+    action: "list",
+  },
+  {
+    to: "/web-monitor",
+    label: "Web Monitor",
+    icon: Globe,
+    activePattern: "/web-monitor/*",
+    capability: "crm.companies.view",
+    resource: "monitored_websites",
     action: "list",
   },
   {

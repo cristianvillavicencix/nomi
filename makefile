@@ -21,7 +21,10 @@ supabase-reset-database: ## reset (and clear!) the database
 start-app: ## start the app locally
 	npm run dev
 
-start: start-supabase start-app ## start the stack locally
+start: start-supabase ## start the stack locally (Supabase + Edge Functions + app)
+	@echo "Starting Edge Functions (background)..."
+	@npx supabase functions serve > .supabase-functions.log 2>&1 &
+	@$(MAKE) start-app
 
 start-demo: ## start the app locally in demo mode
 	npm run dev:demo

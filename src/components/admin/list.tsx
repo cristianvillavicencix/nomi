@@ -182,24 +182,31 @@ export const ListView = <RecordType extends RaRecord = RaRecord>(
 
         {contentScrollable ? (
           <ScrollableContentArea
-            className={cn(
-              hidesPageChrome ? "mt-1 mb-2" : "my-2",
-              props.className,
-            )}
+            className={cn(hidesPageChrome ? "mt-1" : "mt-2", props.className)}
           >
             {children}
-            {pagination}
+            {pagination ? (
+              <div className="border-t border-border/60 bg-background px-3 py-0">
+                {pagination}
+              </div>
+            ) : null}
           </ScrollableContentArea>
         ) : (
           <div
             className={cn(
-              hidesPageChrome ? "mt-1 mb-2" : "my-2",
-              "min-h-0 flex-1 overflow-hidden",
+              hidesPageChrome ? "mt-1" : "mt-2",
+              "flex min-h-0 flex-1 flex-col overflow-hidden",
               props.className,
             )}
           >
-            {children}
-            {pagination}
+            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+              {children}
+            </div>
+            {pagination ? (
+              <div className="shrink-0 border-t border-border/60 bg-background px-3 py-0">
+                {pagination}
+              </div>
+            ) : null}
           </div>
         )}
       </FilterContext.Provider>

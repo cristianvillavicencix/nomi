@@ -1,31 +1,32 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActivityLog } from "@/components/atomic-crm/activity/ActivityLog";
 import type { Company } from "@/components/atomic-crm/types";
 import type { Identifier } from "ra-core";
+import { ClientNotesTab, ClientTasksTab } from "@/lbs/clients/ClientTabPanels";
 import {
-  ClientNotesTab,
-  ClientSupportTab,
-  ClientTasksTab,
-} from "@/lbs/clients/ClientTabPanels";
+  ClientTabAccordion,
+  ClientTabAccordionSection,
+} from "@/lbs/clients/ClientTabAccordion";
+import {
+  ClientTabContentCard,
+  ClientTabSectionCard,
+} from "@/lbs/clients/ClientTabSectionCard";
 import {
   ACTIVITY_SECTIONS,
-  formatTabCount,
   getValidActivitySection,
   type ActivitySection,
 } from "@/lbs/clients/clientShowUtils";
 
 type ClientActivityTabProps = {
-  companyId: Company["id"];
+  companyId?: Company["id"];
   contactIds: Identifier[];
   primaryContactId?: Identifier | null;
   counts: {
     notes: number;
     tasks: number;
-    tickets: number;
-    webForms: number;
   };
+  syncUrl?: boolean;
 };
 
 export const ClientActivityTab = ({
@@ -33,74 +34,80 @@ export const ClientActivityTab = ({
   contactIds,
   primaryContactId,
   counts,
+  syncUrl = true,
 }: ClientActivityTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const section = getValidActivitySection(searchParams.get("section"));
+  const sectionFromUrl =
+    syncUrl && searchParams.get("tab") === "activity"
+      ? getValidActivitySection(searchParams.get("section"))
+      : "feed";
 
-  const handleSectionChange = (nextSection: string) => {
-    const validSection = getValidActivitySection(nextSection);
+  const [openSections, setOpenSections] = useState<string[]>(() => [
+    sectionFromUrl,
+  ]);
+
+  useEffect(() => {
+    if (!syncUrl) return;
+    if (searchParams.get("tab") !== "activity") return;
+    setOpenSections([getValidActivitySection(searchParams.get("section"))]);
+  }, [syncUrl, searchParams.get("tab"), searchParams.get("section")]);
+
+  const handleAccordionChange = (values: string[]) => {
+    setOpenSections(values);
+    if (!syncUrl) return;
     const next = new URLSearchParams(searchParams);
     next.set("tab", "activity");
-    if (validSection === "feed") {
+    const focused =
+      values.find((value) => value !== "feed") ??
+      (values.includes("feed") ? "feed" : undefined);
+    if (!focused || focused === "feed") {
       next.delete("section");
-    } else {
-      next.set("section", validSection);
+    } else if (ACTIVITY_SECTIONS.includes(focused as ActivitySection)) {
+      next.set("section", focused);
     }
     setSearchParams(next, { replace: true });
   };
 
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab !== "activity") return;
-    const rawSection = searchParams.get("section");
-    if (
-      rawSection &&
-      !ACTIVITY_SECTIONS.includes(rawSection as ActivitySection)
-    ) {
-      const next = new URLSearchParams(searchParams);
-      next.delete("section");
-      setSearchParams(next, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-
-  const supportCount = counts.tickets + counts.webForms;
-
   return (
-    <Tabs value={section} onValueChange={handleSectionChange}>
-      <TabsList className="mb-4 inline-flex h-auto w-max max-w-full justify-start gap-1 overflow-x-auto">
-        <TabsTrigger value="feed" className="shrink-0">
-          Feed
-        </TabsTrigger>
-        <TabsTrigger value="notes" className="shrink-0">
-          Notes{formatTabCount(counts.notes)}
-        </TabsTrigger>
-        <TabsTrigger value="tasks" className="shrink-0">
-          Tasks{formatTabCount(counts.tasks)}
-        </TabsTrigger>
-        <TabsTrigger value="support" className="shrink-0">
-          Support{formatTabCount(supportCount)}
-        </TabsTrigger>
-      </TabsList>
+    <ClientTabAccordion value={openSections} onValueChange={handleAccordionChange}>
+      <ClientTabAccordionSection value="feed" title="Activity feed">
+        <ClientTabSectionCard title="Recent activity">
+          {companyId ? (
+            <ActivityLog companyId={companyId} context="company" />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Link this contact to a company to view the shared activity feed.
+            </p>
+          )}
+        </ClientTabSectionCard>
+      </ClientTabAccordionSection>
 
-      <TabsContent value="feed" className="mt-0">
-        <ActivityLog companyId={companyId} context="company" />
-      </TabsContent>
-      <TabsContent value="notes" className="mt-0">
-        <ClientNotesTab
-          contactIds={contactIds}
-          primaryContactId={primaryContactId}
-        />
-      </TabsContent>
-      <TabsContent value="tasks" className="mt-0">
-        <ClientTasksTab
-          companyId={companyId}
-          contactIds={contactIds}
-          primaryContactId={primaryContactId}
-        />
-      </TabsContent>
-      <TabsContent value="support" className="mt-0">
-        <ClientSupportTab companyId={companyId} />
-      </TabsContent>
-    </Tabs>
+      <ClientTabAccordionSection
+        value="notes"
+        title="Notes"
+        count={counts.notes}
+      >
+        <ClientTabContentCard flush>
+          <ClientNotesTab
+            contactIds={contactIds}
+            primaryContactId={primaryContactId}
+          />
+        </ClientTabContentCard>
+      </ClientTabAccordionSection>
+
+      <ClientTabAccordionSection
+        value="tasks"
+        title="Tasks"
+        count={counts.tasks}
+      >
+        <ClientTabContentCard flush>
+          <ClientTasksTab
+            companyId={companyId}
+            contactIds={contactIds}
+            primaryContactId={primaryContactId}
+          />
+        </ClientTabContentCard>
+      </ClientTabAccordionSection>
+    </ClientTabAccordion>
   );
 };

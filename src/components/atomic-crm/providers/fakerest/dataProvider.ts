@@ -30,6 +30,7 @@ import { withCurrentProductName } from "../../root/defaultConfiguration";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getActivityLog } from "../commons/activity";
+import { normalizePostgrestIlikeQuery } from "../commons/postgrestSearchQuery";
 import {
   syncTaskAssignees,
   createTaskTagNotifications,
@@ -2197,6 +2198,7 @@ const applyFullTextSearch =
     }
     const { useContactFtsColumns = true } = options;
     const { q, ...filter } = params.filter;
+    const searchTerm = normalizePostgrestIlikeQuery(String(q));
     return {
       ...params,
       filter: {
@@ -2205,18 +2207,18 @@ const applyFullTextSearch =
           if (useContactFtsColumns && column === "email") {
             return {
               ...acc,
-              [`email_fts@ilike`]: q,
+              [`email_fts@ilike`]: searchTerm,
             };
           }
           if (useContactFtsColumns && column === "phone") {
             return {
               ...acc,
-              [`phone_fts@ilike`]: q,
+              [`phone_fts@ilike`]: searchTerm,
             };
           }
           return {
             ...acc,
-            [`${column}@ilike`]: q,
+            [`${column}@ilike`]: searchTerm,
           };
         }, {}),
       },

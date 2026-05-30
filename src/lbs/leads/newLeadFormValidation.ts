@@ -1,5 +1,5 @@
 import type { NewLeadFormValues } from "./newLeadFormTypes";
-import { isReferralSource } from "./leadFormConstants";
+import { normalizeAssignedMemberIds } from "./leadAssignments";
 
 export type LeadFormValidationResult =
   | { ok: true }
@@ -23,8 +23,8 @@ export const validateNewLeadForm = (
   if (!values.status?.trim()) {
     return { ok: false, message: "Status is required." };
   }
-  if (values.organization_member_id == null || values.organization_member_id === "") {
-    return { ok: false, message: "Assigned to is required." };
+  if (!normalizeAssignedMemberIds(values.assigned_member_ids).length) {
+    return { ok: false, message: "Asigna al menos un miembro del equipo." };
   }
 
   if (isReferralSource(values.lead_source)) {

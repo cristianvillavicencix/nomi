@@ -3,7 +3,6 @@ import { isLbsMode } from "@/lbs/productMode";
 import { LeadsListPage } from "@/lbs/leads/LeadsListPage";
 import { ClientsListPage } from "@/lbs/clients/ClientsListPage";
 import { ClientShowPage } from "@/lbs/clients/ClientShowPage";
-import { ClientCreatePage } from "@/lbs/clients/ClientCreatePage";
 import { ClientEditPage } from "@/lbs/clients/ClientEditPage";
 import { FindDuplicatesPage } from "@/lbs/clients/FindDuplicatesPage";
 import { LeadCreatePage } from "@/lbs/leads/LeadCreatePage";
@@ -33,6 +32,8 @@ import { TicketShow } from "@/lbs/tickets/TicketShow";
 import { lazy, Suspense } from "react";
 import { CalendarPage } from "@/lbs/calendar/CalendarPage";
 import { MeetingsPage } from "@/lbs/meetings/MeetingsPage";
+import { WebsiteMonitorListPage } from "@/lbs/website-monitor/WebsiteMonitorListPage";
+import { WebsiteMonitorShowPage } from "@/lbs/website-monitor/WebsiteMonitorShowPage";
 const MessagesPage = lazy(() =>
   import("@/lbs/messages/MessagesPage").then((module) => ({
     default: module.MessagesPage,
@@ -76,7 +77,7 @@ export const renderLbsCustomRoutes = ({
       <Route path="/companies" element={<Navigate to="/clients" replace />} />
       <Route
         path="/companies/create"
-        element={<Navigate to="/clients/create" replace />}
+        element={<Navigate to="/clients?create=company" replace />}
       />
       <Route
         path="/companies/:id/show"
@@ -155,12 +156,24 @@ export const renderLbsCustomRoutes = ({
         }
       />
       <Route
-        path="/clients/create"
+        path="/web-monitor"
         element={
-          <ProtectedRoute resource="companies" action="create">
-            <ClientCreatePage />
+          <ProtectedRoute resource="monitored_websites" action="list">
+            <WebsiteMonitorListPage />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/web-monitor/:id/show"
+        element={
+          <ProtectedRoute resource="monitored_websites" action="show">
+            <WebsiteMonitorShowPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/clients/create"
+        element={<Navigate to="/clients?create=company" replace />}
       />
       <Route
         path="/clients"

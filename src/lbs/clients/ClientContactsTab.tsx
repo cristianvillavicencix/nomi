@@ -48,24 +48,40 @@ import {
 import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
 import { useMessagesQuickAccess } from "@/lbs/messages/MessagesQuickAccessProvider";
 import { useMessagingEnabled } from "@/lbs/messages/useMessagingEnabled";
+import {
+  CONTACT_STATUS_FILTER,
+  LEAD_STATUS_FILTER,
+} from "@/lbs/shared/relatedFilters";
 
 type ClientContactsTabProps = {
   companyId: Company["id"];
   primaryContactId?: CompanyWithPrimaryContact["primary_contact_id"];
+  statusFilter?: "all" | "contacts" | "leads";
 };
 
 export const ClientContactsTab = ({
   companyId,
   primaryContactId,
+  statusFilter = "all",
 }: ClientContactsTabProps) => {
   const notify = useNotify();
   const refresh = useRefresh();
   const [update, { isPending: isUpdatingPrimary }] = useUpdate();
   const [deleteOne, { isPending: isDeleting }] = useDelete<Contact>();
+  const statusInFilter =
+    statusFilter === "leads"
+      ? LEAD_STATUS_FILTER
+      : statusFilter === "contacts"
+        ? CONTACT_STATUS_FILTER
+        : undefined;
+
   const { data: contacts = [], isPending } = useGetList<Contact>(
     "contacts",
     {
-      filter: { "company_id@eq": companyId },
+      filter: {
+        "company_id@eq": companyId,
+        ...(statusInFilter ? { "status@in": statusInFilter } : {}),
+      },
       pagination: { page: 1, perPage: 100 },
       sort: { field: "last_name", order: "ASC" },
     },
@@ -149,7 +165,6 @@ export const ClientContactsTab = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead className="hidden sm:table-cell">Title</TableHead>
                 <TableHead className="hidden md:table-cell">Phone</TableHead>
                 <TableHead className="hidden lg:table-cell">Email</TableHead>
                 <TableHead>Status</TableHead>
@@ -174,9 +189,6 @@ export const ClientContactsTab = ({
                           {getContactFullName(contact)}
                         </span>
                       </button>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-muted-foreground">
-                      {contact.title?.trim() || "—"}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">
                       {getContactPhone(contact)}

@@ -106,10 +106,13 @@ export const ListPagination = ({
 
   return (
     <div
-      className={`flex items-center justify-end space-x-2 gap-4 ${className}`}
+      className={cn(
+        "flex items-center justify-end gap-2 sm:gap-3",
+        className,
+      )}
     >
-      <div className="hidden md:flex items-center space-x-2">
-        <p className="text-sm font-medium">
+      <div className="hidden items-center gap-1.5 md:flex">
+        <p className="text-xs font-medium text-muted-foreground">
           <Translate i18nKey="ra.navigation.page_rows_per_page">
             Rows per page
           </Translate>
@@ -120,7 +123,7 @@ export const ListPagination = ({
             setPerPage(Number(value));
           }}
         >
-          <SelectTrigger className="h-8 w-fit">
+          <SelectTrigger className="h-7 w-fit px-2 text-xs">
             <SelectValue placeholder={perPage} />
           </SelectTrigger>
           <SelectContent side="top">
@@ -132,7 +135,7 @@ export const ListPagination = ({
           </SelectContent>
         </Select>
       </div>
-      <div className="text-sm text-muted-foreground">
+      <div className="text-xs text-muted-foreground tabular-nums">
         <Translate
           i18nKey="ra.navigation.page_range_info"
           options={{
@@ -146,27 +149,27 @@ export const ListPagination = ({
             : null}
         </Translate>
       </div>
-      <Pagination className="-w-full -mx-auto">
-        <PaginationContent>
+      <Pagination className="mx-0 w-auto">
+        <PaginationContent className="gap-0.5">
           <PaginationItem>
             {hasPreviousPage ? (
               <PaginationLink
                 href="#"
                 onClick={pageChangeHandler(page - 1)}
+                className="size-7"
                 aria-label={translate("ra.navigation.previous", {
                   _: "Previous",
                 })}
               >
-                <ChevronLeftIcon />
+                <ChevronLeftIcon className="size-3.5" />
               </PaginationLink>
             ) : (
-              <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium size-9">
+              <span className="inline-flex size-7 items-center justify-center">
                 <ChevronLeftIcon
                   aria-label={translate("ra.navigation.previous", {
                     _: "Previous",
                   })}
-                  size="16"
-                  className="text-muted-foreground"
+                  className="size-3.5 text-muted-foreground"
                 />
               </span>
             )}
@@ -177,6 +180,7 @@ export const ListPagination = ({
                 href="#"
                 onClick={pageChangeHandler(pageNumber)}
                 isActive={pageNumber === page}
+                className="size-7 text-xs"
               >
                 {pageNumber}
               </PaginationLink>
@@ -184,7 +188,7 @@ export const ListPagination = ({
           ))}
           {siblingsStart > boundaryCount + 2 ? (
             <PaginationItem>
-              <PaginationEllipsis />
+              <PaginationEllipsis className="size-7" />
             </PaginationItem>
           ) : boundaryCount + 1 < count - boundaryCount ? (
             <PaginationItem>
@@ -192,6 +196,7 @@ export const ListPagination = ({
                 href="#"
                 onClick={pageChangeHandler(boundaryCount + 1)}
                 isActive={boundaryCount + 1 === page}
+                className="size-7 text-xs"
               >
                 {boundaryCount + 1}
               </PaginationLink>
@@ -203,6 +208,7 @@ export const ListPagination = ({
                 href="#"
                 onClick={pageChangeHandler(pageNumber)}
                 isActive={pageNumber === page}
+                className="size-7 text-xs"
               >
                 {pageNumber}
               </PaginationLink>
@@ -210,7 +216,7 @@ export const ListPagination = ({
           ))}
           {siblingsEnd < count - boundaryCount - 1 ? (
             <PaginationItem>
-              <PaginationEllipsis />
+              <PaginationEllipsis className="size-7" />
             </PaginationItem>
           ) : count - boundaryCount > boundaryCount ? (
             <PaginationItem>
@@ -218,6 +224,7 @@ export const ListPagination = ({
                 href="#"
                 onClick={pageChangeHandler(count - boundaryCount)}
                 isActive={count - boundaryCount === page}
+                className="size-7 text-xs"
               >
                 {count - boundaryCount}
               </PaginationLink>
@@ -229,6 +236,7 @@ export const ListPagination = ({
                 href="#"
                 onClick={pageChangeHandler(pageNumber)}
                 isActive={pageNumber === page}
+                className="size-7 text-xs"
               >
                 {pageNumber}
               </PaginationLink>
@@ -239,21 +247,16 @@ export const ListPagination = ({
               <PaginationLink
                 href="#"
                 onClick={pageChangeHandler(page + 1)}
-                size="default"
-                className={cn(
-                  "gap-1 px-2.5 sm:pr-2.5",
-                  !hasNextPage ? "opacity-50 cursor-not-allowed" : "",
-                )}
+                className="size-7"
                 aria-label={translate("ra.navigation.next", { _: "Next" })}
               >
-                <ChevronRightIcon />
+                <ChevronRightIcon className="size-3.5" />
               </PaginationLink>
             ) : (
-              <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium size-9">
+              <span className="inline-flex size-7 items-center justify-center">
                 <ChevronRightIcon
                   aria-label={translate("ra.navigation.next", { _: "Next" })}
-                  size="16"
-                  className="text-muted-foreground"
+                  className="size-3.5 text-muted-foreground"
                 />
               </span>
             )}

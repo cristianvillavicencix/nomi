@@ -1,12 +1,12 @@
+import { useEffect, useState } from "react";
 import { useGetIdentity, useListContext } from "ra-core";
 import { Plus } from "lucide-react";
-import { Link, useSearchParams } from "react-router";
-import { buttonVariants } from "@/components/ui/button";
+import { useSearchParams } from "react-router";
+import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { SortButton } from "@/components/admin/sort-button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PageActions,
   PageTitle,
@@ -18,19 +18,41 @@ import { Avatar as ContactAvatar } from "@/components/atomic-crm/contacts/Avatar
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import {
   collectBusinessSocialLinks,
-  collectClientEmails,
   getPrimaryContactFullName,
   getPrimaryContactPhone,
   type CompanyWithPrimaryContact,
 } from "@/lbs/clients/clientProfile";
 import { ClientSocialLinksDisplay } from "@/lbs/clients/ClientSocialLinksDisplay";
-import { cn } from "@/lib/utils";
+import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
+import { getContactFullName } from "@/lbs/clients/clientShowUtils";
 import {
-  getClientCreatePath,
   getClientShowPath,
   getPersonShowPath,
 } from "@/lbs/routing";
 import { LBS_CONTACT_STATUSES } from "@/lbs/navigation";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NewClientDialog } from "@/lbs/clients/NewClientDialog";
+import { NewContactDialog } from "@/lbs/clients/NewContactDialog";
+
+const normalizeWebsiteHref = (website?: string | null) => {
+  const trimmed = String(website ?? "").trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
+const formatCreatedDate = (value?: string | null) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 const CLIENTS_TABS = ["companies", "contacts"] as const;
 type ClientsTab = (typeof CLIENTS_TABS)[number];
@@ -75,48 +97,68 @@ export const ClientsListPage = () => {
   const { identity } = useGetIdentity();
   const [searchParams] = useSearchParams();
   const currentTab = parseTab(searchParams.get("tab"));
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("create") === "company") {
+      setClientDialogOpen(true);
+    }
+    if (searchParams.get("create") === "contact") {
+      setContactDialogOpen(true);
+    }
+  }, [searchParams]);
 
   if (!identity) return null;
 
   return (
     <div className="w-full space-y-3">
-      {currentTab === "companies" ? <CompaniesTab /> : <ContactsTab />}
+      {currentTab === "companies" ? (
+        <CompaniesTab onNewCompany={() => setClientDialogOpen(true)} />
+      ) : (
+        <ContactsTab onNewContact={() => setContactDialogOpen(true)} />
+      )}
+      <NewClientDialog
+        open={clientDialogOpen}
+        onOpenChange={setClientDialogOpen}
+      />
+      <NewContactDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+      />
     </div>
   );
 };
 
 // ---------------- Empresas (companies) tab ----------------
 
-const CompaniesTab = () => (
+const CompaniesTab = ({ onNewCompany }: { onNewCompany: () => void }) => (
   <List
     resource="companies"
     title={false}
     disableBreadcrumb
     perPage={25}
     sort={{ field: "name", order: "ASC" }}
-    actions={<CompaniesActions />}
+    actions={<CompaniesActions onNewCompany={onNewCompany} />}
     pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
   >
     <CompaniesLayout />
   </List>
 );
 
-const CompaniesActions = () => (
+const CompaniesActions = ({ onNewCompany }: { onNewCompany: () => void }) => (
   <PageActions>
-    <PageTitle label="Clients" />
+    <PageTitle label="Empresas" />
     <ClientsTabsBar />
     <div className="ml-auto flex flex-wrap items-center gap-2">
-      <SortButton fields={["name", "website"]} />
-      <Link
-        to={getClientCreatePath()}
-        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-      >
+      <SortButton fields={["name", "city", "created_at", "website"]} />
+      <Button variant="outline" size="sm" onClick={onNewCompany}>
         <Plus className="size-4" />
-        New client
-      </Link>
+        Nueva empresa
+      </Button>
       <ModuleInfoPopover
-        title="Clients"
-        description="Business profiles with linked contacts, projects, contracts, and support."
+        title="Empresas"
+        description="Listado simple de empresas con contacto principal, teléfono, ciudad y web."
       />
     </div>
   </PageActions>
@@ -139,48 +181,74 @@ const CompaniesLayout = () => {
         label=""
         disableSort
         className="w-[52px]"
-        render={(record: Company) => (
+        cellClassName="w-[52px]"
+        render={(record: CompanyWithPrimaryContact) => (
           <CompanyAvatar record={record} width={25} />
         )}
       />
       <DataTable.Col
         source="name"
-        label="Business name"
+        label="Empresa"
         render={(record: CompanyWithPrimaryContact) => (
           <span className="font-medium">{record.name?.trim() || "—"}</span>
         )}
       />
       <DataTable.Col
         source="primary_contact_last_name"
-        label="Client"
+        label="Propietario / contacto"
         render={(record: CompanyWithPrimaryContact) =>
           getPrimaryContactFullName(record)
         }
       />
       <DataTable.Col
         source="primary_contact_phone_jsonb"
-        label="Phone"
-        render={(record: CompanyWithPrimaryContact) =>
-          getPrimaryContactPhone(record)
-        }
+        label="Teléfono"
+        render={(record: CompanyWithPrimaryContact) => {
+          const { display, telHref } = normalizePhoneForTel(
+            getPrimaryContactPhone(record),
+          );
+          if (!telHref || display === "—") return display;
+          return (
+            <a
+              href={telHref}
+              className="link-action"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {display}
+            </a>
+          );
+        }}
       />
       <DataTable.Col
-        source="primary_contact_email_jsonb"
-        label="Email"
+        source="city"
+        label="Ciudad"
         render={(record: CompanyWithPrimaryContact) =>
-          collectClientEmails(record)[0]?.email ?? "—"
+          record.city?.trim() || "—"
         }
       />
       <DataTable.Col
         source="website"
-        label="Website"
-        render={(record: CompanyWithPrimaryContact) =>
-          record.website?.trim() || "—"
-        }
+        label="Página web"
+        render={(record: CompanyWithPrimaryContact) => {
+          const website = String(record?.website ?? "").trim();
+          const href = normalizeWebsiteHref(website);
+          if (!website || !href) return "—";
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="link-action"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {website}
+            </a>
+          );
+        }}
       />
       <DataTable.Col
         source="linkedin_url"
-        label="Social media"
+        label="Redes sociales"
         disableSort
         render={(record: CompanyWithPrimaryContact) => {
           const links = collectBusinessSocialLinks(record);
@@ -194,38 +262,51 @@ const CompaniesLayout = () => {
           );
         }}
       />
+      <DataTable.Col
+        source="created_at"
+        label="Fecha de creación"
+        render={(record: CompanyWithPrimaryContact) =>
+          formatCreatedDate(record.created_at)
+        }
+      />
     </DataTable>
   );
 };
 
 // ---------------- Contactos (contacts) tab ----------------
 
-const ContactsTab = () => (
+const ContactsTab = ({ onNewContact }: { onNewContact: () => void }) => (
   <List
     resource="contacts"
     title={false}
     disableBreadcrumb
     perPage={25}
-    sort={{ field: "last_seen", order: "DESC" }}
+    sort={{ field: "last_name", order: "ASC" }}
     filter={{
       "status@in": `(${LBS_CONTACT_STATUSES.map((s) => `"${s}"`).join(",")})`,
     }}
-    actions={<ContactsActions />}
+    actions={<ContactsActions onNewContact={onNewContact} />}
     pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
   >
     <ContactsLayout />
   </List>
 );
 
-const ContactsActions = () => (
+const ContactsActions = ({ onNewContact }: { onNewContact: () => void }) => (
   <PageActions>
-    <PageTitle label="Clients" />
+    <PageTitle label="Contactos" />
     <ClientsTabsBar />
     <div className="ml-auto flex flex-wrap items-center gap-2">
-      <SortButton fields={["first_name", "last_name", "last_seen"]} />
+      <SortButton
+        fields={["last_name", "company_name", "first_seen", "last_seen"]}
+      />
+      <Button variant="outline" size="sm" onClick={onNewContact}>
+        <Plus className="size-4" />
+        Nuevo contacto
+      </Button>
       <ModuleInfoPopover
-        title="Contacts"
-        description="Every person linked to a client company. New contacts are added from the client profile."
+        title="Contactos"
+        description="Personas vinculadas a empresas cliente. También puedes agregar contactos desde el perfil de una empresa."
       />
     </div>
   </PageActions>
@@ -255,16 +336,56 @@ const ContactsLayout = () => {
         label=""
         disableSort
         className="w-[52px]"
+        cellClassName="w-[52px]"
         render={(record: Contact) => (
           <ContactAvatar record={record} width={25} />
         )}
       />
       <DataTable.Col
-        source="first_name"
-        label="Contact"
-        render={(record: Contact) =>
-          `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim() || "—"
-        }
+        source="last_name"
+        label="Full name"
+        render={(record: Contact) => (
+          <span className="font-medium">{getContactFullName(record)}</span>
+        )}
+      />
+      <DataTable.Col
+        source="email_jsonb"
+        label="Email"
+        disableSort
+        render={(record: Contact) => {
+          const email = getPrimaryEmail(record);
+          const href = mailtoHref(email);
+          if (!href || email === "—") return email;
+          return (
+            <a
+              href={href}
+              className="link-action"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {email}
+            </a>
+          );
+        }}
+      />
+      <DataTable.Col
+        source="phone_jsonb"
+        label="Phone"
+        disableSort
+        render={(record: Contact) => {
+          const { display, telHref } = normalizePhoneForTel(
+            getPrimaryPhone(record),
+          );
+          if (!telHref || display === "—") return display;
+          return (
+            <a
+              href={telHref}
+              className="link-action"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {display}
+            </a>
+          );
+        }}
       />
       <DataTable.Col
         source="company_name"
@@ -272,16 +393,9 @@ const ContactsLayout = () => {
         render={(record: Contact) => record.company_name?.trim() || "—"}
       />
       <DataTable.Col
-        source="phone_jsonb"
-        label="Phone"
-        disableSort
-        render={(record: Contact) => getPrimaryPhone(record)}
-      />
-      <DataTable.Col
-        source="email_jsonb"
-        label="Email"
-        disableSort
-        render={(record: Contact) => getPrimaryEmail(record)}
+        source="first_seen"
+        label="Created"
+        render={(record: Contact) => formatCreatedDate(record.first_seen)}
       />
     </DataTable>
   );

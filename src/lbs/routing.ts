@@ -23,6 +23,13 @@ export const isLeadStatus = (status?: string | null) =>
 
 export const getClientsListPath = () => "/clients";
 
+export const getWebMonitorPath = () => "/web-monitor";
+
+export const getWebMonitorShowPath = (siteId: string | number) =>
+  `/web-monitor/${siteId}/show`;
+
+export const getContactsListPath = () => "/clients?tab=contacts";
+
 export const getClientProposalCreatePath = (
   companyId: string | number,
   contactId?: string | number | null,

@@ -3,7 +3,10 @@ import {
   buildLbsClientContextLinks,
   type LbsBillingAddress,
 } from "@/lbs/clients/clientContextLinks";
-import { splitClientFullName } from "@/lbs/clients/ClientCreateForm";
+import {
+  formatCompanyAddressForPrimary,
+  splitClientFullName,
+} from "@/lbs/clients/ClientCreateForm";
 import {
   cleanChannelFormValues,
   formValuesToEmailJsonb,
@@ -29,14 +32,13 @@ export type LbsClientUpsertInput = {
     emails?: ClientChannelFormValue[];
     phones?: ClientChannelFormValue[];
     address?: string;
-    leadSource?: string;
-    interestedService?: string;
   };
   business: {
     name: string;
     emails?: ClientChannelFormValue[];
     phones?: ClientChannelFormValue[];
     website?: string;
+    sector?: string;
     socialLinks?: ClientSocialLinkValue[];
     address?: string;
     city?: string;
@@ -133,6 +135,7 @@ export const buildCompanyPayloadFromUpsert = (
     name: input.business.name.trim(),
     phone_number: getPrimaryChannelValue(input.business.phones) || null,
     website: normalizeWebsite(input.business.website),
+    sector: input.business.sector?.trim() || null,
     linkedin_url: normalizeWebsite(findLinkedinUrl(companySocialLinks)),
     address: input.business.address?.trim() || null,
     city: input.business.city?.trim() || null,
@@ -175,8 +178,8 @@ export const buildContactPayloadFromUpsert = (
     phone_jsonb: formValuesToPhoneJsonb(input.primary.phones),
     address: input.primary.address?.trim() || null,
     linkedin_url: null,
-    lead_source: input.primary.leadSource?.trim() || null,
-    interested_service: input.primary.interestedService?.trim() || null,
+    lead_source: null,
+    interested_service: null,
     organization_member_id: input.organizationMemberId,
     first_seen: now,
     last_seen: now,
@@ -193,31 +196,22 @@ export const clientCreateFormValuesToUpsertInput = (
     fullName: values.primary_full_name,
     emails: cleanChannelFormValues(values.primary_emails),
     phones: cleanChannelFormValues(values.primary_phones),
-    address: values.primary_address,
-    leadSource: values.primary_lead_source,
-    interestedService: values.interested_service,
+    address: values.primary_same_as_company_address
+      ? formatCompanyAddressForPrimary(values)
+      : values.primary_address,
   },
   business: {
     name: values.company_name,
     emails: cleanChannelFormValues(values.company_emails),
     phones: cleanChannelFormValues(values.company_phones),
     website: values.company_website,
+    sector: values.company_sector,
     socialLinks: values.social_links,
-    address: values.company_same_as_primary_address
-      ? values.primary_address
-      : values.company_address,
-    city: values.company_same_as_primary_address
-      ? undefined
-      : values.company_city,
-    stateAbbr: values.company_same_as_primary_address
-      ? undefined
-      : values.company_state_abbr,
-    zipcode: values.company_same_as_primary_address
-      ? undefined
-      : values.company_zipcode,
-    country: values.company_same_as_primary_address
-      ? undefined
-      : values.company_country,
+    address: values.company_address,
+    city: values.company_city,
+    stateAbbr: values.company_state_abbr,
+    zipcode: values.company_zipcode,
+    country: values.company_country,
     notes: values.notes,
   },
   billing: {

@@ -8,9 +8,7 @@ export const PageLayout = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div
-    className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}
-  >
+  <div className={cn("flex h-full min-h-0 w-full flex-col", className)}>
     {children}
   </div>
 );
@@ -58,7 +56,5 @@ export const ScrollableContentArea = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn("min-h-0 flex-1 overflow-y-auto", className)}>
-    {children}
-  </div>
+  <div className={cn("min-h-0", className)}>{children}</div>
 );

@@ -2,6 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { ClientCreateFormValues } from "@/lbs/clients/ClientCreateForm";
 import {
   detectSocialNetworkFromUrl,
@@ -22,12 +23,15 @@ type SocialLinksSource = "social_links";
 
 type ClientSocialLinksInputProps = {
   source: SocialLinksSource;
-  label: string;
+  label?: string;
 };
+
+const ACTION_SLOT = "size-8 shrink-0";
+const ACTION_COL = "flex h-9 w-[4.5rem] shrink-0 items-center justify-end gap-0.5";
 
 export const ClientSocialLinksInput = ({
   source,
-  label,
+  label = "Social media",
 }: ClientSocialLinksInputProps) => {
   const { control } = useFormContext<ClientCreateFormValues>();
   const { fields, append, remove } = useFieldArray({
@@ -35,27 +39,27 @@ export const ClientSocialLinksInput = ({
     name: source,
   });
 
+  const appendLink = () => append({ url: "" } satisfies ClientSocialLinkValue);
+
   return (
-    <div className="space-y-4">
-      {fields.map((field, index) => (
-        <SocialLinkRow
-          key={field.id}
-          source={source}
-          index={index}
-          label={index === 0 ? label : false}
-          canRemove={fields.length > 1}
-          onRemove={() => remove(index)}
-        />
-      ))}
-      <Button
-        type="button"
-        variant="link"
-        className="h-auto p-0 text-muted-foreground"
-        onClick={() => append({ url: "" } satisfies ClientSocialLinkValue)}
-      >
-        <Plus className="size-4" />
-        Add another link
-      </Button>
+    <div className="space-y-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] items-end gap-2">
+        <p className="text-sm font-medium">{label}</p>
+        <span className="sr-only">Actions</span>
+      </div>
+      <div className="space-y-2">
+        {fields.map((field, index) => (
+          <SocialLinkRow
+            key={field.id}
+            source={source}
+            index={index}
+            canRemove={fields.length > 1}
+            showAdd={index === fields.length - 1}
+            onAdd={appendLink}
+            onRemove={() => remove(index)}
+          />
+        ))}
+      </div>
     </div>
   );
 };
@@ -63,14 +67,16 @@ export const ClientSocialLinksInput = ({
 const SocialLinkRow = ({
   source,
   index,
-  label,
   canRemove,
+  showAdd,
+  onAdd,
   onRemove,
 }: {
   source: SocialLinksSource;
   index: number;
-  label: string | false;
   canRemove: boolean;
+  showAdd: boolean;
+  onAdd: () => void;
   onRemove: () => void;
 }) => {
   const url = useWatch<ClientCreateFormValues>({
@@ -79,31 +85,56 @@ const SocialLinkRow = ({
   const { Icon } = getSocialNetworkOption(detectSocialNetworkFromUrl(url));
 
   return (
-    <div className="flex items-end gap-2">
-      <Icon className="mb-2.5 size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0 flex-1">
-        <TextInput
-          source={`${source}.${index}.url`}
-          label={label || false}
-          helperText={false}
-          validate={optionalUrl}
-          placeholder="https://linkedin.com/..."
-        />
+    <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="flex h-9 w-5 shrink-0 items-center justify-center">
+          <Icon className="size-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <TextInput
+            source={`${source}.${index}.url`}
+            label={false}
+            helperText={false}
+            validate={optionalUrl}
+            placeholder="https://linkedin.com/..."
+            className="gap-0"
+          />
+        </div>
       </div>
-      {canRemove ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="mb-0.5 size-8 shrink-0 text-muted-foreground hover:text-destructive"
-          onClick={onRemove}
-          aria-label="Remove link"
-        >
-          <Trash2 className="size-4" />
-        </Button>
-      ) : (
-        <div className="size-8 shrink-0" />
-      )}
+      <div className={ACTION_COL}>
+        {showAdd ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(ACTION_SLOT, "text-muted-foreground")}
+            onClick={onAdd}
+            aria-label="Add social media"
+            title="Add social media"
+          >
+            <Plus className="size-4" />
+          </Button>
+        ) : (
+          <div aria-hidden className={ACTION_SLOT} />
+        )}
+        {canRemove ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              ACTION_SLOT,
+              "text-muted-foreground hover:text-destructive",
+            )}
+            onClick={onRemove}
+            aria-label="Remove social media"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        ) : (
+          <div aria-hidden className={ACTION_SLOT} />
+        )}
+      </div>
     </div>
   );
 };

@@ -6,7 +6,7 @@ import {
   useNotify,
   useRefresh,
 } from "ra-core";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Sparkles } from "lucide-react";
 
@@ -25,9 +25,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { LBS_CLIENT_STATUS } from "@/lbs/navigation";
+import { LeadStageChangeDialog } from "@/lbs/leads/LeadStageChangeDialog";
 import {
-  getLeadStageDef,
   LBS_LEAD_KANBAN_STAGES,
   type LeadStageId,
   normalizeLeadStage,
@@ -36,7 +35,11 @@ import { LeadColumn } from "./LeadColumn";
 
 type LeadsByStage = Record<LeadStageId, Contact[]>;
 
-const FROZEN_SNOOZE = "2099-12-31T00:00:00+00:00";
+type PendingStageTransition = {
+  lead: Contact;
+  fromStage: LeadStageId;
+  toStage: LeadStageId;
+};
 
 const emptyBuckets = (): LeadsByStage =>
   LBS_LEAD_KANBAN_STAGES.reduce((acc, stage) => {
@@ -56,13 +59,20 @@ const groupLeadsByStage = (leads: Contact[]): LeadsByStage => {
 const fullLeadName = (lead: Contact) =>
   `${lead.first_name ?? ""} ${lead.last_name ?? ""}`.trim() ||
   lead.company_name ||
-  "este lead";
+  "this lead";
+
+const canScrollVertically = (element: HTMLElement, deltaY: number) => {
+  if (deltaY > 0) {
+    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+  }
+  return element.scrollTop > 0;
+};
 
 /**
  * Kanban view of leads grouped by `contacts.lead_stage`. Reads from the
  * surrounding `<List resource="contacts">` so filters / search keep
- * working; on drop we patch the contact's stage (and freeze/unfreeze the
- * anti-olvido `snooze_until` when entering or leaving a terminal column).
+ * working; on drop we open a stage-change dialog (required follow-up
+ * fields, note, and optional task) before persisting the move.
  * Dropping a card in "Won" also offers to convert the lead to a client.
  */
 export const LeadsKanban = () => {
@@ -74,6 +84,45 @@ export const LeadsKanban = () => {
   const [leadsByStage, setLeadsByStage] = useState<LeadsByStage>(emptyBuckets);
   const [convertCandidate, setConvertCandidate] = useState<Contact | null>(
     null,
+  );
+  const [pendingTransition, setPendingTransition] =
+    useState<PendingStageTransition | null>(null);
+  const [stageDialogOpen, setStageDialogOpen] = useState(false);
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  const handleBoardWheelCapture = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      const board = boardRef.current;
+      if (!board || board.scrollWidth <= board.clientWidth) return;
+
+      // Trackpad / mouse horizontal gesture — leave to the browser.
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+
+      const target = event.target as HTMLElement;
+
+      if (event.shiftKey) {
+        event.preventDefault();
+        board.scrollLeft += event.deltaY;
+        return;
+      }
+
+      if (target.closest("[data-kanban-header]")) {
+        event.preventDefault();
+        board.scrollLeft += event.deltaY;
+        return;
+      }
+
+      const cards = target.closest(
+        "[data-kanban-cards]",
+      ) as HTMLElement | null;
+      if (cards && canScrollVertically(cards, event.deltaY)) {
+        return;
+      }
+
+      event.preventDefault();
+      board.scrollLeft += event.deltaY;
+    },
+    [],
   );
 
   useEffect(() => {
@@ -100,65 +149,36 @@ export const LeadsKanban = () => {
 
     const sourceStage = source.droppableId as LeadStageId;
     const destStage = destination.droppableId as LeadStageId;
-    const sourceList = [...leadsByStage[sourceStage]];
-    const [moved] = sourceList.splice(source.index, 1);
+    if (sourceStage === destStage) return;
+
+    const sourceList = leadsByStage[sourceStage];
+    const moved = sourceList[source.index];
     if (!moved) return;
 
-    const previousState = leadsByStage;
+    setPendingTransition({
+      lead: moved,
+      fromStage: sourceStage,
+      toStage: destStage,
+    });
+    setStageDialogOpen(true);
+  };
 
-    const movedUpdated: Contact = {
-      ...moved,
-      lead_stage: destStage,
-      snooze_until:
-        destStage === "won" || destStage === "lost"
-          ? FROZEN_SNOOZE
-          : sourceStage === "won" || sourceStage === "lost"
-            ? null
-            : (moved.snooze_until ?? null),
-    };
+  const closeStageDialog = () => {
+    setStageDialogOpen(false);
+    setPendingTransition(null);
+  };
 
-    const destList = [...leadsByStage[destStage]];
-    destList.splice(destination.index, 0, movedUpdated);
+  const handleStageTransitionCompleted = () => {
+    const transition = pendingTransition;
+    closeStageDialog();
+    void refetch();
 
-    const optimistic: LeadsByStage = {
-      ...leadsByStage,
-      [sourceStage]: sourceList,
-      [destStage]: destList,
-    };
-    setLeadsByStage(optimistic);
-
-    void dataProvider
-      .update("contacts", {
-        id: moved.id,
-        data: {
-          lead_stage: destStage,
-          snooze_until: movedUpdated.snooze_until ?? null,
-          ...(promoteToClient ? { status: LBS_CLIENT_STATUS } : {}),
-        },
-        previousData: moved,
-      })
-      .then(() => {
-        refetch();
-        if (
-          destStage === "won" &&
-          sourceStage !== "won" &&
-          !promoteToClient
-        ) {
-          // Offer the natural next step without forcing it.
-          setConvertCandidate(movedUpdated);
-        } else if (promoteToClient) {
-          notify("Lead promoted to client", { type: "success" });
-          refresh();
-        } else {
-          notify(`Lead moved to "${destStageLabel}"`, { type: "info" });
-        }
-      })
-      .catch((error: unknown) => {
-        setLeadsByStage(previousState);
-        const message =
-          error instanceof Error ? error.message : "Could not move lead";
-        notify(message, { type: "error" });
+    if (transition?.toStage === "won") {
+      setConvertCandidate({
+        ...transition.lead,
+        lead_stage: "won",
       });
+    }
   };
 
   if (isPending) return null;
@@ -174,7 +194,11 @@ export const LeadsKanban = () => {
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex w-full gap-3 overflow-x-auto pb-3">
+        <div
+          ref={boardRef}
+          onWheelCapture={handleBoardWheelCapture}
+          className="flex h-full min-h-0 w-full gap-3 overflow-x-auto overscroll-x-contain"
+        >
           {LBS_LEAD_KANBAN_STAGES.map((stage) => (
             <LeadColumn
               key={stage.id}
@@ -184,6 +208,19 @@ export const LeadsKanban = () => {
           ))}
         </div>
       </DragDropContext>
+
+      {pendingTransition ? (
+        <LeadStageChangeDialog
+          lead={pendingTransition.lead}
+          toStage={pendingTransition.toStage}
+          open={stageDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeStageDialog();
+          }}
+          onCompleted={handleStageTransitionCompleted}
+        />
+      ) : null}
+
       <ConvertWonLeadDialog
         lead={convertCandidate}
         onClose={() => setConvertCandidate(null)}

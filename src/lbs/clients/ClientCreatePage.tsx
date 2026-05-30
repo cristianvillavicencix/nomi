@@ -1,64 +1,22 @@
-import { useState } from "react";
-import {
-  Form,
-  useDataProvider,
-  useGetIdentity,
-  useNotify,
-  useRedirect,
-} from "ra-core";
+import { Form, useRedirect } from "ra-core";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormToolbar } from "@/components/atomic-crm/layout/FormToolbar";
-import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { getClientShowPath } from "@/lbs/routing";
 import {
   ClientCreateFormFields,
   type ClientCreateFormValues,
 } from "@/lbs/clients/ClientCreateForm";
 import { emptyClientFormValues } from "@/lbs/clients/clientFormValues";
-import { clientCreateFormValuesToUpsertInput } from "@/lbs/clients/lbsClientUpsert";
+import { useCreateClientSubmit } from "@/lbs/clients/useCreateClientSubmit";
 
 export const ClientCreatePage = () => {
-  const { identity } = useGetIdentity();
-  const notify = useNotify();
   const redirect = useRedirect();
-  const dataProvider = useDataProvider<CrmDataProvider>();
-  const [isSaving, setIsSaving] = useState(false);
+  const { submitClientCreate, isSaving } = useCreateClientSubmit();
 
   const handleSubmit = async (values: ClientCreateFormValues) => {
-    if (!identity?.id) {
-      notify("You must be signed in to create a client", { type: "error" });
-      return;
-    }
-
-    const companyName = values.company_name.trim();
-    const primaryName = values.primary_full_name.trim();
-    if (!companyName || !primaryName) {
-      notify("Business name and primary contact name are required", {
-        type: "warning",
-      });
-      return;
-    }
-
-    if (!("upsertLbsClient" in dataProvider)) {
-      notify("Client creation is not available in this environment", {
-        type: "error",
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const result = await dataProvider.upsertLbsClient(
-        clientCreateFormValuesToUpsertInput(values, identity.id),
-      );
-      notify(result.created ? "Client created" : "Client updated");
-      redirect(getClientShowPath(result.company_id));
-    } catch (error) {
-      notify(error instanceof Error ? error.message : "Failed to save client", {
-        type: "error",
-      });
-    } finally {
-      setIsSaving(false);
+    const companyId = await submitClientCreate(values);
+    if (companyId != null) {
+      redirect(getClientShowPath(companyId));
     }
   };
 

@@ -1,5 +1,6 @@
 import type { Contact } from "@/components/atomic-crm/types";
 import type { ClientCreateFormValues } from "@/lbs/clients/ClientCreateForm";
+import { formatCompanyAddressForPrimary } from "@/lbs/clients/ClientCreateForm";
 import { parseLbsClientContextLinks } from "@/lbs/clients/clientContextLinks";
 import {
   emailsToFormValues,
@@ -38,58 +39,91 @@ export const companyToClientFormValues = (
     company_emails: emailsToFormValues(ctx.companyEmails, ctx.businessEmail),
     company_phones: phonesToFormValues(ctx.companyPhones, company.phone_number),
     company_website: company.website?.trim() ?? "",
-    social_links: mergeClientSocialLinksForForm(
-      collectCompanySocialLinks(company),
-      collectContactSocialLinks(primaryContact, company.context_links),
-    ),
-    company_same_as_primary_address: isCompanySameAsPrimaryAddress(
+    company_sector: company.sector?.trim() ?? "",
+    social_links: (() => {
+      const links = mergeClientSocialLinksForForm(
+        collectCompanySocialLinks(company),
+        collectContactSocialLinks(primaryContact, company.context_links),
+      );
+      return links.length > 0 ? links : [{ url: "" }];
+    })(),
+    primary_same_as_company_address: isPrimarySameAsCompanyAddress(
       company,
       primaryContact,
     ),
-    company_address: company.address?.trim() ?? "",
-    company_city: company.city?.trim() ?? "",
-    company_state_abbr: company.state_abbr?.trim() ?? "",
-    company_zipcode: company.zipcode?.trim() ?? "",
-    company_country: company.country?.trim() ?? "",
+    company_address: formatStructuredAddress({
+      address: company.address,
+      city: company.city,
+      stateAbbr: company.state_abbr,
+      zipcode: company.zipcode,
+      country: company.country,
+    }),
+    company_city: "",
+    company_state_abbr: "",
+    company_zipcode: "",
+    company_country: "",
     billing_same_as_business: billingSameAsBusiness,
-    billing_address: billing.address?.trim() ?? "",
-    billing_city: billing.city?.trim() ?? "",
-    billing_state_abbr: billing.stateAbbr?.trim() ?? "",
-    billing_zipcode: billing.zipcode?.trim() ?? "",
-    billing_country: billing.country?.trim() ?? "",
+    billing_address: formatStructuredAddress({
+      address: billing.address,
+      city: billing.city,
+      stateAbbr: billing.stateAbbr,
+      zipcode: billing.zipcode,
+      country: billing.country,
+    }),
+    billing_city: "",
+    billing_state_abbr: "",
+    billing_zipcode: "",
+    billing_country: "",
     invoice_same_as_primary: invoiceSameAsPrimary,
     invoice_contact_name: ctx.invoiceContactName ?? "",
     invoice_email: ctx.invoiceEmail ?? "",
     invoice_phone: ctx.invoicePhone ?? "",
-    primary_lead_source:
-      primaryContact?.lead_source?.trim() ??
-      company.primary_contact_lead_source?.trim() ??
-      "",
-    interested_service:
-      primaryContact?.interested_service?.trim() ??
-      company.primary_contact_interested_service?.trim() ??
-      "",
     notes: company.description?.trim() ?? "",
   };
 };
 
-const isCompanySameAsPrimaryAddress = (
+const isPrimarySameAsCompanyAddress = (
   company: CompanyWithPrimaryContact,
   primaryContact?: Contact | null,
 ) => {
   const primaryAddress = primaryContact?.address?.trim() ?? "";
-  const companyAddress = company.address?.trim() ?? "";
-  const hasStructuredFields = Boolean(
-    company.city?.trim() ||
-      company.state_abbr?.trim() ||
-      company.zipcode?.trim() ||
-      company.country?.trim(),
-  );
+  if (!primaryAddress) return false;
 
-  if (!primaryAddress || !companyAddress) return false;
-  if (hasStructuredFields) return false;
-  return primaryAddress === companyAddress;
+  const companyAddress = formatStructuredAddress({
+    address: company.address,
+    city: company.city,
+    stateAbbr: company.state_abbr,
+    zipcode: company.zipcode,
+    country: company.country,
+  });
+
+  return Boolean(companyAddress) && primaryAddress === companyAddress;
 };
+
+const formatStructuredAddress = ({
+  address,
+  city,
+  stateAbbr,
+  zipcode,
+  country,
+}: {
+  address?: string | null;
+  city?: string | null;
+  stateAbbr?: string | null;
+  zipcode?: string | null;
+  country?: string | null;
+}) =>
+  formatCompanyAddressForPrimary({
+    company_address: [
+      address?.trim() ?? "",
+      [city?.trim(), [stateAbbr?.trim(), zipcode?.trim()].filter(Boolean).join(" ")]
+        .filter(Boolean)
+        .join(", "),
+      country?.trim() ?? "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  });
 
 export const emptyClientFormValues = (): ClientCreateFormValues => ({
   primary_full_name: "",
@@ -100,8 +134,9 @@ export const emptyClientFormValues = (): ClientCreateFormValues => ({
   company_emails: [{ value: "", type: "Work", isPrimary: true }],
   company_phones: [{ value: "", type: "Work", isPrimary: true }],
   company_website: "",
-  social_links: [],
-  company_same_as_primary_address: false,
+  company_sector: "",
+  social_links: [{ url: "" }],
+  primary_same_as_company_address: false,
   company_address: "",
   company_city: "",
   company_state_abbr: "",
@@ -117,7 +152,5 @@ export const emptyClientFormValues = (): ClientCreateFormValues => ({
   invoice_contact_name: "",
   invoice_email: "",
   invoice_phone: "",
-  primary_lead_source: "",
-  interested_service: "",
   notes: "",
 });

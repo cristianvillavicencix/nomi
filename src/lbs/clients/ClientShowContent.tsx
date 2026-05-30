@@ -1,22 +1,20 @@
 import { useEffect, useState } from "react";
-import { useShowContext } from "ra-core";
+import { useShowContext, type Identifier } from "ra-core";
 import { useSearchParams } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  ScrollableContentArea,
-  StickyTabsBar,
-} from "@/components/atomic-crm/layout/page-shell";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { CompanyWithPrimaryContact } from "@/lbs/clients/clientProfile";
 import { ClientActivityTab } from "@/lbs/clients/ClientActivityTab";
 import { ClientAddContactDialog } from "@/lbs/clients/ClientAddContactDialog";
-import { ClientContactsTab } from "@/lbs/clients/ClientContactsTab";
 import { ClientFinancialTab } from "@/lbs/clients/ClientFinancialTab";
-import { ClientOverviewTab } from "@/lbs/clients/ClientOverviewTab";
-import { ClientProfileHeader } from "@/lbs/clients/ClientProfileHeader";
+import { ClientCollapsibleRelatedSidebar } from "@/lbs/clients/ClientCollapsibleRelatedSidebar";
+import { ClientRelatedSidebar } from "@/lbs/clients/ClientRelatedSidebar";
+import { ClientShowActions } from "@/lbs/clients/ClientShowActions";
+import { ClientSummaryCard } from "@/lbs/clients/ClientSummaryCard";
 import { ClientProjectsTab } from "@/lbs/clients/ClientTabPanels";
+import { ClientTabSectionCard } from "@/lbs/clients/ClientTabSectionCard";
 import { ContactShowSheet } from "@/lbs/clients/ContactShowSheet";
-import { ReferralsTab } from "@/lbs/leads/ReferralsTab";
 import {
   formatTabCount,
   getValidClientTab,
@@ -28,10 +26,14 @@ import { useClientTabCounts } from "@/lbs/clients/useClientTabCounts";
 export const ClientShowContent = () => {
   const { record, isPending } = useShowContext<CompanyWithPrimaryContact>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
   const resolved = resolveClientTabFromUrl(searchParams.get("tab"));
   const currentTab = getValidClientTab(resolved.tab);
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [primarySheetOpen, setPrimarySheetOpen] = useState(false);
+  const [sidebarContactId, setSidebarContactId] = useState<Identifier | null>(
+    null,
+  );
 
   const counts = useClientTabCounts(record?.id ?? "");
 
@@ -46,7 +48,7 @@ export const ClientShowContent = () => {
       return;
     }
     const next = new URLSearchParams(searchParams);
-    if (mapped.tab === "overview") {
+    if (mapped.tab === "projects") {
       next.delete("tab");
     } else {
       next.set("tab", mapped.tab);
@@ -64,7 +66,7 @@ export const ClientShowContent = () => {
   const handleTabChange = (tab: string) => {
     const nextTab = getValidClientTab(tab);
     const nextSearchParams = new URLSearchParams(searchParams);
-    if (nextTab === "overview") {
+    if (nextTab === "projects") {
       nextSearchParams.delete("tab");
     } else {
       nextSearchParams.set("tab", nextTab);
@@ -77,91 +79,106 @@ export const ClientShowContent = () => {
     `${label}${formatTabCount(count)}`;
 
   const financialCount = counts.proposals + counts.contracts + counts.payments;
-  const activityCount =
-    counts.notes + counts.tasks + counts.tickets + counts.webForms;
+  const activityCount = counts.notes + counts.tasks;
+
+  const openPrimaryContact = record.primary_contact_id
+    ? () => setPrimarySheetOpen(true)
+    : undefined;
+
+  const centerTabs = (
+    <Card className="gap-0 border-0 py-0 shadow-none">
+      <CardContent className="px-4 py-4">
+        <Tabs value={currentTab} onValueChange={handleTabChange}>
+          <TabsList className="mb-4 inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+            <TabsTrigger value="projects" className="shrink-0">
+              {tabLabel("projects", "Projects", counts.projects)}
+            </TabsTrigger>
+            <TabsTrigger value="financial" className="shrink-0">
+              {tabLabel("financial", "Financial", financialCount)}
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="shrink-0">
+              {tabLabel("activity", "Activity", activityCount)}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="projects" className="mt-0">
+            <ClientTabSectionCard title="Projects" count={counts.projects} flush>
+              <ClientProjectsTab companyId={record.id} />
+            </ClientTabSectionCard>
+          </TabsContent>
+          <TabsContent value="financial" className="mt-0">
+            <ClientFinancialTab
+              companyId={record.id}
+              counts={{
+                proposals: counts.proposals,
+                contracts: counts.contracts,
+                payments: counts.payments,
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="activity" className="mt-0">
+            <ClientActivityTab
+              companyId={record.id}
+              contactIds={counts.contactIds}
+              primaryContactId={record.primary_contact_id}
+              counts={{
+                notes: counts.notes,
+                tasks: counts.tasks,
+              }}
+            />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+
+  const sidebarProps = {
+    companyId: record.id,
+    primaryContactId: record.primary_contact_id,
+    counts: {
+      contacts: counts.contacts,
+      leads: counts.leads,
+      projects: counts.projects,
+      tickets: counts.tickets,
+      referrals: counts.referrals,
+    },
+    onAddContact: () => setAddContactOpen(true),
+    onOpenContact: (contactId: Identifier) => {
+      setSidebarContactId(contactId);
+      setPrimarySheetOpen(true);
+    },
+  };
+
+  const sidebar = isMobile ? (
+    <ClientRelatedSidebar {...sidebarProps} />
+  ) : (
+    <ClientCollapsibleRelatedSidebar {...sidebarProps} />
+  );
+
+  const leftColumn = (
+    <ClientSummaryCard
+      record={record}
+      onOpenPrimaryContact={openPrimaryContact}
+    />
+  );
 
   return (
-    <div className="mt-2 space-y-4 pb-2">
-      <ClientProfileHeader
-        record={record}
-        onAddContact={() => setAddContactOpen(true)}
-      />
+    <div className="mt-2 pb-4">
+      <ClientShowActions record={record} />
 
-      <Card>
-        <CardContent>
-          <Tabs value={currentTab} onValueChange={handleTabChange}>
-            <StickyTabsBar className="pb-2">
-              <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-                <TabsTrigger value="overview" className="shrink-0">
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="contacts" className="shrink-0">
-                  {tabLabel("contacts", "Contacts", counts.contacts)}
-                </TabsTrigger>
-                <TabsTrigger value="projects" className="shrink-0">
-                  {tabLabel("projects", "Projects", counts.projects)}
-                </TabsTrigger>
-                <TabsTrigger value="financial" className="shrink-0">
-                  {tabLabel("financial", "Financial", financialCount)}
-                </TabsTrigger>
-                <TabsTrigger value="activity" className="shrink-0">
-                  {tabLabel("activity", "Activity", activityCount)}
-                </TabsTrigger>
-                <TabsTrigger value="referrals" className="shrink-0">
-                  {tabLabel("referrals", "Referidos", counts.referrals)}
-                </TabsTrigger>
-              </TabsList>
-            </StickyTabsBar>
-            <ScrollableContentArea>
-              <TabsContent value="overview" className="pt-4">
-                <ClientOverviewTab
-                  record={record}
-                  onOpenPrimaryContact={
-                    record.primary_contact_id
-                      ? () => setPrimarySheetOpen(true)
-                      : undefined
-                  }
-                />
-              </TabsContent>
-              <TabsContent value="contacts" className="pt-4">
-                <ClientContactsTab
-                  companyId={record.id}
-                  primaryContactId={record.primary_contact_id}
-                />
-              </TabsContent>
-              <TabsContent value="projects" className="pt-4">
-                <ClientProjectsTab companyId={record.id} />
-              </TabsContent>
-              <TabsContent value="financial" className="pt-4">
-                <ClientFinancialTab
-                  companyId={record.id}
-                  counts={{
-                    proposals: counts.proposals,
-                    contracts: counts.contracts,
-                    payments: counts.payments,
-                  }}
-                />
-              </TabsContent>
-              <TabsContent value="activity" className="pt-4">
-                <ClientActivityTab
-                  companyId={record.id}
-                  contactIds={counts.contactIds}
-                  primaryContactId={record.primary_contact_id}
-                  counts={{
-                    notes: counts.notes,
-                    tasks: counts.tasks,
-                    tickets: counts.tickets,
-                    webForms: counts.webForms,
-                  }}
-                />
-              </TabsContent>
-              <TabsContent value="referrals" className="pt-4">
-                <ReferralsTab referrerCompanyId={record.id} />
-              </TabsContent>
-            </ScrollableContentArea>
-          </Tabs>
-        </CardContent>
-      </Card>
+      {isMobile ? (
+        <div className="space-y-4">
+          {leftColumn}
+          {centerTabs}
+          {sidebar}
+        </div>
+      ) : (
+        <div className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)_auto]">
+          {leftColumn}
+          <div className="min-w-0">{centerTabs}</div>
+          {sidebar}
+        </div>
+      )}
 
       <ClientAddContactDialog
         companyId={record.id}
@@ -169,9 +186,12 @@ export const ClientShowContent = () => {
         onOpenChange={setAddContactOpen}
       />
       <ContactShowSheet
-        contactId={record.primary_contact_id ?? null}
+        contactId={sidebarContactId ?? record.primary_contact_id ?? null}
         open={primarySheetOpen}
-        onOpenChange={setPrimarySheetOpen}
+        onOpenChange={(open) => {
+          setPrimarySheetOpen(open);
+          if (!open) setSidebarContactId(null);
+        }}
       />
     </div>
   );

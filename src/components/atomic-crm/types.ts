@@ -163,6 +163,7 @@ export type Contact = {
   tags: Identifier[];
   gender: string;
   organization_member_id?: Identifier | null;
+  assigned_member_ids?: Identifier[];
   status: string;
   background: string;
   phone_jsonb: PhoneNumberAndType[];
@@ -170,6 +171,9 @@ export type Contact = {
   lead_source_other?: string | null;
   lead_stage?: string | null;
   snooze_until?: string | null;
+  next_followup_at?: string | null;
+  last_contacted_at?: string | null;
+  lead_value_estimate?: number | null;
   interested_service?: string | null;
   referred_by_contact_id?: Identifier | null;
   referred_by_company_id?: Identifier | null;

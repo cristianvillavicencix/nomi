@@ -106,6 +106,9 @@ export const generateContacts = (db: Db, size = 500): Required<Contact>[] => {
         .arrayElements(db.tags, random.arrayElement([0, 0, 0, 1, 1, 2]))
         .map((tag) => tag.id), // finalize
       organization_member_id: company.organization_member_id,
+      assigned_member_ids: company.organization_member_id
+        ? [company.organization_member_id]
+        : [],
       nb_tasks: 0,
       linkedin_url: null,
     };

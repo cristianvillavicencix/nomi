@@ -31,6 +31,7 @@ import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import { UsersSettingsSection } from "./UsersSettingsSection";
 import { MessagingSettingsSection } from "@/lbs/settings/MessagingSettingsSection";
 import { DataImportSection } from "@/lbs/settings/DataImportSection";
+import { WebsiteMonitorSettingsSection } from "@/lbs/settings/WebsiteMonitorSettingsSection";
 import { isLbsMode } from "@/lbs/productMode";
 import { useLbsPipelineConfig } from "@/lbs/deals/useLbsPipelineConfig";
 
@@ -47,6 +48,7 @@ const LBS_SETTINGS_TAB_IDS = [
   "general",
   "users",
   "messaging",
+  "web-monitor",
   "projects",
   "notes",
   "tasks",
@@ -63,6 +65,7 @@ const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = isLbsMode()
       { id: "general", label: "Company Settings" },
       { id: "users", label: "Users" },
       { id: "messaging", label: "Communications" },
+      { id: "web-monitor", label: "Web Monitor" },
       { id: "projects", label: "Project Stages" },
       { id: "notes", label: "Lead Statuses" },
       { id: "tasks", label: "Task Types" },
@@ -462,6 +465,9 @@ const SettingsFormFields = () => {
       {activeTab === "users" ? <UsersSettingsSection /> : null}
       {activeTab === "messaging" && isLbsMode() ? (
         <MessagingSettingsSection />
+      ) : null}
+      {activeTab === "web-monitor" && isLbsMode() ? (
+        <WebsiteMonitorSettingsSection />
       ) : null}
       {activeTab === "data" && isLbsMode() ? <DataImportSection /> : null}
       {activeTab === "payments" && !isLbsMode() ? (

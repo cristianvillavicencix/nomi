@@ -1,11 +1,10 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useSearchParams } from "react-router";
 import { useGetList } from "ra-core";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -26,8 +25,15 @@ import {
   ClientProposalsTab,
 } from "@/lbs/clients/ClientTabPanels";
 import {
+  ClientTabAccordion,
+  ClientTabAccordionSection,
+} from "@/lbs/clients/ClientTabAccordion";
+import {
+  ClientTabContentCard,
+  clientTableWrapperClassName,
+} from "@/lbs/clients/ClientTabSectionCard";
+import {
   FINANCIAL_SECTIONS,
-  formatTabCount,
   getValidFinancialSection,
   type FinancialSection,
 } from "@/lbs/clients/clientShowUtils";
@@ -47,28 +53,46 @@ type ClientFinancialTabProps = {
     contracts: number;
     payments: number;
   };
+  syncUrl?: boolean;
 };
 
 export const ClientFinancialTab = ({
   companyId,
   counts,
+  syncUrl = true,
 }: ClientFinancialTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const section = getValidFinancialSection(searchParams.get("section"));
+  const sectionFromUrl =
+    syncUrl && searchParams.get("tab") === "financial"
+      ? getValidFinancialSection(searchParams.get("section"))
+      : "summary";
 
-  const handleSectionChange = (nextSection: string) => {
-    const validSection = getValidFinancialSection(nextSection);
+  const [openSections, setOpenSections] = useState<string[]>(() => [
+    sectionFromUrl,
+  ]);
+
+  useEffect(() => {
+    if (!syncUrl) return;
+    if (searchParams.get("tab") !== "financial") return;
+    setOpenSections([getValidFinancialSection(searchParams.get("section"))]);
+  }, [syncUrl, searchParams.get("tab"), searchParams.get("section")]);
+
+  const handleAccordionChange = (values: string[]) => {
+    setOpenSections(values);
+    if (!syncUrl) return;
     const next = new URLSearchParams(searchParams);
     next.set("tab", "financial");
-    if (validSection === "summary") {
+    const primary = values[0] as FinancialSection | undefined;
+    if (!primary || primary === "summary") {
       next.delete("section");
-    } else {
-      next.set("section", validSection);
+    } else if (FINANCIAL_SECTIONS.includes(primary)) {
+      next.set("section", primary);
     }
     setSearchParams(next, { replace: true });
   };
 
   useEffect(() => {
+    if (!syncUrl) return;
     const tab = searchParams.get("tab");
     if (tab !== "financial") return;
     const rawSection = searchParams.get("section");
@@ -80,38 +104,46 @@ export const ClientFinancialTab = ({
       next.delete("section");
       setSearchParams(next, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [syncUrl, searchParams, setSearchParams]);
 
   return (
-    <Tabs value={section} onValueChange={handleSectionChange}>
-      <TabsList className="mb-4 inline-flex h-auto w-max max-w-full justify-start gap-1 overflow-x-auto">
-        <TabsTrigger value="summary" className="shrink-0">
-          Summary
-        </TabsTrigger>
-        <TabsTrigger value="proposals" className="shrink-0">
-          Proposals{formatTabCount(counts.proposals)}
-        </TabsTrigger>
-        <TabsTrigger value="contracts" className="shrink-0">
-          Contracts{formatTabCount(counts.contracts)}
-        </TabsTrigger>
-        <TabsTrigger value="payments" className="shrink-0">
-          Payments{formatTabCount(counts.payments)}
-        </TabsTrigger>
-      </TabsList>
+    <ClientTabAccordion value={openSections} onValueChange={handleAccordionChange}>
+      <ClientTabAccordionSection value="summary" title="Summary">
+        <ClientTabContentCard>
+          <ClientFinancialSummary companyId={companyId} />
+        </ClientTabContentCard>
+      </ClientTabAccordionSection>
 
-      <TabsContent value="summary" className="mt-0">
-        <ClientFinancialSummary companyId={companyId} />
-      </TabsContent>
-      <TabsContent value="proposals" className="mt-0">
-        <ClientProposalsTab companyId={companyId} />
-      </TabsContent>
-      <TabsContent value="contracts" className="mt-0">
-        <ClientContractsTab companyId={companyId} />
-      </TabsContent>
-      <TabsContent value="payments" className="mt-0">
-        <ClientPaymentsSection companyId={companyId} />
-      </TabsContent>
-    </Tabs>
+      <ClientTabAccordionSection
+        value="proposals"
+        title="Proposals"
+        count={counts.proposals}
+      >
+        <ClientTabContentCard flush>
+          <ClientProposalsTab companyId={companyId} />
+        </ClientTabContentCard>
+      </ClientTabAccordionSection>
+
+      <ClientTabAccordionSection
+        value="contracts"
+        title="Contracts"
+        count={counts.contracts}
+      >
+        <ClientTabContentCard flush>
+          <ClientContractsTab companyId={companyId} />
+        </ClientTabContentCard>
+      </ClientTabAccordionSection>
+
+      <ClientTabAccordionSection
+        value="payments"
+        title="Payments"
+        count={counts.payments}
+      >
+        <ClientTabContentCard flush>
+          <ClientPaymentsSection companyId={companyId} />
+        </ClientTabContentCard>
+      </ClientTabAccordionSection>
+    </ClientTabAccordion>
   );
 };
 
@@ -283,7 +315,7 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className={clientTableWrapperClassName}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -317,7 +349,7 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
               <TableCell className="text-right font-medium">
                 <MoneyText value={payment.amount} />
               </TableCell>
-              <TableCell className="hidden sm:table-cell capitalize text-muted-foreground">
+              <TableCell className="hidden capitalize text-muted-foreground sm:table-cell">
                 {payment.payment_method?.replace(/_/g, " ") || "—"}
               </TableCell>
               <TableCell>
@@ -325,7 +357,7 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
                   {payment.status}
                 </Badge>
               </TableCell>
-              <TableCell className="hidden max-w-xs truncate lg:table-cell text-muted-foreground">
+              <TableCell className="hidden max-w-xs truncate text-muted-foreground lg:table-cell">
                 {payment.reference_number ||
                   payment.check_number ||
                   payment.notes ||
@@ -340,7 +372,7 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
 };
 
 const SummaryCard = ({ label, value }: { label: string; value: ReactNode }) => (
-  <Card>
+  <Card className="shadow-none">
     <CardContent className="p-4">
       <div className="text-sm text-muted-foreground">{label}</div>
       <div className="mt-1 text-xl font-semibold">{value}</div>

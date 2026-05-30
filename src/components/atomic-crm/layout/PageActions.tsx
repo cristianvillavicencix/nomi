@@ -21,14 +21,25 @@ import { ListContext } from "ra-core";
 type PageActionsContextValue = {
   containerEl: HTMLElement | null;
   setContainerEl: (el: HTMLElement | null) => void;
+  trailingContainerEl: HTMLElement | null;
+  setTrailingContainerEl: (el: HTMLElement | null) => void;
 };
 
 const PageActionsContext = createContext<PageActionsContextValue | null>(null);
 
 export const PageActionsProvider = ({ children }: { children: ReactNode }) => {
   const [containerEl, setContainerEl] = useState<HTMLElement | null>(null);
+  const [trailingContainerEl, setTrailingContainerEl] =
+    useState<HTMLElement | null>(null);
   return (
-    <PageActionsContext.Provider value={{ containerEl, setContainerEl }}>
+    <PageActionsContext.Provider
+      value={{
+        containerEl,
+        setContainerEl,
+        trailingContainerEl,
+        setTrailingContainerEl,
+      }}
+    >
       {children}
     </PageActionsContext.Provider>
   );
@@ -73,6 +84,41 @@ export const PageActions = ({ children }: { children: ReactNode }) => {
   if (!ctx) return <>{children}</>;
   if (!ctx.containerEl) return null;
   return createPortal(children, ctx.containerEl);
+};
+
+/** Right side of the header, after the search bar (e.g. show-page ⋮ menu). */
+export const PageActionsTrailingSlot = ({
+  className,
+}: {
+  className?: string;
+}) => {
+  const ctx = useContext(PageActionsContext);
+  if (!ctx) {
+    throw new Error(
+      "PageActionsTrailingSlot must be used inside a <PageActionsProvider>",
+    );
+  }
+  return (
+    <div
+      ref={(el) => ctx.setTrailingContainerEl(el)}
+      data-slot="page-actions-trailing"
+      className={className}
+    />
+  );
+};
+
+export const PageActionsTrailing = ({ children }: { children: ReactNode }) => {
+  const ctx = useContext(PageActionsContext);
+  const [, setReady] = useState(0);
+  useEffect(() => {
+    if (!ctx?.trailingContainerEl) {
+      setReady((n) => n + 1);
+    }
+  }, [ctx?.trailingContainerEl]);
+
+  if (!ctx) return <>{children}</>;
+  if (!ctx.trailingContainerEl) return null;
+  return createPortal(children, ctx.trailingContainerEl);
 };
 
 /**
