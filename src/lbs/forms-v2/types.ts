@@ -113,6 +113,7 @@ export type FormSubmissionV2 = {
   deal_id?: number | null;
   contact_id?: number | null;
   company_id?: number | null;
+  proposal_id?: number | null;
   status?: string;
   submitter_email?: string | null;
   submitter_phone?: string | null;

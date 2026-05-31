@@ -125,7 +125,18 @@ const ContractShowContent = () => {
                 ? new Date(record.signed_at).toLocaleString()
                 : "Not signed"}
             </div>
+            {record.signatory_name ? (
+              <div className="text-xs text-muted-foreground">
+                Signed by {record.signatory_name}
+              </div>
+            ) : null}
           </div>
+          {record.deposit_paid_at ? (
+            <div>
+              <div className="text-muted-foreground">Deposit paid</div>
+              <div>{new Date(record.deposit_paid_at).toLocaleString()}</div>
+            </div>
+          ) : null}
           {record.notes ? (
             <div className="sm:col-span-2">
               <div className="text-muted-foreground">Notes</div>
@@ -134,6 +145,21 @@ const ContractShowContent = () => {
           ) : null}
         </CardContent>
       </Card>
+
+      {record.terms_snapshot ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Terms {record.terms_version ? `(v${record.terms_version})` : ""}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-[480px] overflow-y-auto rounded-md border bg-muted/20 p-4 text-sm whitespace-pre-wrap">
+              {record.terms_snapshot}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 };

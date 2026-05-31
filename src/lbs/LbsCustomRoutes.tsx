@@ -11,6 +11,8 @@ import { LbsContactShowPage } from "@/lbs/contacts/ContactShowPage";
 import { TicketCreate } from "@/lbs/tickets/TicketCreate";
 import { FormPublicEntry } from "@/lbs/forms-v2/public/FormPublicEntry";
 import { ShortUrlRedirect } from "@/lbs/forms-v2/public/ShortUrlRedirect";
+import { PublicProposalPage } from "@/lbs/proposals/public/PublicProposalPage";
+import { ProposalShortUrlRedirect } from "@/lbs/proposals/public/ProposalShortUrlRedirect";
 import { PortalShortUrlRedirect } from "@/lbs/portal/PortalShortUrlRedirect";
 import { FormsListPage } from "@/lbs/forms-v2/FormsListPage";
 import { FormBuilderPage } from "@/lbs/forms-v2/builder/FormBuilderPage";
@@ -24,6 +26,7 @@ import {
 } from "@/lbs/placeholders";
 import { ProposalsList } from "@/lbs/proposals/ProposalsList";
 import { ProposalCreate } from "@/lbs/proposals/ProposalCreate";
+import { ProposalEdit } from "@/lbs/proposals/ProposalEdit";
 import { ProposalShow } from "@/lbs/proposals/ProposalShow";
 import { ContractsList } from "@/lbs/contracts/ContractsList";
 import { ContractShow } from "@/lbs/contracts/ContractShow";
@@ -54,6 +57,8 @@ type ProtectedRouteProps = {
 export const renderLbsPublicFormRoute = () => (
   <>
     <Route path="/f/:shortCode" element={<ShortUrlRedirect />} />
+    <Route path="/pr/:shortCode" element={<ProposalShortUrlRedirect />} />
+    <Route path="/proposal/:token" element={<PublicProposalPage />} />
     <Route path="/p/:shortCode" element={<PortalShortUrlRedirect />} />
     <Route path="/forms/:slug" element={<FormPublicEntry />} />
   </>
@@ -245,6 +250,14 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="proposals" action="show">
             <ProposalShow />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/proposals/:id/edit"
+        element={
+          <ProtectedRoute resource="proposals" action="edit">
+            <ProposalEdit />
           </ProtectedRoute>
         }
       />

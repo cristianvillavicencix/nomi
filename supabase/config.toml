@@ -188,6 +188,15 @@ verify_jwt = false
 [functions.accept_proposal]
 verify_jwt = false
 
+[functions.send_proposal]
+verify_jwt = false
+
+[functions.get_public_proposal]
+verify_jwt = false
+
+[functions.sign_proposal_contract]
+verify_jwt = false
+
 [functions.get_public_deal_brief]
 verify_jwt = false
 

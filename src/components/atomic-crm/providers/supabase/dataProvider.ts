@@ -630,6 +630,7 @@ const dataProviderWithCustomMethods = {
     const { data, error } = await invokeEdgeFunction<{
       deal_id: number;
       proposal_id: number;
+      contract_id?: number | null;
     }>("accept_proposal", {
       method: "POST",
       body: { proposal_id: id },
@@ -638,6 +639,29 @@ const dataProviderWithCustomMethods = {
     if (error || !data?.deal_id) {
       console.error("accept_proposal.error", error);
       throw new Error("Failed to accept proposal");
+    }
+
+    return data;
+  },
+  async sendProposal({ id }: { id: Identifier }) {
+    const { data, error } = await invokeEdgeFunction<{
+      token: string;
+      short_code: string;
+      url: string;
+      short_url: string;
+      expires_at: string;
+      proposal_id: number;
+    }>("send_proposal", {
+      method: "POST",
+      body: {
+        proposal_id: id,
+        base_url: window.location.origin,
+      },
+    });
+
+    if (error || !data?.token) {
+      console.error("send_proposal.error", error);
+      throw new Error("Failed to send proposal");
     }
 
     return data;

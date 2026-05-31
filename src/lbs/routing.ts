@@ -31,13 +31,23 @@ export const getWebMonitorShowPath = (siteId: string | number) =>
 export const getContactsListPath = () => "/clients?tab=contacts";
 
 export const getClientProposalCreatePath = (
-  companyId: string | number,
+  companyId?: string | number | null,
   contactId?: string | number | null,
+  dealId?: string | number | null,
 ) => {
-  const params = new URLSearchParams({ company_id: String(companyId) });
+  const params = new URLSearchParams();
+  if (companyId != null) params.set("company_id", String(companyId));
   if (contactId != null) params.set("contact_id", String(contactId));
-  return `/proposals/create?${params.toString()}`;
+  if (dealId != null) params.set("deal_id", String(dealId));
+  const query = params.toString();
+  return query ? `/proposals/create?${query}` : "/proposals/create";
 };
+
+export const getLeadProposalCreatePath = (
+  contactId: string | number,
+  companyId?: string | number | null,
+  dealId?: string | number | null,
+) => getClientProposalCreatePath(companyId, contactId, dealId);
 
 export const getClientDealCreatePath = (
   companyId: string | number,

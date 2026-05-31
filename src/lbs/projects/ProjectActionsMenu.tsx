@@ -12,6 +12,7 @@ import {
   Archive,
   ArchiveRestore,
   ChevronDown,
+  FileText,
   MessageSquare,
   Pencil,
   Share2,
@@ -30,6 +31,7 @@ import { canUseCrmPermission } from "@/components/atomic-crm/providers/commons/c
 import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
 import type { Contact, Deal } from "@/components/atomic-crm/types";
 import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
+import { getClientProposalCreatePath } from "@/lbs/routing";
 import type { SendFormContext } from "@/lbs/forms-v2/share/sendFormTypes";
 import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
 import { useMessagesQuickAccessOptional } from "@/lbs/messages/messagesQuickAccessContext";
@@ -139,6 +141,18 @@ export const ProjectActionsMenu = ({ record }: { record: Deal }) => {
             variant="menu-item"
             label="Send form"
           />
+          <DropdownMenuItem asChild>
+            <Link
+              to={getClientProposalCreatePath(
+                record.company_id,
+                contactId,
+                record.id,
+              )}
+            >
+              <FileText className="size-4" />
+              Create proposal
+            </Link>
+          </DropdownMenuItem>
           {canSms ? (
             <DropdownMenuItem
               onSelect={(event) => {

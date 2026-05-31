@@ -71,7 +71,11 @@ const ProposalsListLayout = () => {
   if (!data?.length && !hasFilters) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        No proposals yet. Create one to send a quote to a client.
+        No proposals yet. Set up your{" "}
+        <a href="/settings?tab=commercial" className="link-action">
+          service catalog
+        </a>{" "}
+        in Settings, then create a proposal with packages and add-ons.
       </p>
     );
   }
@@ -81,6 +85,11 @@ const ProposalsListLayout = () => {
       rowClick={(id) => navigate(`/proposals/${id}/show`)}
       rowClassName={() => "[&_td]:py-2.5"}
     >
+      <DataTable.Col
+        source="proposal_number"
+        label="Number"
+        render={(record: Proposal) => record.proposal_number ?? "—"}
+      />
       <DataTable.Col source="title" label="Title" />
       <DataTable.Col
         source="status"

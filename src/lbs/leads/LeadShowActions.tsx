@@ -16,6 +16,7 @@ import {
 import type { Contact } from "@/components/atomic-crm/types";
 import { ContactEditModal } from "@/components/atomic-crm/contacts/ContactEditModal";
 import { ConvertLeadButton } from "@/lbs/leads/ConvertLeadButton";
+import { CreateProposalButton } from "@/lbs/proposals/CreateProposalButton";
 import { getLeadsListPath } from "@/lbs/routing";
 
 export const LeadShowActions = ({ record }: { record: Contact }) => {
@@ -46,6 +47,11 @@ export const LeadShowActions = ({ record }: { record: Contact }) => {
       </PageActions>
 
       <PageActionsTrailing>
+        <CreateProposalButton
+          contactId={record.id}
+          companyId={record.company_id}
+          variant="outline"
+        />
         <ConvertLeadButton record={record} />
         <RecordContextProvider value={record}>
           <DropdownMenu>

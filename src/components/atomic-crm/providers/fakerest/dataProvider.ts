@@ -50,6 +50,10 @@ import { getCompanyAvatar } from "../commons/getCompanyAvatar";
 import { getContactAvatar } from "../commons/getContactAvatar";
 import { mergeContacts } from "../commons/mergeContacts";
 import {
+  fakeAcceptProposal,
+  fakeSendProposal,
+} from "./proposalFlow";
+import {
   applyLoanDeductions,
   calculateCompensationGross,
   getPersonCompensationProfile,
@@ -581,6 +585,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   mergeContacts: async (sourceId: Identifier, targetId: Identifier) => {
     return mergeContacts(sourceId, targetId, baseDataProvider);
   },
+  acceptProposal: async ({ id }: { id: Identifier }) =>
+    fakeAcceptProposal(baseDataProvider, id),
+  sendProposal: async ({ id }: { id: Identifier }) =>
+    fakeSendProposal(baseDataProvider, id),
   upsertLbsClient: async (
     input: LbsClientUpsertInput,
   ): Promise<LbsClientUpsertResult> => {

@@ -301,6 +301,19 @@ export const SubmissionDetailPage = () => {
                   "—"
                 )}
               </li>
+              <li>
+                Proposal:{" "}
+                {submission.proposal_id ? (
+                  <Link
+                    to={`/proposals/${submission.proposal_id}/show`}
+                    className="text-primary hover:underline"
+                  >
+                    #{submission.proposal_id}
+                  </Link>
+                ) : (
+                  "—"
+                )}
+              </li>
             </ul>
           </div>
 

@@ -38,7 +38,53 @@ export default (): Db => {
   db.employee_pto_adjustments = [];
   db.proposals = [];
   db.proposal_line_items = [];
+  db.proposal_payment_schedules = [];
+  db.proposal_payment_installments = [];
+  db.service_packages = [
+    {
+      id: 1,
+      org_id: 1,
+      name: "Website Starter",
+      description: "5-page business website",
+      suggested_price: 2500,
+      billing_type: "one_time",
+      billing_interval: null,
+      category: "website",
+      active: true,
+      sort_order: 1,
+    },
+  ];
+  db.service_addons = [
+    {
+      id: 1,
+      org_id: 1,
+      package_id: null,
+      name: "Logo design",
+      description: "Custom logo with revisions",
+      suggested_price: 400,
+      billing_type: "one_time",
+      billing_interval: null,
+      active: true,
+      sort_order: 1,
+    },
+    {
+      id: 2,
+      org_id: 1,
+      package_id: null,
+      name: "SEO monthly",
+      description: "Monthly SEO",
+      suggested_price: 350,
+      billing_type: "recurring",
+      billing_interval: "monthly",
+      active: true,
+      sort_order: 2,
+    },
+  ];
+  db.organization_contract_terms = [];
   db.contracts = [];
+  db.public_proposal_tokens = [];
+  db.deal_client_payments = [];
+  db.maintenance_retainers = [];
   db.forms = [
     {
       id: 1,

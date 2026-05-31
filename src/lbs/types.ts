@@ -32,11 +32,25 @@ export type Proposal = {
   title: string;
   status: string;
   amount?: number | null;
+  proposal_number?: string | null;
+  validity_days?: number;
+  deposit_percent?: number;
+  deposit_amount?: number | null;
+  balance_amount?: number | null;
+  currency?: string;
+  one_time_total?: number | null;
+  payment_schedule_config?: Record<string, unknown>;
+  recurring_summary?: Array<{
+    description: string;
+    amount: number;
+    interval: string;
+  }>;
   valid_until?: string | null;
   sent_at?: string | null;
   viewed_at?: string | null;
   accepted_at?: string | null;
   rejected_at?: string | null;
+  contract_id?: Identifier | null;
   content?: Record<string, unknown>;
   notes?: string | null;
   created_at?: string;
@@ -48,7 +62,86 @@ export type ProposalLineItem = {
   description: string;
   quantity?: number;
   unit_price?: number;
+  line_total?: number | null;
+  package_id?: Identifier | null;
+  addon_id?: Identifier | null;
+  billing_type?: "one_time" | "recurring";
+  billing_interval?: "weekly" | "monthly" | "yearly" | null;
   sort_order?: number;
+} & Pick<RaRecord, "id">;
+
+export type ServicePackage = {
+  org_id?: number;
+  name: string;
+  description?: string | null;
+  suggested_price: number;
+  billing_type: "one_time" | "recurring";
+  billing_interval?: "weekly" | "monthly" | "yearly" | null;
+  category?: string | null;
+  active?: boolean;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ServiceAddon = {
+  org_id?: number;
+  package_id?: Identifier | null;
+  name: string;
+  description?: string | null;
+  suggested_price: number;
+  billing_type: "one_time" | "recurring";
+  billing_interval?: "weekly" | "monthly" | "yearly" | null;
+  active?: boolean;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type OrganizationContractTerms = {
+  org_id?: number;
+  version: string;
+  title: string;
+  body_markdown: string;
+  default_variables?: Record<string, string>;
+  is_active?: boolean;
+  published_at?: string | null;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ProposalPaymentSchedule = {
+  org_id?: number;
+  proposal_id: Identifier;
+  contract_id?: Identifier | null;
+  deposit_amount: number;
+  balance_amount: number;
+  deposit_due_date?: string | null;
+  installment_frequency: "weekly" | "biweekly" | "monthly" | "custom";
+  installment_count: number;
+  currency?: string;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ProposalPaymentInstallment = {
+  org_id?: number;
+  schedule_id: Identifier;
+  proposal_id: Identifier;
+  installment_number: number;
+  label: string;
+  due_date: string;
+  amount: number;
+  billing_type?: "one_time" | "recurring";
+  status?: "pending" | "paid" | "failed" | "skipped" | "waived";
+  paid_at?: string | null;
+  payment_method?: string;
+  stripe_payment_intent_id?: string | null;
+  stripe_invoice_id?: string | null;
+  stripe_subscription_id?: string | null;
+  manual_marked_by_member_id?: Identifier | null;
+  manual_marked_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 } & Pick<RaRecord, "id">;
 
 export type Contract = {
@@ -61,7 +154,15 @@ export type Contract = {
   created_by_member_id?: Identifier | null;
   title: string;
   status: string;
+  terms_version?: string | null;
+  terms_snapshot?: string | null;
   signed_at?: string | null;
+  signed_ip?: string | null;
+  signed_by_contact_id?: Identifier | null;
+  signatory_name?: string | null;
+  deposit_paid_at?: string | null;
+  payment_schedule_id?: Identifier | null;
+  stripe_customer_id?: string | null;
   expires_at?: string | null;
   document?: Record<string, unknown>;
   file?: unknown;

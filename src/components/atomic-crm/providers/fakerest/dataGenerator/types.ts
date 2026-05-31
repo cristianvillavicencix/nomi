@@ -26,8 +26,13 @@ import type {
   Contract,
   Form,
   FormSubmission,
+  OrganizationContractTerms,
   Proposal,
   ProposalLineItem,
+  ProposalPaymentInstallment,
+  ProposalPaymentSchedule,
+  ServiceAddon,
+  ServicePackage,
   Ticket,
   TicketMessage,
   DealResource,
@@ -61,7 +66,41 @@ export interface Db {
   employee_pto_adjustments: EmployeePtoAdjustment[];
   proposals: Proposal[];
   proposal_line_items: ProposalLineItem[];
+  proposal_payment_schedules: ProposalPaymentSchedule[];
+  proposal_payment_installments: ProposalPaymentInstallment[];
+  service_packages: ServicePackage[];
+  service_addons: ServiceAddon[];
+  organization_contract_terms: OrganizationContractTerms[];
   contracts: Contract[];
+  public_proposal_tokens: Array<{
+    id: number;
+    token: string;
+    short_code: string;
+    org_id: number;
+    proposal_id: number;
+    expires_at: string;
+    uses_count: number;
+    created_at: string;
+  }>;
+  deal_client_payments: Array<{
+    id: number;
+    deal_id: number;
+    payment_date: string;
+    amount: number;
+    payment_method: string;
+    reference_number?: string | null;
+    status: string;
+    notes?: string | null;
+  }>;
+  maintenance_retainers: Array<{
+    id: number;
+    org_id: number;
+    deal_id: number;
+    monthly_hours_included: number;
+    monthly_amount: number;
+    notes?: string | null;
+    active: boolean;
+  }>;
   forms: Form[];
   form_submissions: FormSubmission[];
   tickets: Ticket[];

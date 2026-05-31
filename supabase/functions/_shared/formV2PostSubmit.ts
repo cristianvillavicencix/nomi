@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { extractFieldValue } from "./formV2Schema.ts";
+import { createProposalFromQuoteRequest } from "./quoteRequestToProposal.ts";
 
 type FormInstance = {
   id: number;
@@ -153,5 +154,23 @@ export async function handlePostSubmitActions(
       .from("form_submissions_v2")
       .update(updates)
       .eq("id", submission.id);
+  }
+
+  const submissionForProposal = {
+    ...submission,
+    ...updates,
+    contact_id: updates.contact_id ?? submission.contact_id ?? null,
+    deal_id: updates.deal_id ?? submission.deal_id ?? null,
+    company_id: submission.company_id ?? null,
+  };
+
+  if (instance.slug === "quote_request") {
+    await createProposalFromQuoteRequest(
+      supabase,
+      instance.org_id,
+      submissionForProposal,
+      answers,
+      instance.task_assignee_member_id ?? instance.notify_member_ids?.[0] ?? null,
+    );
   }
 }
