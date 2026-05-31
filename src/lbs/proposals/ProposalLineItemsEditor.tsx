@@ -82,10 +82,7 @@ export const ProposalLineItemsEditor = ({
     ]);
   };
 
-  const updateLine = (
-    key: string,
-    patch: Partial<ProposalLineDraft>,
-  ) => {
+  const updateLine = (key: string, patch: Partial<ProposalLineDraft>) => {
     onChange(
       lines.map((line) => (line.key === key ? { ...line, ...patch } : line)),
     );
@@ -182,8 +179,7 @@ export const ProposalLineItemsEditor = ({
                 onValueChange={(value) =>
                   updateLine(line.key, {
                     billing_type: value as ProposalLineDraft["billing_type"],
-                    billing_interval:
-                      value === "recurring" ? "monthly" : null,
+                    billing_interval: value === "recurring" ? "monthly" : null,
                   })
                 }
               >
@@ -203,7 +199,9 @@ export const ProposalLineItemsEditor = ({
               <div className="space-y-1">
                 <Label>Total</Label>
                 <p className="text-sm font-medium">
-                  <MoneyText value={lineTotal(line.quantity, line.unit_price)} />
+                  <MoneyText
+                    value={lineTotal(line.quantity, line.unit_price)}
+                  />
                 </p>
                 {line.billing_type === "recurring" ? (
                   <Badge variant="outline" className="text-[10px]">

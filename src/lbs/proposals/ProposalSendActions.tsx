@@ -1,8 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { Copy, Download, Loader2, Send } from "lucide-react";
-import { useDataProvider, useNotify } from "ra-core";
+import { useDataProvider, useGetIdentity, useNotify } from "ra-core";
 import { useState } from "react";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { canUseCrmPermission } from "@/components/atomic-crm/providers/commons/crmPermissions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,13 +35,18 @@ export const ProposalSendActions = ({
 }) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
+  const { data: identity } = useGetIdentity();
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [clientUrl, setClientUrl] = useState("");
 
   const canSend =
     "sendProposal" in dataProvider &&
     typeof (dataProvider as CrmDataProvider & { sendProposal?: unknown })
-      .sendProposal === "function";
+      .sendProposal === "function" &&
+    canUseCrmPermission(
+      identity as Parameters<typeof canUseCrmPermission>[0],
+      "proposals.send",
+    );
 
   const { mutate: sendProposal, isPending: isSending } = useMutation({
     mutationFn: () =>
@@ -54,7 +60,9 @@ export const ProposalSendActions = ({
       ).sendProposal({ id: proposal.id }),
     onSuccess: (result) => {
       const url = result.short_url || result.url;
-      setClientUrl(url.startsWith("http") ? url : `${window.location.origin}${url}`);
+      setClientUrl(
+        url.startsWith("http") ? url : `${window.location.origin}${url}`,
+      );
       setLinkDialogOpen(true);
       notify("Proposal sent to client", { type: "success" });
       onSent?.();
@@ -96,9 +104,7 @@ export const ProposalSendActions = ({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() =>
-          exportProposalPdf({ proposal, lineItems, installments })
-        }
+        onClick={() => exportProposalPdf({ proposal, lineItems, installments })}
       >
         <Download className="size-4" />
         PDF
@@ -117,7 +123,11 @@ export const ProposalSendActions = ({
             <Label htmlFor="proposal-client-url">URL</Label>
             <div className="flex gap-2">
               <Input id="proposal-client-url" readOnly value={clientUrl} />
-              <Button type="button" variant="outline" onClick={() => copyLink()}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => copyLink()}
+              >
                 <Copy className="size-4" />
               </Button>
             </div>

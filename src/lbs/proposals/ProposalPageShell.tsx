@@ -30,7 +30,9 @@ export const ProposalPageShell = ({
         </Link>
       </Button>
       <PageTitle label={title} />
-      {actions ? <div className="ml-auto flex items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="ml-auto flex items-center gap-2">{actions}</div>
+      ) : null}
     </PageActions>
     <ScrollableContentArea className="px-4 pb-8 md:px-6">
       {children}

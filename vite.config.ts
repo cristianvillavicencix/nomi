@@ -37,7 +37,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MiB (main chunk includes jsPDF)
       },
       manifest: false, // Use existing manifest.json from public/
     }),

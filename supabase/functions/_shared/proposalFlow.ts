@@ -230,7 +230,7 @@ export async function createContractFromProposal(
   if (proposal.contact_id) {
     const { data: contact } = await supabase
       .from("contacts")
-      .select("first_name, last_name, address")
+      .select("first_name, last_name, address, company_id")
       .eq("id", proposal.contact_id)
       .maybeSingle();
     if (contact) {
@@ -239,6 +239,22 @@ export async function createContractFromProposal(
         contactName;
       clientAddress = contact.address ?? clientAddress;
     }
+
+    if (clientAddress === "—" && contact?.company_id) {
+      const { data: company } = await supabase
+        .from("companies")
+        .select("address")
+        .eq("id", contact.company_id)
+        .maybeSingle();
+      if (company?.address) clientAddress = company.address;
+    }
+  } else if (proposal.company_id) {
+    const { data: company } = await supabase
+      .from("companies")
+      .select("address")
+      .eq("id", proposal.company_id)
+      .maybeSingle();
+    if (company?.address) clientAddress = company.address;
   }
 
   const { data: activeTerms } = await supabase

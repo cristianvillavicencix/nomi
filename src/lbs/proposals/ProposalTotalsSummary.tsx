@@ -27,7 +27,9 @@ export const ProposalTotalsSummary = ({
           <MoneyText value={totals.oneTimeTotal} className="font-medium" />
         </div>
         <div className="flex justify-between gap-2">
-          <span className="text-muted-foreground">Deposit ({depositPercent}%)</span>
+          <span className="text-muted-foreground">
+            Deposit ({depositPercent}%)
+          </span>
           <MoneyText value={totals.depositAmount} className="font-medium" />
         </div>
         <div className="flex justify-between gap-2">
@@ -36,7 +38,12 @@ export const ProposalTotalsSummary = ({
         </div>
         <div className="space-y-1 border-t pt-3">
           <Label>Deposit %</Label>
-          <NumberInput source="deposit_percent" label={false} min={0} max={100} />
+          <NumberInput
+            source="deposit_percent"
+            label={false}
+            min={0}
+            max={100}
+          />
         </div>
         {totals.recurringLines.length > 0 ? (
           <div className="space-y-2 border-t pt-3">

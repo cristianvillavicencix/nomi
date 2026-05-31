@@ -45,10 +45,15 @@ const PublicProposalContent = ({
   const [signatoryName, setSignatoryName] = useState("");
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [confirmDeposit, setConfirmDeposit] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const acceptMutation = useMutation({
     mutationFn: () => acceptPublicProposal(proposal.id, token),
-    onSuccess: () => onRefresh(),
+    onSuccess: () => {
+      setActionError(null);
+      onRefresh();
+    },
+    onError: (error: Error) => setActionError(error.message),
   });
 
   const signMutation = useMutation({
@@ -59,7 +64,11 @@ const PublicProposalContent = ({
         signatoryName: signatoryName.trim(),
         confirmDeposit,
       }),
-    onSuccess: () => onRefresh(),
+    onSuccess: () => {
+      setActionError(null);
+      onRefresh();
+    },
+    onError: (error: Error) => setActionError(error.message),
   });
 
   const isAccepted = !!proposal.accepted_at;
@@ -91,6 +100,12 @@ const PublicProposalContent = ({
         </p>
       </div>
 
+      {actionError ? (
+        <p className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {actionError}
+        </p>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Services</CardTitle>
@@ -110,7 +125,8 @@ const PublicProposalContent = ({
                 ) : null}
               </div>
               <div className="text-muted-foreground">
-                {item.quantity ?? 1} × {formatMoney(item.unit_price ?? 0, currency)}
+                {item.quantity ?? 1} ×{" "}
+                {formatMoney(item.unit_price ?? 0, currency)}
               </div>
             </div>
           ))}
@@ -200,16 +216,15 @@ const PublicProposalContent = ({
                 }
               />
               <span>
-                I confirm the 50% deposit ({formatMoney(proposal.deposit_amount ?? 0, currency)})
-                will be paid per the agreed method.
+                I confirm the 50% deposit (
+                {formatMoney(proposal.deposit_amount ?? 0, currency)}) will be
+                paid per the agreed method.
               </span>
             </label>
             <Button
               className="w-full"
               disabled={
-                signMutation.isPending ||
-                !signatoryName.trim() ||
-                !agreedTerms
+                signMutation.isPending || !signatoryName.trim() || !agreedTerms
               }
               onClick={() => signMutation.mutate()}
             >

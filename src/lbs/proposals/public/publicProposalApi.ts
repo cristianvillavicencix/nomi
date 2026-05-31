@@ -1,7 +1,9 @@
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseKey = import.meta.env.VITE_SB_PUBLISHABLE_KEY as string | undefined;
+const supabaseKey = import.meta.env.VITE_SB_PUBLISHABLE_KEY as
+  | string
+  | undefined;
 
-const invokePublicFunction = async <T,>(
+const invokePublicFunction = async <T>(
   functionName: string,
   body: Record<string, unknown>,
 ): Promise<T> => {
@@ -18,7 +20,10 @@ const invokePublicFunction = async <T,>(
     body: JSON.stringify(body),
   });
 
-  const payload = (await response.json()) as T & { message?: string; error?: string };
+  const payload = (await response.json()) as T & {
+    message?: string;
+    error?: string;
+  };
   if (!response.ok) {
     throw new Error(payload.message ?? payload.error ?? "Request failed");
   }

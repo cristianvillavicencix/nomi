@@ -146,12 +146,18 @@ export const saveProposalCommercial = async (
     proposalRecord = data;
     proposalId = data.id;
 
-    const proposalNumber = formatProposalNumber(input.orgId, Number(proposalId));
-    const { data: numbered } = await dataProvider.update<Proposal>("proposals", {
-      id: proposalId,
-      data: { proposal_number: proposalNumber },
-      previousData: data,
-    });
+    const proposalNumber = formatProposalNumber(
+      input.orgId,
+      Number(proposalId),
+    );
+    const { data: numbered } = await dataProvider.update<Proposal>(
+      "proposals",
+      {
+        id: proposalId,
+        data: { proposal_number: proposalNumber },
+        previousData: data,
+      },
+    );
     proposalRecord = numbered;
   }
 

@@ -4,6 +4,7 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware } from "../_shared/authentication.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
+import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { generateSecureToken } from "../_shared/formV2Schema.ts";
 import { generateUniqueShortCode } from "../_shared/formTokenUtils.ts";
 
@@ -33,6 +34,13 @@ Deno.serve(
       const member = await getUserOrganizationMember(user.id);
       if (!member?.id) {
         return createErrorResponse(401, "Unauthorized");
+      }
+
+      if (
+        !member.administrator &&
+        !hasMemberCapability(member, "proposals.send")
+      ) {
+        return createErrorResponse(403, "You cannot send proposals");
       }
 
       const body = (await req.json()) as SendProposalBody;

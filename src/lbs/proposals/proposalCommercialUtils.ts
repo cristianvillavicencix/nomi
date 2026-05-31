@@ -58,8 +58,7 @@ export const calculateProposalTotals = (
 
   const depositAmount =
     Math.round(oneTimeTotal * (depositPercent / 100) * 100) / 100;
-  const balanceAmount =
-    Math.round((oneTimeTotal - depositAmount) * 100) / 100;
+  const balanceAmount = Math.round((oneTimeTotal - depositAmount) * 100) / 100;
 
   return {
     oneTimeTotal,
@@ -144,9 +143,7 @@ export const generatePaymentInstallments = ({
     : addDays(depositDue, 7);
 
   const perInstallment =
-    count > 0
-      ? Math.round((balanceAmount / count) * 100) / 100
-      : balanceAmount;
+    count > 0 ? Math.round((balanceAmount / count) * 100) / 100 : balanceAmount;
 
   let allocated = 0;
   for (let index = 0; index < count; index += 1) {
@@ -159,9 +156,7 @@ export const generatePaymentInstallments = ({
     installments.push({
       installment_number: installments.length + 1,
       label:
-        count === 1
-          ? "Final balance"
-          : `Installment ${index + 1} of ${count}`,
+        count === 1 ? "Final balance" : `Installment ${index + 1} of ${count}`,
       due_date: toDateKey(
         nextDueDate(balanceStart, config.installment_frequency, index),
       ),

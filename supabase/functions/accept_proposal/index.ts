@@ -125,7 +125,7 @@ const acceptProposalCore = async (
   if (proposal.contact_id) {
     await supabaseAdmin
       .from("contacts")
-      .update({ status: "client", lead_stage: "won" })
+      .update({ lead_stage: "closing" })
       .eq("id", proposal.contact_id);
   }
 

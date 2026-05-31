@@ -20,8 +20,7 @@ type PublicProposalToken = {
 const randomToken = () =>
   crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
 
-const randomShortCode = () =>
-  Math.random().toString(36).slice(2, 9);
+const randomShortCode = () => Math.random().toString(36).slice(2, 9);
 
 export const fakeSendProposal = async (
   dataProvider: DataProvider,
@@ -78,12 +77,17 @@ export const fakeSendProposal = async (
     });
   }
 
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const url = `${origin}/proposal/${token}`;
   const short_url = `${origin}/pr/${shortCode}`;
 
-  return { token, short_code: shortCode, url, short_url, expires_at: expiresAt };
+  return {
+    token,
+    short_code: shortCode,
+    url,
+    short_url,
+    expires_at: expiresAt,
+  };
 };
 
 export const fakeAcceptProposal = async (
@@ -199,7 +203,9 @@ export const fakeAcceptProposal = async (
     }
   }
 
-  for (const line of lineItems.filter((row) => row.billing_type === "recurring")) {
+  for (const line of lineItems.filter(
+    (row) => row.billing_type === "recurring",
+  )) {
     try {
       await dataProvider.create("maintenance_retainers", {
         data: {
@@ -222,7 +228,7 @@ export const fakeAcceptProposal = async (
     });
     await dataProvider.update("contacts", {
       id: proposal.contact_id,
-      data: { status: "client", lead_stage: "won" },
+      data: { lead_stage: "closing" },
       previousData: contact,
     });
   }

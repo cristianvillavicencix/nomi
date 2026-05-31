@@ -116,6 +116,13 @@ Deno.serve(
         .update(contractUpdate)
         .eq("id", proposal.contract_id);
 
+      if (proposal.contact_id) {
+        await supabaseAdmin
+          .from("contacts")
+          .update({ status: "client", lead_stage: "won" })
+          .eq("id", proposal.contact_id);
+      }
+
       return new Response(
         JSON.stringify({
           contract_id: proposal.contract_id,

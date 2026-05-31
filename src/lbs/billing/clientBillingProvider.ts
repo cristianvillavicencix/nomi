@@ -1,5 +1,4 @@
 import type { Identifier } from "ra-core";
-import type { InstallmentStatus } from "@/lbs/proposals/proposalCommercialConstants";
 
 export type MarkPaidParams = {
   installmentId: Identifier;
