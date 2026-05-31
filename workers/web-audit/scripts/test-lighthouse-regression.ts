@@ -2,6 +2,7 @@
  * Regression guards for Lighthouse finding mappers (run: npm run test:regression).
  */
 import { mapDetailedLighthouseFindings } from "../src/scoring/mapDetailedLighthouseFindings.js";
+import { sanitizeForPostgresJson } from "../src/sanitizeForPostgresJson.js";
 
 let passed = 0;
 let failed = 0;
@@ -63,6 +64,19 @@ try {
 } catch (cause) {
   failed += 1;
   console.error("❌ handles non-array auditRefs — threw", cause);
+}
+
+try {
+  const loneHigh = "before\ud800after";
+  const cleaned = sanitizeForPostgresJson({ note: loneHigh }) as {
+    note: string;
+  };
+  assert("strips lone high surrogate", cleaned.note === "beforeafter");
+  const roundTrip = JSON.stringify(cleaned);
+  assert("sanitized json stringifies", roundTrip.includes("beforeafter"));
+} catch (cause) {
+  failed += 1;
+  console.error("❌ sanitizeForPostgresJson — threw", cause);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

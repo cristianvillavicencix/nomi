@@ -1,5 +1,6 @@
 import type { WebsiteAuditCallbackPayload } from "./types.js";
 import { config } from "./config.js";
+import { sanitizeForPostgresJson } from "./sanitizeForPostgresJson.js";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -18,7 +19,7 @@ export const postCallback = async (
           Authorization: `Bearer ${config.workerSecret}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(sanitizeForPostgresJson(payload)),
       });
 
       if (response.ok) {

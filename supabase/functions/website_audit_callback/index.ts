@@ -5,6 +5,10 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { triggerWebsiteAuditSummarize } from "../_shared/websiteAuditAiSummary.ts";
 import { notifyWebsiteAuditScoreDrop } from "../_shared/notifyWebsiteAuditScoreDrop.ts";
+import {
+  sanitizeAuditFindingInput,
+  sanitizeForPostgresJson,
+} from "../_shared/sanitizeForPostgresJson.ts";
 import type {
   AuditFindingInput,
   WebsiteAuditCallbackPayload,
@@ -115,7 +119,10 @@ Deno.serve((req: Request) =>
       status: nextStatus,
       completed_at: now,
       worker_id: payload.worker_id ?? null,
-      error_message: payload.error_message ?? null,
+      error_message:
+        payload.error_message == null
+          ? null
+          : String(sanitizeForPostgresJson(payload.error_message)),
       ...(payload.strategy ? { strategy: payload.strategy } : {}),
       overall_score: payload.overall_score ?? null,
       score_performance: payload.score_performance ?? null,
@@ -129,12 +136,22 @@ Deno.serve((req: Request) =>
       field_cls: payload.field_cls ?? null,
       field_inp_ms: payload.field_inp_ms ?? null,
       crux_has_data: payload.crux_has_data ?? false,
-      static_json: payload.static_json ?? {},
-      lighthouse_json: payload.lighthouse_json ?? null,
-      axe_json: payload.axe_json ?? null,
-      crux_json: payload.crux_json ?? null,
-      mobile_snapshot: payload.mobile_snapshot ?? null,
-      desktop_snapshot: payload.desktop_snapshot ?? null,
+      static_json: sanitizeForPostgresJson(payload.static_json ?? {}),
+      lighthouse_json: payload.lighthouse_json
+        ? sanitizeForPostgresJson(payload.lighthouse_json)
+        : null,
+      axe_json: payload.axe_json
+        ? sanitizeForPostgresJson(payload.axe_json)
+        : null,
+      crux_json: payload.crux_json
+        ? sanitizeForPostgresJson(payload.crux_json)
+        : null,
+      mobile_snapshot: payload.mobile_snapshot
+        ? sanitizeForPostgresJson(payload.mobile_snapshot)
+        : null,
+      desktop_snapshot: payload.desktop_snapshot
+        ? sanitizeForPostgresJson(payload.desktop_snapshot)
+        : null,
       pdf_storage_path: payload.pdf_storage_path ?? null,
       ...(nextStatus === "done"
         ? { ai_summary_status: "pending" as const }
@@ -187,21 +204,26 @@ Deno.serve((req: Request) =>
         const { error: findingsError } = await supabaseAdmin
           .from("audit_findings")
           .insert(
-            findings.map((finding, index) => ({
-              org_id: current.org_id,
-              audit_id: auditId,
-              category: finding.category,
-              severity: finding.severity,
-              source: finding.source,
-              source_id: finding.source_id ?? null,
-              title: finding.title,
-              description: finding.description ?? null,
-              recommendation: finding.recommendation ?? null,
-              commercial_message: finding.commercial_message ?? null,
-              metric_key: finding.metric_key ?? null,
-              metric_value: finding.metric_value ?? null,
-              display_order: finding.display_order ?? index,
-            })),
+            findings.map((finding, index) => {
+              const clean = sanitizeAuditFindingInput(
+                finding as unknown as Record<string, unknown>,
+              );
+              return {
+                org_id: current.org_id,
+                audit_id: auditId,
+                category: finding.category,
+                severity: finding.severity,
+                source: finding.source,
+                source_id: finding.source_id ?? null,
+                title: clean.title as string,
+                description: clean.description as string | null,
+                recommendation: clean.recommendation as string | null,
+                commercial_message: clean.commercial_message as string | null,
+                metric_key: finding.metric_key ?? null,
+                metric_value: clean.metric_value as string | null,
+                display_order: finding.display_order ?? index,
+              };
+            }),
           );
 
         if (findingsError) {
