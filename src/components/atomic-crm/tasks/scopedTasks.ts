@@ -3,7 +3,7 @@ import type { Task } from "@/components/atomic-crm/types";
 import type { TaskStatusFilter } from "@/components/atomic-crm/tasks/taskConstants";
 import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 
-export type TaskScopeFilter = "mine" | "team" | "my_projects";
+export type TaskScopeFilter = "mine" | "team" | "my_projects" | "tagged";
 
 export type GetScopedTasksParams = {
   scope: TaskScopeFilter;

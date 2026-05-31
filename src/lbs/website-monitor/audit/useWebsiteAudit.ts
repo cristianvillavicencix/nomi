@@ -2,15 +2,20 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import type { Identifier } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import type { AuditFinding, WebsiteAudit } from "@/lbs/website-monitor/audit/types";
+import type {
+  AuditFinding,
+  WebsiteAudit,
+} from "@/lbs/website-monitor/audit/types";
 import {
   fetchAuditHistory,
   fetchPreviousDoneAudit,
 } from "@/lbs/website-monitor/audit/websiteAuditQueries";
 
 const auditKey = (siteId: Identifier) => ["website-audit", siteId] as const;
-const historyKey = (siteId: Identifier) => ["website-audit-history", siteId] as const;
-const findingsKey = (auditId: number) => ["website-audit-findings", auditId] as const;
+const historyKey = (siteId: Identifier) =>
+  ["website-audit-history", siteId] as const;
+const findingsKey = (auditId: number) =>
+  ["website-audit-findings", auditId] as const;
 const previousKey = (siteId: Identifier, auditId: number) =>
   ["website-audit-previous", siteId, auditId] as const;
 

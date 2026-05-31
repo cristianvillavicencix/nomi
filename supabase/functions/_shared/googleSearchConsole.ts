@@ -1,7 +1,11 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
-export const GOOGLE_GSC_SCOPE =
-  "https://www.googleapis.com/auth/webmasters.readonly";
+export const GOOGLE_GSC_SCOPES = [
+  "https://www.googleapis.com/auth/webmasters.readonly",
+  "https://www.googleapis.com/auth/userinfo.email",
+] as const;
+
+export const GOOGLE_GSC_SCOPE = GOOGLE_GSC_SCOPES.join(" ");
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -71,7 +75,9 @@ export const extractDomainFromMonitorUrl = (url: string): string | null => {
   const value = url.trim();
   if (!value) return null;
   try {
-    const parsed = new URL(value.startsWith("http") ? value : `https://${value}`);
+    const parsed = new URL(
+      value.startsWith("http") ? value : `https://${value}`,
+    );
     return parsed.hostname.replace(/^www\./i, "").toLowerCase() || null;
   } catch {
     return null;
@@ -140,7 +146,8 @@ const exchangeToken = async (body: URLSearchParams) => {
 
 export const exchangeGoogleGscCode = async (code: string) => {
   const redirectUri = buildGoogleGscCallbackUrl();
-  if (!redirectUri) throw new Error("GOOGLE_GSC redirect URI is not configured");
+  if (!redirectUri)
+    throw new Error("GOOGLE_GSC redirect URI is not configured");
 
   return exchangeToken(
     new URLSearchParams({
@@ -214,7 +221,9 @@ export const getFreshGoogleGscAccessToken = async (
   }
 
   const refreshed = await refreshGoogleGscAccessToken(cred.refresh_token);
-  const expires = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
+  const expires = new Date(
+    Date.now() + refreshed.expires_in * 1000,
+  ).toISOString();
 
   await supabase
     .from("google_gsc_credentials")
@@ -242,8 +251,8 @@ export const listGscSites = async (accessToken: string): Promise<string[]> => {
       `GSC sites list failed (${res.status}): ${JSON.stringify(data).slice(0, 300)}`,
     );
   }
-  const entries = (data as { siteEntry?: Array<{ siteUrl?: string }> })
-    .siteEntry ?? [];
+  const entries =
+    (data as { siteEntry?: Array<{ siteUrl?: string }> }).siteEntry ?? [];
   return entries
     .map((entry) => entry.siteUrl?.trim())
     .filter(Boolean) as string[];
@@ -272,7 +281,7 @@ const querySearchAnalytics = async (
       `GSC searchAnalytics failed (${res.status}): ${JSON.stringify(data).slice(0, 300)}`,
     );
   }
-  return ((data as { rows?: GscSearchAnalyticsRow[] }).rows ?? []);
+  return (data as { rows?: GscSearchAnalyticsRow[] }).rows ?? [];
 };
 
 const rowToTotals = (rows: GscSearchAnalyticsRow[]): GscTotals => {
@@ -346,11 +355,7 @@ export const syncMonitoredWebsiteGsc = async (
   if (error) throw new Error(error.message);
   if (!site) return { ok: false, reason: "site_not_found" };
 
-  const gscSiteUrl = resolveGscSiteUrl(
-    site.url,
-    gscSites,
-    site.gsc_site_url,
-  );
+  const gscSiteUrl = resolveGscSiteUrl(site.url, gscSites, site.gsc_site_url);
   if (!gscSiteUrl) {
     return { ok: false, reason: "no_matching_gsc_property" };
   }
@@ -358,7 +363,10 @@ export const syncMonitoredWebsiteGsc = async (
   if (gscSiteUrl !== site.gsc_site_url) {
     await supabase
       .from("monitored_websites")
-      .update({ gsc_site_url: gscSiteUrl, updated_at: new Date().toISOString() })
+      .update({
+        gsc_site_url: gscSiteUrl,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", site.id);
   }
 

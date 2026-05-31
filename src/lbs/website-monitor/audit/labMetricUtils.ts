@@ -8,9 +8,7 @@ export const labMetricScore = (
   if (value == null || !Number.isFinite(value)) return null;
   const v = Number(value);
 
-  const piecewise = (
-    points: Array<{ at: number; score: number }>,
-  ): number => {
+  const piecewise = (points: Array<{ at: number; score: number }>): number => {
     if (v <= points[0].at) return points[0].score;
     for (let i = 1; i < points.length; i += 1) {
       const prev = points[i - 1];

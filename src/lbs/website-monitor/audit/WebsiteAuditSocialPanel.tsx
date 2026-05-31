@@ -25,13 +25,16 @@ export const WebsiteAuditSocialPanel = ({
       <div>
         <h3 className="text-base font-semibold">Redes sociales detectadas</h3>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Perfiles sociales encontrados en la página (footer, iconos, JSON embebido).
+          Perfiles sociales encontrados en la página (footer, iconos, JSON
+          embebido).
         </p>
       </div>
 
       {links.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/60 px-6 py-10 text-center">
-          <p className="text-sm font-medium">No se encontraron redes sociales</p>
+          <p className="text-sm font-medium">
+            No se encontraron redes sociales
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Regenera el reporte si acabas de actualizar el worker.
           </p>

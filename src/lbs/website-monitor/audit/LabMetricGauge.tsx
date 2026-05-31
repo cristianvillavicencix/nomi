@@ -29,7 +29,9 @@ export const LabMetricGauge = ({
   const score = labMetricScore(metric, value);
   const displayText = formatLabMetric(metric, value);
   const target = score;
-  const [display, setDisplay] = useState(animate && target != null ? 0 : target);
+  const [display, setDisplay] = useState(
+    animate && target != null ? 0 : target,
+  );
 
   useEffect(() => {
     if (!animate || target == null) {

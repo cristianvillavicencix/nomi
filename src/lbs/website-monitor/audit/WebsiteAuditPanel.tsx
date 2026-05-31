@@ -112,7 +112,9 @@ export const WebsiteAuditPanel = ({
       void refetch();
     } catch (cause) {
       notify(
-        cause instanceof Error ? cause.message : "No se pudo generar el reporte",
+        cause instanceof Error
+          ? cause.message
+          : "No se pudo generar el reporte",
         { type: "error" },
       );
     } finally {
@@ -156,7 +158,8 @@ export const WebsiteAuditPanel = ({
           <div className="rounded-xl border border-dashed border-border/60 px-6 py-10 text-center">
             <p className="text-sm font-medium">Sin reportes todavía</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Genera el primer reporte completo (móvil + desktop) para este sitio.
+              Genera el primer reporte completo (móvil + desktop) para este
+              sitio.
             </p>
             <Button
               type="button"

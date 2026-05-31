@@ -37,7 +37,13 @@ const compareCrawlFiles = (
   const changes: AuditComparisonResult["crawlChanges"] = [];
   if (!current || !previous) return changes;
 
-  const pairs: Array<[string, { found: boolean; access?: string } | undefined, { found: boolean; access?: string } | undefined]> = [
+  const pairs: Array<
+    [
+      string,
+      { found: boolean; access?: string } | undefined,
+      { found: boolean; access?: string } | undefined,
+    ]
+  > = [
     ["robots.txt", current.robots, previous.robots],
     ["sitemap", current.sitemap, previous.sitemap],
     ["llms.txt", current.llmsTxt, previous.llmsTxt],

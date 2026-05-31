@@ -1,5 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { StaticAnalysisJson, WebsiteAuditAiSummaryJson } from "@/lbs/website-monitor/audit/types";
+import type {
+  StaticAnalysisJson,
+  WebsiteAuditAiSummaryJson,
+} from "@/lbs/website-monitor/audit/types";
 import { WebsiteAuditLinksPanel } from "@/lbs/website-monitor/audit/WebsiteAuditLinksPanel";
 import { WebsiteAuditSocialPanel } from "@/lbs/website-monitor/audit/WebsiteAuditSocialPanel";
 

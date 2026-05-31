@@ -60,7 +60,8 @@ export const WebsiteAuditProgressBar = ({ audit }: { audit: WebsiteAudit }) => {
       <ol className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
         {AUDIT_PROGRESS_STEPS.map((label, index) => {
           const isDone = progress.isComplete || index < progress.phaseIndex;
-          const isCurrent = !progress.isComplete && index === progress.phaseIndex;
+          const isCurrent =
+            !progress.isComplete && index === progress.phaseIndex;
           return (
             <li
               key={label}

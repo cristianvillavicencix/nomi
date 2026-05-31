@@ -1,5 +1,8 @@
 import { MapPin } from "lucide-react";
-import type { AuditFinding, WebsiteAuditAiSummaryJson } from "@/lbs/website-monitor/audit/types";
+import type {
+  AuditFinding,
+  WebsiteAuditAiSummaryJson,
+} from "@/lbs/website-monitor/audit/types";
 import { WebsiteAuditAiTextBlock } from "@/lbs/website-monitor/audit/WebsiteAuditAiTextBlock";
 import {
   getFindingSourceLabel,
@@ -31,7 +34,9 @@ export const WebsiteAuditFindingDetailSections = ({
         </p>
         <p className="mt-1 font-medium leading-snug">{finding.title}</p>
         {problem && problem !== finding.title ? (
-          <p className="mt-2 leading-relaxed text-muted-foreground">{problem}</p>
+          <p className="mt-2 leading-relaxed text-muted-foreground">
+            {problem}
+          </p>
         ) : null}
         {finding.metric_value ? (
           <p className="mt-2 text-xs text-muted-foreground">
@@ -101,7 +106,9 @@ export const WebsiteAuditFindingDetailSections = ({
 
       {finding.recommendation ? (
         <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2">
-          <p className="text-xs font-semibold text-emerald-800">Cómo corregirlo</p>
+          <p className="text-xs font-semibold text-emerald-800">
+            Cómo corregirlo
+          </p>
           <p className="mt-1 leading-relaxed text-emerald-900/90">
             {finding.recommendation}
           </p>

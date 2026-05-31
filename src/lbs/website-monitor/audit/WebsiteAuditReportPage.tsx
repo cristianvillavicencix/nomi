@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import type { AuditFinding, WebsiteAudit } from "@/lbs/website-monitor/audit/types";
+import type {
+  AuditFinding,
+  WebsiteAudit,
+} from "@/lbs/website-monitor/audit/types";
 import { WebsiteAuditPrintDocument } from "@/lbs/website-monitor/audit/WebsiteAuditPrintDocument";
 import { WebsiteAuditReportView } from "@/lbs/website-monitor/audit/WebsiteAuditReportView";
 import { fetchPreviousDoneAudit } from "@/lbs/website-monitor/audit/websiteAuditQueries";
@@ -106,40 +108,38 @@ export const WebsiteAuditReportPage = () => {
 
   return (
     <>
-      <div className="web-audit-report-screen mx-auto w-full max-w-5xl space-y-4 p-4 md:p-6">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to={`/web-monitor/${siteId}/show`}>
-            <ArrowLeft className="mr-2 size-4" />
-            Volver al sitio
-          </Link>
-        </Button>
+      <div className="web-audit-report-screen flex w-full min-w-0 flex-col gap-4 pb-8">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button variant="ghost" size="sm" className="-ml-2 h-8" asChild>
+            <Link to={`/web-monitor/${siteId}/show`}>
+              <ArrowLeft className="mr-2 size-4" />
+              Volver al sitio
+            </Link>
+          </Button>
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Web Report
+          </span>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Web Report</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isPending ? (
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Cargando reporte…
-              </p>
-            ) : !audit ? (
-              <p className="text-sm text-muted-foreground">
-                No se encontró este reporte.
-              </p>
-            ) : (
-              <WebsiteAuditReportView
-                audit={audit}
-                previousAudit={previousAudit ?? undefined}
-                previousFindings={previousFindings}
-                findings={findings}
-                siteLabel={siteLabel}
-                siteId={numericSiteId}
-              />
-            )}
-          </CardContent>
-        </Card>
+        {isPending ? (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Cargando reporte…
+          </p>
+        ) : !audit ? (
+          <p className="text-sm text-muted-foreground">
+            No se encontró este reporte.
+          </p>
+        ) : (
+          <WebsiteAuditReportView
+            audit={audit}
+            previousAudit={previousAudit ?? undefined}
+            previousFindings={previousFindings}
+            findings={findings}
+            siteLabel={siteLabel}
+            siteId={numericSiteId}
+          />
+        )}
       </div>
 
       {audit?.status === "done" ? (

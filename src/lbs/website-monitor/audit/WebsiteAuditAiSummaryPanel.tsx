@@ -40,7 +40,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   best_practices: "Best practices",
 };
 
-const SummaryContent = ({ summary }: { summary: WebsiteAuditAiSummaryJson }) => {
+const SummaryContent = ({
+  summary,
+}: {
+  summary: WebsiteAuditAiSummaryJson;
+}) => {
   const health = HEALTH_LABELS[summary.overall_health];
 
   return (
@@ -106,7 +110,8 @@ const SummaryContent = ({ summary }: { summary: WebsiteAuditAiSummaryJson }) => 
             columns={["#", "Acción", "Impacto", "Categoría"]}
           >
             {summary.priority_actions.map((action) => {
-              const impact = IMPACT_LABELS[action.impact] ?? IMPACT_LABELS.medium;
+              const impact =
+                IMPACT_LABELS[action.impact] ?? IMPACT_LABELS.medium;
               return (
                 <TableRow key={action.rank}>
                   <TableCell className="w-10 font-mono text-xs text-muted-foreground">
@@ -114,9 +119,13 @@ const SummaryContent = ({ summary }: { summary: WebsiteAuditAiSummaryJson }) => 
                   </TableCell>
                   <TableCell>
                     <p className="font-medium">{action.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{action.why}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {action.why}
+                    </p>
                     <p className="mt-2 text-xs">
-                      <span className="font-medium text-foreground/80">Cómo: </span>
+                      <span className="font-medium text-foreground/80">
+                        Cómo:{" "}
+                      </span>
                       {action.how}
                     </p>
                   </TableCell>
@@ -139,7 +148,9 @@ const SummaryContent = ({ summary }: { summary: WebsiteAuditAiSummaryJson }) => 
 
       {summary.technical_notes?.trim() ? (
         <div className="rounded-lg bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-          <span className="font-semibold text-foreground/70">Nota técnica: </span>
+          <span className="font-semibold text-foreground/70">
+            Nota técnica:{" "}
+          </span>
           {summary.technical_notes}
         </div>
       ) : null}
@@ -170,9 +181,7 @@ export const WebsiteAuditAiSummaryPanel = ({
   });
 
   const isBusy =
-    status === "pending" ||
-    status === "running" ||
-    regenerate.isPending;
+    status === "pending" || status === "running" || regenerate.isPending;
 
   if (status === "done" && summary) {
     return (

@@ -8,6 +8,9 @@ import {
 } from "@/lbs/website-monitor/websiteMonitorRealtimeCache";
 import { useWebsiteMonitorRealtime } from "@/lbs/website-monitor/useWebsiteMonitorRealtime";
 
+/** Cache list for the session; metrics update via Realtime patches. */
+const LIST_STALE_MS = 24 * 60 * 60_000;
+
 export const useMonitoredWebsitesLive = (enabled = true) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const params = getMonitoredWebsitesLiveParams();
@@ -24,8 +27,12 @@ export const useMonitoredWebsitesLive = (enabled = true) => {
     },
     enabled,
     placeholderData: (previous) => previous,
-    staleTime: 30_000,
-    refetchInterval: enabled ? 120_000 : false,
+    staleTime: LIST_STALE_MS,
+    gcTime: LIST_STALE_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
   });
 
   useWebsiteMonitorRealtime(enabled);

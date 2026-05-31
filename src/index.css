@@ -299,6 +299,20 @@ input[type="time"] {
     padding: 0 !important;
   }
 
+  .web-audit-pdf-page {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    box-sizing: border-box;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .web-audit-pdf-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
   .loan-print-page {
     width: 100%;
     max-width: none;

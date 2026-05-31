@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { PageImageJson, StaticAnalysisJson } from "@/lbs/website-monitor/audit/types";
+import type {
+  PageImageJson,
+  StaticAnalysisJson,
+} from "@/lbs/website-monitor/audit/types";
 import {
   TableCell,
   TableRow,
@@ -18,13 +21,18 @@ const IMAGE_ISSUE_COPY: Record<string, string> = {
   broken: "No cargó (URL rota o bloqueada).",
 };
 
-const guessIssueCopy = (filename: string | null, status: PageImageJson["status"]) => {
+const guessIssueCopy = (
+  filename: string | null,
+  status: PageImageJson["status"],
+) => {
   if (status === "broken") return IMAGE_ISSUE_COPY.broken;
   const name = (filename ?? "").toLowerCase();
-  if (name.includes("hero") || name.includes("banner")) return IMAGE_ISSUE_COPY.hero;
+  if (name.includes("hero") || name.includes("banner"))
+    return IMAGE_ISSUE_COPY.hero;
   if (name.includes("servicio") || name.includes("service"))
     return IMAGE_ISSUE_COPY.servicio;
-  if (name.includes("equipo") || name.includes("team")) return IMAGE_ISSUE_COPY.equipo;
+  if (name.includes("equipo") || name.includes("team"))
+    return IMAGE_ISSUE_COPY.equipo;
   if (name.includes("logo")) return IMAGE_ISSUE_COPY.logo;
   return IMAGE_ISSUE_COPY.default;
 };
@@ -79,12 +87,14 @@ export const WebsiteAuditImagesPanel = ({
         }));
 
   const total = staticJson.totalImages ?? images.length;
-  const okCount = staticJson.imagesOk ?? images.filter((i) => i.status === "ok").length;
+  const okCount =
+    staticJson.imagesOk ?? images.filter((i) => i.status === "ok").length;
   const missingAlt =
     staticJson.imagesWithoutAlt ??
     images.filter((i) => i.status === "missing_alt").length;
   const brokenCount =
-    staticJson.brokenImages ?? images.filter((i) => i.status === "broken").length;
+    staticJson.brokenImages ??
+    images.filter((i) => i.status === "broken").length;
 
   const filtered = useMemo(
     () =>
@@ -164,7 +174,14 @@ export const WebsiteAuditImagesPanel = ({
           ) : null}
 
           <WebsiteAuditTableShell
-            columns={["Vista", "Archivo", "Estado", "Alt", "Observación", "URL"]}
+            columns={[
+              "Vista",
+              "Archivo",
+              "Estado",
+              "Alt",
+              "Observación",
+              "URL",
+            ]}
           >
             {filtered.map((image) => (
               <TableRow key={image.src}>

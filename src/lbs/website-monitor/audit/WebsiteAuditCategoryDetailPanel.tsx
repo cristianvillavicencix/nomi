@@ -39,7 +39,9 @@ export const WebsiteAuditCategoryDetailPanel = ({
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             <strong className="text-foreground">Cómo se calcula: </strong>
             {explain}
-            {total > 0 ? ` En esta prueba pasaron ${passed} de ${total} auditorías.` : ""}
+            {total > 0
+              ? ` En esta prueba pasaron ${passed} de ${total} auditorías.`
+              : ""}
           </p>
         ) : null}
       </div>
@@ -47,8 +49,8 @@ export const WebsiteAuditCategoryDetailPanel = ({
       {issues.length === 0 ? (
         <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800">
           <CheckCircle2 className="size-4 shrink-0" />
-          Sin problemas detectados en esta categoría (o regenera el reporte para ver
-          el desglose Lighthouse).
+          Sin problemas detectados en esta categoría (o regenera el reporte para
+          ver el desglose Lighthouse).
         </div>
       ) : (
         <ul className="space-y-3">

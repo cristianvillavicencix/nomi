@@ -30,12 +30,14 @@ export const TasksFilterPopover = ({
   scopeOptions,
   taskTypes,
   lbsMode,
+  unreadTaggedCount = 0,
 }: {
   preferences: TaskPreferences;
   onChange: (update: Partial<TaskPreferences>) => void;
   scopeOptions: ReadonlyArray<{ value: TaskScopeFilter; label: string }>;
   taskTypes: ReadonlyArray<{ value: string; label: string }>;
   lbsMode: boolean;
+  unreadTaggedCount?: number;
 }) => {
   const { scope, typeFilter, priorityFilter, projectId } = preferences;
 
@@ -51,6 +53,7 @@ export const TasksFilterPopover = ({
   const hasActiveFilters = taskPreferencesHaveActiveFilters(preferences, {
     lbsMode,
   });
+  const showTaggedBadge = unreadTaggedCount > 0 && scope !== "tagged";
 
   return (
     <Popover>
@@ -58,7 +61,7 @@ export const TasksFilterPopover = ({
         <Button type="button" variant="outline" size="sm" className="gap-2">
           <SlidersHorizontal className="size-4" />
           Filter
-          {hasActiveFilters ? (
+          {hasActiveFilters || showTaggedBadge ? (
             <span className="size-2 rounded-full bg-primary" aria-hidden />
           ) : null}
         </Button>

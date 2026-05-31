@@ -21,7 +21,10 @@ export const WebsiteMonitorAuditScheduleSettings = ({
   const refresh = useRefresh();
   const [update] = useUpdate();
   const [pendingField, setPendingField] = useState<
-    AuditScheduleField | "audit_interval_days" | "audit_score_drop_threshold" | null
+    | AuditScheduleField
+    | "audit_interval_days"
+    | "audit_score_drop_threshold"
+    | null
   >(null);
 
   const handleToggle = async (field: AuditScheduleField, checked: boolean) => {
@@ -90,7 +93,10 @@ export const WebsiteMonitorAuditScheduleSettings = ({
         <p className="text-sm text-muted-foreground">
           Genera reportes Lighthouse automáticamente cada N días. Los defaults
           globales están en{" "}
-          <Link to="/settings?tab=web-monitor" className="font-medium underline">
+          <Link
+            to="/settings?tab=web-monitor"
+            className="font-medium underline"
+          >
             Settings → Web Monitor
           </Link>
           .

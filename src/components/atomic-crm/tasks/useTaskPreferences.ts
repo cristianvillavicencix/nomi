@@ -35,7 +35,9 @@ const readPreferences = (): TaskPreferences => {
     return {
       status: parsed.status === "done" ? "done" : "open",
       scope:
-        parsed.scope === "team" || parsed.scope === "my_projects"
+        parsed.scope === "team" ||
+        parsed.scope === "my_projects" ||
+        parsed.scope === "tagged"
           ? parsed.scope
           : "mine",
       typeFilter: parsed.typeFilter ?? "all",

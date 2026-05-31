@@ -40,8 +40,7 @@ export const WebsiteAuditHtmlDialog = ({
       "",
       "Categorías:",
       ...categories.map(
-        (c) =>
-          `- ${c.label}: ${c.score ?? "—"}/100 (${c.passed}/${c.total} ✓)`,
+        (c) => `- ${c.label}: ${c.score ?? "—"}/100 (${c.passed}/${c.total} ✓)`,
       ),
     ];
     void navigator.clipboard.writeText(lines.join("\n"));
@@ -55,7 +54,12 @@ export const WebsiteAuditHtmlDialog = ({
             <DialogTitle className="text-base font-semibold">
               Informe auditoría · HTML · {deviceLabel}
             </DialogTitle>
-            <Button type="button" size="sm" variant="outline" onClick={copySummary}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={copySummary}
+            >
               <Copy className="mr-1 size-4" />
               Copiar
             </Button>

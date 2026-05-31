@@ -1,39 +1,41 @@
+import { Link } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDataProvider, useGetIdentity, useNotify } from "ra-core";
 import { Loader2, RefreshCw } from "lucide-react";
 import type { Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
-import {
-  WebsiteAuditTableShell,
-} from "@/lbs/website-monitor/audit/WebsiteAuditTableShell";
+import { WebsiteAuditTableShell } from "@/lbs/website-monitor/audit/WebsiteAuditTableShell";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { GscSearchAnalyticsSnapshot } from "@/lbs/website-monitor/googleSearchConsoleTypes";
+import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { fetchLatestGscSnapshot } from "@/lbs/website-monitor/googleSearchConsoleQueries";
-import { formatCheckedAt } from "@/lbs/website-monitor/websiteMonitorUtils";
+import {
+  extractDomainFromUrl,
+  formatCheckedAt,
+} from "@/lbs/website-monitor/websiteMonitorUtils";
+
+const gscSyncReasonMessage = (
+  reason: string | undefined,
+  domain: string | null,
+): string => {
+  if (reason === "no_matching_gsc_property") {
+    return domain
+      ? `No hay propiedad en Search Console para «${domain}». Añade el sitio en Google Search Console (cuenta de la agencia) y vuelve a sincronizar.`
+      : "No hay propiedad en Search Console para este dominio. Añádelo en Google Search Console y vuelve a sincronizar.";
+  }
+  if (reason === "site_not_found") {
+    return "Sitio no encontrado en el monitor.";
+  }
+  return "No se pudo sincronizar Search Console.";
+};
 
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
 
-const QUERY_COLUMNS = [
-  "Consulta",
-  "Clics",
-  "Impresiones",
-  "CTR",
-  "Posición",
-];
+const QUERY_COLUMNS = ["Consulta", "Clics", "Impresiones", "CTR", "Posición"];
 
-const PAGE_COLUMNS = [
-  "Página",
-  "Clics",
-  "Impresiones",
-  "CTR",
-  "Posición",
-];
+const PAGE_COLUMNS = ["Página", "Clics", "Impresiones", "CTR", "Posición"];
 
-export const WebsiteAuditGscPanel = ({
-  siteId,
-}: {
-  siteId: Identifier;
-}) => {
+export const WebsiteAuditGscPanel = ({ siteId }: { siteId: Identifier }) => {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -42,33 +44,58 @@ export const WebsiteAuditGscPanel = ({
     (identity as { administrator?: boolean } | undefined)?.administrator ===
     true;
 
-  const { data: snapshot, isPending } = useQuery({
+  const { data: gscStatus, isPending: gscStatusPending } = useQuery({
+    queryKey: ["google-gsc-status"],
+    queryFn: () => dataProvider.googleGscStatus(),
+    enabled: isAdmin,
+    staleTime: 30_000,
+  });
+
+  const gscConnected = gscStatus?.connected === true;
+
+  const { data: monitoredSite } = useQuery({
+    queryKey: ["monitored-website-gsc", siteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("monitored_websites")
+        .select("url, gsc_site_url")
+        .eq("id", Number(siteId))
+        .maybeSingle();
+      if (error) throw error;
+      return data as { url?: string; gsc_site_url?: string | null } | null;
+    },
+    staleTime: 60_000,
+  });
+
+  const monitorDomain = extractDomainFromUrl(monitoredSite?.url);
+
+  const { data: snapshot, isPending: snapshotPending } = useQuery({
     queryKey: ["gsc-snapshot", siteId],
     queryFn: () => fetchLatestGscSnapshot(siteId),
     staleTime: 60_000,
   });
 
+  const isPending = snapshotPending || (isAdmin && gscStatusPending);
+
   const syncMutation = useMutation({
     mutationFn: () =>
       dataProvider.googleGscSync({ monitoredWebsiteId: siteId }),
     onSuccess: (result) => {
-      if (result.ok && result.reason === "no_matching_gsc_property") {
-        notify(
-          "Sin propiedad GSC para este dominio. Añádelo en Search Console o verifica acceso.",
-          { type: "warning" },
-        );
-      } else if (result.ok) {
+      if (result.ok) {
         notify("Datos de Search Console actualizados", { type: "success" });
       } else {
-        notify("No se pudo sincronizar Search Console", { type: "warning" });
+        notify(gscSyncReasonMessage(result.reason, monitorDomain ?? null), {
+          type: "warning",
+        });
       }
-      void queryClient.invalidateQueries({ queryKey: ["gsc-snapshot", siteId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["gsc-snapshot", siteId],
+      });
     },
     onError: (cause) => {
-      notify(
-        cause instanceof Error ? cause.message : "Sync GSC falló",
-        { type: "error" },
-      );
+      notify(cause instanceof Error ? cause.message : "Sync GSC falló", {
+        type: "error",
+      });
     },
   });
 
@@ -85,27 +112,62 @@ export const WebsiteAuditGscPanel = ({
     return (
       <div className="rounded-xl border border-dashed border-border/60 px-6 py-8 text-center text-sm">
         <p className="font-medium">Sin datos de Search Console</p>
-        <p className="mt-2 text-muted-foreground">
-          Conecta GSC en Settings → Web Monitor y asegúrate de que este dominio
-          exista como propiedad en la cuenta de la agencia.
-        </p>
-        {isAdmin ? (
-          <Button
-            type="button"
-            size="sm"
-            className="mt-4"
-            variant="outline"
-            disabled={syncMutation.isPending}
-            onClick={() => syncMutation.mutate()}
-          >
-            {syncMutation.isPending ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 size-4" />
-            )}
-            Intentar sincronizar
-          </Button>
-        ) : null}
+        {isAdmin && !gscConnected ? (
+          <>
+            <p className="mt-2 text-muted-foreground">
+              La agencia aún no ha conectado Google Search Console. Es una sola
+              cuenta Google para toda la organización (no hace falta API key por
+              cliente). Conéctala una vez en Settings y todos los sitios con
+              propiedad GSC tendrán datos.
+            </p>
+            <Button type="button" size="sm" className="mt-4" asChild>
+              <Link to="/settings?tab=web-monitor">
+                Conectar en Settings → Web Monitor
+              </Link>
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 text-muted-foreground">
+              {gscConnected
+                ? monitorDomain
+                  ? `Google está conectado, pero aún no hay datos para «${monitorDomain}». Nomi solo puede leer dominios que existan como propiedad en tu Search Console (misma cuenta con la que conectaste).`
+                  : "Google está conectado, pero este sitio aún no tiene datos guardados."
+                : "Pide a un administrador que conecte Search Console en Settings → Web Monitor."}
+            </p>
+            {gscConnected && monitorDomain ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Si el cliente no está en Search Console, añádelo en{" "}
+                <a
+                  href="https://search.google.com/search-console"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  search.google.com/search-console
+                </a>{" "}
+                y pulsa «Sincronizar este sitio».
+              </p>
+            ) : null}
+            {isAdmin && gscConnected ? (
+              <Button
+                type="button"
+                size="sm"
+                className="mt-4"
+                variant="outline"
+                disabled={syncMutation.isPending}
+                onClick={() => syncMutation.mutate()}
+              >
+                {syncMutation.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 size-4" />
+                )}
+                Sincronizar este sitio
+              </Button>
+            ) : null}
+          </>
+        )}
       </div>
     );
   }
@@ -211,7 +273,9 @@ const GscSnapshotView = ({
 
 const MetricCard = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-xl border border-border/60 bg-card p-4">
-    <p className="text-xs font-medium uppercase text-muted-foreground">{label}</p>
+    <p className="text-xs font-medium uppercase text-muted-foreground">
+      {label}
+    </p>
     <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
   </div>
 );

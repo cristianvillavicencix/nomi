@@ -9,7 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { AuditFinding, WebsiteAuditAiSummaryJson } from "@/lbs/website-monitor/audit/types";
+import type {
+  AuditFinding,
+  WebsiteAuditAiSummaryJson,
+} from "@/lbs/website-monitor/audit/types";
 import {
   buildFindingFilterOptions,
   categoryFromFindingFilter,
@@ -126,7 +129,9 @@ export const WebsiteAuditFindingsPanel = ({
         </div>
         <Select
           value={filter}
-          onValueChange={(value) => handleFilterChange(value as FindingFilterValue)}
+          onValueChange={(value) =>
+            handleFilterChange(value as FindingFilterValue)
+          }
         >
           <SelectTrigger className="h-9 w-[200px] print:hidden" size="sm">
             <SelectValue placeholder="Filtrar" />
@@ -168,7 +173,9 @@ export const WebsiteAuditFindingsPanel = ({
                 <TableCell className="whitespace-nowrap">
                   <Badge
                     variant={
-                      finding.severity === "critico" ? "destructive" : "secondary"
+                      finding.severity === "critico"
+                        ? "destructive"
+                        : "secondary"
                     }
                     className="text-[10px] font-bold"
                   >
@@ -179,7 +186,9 @@ export const WebsiteAuditFindingsPanel = ({
                   {CATEGORY_LABELS[finding.category] ?? finding.category}
                 </TableCell>
                 <TableCell className="max-w-[300px] whitespace-normal">
-                  <p className="text-sm font-medium leading-snug">{finding.title}</p>
+                  <p className="text-sm font-medium leading-snug">
+                    {finding.title}
+                  </p>
                   {parsed.problem && parsed.problem !== finding.title ? (
                     <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                       {parsed.problem}
@@ -188,7 +197,9 @@ export const WebsiteAuditFindingsPanel = ({
                 </TableCell>
                 <TableCell className="max-w-[220px] whitespace-normal font-mono text-[10px] text-muted-foreground">
                   {locationPreview ? (
-                    <span className="line-clamp-2 break-all">{locationPreview}</span>
+                    <span className="line-clamp-2 break-all">
+                      {locationPreview}
+                    </span>
                   ) : (
                     "—"
                   )}

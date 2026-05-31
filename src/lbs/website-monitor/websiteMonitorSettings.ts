@@ -61,7 +61,8 @@ export const parseWebsiteMonitorSettings = (
       168,
       DEFAULT_WEBSITE_MONITOR_SETTINGS.alert_cooldown_hours,
     ),
-    default_audit_schedule_enabled: value.default_audit_schedule_enabled === true,
+    default_audit_schedule_enabled:
+      value.default_audit_schedule_enabled === true,
     default_audit_interval_days: clampInt(
       value.default_audit_interval_days,
       1,
@@ -79,12 +80,7 @@ export const parseWebsiteMonitorSettings = (
   };
 };
 
-const clampInt = (
-  raw: unknown,
-  min: number,
-  max: number,
-  fallback: number,
-) => {
+const clampInt = (raw: unknown, min: number, max: number, fallback: number) => {
   const parsed = Number(raw);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(max, Math.max(min, Math.round(parsed)));

@@ -24,8 +24,8 @@ export const WebsiteMonitorSummaryCard = ({
     site.display_name || site.company_name || site.page_title || site.url;
   const domain = site.resolved_domain ?? extractDomainFromUrl(site.url);
   const sectorLabel = site.company_sector
-    ? companySectors.find((entry) => entry.value === site.company_sector)
-        ?.label ?? site.company_sector
+    ? (companySectors.find((entry) => entry.value === site.company_sector)
+        ?.label ?? site.company_sector)
     : null;
   const registrar = site.metadata?.dns?.registrar;
 
@@ -68,9 +68,18 @@ export const WebsiteMonitorSummaryCard = ({
                 : "—"
             }
           />
-          <InfoRow label="Respuesta" value={formatResponseMs(site.last_response_ms)} />
-          <InfoRow label="Uptime 7d" value={formatUptimePct(site.uptime_pct_7d)} />
-          <InfoRow label="Último chequeo" value={formatCheckedAt(site.last_checked_at)} />
+          <InfoRow
+            label="Respuesta"
+            value={formatResponseMs(site.last_response_ms)}
+          />
+          <InfoRow
+            label="Uptime 7d"
+            value={formatUptimePct(site.uptime_pct_7d)}
+          />
+          <InfoRow
+            label="Último chequeo"
+            value={formatCheckedAt(site.last_checked_at)}
+          />
           {sectorLabel ? <InfoRow label="Sector" value={sectorLabel} /> : null}
           {site.company_id ? (
             <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 pt-1">

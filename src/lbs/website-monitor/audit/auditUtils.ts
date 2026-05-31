@@ -1,4 +1,7 @@
-import type { AuditStrategySnapshot, WebsiteAudit } from "@/lbs/website-monitor/audit/types";
+import type {
+  AuditStrategySnapshot,
+  WebsiteAudit,
+} from "@/lbs/website-monitor/audit/types";
 
 export const isUnifiedReport = (audit: WebsiteAudit) =>
   audit.strategy === "unified" ||
@@ -7,7 +10,10 @@ export const isUnifiedReport = (audit: WebsiteAudit) =>
 /** Resolve mobile/desktop lab data for unified or legacy single-strategy audits. */
 export const getAuditSnapshots = (
   audit: WebsiteAudit,
-): { mobile: AuditStrategySnapshot | null; desktop: AuditStrategySnapshot | null } => {
+): {
+  mobile: AuditStrategySnapshot | null;
+  desktop: AuditStrategySnapshot | null;
+} => {
   if (audit.mobile_snapshot || audit.desktop_snapshot) {
     return {
       mobile: audit.mobile_snapshot ?? null,

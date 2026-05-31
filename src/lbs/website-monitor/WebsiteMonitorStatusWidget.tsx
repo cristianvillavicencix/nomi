@@ -141,7 +141,11 @@ const SiteRow = ({
           : "flex items-center gap-3 rounded-md border border-border/60 px-3 py-2"
       }
     >
-      <WebsiteMonitorFavicon url={site.url} label={site.display_name ?? site.url} size="sm" />
+      <WebsiteMonitorFavicon
+        url={site.url}
+        label={site.display_name ?? site.url}
+        size="sm"
+      />
       <div className="min-w-0 flex-1">
         <Link
           to={getWebMonitorShowPath(site.id)}
@@ -150,7 +154,8 @@ const SiteRow = ({
           {site.display_name || site.company_name || site.url}
         </Link>
         <p className="truncate text-xs text-muted-foreground">
-          {formatResponseMs(site.last_response_ms)} · {formatCheckedAt(site.last_checked_at)}
+          {formatResponseMs(site.last_response_ms)} ·{" "}
+          {formatCheckedAt(site.last_checked_at)}
         </p>
       </div>
       <WebsiteStatusBadge status={site.last_status} />

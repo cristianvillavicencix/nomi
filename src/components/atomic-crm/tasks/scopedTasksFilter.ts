@@ -70,6 +70,7 @@ export const filterScopedTasks = (
       taskMatchesProjectScope(task, params.projectDealIds ?? []),
     );
   }
+  // scope "tagged" and "team": tasks are pre-filtered in the data provider
 
   const sortField = params.sort?.field ?? "due_date";
   const sortMultiplier = params.sort?.order === "DESC" ? -1 : 1;

@@ -24,6 +24,7 @@ import type {
   SignUpData,
   Task,
   TaskParticipant,
+  TaskTagNotification,
 } from "../../types";
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { withCurrentProductName } from "../../root/defaultConfiguration";
@@ -425,6 +426,33 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     return getActivityLog(dataProvider, companyId);
   },
   getScopedTasks: async (params: GetScopedTasksParams) => {
+    let taggedTaskIds: Identifier[] | null = null;
+
+    if (params.scope === "tagged") {
+      const { data: notifications } =
+        await baseDataProvider.getList<TaskTagNotification>(
+          "task_tag_notifications",
+          {
+            filter: {
+              recipient_organization_member_id: params.organizationMemberId,
+              "read_at@is": null,
+            },
+            pagination: { page: 1, perPage: 500 },
+            sort: { field: "created_at", order: "DESC" },
+          },
+        );
+      taggedTaskIds = [
+        ...new Set(
+          notifications
+            .map((entry) => entry.task_id)
+            .filter((id) => id != null),
+        ),
+      ];
+      if (taggedTaskIds.length === 0) {
+        return { data: [], total: 0 };
+      }
+    }
+
     const [{ data: tasks }, { data: participants }] = await Promise.all([
       baseDataProvider.getList<Task>("tasks", {
         pagination: { page: 1, perPage: 5000 },
@@ -437,8 +465,16 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         filter: {},
       }),
     ]);
+
+    const scopedTasks =
+      taggedTaskIds == null
+        ? tasks
+        : tasks.filter((task) =>
+            taggedTaskIds!.some((id) => String(id) === String(task.id)),
+          );
+
     return filterScopedTasks(
-      tasks,
+      scopedTasks,
       params,
       groupTaskParticipantsByTaskId(participants),
     );

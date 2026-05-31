@@ -72,7 +72,10 @@ const authenticateAdmin = async (
   const member = (await getUserOrganizationMember(data.user)) as Member | null;
   if (!member) return { error: "Forbidden", status: 403 };
   if (!member.administrator) {
-    return { error: "Only administrators can manage Search Console", status: 403 };
+    return {
+      error: "Only administrators can manage Search Console",
+      status: 403,
+    };
   }
   return { member };
 };
@@ -91,10 +94,30 @@ const handleStatus = async (member: Member) => {
   const { data: cred } = await supabaseAdmin
     .from("google_gsc_credentials")
     .select(
-      "google_email, connected_by, last_synced_at, created_at, updated_at",
+      "google_email, refresh_token, connected_by, last_synced_at, created_at, updated_at",
     )
     .eq("org_id", member.org_id)
     .maybeSingle();
+
+  let googleEmail = cred?.google_email ?? null;
+  if (cred?.refresh_token && !googleEmail) {
+    try {
+      const { accessToken } = await getFreshGoogleGscAccessToken(
+        supabaseAdmin,
+        member.org_id,
+      );
+      const email = await fetchGoogleUserEmail(accessToken);
+      if (email) {
+        googleEmail = email;
+        await supabaseAdmin
+          .from("google_gsc_credentials")
+          .update({ google_email: email })
+          .eq("org_id", member.org_id);
+      }
+    } catch {
+      // GSC may work even when userinfo email is unavailable.
+    }
+  }
 
   const { count: snapshotCount } = await supabaseAdmin
     .from("gsc_search_analytics_snapshots")
@@ -103,8 +126,8 @@ const handleStatus = async (member: Member) => {
 
   return json({
     ok: true,
-    connected: Boolean(cred?.google_email),
-    google_email: cred?.google_email ?? null,
+    connected: Boolean(cred?.refresh_token),
+    google_email: googleEmail,
     last_synced_at: cred?.last_synced_at ?? null,
     snapshot_count: snapshotCount ?? 0,
     scope: GOOGLE_GSC_SCOPE,
@@ -228,7 +251,9 @@ const handleOAuthCallback = async (req: Request) => {
         .eq("org_id", stateRow.org_id)
         .maybeSingle();
       if (!existing?.refresh_token) {
-        throw new Error("Google no devolvió refresh_token; revoca acceso y reconecta.");
+        throw new Error(
+          "Google no devolvió refresh_token; revoca acceso y reconecta.",
+        );
       }
       upsertPayload.refresh_token = existing.refresh_token;
     }
@@ -332,7 +357,10 @@ const handleSync = async (
   }
 
   if (!member) {
-    return createErrorResponse(400, "monitored_website_id or sync_all required");
+    return createErrorResponse(
+      400,
+      "monitored_website_id or sync_all required",
+    );
   }
 
   return createErrorResponse(
@@ -370,7 +398,10 @@ Deno.serve(async (req) => {
       const orgId = Number(body.org_id);
       const siteId = Number(body.monitored_website_id);
       if (!Number.isFinite(orgId) || !Number.isFinite(siteId)) {
-        return createErrorResponse(400, "org_id and monitored_website_id required");
+        return createErrorResponse(
+          400,
+          "org_id and monitored_website_id required",
+        );
       }
       const { accessToken } = await getFreshGoogleGscAccessToken(
         supabaseAdmin,

@@ -138,8 +138,8 @@ const CrawlFileCard = ({
           </pre>
           {file.contentTruncated ? (
             <p className="text-xs text-muted-foreground">
-              Contenido truncado en el reporte. Usa &quot;Abrir en sitio&quot; para
-              ver el archivo completo.
+              Contenido truncado en el reporte. Usa &quot;Abrir en sitio&quot;
+              para ver el archivo completo.
             </p>
           ) : null}
         </DialogContent>
@@ -214,7 +214,8 @@ const SiteInfraSection = ({ infra }: { infra: SiteInfraJson }) => {
 
       {infra.headers.noindexHeader ? (
         <p className="mt-2 text-xs font-medium text-red-600">
-          noindex detectado en header — la home puede estar excluida de buscadores
+          noindex detectado en header — la home puede estar excluida de
+          buscadores
         </p>
       ) : null}
     </div>
@@ -225,7 +226,9 @@ const DomainInfraSection = ({ domain }: { domain: DomainInfraJson }) => (
   <div className="rounded-xl border border-border/60 bg-card p-4">
     <div className="flex items-center gap-2">
       <Shield className="size-4 text-muted-foreground" />
-      <p className="text-sm font-semibold">DNS, SSL y email ({domain.hostname})</p>
+      <p className="text-sm font-semibold">
+        DNS, SSL y email ({domain.hostname})
+      </p>
     </div>
     <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
       <div className="rounded-lg border border-border/50 px-3 py-2 text-sm">
@@ -291,7 +294,9 @@ const ChecklistSection = ({ checklist }: { checklist: AiSeoChecklistJson }) => {
 
       {Object.entries(byPillar).map(([pillar, items]) => (
         <div key={pillar} className="space-y-2">
-          <p className="text-sm font-semibold">{pillarLabel[pillar] ?? pillar}</p>
+          <p className="text-sm font-semibold">
+            {pillarLabel[pillar] ?? pillar}
+          </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {items.map((item) => (
               <div
@@ -387,7 +392,9 @@ export const WebsiteAuditCrawlFilesPanel = ({
     return (
       <div className="rounded-xl border border-dashed border-border/60 px-6 py-8 text-center">
         <Bot className="mx-auto mb-3 size-8 text-muted-foreground/60" />
-        <p className="text-sm font-medium">Archivos de rastreo no disponibles</p>
+        <p className="text-sm font-medium">
+          Archivos de rastreo no disponibles
+        </p>
         <p className="mt-1 text-sm text-muted-foreground">
           Regenera el reporte para analizar robots.txt, sitemap.xml, llms.txt,
           security.txt y el AI SEO Checklist.
@@ -399,7 +406,9 @@ export const WebsiteAuditCrawlFilesPanel = ({
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-base font-semibold">Archivos críticos de rastreo</h3>
+        <h3 className="text-base font-semibold">
+          Archivos críticos de rastreo
+        </h3>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           robots.txt, sitemap, llms.txt y security.txt con estado real
           (encontrado, bloqueado por WAF o ausente) y fuente de verificación.
@@ -439,7 +448,9 @@ export const WebsiteAuditCrawlFilesPanel = ({
 
       {crawl.extended ? (
         <div>
-          <p className="mb-3 text-sm font-semibold">Archivos adicionales (P2)</p>
+          <p className="mb-3 text-sm font-semibold">
+            Archivos adicionales (P2)
+          </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {crawl.extended.favicon ? (
               <CrawlFileCard label="favicon" file={crawl.extended.favicon} />
@@ -469,7 +480,10 @@ export const WebsiteAuditCrawlFilesPanel = ({
               />
             ) : null}
             {crawl.extended.humansTxt ? (
-              <CrawlFileCard label="humans.txt" file={crawl.extended.humansTxt} />
+              <CrawlFileCard
+                label="humans.txt"
+                file={crawl.extended.humansTxt}
+              />
             ) : null}
             {crawl.extended.adsTxt ? (
               <CrawlFileCard label="ads.txt" file={crawl.extended.adsTxt} />
@@ -483,10 +497,12 @@ export const WebsiteAuditCrawlFilesPanel = ({
           <p className="font-semibold">Compliance y NAP</p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Badge variant="outline">
-              Privacidad: {staticJson.complianceSignals.hasPrivacyLink ? "sí" : "no"}
+              Privacidad:{" "}
+              {staticJson.complianceSignals.hasPrivacyLink ? "sí" : "no"}
             </Badge>
             <Badge variant="outline">
-              Cookies: {staticJson.complianceSignals.hasCookieBanner ? "sí" : "no"}
+              Cookies:{" "}
+              {staticJson.complianceSignals.hasCookieBanner ? "sí" : "no"}
             </Badge>
             <Badge variant="outline">
               Teléfono:{" "}
@@ -496,7 +512,8 @@ export const WebsiteAuditCrawlFilesPanel = ({
                 : "no"}
             </Badge>
             <Badge variant="outline">
-              NAP schema: {staticJson.complianceSignals.napInSchema ? "sí" : "no"}
+              NAP schema:{" "}
+              {staticJson.complianceSignals.napInSchema ? "sí" : "no"}
             </Badge>
           </div>
         </div>

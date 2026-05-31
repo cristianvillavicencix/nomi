@@ -55,7 +55,11 @@ const findOrCreateChild = (
   return child;
 };
 
-const insertInternalLink = (root: LinkTreeNode, link: PageLinkJson, base: URL) => {
+const insertInternalLink = (
+  root: LinkTreeNode,
+  link: PageLinkJson,
+  base: URL,
+) => {
   let url: URL;
   try {
     url = new URL(link.url, base.href);
@@ -89,11 +93,7 @@ const insertExternalLink = (externalRoot: LinkTreeNode, link: PageLinkJson) => {
     return;
   }
 
-  const hostNode = findOrCreateChild(
-    externalRoot,
-    url.hostname,
-    url.hostname,
-  );
+  const hostNode = findOrCreateChild(externalRoot, url.hostname, url.hostname);
   hostNode.hostname = url.hostname;
 
   const segments = url.pathname.split("/").filter(Boolean);

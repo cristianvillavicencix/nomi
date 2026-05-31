@@ -127,7 +127,11 @@ export const WebsiteAuditSendDialog = ({
           >
             Cancelar
           </Button>
-          <Button type="button" onClick={() => void handleSend()} disabled={sending}>
+          <Button
+            type="button"
+            onClick={() => void handleSend()}
+            disabled={sending}
+          >
             {sending ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />

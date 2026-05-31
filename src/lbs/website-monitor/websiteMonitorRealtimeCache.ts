@@ -7,7 +7,10 @@ export type MonitoredWebsitesListCache = {
   total: number;
 };
 
-export const MONITORED_WEBSITES_LIVE_KEY = ["monitored_websites", "live"] as const;
+export const MONITORED_WEBSITES_LIVE_KEY = [
+  "monitored_websites",
+  "live",
+] as const;
 
 export const getMonitoredWebsitesLiveParams = () => ({
   pagination: { page: 1, perPage: 500 },
@@ -17,17 +20,6 @@ export const getMonitoredWebsitesLiveParams = () => ({
 
 export const getMonitoredWebsitesLiveQueryKey = () =>
   [...MONITORED_WEBSITES_LIVE_KEY, getMonitoredWebsitesLiveParams()] as const;
-
-const sortByLastChecked = (sites: MonitoredWebsite[]) =>
-  sites.slice().sort((a, b) => {
-    const aTime = a.last_checked_at
-      ? new Date(a.last_checked_at).getTime()
-      : 0;
-    const bTime = b.last_checked_at
-      ? new Date(b.last_checked_at).getTime()
-      : 0;
-    return bTime - aTime;
-  });
 
 export const patchMonitoredWebsiteInCache = (
   queryClient: QueryClient,
@@ -52,7 +44,7 @@ export const patchMonitoredWebsiteInCache = (
 
       const data = [...old.data];
       data[index] = { ...data[index], ...patch };
-      return { data: sortByLastChecked(data), total: data.length };
+      return { data, total: data.length };
     },
   );
 };

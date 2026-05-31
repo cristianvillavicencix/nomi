@@ -35,6 +35,7 @@ export type WebsiteAuditAiSummaryJson = {
     how: string;
     impact: "high" | "medium" | "low";
     category?: string | null;
+    expected_result?: string | null;
   }>;
   highlights: {
     strengths: string[];
@@ -44,6 +45,12 @@ export type WebsiteAuditAiSummaryJson = {
   finding_insights?: WebsiteAuditAiFindingInsight[];
   metrics_narrative?: WebsiteAuditAiMetricsNarrative | null;
   links_narrative?: string | null;
+  expected_outcomes?: Array<{
+    area: string;
+    recommendation: string;
+    expected_result: string;
+  }> | null;
+  transformation_closing?: string | null;
 };
 
 type AuditRow = {
@@ -84,7 +91,10 @@ export const buildAuditContextForAi = (params: {
   siteLabel?: string | null;
   findings: AuditFindingInput[];
 }) => {
-  const staticJson = (params.audit.static_json ?? {}) as Record<string, unknown>;
+  const staticJson = (params.audit.static_json ?? {}) as Record<
+    string,
+    unknown
+  >;
   const pageLinks = Array.isArray(staticJson.pageLinks)
     ? (staticJson.pageLinks as Array<Record<string, unknown>>)
     : [];
@@ -131,8 +141,12 @@ export const buildAuditContextForAi = (params: {
     metric_value: finding.metric_value ?? null,
   }));
 
-  const internalLinks = pageLinks.filter((link) => link.isInternal === true).length;
-  const externalLinks = pageLinks.filter((link) => link.isInternal === false).length;
+  const internalLinks = pageLinks.filter(
+    (link) => link.isInternal === true,
+  ).length;
+  const externalLinks = pageLinks.filter(
+    (link) => link.isInternal === false,
+  ).length;
 
   return {
     site_label: params.siteLabel?.trim() || null,
@@ -160,8 +174,8 @@ export const buildAuditContextForAi = (params: {
       : null,
     static_analysis: {
       title: truncate(String(staticJson.title ?? ""), 200) || null,
-      meta_description: truncate(String(staticJson.metaDescription ?? ""), 300) ||
-        null,
+      meta_description:
+        truncate(String(staticJson.metaDescription ?? ""), 300) || null,
       h1_count: staticJson.h1Count ?? null,
       h1_text: truncate(String(staticJson.h1Text ?? ""), 200) || null,
       total_images: staticJson.totalImages ?? pageImages.length,
@@ -177,25 +191,39 @@ export const buildAuditContextForAi = (params: {
       has_llms_txt: staticJson.crawlFiles?.llmsTxt?.found ?? null,
       robots_allows_ai_crawlers:
         staticJson.crawlFiles?.robots?.allowsAiCrawlers ?? null,
-      ai_seo_checklist_score: staticJson.crawlFiles?.aiSeoChecklist?.score ?? null,
+      ai_seo_checklist_score:
+        staticJson.crawlFiles?.aiSeoChecklist?.score ?? null,
       security_txt_found: staticJson.crawlFiles?.securityTxt?.found ?? null,
       waf_detected: staticJson.crawlFiles?.siteInfra?.waf?.detected ?? null,
       ssl_days_remaining:
-        (staticJson.domainInfra as { ssl?: { daysRemaining?: number | null } } | undefined)
-          ?.ssl?.daysRemaining ?? null,
+        (
+          staticJson.domainInfra as
+            | { ssl?: { daysRemaining?: number | null } }
+            | undefined
+        )?.ssl?.daysRemaining ?? null,
       spf_record:
-        (staticJson.domainInfra as { emailAuth?: { spf?: boolean } } | undefined)
-          ?.emailAuth?.spf ?? null,
+        (
+          staticJson.domainInfra as
+            | { emailAuth?: { spf?: boolean } }
+            | undefined
+        )?.emailAuth?.spf ?? null,
       dmarc_record:
-        (staticJson.domainInfra as { emailAuth?: { dmarc?: boolean } } | undefined)
-          ?.emailAuth?.dmarc ?? null,
+        (
+          staticJson.domainInfra as
+            | { emailAuth?: { dmarc?: boolean } }
+            | undefined
+        )?.emailAuth?.dmarc ?? null,
       has_privacy_link:
-        (staticJson.complianceSignals as { hasPrivacyLink?: boolean } | undefined)
-          ?.hasPrivacyLink ?? null,
+        (
+          staticJson.complianceSignals as
+            | { hasPrivacyLink?: boolean }
+            | undefined
+        )?.hasPrivacyLink ?? null,
       http_status: staticJson.httpStatus ?? null,
       expanded_seo: staticJson.expandedSeo ?? null,
-      technologies: (
-        Array.isArray(staticJson.technologies) ? staticJson.technologies : []
+      technologies: (Array.isArray(staticJson.technologies)
+        ? staticJson.technologies
+        : []
       )
         .slice(0, 25)
         .map((tech: Record<string, unknown>) => ({
@@ -211,8 +239,13 @@ export const buildAuditContextForAi = (params: {
   };
 };
 
-const normalizeSummary = (parsed: WebsiteAuditAiSummaryJson): WebsiteAuditAiSummaryJson => {
-  if (!parsed.executive_summary || typeof parsed.executive_summary !== "string") {
+const normalizeSummary = (
+  parsed: WebsiteAuditAiSummaryJson,
+): WebsiteAuditAiSummaryJson => {
+  if (
+    !parsed.executive_summary ||
+    typeof parsed.executive_summary !== "string"
+  ) {
     throw new Error("AI response missing executive_summary");
   }
   if (
@@ -242,6 +275,12 @@ const normalizeSummary = (parsed: WebsiteAuditAiSummaryJson): WebsiteAuditAiSumm
   if (typeof parsed.links_narrative !== "string") {
     parsed.links_narrative = null;
   }
+  if (!Array.isArray(parsed.expected_outcomes)) {
+    parsed.expected_outcomes = [];
+  }
+  if (typeof parsed.transformation_closing !== "string") {
+    parsed.transformation_closing = null;
+  }
   return parsed;
 };
 
@@ -263,8 +302,7 @@ export const generateWebsiteAuditAiSummary = async (
   const model =
     Deno.env.get("ANTHROPIC_MODEL")?.trim() || "claude-sonnet-4-20250514";
 
-  const systemPrompt =
-    `Eres un consultor senior de sitios web para agencias digitales en español (Latinoamérica).
+  const systemPrompt = `Eres un consultor senior de sitios web para agencias digitales en español (Latinoamérica).
 Analiza el JSON del audit y produce contenido útil para clientes NO técnicos.
 REGLAS ESTRICTAS:
 - Usa SOLO datos presentes en el JSON. No inventes métricas, URLs ni hallazgos.
@@ -275,13 +313,17 @@ REGLAS ESTRICTAS:
   "executive_summary": "2-4 párrafos",
   "overall_health": "good" | "needs_work" | "critical",
   "priority_actions": [
-    { "rank": 1, "title": "...", "why": "...", "how": "...", "impact": "high"|"medium"|"low", "category": "performance|seo|a11y|static|best_practices" }
+    { "rank": 1, "title": "...", "why": "...", "how": "...", "impact": "high"|"medium"|"low", "category": "performance|seo|a11y|static|best_practices", "expected_result": "Qué logra el negocio al implementar esta acción (resultado concreto, no técnico)" }
   ],
   "highlights": { "strengths": ["..."], "risks": ["..."] },
   "technical_notes": "opcional o null",
   "finding_insights": [
     { "rank": 1, "plain_language": "Qué significa este hallazgo para alguien sin conocimientos técnicos", "business_impact": "Por qué importa al negocio" }
   ],
+  "expected_outcomes": [
+    { "area": "Velocidad|SEO|Confianza|Conversiones|Visibilidad", "recommendation": "Resumen de qué hay que hacer", "expected_result": "Qué obtiene el cliente al lograrlo (beneficio medible o perceptible)" }
+  ],
+  "transformation_closing": "2-3 oraciones finales: después de aplicar las mejoras prioritarias, el sitio logrará... (visión clara del estado final deseado)",
   "metrics_narrative": {
     "overview": "Resumen general de scores en lenguaje natural",
     "scores": {
@@ -304,7 +346,10 @@ REGLAS ESTRICTAS:
 }
 IMPORTANTE:
 - finding_insights: un objeto por cada hallazgo en findings[] usando el mismo rank (1..N).
-- metrics_narrative: explica scores 0-100 y ms de métricas como los entendería un dueño de negocio.`;
+- metrics_narrative: explica scores 0-100 y ms de métricas como los entendería un dueño de negocio.
+- expected_outcomes: 3-5 objetos agrupando las mejoras por área de negocio (no por hallazgo técnico). Cada expected_result debe responder "¿qué gano yo?" en lenguaje de resultados.
+- transformation_closing: cierre inspirador pero realista basado solo en los datos del audit.
+- priority_actions.expected_result: obligatorio en cada acción — el beneficio concreto de completarla.`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

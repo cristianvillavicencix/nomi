@@ -36,8 +36,8 @@ export const WebsiteAuditOpportunitiesList = ({
       <div>
         <h3 className="text-sm font-semibold">Diagnósticos de oportunidad</h3>
         <p className="text-xs text-muted-foreground">
-          Problemas técnicos concretos que, si los arreglas, mejoran la velocidad
-          del sitio.
+          Problemas técnicos concretos que, si los arreglas, mejoran la
+          velocidad del sitio.
         </p>
       </div>
       {items.length === 0 ? (

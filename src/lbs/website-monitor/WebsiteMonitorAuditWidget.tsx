@@ -4,9 +4,7 @@ import { FileSearch, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useWebsiteAudit } from "@/lbs/website-monitor/audit/useWebsiteAudit";
 import { deltaVsPreviousDone } from "@/lbs/website-monitor/audit/websiteAuditQueries";
-import {
-  formatCheckedAt,
-} from "@/lbs/website-monitor/websiteMonitorUtils";
+import { formatCheckedAt } from "@/lbs/website-monitor/websiteMonitorUtils";
 import type { MonitoredWebsite } from "@/lbs/website-monitor/types";
 import { getWebMonitorShowPath } from "@/lbs/routing";
 import { cn } from "@/lib/utils";
@@ -101,12 +99,9 @@ const AuditSiteRow = ({
   const isPlain = variant === "plain";
 
   const latestDoneIndex = history.findIndex((row) => row.status === "done");
-  const latestDone =
-    latestDoneIndex >= 0 ? history[latestDoneIndex] : null;
+  const latestDone = latestDoneIndex >= 0 ? history[latestDoneIndex] : null;
   const delta =
-    latestDoneIndex >= 0
-      ? deltaVsPreviousDone(history, latestDoneIndex)
-      : null;
+    latestDoneIndex >= 0 ? deltaVsPreviousDone(history, latestDoneIndex) : null;
   const deltaText = formatDelta(delta);
   const active = history.find(
     (row) => row.status === "queued" || row.status === "running",

@@ -1,7 +1,14 @@
 import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import type { AuditFinding, WebsiteAudit, WebsiteAuditAiSummaryJson } from "@/lbs/website-monitor/audit/types";
-import { getAuditSnapshots, snapshotScores } from "@/lbs/website-monitor/audit/auditUtils";
+import type {
+  AuditFinding,
+  WebsiteAudit,
+  WebsiteAuditAiSummaryJson,
+} from "@/lbs/website-monitor/audit/types";
+import {
+  getAuditSnapshots,
+  snapshotScores,
+} from "@/lbs/website-monitor/audit/auditUtils";
 import { parseFindingDescription } from "@/lbs/website-monitor/audit/findingDetailUtils";
 import { WebsiteAuditFindingDetailSections } from "@/lbs/website-monitor/audit/WebsiteAuditFindingDetailSections";
 import {
@@ -95,7 +102,8 @@ export const WebsiteAuditSuggestionsPanel = ({
       <div>
         <h3 className="text-base font-semibold">Plan de acción</h3>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Cada fila es un hallazgo concreto con ubicación y pasos para corregirlo.
+          Cada fila es un hallazgo concreto con ubicación y pasos para
+          corregirlo.
         </p>
         {mobileScores.performance != null ? (
           <p className="mt-2 text-xs text-muted-foreground">
@@ -110,7 +118,8 @@ export const WebsiteAuditSuggestionsPanel = ({
         columns={["", "#", "Impacto", "Hallazgo", "Dónde"]}
       >
         {suggestions.map((finding, index) => {
-          const impact = IMPACT_LABELS[finding.severity] ?? IMPACT_LABELS.importante;
+          const impact =
+            IMPACT_LABELS[finding.severity] ?? IMPACT_LABELS.importante;
           const isOpen = expanded.has(finding.id);
           const aiInsight = findingInsights.get(finding.id);
           const parsed = parseFindingDescription(finding.description);
@@ -143,7 +152,9 @@ export const WebsiteAuditSuggestionsPanel = ({
                   </span>
                 </TableCell>
                 <TableCell className="max-w-[320px] whitespace-normal">
-                  <p className="text-sm font-medium leading-snug">{finding.title}</p>
+                  <p className="text-sm font-medium leading-snug">
+                    {finding.title}
+                  </p>
                   {finding.recommendation ? (
                     <p className="mt-1 line-clamp-2 text-xs text-emerald-800/90">
                       {finding.recommendation}
@@ -156,7 +167,7 @@ export const WebsiteAuditSuggestionsPanel = ({
                       {parsed.locationPreview}
                     </span>
                   ) : (
-                    CATEGORY_LABELS[finding.category] ?? finding.category
+                    (CATEGORY_LABELS[finding.category] ?? finding.category)
                   )}
                 </TableCell>
               </TableRow>

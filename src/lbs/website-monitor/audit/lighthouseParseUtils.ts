@@ -1,4 +1,7 @@
-import { formatLabMetric, labMetricScore } from "@/lbs/website-monitor/audit/labMetricUtils";
+import {
+  formatLabMetric,
+  labMetricScore,
+} from "@/lbs/website-monitor/audit/labMetricUtils";
 
 type LighthouseAudit = {
   id?: string;
@@ -138,9 +141,7 @@ export const parseLighthouseOpportunities = (
     });
   }
 
-  return items.sort(
-    (a, b) => (b.savingsMs ?? 0) - (a.savingsMs ?? 0),
-  );
+  return items.sort((a, b) => (b.savingsMs ?? 0) - (a.savingsMs ?? 0));
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -157,33 +158,28 @@ export const parseLighthouseCategoryStats = (
   const categories = lhr?.categories ?? {};
   const audits = lhr?.audits ?? {};
 
-  return ["performance", "accessibility", "best-practices", "seo"].map(
-    (id) => {
-      const category = categories[id];
-      const refs = category?.auditRefs ?? [];
-      let passed = 0;
-      let total = 0;
+  return ["performance", "accessibility", "best-practices", "seo"].map((id) => {
+    const category = categories[id];
+    const refs = category?.auditRefs ?? [];
+    let passed = 0;
+    let total = 0;
 
-      for (const ref of refs) {
-        const audit = audits[ref.id];
-        if (!audit || audit.scoreDisplayMode === "informative") continue;
-        if (audit.score == null) continue;
-        total += 1;
-        if (audit.score >= 0.9) passed += 1;
-      }
+    for (const ref of refs) {
+      const audit = audits[ref.id];
+      if (!audit || audit.scoreDisplayMode === "informative") continue;
+      if (audit.score == null) continue;
+      total += 1;
+      if (audit.score >= 0.9) passed += 1;
+    }
 
-      return {
-        id,
-        label: CATEGORY_LABELS[id] ?? id,
-        score:
-          category?.score != null
-            ? Math.round(category.score * 100)
-            : null,
-        passed,
-        total,
-      };
-    },
-  );
+    return {
+      id,
+      label: CATEGORY_LABELS[id] ?? id,
+      score: category?.score != null ? Math.round(category.score * 100) : null,
+      passed,
+      total,
+    };
+  });
 };
 
 export const mergeCategoryStatsWithSnapshot = (
@@ -225,7 +221,9 @@ const formatItemLine = (item: Record<string, unknown>): string | null => {
   return null;
 };
 
-const issueStatus = (score: number | null | undefined): LighthouseAuditIssue["status"] => {
+const issueStatus = (
+  score: number | null | undefined,
+): LighthouseAuditIssue["status"] => {
   if (score == null) return "warning";
   if (score >= 0.9) return "passed";
   if (score >= 0.5) return "warning";
@@ -247,7 +245,10 @@ export const parseCategoryAuditIssues = (
   for (const ref of category.auditRefs ?? []) {
     const audit = audits[ref.id];
     if (!audit?.title) continue;
-    if (audit.scoreDisplayMode === "informative" || audit.scoreDisplayMode === "manual") {
+    if (
+      audit.scoreDisplayMode === "informative" ||
+      audit.scoreDisplayMode === "manual"
+    ) {
       continue;
     }
     if (audit.score == null) continue;
@@ -396,8 +397,7 @@ export const parseLabMetricDetails = (
               ? 50
               : 30,
       ),
-      explanation:
-        "Qué tan rápido se pinta visualmente el contenido visible.",
+      explanation: "Qué tan rápido se pinta visualmente el contenido visible.",
       thresholds: "Bueno ≤3.4 s · Mejorable ≤5.8 s · Malo >5.8 s",
       contributesTo: "Performance (velocidad percibida).",
     },

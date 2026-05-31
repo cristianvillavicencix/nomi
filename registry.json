@@ -36,6 +36,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/tasks/useTaskTagNotifications.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/tasks/useTaskPreferences.ts",
           "type": "registry:component"
         },
@@ -132,11 +136,11 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/tasks/TaskTable.tsx",
+          "path": "src/components/atomic-crm/tasks/TasksCalendarPanel.tsx",
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/tasks/TaskNotificationsBanner.tsx",
+          "path": "src/components/atomic-crm/tasks/TaskTable.tsx",
           "type": "registry:component"
         },
         {

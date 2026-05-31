@@ -41,7 +41,11 @@ export const ResponseTimeChart = ({
           {
             axis: "y",
             value: slowThresholdMs,
-            lineStyle: { stroke: "#eab308", strokeWidth: 2, strokeDasharray: "4 4" },
+            lineStyle: {
+              stroke: "#eab308",
+              strokeWidth: 2,
+              strokeDasharray: "4 4",
+            },
             legend: "Slow threshold",
             legendOrientation: "horizontal",
             legendPosition: "top-right",
@@ -50,7 +54,9 @@ export const ResponseTimeChart = ({
         theme={{
           text: { fill: "hsl(var(--muted-foreground))", fontSize: 11 },
           axis: {
-            ticks: { text: { fill: "hsl(var(--muted-foreground))", fontSize: 10 } },
+            ticks: {
+              text: { fill: "hsl(var(--muted-foreground))", fontSize: 10 },
+            },
           },
           grid: { line: { stroke: "hsl(var(--border))", strokeOpacity: 0.5 } },
         }}

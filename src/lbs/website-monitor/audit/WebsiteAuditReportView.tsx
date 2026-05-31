@@ -2,7 +2,11 @@ import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AuditFinding, StaticAnalysisJson, WebsiteAudit } from "@/lbs/website-monitor/audit/types";
+import type {
+  AuditFinding,
+  StaticAnalysisJson,
+  WebsiteAudit,
+} from "@/lbs/website-monitor/audit/types";
 import {
   auditHasLighthouseScores,
   getAuditSnapshots,
@@ -10,7 +14,6 @@ import {
   snapshotScores,
 } from "@/lbs/website-monitor/audit/auditUtils";
 import { ScoreGauge } from "@/lbs/website-monitor/audit/ScoreGauge";
-import { MetricInfo } from "@/lbs/website-monitor/audit/MetricInfo";
 import { WebsiteAuditReportActions } from "@/lbs/website-monitor/audit/WebsiteAuditReportActions";
 import { WebsiteAuditFindingsPanel } from "@/lbs/website-monitor/audit/WebsiteAuditFindingsPanel";
 import { WebsiteAuditImagesPanel } from "@/lbs/website-monitor/audit/WebsiteAuditImagesPanel";
@@ -22,6 +25,7 @@ import { WebsiteAuditAiSummaryPanel } from "@/lbs/website-monitor/audit/WebsiteA
 import { WebsiteAuditSeoTechPanel } from "@/lbs/website-monitor/audit/WebsiteAuditSeoTechPanel";
 import { WebsiteAuditComparisonPanel } from "@/lbs/website-monitor/audit/WebsiteAuditComparisonPanel";
 import { WebsiteAuditGscPanel } from "@/lbs/website-monitor/audit/WebsiteAuditGscPanel";
+import { WebsiteAuditResumenPanel } from "@/lbs/website-monitor/audit/WebsiteAuditResumenPanel";
 import { buildAuditComparison } from "@/lbs/website-monitor/audit/auditComparison";
 import { formatCheckedAt } from "@/lbs/website-monitor/websiteMonitorUtils";
 import { cn } from "@/lib/utils";
@@ -64,16 +68,24 @@ const SummaryDeviceCard = ({
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm font-semibold">{label}</p>
         {delta ? (
-          <span className="text-xs text-muted-foreground">vs anterior: {delta}</span>
+          <span className="text-xs text-muted-foreground">
+            vs anterior: {delta}
+          </span>
         ) : null}
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <ScoreGauge label="Global" value={snapshot.overall} tooltipKey="overall" />
+        <ScoreGauge
+          label="Global"
+          value={snapshot.overall}
+          tooltipKey="overall"
+        />
         <ScoreGauge
           label="Performance"
           value={snapshot.performance}
           tooltipKey="performance"
-          onClick={onCategoryClick ? () => onCategoryClick("performance") : undefined}
+          onClick={
+            onCategoryClick ? () => onCategoryClick("performance") : undefined
+          }
         />
         <ScoreGauge
           label="SEO"
@@ -86,7 +98,9 @@ const SummaryDeviceCard = ({
           value={snapshot.bestPractices}
           tooltipKey="bestPractices"
           onClick={
-            onCategoryClick ? () => onCategoryClick("best-practices") : undefined
+            onCategoryClick
+              ? () => onCategoryClick("best-practices")
+              : undefined
           }
         />
       </div>
@@ -142,7 +156,8 @@ export const WebsiteAuditReportView = ({
     (staticJson.brokenImages ?? 0);
   const brokenLinkCount = staticJson.brokenLinkCount ?? 0;
   const socialCount = staticJson.socialLinks?.length ?? 0;
-  const linkCount = staticJson.totalPageLinks ?? staticJson.pageLinks?.length ?? 0;
+  const linkCount =
+    staticJson.totalPageLinks ?? staticJson.pageLinks?.length ?? 0;
   const aiSummary = audit.ai_summary_json ?? null;
   const expandedSeoScore = staticJson.expandedSeo?.expandedSeoScore;
   const comparison = buildAuditComparison(
@@ -175,7 +190,11 @@ export const WebsiteAuditReportView = ({
                 {STATUS_LABELS.done}
               </span>
             ) : (
-              <Badge variant={audit.status === "failed" ? "destructive" : "secondary"}>
+              <Badge
+                variant={
+                  audit.status === "failed" ? "destructive" : "secondary"
+                }
+              >
                 {STATUS_LABELS[audit.status] ?? audit.status}
               </Badge>
             )}
@@ -201,7 +220,8 @@ export const WebsiteAuditReportView = ({
             <p className="mt-1 text-muted-foreground">
               El hosting bloqueó el fetch automático del worker
               {staticJson.httpStatus ? ` (HTTP ${staticJson.httpStatus})` : ""}.
-              Este reporte se generó con navegador Chrome; los datos son válidos.
+              Este reporte se generó con navegador Chrome; los datos son
+              válidos.
             </p>
           </div>
         </div>
@@ -281,7 +301,7 @@ export const WebsiteAuditReportView = ({
                 {audit.ai_summary_status === "done" ? (
                   <span className="ml-1.5 inline-flex size-2 rounded-full bg-primary" />
                 ) : audit.ai_summary_status === "running" ||
-                    audit.ai_summary_status === "pending" ? (
+                  audit.ai_summary_status === "pending" ? (
                   <span className="ml-1.5 inline-flex size-2 animate-pulse rounded-full bg-amber-500" />
                 ) : null}
               </TabsTrigger>
@@ -289,83 +309,30 @@ export const WebsiteAuditReportView = ({
 
             <TabsContent
               value="resumen"
-              className="mt-6 space-y-6"
+              className="mt-6"
               data-print-label="Resumen"
             >
-              {hasScores ? (
-                <div className="flex flex-col items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-8">
-                  <div className="flex items-center gap-1">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Score combinado (70% móvil · 30% desktop)
-                    </p>
-                    <MetricInfo tooltipKey="combined" />
-                  </div>
-                  <ScoreGauge
-                    label=""
-                    value={audit.overall_score}
-                    size="xl"
-                    tooltipKey="combined"
-                  />
-                </div>
-              ) : null}
-              <div className="grid gap-4 lg:grid-cols-2">
-                <SummaryDeviceCard
-                  label="Móvil"
-                  snapshot={mobileScores}
-                  previousSnapshot={
-                    prevSnapshots?.mobile
-                      ? snapshotScores(prevSnapshots.mobile)
-                      : null
-                  }
-                  onCategoryClick={drillToMetrics}
-                />
-                <SummaryDeviceCard
-                  label="Desktop"
-                  snapshot={desktopScores}
-                  previousSnapshot={
-                    prevSnapshots?.desktop
-                      ? snapshotScores(prevSnapshots.desktop)
-                      : null
-                  }
-                  onCategoryClick={drillToMetrics}
-                />
-              </div>
-              {(staticJson.title || staticJson.metaDescription) && (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-border/60 bg-card p-4 text-sm">
-                    <p className="text-xs font-medium uppercase text-muted-foreground">
-                      Título
-                    </p>
-                    <p className="mt-1 font-medium">{staticJson.title ?? "—"}</p>
-                  </div>
-                  <div className="rounded-xl border border-border/60 bg-card p-4 text-sm">
-                    <p className="text-xs font-medium uppercase text-muted-foreground">
-                      Meta descripción
-                    </p>
-                    <p className="mt-1 text-muted-foreground line-clamp-2">
-                      {staticJson.metaDescription ?? "—"}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {audit.crux_has_data ? (
-                <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  {cruxLabel}:
-                  {audit.field_lcp_ms != null
-                    ? ` LCP ${Math.round(Number(audit.field_lcp_ms))} ms`
-                    : ""}
-                  {audit.field_cls != null
-                    ? ` · CLS ${Number(audit.field_cls).toFixed(3)}`
-                    : ""}
-                  {audit.field_inp_ms != null
-                    ? ` · INP ${Math.round(Number(audit.field_inp_ms))} ms`
-                    : ""}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Sin datos CrUX de campo (tráfico insuficiente en Chrome).
-                </p>
-              )}
+              <WebsiteAuditResumenPanel
+                audit={audit}
+                aiSummary={aiSummary}
+                findings={findings}
+                mobileScores={mobileScores}
+                desktopScores={desktopScores}
+                previousMobileScores={
+                  prevSnapshots?.mobile
+                    ? snapshotScores(prevSnapshots.mobile)
+                    : null
+                }
+                previousDesktopScores={
+                  prevSnapshots?.desktop
+                    ? snapshotScores(prevSnapshots.desktop)
+                    : null
+                }
+                hasScores={hasScores}
+                onCategoryClick={drillToMetrics}
+                staticJson={staticJson}
+                cruxLabel={cruxLabel}
+              />
             </TabsContent>
 
             <TabsContent
@@ -476,7 +443,9 @@ export const WebsiteAuditReportView = ({
           <>
             <SummaryDeviceCard
               label="Scores"
-              snapshot={mobileScores.overall != null ? mobileScores : desktopScores}
+              snapshot={
+                mobileScores.overall != null ? mobileScores : desktopScores
+              }
             />
             <WebsiteAuditImagesPanel staticJson={staticJson} />
             <WebsiteAuditFindingsPanel findings={findings} />

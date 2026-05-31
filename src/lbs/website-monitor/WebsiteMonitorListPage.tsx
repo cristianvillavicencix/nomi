@@ -9,7 +9,13 @@ import {
   ResourceContextProvider,
   type Identifier,
 } from "ra-core";
-import { Globe, Loader2, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import {
+  Globe,
+  Loader2,
+  RefreshCw,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,10 +69,30 @@ import {
 import { getClientShowPath } from "@/lbs/routing";
 import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 import { useMonitoredWebsitesLive } from "@/lbs/website-monitor/useMonitoredWebsitesLive";
+import {
+  markDailyCompanySyncDone,
+  shouldRunDailyCompanySync,
+} from "@/lbs/website-monitor/websiteMonitorBootstrap";
+import {
+  applyStableSiteOrder,
+  getPersistedSortOrder,
+  persistSortOrder,
+  resetStableSiteOrder,
+  WEBSITE_MONITOR_SORT_LABELS,
+  withListOrder,
+  type MonitoredWebsiteListRow,
+  type WebsiteMonitorSortOrder,
+} from "@/lbs/website-monitor/websiteMonitorSiteSort";
 import { patchMonitoredWebsiteInCache } from "@/lbs/website-monitor/websiteMonitorRealtimeCache";
 import type { WebsiteMonitorStatus } from "@/lbs/website-monitor/types";
 
-type StatusFilter = "all" | "up" | "slow" | "down" | "unknown" | "opportunities";
+type StatusFilter =
+  | "all"
+  | "up"
+  | "slow"
+  | "down"
+  | "unknown"
+  | "opportunities";
 
 export const WebsiteMonitorListPage = () => {
   const navigate = useNavigate();
@@ -78,8 +104,14 @@ export const WebsiteMonitorListPage = () => {
   const [hostingFilter, setHostingFilter] = useState("all");
   const [techFilter, setTechFilter] = useState("all");
   const [sectorFilter, setSectorFilter] = useState("all");
-  const [checkingIds, setCheckingIds] = useState<Set<Identifier>>(() => new Set());
-  const bootstrapStarted = useRef(false);
+  const [sortOrder, setSortOrder] = useState<WebsiteMonitorSortOrder>(
+    getPersistedSortOrder,
+  );
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [checkingIds, setCheckingIds] = useState<Set<Identifier>>(
+    () => new Set(),
+  );
+  const dailySyncStartedRef = useRef(false);
   const { enabled: moduleEnabled, isPending: settingsPending } =
     useWebsiteMonitorEnabled();
 
@@ -91,18 +123,42 @@ export const WebsiteMonitorListPage = () => {
   } = useMonitoredWebsitesLive(moduleEnabled);
 
   useEffect(() => {
-    if (!moduleEnabled || bootstrapStarted.current) return;
-    bootstrapStarted.current = true;
+    if (!moduleEnabled || dailySyncStartedRef.current) return;
+    dailySyncStartedRef.current = true;
+
+    if (!shouldRunDailyCompanySync()) return;
 
     void (async () => {
       try {
         await dataProvider.websiteMonitorSync();
+        markDailyCompanySyncDone();
+        resetStableSiteOrder();
         void refetchSites();
       } catch {
-        // Sync is best-effort on load; cron and company triggers keep data fresh.
+        // Manual sync available; list stays on cache + Realtime.
       }
     })();
   }, [dataProvider, moduleEnabled, refetchSites]);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      await dataProvider.websiteMonitorSync();
+      markDailyCompanySyncDone();
+      resetStableSiteOrder();
+      await refetchSites();
+      notify("Lista actualizada", { type: "info" });
+    } catch {
+      notify("No se pudo sincronizar. Intenta de nuevo.", { type: "error" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const orderedSites = useMemo(
+    () => applyStableSiteOrder(sites, sortOrder),
+    [sites, sortOrder],
+  );
 
   const filterOptions = useMemo(() => {
     return {
@@ -114,17 +170,23 @@ export const WebsiteMonitorListPage = () => {
 
   const filteredSites = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return sites.filter((site) => {
+    const filtered = orderedSites.filter((site) => {
       if (hostingFilter !== "all" && site.hosting_provider !== hostingFilter) {
         return false;
       }
-      if (techFilter !== "all" && !(site.tech_stack ?? []).includes(techFilter)) {
+      if (
+        techFilter !== "all" &&
+        !(site.tech_stack ?? []).includes(techFilter)
+      ) {
         return false;
       }
       if (sectorFilter !== "all" && site.company_sector !== sectorFilter) {
         return false;
       }
-      if (statusFilter === "opportunities" && !isMarketingOpportunity(site.last_status)) {
+      if (
+        statusFilter === "opportunities" &&
+        !isMarketingOpportunity(site.last_status)
+      ) {
         return false;
       }
       if (
@@ -145,7 +207,15 @@ export const WebsiteMonitorListPage = () => {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
-  }, [hostingFilter, search, sectorFilter, sites, statusFilter, techFilter]);
+    return withListOrder(filtered);
+  }, [
+    hostingFilter,
+    orderedSites,
+    search,
+    sectorFilter,
+    statusFilter,
+    techFilter,
+  ]);
 
   const statusCounts = useMemo(
     () => ({
@@ -197,9 +267,23 @@ export const WebsiteMonitorListPage = () => {
       <PageActions>
         <PageTitle label="Web Monitor" count={total ?? sites.length} />
         <AddWebsiteMonitorDialog />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={isSyncing || !moduleEnabled}
+          onClick={() => void handleManualSync()}
+        >
+          {isSyncing ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 size-4" />
+          )}
+          {isSyncing ? "Sincronizando…" : "Sincronizar empresas"}
+        </Button>
         <ModuleInfoPopover
           title="Web Monitor"
-          description="Todas las empresas con sitio web se sincronizan solas. Los chequeos corren cada 5 minutos; usa el ícono de refresh en cada fila para actualizar al instante."
+          description="La lista se carga al instante desde caché. Las métricas (estado, respuesta) se actualizan en vivo; el orden de la tabla no salta. Sincronizar empresas (1× al día automático) trae sitios nuevos de clientes. Usa el refresh en cada fila para chequear un sitio al momento."
         />
       </PageActions>
 
@@ -213,81 +297,126 @@ export const WebsiteMonitorListPage = () => {
                 <p className="mt-1 text-sm text-muted-foreground">
                   Actívalo en Settings para reanudar chequeos y alertas.
                 </p>
-                <Button type="button" variant="outline" size="sm" className="mt-4" asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  asChild
+                >
                   <Link to="/settings?tab=web-monitor">Ir a Settings</Link>
                 </Button>
               </CardContent>
             </Card>
           ) : (
             <>
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
-            >
-              <TabsList className="h-auto flex-wrap">
-                <TabsTrigger value="all">Todos ({statusCounts.all})</TabsTrigger>
-                <TabsTrigger value="up">Up ({statusCounts.up})</TabsTrigger>
-                <TabsTrigger value="slow">Slow ({statusCounts.slow})</TabsTrigger>
-                <TabsTrigger value="down">Down ({statusCounts.down})</TabsTrigger>
-                <TabsTrigger value="opportunities">
-                  Outreach ({statusCounts.opportunities})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <div className="relative min-w-[180px] flex-1 basis-[200px] sm:max-w-xs">
-              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar empresa o URL"
-                className="pl-9"
-              />
-            </div>
-            <WebsiteMonitorFiltersPopover
-              hostingFilter={hostingFilter}
-              techFilter={techFilter}
-              sectorFilter={sectorFilter}
-              filterOptions={filterOptions}
-              activeFilterCount={activeFilterCount}
-              onHostingChange={setHostingFilter}
-              onTechChange={setTechFilter}
-              onSectorChange={setSectorFilter}
-              onClear={() => {
-                setHostingFilter("all");
-                setTechFilter("all");
-                setSectorFilter("all");
-              }}
-            />
-          </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Tabs
+                  value={statusFilter}
+                  onValueChange={(value) =>
+                    setStatusFilter(value as StatusFilter)
+                  }
+                >
+                  <TabsList className="h-auto flex-wrap">
+                    <TabsTrigger value="all">
+                      Todos ({statusCounts.all})
+                    </TabsTrigger>
+                    <TabsTrigger value="up">Up ({statusCounts.up})</TabsTrigger>
+                    <TabsTrigger value="slow">
+                      Slow ({statusCounts.slow})
+                    </TabsTrigger>
+                    <TabsTrigger value="down">
+                      Down ({statusCounts.down})
+                    </TabsTrigger>
+                    <TabsTrigger value="opportunities">
+                      Outreach ({statusCounts.opportunities})
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <div className="relative min-w-[180px] flex-1 basis-[200px] sm:max-w-xs">
+                  <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Buscar empresa o URL"
+                    className="pl-9"
+                  />
+                </div>
+                <WebsiteMonitorFiltersPopover
+                  hostingFilter={hostingFilter}
+                  techFilter={techFilter}
+                  sectorFilter={sectorFilter}
+                  filterOptions={filterOptions}
+                  activeFilterCount={activeFilterCount}
+                  onHostingChange={setHostingFilter}
+                  onTechChange={setTechFilter}
+                  onSectorChange={setSectorFilter}
+                  onClear={() => {
+                    setHostingFilter("all");
+                    setTechFilter("all");
+                    setSectorFilter("all");
+                  }}
+                />
+                <Select
+                  value={sortOrder}
+                  onValueChange={(value) => {
+                    const next = value as WebsiteMonitorSortOrder;
+                    setSortOrder(next);
+                    persistSortOrder(next);
+                    resetStableSiteOrder();
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-9 w-[180px]"
+                    aria-label="Ordenar lista"
+                  >
+                    <SelectValue placeholder="Ordenar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(
+                      Object.keys(
+                        WEBSITE_MONITOR_SORT_LABELS,
+                      ) as WebsiteMonitorSortOrder[]
+                    ).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {WEBSITE_MONITOR_SORT_LABELS[key]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {isInitialLoading ? (
-            <div className="min-h-[320px] rounded-lg border border-dashed border-border/60 flex items-center justify-center">
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Cargando sitios…
-              </p>
-            </div>
-          ) : !filteredSites.length ? (
-            <Card>
-              <CardContent className="py-10 text-center">
-                <Globe className="mx-auto mb-3 size-8 text-muted-foreground" />
-                <p className="font-medium">Aún no hay sitios para monitorear</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Agrega un sitio web al guardar una empresa o cliente y aparecerá
-                  aquí automáticamente.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <PaginatedWebsiteTable
-              filterKey={`${statusFilter}-${hostingFilter}-${techFilter}-${sectorFilter}-${search}`}
-              sites={filteredSites}
-              checkingIds={checkingIds}
-              onCheckSite={handleCheckSite}
-              onOpenSite={(siteId) => navigate(`/web-monitor/${siteId}/show`)}
-            />
-          )}
+              {isInitialLoading ? (
+                <div className="min-h-[320px] rounded-lg border border-dashed border-border/60 flex items-center justify-center">
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Cargando sitios…
+                  </p>
+                </div>
+              ) : !filteredSites.length ? (
+                <Card>
+                  <CardContent className="py-10 text-center">
+                    <Globe className="mx-auto mb-3 size-8 text-muted-foreground" />
+                    <p className="font-medium">
+                      Aún no hay sitios para monitorear
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Agrega un sitio web al guardar una empresa o cliente y
+                      aparecerá aquí automáticamente.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <PaginatedWebsiteTable
+                  filterKey={`${statusFilter}-${hostingFilter}-${techFilter}-${sectorFilter}-${search}-${sortOrder}`}
+                  sites={filteredSites}
+                  checkingIds={checkingIds}
+                  onCheckSite={handleCheckSite}
+                  onOpenSite={(siteId) =>
+                    navigate(`/web-monitor/${siteId}/show`)
+                  }
+                />
+              )}
             </>
           )}
         </div>
@@ -414,7 +543,7 @@ const PaginatedWebsiteTable = ({
   onOpenSite,
 }: {
   filterKey: string;
-  sites: MonitoredWebsite[];
+  sites: MonitoredWebsiteListRow[];
   checkingIds: Set<Identifier>;
   onCheckSite: (siteId: Identifier) => Promise<void>;
   onOpenSite: (siteId: Identifier) => void;
@@ -424,7 +553,7 @@ const PaginatedWebsiteTable = ({
     total: sites.length,
     resource: "monitored_websites",
     perPage: 25,
-    sort: { field: "last_checked_at", order: "DESC" },
+    sort: { field: "_listOrder", order: "ASC" },
   });
   const records = listContext.data ?? [];
 
@@ -437,7 +566,12 @@ const PaginatedWebsiteTable = ({
     if (listContext.page > maxPage) {
       listContext.setPage(maxPage);
     }
-  }, [listContext.page, listContext.perPage, listContext.setPage, sites.length]);
+  }, [
+    listContext.page,
+    listContext.perPage,
+    listContext.setPage,
+    sites.length,
+  ]);
 
   return (
     <ResourceContextProvider value="monitored_websites">
@@ -472,7 +606,9 @@ const PaginatedWebsiteTable = ({
                         <WebsiteMonitorFavicon
                           url={record.url}
                           label={
-                            record.display_name || record.company_name || record.url
+                            record.display_name ||
+                            record.company_name ||
+                            record.url
                           }
                           size="sm"
                         />
@@ -482,7 +618,9 @@ const PaginatedWebsiteTable = ({
                           <WebsiteStatusDot status={record.last_status} />
                           <div className="min-w-0">
                             <p className="truncate font-medium">
-                              {record.display_name || record.company_name || "—"}
+                              {record.display_name ||
+                                record.company_name ||
+                                "—"}
                             </p>
                             {record.company_id ? (
                               <Link

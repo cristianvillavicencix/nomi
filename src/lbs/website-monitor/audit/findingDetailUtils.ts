@@ -70,7 +70,9 @@ export const getFindingSourceLabel = (finding: AuditFinding) => {
   return rule ? `${source} · ${rule}` : source;
 };
 
-export const getStaticFindingWhereHint = (finding: AuditFinding): string | null => {
+export const getStaticFindingWhereHint = (
+  finding: AuditFinding,
+): string | null => {
   const id = finding.source_id ?? "";
   if (id.includes("broken-links") || id.includes("broken-link")) {
     return "Enlaces en menú, footer, botones o contenido de la página";
@@ -132,7 +134,8 @@ export const buildFindingFilterOptions = (findings: AuditFinding[]) => {
   const severityCounts = {
     critico: findings.filter((f) => f.severity === "critico").length,
     importante: findings.filter((f) => f.severity === "importante").length,
-    "nice-to-have": findings.filter((f) => f.severity === "nice-to-have").length,
+    "nice-to-have": findings.filter((f) => f.severity === "nice-to-have")
+      .length,
   };
 
   const categoryLabels: Record<string, string> = {
@@ -146,7 +149,10 @@ export const buildFindingFilterOptions = (findings: AuditFinding[]) => {
 
   return [
     { value: "all" as const, label: `Todos (${findings.length})` },
-    { value: "critico" as const, label: `Críticos (${severityCounts.critico})` },
+    {
+      value: "critico" as const,
+      label: `Críticos (${severityCounts.critico})`,
+    },
     {
       value: "importante" as const,
       label: `Importantes (${severityCounts.importante})`,
@@ -167,7 +173,11 @@ export const filterFindings = (
   filter: FindingFilterValue,
 ) => {
   let list = findings;
-  if (filter === "critico" || filter === "importante" || filter === "nice-to-have") {
+  if (
+    filter === "critico" ||
+    filter === "importante" ||
+    filter === "nice-to-have"
+  ) {
     list = list.filter((f) => f.severity === filter);
   } else if (filter.startsWith("cat:")) {
     const cat = filter.slice(4);

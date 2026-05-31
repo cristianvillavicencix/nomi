@@ -34,7 +34,11 @@ const LinkRow = ({ link, depth }: { link: PageLinkJson; depth: number }) => (
         link.ok ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700",
       )}
     >
-      {link.ok ? <CheckCircle2 className="size-3" /> : <XCircle className="size-3" />}
+      {link.ok ? (
+        <CheckCircle2 className="size-3" />
+      ) : (
+        <XCircle className="size-3" />
+      )}
       {statusLabel(link)}
     </span>
     <div className="min-w-0 flex-1">
@@ -101,7 +105,9 @@ const TreeBranch = ({
         <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">
           {node.stats.total}
           {node.stats.broken > 0 ? (
-            <span className="ml-1 text-red-600">· {node.stats.broken} rotos</span>
+            <span className="ml-1 text-red-600">
+              · {node.stats.broken} rotos
+            </span>
           ) : null}
         </span>
       </button>
@@ -133,9 +139,13 @@ export const WebsiteAuditLinkTreeView = ({
   external: LinkTreeNode;
 }) => {
   const hasInternal =
-    internal.stats.total > 0 || internal.links.length > 0 || internal.children.length > 0;
+    internal.stats.total > 0 ||
+    internal.links.length > 0 ||
+    internal.children.length > 0;
   const hasExternal =
-    external.stats.total > 0 || external.links.length > 0 || external.children.length > 0;
+    external.stats.total > 0 ||
+    external.links.length > 0 ||
+    external.children.length > 0;
 
   if (!hasInternal && !hasExternal) {
     return (

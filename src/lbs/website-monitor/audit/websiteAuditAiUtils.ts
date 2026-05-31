@@ -38,3 +38,33 @@ export const getMetricsNarrative = (
 export const getLinksNarrative = (
   aiSummary?: WebsiteAuditAiSummaryJson | null,
 ) => aiSummary?.links_narrative?.trim() || null;
+
+const HEALTH_HEADLINES: Record<
+  WebsiteAuditAiSummaryJson["overall_health"],
+  string
+> = {
+  good: "Tu sitio está en buen camino",
+  needs_work: "Tu sitio necesita mejoras",
+  critical: "Tu sitio requiere atención urgente",
+};
+
+export const getHealthHeadline = (
+  aiSummary?: WebsiteAuditAiSummaryJson | null,
+) =>
+  aiSummary?.overall_health ? HEALTH_HEADLINES[aiSummary.overall_health] : null;
+
+export const getResumenOverview = (
+  aiSummary?: WebsiteAuditAiSummaryJson | null,
+) => {
+  const overview = aiSummary?.metrics_narrative?.overview?.trim();
+  if (overview) return overview;
+  const executive = aiSummary?.executive_summary?.trim();
+  if (!executive) return null;
+  return executive.split(/\n\n+/)[0]?.trim() || executive;
+};
+
+export const countFindingsBySeverity = (findings: AuditFinding[]) => ({
+  critico: findings.filter((f) => f.severity === "critico").length,
+  importante: findings.filter((f) => f.severity === "importante").length,
+  "nice-to-have": findings.filter((f) => f.severity === "nice-to-have").length,
+});

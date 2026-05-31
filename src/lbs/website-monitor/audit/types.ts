@@ -40,6 +40,7 @@ export type WebsiteAuditAiSummaryJson = {
     how: string;
     impact: "high" | "medium" | "low";
     category?: string | null;
+    expected_result?: string | null;
   }>;
   highlights: {
     strengths: string[];
@@ -49,6 +50,12 @@ export type WebsiteAuditAiSummaryJson = {
   finding_insights?: WebsiteAuditAiFindingInsight[];
   metrics_narrative?: WebsiteAuditAiMetricsNarrative | null;
   links_narrative?: string | null;
+  expected_outcomes?: Array<{
+    area: string;
+    recommendation: string;
+    expected_result: string;
+  }> | null;
+  transformation_closing?: string | null;
 };
 
 export type WebsiteAuditStatus = "queued" | "running" | "done" | "failed";
@@ -153,7 +160,12 @@ export type RobotsTxtJson = CrawlFileJson & {
 
 export type SitemapJson = CrawlFileJson & {
   urlCount?: number | null;
-  sitemapRoute?: "default" | "robots_txt" | "wp_sitemap" | "sitemap_index" | "none";
+  sitemapRoute?:
+    | "default"
+    | "robots_txt"
+    | "wp_sitemap"
+    | "sitemap_index"
+    | "none";
   candidatesTried?: string[];
   /** @deprecated use sitemapRoute */
   source?: "default" | "robots_txt" | "wp_sitemap" | "sitemap_index" | "none";

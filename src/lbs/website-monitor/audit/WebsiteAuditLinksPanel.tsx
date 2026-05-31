@@ -49,7 +49,8 @@ export const WebsiteAuditLinksPanel = ({
   const [filter, setFilter] = useState<LinkFilter>("all");
   const links = staticJson.pageLinks ?? [];
   const total = staticJson.totalPageLinks ?? links.length;
-  const broken = staticJson.brokenLinkCount ?? links.filter((l) => !l.ok).length;
+  const broken =
+    staticJson.brokenLinkCount ?? links.filter((l) => !l.ok).length;
   const checked = staticJson.checkedLinkCount ?? links.length;
   const linksNarrative = getLinksNarrative(aiSummary);
 

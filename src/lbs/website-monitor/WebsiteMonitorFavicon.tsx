@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Globe } from "lucide-react";
 import { getWebsiteFaviconSources } from "@/lbs/website-monitor/websiteMonitorUtils";
 import { cn } from "@/lib/utils";

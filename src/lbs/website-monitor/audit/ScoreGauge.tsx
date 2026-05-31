@@ -33,7 +33,9 @@ export const ScoreGauge = ({
   onClick?: () => void;
 }) => {
   const target = value != null ? Math.max(0, Math.min(100, value)) : null;
-  const [display, setDisplay] = useState(animate && target != null ? 0 : target);
+  const [display, setDisplay] = useState(
+    animate && target != null ? 0 : target,
+  );
 
   useEffect(() => {
     if (!animate || target == null) {
@@ -65,56 +67,62 @@ export const ScoreGauge = ({
       ? METRIC_TOOLTIPS[tooltipKey as keyof typeof METRIC_TOOLTIPS]
       : undefined;
 
-  const Wrapper = onClick ? "button" : "div";
-
-  return (
-    <Wrapper
-      type={onClick ? "button" : undefined}
-      onClick={onClick}
-      className={cn(
-        "flex flex-col items-center gap-1.5 text-center",
-        onClick &&
-          "cursor-pointer rounded-lg transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-      )}
-    >
-      <div className="relative" style={{ width: dims, height: dims }}>
-        <svg width={dims} height={dims} className="-rotate-90">
+  const gauge = (
+    <div className="relative" style={{ width: dims, height: dims }}>
+      <svg width={dims} height={dims} className="-rotate-90">
+        <circle
+          cx={dims / 2}
+          cy={dims / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          className="stroke-muted/40"
+        />
+        {target != null ? (
           <circle
             cx={dims / 2}
             cy={dims / 2}
             r={radius}
             fill="none"
             strokeWidth={stroke}
-            className="stroke-muted/40"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className={`transition-[stroke-dashoffset] duration-150 ${scoreRingClass(shown)}`}
           />
-          {target != null ? (
-            <circle
-              cx={dims / 2}
-              cy={dims / 2}
-              r={radius}
-              fill="none"
-              strokeWidth={stroke}
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              className={`transition-[stroke-dashoffset] duration-150 ${scoreRingClass(shown)}`}
-            />
-          ) : null}
-        </svg>
-        <span
-          className={`absolute inset-0 flex items-center justify-center font-semibold tabular-nums ${
-            size === "xl"
-              ? "text-4xl"
-              : size === "lg"
-                ? "text-2xl"
-                : size === "sm"
-                  ? "text-sm"
-                  : "text-lg"
-          } ${target != null ? scoreColorClass(shown) : "text-muted-foreground"}`}
+        ) : null}
+      </svg>
+      <span
+        className={`absolute inset-0 flex items-center justify-center font-semibold tabular-nums ${
+          size === "xl"
+            ? "text-4xl"
+            : size === "lg"
+              ? "text-2xl"
+              : size === "sm"
+                ? "text-sm"
+                : "text-lg"
+        } ${target != null ? scoreColorClass(shown) : "text-muted-foreground"}`}
+      >
+        {target != null ? shown : "—"}
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 text-center">
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className={cn(
+            "cursor-pointer rounded-lg transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          )}
         >
-          {target != null ? shown : "—"}
-        </span>
-      </div>
+          {gauge}
+        </button>
+      ) : (
+        gauge
+      )}
       {label ? (
         <div className="flex max-w-[6rem] items-center justify-center gap-0.5">
           <span className="text-xs text-muted-foreground">{label}</span>
@@ -126,6 +134,6 @@ export const ScoreGauge = ({
       {onClick ? (
         <span className="text-[10px] text-primary/80">Ver detalle →</span>
       ) : null}
-    </Wrapper>
+    </div>
   );
 };

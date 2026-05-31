@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import {
-  useDataProvider,
-  useGetList,
-  useNotify,
-  useRefresh,
-} from "ra-core";
+import { useDataProvider, useGetList, useNotify, useRefresh } from "ra-core";
 import { ExternalLink, Loader2, Megaphone, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +25,11 @@ import {
 } from "@/lbs/website-monitor/websiteMonitorUtils";
 import { getClientShowPath, getWebMonitorPath } from "@/lbs/routing";
 
-export const WebsiteMonitorShowContent = ({ site }: { site: MonitoredWebsite }) => {
+export const WebsiteMonitorShowContent = ({
+  site,
+}: {
+  site: MonitoredWebsite;
+}) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialTab =
@@ -40,14 +39,12 @@ export const WebsiteMonitorShowContent = ({ site }: { site: MonitoredWebsite }) 
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [isChecking, setIsChecking] = useState(false);
 
-  const { data: checks = [], isPending: checksPending } = useGetList<WebsiteCheck>(
-    "website_checks",
-    {
+  const { data: checks = [], isPending: checksPending } =
+    useGetList<WebsiteCheck>("website_checks", {
       filter: { "monitored_website_id@eq": site.id },
       sort: { field: "checked_at", order: "DESC" },
       pagination: { page: 1, perPage: 100 },
-    },
-  );
+    });
 
   const { data: changes = [] } = useGetList<WebsiteMonitorChange>(
     "website_monitor_changes",
@@ -166,7 +163,9 @@ const TabPanels = ({
           <CardHeader>
             <CardTitle>Notas</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm whitespace-pre-wrap">{site.notes}</CardContent>
+          <CardContent className="text-sm whitespace-pre-wrap">
+            {site.notes}
+          </CardContent>
         </Card>
       ) : null}
       <WebsiteMonitorAlertSettings site={site} />
@@ -188,7 +187,8 @@ const TabPanels = ({
         <CardContent>
           {!pageChecks?.length ? (
             <p className="text-sm text-muted-foreground">
-              Solo se analiza la home. Edita las rutas en configuración del sitio.
+              Solo se analiza la home. Edita las rutas en configuración del
+              sitio.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -220,7 +220,9 @@ const TabPanels = ({
                       <td className="py-2 pr-4 tabular-nums">
                         {formatResponseMs(page.responseMs)}
                       </td>
-                      <td className="py-2 tabular-nums">{page.httpStatus ?? "—"}</td>
+                      <td className="py-2 tabular-nums">
+                        {page.httpStatus ?? "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -243,7 +245,9 @@ const TabPanels = ({
         </CardHeader>
         <CardContent>
           {!changes.length ? (
-            <p className="text-sm text-muted-foreground">Sin cambios registrados aún.</p>
+            <p className="text-sm text-muted-foreground">
+              Sin cambios registrados aún.
+            </p>
           ) : (
             <div className="space-y-3">
               {changes.map((change) => (
@@ -253,7 +257,8 @@ const TabPanels = ({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">
-                      {CHANGE_TYPE_LABELS[change.change_type] ?? change.change_type}
+                      {CHANGE_TYPE_LABELS[change.change_type] ??
+                        change.change_type}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {formatCheckedAt(change.detected_at)}
@@ -332,12 +337,17 @@ const TabPanels = ({
           {isMarketingOpportunity(site.last_status) ? (
             <>
               <p>
-                Este sitio está <strong>{site.last_status === "down" ? "caído" : "lento"}</strong>.
-                Buen momento para ofrecer mantenimiento, hosting o rediseño.
+                Este sitio está{" "}
+                <strong>
+                  {site.last_status === "down" ? "caído" : "lento"}
+                </strong>
+                . Buen momento para ofrecer mantenimiento, hosting o rediseño.
               </p>
               {site.company_id ? (
                 <Button type="button" variant="outline" size="sm" asChild>
-                  <Link to={getClientShowPath(site.company_id)}>Ver cliente</Link>
+                  <Link to={getClientShowPath(site.company_id)}>
+                    Ver cliente
+                  </Link>
                 </Button>
               ) : null}
             </>

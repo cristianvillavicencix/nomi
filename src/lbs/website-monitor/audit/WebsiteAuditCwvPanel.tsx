@@ -92,14 +92,18 @@ export const WebsiteAuditCwvPanel = ({
             <LabMetricGauge metric="lcp" value={scores.labLcpMs} label="LCP" />
             <LabMetricGauge metric="cls" value={scores.labCls} label="CLS" />
             {scores.labTbtMs != null ? (
-              <LabMetricGauge metric="tbt" value={scores.labTbtMs} label="TBT" />
+              <LabMetricGauge
+                metric="tbt"
+                value={scores.labTbtMs}
+                label="TBT"
+              />
             ) : null}
           </div>
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Sin métricas de laboratorio para {deviceLabel.toLowerCase()}. Regenera el
-          reporte si acabas de actualizar el worker.
+          Sin métricas de laboratorio para {deviceLabel.toLowerCase()}. Regenera
+          el reporte si acabas de actualizar el worker.
         </p>
       )}
     </div>

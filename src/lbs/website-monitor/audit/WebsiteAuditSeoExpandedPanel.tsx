@@ -1,4 +1,10 @@
-import { AlertTriangle, CheckCircle2, Code2, Globe2, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Code2,
+  Globe2,
+  Search,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { StaticAnalysisJson } from "@/lbs/website-monitor/audit/types";
 import {
@@ -8,12 +14,13 @@ import {
 } from "@/lbs/website-monitor/audit/WebsiteAuditTableShell";
 import { cn } from "@/lib/utils";
 
-const lengthStatusLabel: Record<string, { label: string; className: string }> = {
-  ok: { label: "OK", className: "bg-emerald-100 text-emerald-700" },
-  short: { label: "Corto", className: "bg-amber-100 text-amber-800" },
-  long: { label: "Largo", className: "bg-amber-100 text-amber-800" },
-  missing: { label: "Falta", className: "bg-red-100 text-red-700" },
-};
+const lengthStatusLabel: Record<string, { label: string; className: string }> =
+  {
+    ok: { label: "OK", className: "bg-emerald-100 text-emerald-700" },
+    short: { label: "Corto", className: "bg-amber-100 text-amber-800" },
+    long: { label: "Largo", className: "bg-amber-100 text-amber-800" },
+    missing: { label: "Falta", className: "bg-red-100 text-red-700" },
+  };
 
 const CheckRow = ({
   ok,
@@ -39,23 +46,21 @@ const CheckRow = ({
   </div>
 );
 
-const analysisModeLabel: Record<
-  string,
-  { label: string; className: string }
-> = {
-  rendered: {
-    label: "DOM renderizado",
-    className: "bg-violet-100 text-violet-800",
-  },
-  embedded: {
-    label: "JSON embebido",
-    className: "bg-sky-100 text-sky-800",
-  },
-  static: {
-    label: "HTML estático",
-    className: "bg-muted text-muted-foreground",
-  },
-};
+const analysisModeLabel: Record<string, { label: string; className: string }> =
+  {
+    rendered: {
+      label: "DOM renderizado",
+      className: "bg-violet-100 text-violet-800",
+    },
+    embedded: {
+      label: "JSON embebido",
+      className: "bg-sky-100 text-sky-800",
+    },
+    static: {
+      label: "HTML estático",
+      className: "bg-muted text-muted-foreground",
+    },
+  };
 
 const renderingModelLabel: Record<string, string> = {
   static: "Sitio estático / CMS",
@@ -111,7 +116,7 @@ export const WebsiteAuditSeoExpandedPanel = ({
         </p>
       </div>
 
-      {(seo.auditNote || arch) ? (
+      {seo.auditNote || arch ? (
         <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             {seo.analysisMode ? (
@@ -121,12 +126,14 @@ export const WebsiteAuditSeoExpandedPanel = ({
             ) : null}
             {arch?.platformCategory ? (
               <Badge variant="outline" className="text-[10px]">
-                {platformCategoryLabel[arch.platformCategory] ?? arch.platformCategory}
+                {platformCategoryLabel[arch.platformCategory] ??
+                  arch.platformCategory}
               </Badge>
             ) : null}
             {arch?.renderingModel ? (
               <Badge variant="outline" className="text-[10px]">
-                {renderingModelLabel[arch.renderingModel] ?? arch.renderingModel}
+                {renderingModelLabel[arch.renderingModel] ??
+                  arch.renderingModel}
               </Badge>
             ) : null}
             {arch?.frameworks.map((fw) => (
@@ -175,7 +182,9 @@ export const WebsiteAuditSeoExpandedPanel = ({
             </Badge>
           </div>
           <p className="text-sm font-medium">{staticJson.title ?? "—"}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Ideal: 30–60 caracteres</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ideal: 30–60 caracteres
+          </p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card p-4">
@@ -193,7 +202,9 @@ export const WebsiteAuditSeoExpandedPanel = ({
           <p className="text-sm text-muted-foreground line-clamp-3">
             {staticJson.metaDescription ?? "—"}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Ideal: 120–160 caracteres</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ideal: 120–160 caracteres
+          </p>
         </div>
       </div>
 
@@ -204,7 +215,7 @@ export const WebsiteAuditSeoExpandedPanel = ({
           detail={
             seo.multipleH1
               ? `${staticJson.h1Count} H1 detectados`
-              : staticJson.h1Text ?? undefined
+              : (staticJson.h1Text ?? undefined)
           }
         />
         <CheckRow
@@ -323,7 +334,9 @@ export const WebsiteAuditSeoExpandedPanel = ({
           <WebsiteAuditTableShell columns={["Tipo", "Contexto"]}>
             {seo.structuredData!.map((item, index) => (
               <TableRow key={`${item.type}-${index}`}>
-                <TableCell className="text-sm font-medium">{item.type}</TableCell>
+                <TableCell className="text-sm font-medium">
+                  {item.type}
+                </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   {item.context ?? "—"}
                 </TableCell>

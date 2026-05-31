@@ -177,11 +177,19 @@ const AuditWatchBanner = ({
             <Loader2 className="size-3.5 shrink-0 animate-spin" />
             <span className="truncate">Reporte en curso</span>
           </p>
-          <p className="truncate text-xs text-muted-foreground">{watch.siteLabel}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {watch.siteLabel}
+          </p>
           <p className="text-xs text-muted-foreground">{progress.phaseLabel}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button type="button" size="icon" variant="ghost" className="size-7" asChild>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-7"
+            asChild
+          >
             <Link to={`/web-monitor/${watch.siteId}/show`}>
               <ExternalLink className="size-3.5" />
               <span className="sr-only">Ver sitio</span>

@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { Monitor, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { AuditStrategySnapshot, WebsiteAuditAiSummaryJson } from "@/lbs/website-monitor/audit/types";
+import type {
+  AuditStrategySnapshot,
+  WebsiteAuditAiSummaryJson,
+} from "@/lbs/website-monitor/audit/types";
 import { snapshotScores } from "@/lbs/website-monitor/audit/auditUtils";
 import {
   formatLabMetric,
@@ -88,7 +91,10 @@ const MetricCard = ({
         metricKey === "tbt" ||
         metricKey === "si" ||
         metricKey === "tti"
-      ? formatLabMetric(metricKey === "si" || metricKey === "tti" ? "lcp" : metricKey, valueMs)
+      ? formatLabMetric(
+          metricKey === "si" || metricKey === "tti" ? "lcp" : metricKey,
+          valueMs,
+        )
       : "—";
 
   return (
@@ -112,7 +118,10 @@ const MetricCard = ({
   );
 };
 
-const SCORE_NARRATIVE_KEY: Record<string, "performance" | "seo" | "accessibility" | "best_practices"> = {
+const SCORE_NARRATIVE_KEY: Record<
+  string,
+  "performance" | "seo" | "accessibility" | "best_practices"
+> = {
   performance: "performance",
   seo: "seo",
   accessibility: "accessibility",
@@ -153,7 +162,8 @@ export const WebsiteAuditMetricsPanel = ({
     [snapshot],
   );
   const labDetails = useMemo(
-    () => parseLabMetricDetails(snapshot?.lighthouse_json, snapshot ?? undefined),
+    () =>
+      parseLabMetricDetails(snapshot?.lighthouse_json, snapshot ?? undefined),
     [snapshot],
   );
 
@@ -190,8 +200,9 @@ export const WebsiteAuditMetricsPanel = ({
       <div>
         <h3 className="text-base font-semibold">Métricas de rendimiento</h3>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Medidas de Lighthouse en laboratorio ({device === "mobile" ? "móvil" : "desktop"}).
-          Cada score combina auditorías ponderadas — abre una categoría para ver qué reglas
+          Medidas de Lighthouse en laboratorio (
+          {device === "mobile" ? "móvil" : "desktop"}). Cada score combina
+          auditorías ponderadas — abre una categoría para ver qué reglas
           fallaron y en qué recurso.
         </p>
       </div>
@@ -320,7 +331,9 @@ export const WebsiteAuditMetricsPanel = ({
               </p>
               <p className="mt-1 text-[10px] text-muted-foreground">
                 {detail.contributesTo}
-                {detail.score != null ? ` · Score métrica: ${detail.score}/100` : ""}
+                {detail.score != null
+                  ? ` · Score métrica: ${detail.score}/100`
+                  : ""}
               </p>
             </div>
           ))}
@@ -328,12 +341,42 @@ export const WebsiteAuditMetricsPanel = ({
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <MetricCard label="FCP" metricKey="fcp" valueMs={fcp} aiExplanation={metricAiText.fcp} />
-        <MetricCard label="LCP" metricKey="lcp" valueMs={lcp} aiExplanation={metricAiText.lcp} />
-        <MetricCard label="TBT" metricKey="tbt" valueMs={tbt} aiExplanation={metricAiText.tbt} />
-        <MetricCard label="CLS" metricKey="cls" clsValue={cls} aiExplanation={metricAiText.cls} />
-        <MetricCard label="SI" metricKey="si" valueMs={lab.siMs} aiExplanation={metricAiText.si} />
-        <MetricCard label="TTI" metricKey="tti" valueMs={lab.ttiMs} aiExplanation={metricAiText.tti} />
+        <MetricCard
+          label="FCP"
+          metricKey="fcp"
+          valueMs={fcp}
+          aiExplanation={metricAiText.fcp}
+        />
+        <MetricCard
+          label="LCP"
+          metricKey="lcp"
+          valueMs={lcp}
+          aiExplanation={metricAiText.lcp}
+        />
+        <MetricCard
+          label="TBT"
+          metricKey="tbt"
+          valueMs={tbt}
+          aiExplanation={metricAiText.tbt}
+        />
+        <MetricCard
+          label="CLS"
+          metricKey="cls"
+          clsValue={cls}
+          aiExplanation={metricAiText.cls}
+        />
+        <MetricCard
+          label="SI"
+          metricKey="si"
+          valueMs={lab.siMs}
+          aiExplanation={metricAiText.si}
+        />
+        <MetricCard
+          label="TTI"
+          metricKey="tti"
+          valueMs={lab.ttiMs}
+          aiExplanation={metricAiText.tti}
+        />
       </div>
 
       <WebsiteAuditOpportunitiesList opportunities={opportunities} />

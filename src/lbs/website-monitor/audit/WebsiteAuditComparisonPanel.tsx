@@ -4,11 +4,10 @@ import type { AuditComparisonResult } from "@/lbs/website-monitor/audit/auditCom
 import { cn } from "@/lib/utils";
 
 const DeltaBadge = ({ delta }: { delta: number | null }) => {
-  if (delta == null) return <Minus className="size-3.5 text-muted-foreground" />;
+  if (delta == null)
+    return <Minus className="size-3.5 text-muted-foreground" />;
   if (delta === 0) {
-    return (
-      <span className="text-xs text-muted-foreground">sin cambio</span>
-    );
+    return <span className="text-xs text-muted-foreground">sin cambio</span>;
   }
   const up = delta > 0;
   return (
@@ -37,7 +36,8 @@ export const WebsiteAuditComparisonPanel = ({
         <TrendingUp className="mx-auto mb-3 size-8 text-muted-foreground/60" />
         <p className="text-sm font-medium">Sin reporte anterior</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Genera un segundo audit para ver evolución de scores, hallazgos y archivos críticos.
+          Genera un segundo audit para ver evolución de scores, hallazgos y
+          archivos críticos.
         </p>
       </div>
     );
@@ -46,7 +46,9 @@ export const WebsiteAuditComparisonPanel = ({
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-base font-semibold">Comparativa vs reporte anterior</h3>
+        <h3 className="text-base font-semibold">
+          Comparativa vs reporte anterior
+        </h3>
         {previousDate ? (
           <p className="mt-1 text-sm text-muted-foreground">
             Comparado con audit del {previousDate}
@@ -60,7 +62,9 @@ export const WebsiteAuditComparisonPanel = ({
             key={metric.key}
             className="rounded-xl border border-border/60 bg-card p-4"
           >
-            <p className="text-xs font-medium text-muted-foreground">{metric.label}</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              {metric.label}
+            </p>
             <div className="mt-2 flex items-end justify-between gap-2">
               <span className="text-2xl font-bold tabular-nums">
                 {metric.current ?? "—"}

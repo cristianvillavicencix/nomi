@@ -135,9 +135,7 @@ export const AddWebsiteMonitorDialog = ({
             onClick={() => void handleSubmit()}
             disabled={isSaving || !url.trim()}
           >
-            {isSaving ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : null}
+            {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             Agregar
           </Button>
         </DialogFooter>

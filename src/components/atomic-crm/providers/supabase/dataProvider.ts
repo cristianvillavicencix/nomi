@@ -1528,7 +1528,32 @@ const dataProviderWithCustomMethods = {
       query = query.eq("deal_id", params.projectId);
     }
 
-    if (params.scope === "mine") {
+    if (params.scope === "tagged") {
+      const { data: notifications, error: notificationsError } = await supabase
+        .from("task_tag_notifications")
+        .select("task_id")
+        .eq("recipient_organization_member_id", params.organizationMemberId)
+        .is("read_at", null);
+
+      if (notificationsError) {
+        console.error("getScopedTasks.tagged.error", notificationsError);
+        throw new Error("Failed to load tagged tasks");
+      }
+
+      const taskIds = [
+        ...new Set(
+          (notifications ?? [])
+            .map((entry) => entry.task_id)
+            .filter((id) => id != null),
+        ),
+      ];
+
+      if (taskIds.length === 0) {
+        return { data: [], total: 0 };
+      }
+
+      query = query.in("id", taskIds);
+    } else if (params.scope === "mine") {
       const orParts = [
         `organization_member_id.eq.${params.organizationMemberId}`,
       ];
@@ -1830,8 +1855,7 @@ const dataProviderWithCustomMethods = {
     );
     if (error) {
       throw new Error(
-        (error as { message?: string }).message ??
-          "Failed to save deal secret",
+        (error as { message?: string }).message ?? "Failed to save deal secret",
       );
     }
     if (!data?.ok) {
@@ -2165,16 +2189,13 @@ const dataProviderWithCustomMethods = {
       responseMs?: number | null;
       httpStatus?: number | null;
       errorMessage?: string | null;
-    }>(
-      "website_monitor_check",
-      {
-        method: "POST",
-        body: {
-          monitored_website_id: Number(params.monitoredWebsiteId),
-          include_deep_metadata: params.includeDeepMetadata ?? true,
-        },
+    }>("website_monitor_check", {
+      method: "POST",
+      body: {
+        monitored_website_id: Number(params.monitoredWebsiteId),
+        include_deep_metadata: params.includeDeepMetadata ?? true,
       },
-    );
+    });
     if (error) {
       throw new Error(
         await readEdgeFunctionErrorMessage(error, "Failed to check website"),
@@ -2182,7 +2203,10 @@ const dataProviderWithCustomMethods = {
     }
     return data ?? { ok: true };
   },
-  async websiteMonitorRunOrg(params?: { forceAll?: boolean; maxBatch?: number }) {
+  async websiteMonitorRunOrg(params?: {
+    forceAll?: boolean;
+    maxBatch?: number;
+  }) {
     const { data, error } = await invokeEdgeFunction<{
       ok?: boolean;
       checked?: number;
@@ -2213,20 +2237,20 @@ const dataProviderWithCustomMethods = {
     dealId?: Identifier;
     checkPaths?: string[];
   }) {
-    const { data, error } = await invokeEdgeFunction<{ ok?: boolean; id?: number }>(
-      "website_monitor_create",
-      {
-        method: "POST",
-        body: {
-          url: params.url,
-          display_name: params.displayName,
-          notes: params.notes,
-          company_id: params.companyId != null ? Number(params.companyId) : null,
-          deal_id: params.dealId != null ? Number(params.dealId) : null,
-          check_paths: params.checkPaths,
-        },
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      id?: number;
+    }>("website_monitor_create", {
+      method: "POST",
+      body: {
+        url: params.url,
+        display_name: params.displayName,
+        notes: params.notes,
+        company_id: params.companyId != null ? Number(params.companyId) : null,
+        deal_id: params.dealId != null ? Number(params.dealId) : null,
+        check_paths: params.checkPaths,
       },
-    );
+    });
     if (error) {
       throw new Error(
         await readEdgeFunctionErrorMessage(error, "Failed to add website"),
@@ -2292,7 +2316,10 @@ const dataProviderWithCustomMethods = {
     );
     if (error) {
       throw new Error(
-        await readEdgeFunctionErrorMessage(error, "Failed to send website audit report"),
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to send website audit report",
+        ),
       );
     }
     return { ok: Boolean(data?.ok) };

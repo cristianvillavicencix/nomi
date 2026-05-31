@@ -14,8 +14,7 @@ export const MetricInfo = ({
   text?: string;
 }) => {
   const content =
-    text ??
-    (tooltipKey ? METRIC_TOOLTIPS[tooltipKey] : undefined);
+    text ?? (tooltipKey ? METRIC_TOOLTIPS[tooltipKey] : undefined);
   if (!content) return null;
 
   return (

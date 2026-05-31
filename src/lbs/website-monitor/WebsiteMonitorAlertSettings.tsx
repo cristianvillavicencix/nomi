@@ -92,7 +92,10 @@ export const WebsiteMonitorAlertSettings = ({
             Perfil → Notificaciones
           </Link>
           . La configuración global está en{" "}
-          <Link to="/settings?tab=web-monitor" className="font-medium text-foreground underline">
+          <Link
+            to="/settings?tab=web-monitor"
+            className="font-medium text-foreground underline"
+          >
             Settings → Web Monitor
           </Link>
           .
