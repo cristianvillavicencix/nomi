@@ -21,6 +21,7 @@ import {
 } from "@/lbs/website-monitor/websiteMonitorSettings";
 import { getWebMonitorPath } from "@/lbs/routing";
 import { useWebsiteMonitorSettings } from "@/lbs/settings/useWebsiteMonitorSettings";
+import { GoogleSearchConsoleSettings } from "@/lbs/settings/GoogleSearchConsoleSettings";
 
 export const WebsiteMonitorSettingsSection = () => {
   const notify = useNotify();
@@ -409,6 +410,8 @@ export const WebsiteMonitorSettingsSection = () => {
           />
         </CardContent>
       </Card>
+
+      <GoogleSearchConsoleSettings />
 
       <div className="flex flex-wrap gap-2 pb-4">
         <Button

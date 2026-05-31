@@ -135,6 +135,7 @@ export const WebsiteAuditReportPage = () => {
                 previousFindings={previousFindings}
                 findings={findings}
                 siteLabel={siteLabel}
+                siteId={numericSiteId}
               />
             )}
           </CardContent>

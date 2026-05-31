@@ -51,6 +51,7 @@ export type MonitoredWebsite = {
   audit_alert_on_score_drop?: boolean;
   audit_score_drop_threshold?: number;
   last_audit_score_alert_at?: string | null;
+  gsc_site_url?: string | null;
   company_name?: string | null;
   company_sector?: string | null;
   uptime_pct_7d?: number | null;

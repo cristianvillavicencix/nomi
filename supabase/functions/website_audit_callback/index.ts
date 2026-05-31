@@ -5,6 +5,7 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { triggerWebsiteAuditSummarize } from "../_shared/websiteAuditAiSummary.ts";
 import { notifyWebsiteAuditScoreDrop } from "../_shared/notifyWebsiteAuditScoreDrop.ts";
+import { triggerGoogleGscSync } from "../_shared/googleSearchConsole.ts";
 import {
   sanitizeAuditFindingInput,
   sanitizeForPostgresJson,
@@ -232,6 +233,13 @@ Deno.serve((req: Request) =>
       }
 
       triggerWebsiteAuditSummarize(auditId);
+
+      if (current.monitored_website_id != null) {
+        triggerGoogleGscSync({
+          orgId: current.org_id,
+          monitoredWebsiteId: Number(current.monitored_website_id),
+        });
+      }
 
       if (
         payload.overall_score != null &&

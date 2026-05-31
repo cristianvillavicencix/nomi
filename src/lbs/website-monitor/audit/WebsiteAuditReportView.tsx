@@ -21,6 +21,7 @@ import { WebsiteAuditSuggestionsPanel } from "@/lbs/website-monitor/audit/Websit
 import { WebsiteAuditAiSummaryPanel } from "@/lbs/website-monitor/audit/WebsiteAuditAiSummaryPanel";
 import { WebsiteAuditSeoTechPanel } from "@/lbs/website-monitor/audit/WebsiteAuditSeoTechPanel";
 import { WebsiteAuditComparisonPanel } from "@/lbs/website-monitor/audit/WebsiteAuditComparisonPanel";
+import { WebsiteAuditGscPanel } from "@/lbs/website-monitor/audit/WebsiteAuditGscPanel";
 import { buildAuditComparison } from "@/lbs/website-monitor/audit/auditComparison";
 import { formatCheckedAt } from "@/lbs/website-monitor/websiteMonitorUtils";
 import { cn } from "@/lib/utils";
@@ -115,6 +116,7 @@ export const WebsiteAuditReportView = ({
   findings,
   showPdfActions = true,
   siteLabel,
+  siteId,
 }: {
   audit: WebsiteAudit;
   previousAudit?: WebsiteAudit;
@@ -122,6 +124,7 @@ export const WebsiteAuditReportView = ({
   findings: AuditFinding[];
   showPdfActions?: boolean;
   siteLabel?: string;
+  siteId?: number;
 }) => {
   const [tab, setTab] = useState("resumen");
   const [metricsCategory, setMetricsCategory] = useState<string | null>(null);
@@ -242,6 +245,9 @@ export const WebsiteAuditReportView = ({
                     {expandedSeoScore}
                   </span>
                 ) : null}
+              </TabsTrigger>
+              <TabsTrigger value="search-console" className="rounded-lg">
+                Search Console
               </TabsTrigger>
               <TabsTrigger value="imagenes" className="rounded-lg">
                 Imágenes
@@ -383,6 +389,16 @@ export const WebsiteAuditReportView = ({
             >
               <WebsiteAuditSeoTechPanel staticJson={staticJson} />
             </TabsContent>
+
+            {siteId != null ? (
+              <TabsContent
+                value="search-console"
+                className="mt-6"
+                data-print-label="Search Console"
+              >
+                <WebsiteAuditGscPanel siteId={siteId} />
+              </TabsContent>
+            ) : null}
 
             <TabsContent
               value="imagenes"

@@ -271,3 +271,6 @@ verify_jwt = false
 
 [functions.website_audit_schedule]
 verify_jwt = false
+
+[functions.google_gsc]
+verify_jwt = false
