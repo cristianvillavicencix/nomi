@@ -8,6 +8,10 @@ export type WebsiteMonitorOrgSettings = {
   default_alert_on_slow: boolean;
   default_alert_on_ssl: boolean;
   alert_cooldown_hours: number;
+  default_audit_schedule_enabled: boolean;
+  default_audit_interval_days: number;
+  default_audit_alert_on_score_drop: boolean;
+  default_audit_score_drop_threshold: number;
 };
 
 export const DEFAULT_WEBSITE_MONITOR_SETTINGS: WebsiteMonitorOrgSettings = {
@@ -20,6 +24,10 @@ export const DEFAULT_WEBSITE_MONITOR_SETTINGS: WebsiteMonitorOrgSettings = {
   default_alert_on_slow: false,
   default_alert_on_ssl: true,
   alert_cooldown_hours: 6,
+  default_audit_schedule_enabled: false,
+  default_audit_interval_days: 30,
+  default_audit_alert_on_score_drop: true,
+  default_audit_score_drop_threshold: 10,
 };
 
 export const parseWebsiteMonitorSettings = (
@@ -52,6 +60,21 @@ export const parseWebsiteMonitorSettings = (
       1,
       168,
       DEFAULT_WEBSITE_MONITOR_SETTINGS.alert_cooldown_hours,
+    ),
+    default_audit_schedule_enabled: value.default_audit_schedule_enabled === true,
+    default_audit_interval_days: clampInt(
+      value.default_audit_interval_days,
+      1,
+      365,
+      DEFAULT_WEBSITE_MONITOR_SETTINGS.default_audit_interval_days,
+    ),
+    default_audit_alert_on_score_drop:
+      value.default_audit_alert_on_score_drop !== false,
+    default_audit_score_drop_threshold: clampInt(
+      value.default_audit_score_drop_threshold,
+      1,
+      100,
+      DEFAULT_WEBSITE_MONITOR_SETTINGS.default_audit_score_drop_threshold,
     ),
   };
 };

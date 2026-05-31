@@ -112,6 +112,10 @@ export const WebsiteMonitorSettingsSection = () => {
           alert_on_ssl: settings.default_alert_on_ssl,
           check_interval_minutes: settings.default_check_interval_minutes,
           slow_threshold_ms: settings.default_slow_threshold_ms,
+          audit_schedule_enabled: settings.default_audit_schedule_enabled,
+          audit_interval_days: settings.default_audit_interval_days,
+          audit_alert_on_score_drop: settings.default_audit_alert_on_score_drop,
+          audit_score_drop_threshold: settings.default_audit_score_drop_threshold,
         })
         .eq("org_id", orgSettings.id);
 
@@ -332,6 +336,77 @@ export const WebsiteMonitorSettingsSection = () => {
               }
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Web Report</CardTitle>
+          <CardDescription>
+            Reportes Lighthouse programados y alertas por caída de score (SMS).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <SettingRow
+            id="wm-audit-schedule"
+            label="Default: reportes automáticos"
+            description="Encola un Web Report cada N días por sitio (editable por sitio)."
+            checked={settings.default_audit_schedule_enabled}
+            disabled={!settings.enabled}
+            onCheckedChange={(checked) =>
+              patchSetting("default_audit_schedule_enabled", checked)
+            }
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="wm-audit-interval">Intervalo reporte (días)</Label>
+              <Input
+                id="wm-audit-interval"
+                type="number"
+                min={1}
+                max={365}
+                disabled={!settings.enabled}
+                value={settings.default_audit_interval_days}
+                onChange={(event) =>
+                  patchSetting(
+                    "default_audit_interval_days",
+                    Number(event.target.value) || 30,
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="wm-audit-drop-threshold">
+                Umbral caída score (pts)
+              </Label>
+              <Input
+                id="wm-audit-drop-threshold"
+                type="number"
+                min={1}
+                max={100}
+                disabled={
+                  !settings.enabled || !settings.sms_alerts_enabled
+                }
+                value={settings.default_audit_score_drop_threshold}
+                onChange={(event) =>
+                  patchSetting(
+                    "default_audit_score_drop_threshold",
+                    Number(event.target.value) || 10,
+                  )
+                }
+              />
+            </div>
+          </div>
+          <SettingRow
+            id="wm-audit-score-drop"
+            label="Default: alerta SMS por caída de score"
+            description="Compara con el reporte anterior completado del mismo sitio."
+            checked={settings.default_audit_alert_on_score_drop}
+            disabled={!settings.enabled || !settings.sms_alerts_enabled}
+            onCheckedChange={(checked) =>
+              patchSetting("default_audit_alert_on_score_drop", checked)
+            }
+          />
         </CardContent>
       </Card>
 

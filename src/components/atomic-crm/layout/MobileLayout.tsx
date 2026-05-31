@@ -6,6 +6,7 @@ import { ErrorBoundary } from "react-error-boundary";
 
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { MobileNavigation } from "./MobileNavigation";
+import { WebsiteAuditBackgroundWatcher } from "@/lbs/website-monitor/audit/WebsiteAuditBackgroundWatcher";
 
 export const MobileLayout = ({ children }: { children: ReactNode }) => {
   useConfigurationLoader();
@@ -18,6 +19,7 @@ export const MobileLayout = ({ children }: { children: ReactNode }) => {
         </Suspense>
       </ErrorBoundary>
       <MobileNavigation />
+      <WebsiteAuditBackgroundWatcher />
       <Notification mobileOffset={{ bottom: "72px" }} />
     </>
   );

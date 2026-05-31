@@ -53,7 +53,7 @@ RUN apt-get update \
 
 ENV CHROME_PATH=/usr/bin/chromium
 ENV NODE_ENV=production
-ENV PORT=8787
+# Cloud Run sets PORT=8080; local dev defaults to 8787 via config.
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -62,5 +62,5 @@ ENV PUPPETEER_SKIP_CHROME_DOWNLOAD=true
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 
-EXPOSE 8787
+EXPOSE 8080
 CMD ["node", "dist/index.js"]

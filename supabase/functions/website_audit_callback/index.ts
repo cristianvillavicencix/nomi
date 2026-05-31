@@ -3,6 +3,8 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { verifyWebsiteAuditWorkerSecret } from "../_shared/websiteAuditAuth.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { triggerWebsiteAuditSummarize } from "../_shared/websiteAuditAiSummary.ts";
+import { notifyWebsiteAuditScoreDrop } from "../_shared/notifyWebsiteAuditScoreDrop.ts";
 import type {
   AuditFindingInput,
   WebsiteAuditCallbackPayload,
@@ -45,7 +47,7 @@ Deno.serve((req: Request) =>
 
     const { data: current, error: fetchError } = await supabaseAdmin
       .from("website_audits")
-      .select("id, org_id, status")
+      .select("id, org_id, status, monitored_website_id")
       .eq("id", auditId)
       .maybeSingle();
 
@@ -89,6 +91,7 @@ Deno.serve((req: Request) =>
           status: "running",
           started_at: new Date().toISOString(),
           worker_id: payload.worker_id ?? null,
+          progress_phase: payload.progress_phase ?? null,
         })
         .eq("id", auditId)
         .in("status", ["queued", "running"]);
@@ -133,6 +136,9 @@ Deno.serve((req: Request) =>
       mobile_snapshot: payload.mobile_snapshot ?? null,
       desktop_snapshot: payload.desktop_snapshot ?? null,
       pdf_storage_path: payload.pdf_storage_path ?? null,
+      ...(nextStatus === "done"
+        ? { ai_summary_status: "pending" as const }
+        : {}),
     };
 
     const { data: updatedRows, error: updateError } = await supabaseAdmin
@@ -200,6 +206,47 @@ Deno.serve((req: Request) =>
 
         if (findingsError) {
           return createErrorResponse(500, findingsError.message);
+        }
+      }
+
+      triggerWebsiteAuditSummarize(auditId);
+
+      if (
+        payload.overall_score != null &&
+        current.monitored_website_id != null
+      ) {
+        const siteId = Number(current.monitored_website_id);
+        const { data: site } = await supabaseAdmin
+          .from("monitored_websites")
+          .select(
+            "id, org_id, url, display_name, audit_alert_on_score_drop, audit_score_drop_threshold, last_audit_score_alert_at",
+          )
+          .eq("id", siteId)
+          .maybeSingle();
+
+        const { data: previousDone } = await supabaseAdmin
+          .from("website_audits")
+          .select("overall_score")
+          .eq("monitored_website_id", siteId)
+          .eq("status", "done")
+          .neq("id", auditId)
+          .order("requested_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (
+          site &&
+          previousDone?.overall_score != null &&
+          payload.overall_score < previousDone.overall_score
+        ) {
+          notifyWebsiteAuditScoreDrop(
+            supabaseAdmin,
+            site,
+            payload.overall_score,
+            previousDone.overall_score,
+          ).catch((err) =>
+            console.error("notifyWebsiteAuditScoreDrop", auditId, err),
+          );
         }
       }
     }

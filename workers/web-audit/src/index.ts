@@ -1,6 +1,11 @@
 import http from "node:http";
 import { config, assertConfig } from "./config.js";
+import { postCallbackSafe } from "./callbackClient.js";
 import { runAuditJob } from "./runAudit.js";
+import {
+  clearActiveAudit,
+  readActiveAudit,
+} from "./activeAudit.js";
 import type { WebsiteAuditWorkerJob } from "./types.js";
 
 const readJsonBody = async (req: http.IncomingMessage) => {
@@ -73,8 +78,25 @@ const parseJob = (body: unknown): WebsiteAuditWorkerJob | null => {
 const inFlight = new Set<number>();
 const startedAt = Date.now();
 
-const startServer = () => {
+const recoverOrphanedAudit = async () => {
+  const orphan = readActiveAudit();
+  if (!orphan) return;
+
+  console.error("web-audit recovering orphaned audit", orphan.audit_id);
+  await postCallbackSafe(orphan.callback_url, {
+    audit_id: orphan.audit_id,
+    status: "failed",
+    worker_id: config.workerId,
+    strategy: orphan.strategy,
+    error_message:
+      "El worker se reinició durante el análisis. Genera el reporte de nuevo.",
+  });
+  clearActiveAudit();
+};
+
+const startServer = async () => {
   assertConfig();
+  await recoverOrphanedAudit();
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -156,14 +178,17 @@ const startServer = () => {
     }
   });
 
-  server.listen(config.port, () => {
+  server.listen(config.port, "0.0.0.0", () => {
     console.log(
-      `web-audit-worker listening on :${config.port} (timeout ${config.timeoutMs}ms)`,
+      `web-audit-worker listening on 0.0.0.0:${config.port} (timeout ${config.timeoutMs}ms)`,
     );
   });
 };
 
-startServer();
+void startServer().catch((cause) => {
+  console.error("web-audit worker failed to start", cause);
+  process.exit(1);
+});
 
 /**
  * Pull-queue fallback (NOT implemented in Phase 1):

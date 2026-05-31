@@ -18,6 +18,7 @@ import { ClientProjectsTab, ClientTicketsTab } from "@/lbs/clients/ClientTabPane
 import { ReferralsTab } from "@/lbs/leads/ReferralsTab";
 import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 import { WebsiteMonitorStatusWidget } from "@/lbs/website-monitor/WebsiteMonitorStatusWidget";
+import { WebsiteMonitorAuditWidget } from "@/lbs/website-monitor/WebsiteMonitorAuditWidget";
 import {
   getContactEmail,
   getContactFullName,
@@ -150,9 +151,14 @@ export const ClientRelatedSidebar = ({
     <>
       <div className="space-y-6">
         {webMonitorEnabled ? (
-          <RelatedSection title="Estado web" count={0} forceShow>
-            <WebsiteMonitorStatusWidget companyId={companyId} variant="plain" />
-          </RelatedSection>
+          <>
+            <RelatedSection title="Estado web" count={0} forceShow>
+              <WebsiteMonitorStatusWidget companyId={companyId} variant="plain" />
+            </RelatedSection>
+            <RelatedSection title="Web Report" count={0} forceShow>
+              <WebsiteMonitorAuditWidget companyId={companyId} variant="plain" />
+            </RelatedSection>
+          </>
         ) : null}
 
         <RelatedSection

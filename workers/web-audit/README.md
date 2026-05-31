@@ -6,7 +6,7 @@ Node worker for Nomi **Web Report** audits. Runs outside Supabase Edge (Chromium
 
 ### Phase 1
 
-1. **Static analysis** (Cheerio): meta tags, H1, viewport, robots/sitemap, images without `alt`.
+1. **Static analysis** (Cheerio): meta tags, H1, viewport, robots/sitemap, images without `alt`, **expanded SEO** (title/meta length, Open Graph, JSON-LD, hreflang, noindex), **Wappalyzer tech stack**.
 2. **Lighthouse** (mobile by default): performance, SEO, best practices, accessibility + lab CWV.
 3. **Callback** to Supabase Edge `website_audit_callback` with retry + exponential backoff.
 
@@ -24,7 +24,21 @@ Node worker for Nomi **Web Report** audits. Runs outside Supabase Edge (Chromium
 
 ---
 
-## Deploy on Fly.io (production)
+## Deploy on Google Cloud Run (production — recommended)
+
+See **`CLOUD_RUN.md`** for full steps. Summary:
+
+```bash
+export GCP_PROJECT_ID="your-gcp-project"
+export WEB_AUDIT_WORKER_SECRET="same-as-supabase"
+./scripts/deploy-cloud-run.sh
+```
+
+Then set `WEB_AUDIT_WORKER_URL` on Supabase to the printed Cloud Run URL.
+
+---
+
+## Deploy on Fly.io (legacy)
 
 Nomi uses **hosted Supabase** even locally; the worker must be **publicly reachable** from Edge Functions.
 

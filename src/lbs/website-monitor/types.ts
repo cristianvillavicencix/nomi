@@ -46,6 +46,11 @@ export type MonitoredWebsite = {
   alert_on_down?: boolean;
   alert_on_slow?: boolean;
   alert_on_ssl?: boolean;
+  audit_schedule_enabled?: boolean;
+  audit_interval_days?: number;
+  audit_alert_on_score_drop?: boolean;
+  audit_score_drop_threshold?: number;
+  last_audit_score_alert_at?: string | null;
   company_name?: string | null;
   company_sector?: string | null;
   uptime_pct_7d?: number | null;

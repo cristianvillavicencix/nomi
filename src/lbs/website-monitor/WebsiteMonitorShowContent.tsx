@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   useDataProvider,
   useGetList,
@@ -10,7 +10,6 @@ import { ExternalLink, Loader2, Megaphone, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useIsMobile } from "@/hooks/use-mobile";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { ResponseTimeChart } from "@/lbs/website-monitor/ResponseTimeChart";
 import type {
@@ -19,6 +18,8 @@ import type {
   WebsiteMonitorChange,
 } from "@/lbs/website-monitor/types";
 import { WebsiteMonitorSummaryCard } from "@/lbs/website-monitor/WebsiteMonitorSummaryCard";
+import { WebsiteMonitorAlertSettings } from "@/lbs/website-monitor/WebsiteMonitorAlertSettings";
+import { WebsiteMonitorAuditScheduleSettings } from "@/lbs/website-monitor/WebsiteMonitorAuditScheduleSettings";
 import { WebsiteAuditPanel } from "@/lbs/website-monitor/audit/WebsiteAuditPanel";
 import { WebsiteStatusBadge } from "@/lbs/website-monitor/WebsiteStatusBadge";
 import {
@@ -31,9 +32,11 @@ import { getClientShowPath, getWebMonitorPath } from "@/lbs/routing";
 
 export const WebsiteMonitorShowContent = ({ site }: { site: MonitoredWebsite }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTab =
+    searchParams.get("tab") === "report" ? "report" : "overview";
   const notify = useNotify();
   const refresh = useRefresh();
-  const isMobile = useIsMobile();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [isChecking, setIsChecking] = useState(false);
 
@@ -70,32 +73,13 @@ export const WebsiteMonitorShowContent = ({ site }: { site: MonitoredWebsite }) 
     }
   };
 
-  const layout = isMobile ? (
-    <div className="space-y-4">
+  const layout = (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
       <WebsiteMonitorSummaryCard site={site} />
-      <Tabs defaultValue="overview">
-        <TabsList className="w-full justify-start">
+      <Tabs defaultValue={initialTab} className="min-w-0">
+        <TabsList className="h-auto w-full flex-wrap justify-start">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="pages">Páginas</TabsTrigger>
-          <TabsTrigger value="changes">Cambios</TabsTrigger>
-          <TabsTrigger value="checks">Historial</TabsTrigger>
-          <TabsTrigger value="outreach">Outreach</TabsTrigger>
-        </TabsList>
-        <TabPanels
-          site={site}
-          checks={checks}
-          checksPending={checksPending}
-          changes={changes}
-          pageChecks={pageChecks}
-        />
-      </Tabs>
-    </div>
-  ) : (
-    <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <WebsiteMonitorSummaryCard site={site} />
-      <Tabs defaultValue="overview" className="min-w-0">
-        <TabsList>
-          <TabsTrigger value="overview">Resumen</TabsTrigger>
+          <TabsTrigger value="report">Web Report</TabsTrigger>
           <TabsTrigger value="pages">Páginas</TabsTrigger>
           <TabsTrigger value="changes">Cambios ({changes.length})</TabsTrigger>
           <TabsTrigger value="checks">Historial</TabsTrigger>
@@ -166,7 +150,6 @@ const TabPanels = ({
 }) => (
   <>
     <TabsContent value="overview" className="space-y-4">
-      <WebsiteAuditPanel siteId={site.id} />
       <Card>
         <CardHeader>
           <CardTitle>Tiempo de respuesta</CardTitle>
@@ -186,6 +169,15 @@ const TabPanels = ({
           <CardContent className="text-sm whitespace-pre-wrap">{site.notes}</CardContent>
         </Card>
       ) : null}
+      <WebsiteMonitorAlertSettings site={site} />
+      <WebsiteMonitorAuditScheduleSettings site={site} />
+    </TabsContent>
+
+    <TabsContent value="report" className="space-y-4">
+      <WebsiteAuditPanel
+        siteId={site.id}
+        siteLabel={site.display_name?.trim() || site.url}
+      />
     </TabsContent>
 
     <TabsContent value="pages">

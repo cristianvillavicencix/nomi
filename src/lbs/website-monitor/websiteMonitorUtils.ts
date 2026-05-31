@@ -35,10 +35,17 @@ export const extractDomainFromUrl = (url?: string | null): string | null => {
   return stripped || null;
 };
 
-export const getWebsiteFaviconSrc = (url?: string | null): string | undefined => {
+export const getWebsiteFaviconSrc = (url?: string | null): string | undefined =>
+  getWebsiteFaviconSources(url)[0];
+
+export const getWebsiteFaviconSources = (url?: string | null): string[] => {
   const domain = extractDomainFromUrl(url);
-  if (!domain) return undefined;
-  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+  if (!domain) return [];
+  return [
+    `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`,
+    `https://${domain}/favicon.ico`,
+    `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
+  ];
 };
 
 export const formatResponseMs = (value?: number | null) =>

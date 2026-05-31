@@ -2,6 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { UserMiddleware } from "../_shared/authentication.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
+import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
+import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { isAuthorizedFollowUpCron } from "../_shared/notifyFollowUp.ts";
 import { runWebsiteMonitorCheck } from "../_shared/websiteMonitor.ts";
 import {
@@ -36,7 +38,6 @@ Deno.serve((req: Request) =>
         return createErrorResponse(400, "monitored_website_id is required");
       }
 
-      const { supabaseAdmin } = await import("../_shared/supabaseAdmin.ts");
       const site = await fetchWebsiteMonitorSite(supabaseAdmin, siteId, orgId);
       if (!site) {
         return createErrorResponse(404, "Website not found");
@@ -66,9 +67,6 @@ Deno.serve((req: Request) =>
         return createErrorResponse(401, "Unauthorized");
       }
 
-      const { getUserOrganizationMember } = await import(
-        "../_shared/getUserOrganizationMember.ts"
-      );
       const member = await getUserOrganizationMember(user);
       if (!member?.org_id) {
         return createErrorResponse(403, "Forbidden");

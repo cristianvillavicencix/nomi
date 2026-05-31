@@ -262,7 +262,12 @@ export const WebsiteMonitorListPage = () => {
           </div>
 
           {isInitialLoading ? (
-            <p className="text-sm text-muted-foreground">Cargando sitios…</p>
+            <div className="min-h-[320px] rounded-lg border border-dashed border-border/60 flex items-center justify-center">
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Cargando sitios…
+              </p>
+            </div>
           ) : !filteredSites.length ? (
             <Card>
               <CardContent className="py-10 text-center">

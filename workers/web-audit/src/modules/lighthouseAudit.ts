@@ -31,6 +31,48 @@ export const runLighthouseAudit = async (
   signal: AbortSignal,
   sharedChrome?: AuditChrome,
 ): Promise<{ scores: LighthouseScores; chrome: AuditChrome }> => {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    if (sharedChrome && attempt > 1) {
+      break;
+    }
+    try {
+      return await runLighthouseAuditOnce(
+        url,
+        strategy,
+        signal,
+        attempt === 1 ? sharedChrome : undefined,
+      );
+    } catch (cause) {
+      lastError = cause;
+      const message = cause instanceof Error ? cause.message : String(cause);
+      const retryable =
+        attempt === 1 &&
+        !sharedChrome &&
+        !signal.aborted &&
+        /protocol error|internal error|target closed|disconnected|session closed/i.test(
+          message,
+        );
+      if (!retryable) {
+        throw cause;
+      }
+      console.error(
+        "web-audit lighthouse retry",
+        strategy,
+        attempt,
+        message,
+      );
+    }
+  }
+  throw lastError;
+};
+
+const runLighthouseAuditOnce = async (
+  url: string,
+  strategy: WebsiteAuditStrategy,
+  signal: AbortSignal,
+  sharedChrome?: AuditChrome,
+): Promise<{ scores: LighthouseScores; chrome: AuditChrome }> => {
   if (signal.aborted) {
     throw new LighthouseAuditError(
       "Lighthouse excedió el tiempo límite del audit.",
@@ -60,6 +102,9 @@ export const runLighthouseAudit = async (
           "best-practices",
           "accessibility",
         ],
+        maxWaitForLoad: 25_000,
+        maxWaitForFcp: 15_000,
+        skipAboutBlank: true,
       },
       undefined,
     );
@@ -112,6 +157,14 @@ export const runLighthouseAudit = async (
       );
     }
 
+    if (overall == null) {
+      const finalUrl = lhr.finalDisplayedUrl ?? lhr.requestedUrl ?? url;
+      throw new LighthouseAuditError(
+        `Lighthouse no obtuvo scores para ${finalUrl}. El sitio puede bloquear Chrome headless.`,
+        "lighthouse_failed",
+      );
+    }
+
     return {
       chrome,
       scores: {
@@ -121,6 +174,7 @@ export const runLighthouseAudit = async (
         accessibility,
         overall,
         labLcpMs: extractMetric(audits, "largest-contentful-paint"),
+        labFcpMs: extractMetric(audits, "first-contentful-paint"),
         labCls: extractMetric(audits, "cumulative-layout-shift"),
         labTbtMs: extractMetric(audits, "total-blocking-time"),
         lighthouseJson: lhr as unknown as Record<string, unknown>,

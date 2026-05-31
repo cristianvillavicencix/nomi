@@ -262,3 +262,12 @@ verify_jwt = false
 
 [functions.website_audit_callback]
 verify_jwt = false
+
+[functions.website_audit_send]
+verify_jwt = false
+
+[functions.website_audit_summarize]
+verify_jwt = false
+
+[functions.website_audit_schedule]
+verify_jwt = false

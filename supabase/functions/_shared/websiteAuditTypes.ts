@@ -44,6 +44,7 @@ export type WebsiteAuditCallbackPayload = {
   status: WebsiteAuditStatus;
   worker_id?: string | null;
   strategy?: WebsiteAuditStrategy | null;
+  progress_phase?: "static" | "mobile" | "desktop" | "crux" | null;
   overall_score?: number | null;
   score_performance?: number | null;
   score_seo?: number | null;

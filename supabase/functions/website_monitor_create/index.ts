@@ -2,6 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { UserMiddleware } from "../_shared/authentication.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
+import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
+import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { normalizeMonitorUrl } from "../_shared/websiteMonitor.ts";
 
 Deno.serve((req: Request) =>
@@ -15,9 +17,6 @@ Deno.serve((req: Request) =>
         return createErrorResponse(401, "Unauthorized");
       }
 
-      const { getUserOrganizationMember } = await import(
-        "../_shared/getUserOrganizationMember.ts"
-      );
       const member = await getUserOrganizationMember(user);
       if (!member?.org_id) {
         return createErrorResponse(403, "Forbidden");
@@ -47,7 +46,6 @@ Deno.serve((req: Request) =>
         .filter(Boolean)
         .slice(0, 6);
 
-      const { supabaseAdmin } = await import("../_shared/supabaseAdmin.ts");
       const { data, error } = await supabaseAdmin
         .from("monitored_websites")
         .insert({

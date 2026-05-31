@@ -10,6 +10,10 @@ export type WebsiteMonitorOrgSettings = {
   default_alert_on_slow: boolean;
   default_alert_on_ssl: boolean;
   alert_cooldown_hours: number;
+  default_audit_schedule_enabled: boolean;
+  default_audit_interval_days: number;
+  default_audit_alert_on_score_drop: boolean;
+  default_audit_score_drop_threshold: number;
 };
 
 const DEFAULTS: WebsiteMonitorOrgSettings = {
@@ -22,6 +26,10 @@ const DEFAULTS: WebsiteMonitorOrgSettings = {
   default_alert_on_slow: false,
   default_alert_on_ssl: true,
   alert_cooldown_hours: 6,
+  default_audit_schedule_enabled: false,
+  default_audit_interval_days: 30,
+  default_audit_alert_on_score_drop: true,
+  default_audit_score_drop_threshold: 10,
 };
 
 const clampInt = (
@@ -65,6 +73,21 @@ export const parseWebsiteMonitorSettings = (
       1,
       168,
       DEFAULTS.alert_cooldown_hours,
+    ),
+    default_audit_schedule_enabled: value.default_audit_schedule_enabled === true,
+    default_audit_interval_days: clampInt(
+      value.default_audit_interval_days,
+      1,
+      365,
+      DEFAULTS.default_audit_interval_days,
+    ),
+    default_audit_alert_on_score_drop:
+      value.default_audit_alert_on_score_drop !== false,
+    default_audit_score_drop_threshold: clampInt(
+      value.default_audit_score_drop_threshold,
+      1,
+      100,
+      DEFAULTS.default_audit_score_drop_threshold,
     ),
   };
 };

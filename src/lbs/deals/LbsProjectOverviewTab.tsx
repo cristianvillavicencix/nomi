@@ -20,6 +20,7 @@ import {
 import { ProjectCalendarEventsList } from "@/lbs/calendar/ProjectCalendarEventsList";
 import { ProjectActivityTab } from "@/lbs/projects/tabs/ProjectActivityTab";
 import { WebsiteMonitorStatusWidget } from "@/lbs/website-monitor/WebsiteMonitorStatusWidget";
+import { WebsiteMonitorAuditWidget } from "@/lbs/website-monitor/WebsiteMonitorAuditWidget";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/lbs/types";
 
@@ -117,10 +118,16 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
           ) : null}
 
           {record.company_id ? (
-            <WebsiteMonitorStatusWidget
-              companyId={record.company_id}
-              title="Estado del sitio web del cliente"
-            />
+            <>
+              <WebsiteMonitorStatusWidget
+                companyId={record.company_id}
+                title="Estado del sitio web del cliente"
+              />
+              <WebsiteMonitorAuditWidget
+                companyId={record.company_id}
+                title="Último Web Report"
+              />
+            </>
           ) : null}
         </div>
 

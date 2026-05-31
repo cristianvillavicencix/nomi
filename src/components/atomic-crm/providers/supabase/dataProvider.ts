@@ -2268,6 +2268,62 @@ const dataProviderWithCustomMethods = {
       worker: data.worker,
     };
   },
+  async websiteAuditSend(params: {
+    auditId: number;
+    to: string;
+    subject: string;
+    message: string;
+    pdfBase64: string;
+    filename?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
+      "website_audit_send",
+      {
+        method: "POST",
+        body: {
+          audit_id: params.auditId,
+          to: params.to,
+          subject: params.subject,
+          message: params.message,
+          pdf_base64: params.pdfBase64,
+          filename: params.filename,
+        },
+      },
+    );
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(error, "Failed to send website audit report"),
+      );
+    }
+    return { ok: Boolean(data?.ok) };
+  },
+  async websiteAuditSummarize(params: { auditId: number; force?: boolean }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      audit_id?: number;
+      ai_summary_status?: string;
+      ai_summary_generated_at?: string;
+    }>("website_audit_summarize", {
+      method: "POST",
+      body: {
+        audit_id: params.auditId,
+        force: params.force ?? false,
+      },
+    });
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to generate AI audit summary",
+        ),
+      );
+    }
+    return {
+      ok: Boolean(data?.ok),
+      aiSummaryStatus: data?.ai_summary_status,
+      aiSummaryGeneratedAt: data?.ai_summary_generated_at,
+    };
+  },
 } satisfies DataProvider;
 
 export type CrmDataProvider = typeof dataProviderWithCustomMethods;

@@ -41,6 +41,16 @@ export const snapshotScores = (snapshot: AuditStrategySnapshot | null) => ({
   bestPractices: snapshot?.score_best_practices ?? null,
   accessibility: snapshot?.score_accessibility ?? null,
   labLcpMs: snapshot?.lab_lcp_ms ?? null,
+  labFcpMs: snapshot?.lab_fcp_ms ?? null,
   labCls: snapshot?.lab_cls ?? null,
   labTbtMs: snapshot?.lab_tbt_ms ?? null,
 });
+
+export const auditHasLighthouseScores = (audit: WebsiteAudit) => {
+  if (audit.overall_score != null) return true;
+  const { mobile, desktop } = getAuditSnapshots(audit);
+  return (
+    snapshotScores(mobile).overall != null ||
+    snapshotScores(desktop).overall != null
+  );
+};

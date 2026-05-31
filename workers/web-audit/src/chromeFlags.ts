@@ -9,4 +9,10 @@ export const CHROME_LAUNCH_FLAGS = [
   "--disable-setuid-sandbox",
   "--disable-gpu",
   "--disable-dev-shm-usage",
+  "--disable-extensions",
+  "--disable-background-networking",
+  "--disable-sync",
+  "--mute-audio",
+  "--no-first-run",
+  "--disable-default-apps",
 ] as const;

@@ -1,10 +1,11 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
 import { Globe } from "lucide-react";
-import { getWebsiteFaviconSrc } from "@/lbs/website-monitor/websiteMonitorUtils";
+import { getWebsiteFaviconSources } from "@/lbs/website-monitor/websiteMonitorUtils";
 import { cn } from "@/lib/utils";
 
 export const WebsiteMonitorFavicon = ({
@@ -18,10 +19,23 @@ export const WebsiteMonitorFavicon = ({
   className?: string;
   size?: "sm" | "md" | "lg";
 }) => {
-  const faviconSrc = getWebsiteFaviconSrc(url);
+  const sources = useMemo(() => getWebsiteFaviconSources(url), [url]);
+  const [sourceIndex, setSourceIndex] = useState(0);
+
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [url]);
+
+  const faviconSrc = sources[sourceIndex];
   const sizeClass =
     size === "sm" ? "size-8" : size === "lg" ? "size-16" : "size-10";
   const initials = (label ?? url ?? "?").slice(0, 2).toUpperCase();
+
+  const handleError = () => {
+    setSourceIndex((current) =>
+      current + 1 < sources.length ? current + 1 : current,
+    );
+  };
 
   return (
     <Avatar className={cn(sizeClass, className)}>
@@ -30,6 +44,7 @@ export const WebsiteMonitorFavicon = ({
           src={faviconSrc}
           alt={label ?? url ?? "Sitio web"}
           className="object-contain"
+          onError={handleError}
         />
       ) : null}
       <AvatarFallback className="text-xs">

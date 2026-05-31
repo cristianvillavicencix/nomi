@@ -219,6 +219,19 @@ input[type="time"] {
   }
 }
 
+@media screen {
+  .web-audit-report-print-only {
+    visibility: hidden;
+    height: 0;
+    overflow: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 794px;
+    pointer-events: none;
+  }
+}
+
 @media print {
   @page {
     size: A4;
@@ -244,7 +257,9 @@ input[type="time"] {
   .loan-print-only,
   .loan-print-only *,
   .payment-print-only,
-  .payment-print-only * {
+  .payment-print-only *,
+  .web-audit-report-print-only,
+  .web-audit-report-print-only * {
     visibility: visible !important;
   }
 
@@ -262,6 +277,26 @@ input[type="time"] {
     left: 0;
     top: 0;
     width: 100%;
+  }
+
+  .web-audit-report-print-only {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+  }
+
+  .web-audit-report-screen {
+    display: none !important;
+  }
+
+  .web-audit-report-print-only .web-audit-pdf-document {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
   }
 
   .loan-print-page {

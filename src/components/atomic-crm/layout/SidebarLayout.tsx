@@ -47,6 +47,7 @@ import { isLbsMode } from "@/lbs/productMode";
 import { LBS_NAV_ITEMS, filterLbsNavItems } from "@/lbs/navigation";
 import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
+import { WebsiteAuditBackgroundWatcher } from "@/lbs/website-monitor/audit/WebsiteAuditBackgroundWatcher";
 import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
 import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
 import {
@@ -542,6 +543,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
           </div>
         </main>
         <GlobalMessagesBadge className="fixed right-3 bottom-3 z-50 print:hidden max-[768px]:bottom-[max(0.75rem,env(safe-area-inset-bottom))]" />
+        <WebsiteAuditBackgroundWatcher />
         <Notification />
       </PageActionsProvider>
     </SidebarProvider>

@@ -24,7 +24,7 @@ Implications for agents and scripts:
 - Deploy edge functions with **`supabase functions deploy … --project-ref <ref>`** — not `supabase functions serve`.
 - Edge function secrets live in the **hosted** Dashboard / `supabase secrets set --project-ref …`.
 - **`WEB_AUDIT_WORKER_URL`** must be a URL reachable from Supabase Edge (public worker or tunnel), not `http://127.0.0.1` unless you tunnel.
-- **Web Report worker (Fly.io):** `workers/web-audit/` — deploy with `fly deploy`; set matching `WEB_AUDIT_WORKER_SECRET` on Fly and Supabase. See `workers/web-audit/README.md`.
+- **Web Report worker (Google Cloud Run):** `workers/web-audit/` — `./scripts/deploy-cloud-run.sh`; set `WEB_AUDIT_WORKER_URL` + `WEB_AUDIT_WORKER_SECRET` on Supabase. See `workers/web-audit/CLOUD_RUN.md`. Fly.io is legacy fallback.
 - Do **not** set hosted `SB_JWT_ISSUER` to `http://127.0.0.1:54321/auth/v1` (breaks JWT verification against production tokens).
 
 Optional local Supabase (Docker): see “Accessing Local Services” below — only if you explicitly start the local stack.
