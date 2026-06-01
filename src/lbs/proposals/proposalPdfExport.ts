@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import type {
   Proposal,
   ProposalLineItem,
@@ -19,7 +18,7 @@ const formatDate = (value?: string | null) => {
   });
 };
 
-export const exportProposalPdf = ({
+export const exportProposalPdf = async ({
   proposal,
   lineItems,
   installments,
@@ -28,6 +27,7 @@ export const exportProposalPdf = ({
   lineItems: ProposalLineItem[];
   installments: ProposalPaymentInstallment[];
 }) => {
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const margin = 48;
   let y = margin;
