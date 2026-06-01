@@ -20,11 +20,15 @@ export const ProposalPaymentSchedulePanel = ({
   onChange,
   depositAmount,
   balanceAmount,
+  compact = false,
+  showPreviewTable = true,
 }: {
   config: PaymentScheduleConfig;
   onChange: (config: PaymentScheduleConfig) => void;
   depositAmount: number;
   balanceAmount: number;
+  compact?: boolean;
+  showPreviewTable?: boolean;
 }) => {
   const preview = generatePaymentInstallments({
     depositAmount,
@@ -32,12 +36,8 @@ export const ProposalPaymentSchedulePanel = ({
     config,
   });
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Payment schedule</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+  const fields = (
+    <>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1">
             <Label>Balance frequency</Label>
@@ -109,6 +109,7 @@ export const ProposalPaymentSchedulePanel = ({
           </div>
         </div>
 
+      {showPreviewTable ? (
         <div className="overflow-x-auto rounded-md border">
           <table className="w-full text-sm">
             <thead>
@@ -133,7 +134,20 @@ export const ProposalPaymentSchedulePanel = ({
             </tbody>
           </table>
         </div>
-      </CardContent>
+      ) : null}
+    </>
+  );
+
+  if (compact) {
+    return <div className="space-y-4">{fields}</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Payment schedule</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">{fields}</CardContent>
     </Card>
   );
 };

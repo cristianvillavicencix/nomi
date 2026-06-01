@@ -29,6 +29,7 @@ export type PaymentScheduleConfig = {
 
 export type ProposalTotals = {
   oneTimeTotal: number;
+  recurringSubtotal: number;
   recurringLines: Array<{
     description: string;
     amount: number;
@@ -60,13 +61,21 @@ export const calculateProposalTotals = (
     Math.round(oneTimeTotal * (depositPercent / 100) * 100) / 100;
   const balanceAmount = Math.round((oneTimeTotal - depositAmount) * 100) / 100;
 
+  const recurringLineItems = recurringLines.map((line) => ({
+    description: line.description,
+    amount: lineTotal(line.quantity, line.unit_price),
+    interval: line.billing_interval ?? "monthly",
+  }));
+
+  const recurringSubtotal = recurringLineItems.reduce(
+    (sum, line) => sum + line.amount,
+    0,
+  );
+
   return {
     oneTimeTotal,
-    recurringLines: recurringLines.map((line) => ({
-      description: line.description,
-      amount: lineTotal(line.quantity, line.unit_price),
-      interval: line.billing_interval ?? "monthly",
-    })),
+    recurringSubtotal,
+    recurringLines: recurringLineItems,
     depositAmount,
     balanceAmount,
     grandTotalOneTime: oneTimeTotal,

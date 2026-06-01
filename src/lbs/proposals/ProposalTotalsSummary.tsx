@@ -21,9 +21,21 @@ export const ProposalTotalsSummary = ({
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex justify-between gap-2">
-          <span className="text-muted-foreground">One-time total</span>
+          <span className="text-muted-foreground">One-time subtotal</span>
           <MoneyText value={totals.oneTimeTotal} className="font-medium" />
         </div>
+        {totals.recurringSubtotal > 0 ? (
+          <div className="flex justify-between gap-2">
+            <span className="text-muted-foreground">Recurring subtotal</span>
+            <span className="font-medium tabular-nums">
+              <MoneyText value={totals.recurringSubtotal} />
+              <span className="text-muted-foreground text-xs font-normal">
+                {" "}
+                /mo
+              </span>
+            </span>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-2">
           <span className="text-muted-foreground">
             Deposit ({depositPercent}%)

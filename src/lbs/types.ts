@@ -75,6 +75,7 @@ export type ServicePackage = {
   name: string;
   description?: string | null;
   suggested_price: number;
+  currency?: string;
   billing_type: "one_time" | "recurring";
   billing_interval?: "weekly" | "monthly" | "yearly" | null;
   category?: string | null;
@@ -90,8 +91,10 @@ export type ServiceAddon = {
   name: string;
   description?: string | null;
   suggested_price: number;
+  currency?: string;
   billing_type: "one_time" | "recurring";
   billing_interval?: "weekly" | "monthly" | "yearly" | null;
+  category?: string | null;
   active?: boolean;
   sort_order?: number;
   created_at?: string;

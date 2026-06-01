@@ -1,102 +1,65 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus } from "lucide-react";
 import {
   useCreate,
-  useDelete,
   useGetIdentity,
   useGetList,
   useNotify,
   useUpdate,
 } from "ra-core";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import type { ServiceAddon, ServicePackage } from "@/lbs/types";
 import {
-  BILLING_INTERVALS,
-  BILLING_TYPES,
-} from "@/lbs/proposals/proposalCommercialConstants";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  billingIntervalSuffix,
+  billingTypeLabel,
+  categoryLabel,
+} from "@/lbs/catalog/catalogConstants";
+import {
+  LBS_SERVICE_ADDONS,
+  LBS_SERVICE_PACKAGES,
+} from "@/lbs/catalog/serviceCatalogSeed";
+import {
+  ServiceCatalogItemDialog,
+  type CatalogItemDraft,
+} from "@/lbs/settings/ServiceCatalogItemDialog";
+import type { ServiceAddon, ServicePackage } from "@/lbs/types";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 
-const STARTER_PACKAGES: Array<
-  Omit<ServicePackage, "id" | "org_id" | "created_at" | "updated_at">
-> = [
-  {
-    name: "Website Starter",
-    description: "5-page business website with mobile responsive design",
-    suggested_price: 2500,
-    billing_type: "one_time",
-    billing_interval: null,
-    category: "website",
-    active: true,
-    sort_order: 1,
-  },
-  {
-    name: "Website Pro",
-    description: "Custom website with advanced sections and integrations",
-    suggested_price: 4500,
-    billing_type: "one_time",
-    billing_interval: null,
-    category: "website",
-    active: true,
-    sort_order: 2,
-  },
-  {
-    name: "Monthly Maintenance",
-    description: "Updates, backups, and minor content changes",
-    suggested_price: 150,
-    billing_type: "recurring",
-    billing_interval: "monthly",
-    category: "maintenance",
-    active: true,
-    sort_order: 10,
-  },
-];
+const toPackageDraft = (pkg: ServicePackage): Partial<CatalogItemDraft> => ({
+  name: pkg.name,
+  description: pkg.description ?? "",
+  category: pkg.category ?? "web",
+  suggested_price: pkg.suggested_price,
+  currency: pkg.currency ?? "USD",
+  billing_type: pkg.billing_type,
+  billing_interval: pkg.billing_interval ?? null,
+  active: pkg.active ?? true,
+  sort_order: pkg.sort_order ?? 0,
+});
 
-const STARTER_ADDONS: Array<
-  Omit<ServiceAddon, "id" | "org_id" | "created_at" | "updated_at">
-> = [
-  {
-    name: "Logo design",
-    description: "Custom logo with 2 revision rounds",
-    suggested_price: 400,
-    billing_type: "one_time",
-    billing_interval: null,
-    package_id: null,
-    active: true,
-    sort_order: 1,
-  },
-  {
-    name: "Google Business Profile setup",
-    description: "GBP optimization and verification support",
-    suggested_price: 150,
-    billing_type: "one_time",
-    billing_interval: null,
-    package_id: null,
-    active: true,
-    sort_order: 2,
-  },
-  {
-    name: "SEO monthly",
-    description: "On-page SEO and monthly reporting",
-    suggested_price: 350,
-    billing_type: "recurring",
-    billing_interval: "monthly",
-    package_id: null,
-    active: true,
-    sort_order: 3,
-  },
-];
+const toAddonDraft = (addon: ServiceAddon): Partial<CatalogItemDraft> => ({
+  name: addon.name,
+  description: addon.description ?? "",
+  category: addon.category ?? "web",
+  suggested_price: addon.suggested_price,
+  currency: addon.currency ?? "USD",
+  billing_type: addon.billing_type,
+  billing_interval: addon.billing_interval ?? null,
+  active: addon.active ?? true,
+  sort_order: addon.sort_order ?? 0,
+});
 
 export const ServiceCatalogSettings = () => {
   const notify = useNotify();
@@ -105,10 +68,15 @@ export const ServiceCatalogSettings = () => {
   const orgId = Number(identity?.org_id ?? 1);
   const [createPackage] = useCreate();
   const [updatePackage] = useUpdate();
-  const [deletePackage] = useDelete();
   const [createAddon] = useCreate();
   const [updateAddon] = useUpdate();
-  const [deleteAddon] = useDelete();
+
+  const [packageDialog, setPackageDialog] = useState<
+    { mode: "create" } | { mode: "edit"; record: ServicePackage } | null
+  >(null);
+  const [addonDialog, setAddonDialog] = useState<
+    { mode: "create" } | { mode: "edit"; record: ServiceAddon } | null
+  >(null);
 
   const { data: packages = [], isPending: isPackagesPending } =
     useGetList<ServicePackage>("service_packages", {
@@ -122,16 +90,16 @@ export const ServiceCatalogSettings = () => {
       sort: { field: "sort_order", order: "ASC" },
     });
 
-  const seedStarter = useMutation({
+  const seedCatalog = useMutation({
     mutationFn: async () => {
-      for (const pkg of STARTER_PACKAGES) {
+      for (const pkg of LBS_SERVICE_PACKAGES) {
         await createPackage(
           "service_packages",
           { data: { ...pkg, org_id: orgId } },
           { returnPromise: true },
         );
       }
-      for (const addon of STARTER_ADDONS) {
+      for (const addon of LBS_SERVICE_ADDONS) {
         await createAddon(
           "service_addons",
           { data: { ...addon, org_id: orgId } },
@@ -142,280 +110,285 @@ export const ServiceCatalogSettings = () => {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["service_packages"] });
       await queryClient.invalidateQueries({ queryKey: ["service_addons"] });
-      notify("Starter catalog loaded", { type: "success" });
+      notify("LBS + SKOP catalog loaded", { type: "success" });
     },
-    onError: () => notify("Failed to load starter catalog", { type: "error" }),
+    onError: () => notify("Failed to load catalog", { type: "error" }),
   });
+
+  const activePackages = useMemo(
+    () => packages.filter((pkg) => pkg.active !== false),
+    [packages],
+  );
+  const activeAddons = useMemo(
+    () => addons.filter((addon) => addon.active !== false),
+    [addons],
+  );
 
   if (isPackagesPending || isAddonsPending) {
     return <p className="text-sm text-muted-foreground">Loading catalog…</p>;
   }
 
+  const catalogEmpty = packages.length === 0 && addons.length === 0;
+
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          Packages and add-ons appear as quick-add buttons in the proposal
-          builder. Suggested prices can be edited per proposal.
+    <div className="space-y-4 max-w-5xl">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Manage packages and add-ons for the proposal builder. Catalog prices
+          are <strong>suggested only</strong> — each line can be edited per
+          proposal.
         </p>
-        {packages.length === 0 && addons.length === 0 ? (
+        {catalogEmpty ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
-            disabled={seedStarter.isPending}
-            onClick={() => seedStarter.mutate()}
+            disabled={seedCatalog.isPending}
+            onClick={() => seedCatalog.mutate()}
           >
-            {seedStarter.isPending ? (
+            {seedCatalog.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : null}
-            Load starter catalog
+            Load LBS + SKOP catalog
           </Button>
         ) : null}
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Packages</CardTitle>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              createPackage("service_packages", {
-                data: {
-                  org_id: orgId,
-                  name: "New package",
-                  suggested_price: 0,
-                  billing_type: "one_time",
-                  active: true,
-                  sort_order: packages.length + 1,
-                },
-              })
-            }
-          >
-            <Plus className="size-4" />
-            Add package
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {packages.map((pkg) => (
-            <CatalogRow
-              key={String(pkg.id)}
-              name={pkg.name}
-              description={pkg.description ?? ""}
-              suggestedPrice={pkg.suggested_price}
-              billingType={pkg.billing_type}
-              billingInterval={pkg.billing_interval ?? null}
-              active={pkg.active ?? true}
-              onSave={(patch) =>
-                updatePackage("service_packages", {
-                  id: pkg.id,
-                  data: patch,
-                  previousData: pkg,
-                })
-              }
-              onDelete={() =>
-                deletePackage("service_packages", {
-                  id: pkg.id,
-                  previousData: pkg,
-                })
-              }
-            />
-          ))}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="packages">
+        <TabsList>
+          <TabsTrigger value="packages">
+            Packages ({packages.length})
+          </TabsTrigger>
+          <TabsTrigger value="addons">Add-ons ({addons.length})</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Add-ons</CardTitle>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              createAddon("service_addons", {
-                data: {
-                  org_id: orgId,
-                  name: "New add-on",
-                  suggested_price: 0,
-                  billing_type: "one_time",
-                  active: true,
-                  sort_order: addons.length + 1,
-                },
-              })
-            }
-          >
-            <Plus className="size-4" />
-            Add add-on
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {addons.map((addon) => (
-            <CatalogRow
-              key={String(addon.id)}
-              name={addon.name}
-              description={addon.description ?? ""}
-              suggestedPrice={addon.suggested_price}
-              billingType={addon.billing_type}
-              billingInterval={addon.billing_interval ?? null}
-              active={addon.active ?? true}
-              onSave={(patch) =>
-                updateAddon("service_addons", {
-                  id: addon.id,
-                  data: patch,
-                  previousData: addon,
-                })
-              }
-              onDelete={() =>
-                deleteAddon("service_addons", {
-                  id: addon.id,
-                  previousData: addon,
-                })
-              }
-            />
-          ))}
-        </CardContent>
-      </Card>
+        <TabsContent value="packages" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base">Base packages</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  One package per proposal. {activePackages.length} active.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setPackageDialog({ mode: "create" })}
+              >
+                <Plus className="size-4" />
+                New package
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <CatalogTable
+                rows={packages}
+                onToggleActive={(row, active) =>
+                  updatePackage("service_packages", {
+                    id: row.id,
+                    data: { active },
+                    previousData: row,
+                  })
+                }
+                onEdit={(row) =>
+                  setPackageDialog({ mode: "edit", record: row })
+                }
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="addons" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base">Add-ons</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Stack on a base package. {activeAddons.length} active.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setAddonDialog({ mode: "create" })}
+              >
+                <Plus className="size-4" />
+                New add-on
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <CatalogTable
+                rows={addons}
+                onToggleActive={(row, active) =>
+                  updateAddon("service_addons", {
+                    id: row.id,
+                    data: { active },
+                    previousData: row,
+                  })
+                }
+                onEdit={(row) => setAddonDialog({ mode: "edit", record: row })}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <ServiceCatalogItemDialog
+        open={packageDialog != null}
+        onOpenChange={(open) => !open && setPackageDialog(null)}
+        title={
+          packageDialog?.mode === "edit" ? "Edit package" : "New package"
+        }
+        sortOrder={packages.length + 1}
+        initial={
+          packageDialog?.mode === "edit"
+            ? toPackageDraft(packageDialog.record)
+            : undefined
+        }
+        onSave={async (draft) => {
+          if (packageDialog?.mode === "edit") {
+            await updatePackage(
+              "service_packages",
+              {
+                id: packageDialog.record.id,
+                data: draft,
+                previousData: packageDialog.record,
+              },
+              { returnPromise: true },
+            );
+            notify("Package updated", { type: "success" });
+          } else {
+            await createPackage(
+              "service_packages",
+              { data: { ...draft, org_id: orgId } },
+              { returnPromise: true },
+            );
+            notify("Package created", { type: "success" });
+          }
+        }}
+      />
+
+      <ServiceCatalogItemDialog
+        open={addonDialog != null}
+        onOpenChange={(open) => !open && setAddonDialog(null)}
+        title={addonDialog?.mode === "edit" ? "Edit add-on" : "New add-on"}
+        sortOrder={addons.length + 1}
+        initial={
+          addonDialog?.mode === "edit"
+            ? toAddonDraft(addonDialog.record)
+            : undefined
+        }
+        onSave={async (draft) => {
+          if (addonDialog?.mode === "edit") {
+            await updateAddon(
+              "service_addons",
+              {
+                id: addonDialog.record.id,
+                data: draft,
+                previousData: addonDialog.record,
+              },
+              { returnPromise: true },
+            );
+            notify("Add-on updated", { type: "success" });
+          } else {
+            await createAddon(
+              "service_addons",
+              { data: { ...draft, org_id: orgId, package_id: null } },
+              { returnPromise: true },
+            );
+            notify("Add-on created", { type: "success" });
+          }
+        }}
+      />
     </div>
   );
 };
 
-const CatalogRow = ({
-  name,
-  description,
-  suggestedPrice,
-  billingType,
-  billingInterval,
-  active,
-  onSave,
-  onDelete,
+const CatalogTable = <
+  T extends {
+    id: unknown;
+    name: string;
+    category?: string | null;
+    suggested_price: number;
+    billing_type: "one_time" | "recurring";
+    billing_interval?: string | null;
+    active?: boolean;
+  },
+>({
+  rows,
+  onToggleActive,
+  onEdit,
 }: {
-  name: string;
-  description: string;
-  suggestedPrice: number;
-  billingType: "one_time" | "recurring";
-  billingInterval: "weekly" | "monthly" | "yearly" | null;
-  active: boolean;
-  onSave: (patch: Record<string, unknown>) => void;
-  onDelete: () => void;
+  rows: T[];
+  onToggleActive: (row: T, active: boolean) => void;
+  onEdit: (row: T) => void;
 }) => {
-  const [draft, setDraft] = useState({
-    name,
-    description,
-    suggested_price: suggestedPrice,
-    billing_type: billingType,
-    billing_interval: billingInterval,
-    active,
-  });
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground py-6 text-center">
+        No items yet.
+      </p>
+    );
+  }
 
   return (
-    <div className="grid gap-3 rounded-lg border p-3 md:grid-cols-2">
-      <div className="space-y-2">
-        <Label>Name</Label>
-        <Input
-          value={draft.name}
-          onChange={(event) =>
-            setDraft((current) => ({ ...current, name: event.target.value }))
-          }
-        />
-        <Label>Description</Label>
-        <Textarea
-          value={draft.description}
-          rows={2}
-          onChange={(event) =>
-            setDraft((current) => ({
-              ...current,
-              description: event.target.value,
-            }))
-          }
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>Suggested price</Label>
-        <Input
-          type="number"
-          min={0}
-          step={0.01}
-          value={draft.suggested_price}
-          onChange={(event) =>
-            setDraft((current) => ({
-              ...current,
-              suggested_price: Number(event.target.value) || 0,
-            }))
-          }
-        />
-        <Label>Billing type</Label>
-        <Select
-          value={draft.billing_type}
-          onValueChange={(value) =>
-            setDraft((current) => ({
-              ...current,
-              billing_type: value as "one_time" | "recurring",
-              billing_interval: value === "recurring" ? "monthly" : null,
-            }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {BILLING_TYPES.map((entry) => (
-              <SelectItem key={entry.value} value={entry.value}>
-                {entry.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {draft.billing_type === "recurring" ? (
-          <>
-            <Label>Interval</Label>
-            <Select
-              value={draft.billing_interval ?? "monthly"}
-              onValueChange={(value) =>
-                setDraft((current) => ({
-                  ...current,
-                  billing_interval: value as "weekly" | "monthly" | "yearly",
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BILLING_INTERVALS.map((entry) => (
-                  <SelectItem key={entry.value} value={entry.value}>
-                    {entry.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        ) : null}
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={draft.active}
-            onCheckedChange={(checked) =>
-              setDraft((current) => ({ ...current, active: checked }))
-            }
-          />
-          <Label>Active</Label>
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" size="sm" onClick={() => onSave(draft)}>
-            Save
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={onDelete}
-            aria-label="Delete"
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
-      </div>
+    <div className="overflow-x-auto rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Billing</TableHead>
+            <TableHead className="text-right">Suggested</TableHead>
+            <TableHead className="text-center">Active</TableHead>
+            <TableHead className="w-12" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={String(row.id)}>
+              <TableCell className="font-medium">{row.name}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {categoryLabel(row.category)}
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline" className="font-normal">
+                  {billingTypeLabel(row.billing_type)}
+                  {billingIntervalSuffix(
+                    row.billing_type,
+                    row.billing_interval,
+                  )}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                <MoneyText value={row.suggested_price} />
+                {billingIntervalSuffix(
+                  row.billing_type,
+                  row.billing_interval,
+                )}
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch
+                  checked={row.active !== false}
+                  onCheckedChange={(checked) => onToggleActive(row, checked)}
+                  aria-label={`Toggle ${row.name}`}
+                />
+              </TableCell>
+              <TableCell>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit(row)}
+                  aria-label={`Edit ${row.name}`}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };

@@ -23,9 +23,8 @@ import type {
   ProposalLineItem,
   ProposalPaymentSchedule,
 } from "@/lbs/types";
-import { ProposalLineItemsEditor } from "@/lbs/proposals/ProposalLineItemsEditor";
-import { ProposalPaymentSchedulePanel } from "@/lbs/proposals/ProposalPaymentSchedulePanel";
-import { ProposalTotalsSummary } from "@/lbs/proposals/ProposalTotalsSummary";
+import { ProposalCartPanel } from "@/lbs/proposals/ProposalCartPanel";
+import { ProposalCatalogPanel } from "@/lbs/proposals/ProposalCatalogPanel";
 import {
   DEFAULT_DEPOSIT_PERCENT,
   DEFAULT_VALIDITY_DAYS,
@@ -37,16 +36,6 @@ import {
   type ProposalLineDraft,
 } from "@/lbs/proposals/proposalCommercialUtils";
 import { saveProposalCommercial } from "@/lbs/proposals/saveProposalCommercial";
-
-const newLine = (sortOrder: number): ProposalLineDraft => ({
-  key: `line-${Date.now()}-${sortOrder}`,
-  description: "",
-  quantity: 1,
-  unit_price: 0,
-  billing_type: "one_time",
-  billing_interval: null,
-  sort_order: sortOrder,
-});
 
 const defaultScheduleConfig = (): PaymentScheduleConfig => ({
   installment_frequency: "weekly",
@@ -93,63 +82,56 @@ const ProposalBuilderFields = ({
   );
 
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Proposal details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <TextInput
-              source="title"
-              validate={(value) => (!value ? "Required" : undefined)}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ReferenceInput source="company_id" reference="companies">
-                <AutocompleteInput optionText="name" label="Client" />
-              </ReferenceInput>
-              <ReferenceInput source="contact_id" reference="contacts_summary">
-                <AutocompleteInput
-                  optionText={contactOptionText}
-                  label="Contact"
-                />
-              </ReferenceInput>
-              <ReferenceInput source="deal_id" reference="deals">
-                <AutocompleteInput optionText="name" label="Deal / project" />
-              </ReferenceInput>
-              <NumberInput source="validity_days" label="Validity (days)" />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Valid until: <strong>{validUntil}</strong>
-            </p>
-            <TextInput source="notes" multiline rows={3} label="Notes" />
-          </CardContent>
-        </Card>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Proposal details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <TextInput
+            source="title"
+            validate={(value) => (!value ? "Required" : undefined)}
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <ReferenceInput source="company_id" reference="companies">
+              <AutocompleteInput optionText="name" label="Client" />
+            </ReferenceInput>
+            <ReferenceInput source="contact_id" reference="contacts_summary">
+              <AutocompleteInput
+                optionText={contactOptionText}
+                label="Contact"
+              />
+            </ReferenceInput>
+            <ReferenceInput source="deal_id" reference="deals">
+              <AutocompleteInput optionText="name" label="Deal / project" />
+            </ReferenceInput>
+            <NumberInput source="validity_days" label="Validity (days)" />
+          </div>
+          <TextInput source="notes" multiline rows={2} label="Internal notes" />
+        </CardContent>
+      </Card>
 
-        <ProposalLineItemsEditor lines={lines} onChange={setLines} />
-
-        <ProposalPaymentSchedulePanel
-          config={scheduleConfig}
-          onChange={setScheduleConfig}
-          depositAmount={totals.depositAmount}
-          balanceAmount={totals.balanceAmount}
-        />
-      </div>
-
-      <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-        <ProposalTotalsSummary
-          totals={totals}
-          depositPercent={depositPercent}
-          validUntil={validUntil}
-        />
-        <Button type="submit" className="w-full" disabled={isSaving}>
-          {isSaving ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Save className="size-4" />
-          )}
-          Save proposal
-        </Button>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:items-start">
+        <ProposalCatalogPanel lines={lines} onChange={setLines} />
+        <div className="space-y-4 xl:sticky xl:top-4">
+          <ProposalCartPanel
+            lines={lines}
+            onChange={setLines}
+            totals={totals}
+            depositPercent={depositPercent}
+            validUntil={validUntil}
+            scheduleConfig={scheduleConfig}
+            onScheduleChange={setScheduleConfig}
+          />
+          <Button type="submit" className="w-full" disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            Save proposal
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -167,7 +149,7 @@ export const ProposalBuilderForm = ({
   const { identity } = useGetIdentity();
   const orgId = Number(identity?.org_id ?? 1);
   const [isSaving, setIsSaving] = useState(false);
-  const [lines, setLines] = useState<ProposalLineDraft[]>([newLine(0)]);
+  const [lines, setLines] = useState<ProposalLineDraft[]>([]);
   const [scheduleConfig, setScheduleConfig] = useState<PaymentScheduleConfig>(
     defaultScheduleConfig,
   );
@@ -282,8 +264,11 @@ export const ProposalBuilderForm = ({
       key={proposalId ?? "create"}
       defaultValues={defaultValues}
       onSubmit={async (values: ProposalFormValues) => {
-        if (lines.every((line) => !line.description.trim())) {
-          notify("Add at least one line item", { type: "warning" });
+        const filledLines = lines.filter((line) => line.description.trim());
+        if (filledLines.length === 0) {
+          notify("Select a base package or add at least one line", {
+            type: "warning",
+          });
           return;
         }
 
@@ -298,7 +283,7 @@ export const ProposalBuilderForm = ({
                 organization_member_id: identity?.id ?? null,
                 notes: values.notes?.trim() || null,
               },
-              lines: lines.filter((line) => line.description.trim()),
+              lines: filledLines,
               scheduleConfig,
               validityDays: values.validity_days,
               depositPercent: values.deposit_percent,
