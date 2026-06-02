@@ -2,12 +2,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
+import { markDealPendingPayment } from "../_shared/proposalFlow.ts";
 
 type SignProposalContractBody = {
   proposal_id: number;
   public_token: string;
   signatory_name: string;
-  confirm_deposit?: boolean;
 };
 
 const clientIp = (req: Request) =>
@@ -44,7 +44,9 @@ Deno.serve(
 
       const { data: proposal } = await supabaseAdmin
         .from("proposals")
-        .select("id, org_id, contract_id, contact_id, status, accepted_at")
+        .select(
+          "id, org_id, contract_id, contact_id, deal_id, status, accepted_at, amount",
+        )
         .eq("id", proposalId)
         .maybeSingle();
 
@@ -58,68 +60,31 @@ Deno.serve(
       const now = new Date().toISOString();
       const ip = clientIp(req);
 
-      const contractUpdate: Record<string, unknown> = {
-        status: "signed",
-        signed_at: now,
-        signed_ip: ip,
-        signatory_name: signatoryName,
-        signed_by_contact_id: proposal.contact_id,
-        updated_at: now,
-      };
-
-      const skipBilling =
-        Deno.env.get("SKIP_CLIENT_BILLING") === "1" ||
-        Deno.env.get("SKIP_CLIENT_BILLING") === "true";
-
-      if (body.confirm_deposit !== false) {
-        contractUpdate.deposit_paid_at = now;
-
-        const { data: depositInstallment } = await supabaseAdmin
-          .from("proposal_payment_installments")
-          .select("id, amount")
-          .eq("proposal_id", proposalId)
-          .eq("installment_number", 1)
-          .maybeSingle();
-
-        if (depositInstallment?.id) {
-          await supabaseAdmin
-            .from("proposal_payment_installments")
-            .update({
-              status: "paid",
-              paid_at: now,
-              payment_method: skipBilling ? "manual" : "manual",
-              manual_marked_at: now,
-            })
-            .eq("id", depositInstallment.id);
-        }
-
-        const { data: dealRow } = await supabaseAdmin
-          .from("contracts")
-          .select("deal_id")
-          .eq("id", proposal.contract_id)
-          .maybeSingle();
-
-        if (dealRow?.deal_id && depositInstallment?.id) {
-          await supabaseAdmin
-            .from("deal_client_payments")
-            .update({ status: "cleared" })
-            .eq("deal_id", dealRow.deal_id)
-            .eq(
-              "reference_number",
-              `proposal-installment-${depositInstallment.id}`,
-            );
-        }
-      }
-
       await supabaseAdmin
         .from("contracts")
-        .update(contractUpdate)
+        .update({
+          status: "signed",
+          signed_at: now,
+          signed_ip: ip,
+          signatory_name: signatoryName,
+          signed_by_contact_id: proposal.contact_id,
+          updated_at: now,
+        })
         .eq("id", proposal.contract_id);
+
+      if (proposal.deal_id) {
+        await markDealPendingPayment(
+          supabaseAdmin,
+          proposal.deal_id,
+          proposalId,
+          proposal.amount ?? 0,
+        );
+      }
 
       if (proposal.contact_id) {
         await supabaseAdmin
           .from("contacts")
-          .update({ status: "client", lead_stage: "won" })
+          .update({ lead_stage: "closing" })
           .eq("id", proposal.contact_id);
       }
 
@@ -127,8 +92,7 @@ Deno.serve(
         JSON.stringify({
           contract_id: proposal.contract_id,
           signed_at: now,
-          deposit_recorded: body.confirm_deposit !== false,
-          billing_mode: skipBilling ? "manual_skipped" : "manual",
+          deal_id: proposal.deal_id,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

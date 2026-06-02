@@ -20,6 +20,7 @@ export const LBS_WEB_PIPELINE_STAGES = [
   { value: "lead", label: "Lead" },
   { value: "discovery", label: "Discovery" },
   { value: "proposal_sent", label: "Proposal Sent" },
+  { value: "pending_payment", label: "Pending Payment" },
   { value: "won", label: "Won" },
   { value: "design", label: "Design" },
   { value: "development", label: "Development" },

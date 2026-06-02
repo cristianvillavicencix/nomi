@@ -116,9 +116,8 @@ export const fakeAcceptProposal = async (
         company_id: proposal.company_id,
         contact_id: proposal.contact_id,
         contact_ids: proposal.contact_id ? [proposal.contact_id] : [],
-        stage: "setup",
-        lifecycle_phase: "delivery",
-        delivery_status: "planning",
+        stage: "pending_payment",
+        lifecycle_phase: "opportunity",
         accepted_proposal_id: proposalId,
         amount: proposal.amount ?? 0,
         estimated_value: proposal.amount ?? 0,
@@ -238,6 +237,94 @@ export const fakeAcceptProposal = async (
     proposal_id: proposalId,
     contract_id: contract.id,
   };
+};
+
+export const fakeSignProposalContract = async (
+  dataProvider: DataProvider,
+  proposalId: Identifier,
+  signatoryName: string,
+) => {
+  const { data: proposal } = await dataProvider.getOne<Proposal>("proposals", {
+    id: proposalId,
+  });
+  if (!proposal.contract_id) {
+    throw new Error("Proposal must be accepted before signing");
+  }
+
+  const now = new Date().toISOString();
+  const { data: contract } = await dataProvider.getOne<Contract>("contracts", {
+    id: proposal.contract_id,
+  });
+  await dataProvider.update("contracts", {
+    id: proposal.contract_id,
+    data: {
+      status: "signed",
+      signed_at: now,
+      signatory_name: signatoryName,
+    },
+    previousData: contract,
+  });
+
+  if (proposal.deal_id) {
+    const { data: deal } = await dataProvider.getOne("deals", {
+      id: proposal.deal_id,
+    });
+    await dataProvider.update("deals", {
+      id: proposal.deal_id,
+      data: { stage: "pending_payment", lifecycle_phase: "opportunity" },
+      previousData: deal,
+    });
+  }
+
+  return { contract_id: proposal.contract_id, signed_at: now };
+};
+
+export const fakePayProposalDeposit = async (
+  dataProvider: DataProvider,
+  proposalId: Identifier,
+) => {
+  const { data: proposal } = await dataProvider.getOne<Proposal>("proposals", {
+    id: proposalId,
+  });
+  if (!proposal.contract_id || !proposal.deal_id) {
+    throw new Error("Proposal must be accepted and signed");
+  }
+
+  const now = new Date().toISOString();
+  const { data: contract } = await dataProvider.getOne<Contract>("contracts", {
+    id: proposal.contract_id,
+  });
+  await dataProvider.update("contracts", {
+    id: proposal.contract_id,
+    data: { deposit_paid_at: now },
+    previousData: contract,
+  });
+
+  const { data: deal } = await dataProvider.getOne("deals", {
+    id: proposal.deal_id,
+  });
+  await dataProvider.update("deals", {
+    id: proposal.deal_id,
+    data: {
+      stage: "won",
+      lifecycle_phase: "delivery",
+      delivery_status: "planning",
+    },
+    previousData: deal,
+  });
+
+  if (proposal.contact_id) {
+    const { data: contact } = await dataProvider.getOne("contacts", {
+      id: proposal.contact_id,
+    });
+    await dataProvider.update("contacts", {
+      id: proposal.contact_id,
+      data: { status: "client", lead_stage: "won" },
+      previousData: contact,
+    });
+  }
+
+  return { deposit_paid_at: now, deal_id: proposal.deal_id };
 };
 
 export type { PublicProposalToken };

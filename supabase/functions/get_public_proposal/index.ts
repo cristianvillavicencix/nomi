@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
+import { resolveProposalTermsMarkdown } from "../_shared/proposalFlow.ts";
 
 type GetPublicProposalBody = {
   token?: string;
@@ -76,7 +77,12 @@ Deno.serve(
           viewed_at,
           accepted_at,
           contract_id,
-          content
+          content,
+          org_id,
+          company_id,
+          contact_id,
+          organization_member_id,
+          recurring_summary
         `;
       const proposalSelectBase = proposalSelectWithContent.replace(
         ",\n          content",
@@ -154,6 +160,13 @@ Deno.serve(
         contract = contractRow ?? null;
       }
 
+      const resolvedTerms = await resolveProposalTermsMarkdown(
+        supabaseAdmin,
+        proposal,
+        lineItems ?? [],
+        installments ?? [],
+      );
+
       if (body.mark_viewed !== false && !proposal.viewed_at) {
         const now = new Date().toISOString();
         await supabaseAdmin
@@ -172,6 +185,8 @@ Deno.serve(
           line_items: lineItems ?? [],
           installments: installments ?? [],
           contract,
+          terms_markdown: resolvedTerms.markdown || null,
+          terms_title: resolvedTerms.title,
           organization: {
             name: org?.name ?? "LBS",
             logo_url: null,

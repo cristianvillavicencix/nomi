@@ -3,7 +3,6 @@ export const PROPOSAL_DOCUMENT_SECTIONS = [
   { id: "includes", label: "What's included" },
   { id: "investment", label: "Investment" },
   { id: "warranty", label: "Warranty" },
-  { id: "terms", label: "Terms" },
   { id: "accept", label: "Accept" },
 ] as const;
 
@@ -13,7 +12,6 @@ export const PROPOSAL_DOCUMENT_SECTIONS_ES = [
   { id: "includes", label: "Qué incluye" },
   { id: "investment", label: "Inversión" },
   { id: "warranty", label: "Garantía" },
-  { id: "terms", label: "Términos" },
   { id: "accept", label: "Aceptar" },
 ] as const;
 

@@ -192,7 +192,7 @@ const ProposalShowContent = () => {
               {record.contact_id ? (
                 <ReferenceField
                   source="contact_id"
-                  reference="contacts_summary"
+                  reference="contacts"
                   record={record}
                 />
               ) : (

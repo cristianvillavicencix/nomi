@@ -79,6 +79,8 @@ export type PublicProposalPayload = {
     deposit_paid_at: string | null;
     terms_snapshot: string | null;
   } | null;
+  terms_markdown?: string | null;
+  terms_title?: string | null;
   organization: {
     name: string;
     logo_url?: string | null;
@@ -101,22 +103,37 @@ export const signPublicProposalContract = ({
   proposalId,
   token,
   signatoryName,
-  confirmDeposit,
 }: {
   proposalId: number;
   token: string;
   signatoryName: string;
-  confirmDeposit: boolean;
 }) =>
-  invokePublicFunction<{ contract_id: number; signed_at: string }>(
+  invokePublicFunction<{ contract_id: number; signed_at: string; deal_id: number }>(
     "sign_proposal_contract",
     {
       proposal_id: proposalId,
       public_token: token,
       signatory_name: signatoryName,
-      confirm_deposit: confirmDeposit,
     },
   );
+
+export const payPublicProposalDeposit = ({
+  proposalId,
+  token,
+}: {
+  proposalId: number;
+  token: string;
+}) =>
+  invokePublicFunction<{
+    deal_id: number;
+    contract_id: number;
+    deposit_paid_at: string;
+    already_paid: boolean;
+    billing_mode: string;
+  }>("pay_proposal_deposit", {
+    proposal_id: proposalId,
+    public_token: token,
+  });
 
 export const resolvePublicProposalShortCode = async (shortCode: string) => {
   const data = await invokePublicFunction<{ token: string }>(

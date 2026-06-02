@@ -21,6 +21,10 @@ import {
 import { newCustomSectionId } from "@/lbs/proposals/document/proposalDocumentSections";
 import { DEFAULT_PROPOSAL_TEMPLATES } from "@/lbs/proposals/document/proposalTemplateDefaults";
 import {
+  PROPOSAL_DECK_SECTIONS,
+  type ProposalDeckPresetId,
+} from "@/lbs/proposals/document/proposalTemplateSectionPresets";
+import {
   buildProposalVariableContext,
   mergeProposalVariables,
 } from "@/lbs/proposals/document/proposalVariableMerge";
@@ -63,7 +67,19 @@ export const ProposalPreviewPage = () => {
 
   useEffect(() => {
     if (!proposal || hydrated) return;
-    setContent(parseProposalContent(proposal.content));
+    const parsed = parseProposalContent(proposal.content);
+    const slug = parsed.template_slug;
+    const deck =
+      slug && PROPOSAL_DECK_SECTIONS[slug as ProposalDeckPresetId];
+    const withDeck =
+      deck && !(parsed.custom_sections ?? []).length
+        ? {
+            ...parsed,
+            custom_sections: deck.en,
+            custom_sections_es: deck.es,
+          }
+        : parsed;
+    setContent(withDeck);
     setHydrated(true);
   }, [proposal, hydrated]);
 
@@ -84,6 +100,20 @@ export const ProposalPreviewPage = () => {
       const template = templates.find((row) => String(row.id) === templateId);
       if (!template || !proposal) return;
 
+      const defaultSeed = DEFAULT_PROPOSAL_TEMPLATES.find(
+        (seed) => seed.slug === template.slug,
+      );
+      const dbCustom = (template.content as ProposalDocumentContent).custom_sections;
+      const needsDeckSections = !Array.isArray(dbCustom) || dbCustom.length === 0;
+      const seededContent =
+        defaultSeed && needsDeckSections
+          ? {
+              ...template.content,
+              custom_sections: defaultSeed.content.custom_sections ?? [],
+              custom_sections_es: defaultSeed.content.custom_sections_es ?? [],
+            }
+          : template.content;
+
       const variables = buildProposalVariableContext({
         proposal,
         company,
@@ -92,12 +122,12 @@ export const ProposalPreviewPage = () => {
         member,
       });
       const merged = mergeProposalVariables(
-        template.content as Record<string, string | undefined>,
+        seededContent as Record<string, string | undefined>,
         variables,
       );
 
       setContent({
-        ...parseProposalContent(template.content),
+        ...parseProposalContent(seededContent),
         ...merged,
         template_id: Number(template.id),
         template_slug: template.slug,

@@ -2,7 +2,18 @@ import {
   getProposalDocumentCopy,
   type ProposalLocale,
 } from "@/lbs/proposals/document/proposalDocumentI18n";
-import type { ProposalDocumentContent } from "@/lbs/proposals/document/proposalDocumentTypes";
+import type {
+  ProposalCustomSection,
+  ProposalDocumentContent,
+} from "@/lbs/proposals/document/proposalDocumentTypes";
+
+/** Legacy deck section id — contract text belongs only in the accept dialog. */
+const HIDDEN_CUSTOM_SECTION_IDS = new Set(["terms"]);
+
+export const visibleProposalCustomSections = (
+  sections: ProposalCustomSection[] | undefined,
+): ProposalCustomSection[] =>
+  (sections ?? []).filter((section) => !HIDDEN_CUSTOM_SECTION_IDS.has(section.id));
 
 export type ProposalDocumentNavSection = {
   id: string;
@@ -23,7 +34,6 @@ export const buildProposalDocumentSections = (
     { id: "warranty", label: sections.warranty },
   ];
   const CORE_AFTER_CUSTOM: ProposalDocumentNavSection[] = [
-    { id: "terms", label: sections.terms },
     { id: "accept", label: sections.accept },
   ];
   const custom = (content?.custom_sections ?? []).map((section) => ({
@@ -31,7 +41,8 @@ export const buildProposalDocumentSections = (
     label: section.title?.trim() || "Nueva sección",
     isCustom: true as const,
     customSectionId: section.id,
-  }));
+  }),
+  );
 
   return [...CORE_BEFORE_CUSTOM, ...custom, ...CORE_AFTER_CUSTOM];
 };

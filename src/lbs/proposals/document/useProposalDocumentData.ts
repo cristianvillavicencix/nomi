@@ -35,6 +35,8 @@ export const buildCrmDocumentSnapshot = ({
   deal,
   member,
   contractTerms,
+  termsMarkdown,
+  termsTitle,
 }: {
   proposal: Proposal;
   lineDrafts: ProposalLineDraft[];
@@ -47,6 +49,8 @@ export const buildCrmDocumentSnapshot = ({
   deal?: Deal | null;
   member?: OrganizationMember | null;
   contractTerms?: OrganizationContractTerms | null;
+  termsMarkdown?: string | null;
+  termsTitle?: string | null;
 }): ProposalDocumentDataSnapshot => {
   const recurringSubtotal = lineDrafts
     .filter((line) => line.billing_type === "recurring")
@@ -65,6 +69,11 @@ export const buildCrmDocumentSnapshot = ({
     deal,
     member,
     contractTerms,
+    termsMarkdown:
+      termsMarkdown ??
+      contractTerms?.body_markdown?.trim() ??
+      null,
+    termsTitle: termsTitle ?? contractTerms?.title ?? null,
   };
 };
 

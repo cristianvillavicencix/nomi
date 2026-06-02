@@ -46,6 +46,12 @@ export type ProposalDocumentCopy = {
   signatoryName: string;
   signatoryPlaceholder: string;
   agreeTerms: string;
+  agreeTermsPrefix: string;
+  viewContractTermsLink: string;
+  viewContractTerms: string;
+  acceptAndSign: string;
+  acceptAndSignPending: string;
+  termsRequired: string;
   confirmDeposit: (amount: string) => string;
   signContractButton: string;
   signedOn: (date: string) => string;
@@ -97,13 +103,20 @@ const en: ProposalDocumentCopy = {
   termsEmpty: "Configure active contract terms in Settings → Commercial.",
   acceptDefaultTitle: "Accept this proposal",
   acceptIntro:
-    "By accepting, you agree to the services and payment schedule above. A contract will be generated for your signature.",
+    "Review the proposal, then sign and pay your deposit on the secure acceptance page. We keep a full internal record of your signature and payment.",
   acceptProposal: "Accept proposal",
   acceptPending: "Processing…",
   signContract: "Sign contract",
   signatoryName: "Full legal name",
   signatoryPlaceholder: "Your full name",
   agreeTerms: "I have read and agree to the terms and conditions.",
+  agreeTermsPrefix: "I have read and agree to the",
+  viewContractTermsLink: "terms and conditions",
+  viewContractTerms: "Contract terms",
+  acceptAndSign: "Accept & sign contract",
+  acceptAndSignPending: "Processing…",
+  termsRequired:
+    "Contract terms are not available yet. Please contact your LBS representative.",
   confirmDeposit: (amount) =>
     `I confirm the 50% deposit (${amount}) will be paid per the agreed method.`,
   signContractButton: "Sign contract",
@@ -158,13 +171,20 @@ const es: ProposalDocumentCopy = {
     "Configura los términos del contrato activos en Ajustes → Comercial.",
   acceptDefaultTitle: "Aceptar esta propuesta",
   acceptIntro:
-    "Al aceptar, confirmas los servicios y el calendario de pagos indicados. Se generará un contrato para tu firma.",
+    "Revisa los términos del contrato, confirma abajo y firma una sola vez. La aceptación y la firma quedan registradas juntas.",
   acceptProposal: "Aceptar propuesta",
   acceptPending: "Procesando…",
   signContract: "Firmar contrato",
   signatoryName: "Nombre legal completo",
   signatoryPlaceholder: "Tu nombre completo",
   agreeTerms: "He leído y acepto los términos y condiciones.",
+  agreeTermsPrefix: "He leído y acepto los",
+  viewContractTermsLink: "términos y condiciones",
+  viewContractTerms: "Términos del contrato",
+  acceptAndSign: "Aceptar y firmar contrato",
+  acceptAndSignPending: "Procesando…",
+  termsRequired:
+    "Los términos del contrato aún no están disponibles. Contacta a tu representante de LBS.",
   confirmDeposit: (amount) =>
     `Confirmo que el depósito del 50% (${amount}) se pagará según el método acordado.`,
   signContractButton: "Firmar contrato",

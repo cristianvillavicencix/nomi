@@ -21,11 +21,16 @@ export type ProposalDocumentDataSnapshot = {
   deal?: Deal | null;
   member?: OrganizationMember | null;
   contractTerms?: OrganizationContractTerms | null;
+  /** Merged org + proposal terms for client display (from public API). */
+  termsMarkdown?: string | null;
+  termsTitle?: string | null;
 };
 
 export const mapPublicProposalDocumentData = (
   payload: PublicProposalPayload,
 ): ProposalDocumentDataSnapshot => {
+  const termsMarkdown = payload.terms_markdown?.trim() || null;
+  const termsTitle = payload.terms_title?.trim() || null;
   const { proposal: raw, line_items, installments } = payload;
   const currency = raw.currency ?? "USD";
 
@@ -93,5 +98,13 @@ export const mapPublicProposalDocumentData = (
     oneTimeTotal,
     recurringSubtotal,
     currency,
+    termsMarkdown,
+    termsTitle,
+    contractTerms: termsMarkdown
+      ? ({
+          body_markdown: termsMarkdown,
+          title: termsTitle ?? "Contract terms",
+        } as OrganizationContractTerms)
+      : null,
   };
 };

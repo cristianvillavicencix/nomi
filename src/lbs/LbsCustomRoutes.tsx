@@ -12,6 +12,7 @@ import { TicketCreate } from "@/lbs/tickets/TicketCreate";
 import { FormPublicEntry } from "@/lbs/forms-v2/public/FormPublicEntry";
 import { ShortUrlRedirect } from "@/lbs/forms-v2/public/ShortUrlRedirect";
 import { PublicProposalPage } from "@/lbs/proposals/public/PublicProposalPage";
+import { PublicProposalAcceptPageWithLocale } from "@/lbs/proposals/public/PublicProposalAcceptPage";
 import { ProposalShortUrlRedirect } from "@/lbs/proposals/public/ProposalShortUrlRedirect";
 import { PortalShortUrlRedirect } from "@/lbs/portal/PortalShortUrlRedirect";
 import { FormsListPage } from "@/lbs/forms-v2/FormsListPage";
@@ -61,6 +62,10 @@ export const renderLbsPublicFormRoute = () => (
     <Route path="/f/:shortCode" element={<ShortUrlRedirect />} />
     <Route path="/pr/:shortCode" element={<ProposalShortUrlRedirect />} />
     <Route path="/proposal/:token" element={<PublicProposalPage />} />
+    <Route
+      path="/proposal/:token/accept"
+      element={<PublicProposalAcceptPageWithLocale />}
+    />
     <Route path="/p/:shortCode" element={<PortalShortUrlRedirect />} />
     <Route path="/forms/:slug" element={<FormPublicEntry />} />
   </>

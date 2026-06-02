@@ -1,24 +1,19 @@
-import { useMutation } from "@tanstack/react-query";
-import { Check, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowRight, Check } from "lucide-react";
+import { Link } from "react-router";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { EditableBlock } from "@/lbs/proposals/document/EditableBlock";
 import {
   getProposalDocumentCopy,
   proposalDateLocale,
   type ProposalLocale,
 } from "@/lbs/proposals/document/proposalDocumentI18n";
-import {
-  acceptPublicProposal,
-  signPublicProposalContract,
-} from "@/lbs/proposals/public/publicProposalApi";
 import { formatProposalMoney } from "@/lbs/proposals/document/useProposalDocumentData";
 
-const formatDisplayDate = (value: string | null | undefined, locale: ProposalLocale) => {
+const formatDisplayDate = (
+  value: string | null | undefined,
+  locale: ProposalLocale,
+) => {
   if (!value) return "—";
   const date = new Date(`${value.slice(0, 10)}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
@@ -32,13 +27,10 @@ const formatDisplayDate = (value: string | null | undefined, locale: ProposalLoc
 export const ProposalDocumentAcceptSection = ({
   locale,
   mode,
-  proposalId,
   depositAmount,
   currency,
-  acceptedAt,
   contract,
   publicToken,
-  onRefresh,
   editable = false,
   acceptTitle,
   acceptBody,
@@ -56,6 +48,8 @@ export const ProposalDocumentAcceptSection = ({
     deposit_paid_at?: string | null;
     terms_snapshot: string | null;
   } | null;
+  termsMarkdown?: string;
+  termsTitle?: string | null;
   publicToken?: string;
   onRefresh?: () => void;
   editable?: boolean;
@@ -65,50 +59,10 @@ export const ProposalDocumentAcceptSection = ({
   onAcceptBodyChange?: (value: string) => void;
 }) => {
   const copy = getProposalDocumentCopy(locale);
-  const [signatoryName, setSignatoryName] = useState("");
-  const [agreedTerms, setAgreedTerms] = useState(false);
-  const [confirmDeposit, setConfirmDeposit] = useState(true);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const isAccepted = Boolean(acceptedAt);
   const isSigned = Boolean(contract?.signed_at);
   const depositPaid = Boolean(contract?.deposit_paid_at);
   const depositFormatted = formatProposalMoney(depositAmount, currency);
-
-  const acceptMutation = useMutation({
-    mutationFn: () => {
-      if (!publicToken) throw new Error("Missing token");
-      return acceptPublicProposal(proposalId, publicToken);
-    },
-    onSuccess: () => {
-      setActionError(null);
-      onRefresh?.();
-    },
-    onError: (error: Error) => setActionError(error.message),
-  });
-
-  const signMutation = useMutation({
-    mutationFn: () => {
-      if (!publicToken) throw new Error("Missing token");
-      return signPublicProposalContract({
-        proposalId,
-        token: publicToken,
-        signatoryName: signatoryName.trim(),
-        confirmDeposit,
-      });
-    },
-    onSuccess: () => {
-      setActionError(null);
-      onRefresh?.();
-    },
-    onError: (error: Error) => setActionError(error.message),
-  });
-
-  const showAcceptCard = mode === "preview" || !isAccepted;
-  const showSignCard =
-    mode === "preview" ? !isSigned : isAccepted && contract?.terms_snapshot && !isSigned;
-  const previewAcceptDisabled = mode === "preview";
-  const previewSignDisabled = mode === "preview" || !isAccepted;
+  const acceptPath = publicToken ? `/proposal/${publicToken}/accept` : null;
 
   return (
     <div className="space-y-4">
@@ -134,125 +88,49 @@ export const ProposalDocumentAcceptSection = ({
         </h2>
       )}
 
-      {actionError ? (
-        <p className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {actionError}
+      {!editable ? (
+        <p className="text-sm text-muted-foreground">
+          {acceptBody ?? copy.acceptIntro}
         </p>
       ) : null}
 
-      {showAcceptCard ? (
-        <Card className="border-primary/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{copy.acceptProposal}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {acceptBody ?? copy.acceptIntro}
-            </p>
-            <Button
-              type="button"
-              className="w-full"
-              disabled={
-                previewAcceptDisabled ||
-                acceptMutation.isPending ||
-                (mode === "live" && !publicToken)
-              }
-              onClick={() => acceptMutation.mutate()}
-            >
-              {acceptMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Check className="size-4" />
-              )}
-              {acceptMutation.isPending ? copy.acceptPending : copy.acceptProposal}
-            </Button>
-            {previewAcceptDisabled ? (
-              <p className="text-center text-xs text-muted-foreground">
-                {copy.previewAcceptDisabled}
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {showSignCard ? (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{copy.signContract}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {contract?.terms_snapshot ? (
-              <div className="max-h-72 overflow-y-auto rounded-md border bg-muted/20 p-4 text-xs whitespace-pre-wrap">
-                {contract.terms_snapshot}
-              </div>
-            ) : mode === "preview" ? (
-              <div className="rounded-md border border-dashed bg-muted/20 p-4 text-xs text-muted-foreground">
-                {copy.previewSignDisabled}
-              </div>
-            ) : null}
-            <div className="space-y-2">
-              <Label htmlFor="proposal-signatory-name">{copy.signatoryName}</Label>
-              <Input
-                id="proposal-signatory-name"
-                value={signatoryName}
-                disabled={previewSignDisabled}
-                onChange={(event) => setSignatoryName(event.target.value)}
-                placeholder={copy.signatoryPlaceholder}
-              />
-            </div>
-            <label className="flex items-start gap-2 text-sm">
-              <Checkbox
-                disabled={previewSignDisabled}
-                checked={agreedTerms}
-                onCheckedChange={(checked) => setAgreedTerms(checked === true)}
-              />
-              <span>{copy.agreeTerms}</span>
-            </label>
-            <label className="flex items-start gap-2 text-sm">
-              <Checkbox
-                disabled={previewSignDisabled}
-                checked={confirmDeposit}
-                onCheckedChange={(checked) => setConfirmDeposit(checked === true)}
-              />
-              <span>{copy.confirmDeposit(depositFormatted)}</span>
-            </label>
-            <Button
-              type="button"
-              className="w-full"
-              disabled={
-                previewSignDisabled ||
-                signMutation.isPending ||
-                !signatoryName.trim() ||
-                !agreedTerms ||
-                (mode === "live" && !publicToken)
-              }
-              onClick={() => signMutation.mutate()}
-            >
-              {signMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
-              {copy.signContractButton}
-            </Button>
-            {previewSignDisabled && mode === "preview" ? (
-              <p className="text-center text-xs text-muted-foreground">
-                {copy.previewSignDisabled}
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {isSigned && contract?.signed_at ? (
+      {depositPaid && contract?.signed_at ? (
         <Card>
           <CardContent className="space-y-2 py-6 text-center text-sm">
             <p className="font-medium text-green-700 dark:text-green-400">
               {copy.signedOn(formatDisplayDate(contract.signed_at, locale))}
             </p>
-            {depositPaid ? (
-              <p className="text-muted-foreground">{copy.depositRecorded}</p>
-            ) : null}
+            <p className="text-muted-foreground">{copy.depositRecorded}</p>
           </CardContent>
         </Card>
+      ) : isSigned && acceptPath ? (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="space-y-4 py-4">
+            <p className="flex items-center gap-2 text-sm">
+              <Check className="size-4 text-amber-600" />
+              Contract signed — deposit pending ({depositFormatted})
+            </p>
+            <Button asChild className="w-full">
+              <Link to={acceptPath}>
+                Pay deposit
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : acceptPath && mode === "live" ? (
+        <Card>
+          <CardContent className="space-y-4 py-6">
+            <Button asChild className="w-full" size="lg">
+              <Link to={acceptPath}>
+                Continue to sign & pay
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : mode === "preview" ? (
+        <p className="text-xs text-muted-foreground">{copy.previewAcceptDisabled}</p>
       ) : null}
     </div>
   );

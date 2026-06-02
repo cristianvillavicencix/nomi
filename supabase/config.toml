@@ -197,6 +197,9 @@ verify_jwt = false
 [functions.sign_proposal_contract]
 verify_jwt = false
 
+[functions.pay_proposal_deposit]
+verify_jwt = false
+
 [functions.get_public_deal_brief]
 verify_jwt = false
 

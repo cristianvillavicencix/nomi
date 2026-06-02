@@ -49,7 +49,7 @@ export const ProposalDocumentSidebar = ({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Propuesta
+          Proposal
         </p>
         <nav className="space-y-1">
           {sections.map((section, index) => {

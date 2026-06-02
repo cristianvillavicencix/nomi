@@ -2,11 +2,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
-import { AuthMiddleware } from "../_shared/authentication.ts";
+import { UserMiddleware } from "../_shared/authentication.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import {
   activateAcceptedDeal,
   createContractFromProposal,
+  markDealPendingPayment,
   resolveDealForProposal,
   syncInstallmentsToDealPayments,
   syncRecurringToRetainers,
@@ -38,6 +39,7 @@ const validatePublicToken = async (proposalId: number, token: string) => {
 const acceptProposalCore = async (
   proposalId: number,
   memberId?: number | null,
+  forClientPortal = false,
 ) => {
   const { data: proposal, error: proposalError } = await supabaseAdmin
     .from("proposals")
@@ -62,6 +64,7 @@ const acceptProposalCore = async (
     supabaseAdmin,
     proposal,
     memberId,
+    { forClientPortal },
   );
 
   const [{ data: lineItems }, { data: schedule }, { data: installments }] =
@@ -94,12 +97,21 @@ const acceptProposalCore = async (
     })
     .eq("id", proposalId);
 
-  await activateAcceptedDeal(
-    supabaseAdmin,
-    dealId,
-    proposalId,
-    proposal.amount ?? 0,
-  );
+  if (forClientPortal) {
+    await markDealPendingPayment(
+      supabaseAdmin,
+      dealId,
+      proposalId,
+      proposal.amount ?? 0,
+    );
+  } else {
+    await activateAcceptedDeal(
+      supabaseAdmin,
+      dealId,
+      proposalId,
+      proposal.amount ?? 0,
+    );
+  }
 
   const contractId = await createContractFromProposal(
     supabaseAdmin,
@@ -151,33 +163,59 @@ Deno.serve(
       }
 
       let memberId: number | null = null;
+      let forClientPortal = false;
 
       if (body.public_token) {
         const valid = await validatePublicToken(proposalId, body.public_token);
         if (!valid) {
           return createErrorResponse(403, "Invalid or expired link");
         }
+        forClientPortal = true;
       } else {
-        const user = await AuthMiddleware(req);
-        const member = await getUserOrganizationMember(user.id);
-        if (!member?.id) {
-          return createErrorResponse(401, "Unauthorized");
-        }
+        return UserMiddleware(req, async (req, user) => {
+          if (!user) {
+            return createErrorResponse(401, "Unauthorized");
+          }
 
-        const { data: proposal } = await supabaseAdmin
-          .from("proposals")
-          .select("org_id")
-          .eq("id", proposalId)
-          .maybeSingle();
+          const member = await getUserOrganizationMember(user);
+          if (!member?.id) {
+            return createErrorResponse(401, "Unauthorized");
+          }
 
-        if (!proposal || proposal.org_id !== member.org_id) {
-          return createErrorResponse(404, "Proposal not found");
-        }
+          const { data: proposal } = await supabaseAdmin
+            .from("proposals")
+            .select("org_id")
+            .eq("id", proposalId)
+            .maybeSingle();
 
-        memberId = member.id;
+          if (!proposal || proposal.org_id !== member.org_id) {
+            return createErrorResponse(404, "Proposal not found");
+          }
+
+          try {
+            const result = await acceptProposalCore(
+              proposalId,
+              member.id,
+              false,
+            );
+            return new Response(JSON.stringify(result), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          } catch (error) {
+            console.error("accept_proposal.error", error);
+            return createErrorResponse(
+              500,
+              error instanceof Error ? error.message : "Unexpected error",
+            );
+          }
+        });
       }
 
-      const result = await acceptProposalCore(proposalId, memberId);
+      const result = await acceptProposalCore(
+        proposalId,
+        memberId,
+        forClientPortal,
+      );
 
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

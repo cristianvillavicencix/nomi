@@ -133,10 +133,122 @@ export const buildContractVariables = ({
   };
 };
 
+const readProposalContentTerms = (content: unknown) => {
+  if (!content || typeof content !== "object") {
+    return { terms_body: "", terms_title: "" };
+  }
+  const record = content as { terms_body?: string; terms_title?: string };
+  return {
+    terms_body:
+      typeof record.terms_body === "string" ? record.terms_body.trim() : "",
+    terms_title:
+      typeof record.terms_title === "string" ? record.terms_title.trim() : "",
+  };
+};
+
+export async function resolveProposalClientContext(
+  supabase: SupabaseClient,
+  proposal: ProposalRow,
+) {
+  let contactName = "Client";
+  let clientAddress = "—";
+
+  if (proposal.contact_id) {
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("first_name, last_name, address, company_id")
+      .eq("id", proposal.contact_id)
+      .maybeSingle();
+    if (contact) {
+      contactName =
+        [contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
+        contactName;
+      clientAddress = contact.address ?? clientAddress;
+    }
+
+    if (clientAddress === "—" && contact?.company_id) {
+      const { data: company } = await supabase
+        .from("companies")
+        .select("address")
+        .eq("id", contact.company_id)
+        .maybeSingle();
+      if (company?.address) clientAddress = company.address;
+    }
+  } else if (proposal.company_id) {
+    const { data: company } = await supabase
+      .from("companies")
+      .select("address")
+      .eq("id", proposal.company_id)
+      .maybeSingle();
+    if (company?.address) clientAddress = company.address;
+  }
+
+  return { contactName, clientAddress };
+}
+
+/** Resolved contract text for display (proposal override, else active org terms merged). */
+export async function resolveProposalTermsMarkdown(
+  supabase: SupabaseClient,
+  proposal: ProposalRow & { content?: unknown },
+  lineItems: LineItemRow[],
+  installments: InstallmentRow[],
+) {
+  const fromContent = readProposalContentTerms(proposal.content);
+  if (fromContent.terms_body) {
+    return {
+      markdown: fromContent.terms_body,
+      title: fromContent.terms_title || null,
+      version: null,
+    };
+  }
+
+  const { contactName, clientAddress } = await resolveProposalClientContext(
+    supabase,
+    proposal,
+  );
+
+  const { data: activeTerms } = await supabase
+    .from("organization_contract_terms")
+    .select("version, title, body_markdown, default_variables")
+    .eq("org_id", proposal.org_id)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const termsVersion = activeTerms?.version ?? "1.0";
+  const variables = {
+    ...(activeTerms?.default_variables as Record<string, string> | undefined),
+    ...buildContractVariables({
+      proposal,
+      contactName,
+      clientAddress,
+      lineItems,
+      installments,
+      termsVersion,
+    }),
+  };
+
+  const termsBody = activeTerms?.body_markdown?.trim() ?? "";
+  const markdown = termsBody ? mergeContractTerms(termsBody, variables) : "";
+
+  return {
+    markdown,
+    title: activeTerms?.title?.trim() || null,
+    version: termsVersion,
+  };
+}
+
+export type ResolveDealOptions = {
+  /** Public client portal: deal stays opportunity until deposit is paid. */
+  forClientPortal?: boolean;
+};
+
 export async function resolveDealForProposal(
   supabase: SupabaseClient,
   proposal: ProposalRow,
   memberId?: number | null,
+  options?: ResolveDealOptions,
 ) {
   if (proposal.deal_id) {
     const { data: existingDeal } = await supabase
@@ -167,6 +279,7 @@ export async function resolveDealForProposal(
   }
 
   const contactIds = proposal.contact_id ? [proposal.contact_id] : [];
+  const forClientPortal = options?.forClientPortal === true;
   const { data: newDeal, error } = await supabase
     .from("deals")
     .insert({
@@ -176,14 +289,14 @@ export async function resolveDealForProposal(
       company_id: proposal.company_id,
       contact_id: proposal.contact_id,
       contact_ids: contactIds,
-      stage: "setup",
+      stage: forClientPortal ? "pending_payment" : "setup",
       amount: proposal.amount ?? 0,
       estimated_value: proposal.amount ?? 0,
       description: proposal.notes ?? "",
       category: "website",
       project_type: "website",
-      lifecycle_phase: "delivery",
-      delivery_status: "planning",
+      lifecycle_phase: forClientPortal ? "opportunity" : "delivery",
+      delivery_status: forClientPortal ? null : "planning",
       accepted_proposal_id: proposal.id,
       priority: "normal",
     })
@@ -224,65 +337,14 @@ export async function createContractFromProposal(
     return existingForProposal.id as number;
   }
 
-  let contactName = "Client";
-  let clientAddress = "—";
-
-  if (proposal.contact_id) {
-    const { data: contact } = await supabase
-      .from("contacts")
-      .select("first_name, last_name, address, company_id")
-      .eq("id", proposal.contact_id)
-      .maybeSingle();
-    if (contact) {
-      contactName =
-        [contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
-        contactName;
-      clientAddress = contact.address ?? clientAddress;
-    }
-
-    if (clientAddress === "—" && contact?.company_id) {
-      const { data: company } = await supabase
-        .from("companies")
-        .select("address")
-        .eq("id", contact.company_id)
-        .maybeSingle();
-      if (company?.address) clientAddress = company.address;
-    }
-  } else if (proposal.company_id) {
-    const { data: company } = await supabase
-      .from("companies")
-      .select("address")
-      .eq("id", proposal.company_id)
-      .maybeSingle();
-    if (company?.address) clientAddress = company.address;
-  }
-
-  const { data: activeTerms } = await supabase
-    .from("organization_contract_terms")
-    .select("version, title, body_markdown, default_variables")
-    .eq("org_id", proposal.org_id)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const termsVersion = activeTerms?.version ?? "1.0";
-  const variables = {
-    ...(activeTerms?.default_variables as Record<string, string> | undefined),
-    ...buildContractVariables({
-      proposal,
-      contactName,
-      clientAddress,
-      lineItems,
-      installments,
-      termsVersion,
-    }),
-  };
-
-  const termsBody = activeTerms?.body_markdown ?? "";
-  const termsSnapshot = termsBody
-    ? mergeContractTerms(termsBody, variables)
-    : null;
+  const resolvedTerms = await resolveProposalTermsMarkdown(
+    supabase,
+    proposal,
+    lineItems,
+    installments,
+  );
+  const termsSnapshot = resolvedTerms.markdown || null;
+  const termsVersion = resolvedTerms.version ?? "1.0";
 
   const { data: contract, error } = await supabase
     .from("contracts")
@@ -293,7 +355,8 @@ export async function createContractFromProposal(
       proposal_id: proposal.id,
       deal_id: dealId,
       organization_member_id: proposal.organization_member_id,
-      title: activeTerms?.title ?? `Contract — ${proposal.title}`,
+      title:
+        resolvedTerms.title ?? `Contract — ${proposal.title}`,
       status: "pending_signature",
       terms_version: termsVersion,
       terms_snapshot: termsSnapshot,
@@ -397,6 +460,27 @@ export async function syncRecurringToRetainers(
   }
 }
 
+/** After client signs: contract on file, deal waits for deposit. */
+export async function markDealPendingPayment(
+  supabase: SupabaseClient,
+  dealId: number,
+  proposalId: number,
+  amount: number,
+) {
+  await supabase
+    .from("deals")
+    .update({
+      accepted_proposal_id: proposalId,
+      stage: "pending_payment",
+      lifecycle_phase: "opportunity",
+      amount,
+      estimated_value: amount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", dealId);
+}
+
+/** After deposit is paid: activate delivery project and mark deal won. */
 export async function activateAcceptedDeal(
   supabase: SupabaseClient,
   dealId: number,
@@ -407,13 +491,60 @@ export async function activateAcceptedDeal(
     .from("deals")
     .update({
       accepted_proposal_id: proposalId,
-      stage: "setup",
+      stage: "won",
       lifecycle_phase: "delivery",
       delivery_status: "planning",
       amount,
       estimated_value: amount,
       current_project_value: amount,
       original_project_value: amount,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", dealId);
+}
+
+export async function recordProposalDepositPaid(
+  supabase: SupabaseClient,
+  proposalId: number,
+  contractId: number,
+  dealId: number,
+  paymentMethod: string,
+) {
+  const now = new Date().toISOString();
+
+  const { data: depositInstallment } = await supabase
+    .from("proposal_payment_installments")
+    .select("id, amount")
+    .eq("proposal_id", proposalId)
+    .eq("installment_number", 1)
+    .maybeSingle();
+
+  if (depositInstallment?.id) {
+    await supabase
+      .from("proposal_payment_installments")
+      .update({
+        status: "paid",
+        paid_at: now,
+        payment_method: paymentMethod,
+        manual_marked_at: now,
+      })
+      .eq("id", depositInstallment.id);
+
+    await supabase
+      .from("deal_client_payments")
+      .update({ status: "cleared" })
+      .eq("deal_id", dealId)
+      .eq(
+        "reference_number",
+        `proposal-installment-${depositInstallment.id}`,
+      );
+  }
+
+  await supabase
+    .from("contracts")
+    .update({
+      deposit_paid_at: now,
+      updated_at: now,
+    })
+    .eq("id", contractId);
 }
