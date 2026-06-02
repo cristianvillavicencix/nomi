@@ -5,36 +5,68 @@ import { useGetIdentity } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProposalDocumentView } from "@/lbs/proposals/document/ProposalDocumentView";
+import { buildCrmDocumentSnapshot } from "@/lbs/proposals/document/useProposalDocumentData";
 import { parseProposalContent } from "@/lbs/proposals/document/proposalDocumentTypes";
 import { useProposalDocumentData } from "@/lbs/proposals/document/useProposalDocumentData";
 import { ProposalSendActions } from "@/lbs/proposals/ProposalSendActions";
 
 export const ProposalViewPage = () => {
   const { id } = useParams();
-  const { identity } = useGetIdentity();
+  const { identity, isPending: isIdentityLoading } = useGetIdentity();
   const queryClient = useQueryClient();
 
-  if (!id || !identity) return null;
+  const proposalId = id ?? "";
+  const bundle = useProposalDocumentData(proposalId, {
+    enabled: Boolean(proposalId && identity),
+  });
 
-  const {
-    proposal,
-    isLoading,
-    lines,
-    paymentInstallments,
-  } = useProposalDocumentData(id);
+  const content = parseProposalContent(bundle.proposal?.content);
 
-  const content = parseProposalContent(proposal?.content);
+  const documentData =
+    bundle.proposal != null
+      ? buildCrmDocumentSnapshot({
+          proposal: bundle.proposal,
+          lineDrafts: bundle.lineDrafts,
+          lines: bundle.lines,
+          paymentInstallments: bundle.paymentInstallments,
+          oneTimeTotal: bundle.oneTimeTotal,
+          currency: bundle.currency,
+          company: bundle.company,
+          contact: bundle.contact,
+          deal: bundle.deal,
+          member: bundle.member,
+          contractTerms: bundle.contractTerms,
+        })
+      : undefined;
 
   const handlePrint = () => {
     window.print();
   };
 
-  if (isLoading) {
+  if (!proposalId) return null;
+
+  if (isIdentityLoading || !identity || bundle.isLoading) {
     return (
       <div className="space-y-2 p-4">
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-96 w-full" />
       </div>
+    );
+  }
+
+  if (bundle.isError) {
+    return (
+      <p className="p-6 text-sm text-destructive">
+        {bundle.error instanceof Error
+          ? bundle.error.message
+          : "Failed to load proposal."}
+      </p>
+    );
+  }
+
+  if (!bundle.proposal) {
+    return (
+      <p className="p-6 text-sm text-muted-foreground">Proposal not found.</p>
     );
   }
 
@@ -54,36 +86,35 @@ export const ProposalViewPage = () => {
             Print
           </Button>
           <Button type="button" variant="outline" size="sm" asChild>
-            <Link to={`/proposals/${id}/preview`}>
+            <Link to={`/proposals/${proposalId}/preview`}>
               <Pencil className="size-4" />
               Edit
             </Link>
           </Button>
           <Button type="button" variant="outline" size="sm" asChild>
-            <Link to={`/proposals/${id}/edit`}>
+            <Link to={`/proposals/${proposalId}/edit`}>
               <Wrench className="size-4" />
               Builder
             </Link>
           </Button>
-          {proposal ? (
-            <ProposalSendActions
-              proposal={proposal}
-              lineItems={lines}
-              installments={paymentInstallments}
-              confirmExpiryBeforeSend
-              showPdfExport={false}
-              onSent={async () => {
-                await queryClient.invalidateQueries({ queryKey: ["proposals"] });
-              }}
-            />
-          ) : null}
+          <ProposalSendActions
+            proposal={bundle.proposal}
+            lineItems={bundle.lines}
+            installments={bundle.paymentInstallments}
+            confirmExpiryBeforeSend
+            showPdfExport={false}
+            onSent={async () => {
+              await queryClient.invalidateQueries({ queryKey: ["proposals"] });
+            }}
+          />
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden print:block">
         <ProposalDocumentView
-          proposalId={id}
+          proposalId={proposalId}
           content={content}
+          documentData={documentData}
           editable={false}
           clientView
         />
