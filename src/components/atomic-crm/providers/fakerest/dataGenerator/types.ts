@@ -41,6 +41,7 @@ import type {
   ConversationParticipant,
   ConversationMessage,
 } from "@/lbs/types";
+import type { ProposalTemplate } from "@/lbs/proposals/document/proposalDocumentTypes";
 
 export interface Db {
   companies: Required<Company>[];
@@ -68,6 +69,7 @@ export interface Db {
   proposal_line_items: ProposalLineItem[];
   proposal_payment_schedules: ProposalPaymentSchedule[];
   proposal_payment_installments: ProposalPaymentInstallment[];
+  proposal_templates: ProposalTemplate[];
   service_packages: ServicePackage[];
   service_addons: ServiceAddon[];
   organization_contract_terms: OrganizationContractTerms[];

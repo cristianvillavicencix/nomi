@@ -12,6 +12,7 @@ import {
 } from "@/lbs/catalog/catalogConstants";
 import {
   addonAlreadyInCart,
+  findAddonLine,
   isPackageLine,
   newLineKey,
   selectedPackageId,
@@ -66,8 +67,13 @@ export const ProposalCatalogPanel = ({
     onChange(reordered);
   };
 
-  const addAddon = (addon: ServiceAddon) => {
-    if (addonAlreadyInCart(lines, Number(addon.id))) return;
+  const toggleAddon = (addon: ServiceAddon) => {
+    const addonId = Number(addon.id);
+    const existing = findAddonLine(lines, addonId);
+    if (existing) {
+      onChange(lines.filter((line) => line.key !== existing.key));
+      return;
+    }
     onChange([
       ...lines,
       {
@@ -78,7 +84,7 @@ export const ProposalCatalogPanel = ({
         billing_type: addon.billing_type,
         billing_interval: addon.billing_interval ?? null,
         package_id: addon.package_id ? Number(addon.package_id) : null,
-        addon_id: Number(addon.id),
+        addon_id: addonId,
         sort_order: lines.length,
       },
     ]);
@@ -98,115 +104,154 @@ export const ProposalCatalogPanel = ({
   );
 
   return (
-    <Card className="flex h-full min-h-[480px] flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Catalog</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Pick one base package, then add services. Suggested prices — edit in
-          the summary.
-        </p>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-0 pt-0">
-        <div className="max-h-[min(70vh,720px)] flex-1 overflow-y-auto px-6 pb-6">
-          <div className="space-y-5">
-            <section className="space-y-3">
+    <div className="w-full min-w-0 space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+            Step 1
+          </p>
+          <CardTitle className="text-base">Choose a base package</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            One base per proposal. Selecting another replaces the current one.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {packages.map((pkg) => {
+              const isSelected = activePackageId === Number(pkg.id);
+              return (
+                <button
+                  key={String(pkg.id)}
+                  type="button"
+                  onClick={() => selectPackage(pkg)}
+                  className={cn(
+                    "rounded-lg border p-3 text-left transition-colors hover:bg-muted/50",
+                    isSelected &&
+                      "border-primary bg-primary/5 ring-2 ring-primary",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] uppercase"
+                    >
+                      {categoryLabel(pkg.category)}
+                    </Badge>
+                    {isSelected ? (
+                      <Check className="size-4 shrink-0 text-primary" />
+                    ) : null}
+                  </div>
+                  <p className="mt-2 font-medium text-sm leading-snug">
+                    {pkg.name}
+                  </p>
+                  {pkg.description ? (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {pkg.description}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-sm font-semibold tabular-nums">
+                    <MoneyText value={pkg.suggested_price} />
+                    {billingIntervalSuffix(
+                      pkg.billing_type,
+                      pkg.billing_interval,
+                    )}
+                    {pkg.billing_type === "one_time" ? (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {" "}
+                        one-time
+                      </span>
+                    ) : null}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          {packages.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No packages in catalog. Add them in Settings → Commercial.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+            Step 2
+          </p>
+          <CardTitle className="text-base">Add services</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Tap + to add. Tap again to remove from the cart.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {groupedAddons.map((group) => (
+            <section key={group.key} className="space-y-2">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Base package
+                {group.label}
               </h3>
               <div className="grid gap-2 sm:grid-cols-2">
-                {packages.map((pkg) => {
-                  const isSelected = activePackageId === Number(pkg.id);
+                {group.items.map((addon) => {
+                  const inCart = addonAlreadyInCart(lines, Number(addon.id));
                   return (
-                    <button
-                      key={String(pkg.id)}
-                      type="button"
-                      onClick={() => selectPackage(pkg)}
+                    <div
+                      key={String(addon.id)}
                       className={cn(
-                        "rounded-lg border p-3 text-left transition-colors hover:bg-muted/50",
-                        isSelected &&
-                          "border-primary bg-primary/5 ring-1 ring-primary",
+                        "flex items-center justify-between gap-2 rounded-lg border p-3 transition-colors",
+                        inCart &&
+                          "border-emerald-600/40 bg-emerald-500/5 dark:border-emerald-500/40",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-medium text-sm leading-snug">
-                          {pkg.name}
-                        </span>
-                        {isSelected ? (
-                          <Check className="size-4 shrink-0 text-primary" />
-                        ) : null}
-                      </div>
-                      {pkg.description ? (
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                          {pkg.description}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-snug">
+                          {addon.name}
                         </p>
-                      ) : null}
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {categoryLabel(pkg.category)}
-                        </Badge>
-                        <span className="text-sm font-semibold tabular-nums">
-                          <MoneyText value={pkg.suggested_price} />
+                        {addon.description ? (
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                            {addon.description}
+                          </p>
+                        ) : null}
+                        <p className="mt-1 text-xs font-medium tabular-nums text-muted-foreground">
+                          <MoneyText value={addon.suggested_price} />
                           {billingIntervalSuffix(
-                            pkg.billing_type,
-                            pkg.billing_interval,
+                            addon.billing_type,
+                            addon.billing_interval,
                           )}
-                        </span>
+                        </p>
                       </div>
-                    </button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant={inCart ? "default" : "outline"}
+                        className={cn(
+                          "shrink-0",
+                          inCart &&
+                            "bg-emerald-600 hover:bg-emerald-600/90 dark:bg-emerald-600",
+                        )}
+                        onClick={() => toggleAddon(addon)}
+                        aria-label={
+                          inCart ? `Remove ${addon.name}` : `Add ${addon.name}`
+                        }
+                      >
+                        {inCart ? (
+                          <Check className="size-4" />
+                        ) : (
+                          <Plus className="size-4" />
+                        )}
+                      </Button>
+                    </div>
                   );
                 })}
               </div>
-              {packages.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No packages in catalog. Add them in Settings → Commercial.
-                </p>
-              ) : null}
             </section>
-
-            {groupedAddons.map((group) => (
-              <section key={group.key} className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {group.label}
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {group.items.map((addon) => {
-                    const inCart = addonAlreadyInCart(lines, Number(addon.id));
-                    return (
-                      <div
-                        key={String(addon.id)}
-                        className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">
-                            {addon.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground tabular-nums">
-                            <MoneyText value={addon.suggested_price} />
-                            {billingIntervalSuffix(
-                              addon.billing_type,
-                              addon.billing_interval,
-                            )}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={inCart ? "secondary" : "outline"}
-                          disabled={inCart}
-                          onClick={() => addAddon(addon)}
-                        >
-                          <Plus className="size-3.5" />
-                          {inCart ? "Added" : "Add"}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          ))}
+          {groupedAddons.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No add-ons in catalog yet.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+    </div>
   );
 };

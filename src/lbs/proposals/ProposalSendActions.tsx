@@ -22,6 +22,7 @@ import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
 import { useSendClientSms } from "@/lbs/messages/useClientSms";
 import { useMessagingEnabled } from "@/lbs/messages/useMessagingEnabled";
 import { mailtoHref } from "@/lib/linking";
+import { ProposalSendExpiryDialog } from "@/lbs/proposals/ProposalSendExpiryDialog";
 import type {
   Proposal,
   ProposalLineItem,
@@ -36,11 +37,16 @@ export const ProposalSendActions = ({
   lineItems,
   installments,
   onSent,
+  confirmExpiryBeforeSend = false,
+  showPdfExport = true,
 }: {
   proposal: Proposal;
   lineItems: ProposalLineItem[];
   installments: ProposalPaymentInstallment[];
   onSent?: () => void;
+  /** When true, prompts to review or update validity before generating the client link. */
+  confirmExpiryBeforeSend?: boolean;
+  showPdfExport?: boolean;
 }) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
@@ -55,6 +61,7 @@ export const ProposalSendActions = ({
   );
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isSendingSms, setIsSendingSms] = useState(false);
+  const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
 
   const canSend =
     "sendProposal" in dataProvider &&
@@ -169,14 +176,31 @@ export const ProposalSendActions = ({
     proposal.status === "accepted" ||
     !!proposal.sent_at;
 
+  const startSend = () => {
+    if (confirmExpiryBeforeSend) {
+      setExpiryDialogOpen(true);
+      return;
+    }
+    sendProposal();
+  };
+
   return (
     <>
+      {confirmExpiryBeforeSend ? (
+        <ProposalSendExpiryDialog
+          proposal={proposal}
+          open={expiryDialogOpen}
+          onOpenChange={setExpiryDialogOpen}
+          onContinue={() => sendProposal()}
+          onProposalUpdated={onSent}
+        />
+      ) : null}
       <Button
         type="button"
         variant="default"
         size="sm"
         disabled={!canSend || isSending || proposal.status === "accepted"}
-        onClick={() => sendProposal()}
+        onClick={startSend}
       >
         {isSending ? (
           <Loader2 className="size-4 animate-spin" />
@@ -185,20 +209,22 @@ export const ProposalSendActions = ({
         )}
         {alreadySent ? "Resend" : "Send to client"}
       </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={isExportingPdf}
-        onClick={() => void handleExportPdf()}
-      >
-        {isExportingPdf ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Download className="size-4" />
-        )}
-        PDF
-      </Button>
+      {showPdfExport ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isExportingPdf}
+          onClick={() => void handleExportPdf()}
+        >
+          {isExportingPdf ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Download className="size-4" />
+          )}
+          PDF
+        </Button>
+      ) : null}
 
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
         <DialogContent className="sm:max-w-lg">

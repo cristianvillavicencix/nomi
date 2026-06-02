@@ -27,7 +27,9 @@ import {
 import { ProposalsList } from "@/lbs/proposals/ProposalsList";
 import { ProposalCreate } from "@/lbs/proposals/ProposalCreate";
 import { ProposalEdit } from "@/lbs/proposals/ProposalEdit";
-import { ProposalShow } from "@/lbs/proposals/ProposalShow";
+import { ProposalViewPage } from "@/lbs/proposals/ProposalViewPage";
+import { ProposalClientPreviewRoute } from "@/lbs/proposals/document/ProposalClientPreviewRoute";
+import { ProposalPreviewPage } from "@/lbs/proposals/document/ProposalPreviewPage";
 import { ContractsList } from "@/lbs/contracts/ContractsList";
 import { ContractShow } from "@/lbs/contracts/ContractShow";
 import { TicketsList } from "@/lbs/tickets/TicketsList";
@@ -62,6 +64,14 @@ export const renderLbsPublicFormRoute = () => (
     <Route path="/p/:shortCode" element={<PortalShortUrlRedirect />} />
     <Route path="/forms/:slug" element={<FormPublicEntry />} />
   </>
+);
+
+/** Staff client preview — no CRM sidebar (CustomRoutes noLayout). */
+export const renderLbsProposalClientPreviewRoute = () => (
+  <Route
+    path="/proposals/:id/client-preview"
+    element={<ProposalClientPreviewRoute />}
+  />
 );
 
 export const renderLbsCustomRoutes = ({
@@ -249,7 +259,7 @@ export const renderLbsCustomRoutes = ({
         path="/proposals/:id/show"
         element={
           <ProtectedRoute resource="proposals" action="show">
-            <ProposalShow />
+            <ProposalViewPage />
           </ProtectedRoute>
         }
       />
@@ -258,6 +268,14 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="proposals" action="edit">
             <ProposalEdit />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/proposals/:id/preview"
+        element={
+          <ProtectedRoute resource="proposals" action="edit">
+            <ProposalPreviewPage />
           </ProtectedRoute>
         }
       />

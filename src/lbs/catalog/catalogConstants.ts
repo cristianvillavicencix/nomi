@@ -11,12 +11,12 @@ export type CatalogCategory = (typeof CATALOG_CATEGORIES)[number]["value"];
 
 export const ADDON_CATALOG_GROUPS = [
   { key: "design", label: "Design & brand", categories: ["design"] as const },
-  { key: "web", label: "Web", categories: ["web"] as const },
+  { key: "web", label: "Web — extras", categories: ["web"] as const },
   { key: "seo", label: "SEO & content", categories: ["seo"] as const },
   {
     key: "recurring",
-    label: "Recurring services",
-    categories: ["hosting", "marketing"] as const,
+    label: "Recurring (hosting & support)",
+    categories: ["hosting"] as const,
   },
   { key: "skop", label: "SKOP", categories: ["skop"] as const },
 ] as const;

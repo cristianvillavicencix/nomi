@@ -8,7 +8,7 @@ export const ProposalEdit = () => {
 
   return (
     <ProposalPageShell title="Edit proposal" backTo={`/proposals/${id}/show`}>
-      <div className="max-w-6xl">
+      <div className="w-full min-w-0">
         <ProposalBuilderForm proposalId={id} />
       </div>
     </ProposalPageShell>

@@ -11,6 +11,7 @@ import {
   LBS_SERVICE_ADDONS,
   LBS_SERVICE_PACKAGES,
 } from "@/lbs/catalog/serviceCatalogSeed";
+import { DEFAULT_PROPOSAL_TEMPLATES } from "@/lbs/proposals/document/proposalTemplateDefaults";
 import type { Db } from "./types";
 
 export default (): Db => {
@@ -44,6 +45,19 @@ export default (): Db => {
   db.proposal_line_items = [];
   db.proposal_payment_schedules = [];
   db.proposal_payment_installments = [];
+  db.proposal_templates = DEFAULT_PROPOSAL_TEMPLATES.map((template, index) => ({
+    id: index + 1,
+    org_id: 1,
+    name: template.name,
+    slug: template.slug,
+    category: template.category,
+    content: template.content,
+    is_system: true,
+    active: true,
+    sort_order: template.sort_order,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
   db.service_packages = LBS_SERVICE_PACKAGES.map((pkg, index) => ({
     ...pkg,
     id: index + 1,

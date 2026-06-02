@@ -16,3 +16,6 @@ export const addonAlreadyInCart = (
   lines: ProposalLineDraft[],
   addonId: number,
 ) => lines.some((line) => line.addon_id === addonId);
+
+export const findAddonLine = (lines: ProposalLineDraft[], addonId: number) =>
+  lines.find((line) => line.addon_id === addonId);

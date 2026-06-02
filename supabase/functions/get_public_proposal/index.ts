@@ -58,10 +58,7 @@ Deno.serve(
         return createErrorResponse(410, "This proposal link has expired");
       }
 
-      const { data: proposal, error: proposalError } = await supabaseAdmin
-        .from("proposals")
-        .select(
-          `
+      const proposalSelectWithContent = `
           id,
           title,
           status,
@@ -78,14 +75,42 @@ Deno.serve(
           sent_at,
           viewed_at,
           accepted_at,
-          contract_id
-        `,
-        )
+          contract_id,
+          content
+        `;
+      const proposalSelectBase = proposalSelectWithContent.replace(
+        ",\n          content",
+        "",
+      );
+
+      let proposal: Record<string, unknown> | null = null;
+      let proposalError: { message?: string } | null = null;
+
+      const withContent = await supabaseAdmin
+        .from("proposals")
+        .select(proposalSelectWithContent)
         .eq("id", tokenRow.proposal_id)
         .eq("org_id", tokenRow.org_id)
         .single();
 
+      proposal = withContent.data;
+      proposalError = withContent.error;
+
+      if (proposalError) {
+        const fallback = await supabaseAdmin
+          .from("proposals")
+          .select(proposalSelectBase)
+          .eq("id", tokenRow.proposal_id)
+          .eq("org_id", tokenRow.org_id)
+          .single();
+        if (!fallback.error && fallback.data) {
+          proposal = { ...fallback.data, content: {} };
+          proposalError = null;
+        }
+      }
+
       if (proposalError || !proposal) {
+        console.error("get_public_proposal.proposal", proposalError);
         return createErrorResponse(404, "Proposal not found");
       }
 

@@ -1,13 +1,13 @@
 import { ProposalCreate } from "./ProposalCreate";
 import { ProposalEdit } from "./ProposalEdit";
-import { ProposalShow } from "./ProposalShow";
+import { ProposalViewPage } from "./ProposalViewPage";
 import { ProposalsList } from "./ProposalsList";
 
 export default {
   list: ProposalsList,
   create: ProposalCreate,
   edit: ProposalEdit,
-  show: ProposalShow,
+  show: ProposalViewPage,
 };
 
-export { ProposalsList, ProposalCreate, ProposalEdit, ProposalShow };
+export { ProposalsList, ProposalCreate, ProposalEdit, ProposalViewPage };

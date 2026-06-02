@@ -65,6 +65,7 @@ import { MobileTasksList } from "../tasks/MobileTasksList.tsx";
 import tasks from "../tasks";
 import {
   renderLbsCustomRoutes,
+  renderLbsProposalClientPreviewRoute,
   renderLbsPublicFormRoute,
 } from "@/lbs/LbsCustomRoutes";
 import { isLbsMode } from "@/lbs/productMode";
@@ -298,6 +299,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
             <Route path="/sas" element={<Navigate to="/" replace />} />
             <Route path="/sas/*" element={<Navigate to="/" replace />} />
             {renderLbsPublicFormRoute()}
+            {renderLbsProposalClientPreviewRoute()}
             <Route path="/portal" element={<ClientPortalPage />} />
           </>
         ) : (
@@ -551,6 +553,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="proposal_line_items" />
           <Resource name="proposal_payment_schedules" />
           <Resource name="proposal_payment_installments" />
+          <Resource name="proposal_templates" />
           <Resource name="service_packages" />
           <Resource name="service_addons" />
           <Resource name="organization_contract_terms" />
@@ -651,6 +654,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
               <Route path="/sas" element={<Navigate to="/" replace />} />
               <Route path="/sas/*" element={<Navigate to="/" replace />} />
               {renderLbsPublicFormRoute()}
+              {renderLbsProposalClientPreviewRoute()}
             </>
           ) : (
             <>

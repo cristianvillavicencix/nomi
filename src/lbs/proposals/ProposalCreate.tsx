@@ -3,7 +3,7 @@ import { ProposalPageShell } from "@/lbs/proposals/ProposalPageShell";
 
 export const ProposalCreate = () => (
   <ProposalPageShell title="New proposal">
-    <div className="max-w-6xl">
+    <div className="w-full min-w-0">
       <ProposalBuilderForm />
     </div>
   </ProposalPageShell>

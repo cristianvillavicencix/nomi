@@ -56,6 +56,10 @@ import {
   PageActionsTrailingSlot,
 } from "@/components/atomic-crm/layout/PageActions";
 import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
+import {
+  isProposalFocusModePath,
+  isProposalPreviewPath,
+} from "@/lbs/proposals/proposalFocusMode";
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();
   const activeTheme = theme === "dark" ? "dark" : "light";
@@ -494,17 +498,24 @@ const SidebarItem = ({
 
 export const SidebarLayout = ({ children }: { children: ReactNode }) => {
   useConfigurationLoader();
+  const location = useLocation();
   const matchDealShow = useMatch("/deals/:id/show");
   const matchMessages = useMatch("/messages");
   const currentDealId = matchDealShow?.params.id;
   const isMessagesShell = Boolean(matchMessages);
+  const isProposalFocusMode = isProposalFocusModePath(location.pathname);
+  const isProposalPreview = isProposalPreviewPath(location.pathname);
+  const hideGlobalSearch = isMessagesShell || isProposalFocusMode;
+  const hideGlobalHeader = isMessagesShell || isProposalPreview;
 
   return (
     <SidebarProvider className="h-svh overflow-hidden print:h-auto print:overflow-visible">
       <PageActionsProvider>
         <SidebarNavigation />
         <main className="ml-auto flex h-svh min-h-0 w-full max-w-full flex-col overflow-hidden peer-data-[state=collapsed]:w-[calc(100%-var(--sidebar-width-icon)-1rem)] peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))] sm:transition-[width] sm:duration-200 sm:ease-linear print:h-auto print:w-full print:overflow-visible">
-          {!isMessagesShell ? (
+          {hideGlobalHeader ? (
+            <SpotlightSearchButton variant="hidden" />
+          ) : !hideGlobalSearch ? (
             <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
               <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
               <div className="flex shrink-0 items-center gap-1">
@@ -513,12 +524,20 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
               </div>
             </header>
           ) : (
-            <SpotlightSearchButton variant="hidden" />
+            <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
+              <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
+              <PageActionsTrailingSlot className="ml-auto flex items-center" />
+              <SpotlightSearchButton variant="hidden" />
+            </header>
           )}
           <div
             className={cn(
               "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
-              isMessagesShell ? "gap-2 p-2 pl-1" : "gap-4 px-4 pt-2 pb-0",
+              isMessagesShell
+                ? "gap-2 p-2 pl-1"
+                : isProposalPreview
+                  ? "gap-0 p-0"
+                  : "gap-4 px-4 pt-2 pb-0",
             )}
           >
             {currentDealId ? (
@@ -527,7 +546,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
             <div
               className={cn(
                 "min-h-0 min-w-0 flex-1",
-                isMessagesShell
+                isMessagesShell || isProposalPreview
                   ? "overflow-hidden"
                   : "overflow-y-auto overscroll-contain pr-1",
               )}

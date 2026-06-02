@@ -8,7 +8,7 @@ import {
   useShowContext,
 } from "ra-core";
 import { Link, useNavigate, useParams } from "react-router";
-import { Pencil } from "lucide-react";
+import { Eye, Pencil } from "lucide-react";
 import { ReferenceField } from "@/components/admin/reference-field";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
@@ -119,12 +119,20 @@ const ProposalShowContent = () => {
             onSent={() => refresh()}
           />
           {canEdit ? (
-            <Button variant="outline" asChild>
-              <Link to={`/proposals/${record.id}/edit`}>
-                <Pencil className="size-4" />
-                Edit
-              </Link>
-            </Button>
+            <>
+              <Button variant="outline" asChild>
+                <Link to={`/proposals/${record.id}/preview`}>
+                  <Eye className="size-4" />
+                  Draft & review
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to={`/proposals/${record.id}/edit`}>
+                  <Pencil className="size-4" />
+                  Builder
+                </Link>
+              </Button>
+            </>
           ) : null}
           <ShareRecordModal
             resourceType="proposals"

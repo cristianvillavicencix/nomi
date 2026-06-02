@@ -25,7 +25,14 @@ const invokePublicFunction = async <T>(
     error?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message ?? payload.error ?? "Request failed");
+    const detail =
+      payload.message ??
+      payload.error ??
+      (typeof payload === "object" && payload !== null && "msg" in payload
+        ? String((payload as { msg?: string }).msg)
+        : null) ??
+      `Request failed (${response.status})`;
+    throw new Error(detail);
   }
   return payload;
 };
@@ -49,6 +56,7 @@ export type PublicProposalPayload = {
     viewed_at?: string | null;
     accepted_at?: string | null;
     contract_id?: number | null;
+    content?: unknown;
   };
   line_items: Array<{
     description: string;
