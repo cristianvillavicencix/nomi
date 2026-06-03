@@ -50,7 +50,7 @@ make start
 
 This will start the Vite dev server for the frontend, the local Supabase instance for the API, and a Postgres database (thanks to Docker).
 
-You can then access the app via [http://localhost:5173/](http://localhost:5173/). You will be prompted to create the first user.
+You can then access the app via [http://localhost:5174/](http://localhost:5174/). You will be prompted to create the first user.
 
 If you need debug the backend, you can access the following services:
 

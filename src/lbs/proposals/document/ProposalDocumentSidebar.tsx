@@ -1,4 +1,7 @@
+import type { ReactNode } from "react";
+import { Download, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { daysUntilValidUntil } from "@/lbs/proposals/ProposalSendExpiryDialog";
 import type { ProposalDocumentNavSection } from "@/lbs/proposals/document/proposalDocumentSections";
 import type { Proposal } from "@/lbs/types";
@@ -19,11 +22,24 @@ export const ProposalDocumentSidebar = ({
   sections,
   activeId,
   onSectionClick,
+  downloadPdfLabel = "Download PDF",
+  onDownloadPdf,
+  isExportingPdf = false,
+  languageToggle,
+  onAddSection,
+  addSectionLabel = "Add section",
 }: {
   proposal: Proposal;
   sections: ProposalDocumentNavSection[];
   activeId: string;
   onSectionClick: (sectionId: string) => void;
+  downloadPdfLabel?: string;
+  onDownloadPdf?: () => void;
+  isExportingPdf?: boolean;
+  /** Shown above Download PDF (e.g. EN / Español). */
+  languageToggle?: ReactNode;
+  onAddSection?: () => void;
+  addSectionLabel?: string;
 }) => {
   const daysLeft = daysUntilValidUntil(proposal.valid_until);
   const isActive =
@@ -32,14 +48,14 @@ export const ProposalDocumentSidebar = ({
     (daysLeft == null || daysLeft >= 0);
 
   return (
-    <aside className="flex h-full w-56 shrink-0 flex-col border-r bg-card print:hidden">
-      <div className="shrink-0 border-b px-4 py-4">
+    <aside className="proposal-formal-sidebar flex h-full max-h-full w-56 shrink-0 flex-col overflow-hidden border-r border-border print:hidden">
+      <div className="shrink-0 border-b border-border px-4 py-4">
         <div className="flex items-center gap-2.5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
             L
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="text-sm font-semibold">LBS</p>
+            <p className="text-sm font-semibold text-foreground">LBS</p>
             <p className="text-[11px] text-muted-foreground">
               Latinos Business Support
             </p>
@@ -51,7 +67,7 @@ export const ProposalDocumentSidebar = ({
         <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Proposal
         </p>
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {sections.map((section, index) => {
             const isCurrent = activeId === section.id;
             return (
@@ -59,59 +75,86 @@ export const ProposalDocumentSidebar = ({
                 key={section.id}
                 type="button"
                 onClick={() => onSectionClick(section.id)}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm transition-colors",
-                  isCurrent
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                )}
+                className="pf-nav-link"
+                data-active={isCurrent ? "true" : "false"}
               >
-                <span
-                  className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold tabular-nums",
-                    isCurrent
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {index + 1}
-                </span>
-                {section.label}
+                <span className="pf-nav-num">{index + 1}</span>
+                <span className="pf-nav-label">{section.label}</span>
               </button>
             );
           })}
         </nav>
+        {onAddSection ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3 w-full"
+            onClick={onAddSection}
+          >
+            <Plus className="size-4" />
+            {addSectionLabel}
+          </Button>
+        ) : null}
       </div>
 
-      <div className="shrink-0 space-y-1 border-t px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
-        {proposal.proposal_number ? (
-          <p>
-            Proposal{" "}
-            <span className="font-medium text-foreground">
-              #{proposal.proposal_number}
-            </span>
-          </p>
+      <div className="shrink-0 space-y-3 border-t border-border bg-background px-4 py-3">
+        {languageToggle ? (
+          <div className="w-full">{languageToggle}</div>
         ) : null}
-        {proposal.valid_until ? (
-          <p>
-            Valid until{" "}
-            <span className="font-medium text-foreground">
-              {formatDisplayDate(proposal.valid_until)}
-            </span>
-          </p>
+        {onDownloadPdf ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={onDownloadPdf}
+            disabled={isExportingPdf}
+          >
+            {isExportingPdf ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            {downloadPdfLabel}
+          </Button>
         ) : null}
-        {daysLeft != null && isActive ? (
-          <p className="flex items-center gap-1.5 pt-0.5 font-medium text-amber-600 dark:text-amber-400">
-            <span
-              className="size-1.5 shrink-0 rounded-full bg-amber-500"
-              aria-hidden
-            />
-            Active
-            {daysLeft >= 0
-              ? ` · ${daysLeft} day${daysLeft === 1 ? "" : "s"}`
-              : ` · expired ${Math.abs(daysLeft)}d ago`}
-          </p>
-        ) : null}
+
+        <div className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+          {proposal.proposal_number ? (
+            <p>
+              Proposal{" "}
+              <span className="font-medium text-foreground">
+                #{proposal.proposal_number}
+              </span>
+            </p>
+          ) : null}
+          {proposal.valid_until ? (
+            <p>
+              Valid until{" "}
+              <span className="font-medium text-foreground">
+                {formatDisplayDate(proposal.valid_until)}
+              </span>
+            </p>
+          ) : null}
+          {daysLeft != null && isActive ? (
+            <p
+              className={cn(
+                "flex items-center gap-1.5 pt-0.5 font-medium",
+                daysLeft >= 0 ? "text-amber-600 dark:text-amber-400" : "text-destructive",
+              )}
+            >
+              <span
+                className="size-1.5 shrink-0 rounded-full bg-amber-500"
+                aria-hidden
+              />
+              Active
+              {daysLeft >= 0
+                ? ` · ${daysLeft} day${daysLeft === 1 ? "" : "s"}`
+                : ` · expired ${Math.abs(daysLeft)}d ago`}
+            </p>
+          ) : null}
+        </div>
       </div>
     </aside>
   );

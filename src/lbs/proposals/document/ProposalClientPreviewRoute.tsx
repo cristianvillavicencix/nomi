@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router";
 import { useGetIdentity } from "ra-core";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ProposalDocumentView } from "@/lbs/proposals/document/ProposalDocumentView";
 import { ProposalLanguageToggle } from "@/lbs/proposals/document/ProposalLanguageToggle";
 import { ProposalLocaleProvider } from "@/lbs/proposals/document/ProposalLocaleContext";
-import { parseProposalContent } from "@/lbs/proposals/document/proposalDocumentTypes";
+import { hydrateProposalContent } from "@/lbs/proposals/document/proposalTemplateContent";
 import {
   buildCrmDocumentSnapshot,
   useProposalDocumentData,
 } from "@/lbs/proposals/document/useProposalDocumentData";
+import {
+  buildProposalVariableContext,
+  mergeProposalDocumentContent,
+} from "@/lbs/proposals/document/proposalVariableMerge";
+import { resolveProposalDocumentContent } from "@/lbs/proposals/document/proposalLocalizedContent";
+import { useProposalLocaleOptional } from "@/lbs/proposals/document/ProposalLocaleContext";
+import { exportProposalPdf } from "@/lbs/proposals/proposalPdfExport";
 
 const ProposalClientPreviewBody = () => {
   const { id } = useParams();
@@ -61,7 +68,11 @@ const ProposalClientPreviewBody = () => {
     );
   }
 
-  const content = parseProposalContent(bundle.proposal.content);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const localeContext = useProposalLocaleOptional();
+  const locale = localeContext?.locale ?? "en";
+  const content = hydrateProposalContent(bundle.proposal.content);
   const contractSnapshot = bundle.linkedContract
     ? {
         signed_at: bundle.linkedContract.signed_at ?? null,
@@ -71,9 +82,9 @@ const ProposalClientPreviewBody = () => {
     : null;
 
   return (
-    <div className="min-h-svh bg-background">
+    <div className="flex min-h-svh flex-col bg-background">
       <div
-        className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 bg-amber-50 px-4 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/40 print:hidden"
+        className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 bg-amber-50 px-4 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/40 print:hidden"
         role="note"
       >
         <p className="text-amber-950 dark:text-amber-100">
@@ -96,6 +107,7 @@ const ProposalClientPreviewBody = () => {
         </div>
       </div>
 
+      <div className="min-h-0 flex-1">
       <ProposalDocumentView
         proposalId={proposalId}
         content={content}
@@ -103,10 +115,38 @@ const ProposalClientPreviewBody = () => {
         editable={false}
         clientView
         pageScroll
+        showSectionNav
         showAcceptPlaceholder
         acceptMode="preview"
         contractSnapshot={contractSnapshot}
+        onDownloadPdf={() => {
+          void (async () => {
+            if (!bundle.proposal) return;
+            setIsExportingPdf(true);
+            try {
+              const variables = buildProposalVariableContext({
+                proposal: bundle.proposal,
+                company: bundle.company,
+                contact: bundle.contact,
+                deal: bundle.deal,
+                member: bundle.member,
+              });
+              const merged = mergeProposalDocumentContent(content, variables);
+              const localized = resolveProposalDocumentContent(merged, locale);
+              await exportProposalPdf({
+                proposal: bundle.proposal,
+                content: localized,
+                snapshot: documentData,
+                locale,
+              });
+            } finally {
+              setIsExportingPdf(false);
+            }
+          })();
+        }}
+        isExportingPdf={isExportingPdf}
       />
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import {
   useCreate,
@@ -14,22 +14,37 @@ import { ProposalLanguageToggle } from "@/lbs/proposals/document/ProposalLanguag
 import { ProposalLocaleProvider } from "@/lbs/proposals/document/ProposalLocaleContext";
 import { ProposalPreviewToolbar } from "@/lbs/proposals/document/ProposalPreviewToolbar";
 import {
+  getProposalDocumentCopy,
+  PROPOSAL_LOCALE_KEY,
+  type ProposalLocale,
+} from "@/lbs/proposals/document/proposalDocumentI18n";
+import {
+  emptyProposalDocumentContent,
   parseProposalContent,
+  proposalContentSnapshot,
   type ProposalDocumentContent,
   type ProposalTemplate,
 } from "@/lbs/proposals/document/proposalDocumentTypes";
+import type { Proposal } from "@/lbs/types";
 import { newCustomSectionId } from "@/lbs/proposals/document/proposalDocumentSections";
 import { DEFAULT_PROPOSAL_TEMPLATES } from "@/lbs/proposals/document/proposalTemplateDefaults";
+import { hydrateProposalContent } from "@/lbs/proposals/document/proposalTemplateContent";
+import { inferProposalDeckPresetFromLines } from "@/lbs/proposals/document/inferProposalDeckPreset";
+import type { ProposalDeckPresetId } from "@/lbs/proposals/document/proposalDeckSectionOrder";
 import {
-  PROPOSAL_DECK_SECTIONS,
-  type ProposalDeckPresetId,
-} from "@/lbs/proposals/document/proposalTemplateSectionPresets";
+  PROPOSAL_DECK_REVISION,
+  proposalNeedsDeckRevisionRefresh,
+} from "@/lbs/proposals/document/proposalDeckRevision";
+import { useProposalDocumentData } from "@/lbs/proposals/document/useProposalDocumentData";
 import {
   buildProposalVariableContext,
-  mergeProposalVariables,
 } from "@/lbs/proposals/document/proposalVariableMerge";
-import { useProposalDocumentData } from "@/lbs/proposals/document/useProposalDocumentData";
+import { ProposalVariablesHelp } from "@/lbs/proposals/document/ProposalVariablesHelp";
 import { ProposalSendActions } from "@/lbs/proposals/ProposalSendActions";
+import type { ServicePackage } from "@/lbs/types";
+
+const proposalGetOneQueryKey = (proposalId: string | number) =>
+  ["proposals", "getOne", { id: String(proposalId) }] as const;
 
 export const ProposalPreviewPage = () => {
   const { id } = useParams();
@@ -58,84 +73,75 @@ export const ProposalPreviewPage = () => {
       sort: { field: "sort_order", order: "ASC" },
     });
 
-  const [content, setContent] = useState<ProposalDocumentContent>(() =>
-    parseProposalContent(proposal?.content),
-  );
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
-  const [hydrated, setHydrated] = useState(false);
-  const autoAppliedRef = useRef(false);
-
-  useEffect(() => {
-    if (!proposal || hydrated) return;
-    const parsed = parseProposalContent(proposal.content);
-    const slug = parsed.template_slug;
-    const deck =
-      slug && PROPOSAL_DECK_SECTIONS[slug as ProposalDeckPresetId];
-    const withDeck =
-      deck && !(parsed.custom_sections ?? []).length
-        ? {
-            ...parsed,
-            custom_sections: deck.en,
-            custom_sections_es: deck.es,
-          }
-        : parsed;
-    setContent(withDeck);
-    setHydrated(true);
-  }, [proposal, hydrated]);
-
-  useEffect(() => {
-    if (selectedTemplateId || templates.length === 0) return;
-    const fromProposal = content.template_id
-      ? String(content.template_id)
-      : null;
-    if (fromProposal && templates.some((t) => String(t.id) === fromProposal)) {
-      setSelectedTemplateId(fromProposal);
-      return;
-    }
-    setSelectedTemplateId(String(templates[0].id));
-  }, [content.template_id, selectedTemplateId, templates]);
-
-  const applyTemplate = useCallback(
-    (templateId: string) => {
-      const template = templates.find((row) => String(row.id) === templateId);
-      if (!template || !proposal) return;
-
-      const defaultSeed = DEFAULT_PROPOSAL_TEMPLATES.find(
-        (seed) => seed.slug === template.slug,
-      );
-      const dbCustom = (template.content as ProposalDocumentContent).custom_sections;
-      const needsDeckSections = !Array.isArray(dbCustom) || dbCustom.length === 0;
-      const seededContent =
-        defaultSeed && needsDeckSections
-          ? {
-              ...template.content,
-              custom_sections: defaultSeed.content.custom_sections ?? [],
-              custom_sections_es: defaultSeed.content.custom_sections_es ?? [],
-            }
-          : template.content;
-
-      const variables = buildProposalVariableContext({
-        proposal,
-        company,
-        contact,
-        deal,
-        member,
-      });
-      const merged = mergeProposalVariables(
-        seededContent as Record<string, string | undefined>,
-        variables,
-      );
-
-      setContent({
-        ...parseProposalContent(seededContent),
-        ...merged,
-        template_id: Number(template.id),
-        template_slug: template.slug,
-      });
-      setSelectedTemplateId(templateId);
+  const { data: servicePackages = [] } = useGetList<ServicePackage>(
+    "service_packages",
+    {
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "sort_order", order: "ASC" },
     },
-    [templates, proposal, company, contact, deal, member],
   );
+
+  const packagesById = useMemo(
+    () =>
+      new Map(
+        servicePackages.map((pkg) => [
+          Number(pkg.id),
+          { category: pkg.category, name: pkg.name },
+        ]),
+      ),
+    [servicePackages],
+  );
+
+  const [content, setContent] = useState<ProposalDocumentContent>(
+    emptyProposalDocumentContent,
+  );
+  const [hydrated, setHydrated] = useState(false);
+
+  const resolveTemplateForSlug = useCallback(
+    (slug: ProposalDeckPresetId) =>
+      templates.find((row) => row.slug === slug) ?? null,
+    [templates],
+  );
+
+  const attachTemplateMeta = useCallback(
+    (
+      draft: ProposalDocumentContent,
+      slug: ProposalDeckPresetId,
+    ): ProposalDocumentContent => {
+      const template = resolveTemplateForSlug(slug);
+      return {
+        ...draft,
+        template_slug: slug,
+        template_id: template ? Number(template.id) : draft.template_id ?? null,
+      };
+    },
+    [resolveTemplateForSlug],
+  );
+
+  useEffect(() => {
+    if (!proposal || hydrated || templates.length === 0) return;
+
+    const parsed = parseProposalContent(proposal.content);
+    const inferredSlug = inferProposalDeckPresetFromLines(lines, packagesById);
+    const slug =
+      (parsed.template_slug as ProposalDeckPresetId | undefined) ?? inferredSlug;
+
+    let next = hydrateProposalContent({
+      ...parsed,
+      template_slug: slug,
+    });
+    next = attachTemplateMeta(next, slug);
+
+    setContent(next);
+    setHydrated(true);
+  }, [
+    proposal,
+    hydrated,
+    templates.length,
+    lines,
+    packagesById,
+    attachTemplateMeta,
+  ]);
 
   const seedTemplates = useMutation({
     mutationFn: async () => {
@@ -170,38 +176,45 @@ export const ProposalPreviewPage = () => {
     }
   }, [isTemplatesPending, templates.length, seedTemplates.isPending]);
 
-  useEffect(() => {
-    if (
-      autoAppliedRef.current ||
-      !hydrated ||
-      !proposal ||
-      templates.length === 0 ||
-      !selectedTemplateId
-    ) {
-      return;
-    }
-    const parsed = parseProposalContent(proposal.content);
-    const hasDraft = Boolean(parsed.intro_body?.trim() || parsed.warranty_body?.trim());
-    if (!hasDraft) {
-      autoAppliedRef.current = true;
-      applyTemplate(selectedTemplateId);
-    }
-  }, [hydrated, proposal, templates.length, selectedTemplateId, applyTemplate]);
+  const activeDeckLabel = useMemo(() => {
+    const slug = content.template_slug as ProposalDeckPresetId | undefined;
+    const match = slug ? templates.find((row) => row.slug === slug) : null;
+    return match?.name ?? slug ?? "Proposal deck";
+  }, [content.template_slug, templates]);
+
+  const contentForSave = useMemo(
+    (): ProposalDocumentContent => ({
+      ...content,
+      deck_revision: Math.max(
+        content.deck_revision ?? 0,
+        PROPOSAL_DECK_REVISION,
+      ),
+    }),
+    [content],
+  );
 
   const saveContent = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (payload: ProposalDocumentContent) => {
       if (!proposal) return;
       await updateProposal(
         "proposals",
         {
           id: proposal.id,
-          data: { content },
+          data: { content: payload },
           previousData: proposal,
         },
         { returnPromise: true },
       );
+      return payload;
     },
-    onSuccess: async () => {
+    onSuccess: async (savedContent) => {
+      if (proposal && savedContent) {
+        queryClient.setQueryData<Proposal>(
+          proposalGetOneQueryKey(proposal.id),
+          (cached) =>
+            cached ? { ...cached, content: savedContent } : cached,
+        );
+      }
       await queryClient.invalidateQueries({ queryKey: ["proposals"] });
       notify("Proposal content saved", { type: "success" });
     },
@@ -224,7 +237,7 @@ export const ProposalPreviewPage = () => {
             org_id: orgId,
             name: name.trim(),
             slug: slug || `template-${Date.now()}`,
-            content,
+            content: contentForSave,
             active: true,
             sort_order: templates.length + 1,
           },
@@ -237,6 +250,44 @@ export const ProposalPreviewPage = () => {
       notify("Template saved", { type: "success" });
     },
   });
+
+  const savedContentKey = useMemo(
+    () => proposalContentSnapshot(proposal?.content),
+    [proposal?.content],
+  );
+
+  const draftContentKey = useMemo(
+    () => proposalContentSnapshot(contentForSave),
+    [contentForSave],
+  );
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!proposal || !hydrated) return false;
+    return draftContentKey !== savedContentKey;
+  }, [proposal, hydrated, draftContentKey, savedContentKey]);
+
+  const showDeckSaveHint = useMemo(() => {
+    if (!proposal || !hasUnsavedChanges) return false;
+    return proposalNeedsDeckRevisionRefresh(
+      parseProposalContent(proposal.content),
+    );
+  }, [proposal, hasUnsavedChanges]);
+
+  const proposalVariables = useMemo(() => {
+    if (!proposal) return undefined;
+    return buildProposalVariableContext({
+      proposal,
+      company,
+      contact,
+      deal,
+      member,
+    });
+  }, [proposal, company, contact, deal, member]);
+
+  const previewLocale = useMemo((): ProposalLocale => {
+    if (typeof window === "undefined") return "en";
+    return window.localStorage.getItem(PROPOSAL_LOCALE_KEY) === "es" ? "es" : "en";
+  }, []);
 
   const stepper = useMemo(
     () => (
@@ -270,24 +321,23 @@ export const ProposalPreviewPage = () => {
       <ProposalPreviewToolbar
         proposalId={proposalId}
         languageToggle={<ProposalLanguageToggle />}
-        templates={templates}
-        selectedTemplateId={selectedTemplateId}
-        onTemplateChange={applyTemplate}
-        onSaveTemplate={() => saveAsTemplate.mutate()}
-        onSaveContent={() => saveContent.mutate()}
-        onAddSection={() =>
-          setContent((current) => ({
-            ...current,
-            custom_sections: [
-              ...(current.custom_sections ?? []),
-              {
-                id: newCustomSectionId(),
-                title: "New section",
-                body: "",
-              },
-            ],
-          }))
+        variablesHelp={
+          proposal ? (
+            <ProposalVariablesHelp variables={proposalVariables} />
+          ) : null
         }
+        deckLabel={activeDeckLabel}
+        unsavedHint={
+          hasUnsavedChanges
+            ? getProposalDocumentCopy(previewLocale)[
+                showDeckSaveHint
+                  ? "deckUpdatedSaveHint"
+                  : "saveBeforeClientHint"
+              ]
+            : undefined
+        }
+        onSaveTemplate={() => saveAsTemplate.mutate()}
+        onSaveContent={() => saveContent.mutate(contentForSave)}
         isSaving={saveContent.isPending}
         sendActions={
           proposal ? (
@@ -322,10 +372,23 @@ export const ProposalPreviewPage = () => {
               ),
             }))
           }
+          onAddSection={() =>
+            setContent((current) => ({
+              ...current,
+              custom_sections: [
+                ...(current.custom_sections ?? []),
+                {
+                  id: newCustomSectionId(),
+                  title: "New section",
+                  body: "",
+                  image_url: "",
+                },
+              ],
+            }))
+          }
         />
         </div>
       </div>
     </ProposalLocaleProvider>
   );
 };
-

@@ -14,7 +14,7 @@ import { pushSeatCountToStripeForOrg } from "../_shared/syncSubscriptionSeats.ts
 
 const siteBaseUrl = () =>
   (Deno.env.get("BILLING_PUBLIC_SITE_URL") ?? "").replace(/\/$/, "") ||
-  "http://localhost:5173";
+  "http://localhost:5174";
 
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {

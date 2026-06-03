@@ -156,18 +156,11 @@ export const ProposalSendActions = ({
     }
   };
 
-  const handleExportPdf = async () => {
-    setIsExportingPdf(true);
-    try {
-      await exportProposalPdf({ proposal, lineItems, installments });
-    } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Failed to export PDF",
-        { type: "error" },
-      );
-    } finally {
-      setIsExportingPdf(false);
-    }
+  const handleExportPdf = () => {
+    notify(
+      "Open the proposal document (View or client preview) to download the PDF.",
+      { type: "warning" },
+    );
   };
 
   const alreadySent =

@@ -1,0 +1,34 @@
+---
+description: Product UI and code are English; user may chat in Spanish
+alwaysApply: true
+---
+
+# Language
+
+The user may write in **Spanish**. All **product-facing copy** and **project artifacts** stay in **English**.
+
+## English (required)
+
+- UI labels, buttons, headings, empty states, tooltips, placeholders
+- Error and success messages shown in the app
+- Code identifiers, comments, commit messages, PR titles/bodies
+- Docs in the repo (`AGENTS.md`, migrations comments, etc.)
+
+## Spanish (allowed)
+
+- Chat with the user (replies can be in Spanish if they wrote in Spanish)
+- User-provided domain content (company names, contact names, notes)
+
+## Examples
+
+```tsx
+// ❌ BAD — Spanish UI copy
+<PageTitle label="Contactos" />
+<DataTable.Col label="Fecha de creación" />
+
+// ✅ GOOD
+<PageTitle label="Contacts" />
+<DataTable.Col label="Created" />
+```
+
+When editing existing Spanish UI strings, prefer converting them to English unless the user explicitly asks for Spanish localization.

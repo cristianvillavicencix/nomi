@@ -1,13 +1,20 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Pencil, Printer, Wrench } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useGetIdentity } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProposalDocumentView } from "@/lbs/proposals/document/ProposalDocumentView";
 import { buildCrmDocumentSnapshot } from "@/lbs/proposals/document/useProposalDocumentData";
-import { parseProposalContent } from "@/lbs/proposals/document/proposalDocumentTypes";
+import { hydrateProposalContent } from "@/lbs/proposals/document/proposalTemplateContent";
 import { useProposalDocumentData } from "@/lbs/proposals/document/useProposalDocumentData";
+import {
+  buildProposalVariableContext,
+  mergeProposalDocumentContent,
+} from "@/lbs/proposals/document/proposalVariableMerge";
+import { resolveProposalDocumentContent } from "@/lbs/proposals/document/proposalLocalizedContent";
+import { exportProposalPdf } from "@/lbs/proposals/proposalPdfExport";
 import { ProposalSendActions } from "@/lbs/proposals/ProposalSendActions";
 
 export const ProposalViewPage = () => {
@@ -20,7 +27,13 @@ export const ProposalViewPage = () => {
     enabled: Boolean(proposalId && identity),
   });
 
-  const content = parseProposalContent(bundle.proposal?.content);
+  const content = useMemo(
+    () =>
+      bundle.proposal
+        ? hydrateProposalContent(bundle.proposal.content)
+        : undefined,
+    [bundle.proposal?.content],
+  );
 
   const documentData =
     bundle.proposal != null
@@ -39,8 +52,34 @@ export const ProposalViewPage = () => {
         })
       : undefined;
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!bundle.proposal || !documentData || !content) return;
+    setIsExportingPdf(true);
+    try {
+      const variables = buildProposalVariableContext({
+        proposal: bundle.proposal,
+        company: bundle.company,
+        contact: bundle.contact,
+        deal: bundle.deal,
+        member: bundle.member,
+      });
+      const merged = mergeProposalDocumentContent(content, variables);
+      const localized = resolveProposalDocumentContent(merged, "en");
+      await exportProposalPdf({
+        proposal: bundle.proposal,
+        content: localized,
+        snapshot: documentData,
+        locale: "en",
+      });
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   if (!proposalId) return null;
@@ -64,7 +103,7 @@ export const ProposalViewPage = () => {
     );
   }
 
-  if (!bundle.proposal) {
+  if (!bundle.proposal || !content) {
     return (
       <p className="p-6 text-sm text-muted-foreground">Proposal not found.</p>
     );
@@ -117,6 +156,9 @@ export const ProposalViewPage = () => {
           documentData={documentData}
           editable={false}
           clientView
+          showSectionNav
+          onDownloadPdf={() => void handleDownloadPdf()}
+          isExportingPdf={isExportingPdf}
         />
       </div>
     </div>

@@ -85,6 +85,21 @@ export type PublicProposalPayload = {
     name: string;
     logo_url?: string | null;
   };
+  company?: {
+    id?: number;
+    name: string;
+  } | null;
+  contact?: {
+    id?: number;
+    first_name?: string | null;
+    last_name?: string | null;
+  } | null;
+  member?: {
+    id?: number;
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+  } | null;
 };
 
 export const fetchPublicProposal = (token: string) =>

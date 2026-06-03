@@ -196,7 +196,7 @@ If the **Places API (New)** endpoint returns **403**, the app automatically retr
 1. [APIs & Services → Library](https://console.cloud.google.com/apis/library) → enable **Places API (New)** (`places.googleapis.com`).
 2. Also enable **Places API** (legacy) if you rely on the fallback.
 3. [Credentials](https://console.cloud.google.com/apis/credentials) → your browser key → **API restrictions**: allow both Places APIs (or “Don’t restrict” for testing).
-4. **Application restrictions**: HTTP referrers — add `http://localhost:5173/*`, `https://lbs.bz/*`, and your Vercel preview URLs.
+4. **Application restrictions**: HTTP referrers — add `http://localhost:5174/*`, `https://lbs.bz/*`, and your Vercel preview URLs.
 5. Ensure **billing** is enabled on the GCP project.
 
 ### Accessing Local Services During Development
@@ -205,7 +205,7 @@ If the **Places API (New)** endpoint returns **403**, the app automatically retr
 
 **Optional local Supabase (Docker only, if running `supabase start`):**
 
-- Frontend: http://localhost:5173/
+- Frontend: http://localhost:5174/
 - Supabase Dashboard: http://localhost:54323/
 - REST API: http://127.0.0.1:54321
 - Storage (attachments): http://localhost:54323/project/default/storage/buckets/attachments

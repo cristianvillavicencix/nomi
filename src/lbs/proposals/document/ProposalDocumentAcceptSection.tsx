@@ -36,6 +36,8 @@ export const ProposalDocumentAcceptSection = ({
   acceptBody,
   onAcceptTitleChange,
   onAcceptBodyChange,
+  termsMarkdown,
+  termsTitle,
 }: {
   locale: ProposalLocale;
   mode: "preview" | "live";
@@ -63,6 +65,7 @@ export const ProposalDocumentAcceptSection = ({
   const depositPaid = Boolean(contract?.deposit_paid_at);
   const depositFormatted = formatProposalMoney(depositAmount, currency);
   const acceptPath = publicToken ? `/proposal/${publicToken}/accept` : null;
+  const termsForPdf = termsMarkdown?.trim();
 
   return (
     <div className="space-y-4">
@@ -94,8 +97,27 @@ export const ProposalDocumentAcceptSection = ({
         </p>
       ) : null}
 
+      <div data-pdf-only className="hidden">
+        <p className="pf-pdf-accept-note">{copy.pdfAcceptNote}</p>
+        {depositAmount > 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {copy.confirmDeposit(depositFormatted)}
+          </p>
+        ) : null}
+        {termsForPdf ? (
+          <div className="pf-pdf-terms">
+            {termsTitle ? (
+              <p className="mb-2 text-sm font-semibold text-foreground">
+                {termsTitle}
+              </p>
+            ) : null}
+            {termsForPdf}
+          </div>
+        ) : null}
+      </div>
+
       {depositPaid && contract?.signed_at ? (
-        <Card>
+        <Card data-pdf-hide>
           <CardContent className="space-y-2 py-6 text-center text-sm">
             <p className="font-medium text-green-700 dark:text-green-400">
               {copy.signedOn(formatDisplayDate(contract.signed_at, locale))}
@@ -104,7 +126,7 @@ export const ProposalDocumentAcceptSection = ({
           </CardContent>
         </Card>
       ) : isSigned && acceptPath ? (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-amber-500/30 bg-amber-500/5" data-pdf-hide>
           <CardContent className="space-y-4 py-4">
             <p className="flex items-center gap-2 text-sm">
               <Check className="size-4 text-amber-600" />
@@ -119,7 +141,7 @@ export const ProposalDocumentAcceptSection = ({
           </CardContent>
         </Card>
       ) : acceptPath && mode === "live" ? (
-        <Card>
+        <Card data-pdf-hide>
           <CardContent className="space-y-4 py-6">
             <Button asChild className="w-full" size="lg">
               <Link to={acceptPath}>
@@ -130,7 +152,9 @@ export const ProposalDocumentAcceptSection = ({
           </CardContent>
         </Card>
       ) : mode === "preview" ? (
-        <p className="text-xs text-muted-foreground">{copy.previewAcceptDisabled}</p>
+        <p className="text-xs text-muted-foreground" data-pdf-hide>
+          {copy.previewAcceptDisabled}
+        </p>
       ) : null}
     </div>
   );

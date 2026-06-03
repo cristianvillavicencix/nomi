@@ -18,15 +18,58 @@ export const PROPOSAL_DOCUMENT_SECTIONS_ES = [
 export type ProposalDocumentSectionId =
   (typeof PROPOSAL_DOCUMENT_SECTIONS)[number]["id"];
 
+export type ProposalPortfolioItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  image_url?: string | null;
+};
+
+export type ProposalTeamMember = {
+  id: string;
+  name: string;
+  role: string;
+  /** Short bio shown under name and role (about-us team grid). */
+  bio?: string;
+  image_url?: string | null;
+};
+
+/** Client / partner logo for the work-reviews section. */
+export type ProposalClientLogo = {
+  id: string;
+  /** Optional label (accessibility / PDF). */
+  name?: string;
+  image_url?: string | null;
+};
+
 export type ProposalCustomSection = {
   id: string;
   title: string;
   body: string;
+  /** Public URL or uploaded attachments URL for section visual. */
+  image_url?: string | null;
+};
+
+export type ProposalAboutStats = {
+  websites?: string;
+  years?: string;
+  leads?: string;
+  retention?: string;
+};
+
+export type ProposalTimelineBar = {
+  id: string;
+  label: string;
+  week_label: string;
+  left_percent: number;
+  width_percent: number;
+  tone: "light" | "brand" | "dark" | "gold";
 };
 
 export type ProposalLocaleContentBlock = {
   hero_title?: string;
   hero_subtitle?: string;
+  hero_image_url?: string | null;
   intro_title?: string;
   intro_body?: string;
   investment_title?: string;
@@ -46,6 +89,7 @@ export type ProposalDocumentContent = ProposalLocaleContentBlock & {
   /** Spanish overrides (legacy flat fields). */
   hero_title_es?: string;
   hero_subtitle_es?: string;
+  hero_image_url_es?: string | null;
   intro_title_es?: string;
   intro_body_es?: string;
   investment_title_es?: string;
@@ -62,6 +106,28 @@ export type ProposalDocumentContent = ProposalLocaleContentBlock & {
   };
   custom_sections?: ProposalCustomSection[];
   custom_sections_es?: ProposalCustomSection[];
+  /** Portfolio tiles for work-reviews section (up to 3). */
+  portfolio_items?: ProposalPortfolioItem[];
+  /** Team grid on about-us. */
+  team_members?: ProposalTeamMember[];
+  /** Partner / client logos (work-reviews). */
+  client_logos?: ProposalClientLogo[];
+  /** Round profile photo beside intro signatory name. */
+  intro_signatory_image_url?: string | null;
+  /** Name on the intro letter (proposal contact — not the logged-in CRM user). */
+  intro_signatory_name?: string;
+  /** Company line under signatory name on the intro letter. */
+  intro_signatory_company?: string;
+  /** @deprecated Use intro_signatory_name; kept for older saved proposals. */
+  intro_signatory_bio?: string;
+  about_stats?: ProposalAboutStats;
+  /** Gantt bars for project timeline section. */
+  timeline_bars?: ProposalTimelineBar[];
+  /**
+   * Canonical deck copy revision. When lower than `PROPOSAL_DECK_REVISION`,
+   * `hydrateProposalContent` replaces `custom_sections` from the template preset.
+   */
+  deck_revision?: number;
 };
 
 export type ProposalTemplateContent = ProposalDocumentContent;
@@ -84,148 +150,11 @@ export const emptyProposalDocumentContent = (): ProposalDocumentContent => ({
   hero_subtitle: "",
   intro_title: "Let's grow your business online",
   intro_body: "",
-  warranty_title: "Work with confidence",
+  warranty_title: "",
   warranty_body: "",
 });
 
-export const parseProposalContent = (
-  raw: unknown,
-): ProposalDocumentContent => {
-  if (!raw || typeof raw !== "object") {
-    return emptyProposalDocumentContent();
-  }
-  const record = raw as Record<string, unknown>;
-  return {
-    ...emptyProposalDocumentContent(),
-    template_id:
-      typeof record.template_id === "number" ? record.template_id : null,
-    template_slug:
-      typeof record.template_slug === "string" ? record.template_slug : null,
-    hero_title:
-      typeof record.hero_title === "string" ? record.hero_title : undefined,
-    hero_subtitle:
-      typeof record.hero_subtitle === "string"
-        ? record.hero_subtitle
-        : undefined,
-    intro_title:
-      typeof record.intro_title === "string" ? record.intro_title : undefined,
-    intro_body:
-      typeof record.intro_body === "string" ? record.intro_body : undefined,
-    warranty_title:
-      typeof record.warranty_title === "string"
-        ? record.warranty_title
-        : undefined,
-    warranty_body:
-      typeof record.warranty_body === "string"
-        ? record.warranty_body
-        : undefined,
-    investment_title:
-      typeof record.investment_title === "string"
-        ? record.investment_title
-        : undefined,
-    investment_notes:
-      typeof record.investment_notes === "string"
-        ? record.investment_notes
-        : undefined,
-    payment_notes:
-      typeof record.payment_notes === "string"
-        ? record.payment_notes
-        : undefined,
-    terms_title:
-      typeof record.terms_title === "string" ? record.terms_title : undefined,
-    terms_body:
-      typeof record.terms_body === "string" ? record.terms_body : undefined,
-    accept_title:
-      typeof record.accept_title === "string" ? record.accept_title : undefined,
-    accept_body:
-      typeof record.accept_body === "string" ? record.accept_body : undefined,
-    custom_sections: parseCustomSections(record.custom_sections),
-    custom_sections_es: parseCustomSections(record.custom_sections_es),
-    locales: parseLocalesBlock(record.locales),
-    ...parseEsSuffixFields(record),
-  };
-};
-
-const parseEsSuffixFields = (
-  record: Record<string, unknown>,
-): Partial<ProposalDocumentContent> => {
-  const keys = [
-    "hero_title",
-    "hero_subtitle",
-    "intro_title",
-    "intro_body",
-    "investment_title",
-    "investment_notes",
-    "payment_notes",
-    "warranty_title",
-    "warranty_body",
-    "terms_title",
-    "terms_body",
-    "accept_title",
-    "accept_body",
-  ] as const;
-  const out: Partial<ProposalDocumentContent> = {};
-  for (const key of keys) {
-    const esKey = `${key}_es`;
-    const value = record[esKey];
-    if (typeof value === "string") {
-      (out as Record<string, string>)[esKey] = value;
-    }
-  }
-  return out;
-};
-
-const parseLocaleContentBlock = (
-  raw: unknown,
-): ProposalLocaleContentBlock | undefined => {
-  if (!raw || typeof raw !== "object") return undefined;
-  const record = raw as Record<string, unknown>;
-  const block: ProposalLocaleContentBlock = {};
-  const keys = [
-    "hero_title",
-    "hero_subtitle",
-    "intro_title",
-    "intro_body",
-    "investment_title",
-    "investment_notes",
-    "payment_notes",
-    "warranty_title",
-    "warranty_body",
-    "terms_title",
-    "terms_body",
-    "accept_title",
-    "accept_body",
-  ] as const;
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string") block[key] = value;
-  }
-  return Object.keys(block).length > 0 ? block : undefined;
-};
-
-const parseLocalesBlock = (
-  raw: unknown,
-): ProposalDocumentContent["locales"] => {
-  if (!raw || typeof raw !== "object") return undefined;
-  const record = raw as Record<string, unknown>;
-  const es = parseLocaleContentBlock(record.es);
-  return es ? { es } : undefined;
-};
-
-const parseCustomSections = (raw: unknown): ProposalCustomSection[] | undefined => {
-  if (!Array.isArray(raw)) return undefined;
-  const sections = raw
-    .map((item) => {
-      if (!item || typeof item !== "object") return null;
-      const row = item as Record<string, unknown>;
-      const id = typeof row.id === "string" ? row.id : null;
-      if (!id) return null;
-      return {
-        id,
-        title: typeof row.title === "string" ? row.title : "",
-        body: typeof row.body === "string" ? row.body : "",
-      };
-    })
-    .filter((row): row is ProposalCustomSection => row != null);
-  return sections.length > 0 ? sections : undefined;
-};
+export {
+  parseProposalContent,
+  proposalContentSnapshot,
+} from "@/lbs/proposals/document/proposalContentParsers";

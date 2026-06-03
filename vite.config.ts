@@ -73,4 +73,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    // Avoid clashing with other local Vite apps (default 5173).
+    port: 5174,
+    strictPort: true,
+  },
 });

@@ -1,31 +1,17 @@
-import {
-  Check,
-  ClipboardCheck,
-  FileCheck2,
-  Flag,
-  Handshake,
-  HelpCircle,
-  Layers3,
-  LoaderCircle,
-  Monitor,
-  RefreshCw,
-  Shield,
-  Sparkles,
-  Timer,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { Check, CreditCard, Monitor, RefreshCw, Shield } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { isClientBillingSkipped } from "@/lbs/billing/clientBillingProvider";
 import { isPackageLine } from "@/lbs/proposals/proposalCatalogUtils";
 import { EditableBlock } from "@/lbs/proposals/document/EditableBlock";
+import { ProposalFormalSection } from "@/lbs/proposals/document/ProposalFormalSection";
+import { ProposalIntroSection } from "@/lbs/proposals/document/ProposalIntroSection";
+import "./proposal-formal.css";
 import { ProposalDocumentAcceptSection } from "@/lbs/proposals/document/ProposalDocumentAcceptSection";
+import { partitionProposalDeckSections } from "@/lbs/proposals/document/proposalDeckSectionOrder";
 import {
   buildProposalDocumentSections,
   visibleProposalCustomSections,
@@ -48,89 +34,11 @@ import { ProposalDocumentSidebar } from "@/lbs/proposals/document/ProposalDocume
 import { useSectionSpy } from "@/lbs/proposals/document/useSectionSpy";
 import {
   buildProposalVariableContext,
-  mergeProposalVariables,
+  mergeProposalDocumentContent,
+  mergeTextVariables,
 } from "@/lbs/proposals/document/proposalVariableMerge";
 import type { ProposalLineItem } from "@/lbs/types";
-
-const DecorativeSectionArt = ({
-  id,
-}: {
-  id: string;
-}) => {
-  // Small, inline SVG (no external network dependency).
-  const palette: Record<string, { a: string; b: string; c: string }> = {
-    overview: { a: "#60a5fa", b: "#a78bfa", c: "#22c55e" },
-    goals: { a: "#22c55e", b: "#06b6d4", c: "#a78bfa" },
-    scope: { a: "#a78bfa", b: "#f59e0b", c: "#60a5fa" },
-    timeline: { a: "#f59e0b", b: "#60a5fa", c: "#22c55e" },
-    requirements: { a: "#06b6d4", b: "#a78bfa", c: "#f59e0b" },
-    support: { a: "#22c55e", b: "#60a5fa", c: "#a78bfa" },
-    faq: { a: "#a78bfa", b: "#06b6d4", c: "#22c55e" },
-    next: { a: "#60a5fa", b: "#22c55e", c: "#f59e0b" },
-  };
-  const colors = palette[id] ?? { a: "#60a5fa", b: "#a78bfa", c: "#22c55e" };
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 560 240"
-      className="h-32 w-full rounded-xl border bg-gradient-to-br from-muted/30 to-muted/10"
-    >
-      <defs>
-        <linearGradient id={`g-${id}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={colors.a} stopOpacity="0.55" />
-          <stop offset="55%" stopColor={colors.b} stopOpacity="0.45" />
-          <stop offset="100%" stopColor={colors.c} stopOpacity="0.35" />
-        </linearGradient>
-        <filter id={`b-${id}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="18" />
-        </filter>
-      </defs>
-      <rect x="0" y="0" width="560" height="240" rx="18" fill={`url(#g-${id})`} opacity="0.22" />
-      <circle cx="140" cy="90" r="70" fill={colors.a} filter={`url(#b-${id})`} opacity="0.55" />
-      <circle cx="310" cy="150" r="92" fill={colors.b} filter={`url(#b-${id})`} opacity="0.45" />
-      <circle cx="430" cy="70" r="68" fill={colors.c} filter={`url(#b-${id})`} opacity="0.40" />
-      <path
-        d="M40 200 C120 160, 190 220, 270 190 C360 155, 420 200, 520 170"
-        fill="none"
-        stroke="rgba(255,255,255,0.28)"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-};
-
-const splitBullets = (value: string) =>
-  value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => line.replace(/^-+\s*/, ""));
-
-const parseFaq = (value: string) => {
-  // Supports markdown-ish: **Question** Answer...
-  const lines = value.split("\n").map((l) => l.trim());
-  const items: Array<{ q: string; a: string }> = [];
-  let current: { q: string; a: string[] } | null = null;
-
-  const flush = () => {
-    if (!current) return;
-    items.push({ q: current.q, a: current.a.join("\n").trim() });
-    current = null;
-  };
-
-  for (const line of lines) {
-    const m = line.match(/^\*\*(.+?)\*\*\s*(.*)$/);
-    if (m) {
-      flush();
-      current = { q: m[1].trim(), a: [m[2] ?? ""] };
-      continue;
-    }
-    if (!current) continue;
-    current.a.push(line);
-  }
-  flush();
-  return items.filter((i) => i.q && i.a);
-};
+import { PROPOSAL_PDF_ROOT_ID } from "@/lbs/proposals/proposalPdfExport";
 
 const formatDisplayDate = (
   value?: string | null,
@@ -145,12 +53,6 @@ const formatDisplayDate = (
     year: "numeric",
   });
 };
-
-const SectionEyebrow = ({ children }: { children: string }) => (
-  <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
-    {children}
-  </p>
-);
 
 export const ProposalDocumentView = ({
   proposalId,
@@ -169,6 +71,10 @@ export const ProposalDocumentView = ({
   publicDocumentData,
   documentData,
   locale: localeOverride,
+  onDownloadPdf,
+  isExportingPdf = false,
+  sidebarLanguageToggle,
+  onAddSection,
 }: {
   proposalId: string | number;
   content: ProposalDocumentContent;
@@ -194,6 +100,11 @@ export const ProposalDocumentView = ({
   /** Preloaded CRM data (e.g. client preview) — avoids duplicate fetches. */
   documentData?: ProposalDocumentDataSnapshot;
   locale?: ProposalLocale;
+  onDownloadPdf?: () => void;
+  isExportingPdf?: boolean;
+  sidebarLanguageToggle?: React.ReactNode;
+  /** Editor only — adds a custom section to the deck. */
+  onAddSection?: () => void;
 }) => {
   const localeContext = useProposalLocaleOptional();
   const locale = localeOverride ?? localeContext?.locale ?? "en";
@@ -252,6 +163,7 @@ export const ProposalDocumentView = ({
     () => buildProposalDocumentSections(localizedContent, locale),
     [localizedContent, locale],
   );
+
   const sectionIds = navSections.map((section) => section.id);
   const { activeId, scrollTo } = useSectionSpy(
     sectionIds,
@@ -270,16 +182,30 @@ export const ProposalDocumentView = ({
       contact,
       deal,
       member,
+      organizationName: dataSource?.organization?.name,
     });
-  }, [resolvedProposal, company, contact, deal, member]);
+  }, [resolvedProposal, company, contact, deal, member, dataSource?.organization?.name]);
 
-  const mergedContent = useMemo(() => {
-    const merged = mergeProposalVariables(
-      localizedContent as Record<string, string | undefined>,
-      variables,
-    );
-    return { ...localizedContent, ...merged } as ProposalDocumentContent;
-  }, [localizedContent, variables]);
+  const mergedContent = useMemo(
+    () => mergeProposalDocumentContent(localizedContent, variables),
+    [localizedContent, variables],
+  );
+
+  const deckSections = useMemo(
+    () =>
+      partitionProposalDeckSections(
+        visibleProposalCustomSections(
+          editable
+            ? localizedContent.custom_sections
+            : mergedContent.custom_sections,
+        ),
+      ),
+    [
+      editable,
+      localizedContent.custom_sections,
+      mergedContent.custom_sections,
+    ],
+  );
 
   const resolvedAcceptMode =
     acceptMode ??
@@ -355,7 +281,7 @@ export const ProposalDocumentView = ({
 
   const patchCustomSection = (
     customSectionId: string,
-    partial: { title?: string; body?: string },
+    partial: { title?: string; body?: string; image_url?: string | null },
   ) => {
     const next = (content.custom_sections ?? []).map((section) =>
       section.id === customSectionId ? { ...section, ...partial } : section,
@@ -363,12 +289,19 @@ export const ProposalDocumentView = ({
     patch({ custom_sections: next });
   };
 
-  const termsMarkdown =
+  const proposalOrgId = Number(resolvedProposal?.org_id ?? 0);
+  const proposalNumericId = Number(resolvedProposal?.id ?? proposalId);
+
+  const termsMarkdownRaw =
     contractForAccept?.terms_snapshot?.trim() ||
     mergedContent.terms_body?.trim() ||
     resolvedTermsMarkdownFromSource?.trim() ||
     contractTerms?.body_markdown?.trim() ||
     "";
+
+  const termsMarkdown = termsMarkdownRaw
+    ? mergeTextVariables(termsMarkdownRaw, variables)
+    : "";
 
   const metaLine =
     resolvedProposal.proposal_number || resolvedProposal.valid_until ? (
@@ -387,23 +320,31 @@ export const ProposalDocumentView = ({
 
   const documentBody = (
     <div
+      id={PROPOSAL_PDF_ROOT_ID}
       className={cn(
-        "mx-auto space-y-10 px-4 py-6 md:px-8 md:py-8",
-        showSectionNav ? "max-w-3xl" : "max-w-4xl",
+        "proposal-formal mx-auto space-y-0 px-6 py-8 md:px-10 md:py-10",
+        showSectionNav ? "max-w-[820px]" : "max-w-4xl",
       )}
     >
       {!showSectionNav ? metaLine : null}
-      {/* Hero */}
-          <section className="rounded-xl bg-primary px-6 py-8 text-primary-foreground shadow-sm md:px-8">
-            <p className="text-[11px] font-semibold uppercase tracking-widest opacity-80">
+
+      <section
+        id="intro"
+        className="pf-section proposal-pdf-page scroll-mt-6"
+      >
+        <div className="pf-hero relative">
+          <div className="pf-hero-grid" aria-hidden />
+          <div className="relative px-6 py-10 md:px-10 md:py-12">
+            <div className="pf-hero-tag">
+              <span className="size-1.5 rounded-full bg-[#f59e0b]" aria-hidden />
               {copy.serviceProposal}
-            </p>
+            </div>
             <EditableBlock
-              as="h2"
+              as="h1"
               editable={editable}
               value={mergedContent.hero_title ?? resolvedProposal.title}
               onChange={(hero_title) => patch({ hero_title })}
-              className="mt-2 text-primary-foreground"
+              className="text-white"
               placeholder="Proposal title"
             />
             <EditableBlock
@@ -413,63 +354,136 @@ export const ProposalDocumentView = ({
                 `Prepared for ${variables.empresa ?? "your company"} by Latinos Business Support`
               }
               onChange={(hero_subtitle) => patch({ hero_subtitle })}
-              className="mt-2 text-primary-foreground/90"
+              className="mt-2 max-w-xl text-sm text-white/85 md:text-base"
               placeholder="Subtitle"
             />
-            <div className="mt-6 grid gap-3 text-xs uppercase tracking-wide opacity-90 sm:grid-cols-3">
+            <div className="mt-8 grid gap-4 text-xs uppercase tracking-wide text-white/70 sm:grid-cols-3">
               <div>
-                <p className="opacity-70">{copy.date}</p>
-                <p className="mt-0.5 font-medium normal-case">
-                  {formatDisplayDate(new Date().toISOString().slice(0, 10))}
+                <p className="pf-mono text-[10px]">{copy.date}</p>
+                <p className="mt-1 font-semibold normal-case text-white">
+                  {formatDisplayDate(new Date().toISOString().slice(0, 10), locale)}
                 </p>
               </div>
               <div>
-                <p className="opacity-70">{copy.preparedBy}</p>
-                <p className="mt-0.5 font-medium normal-case">
+                <p className="pf-mono text-[10px]">{copy.preparedBy}</p>
+                <p className="mt-1 font-semibold normal-case text-white">
                   {variables.preparada_por}
                 </p>
               </div>
               <div>
-                <p className="opacity-70">{copy.validFor}</p>
-                <p className="mt-0.5 font-medium normal-case">
+                <p className="pf-mono text-[10px]">{copy.validFor}</p>
+                <p className="mt-1 font-semibold normal-case text-white">
                   {resolvedProposal.validity_days ?? 30} {copy.days}
                 </p>
               </div>
             </div>
-          </section>
+          </div>
+        </div>
 
-          {/* Intro */}
-          <section id="intro" className="scroll-mt-6 space-y-3">
-            <SectionEyebrow>{copy.sections.intro}</SectionEyebrow>
-            <EditableBlock
-              as="h2"
-              editable={editable}
-              value={mergedContent.intro_title ?? ""}
-              onChange={(intro_title) => patch({ intro_title })}
-              placeholder="Section title"
-            />
-            <EditableBlock
-              editable={editable}
-              value={mergedContent.intro_body ?? ""}
-              onChange={(intro_body) => patch({ intro_body })}
-              placeholder="Click to write the introduction…"
-            />
-          </section>
+        <div className="mt-10">
+          <ProposalIntroSection
+            variant="formal"
+            embedded
+            eyebrow={copy.sections.intro}
+            title={mergedContent.intro_title ?? ""}
+            body={mergedContent.intro_body ?? ""}
+            signatory={
+              mergedContent.intro_signatory_name?.trim() ||
+              variables.preparada_por
+            }
+            signatoryCompany={
+              mergedContent.intro_signatory_company?.trim() ||
+              "Latinos Business Support"
+            }
+            signatoryImageUrl={mergedContent.intro_signatory_image_url}
+            signatoryNamePlaceholder={copy.introSignatoryNamePlaceholder}
+            signatoryCompanyPlaceholder={copy.introSignatoryCompanyPlaceholder}
+            signatoryHint={editable ? copy.introSignatoryHint : undefined}
+            orgId={proposalOrgId}
+            proposalId={proposalNumericId}
+            editable={editable}
+            onTitleChange={(intro_title) => patch({ intro_title })}
+            onBodyChange={(intro_body) => patch({ intro_body })}
+            onSignatoryNameChange={(intro_signatory_name) =>
+              patch({ intro_signatory_name })
+            }
+            onSignatoryCompanyChange={(intro_signatory_company) =>
+              patch({ intro_signatory_company })
+            }
+            onSignatoryImageChange={(intro_signatory_image_url) =>
+              patch({ intro_signatory_image_url })
+            }
+            titlePlaceholder={copy.introTitlePlaceholder}
+            bodyPlaceholder={copy.introBodyPlaceholder}
+            editHint={editable ? copy.introEditHint : undefined}
+          />
+        </div>
+      </section>
 
-          {/* Includes */}
-          <section id="includes" className="scroll-mt-6 space-y-4">
+      {deckSections.narrative.map((section) => (
+        <ProposalFormalSection
+          key={section.id}
+          section={section}
+          content={mergedContent}
+          copy={copy}
+          editable={editable}
+          orgId={proposalOrgId}
+          proposalId={proposalNumericId}
+          preparadaPor={variables.preparada_por}
+          onPatchSection={patchCustomSection}
+          onPatchContent={patch}
+          onRemove={onRemoveCustomSection}
+        />
+      ))}
+
+      {deckSections.timeline ? (
+        <ProposalFormalSection
+          section={deckSections.timeline}
+          content={mergedContent}
+          copy={copy}
+          editable={editable}
+          orgId={proposalOrgId}
+          proposalId={proposalNumericId}
+          onPatchSection={patchCustomSection}
+          onPatchContent={patch}
+          onRemove={onRemoveCustomSection}
+        />
+      ) : null}
+
+      <section
+        id="investment"
+        className="pf-section proposal-pdf-page scroll-mt-6 space-y-4"
+      >
             <div>
-              <SectionEyebrow>{copy.sections.includes}</SectionEyebrow>
-              <h2 className="text-2xl font-semibold tracking-tight">
-                {copy.includesTitle}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {copy.includesSubtitle}
-              </p>
+              <div className="pf-kicker">{copy.sections.investment}</div>
+              <EditableBlock
+                as="h2"
+                editable={editable}
+                value={
+                  mergedContent.investment_title ?? copy.investmentDefaultTitle
+                }
+                onChange={(investment_title) => patch({ investment_title })}
+                placeholder="Section title"
+              />
+              <EditableBlock
+                editable={editable}
+                value={mergedContent.investment_notes ?? ""}
+                onChange={(investment_notes) => patch({ investment_notes })}
+                placeholder="Optional notes above the investment summary…"
+                className="mt-2 text-sm text-muted-foreground"
+              />
             </div>
 
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold tracking-tight">
+                {copy.sections.packageLines}
+              </h3>
+              <p className="text-sm text-muted-foreground">{copy.includesSubtitle}</p>
+            </div>
+
+            <div className="pf-invest">
             {resolvedBasePackageLine ? (
-              <Card>
+              <Card className="rounded-none border-0 shadow-none">
                 <CardContent className="flex items-start gap-4 p-4">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Monitor className="size-5" />
@@ -514,31 +528,8 @@ export const ProposalDocumentView = ({
                 ) : null}
               </CardContent>
             </Card>
-          </section>
 
-          {/* Investment */}
-          <section id="investment" className="scroll-mt-6 space-y-4">
-            <div>
-              <SectionEyebrow>{copy.sections.investment}</SectionEyebrow>
-              <EditableBlock
-                as="h2"
-                editable={editable}
-                value={
-                  mergedContent.investment_title ?? copy.investmentDefaultTitle
-                }
-                onChange={(investment_title) => patch({ investment_title })}
-                placeholder="Section title"
-              />
-              <EditableBlock
-                editable={editable}
-                value={mergedContent.investment_notes ?? ""}
-                onChange={(investment_notes) => patch({ investment_notes })}
-                placeholder="Optional notes above the investment summary…"
-                className="mt-2 text-sm text-muted-foreground"
-              />
-            </div>
-
-            <Card>
+            <Card className="rounded-none border-0 border-t shadow-none">
               <CardContent className="space-y-0 p-0">
                 <div className="flex justify-between gap-4 border-b px-4 py-3 text-sm">
                   <span>{copy.oneTimePayment}</span>
@@ -548,24 +539,26 @@ export const ProposalDocumentView = ({
                 </div>
                 {displayRecurringSubtotal > 0 ? (
                   <div className="flex justify-between gap-4 border-b px-4 py-3 text-sm">
-                    <span className="text-primary">{copy.recurringServices}</span>
-                    <span className="font-semibold tabular-nums text-primary">
+                    <span className="text-[#1E5FA8]">{copy.recurringServices}</span>
+                    <span className="font-semibold tabular-nums text-[#1E5FA8]">
                       {formatProposalMoney(displayRecurringSubtotal, resolvedCurrency)}
                       /mo
                     </span>
                   </div>
                 ) : null}
-                <div className="flex justify-between gap-4 bg-primary px-4 py-3 text-sm text-primary-foreground">
-                  <span className="font-medium">{copy.totalInvestment}</span>
-                  <span className="font-bold tabular-nums">
-                    {formatProposalMoney(resolvedOneTimeTotal, resolvedCurrency)}
-                    {displayRecurringSubtotal > 0
-                      ? ` + ${formatProposalMoney(displayRecurringSubtotal, resolvedCurrency)}/mo`
-                      : ""}
-                  </span>
-                </div>
               </CardContent>
             </Card>
+
+            <div className="pf-inv-grand">
+              <span className="font-semibold">{copy.totalInvestment}</span>
+              <span className="text-xl font-bold tabular-nums">
+                {formatProposalMoney(resolvedOneTimeTotal, resolvedCurrency)}
+                {displayRecurringSubtotal > 0
+                  ? ` + ${formatProposalMoney(displayRecurringSubtotal, resolvedCurrency)}/mo`
+                  : ""}
+              </span>
+            </div>
+            </div>
 
             <Card>
               <CardContent className="space-y-3 p-4">
@@ -617,494 +610,39 @@ export const ProposalDocumentView = ({
                 />
               </CardContent>
             </Card>
-          </section>
 
-          {/* Warranty */}
-          <section id="warranty" className="scroll-mt-6 space-y-3">
-            <SectionEyebrow>{copy.sections.warranty}</SectionEyebrow>
-            <EditableBlock
-              as="h2"
-              editable={editable}
-              value={mergedContent.warranty_title ?? ""}
-              onChange={(warranty_title) => patch({ warranty_title })}
-              placeholder="Warranty title"
-            />
-            <Card className="border-emerald-500/30 bg-emerald-500/5">
-              <CardContent className="flex gap-3 p-4">
-                <Shield className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                <EditableBlock
-                  editable={editable}
-                  value={mergedContent.warranty_body ?? ""}
-                  onChange={(warranty_body) => patch({ warranty_body })}
-                  placeholder="Warranty details…"
-                />
-              </CardContent>
-            </Card>
-          </section>
-
-          {visibleProposalCustomSections(mergedContent.custom_sections).map(
-            (section) => {
-            const commonHeader = (
-              <div className="flex items-start justify-between gap-2">
-                <SectionEyebrow>{copy.sections.custom}</SectionEyebrow>
-                {editable && onRemoveCustomSection ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => onRemoveCustomSection(section.id)}
-                    aria-label="Remove section"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                ) : null}
-              </div>
-            );
-
-            const titleNode = (
-              <EditableBlock
-                as="h2"
-                editable={editable}
-                value={section.title}
-                onChange={(title) => patchCustomSection(section.id, { title })}
-                placeholder="Section title"
-                className="text-2xl font-semibold tracking-tight"
-              />
-            );
-
-            // Specialized layouts for the seeded proposal deck sections.
-            if (section.id === "overview") {
-              return (
-                <section
-                  key={section.id}
-                  id={`custom-${section.id}`}
-                  className="scroll-mt-6 space-y-4"
-                >
-                  {commonHeader}
-                  <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                    <div className="space-y-3">
-                      {titleNode}
-                      <Card>
-                        <CardContent className="space-y-3 p-5">
-                          <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                            <Sparkles className="size-4" />
-                            What you’re getting
-                          </div>
-                          <EditableBlock
-                            editable={editable}
-                            value={section.body}
-                            onChange={(body) => patchCustomSection(section.id, { body })}
-                            placeholder="Project overview…"
-                            className="text-sm text-muted-foreground"
-                          />
-                        </CardContent>
-                      </Card>
-                    </div>
-                    <div className="space-y-3">
-                      <DecorativeSectionArt id="overview" />
-                      <Card className="border-primary/20 bg-primary/5">
-                        <CardContent className="space-y-2 p-5 text-sm">
-                          <div className="flex items-center gap-2 font-medium">
-                            <Handshake className="size-4 text-primary" />
-                            Success criteria
-                          </div>
-                          <ul className="space-y-1.5 text-muted-foreground">
-                            <li>Fast load time</li>
-                            <li>Mobile-first layout</li>
-                            <li>Clear calls-to-action</li>
-                            <li>Search-ready structure</li>
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </section>
-              );
-            }
-
-            if (section.id === "goals") {
-              const bullets = splitBullets(section.body);
-              return (
-                <section
-                  key={section.id}
-                  id={`custom-${section.id}`}
-                  className="scroll-mt-6 space-y-4"
-                >
-                  {commonHeader}
-                  {titleNode}
-                  <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-                    <DecorativeSectionArt id="goals" />
-                    <Card>
-                      <CardContent className="p-5">
-                        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
-                          <Flag className="size-4" />
-                          Outcomes
-                        </div>
-                        <ul className="grid gap-2 sm:grid-cols-2">
-                          {(bullets.length ? bullets : ["Add goals here…"]).map((b, i) => (
-                            <li
-                              key={String(i)}
-                              className="flex gap-2 rounded-lg border bg-muted/10 px-3 py-2 text-sm"
-                            >
-                              <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                                <Check className="size-3.5" />
-                              </span>
-                              <span className="text-muted-foreground">
-                                {editable && b === "Add goals here…" ? (
-                                  <EditableBlock
-                                    editable
-                                    value={section.body}
-                                    onChange={(body) =>
-                                      patchCustomSection(section.id, { body })
-                                    }
-                                    placeholder="- Goal 1\n- Goal 2"
-                                  />
-                                ) : (
-                                  b
-                                )}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </section>
-              );
-            }
-
-            if (section.id === "scope") {
-              const bullets = splitBullets(section.body);
-              return (
-                <section
-                  key={section.id}
-                  id={`custom-${section.id}`}
-                  className="scroll-mt-6 space-y-4"
-                >
-                  {commonHeader}
-                  {titleNode}
-                  <Card>
-                    <CardContent className="grid gap-4 p-5 lg:grid-cols-[1fr_0.9fr]">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                          <Layers3 className="size-4" />
-                          Deliverables
-                        </div>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                          {(bullets.length ? bullets : ["Add scope items…"]).map((b, i) => (
-                            <li key={String(i)} className="flex items-start gap-2">
-                              <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary/70" />
-                              <span>{b}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        {editable ? (
-                          <div className="pt-2">
-                            <EditableBlock
-                              editable
-                              value={section.body}
-                              onChange={(body) => patchCustomSection(section.id, { body })}
-                              placeholder="- Item 1\n- Item 2"
-                              className="text-xs text-muted-foreground"
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="space-y-3">
-                        <DecorativeSectionArt id="scope" />
-                        <div className="rounded-xl border bg-muted/10 p-4 text-sm">
-                          <div className="flex items-center gap-2 font-medium">
-                            <FileCheck2 className="size-4 text-primary" />
-                            What’s included
-                          </div>
-                          <p className="mt-2 text-muted-foreground">
-                            Everything listed above is included in this proposal.
-                            Anything outside scope is quoted separately.
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </section>
-              );
-            }
-
-            if (section.id === "timeline") {
-              const bullets = splitBullets(section.body);
-              return (
-                <section
-                  key={section.id}
-                  id={`custom-${section.id}`}
-                  className="scroll-mt-6 space-y-4"
-                >
-                  {commonHeader}
-                  <div className="flex flex-wrap items-end justify-between gap-2">
-                    {titleNode}
-                    <Badge variant="secondary" className="gap-1">
-                      <Timer className="size-3.5" />
-                      Typical 2–4 weeks
-                    </Badge>
-                  </div>
-                  <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-                    <DecorativeSectionArt id="timeline" />
-                    <Card>
-                      <CardContent className="p-5">
-                        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
-                          <LoaderCircle className="size-4" />
-                          Milestones
-                        </div>
-                        <ol className="space-y-3">
-                          {(bullets.length ? bullets : ["Add timeline milestones…"]).map(
-                            (b, i) => (
-                              <li key={String(i)} className="flex gap-3">
-                                <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary tabular-nums">
-                                  {i + 1}
-                                </span>
-                                <div className="min-w-0">
-                                  <p className="text-sm text-muted-foreground">{b}</p>
-                                </div>
-                              </li>
-                            ),
-                          )}
-                        </ol>
-                        {editable ? (
-                          <>
-                            <Separator className="my-4" />
-                            <EditableBlock
-                              editable
-                              value={section.body}
-                              onChange={(body) => patchCustomSection(section.id, { body })}
-                              placeholder="- Week 1: ...\n- Week 2: ..."
-                              className="text-xs text-muted-foreground"
-                            />
-                          </>
-                        ) : null}
-                      </CardContent>
-                    </Card>
-                  </div>
-                </section>
-              );
-            }
-
-            if (section.id === "requirements") {
-              const bullets = splitBullets(section.body);
-              return (
-                <section
-                  key={section.id}
-                  id={`custom-${section.id}`}
-                  className="scroll-mt-6 space-y-4"
-                >
-                  {commonHeader}
-                  {titleNode}
-                  <Card>
-                    <CardContent className="grid gap-4 p-5 lg:grid-cols-[1.1fr_0.9fr]">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                          <ClipboardCheck className="size-4" />
-                          Checklist
-                        </div>
-                        <ul className="space-y-2">
-                          {(bullets.length ? bullets : ["Add requirements…"]).map((b, i) => (
-                            <li
-                              key={String(i)}
-                              className="flex items-start gap-2 rounded-lg border bg-muted/10 px-3 py-2 text-sm"
-                            >
-                              <span className="mt-0.5 size-2 shrink-0 rounded-full bg-primary/70" />
-                              <span className="text-muted-foreground">{b}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        {editable ? (
-                          <div className="pt-2">
-                            <EditableBlock
-                              editable
-                              value={section.body}
-                              onChange={(body) => patchCustomSection(section.id, { body })}
-                              placeholder="- Item 1\n- Item 2"
-                              className="text-xs text-muted-foreground"
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="space-y-3">
-                        <DecorativeSectionArt id="requirements" />
-                        <div className="rounded-xl border bg-muted/10 p-4 text-sm">
-                          <div className="flex items-center gap-2 font-medium">
-                            <Users className="size-4 text-primary" />
-                            Approvals
-                          </div>
-                          <p className="mt-2 text-muted-foreground">
-                            We’ll share progress and request quick approvals to keep
-                            the project moving.
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </section>
-              );
-            }
-
-            if (section.id === "support") {
-              return (
-                <section
-                  key={section.id}
-                  id={`custom-${section.id}`}
-                  className="scroll-mt-6 space-y-4"
-                >
-                  {commonHeader}
-                  {titleNode}
-                  <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-                    <Card className="border-primary/20 bg-primary/5">
-                      <CardContent className="space-y-3 p-5">
-                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                          <Handshake className="size-4" />
-                          Monthly support
-                        </div>
-                        <EditableBlock
-                          editable={editable}
-                          value={section.body}
-                          onChange={(body) => patchCustomSection(section.id, { body })}
-                          placeholder="Describe the optional monthly support…"
-                          className="text-sm text-muted-foreground"
-                        />
-                      </CardContent>
-                    </Card>
-                    <DecorativeSectionArt id="support" />
-                  </div>
-                </section>
-              );
-            }
-
-            if (section.id === "faq") {
-              const items = parseFaq(section.body);
-              return (
-                <section
-                  key={section.id}
-                  id={`custom-${section.id}`}
-                  className="scroll-mt-6 space-y-4"
-                >
-                  {commonHeader}
-                  {titleNode}
-                  <Card>
-                    <CardContent className="p-5">
-                      <div className="mb-2 flex items-center gap-2 text-sm font-medium text-primary">
-                        <HelpCircle className="size-4" />
-                        Quick answers
-                      </div>
-                      <Accordion type="single" collapsible className="mt-2">
-                        {(items.length
-                          ? items
-                          : [{ q: "Add an FAQ question", a: "Add the answer here." }]
-                        ).map((it, idx) => (
-                          <AccordionItem key={String(idx)} value={`faq-${idx}`}>
-                            <AccordionTrigger>{it.q}</AccordionTrigger>
-                            <AccordionContent>
-                              <p className="text-muted-foreground whitespace-pre-wrap">
-                                {it.a}
-                              </p>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                      {editable ? (
-                        <>
-                          <Separator className="my-4" />
-                          <EditableBlock
-                            editable
-                            value={section.body}
-                            onChange={(body) => patchCustomSection(section.id, { body })}
-                            placeholder="**Question** Answer...\n\n**Question** Answer..."
-                            className="text-xs text-muted-foreground"
-                          />
-                        </>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                </section>
-              );
-            }
-
-            if (section.id === "next") {
-              const bullets = splitBullets(section.body);
-              return (
-                <section
-                  key={section.id}
-                  id={`custom-${section.id}`}
-                  className="scroll-mt-6 space-y-4"
-                >
-                  {commonHeader}
-                  {titleNode}
-                  <Card>
-                    <CardContent className="grid gap-4 p-5 lg:grid-cols-[0.9fr_1.1fr]">
-                      <DecorativeSectionArt id="next" />
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                          <Handshake className="size-4" />
-                          Steps
-                        </div>
-                        <ol className="grid gap-2 sm:grid-cols-2">
-                          {(bullets.length ? bullets : ["Add next steps…"]).map((b, i) => (
-                            <li
-                              key={String(i)}
-                              className="rounded-xl border bg-muted/10 p-4"
-                            >
-                              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                Step {i + 1}
-                              </p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {b}
-                              </p>
-                            </li>
-                          ))}
-                        </ol>
-                        {editable ? (
-                          <div className="pt-2">
-                            <EditableBlock
-                              editable
-                              value={section.body}
-                              onChange={(body) => patchCustomSection(section.id, { body })}
-                              placeholder="1. ...\n2. ..."
-                              className="text-xs text-muted-foreground"
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </section>
-              );
-            }
-
-            // Default layout for any other custom section.
-            return (
-              <section
-                key={section.id}
-                id={`custom-${section.id}`}
-                className="scroll-mt-6 space-y-3"
-              >
-                {commonHeader}
-                {titleNode}
-                <Card>
-                  <CardContent className="p-5">
+            {mergedContent.warranty_body?.trim() ? (
+              <Card className="border-emerald-500/30 bg-emerald-500/5">
+                <CardContent className="flex gap-3 p-4">
+                  <Shield className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <div className="min-w-0 space-y-2">
+                    <EditableBlock
+                      as="h3"
+                      editable={editable}
+                      value={mergedContent.warranty_title ?? copy.sections.warranty}
+                      onChange={(warranty_title) => patch({ warranty_title })}
+                      placeholder="Warranty title"
+                      className="font-semibold"
+                    />
                     <EditableBlock
                       editable={editable}
-                      value={section.body}
-                      onChange={(body) => patchCustomSection(section.id, { body })}
-                      placeholder="Section content…"
+                      value={mergedContent.warranty_body ?? ""}
+                      onChange={(warranty_body) => patch({ warranty_body })}
+                      placeholder="Warranty details…"
                       className="text-sm text-muted-foreground"
                     />
-                  </CardContent>
-                </Card>
-              </section>
-            );
-          },
-          )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+          </section>
 
           {resolvedAcceptMode !== "off" ? (
-            <section id="accept" className="scroll-mt-6 space-y-3 pb-12">
-              <SectionEyebrow>{copy.sections.accept}</SectionEyebrow>
+            <section
+              id="accept"
+              className="pf-section proposal-pdf-page scroll-mt-6 space-y-3 pb-12"
+            >
+              <div className="pf-kicker">{copy.sections.accept}</div>
               <ProposalDocumentAcceptSection
                 locale={locale}
                 mode={
@@ -1147,13 +685,19 @@ export const ProposalDocumentView = ({
   }
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden">
+    <div className="proposal-formal-shell flex h-full min-h-0 max-h-full overflow-hidden">
       <div className="hidden h-full shrink-0 md:block">
         <ProposalDocumentSidebar
           proposal={resolvedProposal}
           sections={navSections}
           activeId={activeId}
           onSectionClick={scrollTo}
+          downloadPdfLabel={copy.downloadPdf}
+          onDownloadPdf={onDownloadPdf}
+          isExportingPdf={isExportingPdf}
+          languageToggle={sidebarLanguageToggle}
+          onAddSection={editable ? onAddSection : undefined}
+          addSectionLabel={copy.addSection}
         />
       </div>
       <div

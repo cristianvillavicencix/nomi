@@ -120,28 +120,62 @@ Deno.serve(
         return createErrorResponse(404, "Proposal not found");
       }
 
-      const [{ data: lineItems }, { data: installments }, { data: org }] =
-        await Promise.all([
-          supabaseAdmin
-            .from("proposal_line_items")
-            .select(
-              "description, quantity, unit_price, line_total, billing_type, billing_interval, sort_order",
-            )
-            .eq("proposal_id", proposal.id)
-            .order("sort_order", { ascending: true }),
-          supabaseAdmin
-            .from("proposal_payment_installments")
-            .select(
-              "installment_number, label, due_date, amount, billing_type, status",
-            )
-            .eq("proposal_id", proposal.id)
-            .order("installment_number", { ascending: true }),
-          supabaseAdmin
-            .from("organizations")
-            .select("name")
-            .eq("id", tokenRow.org_id)
-            .maybeSingle(),
-        ]);
+      const companyId = proposal.company_id as number | null | undefined;
+      const contactId = proposal.contact_id as number | null | undefined;
+      const memberId = proposal.organization_member_id as
+        | number
+        | null
+        | undefined;
+
+      const [
+        { data: lineItems },
+        { data: installments },
+        { data: org },
+        { data: company },
+        { data: contact },
+        { data: member },
+      ] = await Promise.all([
+        supabaseAdmin
+          .from("proposal_line_items")
+          .select(
+            "description, quantity, unit_price, line_total, billing_type, billing_interval, sort_order",
+          )
+          .eq("proposal_id", proposal.id)
+          .order("sort_order", { ascending: true }),
+        supabaseAdmin
+          .from("proposal_payment_installments")
+          .select(
+            "installment_number, label, due_date, amount, billing_type, status",
+          )
+          .eq("proposal_id", proposal.id)
+          .order("installment_number", { ascending: true }),
+        supabaseAdmin
+          .from("organizations")
+          .select("name")
+          .eq("id", tokenRow.org_id)
+          .maybeSingle(),
+        companyId
+          ? supabaseAdmin
+            .from("companies")
+            .select("id, name")
+            .eq("id", companyId)
+            .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        contactId
+          ? supabaseAdmin
+            .from("contacts")
+            .select("id, first_name, last_name")
+            .eq("id", contactId)
+            .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        memberId
+          ? supabaseAdmin
+            .from("organization_members")
+            .select("id, first_name, last_name, email")
+            .eq("id", memberId)
+            .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
 
       let contract: {
         id: number;
@@ -191,6 +225,24 @@ Deno.serve(
             name: org?.name ?? "LBS",
             logo_url: null,
           },
+          company: company?.name
+            ? { id: company.id, name: company.name }
+            : null,
+          contact: contact
+            ? {
+              id: contact.id,
+              first_name: contact.first_name,
+              last_name: contact.last_name,
+            }
+            : null,
+          member: member
+            ? {
+              id: member.id,
+              first_name: member.first_name,
+              last_name: member.last_name,
+              email: member.email,
+            }
+            : null,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

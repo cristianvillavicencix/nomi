@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProposalDocumentView } from "@/lbs/proposals/document/ProposalDocumentView";
@@ -10,11 +11,18 @@ import {
   type ProposalLocale,
 } from "@/lbs/proposals/document/proposalDocumentI18n";
 import { mapPublicProposalDocumentData } from "@/lbs/proposals/document/mapPublicProposalDocumentData";
-import { parseProposalContent } from "@/lbs/proposals/document/proposalDocumentTypes";
+import { hydrateProposalContent } from "@/lbs/proposals/document/proposalTemplateContent";
 import {
   fetchPublicProposal,
   type PublicProposalPayload,
 } from "@/lbs/proposals/public/publicProposalApi";
+import {
+  buildProposalVariableContext,
+  mergeProposalDocumentContent,
+} from "@/lbs/proposals/document/proposalVariableMerge";
+import { resolveProposalDocumentContent } from "@/lbs/proposals/document/proposalLocalizedContent";
+import { exportProposalPdf } from "@/lbs/proposals/proposalPdfExport";
+import { useProposalLocaleOptional } from "@/lbs/proposals/document/ProposalLocaleContext";
 
 const readStoredLocale = (): ProposalLocale => {
   if (typeof window === "undefined") return "en";
@@ -30,26 +38,63 @@ const PublicProposalDocumentBody = ({
   payload: PublicProposalPayload;
   onRefresh: () => void;
 }) => {
-  const content = parseProposalContent(payload.proposal.content);
+  const content = useMemo(
+    () => hydrateProposalContent(payload.proposal.content),
+    [payload.proposal.content],
+  );
   const publicDocumentData = mapPublicProposalDocumentData(payload);
+  const localeContext = useProposalLocaleOptional();
+  const locale = localeContext?.locale ?? readStoredLocale();
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const pdfContent = useMemo(() => {
+    const variables = buildProposalVariableContext({
+      proposal: publicDocumentData.proposal,
+      company: publicDocumentData.company,
+      contact: publicDocumentData.contact,
+      deal: publicDocumentData.deal,
+      member: publicDocumentData.member,
+      organizationName: publicDocumentData.organization?.name,
+    });
+    const merged = mergeProposalDocumentContent(content, variables);
+    return resolveProposalDocumentContent(merged, locale);
+  }, [content, publicDocumentData, locale]);
+
+  const handleDownloadPdf = async () => {
+    setIsExportingPdf(true);
+    try {
+      await exportProposalPdf({
+        proposal: publicDocumentData.proposal,
+        content: pdfContent,
+        snapshot: publicDocumentData,
+        locale,
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   return (
-    <div className="min-h-svh bg-background">
-      <header className="sticky top-0 z-10 flex items-center justify-end border-b bg-card/95 px-4 py-2 backdrop-blur">
-        <ProposalLanguageToggle />
-      </header>
+    <div className="h-svh min-h-0 bg-background">
       <ProposalDocumentView
         proposalId={payload.proposal.id}
         content={content}
         editable={false}
         clientView
-        pageScroll
+        showSectionNav
         showAcceptPlaceholder
         acceptMode="live"
         publicToken={token}
         onPublicRefresh={onRefresh}
         contractSnapshot={payload.contract}
         publicDocumentData={publicDocumentData}
+        onDownloadPdf={() => void handleDownloadPdf()}
+        isExportingPdf={isExportingPdf}
+        sidebarLanguageToggle={
+          <ProposalLanguageToggle className="w-full" />
+        }
       />
     </div>
   );

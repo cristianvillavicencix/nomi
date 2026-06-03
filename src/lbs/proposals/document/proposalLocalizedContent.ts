@@ -7,6 +7,7 @@ import type { ProposalLocale } from "@/lbs/proposals/document/proposalDocumentI1
 const LOCALIZED_KEYS = [
   "hero_title",
   "hero_subtitle",
+  "hero_image_url",
   "intro_title",
   "intro_body",
   "investment_title",
@@ -35,7 +36,16 @@ export const resolveProposalDocumentContent = (
 
   for (const key of LOCALIZED_KEYS) {
     const esSuffix = content[`${key}_es` as keyof ProposalDocumentContent];
-    const fromBlock = fromLocaleBlock?.[key];
+    const fromBlock = fromLocaleBlock?.[key as keyof typeof fromLocaleBlock];
+    if (key === "hero_image_url") {
+      const image =
+        (typeof fromBlock === "string" && fromBlock.trim() ? fromBlock : null) ??
+        (typeof esSuffix === "string" && esSuffix.trim()
+          ? (esSuffix as string)
+          : null);
+      if (image) resolved.hero_image_url = image;
+      continue;
+    }
     const value =
       (typeof fromBlock === "string" && fromBlock.trim() ? fromBlock : null) ??
       (typeof esSuffix === "string" && esSuffix.trim() ? esSuffix : null);
@@ -66,6 +76,10 @@ const mergeCustomSections = (
       ...section,
       title: translated.title?.trim() ? translated.title : section.title,
       body: translated.body?.trim() ? translated.body : section.body,
+      image_url:
+        translated.image_url?.trim()
+          ? translated.image_url
+          : section.image_url,
     };
   });
   return merged.length > 0 ? merged : es;

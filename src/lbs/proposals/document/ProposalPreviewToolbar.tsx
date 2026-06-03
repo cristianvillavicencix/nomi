@@ -1,40 +1,37 @@
-import { ArrowLeft, Eye, FileText, Plus, Save } from "lucide-react";
+import { ArrowLeft, Eye, FileText, Save } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { ProposalTemplate } from "@/lbs/proposals/document/proposalDocumentTypes";
 
 export const ProposalPreviewToolbar = ({
   proposalId,
-  templates,
-  selectedTemplateId,
-  onTemplateChange,
+  deckLabel,
   onSaveTemplate,
   onSaveContent,
-  onAddSection,
   isSaving,
   sendActions,
   languageToggle,
+  variablesHelp,
+  unsavedHint,
 }: {
   proposalId: string | number;
-  templates: ProposalTemplate[];
-  selectedTemplateId: string;
-  onTemplateChange: (templateId: string) => void;
+  /** Deck type inferred from the builder package (read-only). */
+  deckLabel: string;
   onSaveTemplate: () => void;
   onSaveContent: () => void;
-  onAddSection?: () => void;
   isSaving?: boolean;
   sendActions?: ReactNode;
   languageToggle?: ReactNode;
+  variablesHelp?: ReactNode;
+  unsavedHint?: string;
 }) => (
-  <div className="flex flex-wrap items-center gap-2 border-b bg-card px-3 py-2">
+  <div className="border-b bg-card">
+    {unsavedHint ? (
+      <p className="border-b border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+        {unsavedHint}
+      </p>
+    ) : null}
+  <div className="flex flex-wrap items-center gap-2 px-3 py-2">
     <Button variant="ghost" size="sm" asChild>
       <Link to={`/proposals/${proposalId}/edit`}>
         <ArrowLeft className="size-4" />
@@ -42,30 +39,17 @@ export const ProposalPreviewToolbar = ({
       </Link>
     </Button>
 
-    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-      <span className="text-xs text-muted-foreground shrink-0">Template</span>
-      <Select value={selectedTemplateId} onValueChange={onTemplateChange}>
-        <SelectTrigger className="h-8 w-[min(100%,220px)]">
-          <SelectValue placeholder="Choose template" />
-        </SelectTrigger>
-        <SelectContent>
-          {templates.map((template) => (
-            <SelectItem key={String(template.id)} value={String(template.id)}>
-              {template.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">Deck:</span> {deckLabel}
+      <span className="hidden sm:inline">
+        {" "}
+        — from your builder package
+      </span>
+    </p>
 
     {languageToggle}
 
-    {onAddSection ? (
-      <Button type="button" variant="outline" size="sm" onClick={onAddSection}>
-        <Plus className="size-4" />
-        Add section
-      </Button>
-    ) : null}
+    {variablesHelp}
 
     <Button type="button" variant="outline" size="sm" asChild>
       <Link
@@ -95,5 +79,6 @@ export const ProposalPreviewToolbar = ({
     </Button>
 
     {sendActions}
+  </div>
   </div>
 );

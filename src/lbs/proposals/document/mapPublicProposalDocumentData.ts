@@ -1,5 +1,39 @@
 import type { Company, Contact, Deal, OrganizationMember } from "@/components/atomic-crm/types";
 import type { PublicProposalPayload } from "@/lbs/proposals/public/publicProposalApi";
+
+const mapPublicContact = (
+  row: PublicProposalPayload["contact"],
+): Contact | null => {
+  if (!row) return null;
+  return {
+    id: row.id,
+    first_name: row.first_name ?? "",
+    last_name: row.last_name ?? "",
+  } as Contact;
+};
+
+const mapPublicCompany = (
+  row: PublicProposalPayload["company"],
+): Company | null => {
+  if (!row?.name?.trim()) return null;
+  return {
+    id: row.id ?? 0,
+    name: row.name,
+  } as Company;
+};
+
+const mapPublicMember = (
+  row: PublicProposalPayload["member"],
+): OrganizationMember | null => {
+  if (!row) return null;
+  const name = `${row.first_name ?? ""} ${row.last_name ?? ""}`.trim();
+  return {
+    id: row.id,
+    first_name: row.first_name ?? "",
+    last_name: row.last_name ?? "",
+    email: row.email ?? "",
+  } as OrganizationMember;
+};
 import type { ProposalLineDraft } from "@/lbs/proposals/proposalCommercialUtils";
 import type {
   OrganizationContractTerms,
@@ -20,6 +54,7 @@ export type ProposalDocumentDataSnapshot = {
   contact?: Contact | null;
   deal?: Deal | null;
   member?: OrganizationMember | null;
+  organization?: { name: string } | null;
   contractTerms?: OrganizationContractTerms | null;
   /** Merged org + proposal terms for client display (from public API). */
   termsMarkdown?: string | null;
@@ -98,6 +133,10 @@ export const mapPublicProposalDocumentData = (
     oneTimeTotal,
     recurringSubtotal,
     currency,
+    company: mapPublicCompany(payload.company),
+    contact: mapPublicContact(payload.contact),
+    member: mapPublicMember(payload.member),
+    organization: payload.organization ?? null,
     termsMarkdown,
     termsTitle,
     contractTerms: termsMarkdown
