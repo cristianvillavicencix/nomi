@@ -23,6 +23,9 @@ import { exportProposalPdf } from "@/lbs/proposals/proposalPdfExport";
 const ProposalClientPreviewBody = () => {
   const { id } = useParams();
   const proposalId = id ?? "";
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const localeContext = useProposalLocaleOptional();
+  const locale = localeContext?.locale ?? "en";
 
   const bundle = useProposalDocumentData(proposalId, {
     fetchLinkedContract: true,
@@ -68,10 +71,6 @@ const ProposalClientPreviewBody = () => {
     );
   }
 
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-
-  const localeContext = useProposalLocaleOptional();
-  const locale = localeContext?.locale ?? "en";
   const content = hydrateProposalContent(bundle.proposal.content);
   const contractSnapshot = bundle.linkedContract
     ? {
