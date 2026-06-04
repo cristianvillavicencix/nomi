@@ -666,6 +666,59 @@ const dataProviderWithCustomMethods = {
 
     return data;
   },
+  async issueClientInvoice({ installmentId }: { installmentId: Identifier }) {
+    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
+      "issue_client_invoice",
+      {
+        method: "POST",
+        body: { installment_id: Number(installmentId) },
+      },
+    );
+
+    if (error || !data?.invoice) {
+      console.error("issue_client_invoice.error", error);
+      throw new Error("Failed to issue invoice");
+    }
+
+    return data.invoice;
+  },
+  async sendClientInvoice({
+    invoiceId,
+    to,
+    message,
+    pdfBase64,
+    filename,
+    subject,
+  }: {
+    invoiceId: Identifier;
+    to: string;
+    message?: string;
+    pdfBase64: string;
+    filename?: string;
+    subject?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
+      "send_client_invoice",
+      {
+        method: "POST",
+        body: {
+          invoice_id: Number(invoiceId),
+          to,
+          message,
+          pdf_base64: pdfBase64,
+          filename,
+          subject,
+        },
+      },
+    );
+
+    if (error || !data?.invoice) {
+      console.error("send_client_invoice.error", error);
+      throw new Error("Failed to send invoice");
+    }
+
+    return data.invoice;
+  },
   async upsertLbsClient(
     input: LbsClientUpsertInput,
   ): Promise<LbsClientUpsertResult> {

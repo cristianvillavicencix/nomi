@@ -699,6 +699,17 @@ export async function markInstallmentPaidFromStripe(
       .eq("id", params.contractId);
   }
 
+  await supabase
+    .from("client_invoices")
+    .update({
+      status: "paid",
+      paid_at: now,
+      stripe_payment_intent_id: params.stripePaymentIntentId,
+      updated_at: now,
+    })
+    .eq("installment_id", params.installmentId)
+    .not("status", "eq", "void");
+
   const { data: proposal } = await supabase
     .from("proposals")
     .select("amount, contact_id")

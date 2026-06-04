@@ -154,6 +154,29 @@ export type ProposalPaymentInstallment = {
   updated_at?: string;
 } & Pick<RaRecord, "id">;
 
+export type ClientInvoice = {
+  org_id?: number;
+  invoice_number: string;
+  installment_id?: Identifier | null;
+  proposal_id?: Identifier | null;
+  deal_id?: Identifier | null;
+  company_id?: Identifier | null;
+  contact_id?: Identifier | null;
+  issue_date: string;
+  due_date: string;
+  amount: number;
+  currency?: string;
+  description: string;
+  status?: "draft" | "sent" | "paid" | "void" | "overdue";
+  sent_at?: string | null;
+  paid_at?: string | null;
+  stripe_payment_intent_id?: string | null;
+  recipient_email?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+} & Pick<RaRecord, "id">;
+
 export type Contract = {
   org_id?: number;
   company_id?: Identifier | null;

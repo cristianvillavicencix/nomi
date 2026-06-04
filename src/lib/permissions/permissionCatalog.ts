@@ -346,6 +346,13 @@ export const RESOURCE_ACTION_TO_CAPABILITY: Record<
     edit: "proposals.edit",
     delete: "proposals.edit",
   },
+  client_invoices: {
+    list: "proposals.view",
+    show: "proposals.view",
+    create: "proposals.send",
+    edit: "proposals.send",
+    delete: "proposals.send",
+  },
   service_packages: {
     list: "proposals.view",
     show: "proposals.view",

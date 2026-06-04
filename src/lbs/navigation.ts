@@ -195,7 +195,7 @@ export const LBS_PLACEHOLDER_MODULES = {
   billing: {
     title: "Billing",
     description:
-      "Track proposal installments, collected revenue, outstanding balances, and overdue client payments.",
+      "Track collections, issue numbered invoices (INV-YYYY-####), email PDFs, and view monthly revenue.",
     phase: 4,
   },
   webForms: {

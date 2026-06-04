@@ -1,115 +1,40 @@
+import { useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
-  useGetIdentity,
+  useDataProvider,
   useGetList,
   useGetMany,
   useListContext,
+  useNotify,
+  useRefresh,
 } from "ra-core";
 import { Link, useNavigate } from "react-router";
+import { Loader2, Receipt } from "lucide-react";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
+import type { ClientInvoice, Proposal, ProposalPaymentInstallment } from "@/lbs/types";
 import {
-  PageActions,
-  PageTitle,
-} from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
-import type { Proposal, ProposalPaymentInstallment } from "@/lbs/types";
+  buildInstallmentListFilter,
+  formatBillingDate,
+  INSTALLMENT_FILTER_OPTIONS,
+  installmentStatusLabel,
+  installmentStatusVariant,
+  isInstallmentOverdue,
+  type InstallmentStatusFilter,
+} from "@/lbs/billing/billingDisplayUtils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { cn } from "@/lib/utils";
 
-type StatusFilter =
-  | "all"
-  | "pending"
-  | "paid"
-  | "overdue"
-  | "failed"
-  | "requires_action";
-
-const todayIso = () => new Date().toISOString().slice(0, 10);
-
-const isOverdue = (row: ProposalPaymentInstallment) =>
-  row.status === "pending" &&
-  Boolean(row.due_date) &&
-  row.due_date < todayIso();
-
-const formatDate = (value?: string | null) => {
-  if (!value) return "—";
-  const date = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
-
-const statusLabel = (row: ProposalPaymentInstallment) => {
-  if (isOverdue(row)) return "Overdue";
-  switch (row.status) {
-    case "paid":
-      return "Paid";
-    case "pending":
-      return "Pending";
-    case "processing":
-      return "Processing";
-    case "requires_action":
-      return "Action required";
-    case "failed":
-      return "Failed";
-    case "skipped":
-      return "Skipped";
-    case "waived":
-      return "Waived";
-    default:
-      return row.status ?? "—";
-  }
-};
-
-const statusVariant = (row: ProposalPaymentInstallment) => {
-  if (isOverdue(row)) return "destructive" as const;
-  switch (row.status) {
-    case "paid":
-      return "default" as const;
-    case "failed":
-    case "requires_action":
-      return "destructive" as const;
-    case "processing":
-      return "secondary" as const;
-    default:
-      return "outline" as const;
-  }
-};
-
-const FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "overdue", label: "Overdue" },
-  { value: "paid", label: "Paid" },
-  { value: "failed", label: "Failed" },
-  { value: "requires_action", label: "Action required" },
-];
-
-const buildListFilter = (statusFilter: StatusFilter) => {
-  if (statusFilter === "all") return {};
-  if (statusFilter === "overdue") {
-    return {
-      "status@eq": "pending",
-      "due_date@lt": todayIso(),
-    };
-  }
-  return { "status@eq": statusFilter };
-};
-
-export const ClientBillingList = () => {
-  const { identity } = useGetIdentity();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+export const BillingCollectionsTab = () => {
+  const [statusFilter, setStatusFilter] = useState<InstallmentStatusFilter>("all");
   const listFilter = useMemo(
-    () => buildListFilter(statusFilter),
+    () => buildInstallmentListFilter(statusFilter),
     [statusFilter],
   );
 
@@ -136,7 +61,7 @@ export const ClientBillingList = () => {
         row.status === "requires_action"
       ) {
         outstanding += amount;
-        if (isOverdue(row)) {
+        if (isInstallmentOverdue(row)) {
           overdueAmount += amount;
           overdueCount += 1;
         }
@@ -146,26 +71,10 @@ export const ClientBillingList = () => {
     return { collected, outstanding, overdueAmount, overdueCount };
   }, [allInstallments]);
 
-  if (!identity) return null;
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-6">
-      <PageActions>
-        <PageTitle label="Billing" />
-        <div className="ml-auto">
-          <ModuleInfoPopover
-            title={LBS_PLACEHOLDER_MODULES.billing.title}
-            description={LBS_PLACEHOLDER_MODULES.billing.description}
-          />
-        </div>
-      </PageActions>
-
+    <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <SummaryCard
-          title="Collected"
-          subtitle="Paid installments"
-          amount={summary.collected}
-        />
+        <SummaryCard title="Collected" subtitle="Paid installments" amount={summary.collected} />
         <SummaryCard
           title="Outstanding"
           subtitle="Pending & failed"
@@ -184,7 +93,7 @@ export const ClientBillingList = () => {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {FILTER_OPTIONS.map((option) => (
+        {INSTALLMENT_FILTER_OPTIONS.map((option) => (
           <Button
             key={option.value}
             type="button"
@@ -206,7 +115,6 @@ export const ClientBillingList = () => {
         filter={listFilter}
         actions={false}
         pagination={<ListPagination rowsPerPageOptions={[25, 50, 100]} />}
-        sx={{ "& .RaList-main": { boxShadow: "none" } }}
       >
         <BillingInstallmentsTable />
       </List>
@@ -216,8 +124,28 @@ export const ClientBillingList = () => {
 
 const BillingInstallmentsTable = () => {
   const navigate = useNavigate();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const canIssue = useMemberCapability("proposals.send");
   const { data: installments = [], isPending } =
     useListContext<ProposalPaymentInstallment>();
+
+  const { data: issuedInvoices = [] } = useGetList<ClientInvoice>("client_invoices", {
+    pagination: { page: 1, perPage: 500 },
+    sort: { field: "created_at", order: "DESC" },
+  });
+
+  const issuedByInstallment = useMemo(
+    () =>
+      new Set(
+        issuedInvoices
+          .map((row) => row.installment_id)
+          .filter(Boolean)
+          .map(String),
+      ),
+    [issuedInvoices],
+  );
 
   const proposalIds = useMemo(
     () =>
@@ -225,9 +153,7 @@ const BillingInstallmentsTable = () => {
         ...new Set(
           installments
             .map((row) => row.proposal_id)
-            .filter((id): id is ProposalPaymentInstallment["proposal_id"] =>
-              id != null,
-            ),
+            .filter((id): id is ProposalPaymentInstallment["proposal_id"] => id != null),
         ),
       ],
     [installments],
@@ -266,6 +192,17 @@ const BillingInstallmentsTable = () => {
     [companies],
   );
 
+  const issueMutation = useMutation({
+    mutationFn: (installmentId: number) =>
+      dataProvider.issueClientInvoice({ installmentId }),
+    onSuccess: () => {
+      notify("Invoice created", { type: "success" });
+      refresh();
+    },
+    onError: (error: Error) =>
+      notify(error.message || "Could not create invoice", { type: "error" }),
+  });
+
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
@@ -295,7 +232,7 @@ const BillingInstallmentsTable = () => {
         source="due_date"
         label="Due"
         render={(record: ProposalPaymentInstallment) =>
-          formatDate(record.due_date)
+          formatBillingDate(record.due_date)
         }
       />
       <DataTable.Col
@@ -330,26 +267,43 @@ const BillingInstallmentsTable = () => {
         source="status"
         label="Status"
         render={(record: ProposalPaymentInstallment) => (
-          <Badge variant={statusVariant(record)} className="capitalize">
-            {statusLabel(record)}
+          <Badge variant={installmentStatusVariant(record)} className="capitalize">
+            {installmentStatusLabel(record)}
           </Badge>
         )}
       />
       <DataTable.Col
-        source="payment_method"
-        label="Method"
-        render={(record: ProposalPaymentInstallment) => (
-          <span className="capitalize text-muted-foreground">
-            {record.payment_method?.replace(/_/g, " ") ?? "—"}
-          </span>
-        )}
-      />
-      <DataTable.Col
-        source="paid_at"
-        label="Paid"
-        render={(record: ProposalPaymentInstallment) =>
-          record.paid_at ? formatDate(record.paid_at.slice(0, 10)) : "—"
-        }
+        label="Invoice"
+        render={(record: ProposalPaymentInstallment) => {
+          const hasInvoice = issuedByInstallment.has(String(record.id));
+          if (hasInvoice) {
+            return (
+              <Badge variant="outline" className="font-normal">
+                Issued
+              </Badge>
+            );
+          }
+          if (!canIssue) return "—";
+          return (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={issueMutation.isPending}
+              onClick={(event) => {
+                event.stopPropagation();
+                issueMutation.mutate(Number(record.id));
+              }}
+            >
+              {issueMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Receipt className="size-3.5" />
+              )}
+              Issue
+            </Button>
+          );
+        }}
       />
     </DataTable>
   );
@@ -368,15 +322,11 @@ const SummaryCard = ({
 }) => (
   <Card
     className={cn(
-      variant === "warning" &&
-        amount > 0 &&
-        "border-amber-500/40 bg-amber-500/5",
+      variant === "warning" && amount > 0 && "border-amber-500/40 bg-amber-500/5",
     )}
   >
     <CardHeader className="pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">
-        {title}
-      </CardTitle>
+      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       <p className="text-xs text-muted-foreground">{subtitle}</p>
     </CardHeader>
     <CardContent>

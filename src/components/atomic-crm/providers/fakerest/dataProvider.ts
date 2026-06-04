@@ -589,6 +589,29 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     fakeAcceptProposal(baseDataProvider, id),
   sendProposal: async ({ id }: { id: Identifier }) =>
     fakeSendProposal(baseDataProvider, id),
+  issueClientInvoice: async ({ installmentId }: { installmentId: Identifier }) => {
+    const { data: installment } = await baseDataProvider.getOne(
+      "proposal_payment_installments",
+      { id: installmentId },
+    );
+    const year = new Date().getFullYear();
+    const { data: invoice } = await baseDataProvider.create("client_invoices", {
+      data: {
+        org_id: 1,
+        invoice_number: `INV-${year}-0001`,
+        installment_id: installmentId,
+        proposal_id: installment.proposal_id,
+        issue_date: new Date().toISOString().slice(0, 10),
+        due_date: installment.due_date,
+        amount: installment.amount,
+        currency: "USD",
+        description: installment.label,
+        status: installment.status === "paid" ? "paid" : "draft",
+      },
+    });
+    return invoice;
+  },
+  sendClientInvoice: async () => ({ sent: true }),
   upsertLbsClient: async (
     input: LbsClientUpsertInput,
   ): Promise<LbsClientUpsertResult> => {

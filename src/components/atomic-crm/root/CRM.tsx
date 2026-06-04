@@ -553,6 +553,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="proposal_line_items" />
           <Resource name="proposal_payment_schedules" />
           <Resource name="proposal_payment_installments" />
+          <Resource name="client_invoices" />
           <Resource name="proposal_templates" />
           <Resource name="service_packages" />
           <Resource name="service_addons" />

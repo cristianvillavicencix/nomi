@@ -69,6 +69,7 @@ export interface Db {
   proposal_line_items: ProposalLineItem[];
   proposal_payment_schedules: ProposalPaymentSchedule[];
   proposal_payment_installments: ProposalPaymentInstallment[];
+  client_invoices: import("@/lbs/types").ClientInvoice[];
   proposal_templates: ProposalTemplate[];
   service_packages: ServicePackage[];
   service_addons: ServiceAddon[];
