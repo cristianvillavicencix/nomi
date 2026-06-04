@@ -1,7 +1,13 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/process-scheduled-payments",
+      "schedule": "0 */2 * * *"
+    }
+  ],
   "rewrites": [
     {
-      "source": "/((?!assets/|icons/|manifest\\.json|favicon|sw\\.js|workbox-).*)",
+      "source": "/((?!assets/|icons/|manifest\\.json|favicon|sw\\.js|workbox-|api/).*)",
       "destination": "/index.html"
     }
   ]

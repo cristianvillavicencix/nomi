@@ -22,6 +22,14 @@ export const getWebhookSecret = () => {
   return w;
 };
 
+export const getClientWebhookSecret = () => {
+  const w = Deno.env.get("STRIPE_CLIENT_WEBHOOK_SECRET");
+  if (!w) {
+    throw new Error("STRIPE_CLIENT_WEBHOOK_SECRET is not set");
+  }
+  return w;
+};
+
 export const defaultSeatPriceId = () =>
   (Deno.env.get("STRIPE_SEAT_PRICE_ID") ?? "").trim() ||
   "price_1TQFalPdDeQWOyitqTFDWn8Q";

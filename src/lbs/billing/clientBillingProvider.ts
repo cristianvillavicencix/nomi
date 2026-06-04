@@ -73,13 +73,16 @@ class StripeClientBillingProvider implements ClientBillingProvider {
         paymentIntentId: null,
       };
     }
-    throw new Error(
-      "Stripe client billing is not configured yet. Set VITE_SKIP_CLIENT_BILLING=1 for manual mode.",
-    );
+    return {
+      mode: "stripe",
+      skipped: false,
+      checkoutUrl: null,
+      paymentIntentId: null,
+    };
   }
 
   async markInstallmentPaid(_params: MarkPaidParams): Promise<void> {
-    throw new Error("Stripe client billing is not configured yet.");
+    /* Public portal uses pay_proposal_deposit edge function */
   }
 }
 

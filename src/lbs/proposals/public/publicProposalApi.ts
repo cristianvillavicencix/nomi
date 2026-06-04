@@ -65,6 +65,7 @@ export type PublicProposalPayload = {
     billing_type?: string;
     billing_interval?: string | null;
   }>;
+  client_billing_mode?: "manual" | "stripe";
   installments: Array<{
     installment_number: number;
     label: string;
@@ -135,19 +136,26 @@ export const signPublicProposalContract = ({
 export const payPublicProposalDeposit = ({
   proposalId,
   token,
+  paymentMethodId,
 }: {
   proposalId: number;
   token: string;
+  paymentMethodId?: string;
 }) =>
   invokePublicFunction<{
     deal_id: number;
     contract_id: number;
-    deposit_paid_at: string;
+    deposit_paid_at?: string;
     already_paid: boolean;
     billing_mode: string;
+    requires_action?: boolean;
+    client_secret?: string | null;
+    payment_intent_id?: string | null;
+    paid_in_full?: boolean;
   }>("pay_proposal_deposit", {
     proposal_id: proposalId,
     public_token: token,
+    ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
   });
 
 export const resolvePublicProposalShortCode = async (shortCode: string) => {

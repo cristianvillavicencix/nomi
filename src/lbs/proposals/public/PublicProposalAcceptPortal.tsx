@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Check, Loader2, Lock, Pencil, Wallet } from "lucide-react";
+import { Check, Loader2, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { Markdown } from "@/components/atomic-crm/misc/Markdown";
@@ -13,6 +13,8 @@ import { isClientBillingSkipped } from "@/lbs/billing/clientBillingProvider";
 import type { ProposalLocale } from "@/lbs/proposals/document/proposalDocumentI18n";
 import { formatProposalMoney } from "@/lbs/proposals/document/useProposalDocumentData";
 import { getProposalAcceptPortalCopy } from "@/lbs/proposals/public/proposalAcceptPortalI18n";
+import { PublicProposalPaymentFlow } from "@/lbs/proposals/public/PublicProposalPaymentFlow";
+import { getProposalPaymentFlowCopy } from "@/lbs/proposals/public/proposalPaymentFlowI18n";
 import {
   acceptPublicProposal,
   payPublicProposalDeposit,
@@ -41,6 +43,7 @@ export const PublicProposalAcceptPortal = ({
   onRefresh: () => void;
 }) => {
   const copy = getProposalAcceptPortalCopy(locale);
+  const paymentCopy = getProposalPaymentFlowCopy(locale);
   const isPreview = mode === "preview";
   const stripeMock = isClientBillingSkipped();
 
@@ -74,6 +77,10 @@ export const PublicProposalAcceptPortal = ({
 
   const isSigned = Boolean(contract?.signed_at);
   const depositPaid = Boolean(contract?.deposit_paid_at);
+  const paidInFull = proposal.status === "paid_in_full";
+  const allInstallmentsPaid =
+    installments.length > 0 &&
+    installments.every((row) => row.status === "paid");
   const [tab, setTab] = useState<PortalTab>(
     depositPaid ? "deposit" : isSigned ? "deposit" : "sign",
   );
@@ -121,7 +128,6 @@ export const PublicProposalAcceptPortal = ({
     Boolean(termsMarkdown) &&
     !isSigned;
 
-  const canPay = !isPreview && isSigned && !depositPaid;
 
   const totalLine = useMemo(() => {
     if (recurringTotal > 0) {
@@ -131,15 +137,47 @@ export const PublicProposalAcceptPortal = ({
   }, [currency, oneTimeTotal, recurringTotal]);
 
   if (depositPaid) {
+    const balanceInstallments = installments.filter(
+      (row) => !row.label.toLowerCase().includes("deposit"),
+    );
     return (
       <div className="mx-auto max-w-lg space-y-6 px-4 py-10 text-center">
         <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
           <Check className="size-7" />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {copy.completeTitle}
+          {paidInFull || allInstallmentsPaid
+            ? paymentCopy.paidInFullTitle
+            : paymentCopy.depositSuccessTitle}
         </h1>
-        <p className="text-sm text-muted-foreground">{copy.completeBody}</p>
+        <p className="text-sm text-muted-foreground">
+          {paidInFull || allInstallmentsPaid
+            ? paymentCopy.paidInFullBody
+            : paymentCopy.depositSuccessBody}
+        </p>
+        {balanceInstallments.length > 0 && !paidInFull && !allInstallmentsPaid ? (
+          <div className="text-left rounded-lg border bg-muted/20 p-4 text-sm">
+            <p className="font-medium">{paymentCopy.scheduleTitle}</p>
+            <p className="mt-1 text-muted-foreground">
+              {paymentCopy.scheduleIntro(balanceInstallments.length)}
+            </p>
+            <ul className="mt-3 space-y-1.5">
+              {balanceInstallments.map((row) => (
+                <li
+                  key={`${row.installment_number}-${row.due_date}`}
+                  className="flex justify-between gap-2 tabular-nums"
+                >
+                  <span>
+                    {row.label} — {row.due_date}
+                  </span>
+                  <span className="font-medium">
+                    {formatProposalMoney(row.amount, currency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <Button variant="outline" asChild>
           <Link to={`/proposal/${token}`}>{copy.backToProposal}</Link>
         </Button>
@@ -302,53 +340,22 @@ export const PublicProposalAcceptPortal = ({
                 ) : null}
               </div>
 
-              <div className="space-y-3 rounded-lg border p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {copy.paymentDetails}
-                </p>
-                <Input
-                  disabled
-                  placeholder={copy.cardNumber}
-                  className="bg-muted/30"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    disabled
-                    placeholder={copy.cardExpiry}
-                    className="bg-muted/30"
-                  />
-                  <Input
-                    disabled
-                    placeholder={copy.cardCvc}
-                    className="bg-muted/30"
-                  />
-                </div>
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Lock className="size-3.5" />
-                  {copy.stripeSecure}
-                </p>
-              </div>
-
               {stripeMock ? (
                 <p className="text-xs text-muted-foreground">{copy.mockModeNote}</p>
               ) : null}
 
-              <Button
-                type="button"
-                className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
-                size="lg"
-                disabled={!canPay || payMutation.isPending}
-                onClick={() => payMutation.mutate()}
-              >
-                {payMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Wallet className="size-4" />
-                )}
-                {payMutation.isPending
-                  ? copy.paying
-                  : copy.payDeposit(depositFormatted)}
-              </Button>
+              <PublicProposalPaymentFlow
+                proposalId={proposal.id}
+                token={token}
+                payload={payload}
+                locale={locale}
+                onSuccess={() => {
+                  setActionError(null);
+                  onRefresh();
+                }}
+                onMockPay={() => payMutation.mutate()}
+                mockPayPending={payMutation.isPending}
+              />
 
               <p className="text-center text-xs text-muted-foreground">
                 {copy.depositFootnote}

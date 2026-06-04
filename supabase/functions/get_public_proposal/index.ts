@@ -151,7 +151,7 @@ Deno.serve(
           .order("installment_number", { ascending: true }),
         supabaseAdmin
           .from("organizations")
-          .select("name")
+          .select("name, client_billing_mode")
           .eq("id", tokenRow.org_id)
           .maybeSingle(),
         companyId
@@ -225,6 +225,8 @@ Deno.serve(
             name: org?.name ?? "LBS",
             logo_url: null,
           },
+          client_billing_mode:
+            org?.client_billing_mode === "stripe" ? "stripe" : "manual",
           company: company?.name
             ? { id: company.id, name: company.name }
             : null,

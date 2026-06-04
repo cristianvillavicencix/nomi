@@ -166,6 +166,9 @@ export type Contract = {
   deposit_paid_at?: string | null;
   payment_schedule_id?: Identifier | null;
   stripe_customer_id?: string | null;
+  stripe_payment_method_id?: string | null;
+  payment_method_brand?: string | null;
+  payment_method_last4?: string | null;
   expires_at?: string | null;
   document?: Record<string, unknown>;
   file?: unknown;

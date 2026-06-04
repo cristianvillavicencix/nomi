@@ -10,6 +10,8 @@ FUNCTIONS=(
   send_proposal
   sign_proposal_contract
   pay_proposal_deposit
+  stripe-client-webhook
+  process_scheduled_payments
 )
 
 for fn in "${FUNCTIONS[@]}"; do

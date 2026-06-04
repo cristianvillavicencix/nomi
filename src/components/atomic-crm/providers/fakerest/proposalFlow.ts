@@ -300,31 +300,96 @@ export const fakePayProposalDeposit = async (
     previousData: contract,
   });
 
-  const { data: deal } = await dataProvider.getOne("deals", {
-    id: proposal.deal_id,
-  });
-  await dataProvider.update("deals", {
-    id: proposal.deal_id,
-    data: {
-      stage: "won",
-      lifecycle_phase: "delivery",
-      delivery_status: "planning",
-    },
-    previousData: deal,
-  });
+  const { data: installments } =
+    await dataProvider.getList<ProposalPaymentInstallment>(
+      "proposal_payment_installments",
+      {
+        filter: { "proposal_id@eq": proposalId },
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: "installment_number", order: "ASC" },
+      },
+    );
 
-  if (proposal.contact_id) {
-    const { data: contact } = await dataProvider.getOne("contacts", {
-      id: proposal.contact_id,
+  const depositRow =
+    installments.find((row) => row.installment_number === 1) ??
+    installments.find((row) => row.label?.toLowerCase().includes("deposit"));
+
+  if (depositRow?.id) {
+    await dataProvider.update("proposal_payment_installments", {
+      id: depositRow.id,
+      data: { status: "paid", paid_at: now, payment_method: "mock" },
+      previousData: depositRow,
     });
-    await dataProvider.update("contacts", {
-      id: proposal.contact_id,
-      data: { status: "client", lead_stage: "won" },
-      previousData: contact,
-    });
+    try {
+      await dataProvider.update("deal_client_payments", {
+        id: `proposal-installment-${depositRow.id}`,
+        data: { status: "cleared" },
+        previousData: {},
+      });
+    } catch {
+      /* match by reference in list */
+      const { data: payments } = await dataProvider.getList(
+        "deal_client_payments",
+        {
+          filter: {
+            "deal_id@eq": proposal.deal_id,
+            "reference_number@eq": `proposal-installment-${depositRow.id}`,
+          },
+          pagination: { page: 1, perPage: 1 },
+        },
+      );
+      if (payments[0]?.id) {
+        await dataProvider.update("deal_client_payments", {
+          id: payments[0].id,
+          data: { status: "cleared" },
+          previousData: payments[0],
+        });
+      }
+    }
   }
 
-  return { deposit_paid_at: now, deal_id: proposal.deal_id };
+  const allPaid = installments.every((row) => {
+    if (depositRow?.id && row.id === depositRow.id) return true;
+    return (
+      row.status === "paid" ||
+      row.status === "skipped" ||
+      row.status === "waived"
+    );
+  });
+
+  if (allPaid) {
+    await dataProvider.update("proposals", {
+      id: proposalId,
+      data: { status: "paid_in_full" },
+      previousData: proposal,
+    });
+
+    const { data: deal } = await dataProvider.getOne("deals", {
+      id: proposal.deal_id,
+    });
+    await dataProvider.update("deals", {
+      id: proposal.deal_id,
+      data: {
+        stage: "won",
+        lifecycle_phase: "delivery",
+        delivery_status: "planning",
+      },
+      previousData: deal,
+    });
+
+    if (proposal.contact_id) {
+      const { data: contact } = await dataProvider.getOne("contacts", {
+        id: proposal.contact_id,
+      });
+      await dataProvider.update("contacts", {
+        id: proposal.contact_id,
+        data: { status: "client", lead_stage: "won" },
+        previousData: contact,
+      });
+    }
+  }
+
+  return { deposit_paid_at: now, deal_id: proposal.deal_id, paid_in_full: allPaid };
 };
 
 export type { PublicProposalToken };
