@@ -1,4 +1,4 @@
-import { Check, CreditCard, Monitor, RefreshCw, Shield } from "lucide-react";
+import { Check, Monitor, RefreshCw, Shield } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,24 @@ import {
 } from "@/lbs/proposals/document/proposalVariableMerge";
 import type { ProposalLineItem } from "@/lbs/types";
 import { PROPOSAL_PDF_ROOT_ID } from "@/lbs/proposals/proposalPdfExport";
+
+/** Inline icon — avoids production bundle missing lucide `CreditCard` export. */
+const PaymentCardIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <rect width="20" height="14" x="2" y="5" rx="2" />
+    <line x1="2" x2="22" y1="10" y2="10" />
+  </svg>
+);
 
 const formatDisplayDate = (
   value?: string | null,
@@ -563,7 +581,7 @@ export const ProposalDocumentView = ({
             <Card>
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <CreditCard className="size-4 text-primary" />
+                  <PaymentCardIcon className="size-4 text-primary" />
                   {copy.paymentsTitle}
                 </div>
                 {resolvedDepositInstallment ? (

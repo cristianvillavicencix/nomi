@@ -1,3 +1,4 @@
+import { getFaviconSourcesForEmail } from "@/lib/faviconSources";
 import { fetchWithTimeout } from "../../misc/fetchWithTimeout";
 import { DOMAINS_NOT_SUPPORTING_FAVICON } from "../../misc/unsupportedDomains.const";
 import type { Contact } from "../../types";
@@ -40,28 +41,24 @@ async function getFaviconUrl(domain: string): Promise<string | null> {
  * Synchronous best-effort avatar URL for a contact, used when the contact
  * does not have an explicit `avatar.src` uploaded. We don't try Gravatar
  * here because it requires async hashing; falling back to the favicon of
- * the email domain (via icons.duckduckgo.com) keeps the avatar component
- * fully synchronous while still showing something meaningful for imported
- * records (e.g. Zoho contacts) that only have an email on file.
+ * the email domain favicon (Google S2) keeps the avatar component fully
+ * synchronous while still showing something meaningful for imported records.
  */
-export const getContactAvatarSrc = (
+export const getContactAvatarSources = (
   record: Partial<Contact>,
-): string | undefined => {
-  if (record.avatar?.src) {
-    return record.avatar.src;
+): string[] => {
+  if (record.avatar?.src?.trim()) {
+    return [record.avatar.src.trim()];
   }
   const firstEmail = record.email_jsonb?.find(
     (entry) => typeof entry?.email === "string" && entry.email.trim().length > 0,
   )?.email;
-  if (!firstEmail) {
-    return undefined;
-  }
-  const domain = firstEmail.split("@")[1]?.trim().replace(/^www\./i, "");
-  if (!domain) {
-    return undefined;
-  }
-  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+  return firstEmail ? getFaviconSourcesForEmail(firstEmail) : [];
 };
+
+export const getContactAvatarSrc = (
+  record: Partial<Contact>,
+): string | undefined => getContactAvatarSources(record)[0];
 
 // Main function to get the avatar URL
 export async function getContactAvatar(

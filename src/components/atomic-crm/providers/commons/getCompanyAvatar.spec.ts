@@ -7,7 +7,7 @@ it("should return favicon URL if website url exist", async () => {
 
   const avatarUrl = await getCompanyAvatar(record);
   expect(avatarUrl).toStrictEqual({
-    src: "https://icons.duckduckgo.com/ip3/example.com.ico",
+    src: "https://www.google.com/s2/favicons?domain=example.com&sz=64",
     title: "Company favicon",
   });
 });

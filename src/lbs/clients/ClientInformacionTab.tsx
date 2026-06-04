@@ -7,12 +7,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getCompanyAvatarFallback } from "@/components/atomic-crm/companies/CompanyAvatar";
-import { getCompanyFaviconSrc } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
-import {
-  AvatarFallback,
-  AvatarImage,
-  Avatar as UiAvatar,
-} from "@/components/ui/avatar";
+import { getCompanyFaviconSources } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
+import { AvatarFallback, Avatar as UiAvatar } from "@/components/ui/avatar";
+import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
 import type { Contact } from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import {
@@ -63,7 +60,7 @@ export const ClientInformacionTab = ({
   const businessSocialLinks = collectBusinessSocialLinks(record);
   const primaryName = getPrimaryContactFullName(record);
   const businessName = record.name?.trim() || "—";
-  const faviconSrc = getCompanyFaviconSrc(record);
+  const faviconSources = getCompanyFaviconSources(record);
 
   return (
     <div className="space-y-4">
@@ -71,13 +68,11 @@ export const ClientInformacionTab = ({
         <CardContent className="flex items-center justify-between gap-4 px-4 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <UiAvatar className="size-10 shrink-0">
-              {faviconSrc ? (
-                <AvatarImage
-                  src={faviconSrc}
-                  alt={businessName}
-                  className="object-contain"
-                />
-              ) : null}
+              <FaviconAvatarImage
+                sources={faviconSources}
+                alt={businessName}
+                className="object-contain"
+              />
               <AvatarFallback className="text-xs">
                 {getCompanyAvatarFallback({
                   name: businessName !== "—" ? businessName : undefined,

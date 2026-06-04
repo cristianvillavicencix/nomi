@@ -10,10 +10,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { getCompanyAvatarFallback } from "@/components/atomic-crm/companies/CompanyAvatar";
-import { getCompanyFaviconSrc } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
+import { getCompanyFaviconSources } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
+import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
 import {
   AvatarFallback,
-  AvatarImage,
   Avatar as UiAvatar,
 } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -204,7 +204,7 @@ export const ClientSummaryCard = ({
 }: ClientSummaryCardProps) => {
   const { companySectors } = useConfigurationContext();
   const businessName = record.name?.trim() || "—";
-  const faviconSrc = getCompanyFaviconSrc(record);
+  const faviconSources = getCompanyFaviconSources(record);
   const website = record.website?.trim();
   const websiteHref = website
     ? website.startsWith("http")
@@ -252,13 +252,11 @@ export const ClientSummaryCard = ({
       <CardContent className="px-4 py-4">
         <div className="flex flex-col items-center text-center">
           <UiAvatar className="size-16">
-            {faviconSrc ? (
-              <AvatarImage
-                src={faviconSrc}
-                alt={businessName}
-                className="object-contain"
-              />
-            ) : null}
+            <FaviconAvatarImage
+              sources={faviconSources}
+              alt={businessName}
+              className="object-contain"
+            />
             <AvatarFallback className="text-base">
               {getCompanyAvatarFallback({
                 name: businessName !== "—" ? businessName : undefined,

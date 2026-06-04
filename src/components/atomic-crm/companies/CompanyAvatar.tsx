@@ -1,7 +1,8 @@
 import { useRecordContext } from "ra-core";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
 
-import { getCompanyFaviconSrc } from "../providers/commons/getCompanyAvatar";
+import { getCompanyFaviconSources } from "../providers/commons/getCompanyAvatar";
 import type { Company } from "../types";
 
 type CompanyAvatarSource = Partial<
@@ -48,7 +49,7 @@ export const CompanyAvatar = (props: {
         : "w-10 h-10";
   const companyName = String(record.name ?? "").trim();
   const fallbackInitial = getCompanyAvatarFallback(record);
-  const avatarSrc = record.logo?.src ?? getCompanyFaviconSrc(record);
+  const faviconSources = getCompanyFaviconSources(record);
 
   if (import.meta.env.DEV && !companyName) {
     console.warn("CompanyAvatar received a record without a company name", {
@@ -59,8 +60,8 @@ export const CompanyAvatar = (props: {
 
   return (
     <Avatar className={resolvedSizeClass}>
-      <AvatarImage
-        src={avatarSrc}
+      <FaviconAvatarImage
+        sources={faviconSources}
         alt={companyName || "Company"}
         className="object-contain"
       />

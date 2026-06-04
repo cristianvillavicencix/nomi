@@ -23,10 +23,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Status } from "@/components/atomic-crm/misc/Status";
 import { getCompanyAvatarFallback } from "@/components/atomic-crm/companies/CompanyAvatar";
-import { getCompanyFaviconSrc } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
+import { getCompanyFaviconSources } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
+import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
 import {
   AvatarFallback,
-  AvatarImage,
   Avatar as UiAvatar,
 } from "@/components/ui/avatar";
 import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
@@ -93,7 +93,7 @@ export const ClientProfileHeader = ({
   const phoneValue = phone !== "—" ? phone : "";
   const emailLink = emailValue ? mailtoHref(emailValue) : "";
   const phoneLink = phoneValue ? normalizePhoneForTel(phoneValue) : null;
-  const faviconSrc = getCompanyFaviconSrc(record);
+  const faviconSources = getCompanyFaviconSources(record);
   const website = record.website?.trim();
   const websiteHref = website
     ? website.startsWith("http")
@@ -134,13 +134,11 @@ export const ClientProfileHeader = ({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 items-start gap-4">
             <UiAvatar className="size-10 shrink-0 self-center">
-              {faviconSrc ? (
-                <AvatarImage
-                  src={faviconSrc}
-                  alt={businessName || personName}
-                  className="object-contain"
-                />
-              ) : null}
+              <FaviconAvatarImage
+                sources={faviconSources}
+                alt={businessName || personName}
+                className="object-contain"
+              />
               <AvatarFallback className="text-sm">
                 {getCompanyAvatarFallback({
                   name: businessName,

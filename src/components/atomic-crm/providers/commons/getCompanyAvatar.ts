@@ -1,49 +1,43 @@
 import type { Company } from "../../types";
-
-/**
- * Returns a normalized domain like "example.com" extracted from any kind of
- * website URL the user might have typed (with/without https, with/without
- * www, with trailing slashes, paths, query strings, etc.). Returns null if
- * we can't make sense of it.
- */
-const extractDomain = (website?: string | null): string | null => {
-  const value = website?.trim();
-  if (!value) return null;
-  const stripped = value
-    .replace(/^https?:\/\//i, "")
-    .replace(/^www\./i, "")
-    .split(/[/?#]/)[0]
-    .trim();
-  return stripped || null;
-};
-
-const faviconUrlFor = (domain: string) =>
-  `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+import {
+  extractDomainFromUrl,
+  getFaviconSourcesForWebsite,
+  getPrimaryFaviconSrc,
+} from "@/lib/faviconSources";
 
 // Main function to get the avatar URL
 export async function getCompanyAvatar(record: Partial<Company>): Promise<{
   src: string;
   title: string;
 } | null> {
-  const domain = extractDomain(record.website);
-  if (!domain) {
+  const sources = getFaviconSourcesForWebsite(record.website);
+  if (!sources.length) {
     return null;
   }
   return {
-    src: faviconUrlFor(domain),
+    src: sources[0],
     title: "Company favicon",
   };
 }
 
+export const getCompanyFaviconSources = (
+  record: Partial<Company>,
+): string[] => {
+  if (record.logo?.src?.trim()) {
+    return [record.logo.src.trim()];
+  }
+  return getFaviconSourcesForWebsite(record.website);
+};
+
 export const getCompanyFaviconSrc = (
   record: Partial<Company>,
 ): string | undefined => {
-  if (record.logo?.src) {
-    return record.logo.src;
-  }
-  const domain = extractDomain(record.website);
-  if (!domain) {
-    return undefined;
-  }
-  return faviconUrlFor(domain);
+  const sources = getCompanyFaviconSources(record);
+  return sources[0];
 };
+
+/** @deprecated Use extractDomainFromUrl from @/lib/faviconSources */
+export const extractCompanyDomain = extractDomainFromUrl;
+
+/** Primary favicon for a website string (no Company record). */
+export { getPrimaryFaviconSrc };

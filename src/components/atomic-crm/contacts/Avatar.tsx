@@ -1,11 +1,8 @@
-import {
-  AvatarFallback,
-  AvatarImage,
-  Avatar as ShadcnAvatar,
-} from "@/components/ui/avatar";
+import { AvatarFallback, Avatar as ShadcnAvatar } from "@/components/ui/avatar";
+import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
 import { useRecordContext } from "ra-core";
 
-import { getContactAvatarSrc } from "../providers/commons/getContactAvatar";
+import { getContactAvatarSources } from "../providers/commons/getContactAvatar";
 import type { Contact } from "../types";
 
 export const Avatar = (props: {
@@ -29,11 +26,11 @@ export const Avatar = (props: {
         ? "w-[25px] h-[25px]"
         : "w-10 h-10";
 
-  const avatarSrc = getContactAvatarSrc(record);
+  const avatarSources = getContactAvatarSources(record);
 
   return (
     <ShadcnAvatar className={sizeClass} title={props.title}>
-      <AvatarImage src={avatarSrc} />
+      <FaviconAvatarImage sources={avatarSources} alt={record.first_name ?? "Contact"} />
       <AvatarFallback className={size && size < 40 ? "text-[10px]" : "text-sm"}>
         {record.first_name?.charAt(0).toUpperCase()}
         {record.last_name?.charAt(0).toUpperCase()}

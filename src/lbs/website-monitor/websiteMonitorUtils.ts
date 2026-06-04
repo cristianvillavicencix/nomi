@@ -24,28 +24,18 @@ export const CHANGE_TYPE_LABELS: Record<string, string> = {
   response_time: "Tiempo de respuesta",
 };
 
-export const extractDomainFromUrl = (url?: string | null): string | null => {
-  const value = url?.trim();
-  if (!value) return null;
-  const stripped = value
-    .replace(/^https?:\/\//i, "")
-    .replace(/^www\./i, "")
-    .split(/[/?#]/)[0]
-    .trim();
-  return stripped || null;
-};
+import {
+  extractDomainFromUrl,
+  getFaviconSourcesForWebsite,
+} from "@/lib/faviconSources";
+
+export { extractDomainFromUrl };
 
 export const getWebsiteFaviconSrc = (url?: string | null): string | undefined =>
   getWebsiteFaviconSources(url)[0];
 
-export const getWebsiteFaviconSources = (url?: string | null): string[] => {
-  const domain = extractDomainFromUrl(url);
-  if (!domain || !domain.includes(".")) return [];
-  return [
-    `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
-    `https://${domain}/favicon.ico`,
-  ];
-};
+export const getWebsiteFaviconSources = (url?: string | null): string[] =>
+  getFaviconSourcesForWebsite(url);
 
 export const formatResponseMs = (value?: number | null) =>
   value == null ? "—" : `${value} ms`;
