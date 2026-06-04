@@ -9,6 +9,7 @@ import {
   Globe,
   Home,
   ListChecks,
+  Receipt,
   Settings,
   Ticket,
   UserPlus,
@@ -139,6 +140,15 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     action: "list",
   },
   {
+    to: "/billing",
+    label: "Billing",
+    icon: Receipt,
+    activePattern: "/billing/*",
+    capability: "proposals.view",
+    resource: "proposal_payment_installments",
+    action: "list",
+  },
+  {
     to: "/forms-v2",
     label: "Forms",
     icon: FormInput,
@@ -180,6 +190,12 @@ export const LBS_PLACEHOLDER_MODULES = {
     title: "Contracts",
     description:
       "Manage contract drafts, signatures, and active agreements linked to clients and projects.",
+    phase: 4,
+  },
+  billing: {
+    title: "Billing",
+    description:
+      "Track proposal installments, collected revenue, outstanding balances, and overdue client payments.",
     phase: 4,
   },
   webForms: {

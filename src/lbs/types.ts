@@ -135,7 +135,14 @@ export type ProposalPaymentInstallment = {
   due_date: string;
   amount: number;
   billing_type?: "one_time" | "recurring";
-  status?: "pending" | "paid" | "failed" | "skipped" | "waived";
+  status?:
+    | "pending"
+    | "processing"
+    | "requires_action"
+    | "paid"
+    | "failed"
+    | "skipped"
+    | "waived";
   paid_at?: string | null;
   payment_method?: string;
   stripe_payment_intent_id?: string | null;

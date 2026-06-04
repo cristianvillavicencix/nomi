@@ -33,6 +33,7 @@ import { ProposalClientPreviewRoute } from "@/lbs/proposals/document/ProposalCli
 import { ProposalPreviewPage } from "@/lbs/proposals/document/ProposalPreviewPage";
 import { ContractsList } from "@/lbs/contracts/ContractsList";
 import { ContractShow } from "@/lbs/contracts/ContractShow";
+import { ClientBillingList } from "@/lbs/billing/ClientBillingList";
 import { TicketsList } from "@/lbs/tickets/TicketsList";
 import { TicketShow } from "@/lbs/tickets/TicketShow";
 import { lazy, Suspense } from "react";
@@ -289,6 +290,14 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="contracts" action="list">
             <ContractsList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/billing"
+        element={
+          <ProtectedRoute resource="proposal_payment_installments" action="list">
+            <ClientBillingList />
           </ProtectedRoute>
         }
       />
