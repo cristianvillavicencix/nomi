@@ -81,9 +81,9 @@ const ProposalClientPreviewBody = () => {
     : null;
 
   return (
-    <div className="flex min-h-svh flex-col bg-background">
+    <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background">
       <div
-        className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 bg-amber-50 px-4 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/40 print:hidden"
+        className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 bg-amber-50 px-4 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/40 print:hidden"
         role="note"
       >
         <p className="text-amber-950 dark:text-amber-100">
@@ -106,14 +106,13 @@ const ProposalClientPreviewBody = () => {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1">
-      <ProposalDocumentView
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <ProposalDocumentView
         proposalId={proposalId}
         content={content}
         documentData={documentData}
         editable={false}
         clientView
-        pageScroll
         showSectionNav
         showAcceptPlaceholder
         acceptMode="preview"
@@ -144,7 +143,7 @@ const ProposalClientPreviewBody = () => {
           })();
         }}
         isExportingPdf={isExportingPdf}
-      />
+        />
       </div>
     </div>
   );

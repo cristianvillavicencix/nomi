@@ -703,7 +703,7 @@ export const ProposalDocumentView = ({
   }
 
   return (
-    <div className="proposal-formal-shell flex h-full min-h-0 max-h-full overflow-hidden">
+    <div className="proposal-formal-shell flex h-full min-h-0 w-full overflow-hidden">
       <div className="hidden h-full shrink-0 md:block">
         <ProposalDocumentSidebar
           proposal={resolvedProposal}
