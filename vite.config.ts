@@ -37,7 +37,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MiB (main chunk includes jsPDF)
+        // Main bundle is ~7.4 MB (pdfmake, jsPDF, CRM). Workbox default is 2 MiB.
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
       },
       manifest: false, // Use existing manifest.json from public/
     }),
