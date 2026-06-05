@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import {
   fetchGooglePlaceDetails,
   fetchPlacesAutocomplete,
+  GooglePlacesUnavailableError,
   isGooglePlacesEnabled,
   type GooglePlaceDetails,
   type GooglePlacesAutocompleteMode,
@@ -68,7 +69,7 @@ export const GooglePlacesAutocompleteInput = ({
   >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
-  const [fetchError, setFetchError] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const query = String(field.value ?? "").trim();
   const placesEnabled = isGooglePlacesEnabled();
@@ -78,21 +79,25 @@ export const GooglePlacesAutocompleteInput = ({
     if (!placesEnabled || query.length < 3) {
       setSuggestions([]);
       setIsLoading(false);
-      setFetchError(false);
+      setFetchError(null);
       return;
     }
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setIsLoading(true);
-      setFetchError(false);
+      setFetchError(null);
       try {
         const next = await fetchPlacesAutocomplete(query, mode, controller.signal);
         setSuggestions(next);
-        setFetchError(next.length === 0);
-      } catch {
+        setFetchError(next.length === 0 ? "No Google results for this search." : null);
+      } catch (error) {
         setSuggestions([]);
-        setFetchError(true);
+        if (error instanceof GooglePlacesUnavailableError) {
+          setFetchError(error.message);
+        } else {
+          setFetchError("Could not reach Google Places. You can still type manually.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -154,9 +159,10 @@ export const GooglePlacesAutocompleteInput = ({
         ))
       ) : (
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
-          {fetchError
-            ? "No results. You can keep typing manually."
-            : "Type at least 3 characters."}
+          {fetchError ??
+            (query.length >= 3
+              ? "No results. You can keep typing manually."
+              : "Type at least 3 characters.")}
         </div>
       )}
     </>

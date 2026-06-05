@@ -1,6 +1,7 @@
 export {
   fetchGooglePlaceDetails,
   fetchPlacesAutocomplete,
+  GooglePlacesUnavailableError,
 } from "./api";
 export { getGooglePlacesApiKey, isGooglePlacesEnabled } from "./config";
 export {

@@ -11,9 +11,14 @@ import {
 import { useSearchParams } from "react-router";
 import { Create } from "@/components/admin/create";
 import { SaveButton } from "@/components/admin/form";
+import {
+  FormGuardProvider,
+  useGuardedDialogClose,
+} from "@/components/admin/form-guard";
 import { FormToolbar } from "@/components/admin/simple-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { clearFormDraft } from "@/lib/formPersistence/formDraftStorage";
 import { isLbsMode } from "@/lbs/productMode";
 import {
   LBS_DEFAULT_AGENCY_PROJECT_TYPE,
@@ -29,6 +34,8 @@ import type { Deal } from "../types";
 import { DealInputs } from "./DealInputs";
 import { syncProjectAssignments } from "./projectAssignments";
 import { normalizeProjectPayload } from "./projectForm";
+
+const DEAL_CREATE_DRAFT_KEY = "crm:deal-create";
 
 export const DealCreate = ({
   open,
@@ -54,6 +61,7 @@ export const DealCreate = ({
   const lbsMode = isLbsMode();
 
   const onSuccess = async (deal: Deal) => {
+    clearFormDraft(DEAL_CREATE_DRAFT_KEY);
     if (!lbsMode) {
       try {
         await syncProjectAssignments(
@@ -125,8 +133,65 @@ export const DealCreate = ({
   const presetCompanyId = searchParams.get("company_id");
   const presetContactId = searchParams.get("contact_id");
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
+    <Create
+      resource="deals"
+      title={false}
+      disableBreadcrumb
+      mutationOptions={{ onSuccess }}
+    >
+      <Form
+        defaultValues={{
+          organization_member_id: identity?.id,
+          category: lbsMode ? LBS_DEFAULT_PROJECT_CATEGORY : "retail",
+          stage: lbsMode ? LBS_DEFAULT_AGENCY_STAGE : "lead",
+          project_type: lbsMode
+            ? LBS_DEFAULT_AGENCY_PROJECT_TYPE
+            : "roofing",
+          lifecycle_phase: lbsMode
+            ? LBS_DEFAULT_LIFECYCLE_PHASE
+            : undefined,
+          delivery_status: lbsMode
+            ? LBS_DEFAULT_DELIVERY_STATUS
+            : undefined,
+          priority: lbsMode ? LBS_DEFAULT_PROJECT_PRIORITY : undefined,
+          estimated_value: lbsMode ? undefined : 0,
+          amount: lbsMode ? undefined : 0,
+          notes: "",
+          project_address: lbsMode ? undefined : "",
+          website_brief: lbsMode ? emptyWebsiteBriefValues() : undefined,
+          company_id: presetCompanyId ? Number(presetCompanyId) : null,
+          contact_id: presetContactId ? Number(presetContactId) : null,
+          contact_ids: presetContactId ? [Number(presetContactId)] : [],
+          salesperson_ids: [],
+          subcontractor_ids: [],
+          index: 0,
+          pipeline_id: "default",
+        }}
+      >
+        <FormGuardProvider draftKey={DEAL_CREATE_DRAFT_KEY} enabled>
+          <DealCreateDialogShell onClose={handleClose} lbsMode={lbsMode} />
+        </FormGuardProvider>
+      </Form>
+    </Create>
+  );
+};
+
+const DealCreateDialogShell = ({
+  onClose,
+  lbsMode,
+}: {
+  onClose: () => void;
+  lbsMode: boolean;
+}) => {
+  const guardedClose = useGuardedDialogClose((next) => {
+    if (!next) onClose();
+  });
+
+  return (
+    <Dialog open onOpenChange={guardedClose}>
       <DialogContent className="lg:max-w-4xl overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
         <DialogTitle className="text-2xl font-semibold">
           New Project
@@ -136,53 +201,16 @@ export const DealCreate = ({
             ? "Set up a website or digital marketing project with service details, budget, and goals."
             : "Create and configure a construction project with contact, address, stage, and assignments."}
         </DialogDescription>
-        <Create
-          resource="deals"
-          title={false}
-          disableBreadcrumb
-          mutationOptions={{ onSuccess }}
-        >
-          <Form
-            defaultValues={{
-              organization_member_id: identity?.id,
-              category: lbsMode ? LBS_DEFAULT_PROJECT_CATEGORY : "retail",
-              stage: lbsMode ? LBS_DEFAULT_AGENCY_STAGE : "lead",
-              project_type: lbsMode
-                ? LBS_DEFAULT_AGENCY_PROJECT_TYPE
-                : "roofing",
-              lifecycle_phase: lbsMode
-                ? LBS_DEFAULT_LIFECYCLE_PHASE
-                : undefined,
-              delivery_status: lbsMode
-                ? LBS_DEFAULT_DELIVERY_STATUS
-                : undefined,
-              priority: lbsMode ? LBS_DEFAULT_PROJECT_PRIORITY : undefined,
-              estimated_value: lbsMode ? undefined : 0,
-              amount: lbsMode ? undefined : 0,
-              notes: "",
-              project_address: lbsMode ? undefined : "",
-              website_brief: lbsMode ? emptyWebsiteBriefValues() : undefined,
-              company_id: presetCompanyId ? Number(presetCompanyId) : null,
-              contact_id: presetContactId ? Number(presetContactId) : null,
-              contact_ids: presetContactId ? [Number(presetContactId)] : [],
-              salesperson_ids: [],
-              subcontractor_ids: [],
-              index: 0,
-              pipeline_id: "default",
-            }}
-          >
-            <DealInputs />
-            <FormToolbar>
-              <div className="flex justify-end">
-                <SaveButton
-                  type="button"
-                  transform={normalizeProjectPayload}
-                  label="Save project"
-                />
-              </div>
-            </FormToolbar>
-          </Form>
-        </Create>
+        <DealInputs />
+        <FormToolbar>
+          <div className="flex justify-end">
+            <SaveButton
+              type="button"
+              transform={normalizeProjectPayload}
+              label="Save project"
+            />
+          </div>
+        </FormToolbar>
       </DialogContent>
     </Dialog>
   );

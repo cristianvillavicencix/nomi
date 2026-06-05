@@ -1,5 +1,9 @@
 import { CreateBase, Form, useGetIdentity } from "ra-core";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  FormGuardProvider,
+  FormNavigationGuard,
+} from "@/components/admin/form-guard";
 import { ContactInputs } from "@/components/atomic-crm/contacts/ContactInputs";
 import { FormToolbar } from "@/components/atomic-crm/layout/FormToolbar";
 import type { Contact } from "@/components/atomic-crm/types";
@@ -7,6 +11,8 @@ import {
   LBS_LEAD_SOURCE_OTHER,
   LBS_LEAD_SOURCE_REFERRAL,
 } from "@/lbs/leads/leadFormConstants";
+
+const LEAD_CREATE_PAGE_DRAFT_KEY = "lbs:lead-create-page";
 
 export const LeadCreatePage = () => {
   const { identity } = useGetIdentity();
@@ -43,12 +49,15 @@ export const LeadCreatePage = () => {
               organization_member_id: identity?.id,
             }}
           >
-            <Card>
-              <CardContent>
-                <ContactInputs />
-                <FormToolbar />
-              </CardContent>
-            </Card>
+            <FormGuardProvider draftKey={LEAD_CREATE_PAGE_DRAFT_KEY} enabled>
+              <FormNavigationGuard />
+              <Card>
+                <CardContent>
+                  <ContactInputs />
+                  <FormToolbar />
+                </CardContent>
+              </Card>
+            </FormGuardProvider>
           </Form>
         </div>
       </div>

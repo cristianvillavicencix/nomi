@@ -50,8 +50,11 @@ Deno.serve((req: Request) =>
           if (input.length < 3) {
             return json({ suggestions: [] });
           }
-          const suggestions = await serverPlacesAutocomplete(input, mode);
-          return json({ suggestions });
+          const result = await serverPlacesAutocomplete(input, mode);
+          return json({
+            suggestions: result.suggestions,
+            googleError: result.googleError,
+          });
         }
 
         if (action === "details") {

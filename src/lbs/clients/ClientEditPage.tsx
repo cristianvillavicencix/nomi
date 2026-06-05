@@ -24,6 +24,13 @@ import {
 import type { CompanyWithPrimaryContact } from "@/lbs/clients/clientProfile";
 import { clientCreateFormValuesToUpsertInput } from "@/lbs/clients/lbsClientUpsert";
 import { getClientShowPath } from "@/lbs/routing";
+import {
+  FormNavigationGuard,
+  FormGuardProvider,
+} from "@/components/admin/form-guard";
+import { clearFormDraft } from "@/lib/formPersistence/formDraftStorage";
+
+const clientEditDraftKey = (id: string) => `lbs:client-edit:${id}`;
 
 export const ClientEditPage = () => {
   const { id } = useParams();
@@ -78,6 +85,7 @@ export const ClientEditPage = () => {
         primaryContactId: company.primary_contact_id ?? undefined,
       });
       notify("Client updated");
+      clearFormDraft(clientEditDraftKey(String(id)));
       redirect(getClientShowPath(result.company_id));
     } catch (error) {
       notify(
@@ -103,15 +111,18 @@ export const ClientEditPage = () => {
           defaultValues={defaultValues ?? emptyClientFormValues()}
           onSubmit={handleSubmit}
         >
-          <Card>
-            <CardContent className="space-y-4 pt-6">
-              <ClientCreateFormFields />
-              <FormToolbar />
-              {isSaving ? (
-                <p className="text-sm text-muted-foreground">Saving client…</p>
-              ) : null}
-            </CardContent>
-          </Card>
+          <FormGuardProvider draftKey={clientEditDraftKey(String(id))} enabled>
+            <FormNavigationGuard />
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                <ClientCreateFormFields />
+                <FormToolbar />
+                {isSaving ? (
+                  <p className="text-sm text-muted-foreground">Saving client…</p>
+                ) : null}
+              </CardContent>
+            </Card>
+          </FormGuardProvider>
         </Form>
       </div>
     </div>

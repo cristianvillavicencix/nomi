@@ -51,28 +51,44 @@ const pickComponent = (
 export const serverPlacesAutocomplete = async (
   input: string,
   mode: GooglePlacesAutocompleteMode,
-): Promise<GooglePlaceSuggestion[]> => {
+): Promise<{ suggestions: GooglePlaceSuggestion[]; googleError?: string }> => {
   const key = getGooglePlacesServerApiKey();
-  if (!key || input.trim().length < 3) return [];
-
-  const newResult = await fetchNewPlacesAutocomplete(input, mode, key);
-  if (newResult !== "forbidden") {
-    return newResult;
+  if (!key || input.trim().length < 3) {
+    return { suggestions: [] };
   }
 
-  return fetchLegacyPlacesAutocomplete(input, mode, key);
+  const newResult = await fetchNewPlacesAutocomplete(input, mode, key);
+  if (newResult.ok) {
+    return { suggestions: newResult.suggestions };
+  }
+
+  const legacySuggestions = await fetchLegacyPlacesAutocomplete(input, mode, key);
+  if (legacySuggestions.length > 0) {
+    return { suggestions: legacySuggestions };
+  }
+
+  return {
+    suggestions: [],
+    googleError: newResult.errorMessage,
+  };
 };
 
 const fetchNewPlacesAutocomplete = async (
   input: string,
-  _mode: GooglePlacesAutocompleteMode,
+  mode: GooglePlacesAutocompleteMode,
   key: string,
-): Promise<GooglePlaceSuggestion[] | "forbidden"> => {
+): Promise<
+  | { ok: true; suggestions: GooglePlaceSuggestion[] }
+  | { ok: false; errorMessage: string }
+> => {
   const body: Record<string, unknown> = {
     input: input.trim(),
     languageCode: "en",
     regionCode: "US",
   };
+  if (mode === "business") {
+    body.includedPrimaryTypes = ["establishment"];
+  }
 
   const response = await fetch(
     "https://places.googleapis.com/v1/places:autocomplete",
@@ -88,8 +104,21 @@ const fetchNewPlacesAutocomplete = async (
     },
   );
 
-  if (response.status === 403) return "forbidden";
-  if (!response.ok) return [];
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    let message = `Google Places API (New) failed (${response.status})`;
+    try {
+      const parsed = JSON.parse(detail) as {
+        error?: { message?: string };
+      };
+      if (parsed.error?.message) {
+        message = parsed.error.message;
+      }
+    } catch {
+      if (detail.trim()) message = detail.trim();
+    }
+    return { ok: false, errorMessage: message };
+  }
 
   const payload = (await response.json()) as {
     suggestions?: Array<{
@@ -97,15 +126,19 @@ const fetchNewPlacesAutocomplete = async (
     }>;
   };
 
-  return (
+  const suggestions =
     payload.suggestions
       ?.map((item) => ({
-        placeId: String(item.placePrediction?.placeId ?? ""),
+        placeId: String(item.placePrediction?.placeId ?? "").replace(
+          /^places\//,
+          "",
+        ),
         text: String(item.placePrediction?.text?.text ?? ""),
       }))
       .filter((item) => item.placeId && item.text)
-      .slice(0, 8) ?? []
-  );
+      .slice(0, 8) ?? [];
+
+  return { ok: true, suggestions };
 };
 
 const fetchLegacyPlacesAutocomplete = async (

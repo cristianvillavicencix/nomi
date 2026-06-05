@@ -10,9 +10,14 @@ import { Link } from "react-router";
 import { CancelButton } from "@/components/admin/cancel-button";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { SaveButton } from "@/components/admin/form";
+import {
+  FormGuardProvider,
+  useGuardedDialogClose,
+} from "@/components/admin/form-guard";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { clearFormDraft } from "@/lib/formPersistence/formDraftStorage";
 
 import { CompanyAvatar } from "../companies/CompanyAvatar";
 import type { Deal } from "../types";
@@ -20,6 +25,8 @@ import { DealInputs } from "./DealInputs";
 import { syncProjectAssignments } from "./projectAssignments";
 import { normalizeProjectPayload } from "./projectForm";
 import { isLbsMode } from "@/lbs/productMode";
+
+const dealEditDraftKey = (id: string) => `crm:deal-edit:${id}`;
 
 export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
   const redirect = useRedirect();
@@ -32,56 +39,73 @@ export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
     });
   };
 
+  if (!open || !id) return null;
+
   return (
-    <Dialog open={open} onOpenChange={() => handleClose()}>
+    <EditBase
+      id={id}
+      mutationMode="pessimistic"
+      mutationOptions={{
+        onSuccess: async (deal: Deal) => {
+          clearFormDraft(dealEditDraftKey(String(id)));
+          if (!isLbsMode()) {
+            try {
+              await syncProjectAssignments(
+                dataProvider,
+                deal.id,
+                deal.salesperson_ids,
+                deal.subcontractor_ids,
+              );
+            } catch {
+              notify(
+                "Project updated, but assignments could not be fully synced",
+                {
+                  type: "warning",
+                },
+              );
+            }
+          }
+          notify("Project updated");
+          redirect(`/deals/${id}/show`, undefined, undefined, undefined, {
+            _scrollToTop: false,
+          });
+        },
+      }}
+    >
+      <Form>
+        <FormGuardProvider draftKey={dealEditDraftKey(String(id))} enabled>
+          <DealEditDialogShell onClose={handleClose} />
+        </FormGuardProvider>
+      </Form>
+    </EditBase>
+  );
+};
+
+const DealEditDialogShell = ({
+  onClose,
+}: {
+  onClose: () => void;
+}) => {
+  const guardedClose = useGuardedDialogClose((next) => {
+    if (!next) onClose();
+  });
+
+  return (
+    <Dialog open onOpenChange={guardedClose}>
       <DialogContent className="lg:max-w-4xl p-4 overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
-        {id ? (
-          <EditBase
-            id={id}
-            mutationMode="pessimistic"
-            mutationOptions={{
-              onSuccess: async (deal: Deal) => {
-                if (!isLbsMode()) {
-                  try {
-                    await syncProjectAssignments(
-                      dataProvider,
-                      deal.id,
-                      deal.salesperson_ids,
-                      deal.subcontractor_ids,
-                    );
-                  } catch {
-                    notify(
-                      "Project updated, but assignments could not be fully synced",
-                      {
-                        type: "warning",
-                      },
-                    );
-                  }
-                }
-                notify("Project updated");
-                redirect(`/deals/${id}/show`, undefined, undefined, undefined, {
-                  _scrollToTop: false,
-                });
-              },
-            }}
-          >
-            <EditHeader />
-            <Form>
-              <DealInputs />
-              <div
-                role="toolbar"
-                className="sticky flex pt-4 pb-4 md:pb-0 bottom-0 bg-linear-to-b from-transparent to-card to-10% flex-row justify-end gap-2"
-              >
-                <CancelButton />
-                <SaveButton
-                  type="button"
-                  transform={normalizeProjectPayload}
-                  label="Save project"
-                />
-              </div>
-            </Form>
-          </EditBase>
-        ) : null}
+        <EditHeader />
+        <DealInputs />
+        <div
+          role="toolbar"
+          className="sticky flex pt-4 pb-4 md:pb-0 bottom-0 bg-linear-to-b from-transparent to-card to-10% flex-row justify-end gap-2"
+        >
+          <CancelButton onClick={() => guardedClose(false)} />
+          <SaveButton
+            type="button"
+            transform={normalizeProjectPayload}
+            label="Save project"
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
