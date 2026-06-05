@@ -1030,7 +1030,9 @@ const dataProviderWithCustomMethods = {
         .single();
 
       if (updateCompanyError || !updatedCompany) {
-        throw new Error("Failed to update client company");
+        throw new Error(
+          updateCompanyError?.message || "Failed to update client company",
+        );
       }
       companyId = updatedCompany.id;
     } else {
@@ -1045,7 +1047,9 @@ const dataProviderWithCustomMethods = {
         .single();
 
       if (createCompanyError || !newCompany) {
-        throw new Error("Failed to create client company");
+        throw new Error(
+          createCompanyError?.message || "Failed to create client company",
+        );
       }
       companyId = newCompany.id;
       created = true;

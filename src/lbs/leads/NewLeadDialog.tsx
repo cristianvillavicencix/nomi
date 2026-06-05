@@ -92,8 +92,11 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
       if (contact?.id != null) {
         navigate(`/leads/${contact.id}/show`);
       }
-    } catch {
-      notify("Failed to create lead", { type: "error" });
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "Failed to create lead",
+        { type: "error" },
+      );
     } finally {
       setIsSaving(false);
     }

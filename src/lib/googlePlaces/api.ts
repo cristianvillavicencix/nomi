@@ -1,8 +1,8 @@
 import { getGooglePlacesApiKey, isGooglePlacesEnabled } from "./config";
 import {
-  fetchLegacyPlaceDetails,
-  fetchLegacyPlacesAutocomplete,
-} from "./legacy";
+  fetchEdgePlaceDetails,
+  fetchEdgePlacesAutocomplete,
+} from "./edgeProxy";
 import { mapPlaceDetailsFromApi } from "./normalize";
 import type {
   GooglePlaceDetails,
@@ -11,24 +11,22 @@ import type {
 } from "./types";
 
 const LEGACY_STORAGE_KEY = "nomi_google_places_use_legacy";
+const PROXY_STORAGE_KEY = "nomi_google_places_use_proxy";
 
-/** Broader matching — strict types often return zero suggestions. */
-const AUTOCOMPLETE_PRIMARY_TYPES: Record<
-  GooglePlacesAutocompleteMode,
-  string[] | undefined
-> = {
-  business: undefined,
-  address: undefined,
-};
-
-const readPreferLegacy = (): boolean => {
+const readPreferProxy = (): boolean => {
   if (typeof sessionStorage === "undefined") return false;
-  return sessionStorage.getItem(LEGACY_STORAGE_KEY) === "1";
+  if (sessionStorage.getItem(LEGACY_STORAGE_KEY) === "1") {
+    sessionStorage.setItem(PROXY_STORAGE_KEY, "1");
+    sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+    return true;
+  }
+  return sessionStorage.getItem(PROXY_STORAGE_KEY) === "1";
 };
 
-const markPreferLegacy = () => {
+const markPreferProxy = () => {
   if (typeof sessionStorage !== "undefined") {
-    sessionStorage.setItem(LEGACY_STORAGE_KEY, "1");
+    sessionStorage.setItem(PROXY_STORAGE_KEY, "1");
+    sessionStorage.removeItem(LEGACY_STORAGE_KEY);
   }
 };
 
@@ -37,15 +35,11 @@ const fetchNewPlacesAutocomplete = async (
   mode: GooglePlacesAutocompleteMode,
   signal?: AbortSignal,
 ): Promise<{ ok: true; data: GooglePlaceSuggestion[] } | { ok: false; status: number }> => {
-  const includedPrimaryTypes = AUTOCOMPLETE_PRIMARY_TYPES[mode];
   const body: Record<string, unknown> = {
     input: input.trim(),
-    languageCode: "es",
+    languageCode: "en",
     regionCode: "US",
   };
-  if (includedPrimaryTypes?.length) {
-    body.includedPrimaryTypes = includedPrimaryTypes;
-  }
 
   const response = await fetch(
     "https://places.googleapis.com/v1/places:autocomplete",
@@ -92,6 +86,21 @@ const fetchNewPlacesAutocomplete = async (
   return { ok: true, data };
 };
 
+const fetchProxyPlacesAutocomplete = async (
+  input: string,
+  mode: GooglePlacesAutocompleteMode,
+  signal?: AbortSignal,
+): Promise<GooglePlaceSuggestion[]> => {
+  try {
+    return await fetchEdgePlacesAutocomplete(input, mode, signal);
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn("[Google Places] edge proxy autocomplete failed:", error);
+    }
+    return [];
+  }
+};
+
 export const fetchPlacesAutocomplete = async (
   input: string,
   mode: GooglePlacesAutocompleteMode,
@@ -101,24 +110,25 @@ export const fetchPlacesAutocomplete = async (
     return [];
   }
 
-  if (!readPreferLegacy()) {
-    const result = await fetchNewPlacesAutocomplete(input, mode, signal);
-    if (result.ok) {
-      return result.data;
-    }
-    if (result.status === 403) {
-      markPreferLegacy();
-      if (import.meta.env.DEV) {
-        console.info(
-          "[Google Places] New API denied (403). Falling back to legacy Places API. Enable “Places API (New)” in Google Cloud to use the new endpoint.",
-        );
-      }
-    } else {
-      return [];
+  if (readPreferProxy()) {
+    return fetchProxyPlacesAutocomplete(input, mode, signal);
+  }
+
+  const result = await fetchNewPlacesAutocomplete(input, mode, signal);
+  if (result.ok) {
+    return result.data;
+  }
+
+  if (result.status === 403) {
+    markPreferProxy();
+    if (import.meta.env.DEV) {
+      console.info(
+        "[Google Places] New API denied (403). Using server proxy for autocomplete.",
+      );
     }
   }
 
-  return fetchLegacyPlacesAutocomplete(input, mode, signal);
+  return fetchProxyPlacesAutocomplete(input, mode, signal);
 };
 
 const fetchNewPlaceDetails = async (
@@ -153,6 +163,20 @@ const fetchNewPlaceDetails = async (
   return mapPlaceDetailsFromApi(placeId, payload);
 };
 
+const fetchProxyPlaceDetails = async (
+  placeId: string,
+  signal?: AbortSignal,
+): Promise<GooglePlaceDetails | null> => {
+  try {
+    return await fetchEdgePlaceDetails(placeId, signal);
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn("[Google Places] edge proxy details failed:", error);
+    }
+    return null;
+  }
+};
+
 export const fetchGooglePlaceDetails = async (
   placeId: string,
   signal?: AbortSignal,
@@ -161,16 +185,18 @@ export const fetchGooglePlaceDetails = async (
     return null;
   }
 
-  if (!readPreferLegacy()) {
-    const result = await fetchNewPlaceDetails(placeId, signal);
-    if (result === "forbidden") {
-      markPreferLegacy();
-      return fetchLegacyPlaceDetails(placeId, signal);
-    }
-    if (result) {
-      return result;
-    }
+  if (readPreferProxy()) {
+    return fetchProxyPlaceDetails(placeId, signal);
   }
 
-  return fetchLegacyPlaceDetails(placeId, signal);
+  const result = await fetchNewPlaceDetails(placeId, signal);
+  if (result === "forbidden") {
+    markPreferProxy();
+    return fetchProxyPlaceDetails(placeId, signal);
+  }
+  if (result) {
+    return result;
+  }
+
+  return fetchProxyPlaceDetails(placeId, signal);
 };

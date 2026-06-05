@@ -322,3 +322,6 @@ verify_jwt = false
 
 [functions.google_gsc]
 verify_jwt = false
+
+[functions.google_places]
+verify_jwt = false

@@ -125,8 +125,8 @@ export const GooglePlacesAutocompleteInput = ({
 
   const defaultPlaceholder =
     mode === "business"
-      ? "Busca el negocio en Google…"
-      : "Busca la dirección en Google…";
+      ? "Search for a business on Google…"
+      : "Search for an address on Google…";
 
   const panelContent = (
     <>
@@ -134,10 +134,10 @@ export const GooglePlacesAutocompleteInput = ({
       {suggestionHeader ? <div className="my-2 border-t" /> : null}
       <div className="mb-1 flex items-center gap-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         <MapPin className="size-3" />
-        Sugerencias de Google
+        Google suggestions
       </div>
       {isLoading ? (
-        <div className="px-2 py-1.5 text-xs text-muted-foreground">Buscando…</div>
+        <div className="px-2 py-1.5 text-xs text-muted-foreground">Searching…</div>
       ) : suggestions.length > 0 ? (
         suggestions.map((item) => (
           <button
@@ -155,8 +155,8 @@ export const GooglePlacesAutocompleteInput = ({
       ) : (
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
           {fetchError
-            ? "Sin resultados. Si ves 403 en consola, habilita Places API (New) y Places API en Google Cloud."
-            : "Escribe al menos 3 caracteres."}
+            ? "No results. You can keep typing manually."
+            : "Type at least 3 characters."}
         </div>
       )}
     </>
@@ -243,9 +243,9 @@ export const GooglePlacesAutocompleteInput = ({
           helperText ??
           (placesEnabled
             ? mode === "business"
-              ? "Elige un resultado para autocompletar web, teléfono y dirección."
-              : "Elige una dirección o escribe manualmente."
-            : "Añade VITE_GOOGLE_PLACES_API_KEY en .env y reinicia Vite.")
+              ? "Pick a result to fill website, phone, and address."
+              : "Pick an address or type manually."
+            : "Add VITE_GOOGLE_PLACES_API_KEY to .env and restart Vite.")
         }
       />
       <FormError />
