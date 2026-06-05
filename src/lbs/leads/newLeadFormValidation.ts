@@ -1,5 +1,6 @@
 import type { NewLeadFormValues } from "./newLeadFormTypes";
 import { normalizeAssignedMemberIds } from "./leadAssignments";
+import { isReferralSource } from "./leadFormConstants";
 
 export type LeadFormValidationResult =
   | { ok: true }
@@ -24,7 +25,7 @@ export const validateNewLeadForm = (
     return { ok: false, message: "Status is required." };
   }
   if (!normalizeAssignedMemberIds(values.assigned_member_ids).length) {
-    return { ok: false, message: "Asigna al menos un miembro del equipo." };
+    return { ok: false, message: "Assign at least one team member." };
   }
 
   if (isReferralSource(values.lead_source)) {
@@ -41,23 +42,23 @@ export const validateNewLeadForm = (
     (values.lead_type === "business" && values.add_primary_contact);
 
   if (values.lead_type === "business" && !values.company_draft_name?.trim()) {
-    return { ok: false, message: "El nombre de la empresa es obligatorio." };
+    return { ok: false, message: "Company name is required." };
   }
 
   if (showContact) {
     if (!values.first_name?.trim()) {
-      return { ok: false, message: "El nombre es obligatorio." };
+      return { ok: false, message: "First name is required." };
     }
     if (!hasContactChannel(values)) {
       return {
         ok: false,
-        message: "Agrega al menos un email o teléfono.",
+        message: "Add at least one email or phone number.",
       };
     }
     if (values.lead_type === "individual" && !values.address?.trim()) {
       return {
         ok: false,
-        message: "La dirección es obligatoria (facturación y contacto).",
+        message: "Address is required for billing and contact.",
       };
     }
   }

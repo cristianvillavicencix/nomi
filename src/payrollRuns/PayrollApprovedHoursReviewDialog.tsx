@@ -12,7 +12,7 @@ import {
   useRefresh,
 } from "ra-core";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { SaveButton } from "@/components/admin/form";
+import { DialogSaveButton } from "@/components/admin/form-guard";
 import { TimeEntriesForm } from "@/timeEntries/TimeEntriesForm";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,10 +91,10 @@ function TimeEntryPayrollEditDialog({
           <DialogContent className="top-[6%] z-[100] max-h-[90vh] max-w-[calc(100%-2rem)] translate-y-0 overflow-y-auto sm:max-w-2xl">
             <Form className="flex flex-col gap-4">
               <DialogHeader>
-                <DialogTitle>Editar registro de horas</DialogTitle>
+                <DialogTitle>Edit time entry</DialogTitle>
                 <DialogDescription>
-                  Los cambios se guardan en Hours. Al guardar, esta ventana se
-                  cierra y se actualiza la lista de revisión.
+                  Changes are saved to Hours. Saving closes this window and
+                  refreshes the review list.
                 </DialogDescription>
               </DialogHeader>
               <TimeEntriesForm />
@@ -104,9 +104,9 @@ function TimeEntryPayrollEditDialog({
                   variant="ghost"
                   onClick={() => onOpenChange(false)}
                 >
-                  Cancelar
+                  Cancel
                 </Button>
-                <SaveButton label="Guardar" />
+                <DialogSaveButton label="Save" />
               </DialogFooter>
             </Form>
           </DialogContent>

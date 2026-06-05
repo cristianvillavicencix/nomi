@@ -72,11 +72,11 @@ export const LeadInfoSection = () => {
         filter={{ "disabled@neq": true }}
       >
         <AutocompleteArrayInput
-          label="Asignado a"
+          label="Assigned to"
           optionText={getMemberOptionText}
           validate={requireAssignedMembers}
           helperText={false}
-          placeholder="Selecciona uno o más miembros del equipo"
+          placeholder="Select one or more team members"
           filterToQuery={(searchText) => ({ q: searchText })}
         />
       </ReferenceArrayInput>

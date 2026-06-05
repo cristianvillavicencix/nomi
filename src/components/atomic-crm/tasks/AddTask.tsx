@@ -12,7 +12,7 @@ import {
   type Identifier,
 } from "ra-core";
 import { useState } from "react";
-import { SaveButton } from "@/components/admin/form";
+import { DialogSaveButton } from "@/components/admin/form-guard";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -185,7 +185,7 @@ export const AddTask = ({
                   defaultDealId={dealId}
                 />
                 <DialogFooter className="w-full justify-end">
-                  <SaveButton />
+                  <DialogSaveButton />
                 </DialogFooter>
               </Form>
             </DialogContent>

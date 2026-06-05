@@ -7,8 +7,8 @@ import {
   useRefresh,
   useTranslate,
 } from "ra-core";
-import { SaveButton } from "@/components/admin/form";
 import {
+  DialogSaveButton,
   FormGuardProvider,
   useGuardedDialogClose,
 } from "@/components/admin/form-guard";
@@ -64,43 +64,45 @@ export const ContactEditModal = ({
         },
       }}
     >
-      <Form className="flex flex-col gap-4">
-        <FormGuardProvider draftKey={contactEditDraftKey(contactId)} enabled>
-          <ContactEditModalShell onOpenChange={onOpenChange} />
-        </FormGuardProvider>
-      </Form>
+      <ContactEditModalShell onOpenChange={onOpenChange} contactId={contactId} />
     </EditBase>
   );
 };
 
 const ContactEditModalShell = ({
   onOpenChange,
+  contactId,
 }: {
   onOpenChange: (open: boolean) => void;
+  contactId: Identifier;
 }) => {
   const guardedClose = useGuardedDialogClose(onOpenChange);
 
   return (
     <Dialog open onOpenChange={guardedClose}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>
-            Edit <RecordRepresentation />
-          </DialogTitle>
-        </DialogHeader>
+        <Form className="flex flex-col gap-4">
+          <FormGuardProvider draftKey={contactEditDraftKey(contactId)} enabled>
+            <DialogHeader>
+              <DialogTitle>
+                Edit <RecordRepresentation />
+              </DialogTitle>
+            </DialogHeader>
 
-        <ContactFormFields />
+            <ContactFormFields />
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => guardedClose(false)}
-          >
-            Cancel
-          </Button>
-          <SaveButton label="Save" />
-        </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => guardedClose(false)}
+              >
+                Cancel
+              </Button>
+              <DialogSaveButton label="Save" />
+            </DialogFooter>
+          </FormGuardProvider>
+        </Form>
       </DialogContent>
     </Dialog>
   );

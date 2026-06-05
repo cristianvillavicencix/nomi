@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { required } from "ra-core";
 import { useFormContext, useWatch } from "react-hook-form";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { TextInput } from "@/components/admin/text-input";
@@ -67,7 +68,7 @@ export const LeadContactSection = () => {
             htmlFor="use-company-contact-info"
             className="cursor-pointer text-sm font-normal leading-snug"
           >
-            Usar teléfono y dirección de la empresa en el contacto
+            Use company phone and address for the contact
           </Label>
         </div>
       ) : null}
@@ -75,10 +76,11 @@ export const LeadContactSection = () => {
       <div className="grid gap-3 sm:grid-cols-2">
         <TextInput
           source="first_name"
-          label="Nombre"
+          label="First name"
+          validate={required()}
           helperText={false}
         />
-        <TextInput source="last_name" label="Apellido" helperText={false} />
+        <TextInput source="last_name" label="Last name" helperText={false} />
       </div>
 
       <LeadChannelsInput
@@ -98,13 +100,13 @@ export const LeadContactSection = () => {
         source="address"
         label={
           leadType === "individual"
-            ? "Dirección (facturación / contacto)"
-            : "Dirección del contacto"
+            ? "Address (billing / contact)"
+            : "Contact address"
         }
         mode="address"
         helperText={
           leadType === "individual"
-            ? "Obligatoria para facturación futura."
+            ? "Required for future billing."
             : false
         }
         onPlaceDetails={(details) =>
@@ -115,11 +117,11 @@ export const LeadContactSection = () => {
       {leadType === "business" ? (
         <SelectInput
           source="title"
-          label="Cargo"
+          label="Role"
           choices={[...LBS_CONTACT_ROLE_CHOICES]}
           optionText="name"
           helperText={false}
-          emptyText="Selecciona cargo"
+          emptyText="Select role"
         />
       ) : null}
     </div>

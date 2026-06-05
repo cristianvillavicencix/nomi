@@ -98,14 +98,15 @@ export const fetchPlacesAutocomplete = async (
     return [];
   }
 
-  const newResult = await fetchNewPlacesAutocomplete(input, mode, signal);
-  if (newResult.ok) {
-    return newResult.data;
-  }
-
+  // Prefer the Supabase proxy: avoids browser referrer restrictions and CORS.
   const proxyResult = await fetchEdgePlacesAutocomplete(input, mode, signal);
   if (proxyResult.suggestions.length > 0) {
     return proxyResult.suggestions;
+  }
+
+  const newResult = await fetchNewPlacesAutocomplete(input, mode, signal);
+  if (newResult.ok) {
+    return newResult.data;
   }
 
   if (proxyResult.error) {
@@ -117,7 +118,7 @@ export const fetchPlacesAutocomplete = async (
 
   if (newResult.status === 403) {
     throw new GooglePlacesUnavailableError(
-      "Google Places API (New) denied this request. Enable billing, Places API (New), and Places API in Google Cloud, and allow your site URL in the API key referrers.",
+      "Google Places is unavailable. Enable billing, Places API (New), and Places API in Google Cloud, then set GOOGLE_PLACES_API_KEY on Supabase and VITE_GOOGLE_PLACES_API_KEY in the app.",
       "permission_denied",
     );
   }
@@ -166,15 +167,18 @@ export const fetchGooglePlaceDetails = async (
     return null;
   }
 
+  const proxyResult = await fetchEdgePlaceDetails(placeId, signal);
+  if (proxyResult.details) {
+    return proxyResult.details;
+  }
+
   const result = await fetchNewPlaceDetails(placeId, signal);
   if (result === "forbidden") {
-    const proxyResult = await fetchEdgePlaceDetails(placeId, signal);
-    return proxyResult.details;
+    return null;
   }
   if (result) {
     return result;
   }
 
-  const proxyResult = await fetchEdgePlaceDetails(placeId, signal);
   return proxyResult.details;
 };

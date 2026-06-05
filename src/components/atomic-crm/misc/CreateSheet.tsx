@@ -1,4 +1,4 @@
-import { SaveButton } from "@/components/admin/form";
+import { DialogSaveButton } from "@/components/admin/form-guard";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -150,7 +150,7 @@ export const CreateSheet = ({
                     Close
                   </Button>
                 </SheetClose>
-                <SaveButton className="flex-1" />
+                <DialogSaveButton className="flex-1" />
               </div>
             </SheetFooter>
           </Form>

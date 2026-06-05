@@ -1,6 +1,6 @@
 import { EditBase, Form, useNotify, type Identifier } from "ra-core";
 import { DeleteButton } from "@/components/admin/delete-button";
-import { SaveButton } from "@/components/admin/form";
+import { DialogSaveButton } from "@/components/admin/form-guard";
 import {
   Dialog,
   DialogContent,
@@ -58,7 +58,7 @@ export const TaskEdit = ({
                   }}
                   redirect={false}
                 />
-                <SaveButton label="Save" />
+                <DialogSaveButton label="Save" />
               </DialogFooter>
             </Form>
           </DialogContent>

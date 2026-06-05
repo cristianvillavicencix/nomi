@@ -19,9 +19,7 @@ const AddContactChoice = ({
   onChange: (next: boolean) => void;
 }) => (
   <div className="space-y-2 rounded-md border border-dashed bg-muted/30 p-3">
-    <p className="text-sm font-medium">
-      ¿Agregar contacto principal de esta empresa?
-    </p>
+    <p className="text-sm font-medium">Add a primary contact for this company?</p>
     <div className="flex gap-2">
       <button
         type="button"
@@ -33,7 +31,7 @@ const AddContactChoice = ({
             : "border-border hover:bg-muted/50",
         )}
       >
-        Sí
+        Yes
       </button>
       <button
         type="button"
@@ -61,28 +59,28 @@ export const LeadCompanySection = () => {
     <div className="space-y-3">
       <GooglePlacesAutocompleteInput
         source="company_draft_name"
-        label="Nombre de la empresa"
+        label="Company name"
         mode="business"
         helperText={false}
-        placeholder="Ej. Acme Landscaping"
+        placeholder="e.g. Acme Landscaping"
         onPlaceDetails={(details) =>
           applyGoogleBusinessToLeadForm(setValue, details)
         }
       />
       <TextInput
         source="company_draft_website"
-        label="Sitio web"
+        label="Website"
         helperText={false}
-        placeholder="www.ejemplo.com"
+        placeholder="www.example.com"
       />
       <PhoneInput
         source="company_draft_phone"
-        label="Teléfono de la empresa"
+        label="Company phone"
         helperText={false}
       />
       <GooglePlacesAutocompleteInput
         source="company_draft_address"
-        label="Dirección"
+        label="Address"
         mode="address"
         helperText={false}
         onPlaceDetails={(details) =>
@@ -91,11 +89,11 @@ export const LeadCompanySection = () => {
       />
       <SelectInput
         source="company_draft_sector"
-        label="Industria"
+        label="Industry"
         choices={[...LBS_COMPANY_INDUSTRY_CHOICES]}
         optionText="name"
         helperText={false}
-        emptyText="Selecciona industria"
+        emptyText="Select industry"
       />
 
       <AddContactChoice

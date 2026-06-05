@@ -1,5 +1,5 @@
 import { DeleteButton } from "@/components/admin";
-import { SaveButton } from "@/components/admin/form";
+import { DialogSaveButton } from "@/components/admin/form-guard";
 import {
   Sheet,
   SheetContent,
@@ -158,7 +158,7 @@ export const EditSheet = ({
             <SheetFooter className="border-t">
               <div className="flex w-full gap-4">
                 {deleteButton || defaultDeleteButton}
-                <SaveButton className="flex-1" />
+                <DialogSaveButton className="flex-1" />
               </div>
             </SheetFooter>
           </Form>

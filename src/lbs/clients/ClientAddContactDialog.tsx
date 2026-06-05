@@ -6,7 +6,7 @@ import {
   useRefresh,
   type Identifier,
 } from "ra-core";
-import { SaveButton } from "@/components/admin/form";
+import { DialogSaveButton } from "@/components/admin/form-guard";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
 import { TextInput } from "@/components/admin/text-input";
@@ -108,7 +108,7 @@ export const ClientAddContactDialog = ({
               <Button type="button" variant="ghost" onClick={handleClose}>
                 Cancel
               </Button>
-              <SaveButton label="Add contact" />
+              <DialogSaveButton label="Add contact" />
             </DialogFooter>
           </Form>
         </CreateBase>

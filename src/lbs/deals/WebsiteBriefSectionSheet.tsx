@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Form, useGetIdentity, useNotify, useUpdate } from "ra-core";
-import { SaveButton } from "@/components/admin/form";
+import { DialogSaveButton } from "@/components/admin/form-guard";
 import { DateInput } from "@/components/admin/date-input";
 import { SelectInput } from "@/components/admin/select-input";
 import {
@@ -167,7 +167,7 @@ export const WebsiteBriefSectionSheet = ({
             </div>
 
             <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
-              <SaveButton disabled={isPending} label="Save" />
+              <DialogSaveButton disabled={isPending} label="Save" />
             </div>
           </Form>
         ) : null}
