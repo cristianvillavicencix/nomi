@@ -5,13 +5,15 @@ import {
   useListContext,
   useRefresh,
 } from "ra-core";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { InvoiceRowActions } from "@/lbs/billing/SendInvoiceDialog";
+import { CreateClientInvoiceButton } from "@/lbs/billing/CreateClientInvoiceDialog";
+import { Plus } from "lucide-react";
 import {
   formatBillingDate,
   INVOICE_FILTER_OPTIONS,
@@ -34,6 +36,7 @@ const buildInvoiceFilter = (statusFilter: InvoiceStatusFilter) => {
 
 export const ClientInvoicesTab = () => {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>("all");
+  const refresh = useRefresh();
   const listFilter = useMemo(
     () => buildInvoiceFilter(statusFilter),
     [statusFilter],
@@ -41,7 +44,8 @@ export const ClientInvoicesTab = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
         {INVOICE_FILTER_OPTIONS.map((option) => (
           <Button
             key={option.value}
@@ -53,6 +57,16 @@ export const ClientInvoicesTab = () => {
             {option.label}
           </Button>
         ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" asChild>
+            <Link to="/billing/invoices/new">
+              <Plus className="size-4" />
+              New invoice
+            </Link>
+          </Button>
+          <CreateClientInvoiceButton onCreated={refresh} />
+        </div>
       </div>
 
       <List
@@ -147,20 +161,25 @@ const ClientInvoicesTable = () => {
   if (!invoices.length) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        No invoices yet. Issue an invoice from the Collections tab.
+        No invoices yet. Create one from a proposal or issue from Collections.
       </p>
     );
   }
 
   return (
     <DataTable
-      rowClick={(id) => {
-        const row = invoices.find((r) => String(r.id) === String(id));
-        if (row?.proposal_id) navigate(`/proposals/${row.proposal_id}/show`);
+      rowClick={(rowId) => {
+        navigate(`/billing/invoices/${rowId}/edit`);
       }}
       rowClassName={() => "[&_td]:py-2.5"}
     >
-      <DataTable.Col source="invoice_number" label="Invoice #" />
+      <DataTable.Col
+        source="invoice_number"
+        label="Invoice #"
+        render={(record: ClientInvoice) => (
+          <span className="font-medium text-blue-700">{record.invoice_number}</span>
+        )}
+      />
       <DataTable.Col
         source="issue_date"
         label="Issued"

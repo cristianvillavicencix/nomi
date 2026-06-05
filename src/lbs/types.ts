@@ -165,6 +165,15 @@ export type ClientInvoice = {
   issue_date: string;
   due_date: string;
   amount: number;
+  subtotal?: number | null;
+  discount_amount?: number | null;
+  fee_amount?: number | null;
+  terms?: string | null;
+  save_card_for_future_charges?: boolean;
+  upfront_percent?: number | null;
+  auto_charge_remainder?: boolean;
+  amount_paid?: number | null;
+  remainder_schedule?: Record<string, unknown> | null;
   currency?: string;
   description: string;
   status?: "draft" | "sent" | "paid" | "void" | "overdue";
@@ -172,9 +181,28 @@ export type ClientInvoice = {
   paid_at?: string | null;
   stripe_payment_intent_id?: string | null;
   recipient_email?: string | null;
+  reference?: string | null;
+  sales_person_id?: Identifier | null;
   notes?: string | null;
+  scheduled_send_at?: string | null;
+  scheduled_send_message?: string | null;
+  scheduled_send_storage_path?: string | null;
   created_at?: string;
   updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ClientInvoiceLineItem = {
+  org_id?: number;
+  invoice_id: Identifier;
+  description: string;
+  quantity: number;
+  unit?: string;
+  unit_price: number;
+  line_total: number;
+  package_id?: Identifier | null;
+  addon_id?: Identifier | null;
+  sort_order?: number;
+  created_at?: string;
 } & Pick<RaRecord, "id">;
 
 export type Contract = {

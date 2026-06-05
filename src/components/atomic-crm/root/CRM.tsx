@@ -70,6 +70,7 @@ import {
 } from "@/lbs/LbsCustomRoutes";
 import { isLbsMode } from "@/lbs/productMode";
 import { ClientPortalPage } from "@/lbs/portal/ClientPortalPage";
+import { ClientPortalInvoicePage } from "@/lbs/portal/ClientPortalInvoicePage";
 import proposals from "@/lbs/proposals";
 import contracts from "@/lbs/contracts";
 import tickets from "@/lbs/tickets";
@@ -301,6 +302,10 @@ const DesktopAdmin = (props: CoreAdminProps) => {
             {renderLbsPublicFormRoute()}
             {renderLbsProposalClientPreviewRoute()}
             <Route path="/portal" element={<ClientPortalPage />} />
+            <Route
+              path="/portal/invoice/:token"
+              element={<ClientPortalInvoicePage />}
+            />
           </>
         ) : (
           <>
@@ -554,6 +559,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           <Resource name="proposal_payment_schedules" />
           <Resource name="proposal_payment_installments" />
           <Resource name="client_invoices" />
+          <Resource name="client_invoice_line_items" />
           <Resource name="proposal_templates" />
           <Resource name="service_packages" />
           <Resource name="service_addons" />

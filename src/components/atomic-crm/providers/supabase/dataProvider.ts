@@ -666,18 +666,91 @@ const dataProviderWithCustomMethods = {
 
     return data;
   },
-  async issueClientInvoice({ installmentId }: { installmentId: Identifier }) {
+  async issueClientInvoice({
+    installmentId,
+    proposalId,
+    amount,
+    dueDate,
+    description,
+  }: {
+    installmentId?: Identifier;
+    proposalId?: Identifier;
+    amount?: number;
+    dueDate?: string;
+    description?: string;
+  }) {
+    const body: Record<string, unknown> = {};
+    if (installmentId != null) {
+      body.installment_id = Number(installmentId);
+    }
+    if (proposalId != null) {
+      body.proposal_id = Number(proposalId);
+    }
+    if (amount != null) body.amount = amount;
+    if (dueDate) body.due_date = dueDate;
+    if (description) body.description = description;
+
     const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
       "issue_client_invoice",
       {
         method: "POST",
-        body: { installment_id: Number(installmentId) },
+        body,
       },
     );
 
     if (error || !data?.invoice) {
       console.error("issue_client_invoice.error", error);
       throw new Error("Failed to issue invoice");
+    }
+
+    return data.invoice;
+  },
+  async createStandaloneClientInvoice(body: {
+    company_id?: number | null;
+    contact_id?: number | null;
+    deal_id?: number | null;
+    issue_date?: string;
+    due_date: string;
+    terms?: string;
+    currency?: string;
+    subtotal: number;
+    discount_amount?: number;
+    fee_amount?: number;
+    amount: number;
+    description: string;
+    notes?: string | null;
+    reference?: string | null;
+    recipient_email?: string | null;
+    sales_person_id?: number | null;
+    save_card_for_future_charges?: boolean;
+    upfront_percent?: number;
+    auto_charge_remainder?: boolean;
+    remainder_schedule?: Record<string, unknown> | null;
+    line_items: Array<{
+      description: string;
+      quantity: number;
+      unit?: string;
+      unit_price: number;
+      package_id?: number | null;
+      addon_id?: number | null;
+      sort_order?: number;
+    }>;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
+      "create_client_invoice",
+      {
+        method: "POST",
+        body,
+      },
+    );
+
+    if (error || !data?.invoice) {
+      console.error("create_client_invoice.error", error);
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(error, "Failed to create invoice")
+          : "Failed to create invoice",
+      );
     }
 
     return data.invoice;
@@ -697,7 +770,11 @@ const dataProviderWithCustomMethods = {
     filename?: string;
     subject?: string;
   }) {
-    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+      email_sent?: boolean;
+      email_skipped?: boolean;
+    }>(
       "send_client_invoice",
       {
         method: "POST",
@@ -714,10 +791,177 @@ const dataProviderWithCustomMethods = {
 
     if (error || !data?.invoice) {
       console.error("send_client_invoice.error", error);
-      throw new Error("Failed to send invoice");
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(error, "Failed to send invoice")
+          : "Failed to send invoice",
+      );
+    }
+
+    return data;
+  },
+  async manageClientInvoice({
+    invoiceId,
+    action,
+  }: {
+    invoiceId: Identifier;
+    action: "mark_sent" | "void" | "delete";
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoice?: Record<string, unknown>;
+      deleted?: boolean;
+      id?: number;
+    }>("manage_client_invoice", {
+      method: "POST",
+      body: {
+        invoice_id: Number(invoiceId),
+        action,
+      },
+    });
+
+    if (error) {
+      console.error("manage_client_invoice.error", error);
+      throw new Error(
+        await readEdgeFunctionErrorMessage(error, "Could not update invoice"),
+      );
+    }
+
+    return data;
+  },
+  async scheduleClientInvoice({
+    invoiceId,
+    to,
+    message,
+    scheduledSendAt,
+    pdfBase64,
+    filename,
+  }: {
+    invoiceId: Identifier;
+    to: string;
+    message?: string;
+    scheduledSendAt: string;
+    pdfBase64: string;
+    filename?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
+      "schedule_client_invoice",
+      {
+        method: "POST",
+        body: {
+          invoice_id: Number(invoiceId),
+          to,
+          message,
+          scheduled_send_at: scheduledSendAt,
+          pdf_base64: pdfBase64,
+          filename,
+        },
+      },
+    );
+
+    if (error || !data?.invoice) {
+      console.error("schedule_client_invoice.error", error);
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to schedule invoice send",
+            )
+          : "Failed to schedule invoice send",
+      );
     }
 
     return data.invoice;
+  },
+  async updateStandaloneClientInvoice(
+    invoiceId: Identifier,
+    body: {
+      company_id?: number | null;
+      contact_id?: number | null;
+      issue_date?: string;
+      due_date: string;
+      terms?: string;
+      currency?: string;
+      subtotal: number;
+      discount_amount?: number;
+      fee_amount?: number;
+      amount: number;
+      description: string;
+      notes?: string | null;
+      reference?: string | null;
+      recipient_email?: string | null;
+      sales_person_id?: number | null;
+      save_card_for_future_charges?: boolean;
+      upfront_percent?: number;
+      auto_charge_remainder?: boolean;
+      remainder_schedule?: Record<string, unknown> | null;
+      line_items: Array<{
+        description: string;
+        quantity: number;
+        unit?: string;
+        unit_price: number;
+        package_id?: number | null;
+        addon_id?: number | null;
+        sort_order?: number;
+      }>;
+    },
+  ) {
+    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
+      "update_client_invoice",
+      {
+        method: "POST",
+        body: {
+          invoice_id: Number(invoiceId),
+          ...body,
+        },
+      },
+    );
+
+    if (error || !data?.invoice) {
+      console.error("update_client_invoice.error", error);
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(error, "Failed to update invoice")
+          : "Failed to update invoice",
+      );
+    }
+
+    return data.invoice;
+  },
+  async shareClientInvoice({
+    invoiceId,
+    baseUrl,
+  }: {
+    invoiceId: Identifier;
+    baseUrl?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      token: string;
+      short_code: string;
+      url: string;
+      short_url: string;
+      expires_at: string;
+      invoice_id: number;
+    }>("share_client_invoice", {
+      method: "POST",
+      body: {
+        invoice_id: Number(invoiceId),
+        base_url: baseUrl ?? window.location.origin,
+      },
+    });
+
+    if (error || !data?.url) {
+      console.error("share_client_invoice.error", error);
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to generate invoice link",
+            )
+          : "Failed to generate invoice link",
+      );
+    }
+
+    return data;
   },
   async upsertLbsClient(
     input: LbsClientUpsertInput,

@@ -6,7 +6,7 @@ import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { markClientInvoiceSent } from "../_shared/clientInvoiceFlow.ts";
-import { sendPostmarkEmail } from "../_shared/postmarkEmail.ts";
+import { sendPostmarkEmail, isPostmarkEmailConfigured } from "../_shared/postmarkEmail.ts";
 
 type SendBody = {
   invoice_id?: number;
@@ -83,18 +83,30 @@ Deno.serve(
         const filename =
           body.filename?.trim() || `${invoice.invoice_number}.pdf`;
 
-        await sendPostmarkEmail({
-          to,
-          subject,
-          textBody: message,
-          attachments: [
-            {
-              name: filename,
-              contentBase64: pdfBase64,
-              contentType: "application/pdf",
-            },
-          ],
-        });
+        let emailSent = false;
+        let emailSkipped = false;
+
+        if (isPostmarkEmailConfigured()) {
+          await sendPostmarkEmail({
+            to,
+            subject,
+            textBody: message,
+            attachments: [
+              {
+                name: filename,
+                contentBase64: pdfBase64,
+                contentType: "application/pdf",
+              },
+            ],
+          });
+          emailSent = true;
+        } else {
+          emailSkipped = true;
+          console.warn(
+            "send_client_invoice.email_skipped",
+            "Postmark is not configured; marking invoice sent without email",
+          );
+        }
 
         const updated = await markClientInvoiceSent(
           supabaseAdmin,
@@ -103,9 +115,17 @@ Deno.serve(
           to,
         );
 
-        return new Response(JSON.stringify({ invoice: updated, sent: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            invoice: updated,
+            sent: true,
+            email_sent: emailSent,
+            email_skipped: emailSkipped,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       } catch (error) {
         console.error("send_client_invoice.error", error);
         return createErrorResponse(

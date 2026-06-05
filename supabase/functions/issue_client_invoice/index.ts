@@ -5,10 +5,14 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
-import { issueClientInvoiceFromInstallment } from "../_shared/clientInvoiceFlow.ts";
+import { issueClientInvoiceFromInstallment, issueClientInvoiceFromProposal } from "../_shared/clientInvoiceFlow.ts";
 
 type IssueBody = {
   installment_id?: number;
+  proposal_id?: number;
+  amount?: number;
+  due_date?: string;
+  description?: string;
 };
 
 Deno.serve(
@@ -36,20 +40,45 @@ Deno.serve(
         }
 
         const body = (await req.json()) as IssueBody;
-        const installmentId = Number(body.installment_id);
-        if (!Number.isFinite(installmentId)) {
-          return createErrorResponse(400, "Invalid installment_id");
+        const installmentId = body.installment_id
+          ? Number(body.installment_id)
+          : undefined;
+        const proposalId = body.proposal_id
+          ? Number(body.proposal_id)
+          : undefined;
+
+        if (installmentId && Number.isFinite(installmentId)) {
+          const invoice = await issueClientInvoiceFromInstallment(
+            supabaseAdmin,
+            member.org_id,
+            installmentId,
+          );
+          return new Response(JSON.stringify({ invoice }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
 
-        const invoice = await issueClientInvoiceFromInstallment(
-          supabaseAdmin,
-          member.org_id,
-          installmentId,
-        );
+        if (proposalId && Number.isFinite(proposalId)) {
+          const invoice = await issueClientInvoiceFromProposal(
+            supabaseAdmin,
+            member.org_id,
+            {
+              proposalId,
+              amount:
+                body.amount != null ? Number(body.amount) : undefined,
+              dueDate: body.due_date,
+              description: body.description,
+            },
+          );
+          return new Response(JSON.stringify({ invoice }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
-        return new Response(JSON.stringify({ invoice }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return createErrorResponse(
+          400,
+          "Provide installment_id or proposal_id",
+        );
       } catch (error) {
         console.error("issue_client_invoice.error", error);
         return createErrorResponse(

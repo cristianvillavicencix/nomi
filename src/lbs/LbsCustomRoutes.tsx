@@ -14,6 +14,8 @@ import { ShortUrlRedirect } from "@/lbs/forms-v2/public/ShortUrlRedirect";
 import { PublicProposalPage } from "@/lbs/proposals/public/PublicProposalPage";
 import { PublicProposalAcceptPageWithLocale } from "@/lbs/proposals/public/PublicProposalAcceptPage";
 import { ProposalShortUrlRedirect } from "@/lbs/proposals/public/ProposalShortUrlRedirect";
+import { PublicInvoicePage } from "@/lbs/billing/public/PublicInvoicePage";
+import { InvoiceShortUrlRedirect } from "@/lbs/billing/public/InvoiceShortUrlRedirect";
 import { PortalShortUrlRedirect } from "@/lbs/portal/PortalShortUrlRedirect";
 import { FormsListPage } from "@/lbs/forms-v2/FormsListPage";
 import { FormBuilderPage } from "@/lbs/forms-v2/builder/FormBuilderPage";
@@ -34,6 +36,9 @@ import { ProposalPreviewPage } from "@/lbs/proposals/document/ProposalPreviewPag
 import { ContractsList } from "@/lbs/contracts/ContractsList";
 import { ContractShow } from "@/lbs/contracts/ContractShow";
 import { ClientBillingPage } from "@/lbs/billing/ClientBillingPage";
+import { StandaloneInvoiceCreatePage } from "@/lbs/billing/StandaloneInvoiceCreatePage";
+import { StandaloneInvoiceShowPage } from "@/lbs/billing/StandaloneInvoiceShowPage";
+import { StandaloneInvoiceEditPage } from "@/lbs/billing/StandaloneInvoiceEditPage";
 import { TicketsList } from "@/lbs/tickets/TicketsList";
 import { TicketShow } from "@/lbs/tickets/TicketShow";
 import { lazy, Suspense } from "react";
@@ -62,6 +67,8 @@ export const renderLbsPublicFormRoute = () => (
   <>
     <Route path="/f/:shortCode" element={<ShortUrlRedirect />} />
     <Route path="/pr/:shortCode" element={<ProposalShortUrlRedirect />} />
+    <Route path="/iv/:shortCode" element={<InvoiceShortUrlRedirect />} />
+    <Route path="/invoice/:token" element={<PublicInvoicePage />} />
     <Route path="/proposal/:token" element={<PublicProposalPage />} />
     <Route
       path="/proposal/:token/accept"
@@ -298,6 +305,30 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="proposal_payment_installments" action="list">
             <ClientBillingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/billing/invoices/new"
+        element={
+          <ProtectedRoute resource="client_invoices" action="create">
+            <StandaloneInvoiceCreatePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/billing/invoices/:id/show"
+        element={
+          <ProtectedRoute resource="client_invoices" action="show">
+            <StandaloneInvoiceShowPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/billing/invoices/:id/edit"
+        element={
+          <ProtectedRoute resource="client_invoices" action="edit">
+            <StandaloneInvoiceEditPage />
           </ProtectedRoute>
         }
       />

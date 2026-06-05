@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { ProposalPageShell } from "@/lbs/proposals/ProposalPageShell";
 import { ProposalSendActions } from "@/lbs/proposals/ProposalSendActions";
+import { CreateClientInvoiceButton } from "@/lbs/billing/CreateClientInvoiceDialog";
 import type {
   Proposal,
   ProposalLineItem,
@@ -138,6 +139,10 @@ const ProposalShowContent = () => {
             resourceType="proposals"
             resourceId={record.id}
             orgId={record.org_id}
+          />
+          <CreateClientInvoiceButton
+            defaultProposalId={record.id}
+            onCreated={() => refresh()}
           />
           {canAccept ? (
             <Button onClick={() => acceptProposal()} disabled={isAccepting}>

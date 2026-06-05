@@ -589,29 +589,209 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     fakeAcceptProposal(baseDataProvider, id),
   sendProposal: async ({ id }: { id: Identifier }) =>
     fakeSendProposal(baseDataProvider, id),
-  issueClientInvoice: async ({ installmentId }: { installmentId: Identifier }) => {
-    const { data: installment } = await baseDataProvider.getOne(
-      "proposal_payment_installments",
-      { id: installmentId },
-    );
+  issueClientInvoice: async ({
+    installmentId,
+    proposalId,
+    amount,
+    dueDate,
+    description,
+  }: {
+    installmentId?: Identifier;
+    proposalId?: Identifier;
+    amount?: number;
+    dueDate?: string;
+    description?: string;
+  }) => {
+    if (installmentId != null) {
+      const { data: installment } = await baseDataProvider.getOne(
+        "proposal_payment_installments",
+        { id: installmentId },
+      );
+      const year = new Date().getFullYear();
+      const { data: invoice } = await baseDataProvider.create("client_invoices", {
+        data: {
+          org_id: 1,
+          invoice_number: `INV-${year}-0001`,
+          installment_id: installmentId,
+          proposal_id: installment.proposal_id,
+          issue_date: new Date().toISOString().slice(0, 10),
+          due_date: dueDate ?? installment.due_date,
+          amount: amount ?? installment.amount,
+          currency: "USD",
+          description: description ?? installment.label,
+          status: installment.status === "paid" ? "paid" : "draft",
+        },
+      });
+      return invoice;
+    }
+
+    if (proposalId == null) {
+      throw new Error("Missing proposal");
+    }
+
+    const { data: proposal } = await baseDataProvider.getOne("proposals", {
+      id: proposalId,
+    });
     const year = new Date().getFullYear();
     const { data: invoice } = await baseDataProvider.create("client_invoices", {
       data: {
         org_id: 1,
-        invoice_number: `INV-${year}-0001`,
-        installment_id: installmentId,
-        proposal_id: installment.proposal_id,
+        invoice_number: `INV-${year}-0002`,
+        proposal_id: proposalId,
+        company_id: proposal.company_id,
+        contact_id: proposal.contact_id,
         issue_date: new Date().toISOString().slice(0, 10),
-        due_date: installment.due_date,
-        amount: installment.amount,
-        currency: "USD",
-        description: installment.label,
-        status: installment.status === "paid" ? "paid" : "draft",
+        due_date: dueDate ?? new Date().toISOString().slice(0, 10),
+        amount:
+          amount ??
+          proposal.deposit_amount ??
+          proposal.amount ??
+          0,
+        currency: proposal.currency ?? "USD",
+        description:
+          description ??
+          `Invoice for ${proposal.title}`,
+        status: "draft",
       },
     });
     return invoice;
   },
-  sendClientInvoice: async () => ({ sent: true }),
+  createStandaloneClientInvoice: async (body) => {
+    const year = new Date().getFullYear();
+    const { data: invoice } = await baseDataProvider.create("client_invoices", {
+      data: {
+        org_id: 1,
+        invoice_number: `INV-${year}-0099`,
+        company_id: body.company_id,
+        contact_id: body.contact_id,
+        issue_date: body.issue_date ?? new Date().toISOString().slice(0, 10),
+        due_date: body.due_date,
+        subtotal: body.subtotal,
+        discount_amount: body.discount_amount ?? 0,
+        fee_amount: body.fee_amount ?? 0,
+        amount: body.amount,
+        terms: body.terms ?? "Net 30",
+        description: body.description,
+        notes: body.notes ?? null,
+        reference: body.reference ?? null,
+        recipient_email: body.recipient_email ?? null,
+        sales_person_id: body.sales_person_id ?? null,
+        save_card_for_future_charges: body.save_card_for_future_charges ?? false,
+        upfront_percent: body.upfront_percent ?? 100,
+        auto_charge_remainder: body.auto_charge_remainder ?? false,
+        remainder_schedule: body.remainder_schedule ?? null,
+        amount_paid: 0,
+        currency: "USD",
+        status: "draft",
+      },
+    });
+    await Promise.all(
+      body.line_items.map((line, index) =>
+        baseDataProvider.create("client_invoice_line_items", {
+          data: {
+            org_id: 1,
+            invoice_id: invoice.id,
+            description: line.description,
+            quantity: line.quantity,
+            unit: line.unit ?? "ea",
+            unit_price: line.unit_price,
+            line_total: line.quantity * line.unit_price,
+            package_id: line.package_id,
+            addon_id: line.addon_id,
+            sort_order: line.sort_order ?? index,
+          },
+        }),
+      ),
+    );
+    return invoice;
+  },
+  updateStandaloneClientInvoice: async (
+    invoiceId: Identifier,
+    body: Parameters<CrmDataProvider["createStandaloneClientInvoice"]>[0],
+  ) => {
+    const { data: invoice } = await baseDataProvider.update("client_invoices", {
+      id: invoiceId,
+      data: {
+        company_id: body.company_id,
+        contact_id: body.contact_id,
+        issue_date: body.issue_date,
+        due_date: body.due_date,
+        subtotal: body.subtotal,
+        discount_amount: body.discount_amount ?? 0,
+        fee_amount: body.fee_amount ?? 0,
+        amount: body.amount,
+        terms: body.terms ?? "Net 30",
+        description: body.description,
+        notes: body.notes ?? null,
+        sales_person_id: body.sales_person_id ?? null,
+        save_card_for_future_charges: body.save_card_for_future_charges ?? false,
+        upfront_percent: body.upfront_percent ?? 100,
+        auto_charge_remainder: body.auto_charge_remainder ?? false,
+        remainder_schedule: body.remainder_schedule ?? null,
+      },
+      previousData: { id: invoiceId },
+    });
+    const existing = await baseDataProvider.getList("client_invoice_line_items", {
+      filter: { "invoice_id@eq": invoiceId },
+      pagination: { page: 1, perPage: 500 },
+      sort: { field: "sort_order", order: "ASC" },
+    });
+    await Promise.all(
+      existing.data.map((row) =>
+        baseDataProvider.delete("client_invoice_line_items", {
+          id: row.id,
+          previousData: row,
+        }),
+      ),
+    );
+    await Promise.all(
+      body.line_items.map((line, index) =>
+        baseDataProvider.create("client_invoice_line_items", {
+          data: {
+            org_id: 1,
+            invoice_id: invoiceId,
+            description: line.description,
+            quantity: line.quantity,
+            unit: line.unit ?? "ea",
+            unit_price: line.unit_price,
+            line_total: line.quantity * line.unit_price,
+            package_id: line.package_id,
+            addon_id: line.addon_id,
+            sort_order: line.sort_order ?? index,
+          },
+        }),
+      ),
+    );
+    return invoice;
+  },
+  sendClientInvoice: async ({ invoiceId }) => ({
+    invoice: { id: invoiceId, status: "sent" },
+    sent: true,
+    email_skipped: true,
+  }),
+  scheduleClientInvoice: async ({ invoiceId, to, scheduledSendAt }) => ({
+    id: invoiceId,
+    recipient_email: to,
+    scheduled_send_at: scheduledSendAt,
+    status: "draft",
+  }),
+  manageClientInvoice: async ({ invoiceId, action }) => {
+    if (action === "delete") {
+      return { id: invoiceId, deleted: true };
+    }
+    if (action === "void") {
+      return { invoice: { id: invoiceId, status: "void" } };
+    }
+    return { invoice: { id: invoiceId, status: "sent" } };
+  },
+  shareClientInvoice: async ({ invoiceId }: { invoiceId: Identifier }) => ({
+    token: "demo-invoice-token",
+    short_code: "demoiv",
+    url: `${window.location.origin}/invoice/demo-invoice-token`,
+    short_url: `${window.location.origin}/iv/demoiv`,
+    expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+    invoice_id: Number(invoiceId),
+  }),
   upsertLbsClient: async (
     input: LbsClientUpsertInput,
   ): Promise<LbsClientUpsertResult> => {

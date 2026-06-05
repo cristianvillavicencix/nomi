@@ -38,13 +38,12 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { canAccess } from "../providers/commons/canAccess";
-import { hasMemberCapability } from "../providers/commons/memberModuleAccess";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
 import { isLbsMode } from "@/lbs/productMode";
-import { LBS_NAV_ITEMS, filterLbsNavItems } from "@/lbs/navigation";
+import { LbsSidebarNav } from "@/lbs/LbsSidebarNav";
 import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 import { WebsiteAuditBackgroundWatcher } from "@/lbs/website-monitor/audit/WebsiteAuditBackgroundWatcher";
@@ -179,9 +178,6 @@ const SidebarNavigation = () => {
   const { data: identity } = useGetIdentity();
   const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
   const { enabled: websiteMonitorEnabled } = useWebsiteMonitorEnabled(isLbsMode());
-  const lbsNavItems = filterLbsNavItems(LBS_NAV_ITEMS, {
-    websiteMonitorEnabled,
-  });
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
   const canViewSales = canAccess(identity as any, {
     action: "list",
@@ -270,35 +266,10 @@ const SidebarNavigation = () => {
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-            <SidebarMenu>
-              {lbsNavItems.filter((item) =>
-                item.capability
-                  ? hasMemberCapability(identity as any, item.capability)
-                  : item.resource
-                    ? canAccess(identity as any, {
-                        resource: item.resource,
-                        action: item.action ?? "list",
-                      })
-                    : true,
-              ).map((item) => {
-                const Icon = item.icon;
-                return (
-                  <SidebarItem
-                    key={item.to}
-                    to={item.to}
-                    label={item.label}
-                    icon={<Icon className="h-4 w-4" />}
-                    active={isActive(item.activePattern)}
-                    badgeCount={
-                      item.to === "/messages" ? messagesUnreadCount : 0
-                    }
-                  />
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
+          <LbsSidebarNav
+            websiteMonitorEnabled={websiteMonitorEnabled}
+            messagesUnreadCount={messagesUnreadCount}
+          />
         </SidebarContent>
         <SidebarFooter className="p-2 group-data-[collapsible=icon]:p-1">
           <SidebarFooterControls />

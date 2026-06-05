@@ -12,6 +12,7 @@ import {
   syncInstallmentsToDealPayments,
   syncRecurringToRetainers,
 } from "../_shared/proposalFlow.ts";
+import { autoIssueInvoiceOnProposalAccept } from "../_shared/clientInvoiceFlow.ts";
 
 type AcceptProposalBody = {
   proposal_id: number;
@@ -132,6 +133,13 @@ const acceptProposalCore = async (
     proposal.org_id,
     dealId,
     proposal.recurring_summary,
+  );
+
+  await autoIssueInvoiceOnProposalAccept(
+    supabaseAdmin,
+    proposal.org_id,
+    proposalId,
+    installments ?? [],
   );
 
   if (proposal.contact_id) {

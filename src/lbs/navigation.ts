@@ -27,6 +27,13 @@ export type LbsNavItem = {
   action?: string;
 };
 
+export type LbsNavGroup = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  items: LbsNavItem[];
+};
+
 export const filterLbsNavItems = (
   items: LbsNavItem[],
   options?: { websiteMonitorEnabled?: boolean },
@@ -39,7 +46,19 @@ export const filterLbsNavItems = (
       ),
   );
 
-export const LBS_NAV_ITEMS: LbsNavItem[] = [
+export const filterLbsNavGroups = (
+  groups: LbsNavGroup[],
+  options?: { websiteMonitorEnabled?: boolean },
+): LbsNavGroup[] =>
+  groups
+    .map((group) => ({
+      ...group,
+      items: filterLbsNavItems(group.items, options),
+    }))
+    .filter((group) => group.items.length > 0);
+
+/** Top-level links rendered outside collapsible groups. */
+export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   {
     to: "/",
     label: "Dashboard",
@@ -49,134 +68,168 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
     resource: "deals",
     action: "list",
   },
+];
+
+export const LBS_NAV_GROUPS: LbsNavGroup[] = [
   {
-    to: "/leads",
-    label: "Leads",
-    icon: UserPlus,
-    activePattern: "/leads/*",
-    capability: "crm.contacts.view",
-    resource: "contacts",
-    action: "list",
-  },
-  {
-    to: "/clients",
-    label: "Clients",
-    icon: Building2,
-    activePattern: "/clients/*",
-    capability: "crm.companies.view",
-    resource: "companies",
-    action: "list",
-  },
-  {
-    to: "/web-monitor",
-    label: "Web Monitor",
-    icon: Globe,
-    activePattern: "/web-monitor/*",
-    capability: "crm.companies.view",
-    resource: "monitored_websites",
-    action: "list",
-  },
-  {
-    to: "/deals",
-    label: "Deals",
+    id: "sales",
+    label: "Sales",
     icon: Briefcase,
-    activePattern: "/deals/*",
-    capability: "crm.pipeline.view",
-    resource: "deals",
-    action: "list",
+    items: [
+      {
+        to: "/leads",
+        label: "Leads",
+        icon: UserPlus,
+        activePattern: "/leads/*",
+        capability: "crm.contacts.view",
+        resource: "contacts",
+        action: "list",
+      },
+      {
+        to: "/clients",
+        label: "Clients",
+        icon: Building2,
+        activePattern: "/clients/*",
+        capability: "crm.companies.view",
+        resource: "companies",
+        action: "list",
+      },
+      {
+        to: "/deals",
+        label: "Deals",
+        icon: Briefcase,
+        activePattern: "/deals/*",
+        capability: "crm.pipeline.view",
+        resource: "deals",
+        action: "list",
+      },
+      {
+        to: "/proposals",
+        label: "Proposals",
+        icon: FileText,
+        activePattern: "/proposals/*",
+        capability: "proposals.view",
+        resource: "proposals",
+        action: "list",
+      },
+      {
+        to: "/contracts",
+        label: "Contracts",
+        icon: FileSignature,
+        activePattern: "/contracts/*",
+        capability: "contracts.view",
+        resource: "contracts",
+        action: "list",
+      },
+      {
+        to: "/billing",
+        label: "Billing",
+        icon: Receipt,
+        activePattern: "/billing/*",
+        capability: "proposals.view",
+        resource: "proposal_payment_installments",
+        action: "list",
+      },
+    ],
   },
   {
-    to: "/calendar",
-    label: "Calendar",
-    icon: CalendarDays,
-    activePattern: "/calendar/*",
-    capability: "calendar.view",
-    resource: "calendar_events",
-    action: "list",
-  },
-  {
-    to: "/meetings",
-    label: "Meetings",
-    icon: Video,
-    activePattern: "/meetings/*",
-    capability: "meetings.view",
-    resource: "tasks",
-    action: "list",
-  },
-  {
-    to: "/messages",
-    label: "Messages",
-    icon: MessageSquare,
-    activePattern: "/messages/*",
-    capability: "messaging.conversations.view",
-    resource: "conversations",
-    action: "list",
-  },
-  {
-    to: "/tasks",
-    label: "Tasks",
+    id: "work",
+    label: "Work",
     icon: ListChecks,
-    activePattern: "/tasks/*",
-    capability: "crm.tasks.view",
-    resource: "tasks",
-    action: "list",
+    items: [
+      {
+        to: "/tasks",
+        label: "Tasks",
+        icon: ListChecks,
+        activePattern: "/tasks/*",
+        capability: "crm.tasks.view",
+        resource: "tasks",
+        action: "list",
+      },
+      {
+        to: "/calendar",
+        label: "Calendar",
+        icon: CalendarDays,
+        activePattern: "/calendar/*",
+        capability: "calendar.view",
+        resource: "calendar_events",
+        action: "list",
+      },
+      {
+        to: "/meetings",
+        label: "Meetings",
+        icon: Video,
+        activePattern: "/meetings/*",
+        capability: "meetings.view",
+        resource: "tasks",
+        action: "list",
+      },
+      {
+        to: "/messages",
+        label: "Messages",
+        icon: MessageSquare,
+        activePattern: "/messages/*",
+        capability: "messaging.conversations.view",
+        resource: "conversations",
+        action: "list",
+      },
+    ],
   },
   {
-    to: "/proposals",
-    label: "Proposals",
-    icon: FileText,
-    activePattern: "/proposals/*",
-    capability: "proposals.view",
-    resource: "proposals",
-    action: "list",
+    id: "monitoring",
+    label: "Monitoring",
+    icon: Globe,
+    items: [
+      {
+        to: "/web-monitor",
+        label: "Web Monitor",
+        icon: Globe,
+        activePattern: "/web-monitor/*",
+        capability: "crm.companies.view",
+        resource: "monitored_websites",
+        action: "list",
+      },
+    ],
   },
   {
-    to: "/contracts",
-    label: "Contracts",
-    icon: FileSignature,
-    activePattern: "/contracts/*",
-    capability: "contracts.view",
-    resource: "contracts",
-    action: "list",
-  },
-  {
-    to: "/billing",
-    label: "Billing",
-    icon: Receipt,
-    activePattern: "/billing/*",
-    capability: "proposals.view",
-    resource: "proposal_payment_installments",
-    action: "list",
-  },
-  {
-    to: "/forms-v2",
-    label: "Forms",
-    icon: FormInput,
-    activePattern: "/forms-v2/*",
-    capability: "forms.manage",
-    resource: "forms",
-    action: "list",
+    id: "settings",
+    label: "Settings",
+    icon: Settings,
+    items: [
+      {
+        to: "/settings",
+        label: "General",
+        icon: Settings,
+        activePattern: "/settings/*",
+        resource: "organization_members",
+        action: "list",
+      },
+      {
+        to: "/forms-v2",
+        label: "Forms",
+        icon: FormInput,
+        activePattern: "/forms-v2/*",
+        capability: "forms.manage",
+        resource: "forms",
+        action: "list",
+      },
+      {
+        to: "/tickets",
+        label: "Tickets",
+        icon: Ticket,
+        activePattern: "/tickets/*",
+        capability: "support.tickets.view",
+        resource: "tickets",
+        action: "list",
+      },
+    ],
   },
 ];
 
-export const LBS_USER_MENU_NAV_ITEMS: LbsNavItem[] = [
-  {
-    to: "/tickets",
-    label: "Tickets",
-    icon: Ticket,
-    activePattern: "/tickets/*",
-    capability: "support.tickets.view",
-    resource: "tickets",
-    action: "list",
-  },
-  {
-    to: "/settings",
-    label: "Settings",
-    icon: Settings,
-    activePattern: "/settings/*",
-    resource: "organization_members",
-    action: "list",
-  },
+/** Flat list for top navigation and legacy callers. */
+export const LBS_NAV_ITEMS: LbsNavItem[] = [
+  ...LBS_NAV_STANDALONE,
+  ...LBS_NAV_GROUPS.flatMap((group) => group.items),
 ];
 
 export const LBS_PLACEHOLDER_MODULES = {
