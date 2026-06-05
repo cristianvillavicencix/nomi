@@ -1096,6 +1096,10 @@
           "type": "registry:hook"
         },
         {
+          "path": "src/hooks/useStateFormDraft.ts",
+          "type": "registry:hook"
+        },
+        {
           "path": "src/hooks/useBulkExport.tsx",
           "type": "registry:hook"
         },
