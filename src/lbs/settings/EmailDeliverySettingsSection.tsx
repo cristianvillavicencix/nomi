@@ -101,7 +101,7 @@ export const EmailDeliverySettingsSection = () => {
   }
 
   const providerLabel =
-    data?.provider === "twilio" ? "Twilio SendGrid" : "Not configured";
+    data?.provider === "twilio" ? "Twilio Email" : "Not configured";
 
   return (
     <Card>
@@ -112,18 +112,19 @@ export const EmailDeliverySettingsSection = () => {
         </CardTitle>
         <CardDescription>
           Outbound email for invoices, portal verification codes, and web audit
-          reports. Uses Twilio SendGrid (same Twilio account as SMS). API keys
-          are configured on the server.
+          reports. Uses Twilio Email (same account as SMS). Server credentials
+          are configured on Supabase.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!data?.configured ? (
           <Alert>
             <AlertDescription>
-              Set <code className="text-xs">TWILIO_SENDGRID_API_KEY</code> and{" "}
-              <code className="text-xs">TWILIO_SENDGRID_FROM_EMAIL</code> in
-              Supabase Edge Function secrets. Create the API key in Twilio
-              Console → Email → SendGrid.
+              Set <code className="text-xs">TWILIO_ACCOUNT_SID</code>,{" "}
+              <code className="text-xs">TWILIO_AUTH_TOKEN</code>, and{" "}
+              <code className="text-xs">TWILIO_EMAIL_FROM</code> in Supabase Edge
+              Function secrets. Use the same Twilio account as SMS (Console →
+              Account Info).
             </AlertDescription>
           </Alert>
         ) : null}

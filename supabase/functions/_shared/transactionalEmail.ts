@@ -4,13 +4,14 @@ export type EmailAttachment = {
   contentType: string;
 };
 
-const getTwilioSendGridApiKey = () =>
-  Deno.env.get("TWILIO_SENDGRID_API_KEY")?.trim() ??
-  Deno.env.get("SENDGRID_API_KEY")?.trim();
+const getTwilioAccountSid = () =>
+  Deno.env.get("TWILIO_ACCOUNT_SID")?.trim();
 
-const getTwilioSendGridFromEmail = () =>
-  Deno.env.get("TWILIO_SENDGRID_FROM_EMAIL")?.trim() ??
-  Deno.env.get("SENDGRID_FROM_EMAIL")?.trim();
+const getTwilioAuthToken = () => Deno.env.get("TWILIO_AUTH_TOKEN")?.trim();
+
+const getTwilioEmailFrom = () =>
+  Deno.env.get("TWILIO_EMAIL_FROM")?.trim() ??
+  Deno.env.get("TWILIO_SENDGRID_FROM_EMAIL")?.trim();
 
 const isSkipFlagOn = (value: string | undefined) => {
   const flag = value?.trim().toLowerCase();
@@ -25,14 +26,15 @@ export type TransactionalEmailProvider = "twilio";
 
 export const getAvailableTransactionalEmailProviders =
   (): TransactionalEmailProvider[] =>
-    getTwilioSendGridApiKey() && getTwilioSendGridFromEmail() ? ["twilio"] : [];
+    getTwilioAccountSid() && getTwilioAuthToken() && getTwilioEmailFrom()
+      ? ["twilio"]
+      : [];
 
 export const getTransactionalEmailProvider = ():
   | TransactionalEmailProvider
   | null => getAvailableTransactionalEmailProviders()[0] ?? null;
 
-export const getTransactionalFromEmail = () =>
-  getTwilioSendGridFromEmail() ?? null;
+export const getTransactionalFromEmail = () => getTwilioEmailFrom() ?? null;
 
 export const isTransactionalEmailConfigured = () =>
   Boolean(getTransactionalEmailProvider());
@@ -51,9 +53,9 @@ const parseEmailAddress = (value: string) => {
   const angle = trimmed.match(/^(.+?)\s*<([^>]+)>$/);
   if (angle) {
     const name = angle[1].replace(/^["']|["']$/g, "").trim();
-    return { email: angle[2].trim(), name: name || undefined };
+    return { email: angle[2].trim(), name: name || "Nomi CRM" };
   }
-  return { email: trimmed };
+  return { email: trimmed, name: "Nomi CRM" };
 };
 
 const formatEmailSendFailure = (message: string) => {
@@ -61,19 +63,20 @@ const formatEmailSendFailure = (message: string) => {
 
   if (
     lower.includes("verified") ||
-    lower.includes("sender identity") ||
-    lower.includes("from address")
+    lower.includes("sender") ||
+    lower.includes("domain") ||
+    lower.includes("authenticate")
   ) {
     return (
-      "Twilio SendGrid sender is not verified. In Twilio Console → Email, verify your domain " +
-      "and set TWILIO_SENDGRID_FROM_EMAIL on Supabase to a verified address (e.g. billing@lbs.bz)."
+      "Twilio Email sender is not verified. In Twilio Console → Email, authenticate your domain " +
+      "(e.g. lbs.bz) and set TWILIO_EMAIL_FROM on Supabase to a verified address."
     );
   }
 
   return message;
 };
 
-async function sendViaTwilioSendGrid(params: {
+async function sendViaTwilioEmail(params: {
   to: string;
   subject: string;
   textBody: string;
@@ -81,53 +84,50 @@ async function sendViaTwilioSendGrid(params: {
   replyTo?: string | null;
   attachments?: EmailAttachment[];
 }) {
-  const apiKey = getTwilioSendGridApiKey();
-  const fromRaw = getTwilioSendGridFromEmail();
-  if (!apiKey || !fromRaw) {
+  const accountSid = getTwilioAccountSid();
+  const authToken = getTwilioAuthToken();
+  const fromRaw = getTwilioEmailFrom();
+  if (!accountSid || !authToken || !fromRaw) {
     throw new Error(
-      "Twilio SendGrid is not configured (TWILIO_SENDGRID_API_KEY / TWILIO_SENDGRID_FROM_EMAIL).",
+      "Twilio Email is not configured (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_EMAIL_FROM).",
     );
   }
 
   const from = parseEmailAddress(fromRaw);
   const body: Record<string, unknown> = {
-    personalizations: [
-      {
-        to: [{ email: params.to }],
-      },
-    ],
     from: {
-      email: from.email,
-      ...(from.name ? { name: from.name } : {}),
+      address: from.email,
+      name: from.name,
     },
-    subject: params.subject,
-    content: [
-      { type: "text/plain", value: params.textBody },
-      { type: "text/html", value: params.htmlBody },
-    ],
+    to: [{ address: params.to }],
+    content: {
+      subject: params.subject,
+      text: params.textBody,
+      html: params.htmlBody,
+    },
   };
 
   if (params.replyTo?.trim()) {
     const replyTo = parseEmailAddress(params.replyTo);
-    body.reply_to = {
-      email: replyTo.email,
+    body.replyTo = {
+      address: replyTo.email,
       ...(replyTo.name ? { name: replyTo.name } : {}),
     };
   }
 
   if (params.attachments?.length) {
     body.attachments = params.attachments.map((file) => ({
-      content: file.contentBase64,
       filename: file.name,
-      type: file.contentType,
-      disposition: "attachment",
+      contentType: file.contentType,
+      content: file.contentBase64,
     }));
   }
 
-  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+  const credentials = btoa(`${accountSid}:${authToken}`);
+  const res = await fetch("https://comms.twilio.com/v1/Emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Basic ${credentials}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -137,7 +137,7 @@ async function sendViaTwilioSendGrid(params: {
     const text = await res.text().catch(() => "");
     throw new Error(
       formatEmailSendFailure(
-        `Could not send email via Twilio SendGrid (${res.status}) ${text}`,
+        `Could not send email via Twilio Email (${res.status}) ${text}`,
       ),
     );
   }
@@ -162,11 +162,11 @@ export async function sendTransactionalEmail(params: {
 
   if (!isTransactionalEmailConfigured()) {
     throw new Error(
-      "Email is not configured. Set TWILIO_SENDGRID_API_KEY and TWILIO_SENDGRID_FROM_EMAIL on Supabase.",
+      "Email is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_EMAIL_FROM on Supabase.",
     );
   }
 
   const htmlBody = textToHtml(params.textBody);
-  const result = await sendViaTwilioSendGrid({ ...params, htmlBody });
+  const result = await sendViaTwilioEmail({ ...params, htmlBody });
   return { skipped: false as const, ...result };
 }
