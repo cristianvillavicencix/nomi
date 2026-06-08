@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
+import { sendTransactionalEmail } from "../_shared/transactionalEmail.ts";
 
 type ClientPortalCredentialsBody = {
   token?: string;
@@ -23,9 +24,6 @@ const SENSITIVE_SESSION_TTL_MS = 5 * 60 * 1000;
 const SENSITIVE_CODE_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 8;
 
-const getPostmarkServerToken = () => Deno.env.get("POSTMARK_SERVER_TOKEN")?.trim();
-const getPostmarkFromEmail = () => Deno.env.get("POSTMARK_FROM_EMAIL")?.trim();
-
 const generateOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
 const sha256Hex = async (value: string) => {
@@ -37,31 +35,11 @@ const sha256Hex = async (value: string) => {
 };
 
 const sendOtpEmail = async (to: string, code: string) => {
-  const token = getPostmarkServerToken();
-  const from = getPostmarkFromEmail();
-  if (!token || !from) {
-    throw new Error("Email provider is not configured");
-  }
-
-  const res = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": token,
-    },
-    body: JSON.stringify({
-      From: from,
-      To: to,
-      Subject: "Your Nomi verification code",
-      TextBody: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
-    }),
+  await sendTransactionalEmail({
+    to,
+    subject: "Your Nomi verification code",
+    textBody: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
   });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Failed to send verification email (${res.status}) ${text}`);
-  }
 };
 
 const getPgcryptoKey = () => {

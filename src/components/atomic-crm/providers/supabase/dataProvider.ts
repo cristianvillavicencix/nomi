@@ -2031,6 +2031,64 @@ const dataProviderWithCustomMethods = {
     }
     return data;
   },
+  async getEmailDeliverySettings() {
+    const fallback: import("@/lbs/settings/EmailDeliverySettingsSection").EmailDeliverySettings =
+      {
+        configured: false,
+        provider: null,
+        from_email: null,
+        reply_to: null,
+        org_name: null,
+      };
+
+    const { data, error } = await invokeEdgeFunction<
+      import("@/lbs/settings/EmailDeliverySettingsSection").EmailDeliverySettings
+    >("email_settings", {
+      method: "POST",
+      body: { action: "get" },
+    });
+    if (error || !data) {
+      console.warn("getEmailDeliverySettings.error", error);
+      return fallback;
+    }
+    return data;
+  },
+  async updateEmailDeliverySettings(params: { reply_to?: string | null }) {
+    const { data, error } = await invokeEdgeFunction<
+      import("@/lbs/settings/EmailDeliverySettingsSection").EmailDeliverySettings
+    >("email_settings", {
+      method: "POST",
+      body: { action: "update", ...params },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to save email settings",
+      );
+    }
+    if (!data) {
+      throw new Error("Failed to save email settings");
+    }
+    return data;
+  },
+  async sendTestTransactionalEmail(testEmail: string) {
+    const { data, error } = await invokeEdgeFunction<{ ok: boolean }>(
+      "email_settings",
+      {
+        method: "POST",
+        body: { action: "test", test_email: testEmail },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to send test email",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Failed to send test email");
+    }
+    return data;
+  },
   async sendTestSms(testPhone: string) {
     const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
       "messaging_settings",

@@ -15,6 +15,7 @@ import { InvoiceShareLinkDialog } from "@/lbs/billing/InvoiceShareLinkDialog";
 import {
   canDeleteClientInvoice,
   canMarkClientInvoiceSent,
+  canSendClientInvoice,
   canVoidClientInvoice,
   resolveInvoiceRecipientEmail,
 } from "@/lbs/billing/billingUtils";
@@ -139,7 +140,7 @@ export const SendInvoiceDialog = ({
     onSuccess: (result) => {
       if (result.email_skipped) {
         notify(
-          "Invoice marked as sent. Email is not configured — use Share to send the portal link.",
+          "Invoice marked as sent. Email is not configured (Resend) — use Share to send the portal link.",
           { type: "warning" },
         );
       } else {
@@ -161,7 +162,7 @@ export const SendInvoiceDialog = ({
         <DialogHeader>
           <DialogTitle>Send invoice {invoice.invoice_number}</DialogTitle>
           <DialogDescription>
-            Email the PDF invoice to your client via Postmark.
+            Email the PDF invoice to your client.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -229,6 +230,7 @@ export const InvoiceRowActions = ({
   const [downloading, setDownloading] = useState(false);
   const { organizationAddress, companyWebsite } = useOrganizationAddress();
 
+  const showSend = canSendClientInvoice(invoice);
   const showMarkSent = canMarkClientInvoiceSent(invoice);
   const showVoid = canVoidClientInvoice(invoice);
   const showDelete = canDeleteClientInvoice(invoice);
@@ -352,7 +354,7 @@ export const InvoiceRowActions = ({
         type="button"
         size="sm"
         variant="outline"
-        disabled={invoice.status === "void" || shareMutation.isPending}
+        disabled={!showSend || shareMutation.isPending}
         onClick={() => shareMutation.mutate()}
       >
         {shareMutation.isPending ? (
@@ -362,16 +364,17 @@ export const InvoiceRowActions = ({
         )}
         Share
       </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={invoice.status === "void"}
-        onClick={() => setSendOpen(true)}
-      >
-        <Mail className="size-3.5" />
-        Send
-      </Button>
+      {showSend ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setSendOpen(true)}
+        >
+          <Mail className="size-3.5" />
+          Send
+        </Button>
+      ) : null}
       {showMarkSent ? (
         <Button
           type="button"

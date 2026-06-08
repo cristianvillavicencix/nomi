@@ -4,7 +4,10 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { isAuthorizedClientBillingCron } from "../_shared/clientProposalBilling.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { markClientInvoiceSent } from "../_shared/clientInvoiceFlow.ts";
-import { sendPostmarkEmail } from "../_shared/postmarkEmail.ts";
+import {
+  isTransactionalEmailConfigured,
+  sendTransactionalEmail,
+} from "../_shared/transactionalEmail.ts";
 
 const bytesToBase64 = (bytes: Uint8Array) => {
   let binary = "";
@@ -25,6 +28,19 @@ Deno.serve(
     }
 
     try {
+      if (!isTransactionalEmailConfigured()) {
+        return new Response(
+          JSON.stringify({
+            processed: 0,
+            sent: 0,
+            failed: 0,
+            skipped: true,
+            reason: "Transactional email is not configured",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       const now = new Date().toISOString();
       const { data: dueRows, error: listError } = await supabaseAdmin
         .from("client_invoices")
@@ -73,7 +89,7 @@ Deno.serve(
 
           const { data: org } = await supabaseAdmin
             .from("organizations")
-            .select("name")
+            .select("name, email")
             .eq("id", row.org_id)
             .maybeSingle();
 
@@ -82,10 +98,11 @@ Deno.serve(
             row.scheduled_send_message?.trim() ||
             `Please find attached invoice ${row.invoice_number} for ${row.description} (${row.currency} ${row.amount}).\n\nThank you for your business.`;
 
-          await sendPostmarkEmail({
+          await sendTransactionalEmail({
             to,
             subject,
             textBody: message,
+            replyTo: org?.email?.trim() ?? null,
             attachments: [
               {
                 name: `${row.invoice_number}.pdf`,

@@ -6,7 +6,10 @@ import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { markClientInvoiceSent } from "../_shared/clientInvoiceFlow.ts";
-import { sendPostmarkEmail, isPostmarkEmailConfigured } from "../_shared/postmarkEmail.ts";
+import {
+  isTransactionalEmailConfigured,
+  sendTransactionalEmail,
+} from "../_shared/transactionalEmail.ts";
 
 type SendBody = {
   invoice_id?: number;
@@ -58,7 +61,7 @@ Deno.serve(
 
         const { data: invoice } = await supabaseAdmin
           .from("client_invoices")
-          .select("id, invoice_number, amount, currency, description, org_id")
+          .select("id, invoice_number, amount, currency, description, org_id, status")
           .eq("id", invoiceId)
           .eq("org_id", member.org_id)
           .maybeSingle();
@@ -67,9 +70,16 @@ Deno.serve(
           return createErrorResponse(404, "Invoice not found");
         }
 
+        if (invoice.status === "paid" || invoice.status === "void") {
+          return createErrorResponse(
+            400,
+            "Paid or void invoices cannot be sent",
+          );
+        }
+
         const { data: org } = await supabaseAdmin
           .from("organizations")
-          .select("name")
+          .select("name, email")
           .eq("id", member.org_id)
           .maybeSingle();
 
@@ -86,11 +96,12 @@ Deno.serve(
         let emailSent = false;
         let emailSkipped = false;
 
-        if (isPostmarkEmailConfigured()) {
-          await sendPostmarkEmail({
+        if (isTransactionalEmailConfigured()) {
+          await sendTransactionalEmail({
             to,
             subject,
             textBody: message,
+            replyTo: org?.email?.trim() ?? null,
             attachments: [
               {
                 name: filename,
@@ -104,7 +115,7 @@ Deno.serve(
           emailSkipped = true;
           console.warn(
             "send_client_invoice.email_skipped",
-            "Postmark is not configured; marking invoice sent without email",
+            "Transactional email is not configured; marking invoice sent without email",
           );
         }
 

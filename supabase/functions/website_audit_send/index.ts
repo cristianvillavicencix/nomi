@@ -4,6 +4,7 @@ import { UserMiddleware } from "../_shared/authentication.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { sendTransactionalEmail } from "../_shared/transactionalEmail.ts";
 
 type SendBody = {
   audit_id?: number;
@@ -14,61 +15,7 @@ type SendBody = {
   filename?: string;
 };
 
-const getPostmarkServerToken = () =>
-  Deno.env.get("POSTMARK_SERVER_TOKEN")?.trim();
-const getPostmarkFromEmail = () => Deno.env.get("POSTMARK_FROM_EMAIL")?.trim();
-
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const sendReportEmail = async (params: {
-  to: string;
-  subject: string;
-  message: string;
-  pdfBase64: string;
-  filename: string;
-}) => {
-  const token = getPostmarkServerToken();
-  const from = getPostmarkFromEmail();
-  if (!token || !from) {
-    throw new Error(
-      "El envío por correo no está configurado (POSTMARK_SERVER_TOKEN / POSTMARK_FROM_EMAIL).",
-    );
-  }
-
-  const htmlBody = params.message
-    .split("\n")
-    .map((line) => `<p>${line.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`)
-    .join("");
-
-  const res = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": token,
-    },
-    body: JSON.stringify({
-      From: from,
-      To: params.to,
-      Subject: params.subject,
-      TextBody: params.message,
-      HtmlBody: htmlBody,
-      Attachments: [
-        {
-          Name: params.filename,
-          Content: params.pdfBase64,
-          ContentType: "application/pdf",
-          ContentID: null,
-        },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`No se pudo enviar el correo (${res.status}) ${text}`);
-  }
-};
 
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {
@@ -94,22 +41,22 @@ Deno.serve((req: Request) =>
         const subject = payload.subject?.trim() ?? "";
         const message = payload.message?.trim() ?? "";
         const pdfBase64 = payload.pdf_base64?.trim() ?? "";
-        const filename = payload.filename?.trim() || "reporte-web.pdf";
+        const filename = payload.filename?.trim() || "web-report.pdf";
 
         if (!Number.isFinite(auditId)) {
-          throw new Error("audit_id inválido");
+          throw new Error("Invalid audit_id");
         }
         if (!emailRegex.test(to)) {
-          throw new Error("Correo del cliente inválido");
+          throw new Error("Invalid recipient email");
         }
         if (!subject) {
-          throw new Error("El asunto es obligatorio");
+          throw new Error("Subject is required");
         }
         if (!message) {
-          throw new Error("El mensaje es obligatorio");
+          throw new Error("Message is required");
         }
         if (!pdfBase64) {
-          throw new Error("Falta el PDF adjunto");
+          throw new Error("PDF attachment is required");
         }
 
         const { data: audit, error: auditError } = await supabaseAdmin
@@ -119,21 +66,33 @@ Deno.serve((req: Request) =>
           .maybeSingle();
 
         if (auditError || !audit) {
-          throw new Error("Reporte no encontrado");
+          throw new Error("Report not found");
         }
         if (Number(audit.org_id) !== orgId) {
           return createErrorResponse(403, "Forbidden");
         }
         if (audit.status !== "done") {
-          throw new Error("Solo se pueden enviar reportes completados");
+          throw new Error("Only completed reports can be emailed");
         }
 
-        await sendReportEmail({
+        const { data: org } = await supabaseAdmin
+          .from("organizations")
+          .select("email")
+          .eq("id", orgId)
+          .maybeSingle();
+
+        await sendTransactionalEmail({
           to,
           subject,
-          message,
-          pdfBase64,
-          filename,
+          textBody: message,
+          replyTo: org?.email?.trim() ?? null,
+          attachments: [
+            {
+              name: filename,
+              contentBase64: pdfBase64,
+              contentType: "application/pdf",
+            },
+          ],
         });
 
         return new Response(JSON.stringify({ ok: true }), {

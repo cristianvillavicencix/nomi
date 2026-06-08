@@ -74,6 +74,8 @@ export const isAuthorizedClientBillingCron = (req: Request) => {
   return false;
 };
 
+type ContactEmailRow = { email?: string; isPrimary?: boolean };
+
 export async function resolveContactEmail(
   supabase: SupabaseClient,
   contactId: number | null | undefined,
@@ -81,10 +83,109 @@ export async function resolveContactEmail(
   if (!contactId) return null;
   const { data } = await supabase
     .from("contacts")
-    .select("email")
+    .select("email_jsonb")
     .eq("id", contactId)
     .maybeSingle();
-  return data?.email?.trim() || null;
+
+  const emails = data?.email_jsonb as ContactEmailRow[] | null;
+  return (
+    emails?.find((row) => row.isPrimary)?.email?.trim() ??
+    emails?.find((row) => row.email?.trim())?.email?.trim() ??
+    null
+  );
+}
+
+/** Stripe customer for standalone client invoices (no contract). */
+export async function resolveOrCreateInvoiceStripeCustomer(
+  stripe: Stripe,
+  params: {
+    email: string;
+    name?: string;
+    orgId: number;
+    contactId?: number | null;
+    companyId?: number | null;
+    existingPaymentIntentId?: string | null;
+  },
+) {
+  if (params.existingPaymentIntentId) {
+    try {
+      const intent = await stripe.paymentIntents.retrieve(
+        params.existingPaymentIntentId,
+      );
+      const customerId =
+        typeof intent.customer === "string" ? intent.customer : intent.customer?.id;
+      if (customerId) {
+        const customer = await stripe.customers.retrieve(customerId);
+        if (!("deleted" in customer && customer.deleted)) {
+          return customer as Stripe.Customer;
+        }
+      }
+    } catch {
+      /* create a new customer below */
+    }
+  }
+
+  return stripe.customers.create({
+    email: params.email,
+    name: params.name,
+    metadata: {
+      org_id: String(params.orgId),
+      contact_id: params.contactId ? String(params.contactId) : "",
+      company_id: params.companyId ? String(params.companyId) : "",
+      source: "nomi_client_invoice",
+    },
+  });
+}
+
+export async function applyClientInvoicePaymentFromStripe(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    invoiceId: number;
+    stripePaymentIntentId: string;
+    amountCents: number;
+  },
+) {
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select(
+      "id, org_id, amount, amount_paid, status, upfront_percent, auto_charge_remainder, save_card_for_future_charges",
+    )
+    .eq("id", params.invoiceId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!invoice?.id || invoice.status === "void" || invoice.status === "paid") {
+    return { handled: false, skipped: true };
+  }
+
+  if (invoice.stripe_payment_intent_id === params.stripePaymentIntentId) {
+    return { handled: true, skipped: true, duplicate: true };
+  }
+
+  const total = Number(invoice.amount) || 0;
+  const paid = Number(invoice.amount_paid) || 0;
+  const chargeAmount = Math.round(params.amountCents) / 100;
+  const newPaid = Math.round((paid + chargeAmount) * 100) / 100;
+  const isPaidInFull = newPaid >= total - 0.01;
+  const now = new Date().toISOString();
+
+  const { data: updated } = await supabase
+    .from("client_invoices")
+    .update({
+      amount_paid: newPaid,
+      status: isPaidInFull ? "paid" : "sent",
+      paid_at: isPaidInFull ? now : null,
+      sent_at: invoice.status === "draft" ? now : undefined,
+      stripe_payment_intent_id: params.stripePaymentIntentId,
+      updated_at: now,
+    })
+    .eq("id", invoice.id)
+    .eq("org_id", params.orgId)
+    .select("*")
+    .single();
+
+  return { handled: true, invoice: updated, paid_in_full: isPaidInFull };
 }
 
 export async function findDepositInstallment(
@@ -316,9 +417,24 @@ export async function processPaymentIntentSucceeded(
   supabase: SupabaseClient,
   paymentIntent: {
     id: string;
+    amount?: number;
     metadata: Record<string, string> | null;
   },
 ) {
+  if (paymentIntent.metadata?.type === "client_invoice") {
+    const orgId = Number(paymentIntent.metadata.org_id);
+    const invoiceId = Number(paymentIntent.metadata.invoice_id);
+    if (!Number.isFinite(orgId) || !Number.isFinite(invoiceId)) {
+      return { handled: false, error: "Invalid invoice metadata" };
+    }
+    return applyClientInvoicePaymentFromStripe(supabase, {
+      orgId,
+      invoiceId,
+      stripePaymentIntentId: paymentIntent.id,
+      amountCents: paymentIntent.amount ?? 0,
+    });
+  }
+
   if (!isClientPaymentMetadata(paymentIntent.metadata)) {
     return { handled: false };
   }

@@ -58,7 +58,11 @@ Deno.serve(async (req: Request) => {
       } | null;
     };
 
-    if (!isClientPaymentMetadata(object.metadata ?? undefined)) {
+    const metadata = object.metadata ?? undefined;
+    const isInvoicePayment = metadata?.type === "client_invoice";
+    const isProposalPayment = isClientPaymentMetadata(metadata);
+
+    if (!isInvoicePayment && !isProposalPayment) {
       return new Response(JSON.stringify({ received: true, ignored: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -68,6 +72,7 @@ Deno.serve(async (req: Request) => {
       case "payment_intent.succeeded": {
         const result = await processPaymentIntentSucceeded(supabaseAdmin, {
           id: object.id,
+          amount: object.amount,
           metadata: object.metadata ?? null,
         });
         return new Response(JSON.stringify({ received: true, ...result }), {

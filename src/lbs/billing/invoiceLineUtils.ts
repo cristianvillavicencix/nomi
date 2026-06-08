@@ -28,9 +28,18 @@ export const STRIPE_TRANSFER_FEE_RATE = 0.029;
 export const STRIPE_TRANSFER_FEE_FIXED = 0.3;
 export const STRIPE_TRANSFER_FEE_LABEL = "2.9% + $0.30";
 
-export const calculateTransferFee = (subtotal: number) =>
-  Math.round((subtotal * STRIPE_TRANSFER_FEE_RATE + STRIPE_TRANSFER_FEE_FIXED) * 100) /
-  100;
+/**
+ * Gross-up so the merchant nets `subtotal` after Stripe takes 2.9% + $0.30
+ * from the total charge (fee is applied to the payment amount, not the subtotal).
+ *
+ * Example: $650 subtotal → charge $669.72 → Stripe fee $19.72 → net $650.
+ */
+export const calculateTransferFee = (subtotal: number) => {
+  if (subtotal <= 0) return 0;
+  const chargeTotal =
+    (subtotal + STRIPE_TRANSFER_FEE_FIXED) / (1 - STRIPE_TRANSFER_FEE_RATE);
+  return Math.round((chargeTotal - subtotal) * 100) / 100;
+};
 
 export const calculateInvoiceTotals = (
   lines: InvoiceLineDraft[],

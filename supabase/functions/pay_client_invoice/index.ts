@@ -7,7 +7,7 @@ import {
   attachPaymentMethodToCustomer,
   isStripeMockMode,
   resolveContactEmail,
-  resolveOrCreateStripeCustomer,
+  resolveOrCreateInvoiceStripeCustomer,
 } from "../_shared/clientProposalBilling.ts";
 import { getStripe } from "../_shared/stripeClient.ts";
 
@@ -51,7 +51,7 @@ Deno.serve(
       const { data: invoice } = await supabaseAdmin
         .from("client_invoices")
         .select(
-          "id, org_id, contact_id, company_id, amount, amount_paid, currency, status, upfront_percent, save_card_for_future_charges, auto_charge_remainder, stripe_payment_intent_id",
+          "id, org_id, contact_id, company_id, amount, amount_paid, currency, status, upfront_percent, save_card_for_future_charges, auto_charge_remainder, stripe_payment_intent_id, recipient_email",
         )
         .eq("id", tokenRow.invoice_id)
         .eq("org_id", tokenRow.org_id)
@@ -106,21 +106,50 @@ Deno.serve(
           return createErrorResponse(400, "payment_method_id is required");
         }
 
-        const email = await resolveContactEmail(supabaseAdmin, invoice.contact_id);
-        const customerId = await resolveOrCreateStripeCustomer({
-          supabase: supabaseAdmin,
-          orgId: invoice.org_id,
-          contactId: invoice.contact_id,
-          email,
-        });
+        const email =
+          (await resolveContactEmail(supabaseAdmin, invoice.contact_id)) ??
+          invoice.recipient_email?.trim() ??
+          null;
 
-        await attachPaymentMethodToCustomer(customerId, paymentMethodId);
+        if (!email) {
+          return createErrorResponse(
+            400,
+            "Contact email is required for card payments",
+          );
+        }
+
+        const { data: contact } = invoice.contact_id
+          ? await supabaseAdmin
+            .from("contacts")
+            .select("first_name, last_name")
+            .eq("id", invoice.contact_id)
+            .maybeSingle()
+          : { data: null };
+
+        const contactName = [contact?.first_name, contact?.last_name]
+          .filter(Boolean)
+          .join(" ");
 
         const stripe = getStripe();
+        const customer = await resolveOrCreateInvoiceStripeCustomer(stripe, {
+          email,
+          name: contactName || undefined,
+          orgId: invoice.org_id,
+          contactId: invoice.contact_id,
+          companyId: invoice.company_id,
+          existingPaymentIntentId: invoice.stripe_payment_intent_id,
+        });
+
+        await attachPaymentMethodToCustomer(
+          stripe,
+          customer.id,
+          paymentMethodId,
+        );
+
         const intent = await stripe.paymentIntents.create({
           amount: amountToCents(chargeAmount),
           currency: (invoice.currency ?? "usd").toLowerCase(),
-          customer: customerId,
+          customer: customer.id,
           payment_method: paymentMethodId,
           confirm: true,
           off_session: false,
@@ -137,7 +166,7 @@ Deno.serve(
         paymentIntentId = intent.id;
 
         if (invoice.save_card_for_future_charges) {
-          await stripe.customers.update(customerId, {
+          await stripe.customers.update(customer.id, {
             invoice_settings: { default_payment_method: paymentMethodId },
           });
         }

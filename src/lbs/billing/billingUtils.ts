@@ -202,6 +202,11 @@ export const canMarkClientInvoiceSent = (invoice: {
   status?: string | null;
 }) => invoice.status === "draft";
 
+export const canSendClientInvoice = (invoice: {
+  status?: string | null;
+}) =>
+  invoice.status === "draft" || invoice.status === "sent";
+
 export const canVoidClientInvoice = (invoice: {
   status?: string | null;
 }) =>

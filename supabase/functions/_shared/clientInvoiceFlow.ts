@@ -500,6 +500,26 @@ export async function markClientInvoiceSent(
   orgId: number,
   recipientEmail: string,
 ) {
+  const { data: existing, error: existingError } = await supabase
+    .from("client_invoices")
+    .select("id, status, scheduled_send_storage_path")
+    .eq("id", invoiceId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  if (existingError || !existing?.id) {
+    throw new Error("Invoice not found");
+  }
+
+  if (existing.status === "paid" || existing.status === "void") {
+    throw new Error("This invoice cannot be marked as sent");
+  }
+
+  const storagePath = existing.scheduled_send_storage_path?.trim();
+  if (storagePath) {
+    await supabase.storage.from("attachments").remove([storagePath]);
+  }
+
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("client_invoices")
@@ -507,6 +527,9 @@ export async function markClientInvoiceSent(
       status: "sent",
       sent_at: now,
       recipient_email: recipientEmail,
+      scheduled_send_at: null,
+      scheduled_send_message: null,
+      scheduled_send_storage_path: null,
       updated_at: now,
     })
     .eq("id", invoiceId)

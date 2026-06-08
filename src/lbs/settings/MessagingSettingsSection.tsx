@@ -14,6 +14,7 @@ import { BusinessHoursSettingsCard } from "@/lbs/settings/communications/Busines
 import { TestSmsButton } from "@/lbs/settings/communications/TestSmsButton";
 import { OrganizationSignatureSection } from "@/lbs/settings/OrganizationSignatureSection";
 import { FormNotificationsSection } from "@/lbs/settings/FormNotificationsSection";
+import { EmailDeliverySettingsSection } from "@/lbs/settings/EmailDeliverySettingsSection";
 
 export const MessagingSettingsSection = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -103,6 +104,7 @@ export const MessagingSettingsSection = () => {
   return (
     <div className="max-w-3xl space-y-8">
       <DesktopMessageAlertsSection />
+      <EmailDeliverySettingsSection />
 
       {!isAdmin ? (
         <div className="rounded-xl border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">

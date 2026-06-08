@@ -61,9 +61,13 @@ export const InvoiceDocumentPreview = ({
   balanceDue: balanceDueOverride,
   className,
 }: InvoiceDocumentPreviewProps) => {
-  const calculated = calculateInvoiceTotals(lines);
-  const subtotal = subtotalOverride ?? calculated.subtotal;
   const discountAmount = discountOverride ?? 0;
+  const discountPercent =
+    subtotalOverride != null && subtotalOverride > 0 && discountAmount > 0
+      ? (discountAmount / subtotalOverride) * 100
+      : 0;
+  const calculated = calculateInvoiceTotals(lines, discountPercent);
+  const subtotal = subtotalOverride ?? calculated.subtotal;
   const feeAmount = feeOverride ?? calculated.feeAmount;
   const total = totalOverride ?? calculated.total;
   const balanceDue = balanceDueOverride ?? total;

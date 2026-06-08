@@ -245,6 +245,9 @@ verify_jwt = false
 [functions.messaging_settings]
 verify_jwt = false
 
+[functions.email_settings]
+verify_jwt = false
+
 [functions.access_entry_password]
 verify_jwt = false
 

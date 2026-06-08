@@ -1704,6 +1704,21 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     auto_acknowledge_enabled: params.auto_acknowledge_enabled ?? false,
     auto_acknowledge_message: params.auto_acknowledge_message ?? null,
   }),
+  getEmailDeliverySettings: async () => ({
+    configured: false,
+    provider: null,
+    from_email: null,
+    reply_to: null,
+    org_name: "Demo",
+  }),
+  updateEmailDeliverySettings: async (params) => ({
+    configured: false,
+    provider: null,
+    from_email: null,
+    reply_to: params.reply_to ?? null,
+    org_name: "Demo",
+  }),
+  sendTestTransactionalEmail: async () => ({ ok: true }),
   sendTestSms: async () => ({ ok: true }),
   sendClientSms: async ({
     conversationId,
