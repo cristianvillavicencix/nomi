@@ -1,4 +1,5 @@
 import type { InvoiceAmortizationRow } from "@/lbs/billing/invoicePaymentUtils";
+import { meetsStripeMinimumCharge } from "@/lbs/billing/invoicePaymentUtils";
 
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
@@ -115,6 +116,9 @@ export const isValidInvoicePaymentAmount = ({
   effectiveInstallmentCount: number;
 }) => {
   if (amount < 0.01 || amount > roundMoney(balanceDue) + 0.001) {
+    return false;
+  }
+  if (!meetsStripeMinimumCharge(amount, balanceDue)) {
     return false;
   }
   if (!depositPaid) {

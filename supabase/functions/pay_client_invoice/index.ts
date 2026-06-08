@@ -203,23 +203,31 @@ Deno.serve(
         clearAutoChargeError: true,
       });
 
+      const chargedAmount = result.charged_amount ?? chargeAmount;
+      let receipt: Awaited<ReturnType<typeof notifyInvoicePaymentReceipt>> | null =
+        null;
       if (paymentIntentId && !mock) {
-        await notifyInvoicePaymentReceipt(supabaseAdmin, {
+        receipt = await notifyInvoicePaymentReceipt(supabaseAdmin, {
           orgId: invoice.org_id,
           invoiceId: invoice.id,
           stripePaymentIntentId: paymentIntentId,
-          chargedAmount: result.charged_amount,
+          chargedAmount,
         });
+        if (!receipt.sent) {
+          console.warn("pay_client_invoice.receipt", receipt);
+        }
       }
 
       return new Response(
         JSON.stringify({
           invoice: result.invoice,
-          charged_amount: result.charged_amount,
-          amount_paid: result.amount_paid,
+          charged_amount: chargedAmount,
+          amount_paid: result.amount_paid ?? invoice.amount_paid,
           balance_due: result.balance_due,
           paid_in_full: result.paid_in_full,
           billing_mode: mock ? "mock" : "stripe",
+          receipt_sent: receipt?.sent ?? false,
+          receipt_skipped_reason: receipt?.sent ? null : receipt?.reason ?? null,
           auto_charge_scheduled:
             Boolean(invoice.auto_charge_remainder) &&
             Boolean(invoice.save_card_for_future_charges) &&

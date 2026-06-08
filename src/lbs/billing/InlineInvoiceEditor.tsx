@@ -10,7 +10,7 @@ import {
   resolveBillToDisplay,
 } from "@/lbs/billing/billingUtils";
 import type { InvoicePaymentCollectionMode } from "@/lbs/billing/invoicePaymentUtils";
-import { computeInvoiceBalanceDue } from "@/lbs/billing/invoicePaymentUtils";
+import { computeInvoiceBalanceDue, formatInvoicePaymentMethod } from "@/lbs/billing/invoicePaymentUtils";
 import {
   describeInvoiceOnlinePaymentSummary,
   type InvoiceRemainderScheduleConfig,
@@ -100,6 +100,9 @@ export type InlineInvoiceEditorProps = {
   amountPaid?: number;
   /** Ribbon text on the document corner (defaults to "Draft" on create). */
   documentRibbon?: string | null;
+  paymentMethodBrand?: string | null;
+  paymentMethodLast4?: string | null;
+  autoChargeRemainder?: boolean;
 };
 
 export const InlineInvoiceEditor = ({
@@ -135,6 +138,9 @@ export const InlineInvoiceEditor = ({
   invoiceNumber,
   amountPaid = 0,
   documentRibbon = DRAFT_INVOICE_NUMBER_LABEL,
+  paymentMethodBrand,
+  paymentMethodLast4,
+  autoChargeRemainder = false,
 }: InlineInvoiceEditorProps) => {
   const { subtotal, feeAmount, total } = calculateInvoiceTotals(
     lines,
@@ -146,6 +152,10 @@ export const InlineInvoiceEditor = ({
     depositPercent,
     total,
     remainderSchedule,
+  });
+  const cardOnFile = formatInvoicePaymentMethod({
+    payment_method_brand: paymentMethodBrand,
+    payment_method_last4: paymentMethodLast4,
   });
   const billToDisplay = resolveBillToDisplay(company, contact);
 
@@ -497,6 +507,11 @@ export const InlineInvoiceEditor = ({
             </p>
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
               <p className="text-sm text-slate-700">{paymentSummary}</p>
+              {autoChargeRemainder && cardOnFile ? (
+                <p className="mt-2 text-sm font-medium text-emerald-800">
+                  Auto-pay active · {cardOnFile}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

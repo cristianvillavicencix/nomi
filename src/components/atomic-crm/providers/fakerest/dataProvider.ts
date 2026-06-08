@@ -784,6 +784,12 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     }
     return { invoice: { id: invoiceId, status: "sent" } };
   },
+  resendClientInvoicePaymentReceipt: async ({ invoiceId }) => ({
+    invoice_id: Number(invoiceId),
+    payment_intent_id: "pi_demo",
+    charged_amount: 0,
+    receipt_sent: true,
+  }),
   shareClientInvoice: async ({ invoiceId }: { invoiceId: Identifier }) => ({
     token: "demo-invoice-token",
     short_code: "demoiv",

@@ -460,6 +460,9 @@ export const StandaloneInvoiceEditPage = () => {
           invoiceNumber={invoice.invoice_number}
           amountPaid={Number(invoice.amount_paid) || 0}
           documentRibbon={statusRibbon}
+          paymentMethodBrand={invoice.payment_method_brand}
+          paymentMethodLast4={invoice.payment_method_last4}
+          autoChargeRemainder={Boolean(invoice.auto_charge_remainder)}
         />
       </div>
 

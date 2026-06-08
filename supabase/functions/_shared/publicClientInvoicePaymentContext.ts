@@ -85,6 +85,8 @@ export async function resolvePublicClientInvoicePayment(
     return { ok: false, status: 409, message: "This invoice is already paid" };
   }
 
+  const STRIPE_MIN_USD = 0.5;
+
   const upfrontPercent = Number(invoice.upfront_percent ?? 100);
   const targetUpfront =
     Math.round(total * (Math.min(Math.max(upfrontPercent, 1), 100) / 100) * 100) /
@@ -112,6 +114,19 @@ export async function resolvePublicClientInvoicePayment(
       };
     }
     chargeAmount = requestedAmount;
+  }
+
+  if (balance > STRIPE_MIN_USD && chargeAmount < STRIPE_MIN_USD) {
+    return {
+      ok: false,
+      status: 400,
+      message:
+        "Each card payment must be at least $0.50. Select another installment or pay the remaining balance.",
+    };
+  }
+
+  if (balance <= STRIPE_MIN_USD && chargeAmount > balance + 0.001) {
+    chargeAmount = balance;
   }
 
   const remainderInstallmentNumbers = Array.isArray(

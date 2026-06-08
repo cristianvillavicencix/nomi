@@ -42,7 +42,15 @@ export async function applyClientInvoicePaymentUpdate(
   const now = new Date().toISOString();
 
   if (invoice.stripe_payment_intent_id === params.stripePaymentIntentId) {
-    return { duplicate: true, invoice };
+    const balanceDue = Math.max(Math.round((total - paid) * 100) / 100, 0);
+    return {
+      duplicate: true,
+      invoice,
+      charged_amount: params.chargeAmount,
+      amount_paid: paid,
+      balance_due: balanceDue,
+      paid_in_full: paid >= total - 0.01,
+    };
   }
 
   const newPaid = Math.round((paid + params.chargeAmount) * 100) / 100;

@@ -141,6 +141,7 @@ export async function notifyInvoicePaymentReceipt(
     invoiceId: number;
     stripePaymentIntentId: string;
     chargedAmount: number;
+    forceResend?: boolean;
   },
 ) {
   const { data: invoice } = await supabase
@@ -166,6 +167,7 @@ export async function notifyInvoicePaymentReceipt(
     stripePaymentIntentId: params.stripePaymentIntentId,
     paidInFull: invoice.status === "paid" || balanceDue <= 0.01,
     balanceDue,
+    forceResend: params.forceResend,
   });
 }
 
@@ -177,10 +179,14 @@ export async function sendClientInvoicePaymentReceipt(
     stripePaymentIntentId: string;
     paidInFull: boolean;
     balanceDue: number;
+    forceResend?: boolean;
   },
 ) {
   const referenceKey = `receipt:${params.stripePaymentIntentId}`;
-  if (await hasEmailBeenSent(supabase, params.invoice.id, referenceKey)) {
+  if (
+    !params.forceResend &&
+    (await hasEmailBeenSent(supabase, params.invoice.id, referenceKey))
+  ) {
     return { sent: false, skipped: true, reason: "duplicate" as const };
   }
 
@@ -264,7 +270,7 @@ export async function sendClientInvoicePaymentReceipt(
     </div>`;
 
   try {
-    await sendTransactionalEmail({
+    const sendResult = await sendTransactionalEmail({
       orgId: params.invoice.org_id,
       orgName: INVOICE_ORGANIZATION_NAME,
       to,
@@ -273,6 +279,13 @@ export async function sendClientInvoicePaymentReceipt(
       htmlBody,
       replyTo: INVOICE_ORGANIZATION_EMAIL,
     });
+    if (sendResult.skipped) {
+      console.warn(
+        "invoicePaymentEmails.receipt_skipped",
+        "SKIP_TRANSACTIONAL_EMAIL",
+      );
+      return { sent: false, skipped: true, reason: "email_skipped" as const };
+    }
     await logEmailSent(supabase, {
       orgId: params.invoice.org_id,
       invoiceId: params.invoice.id,

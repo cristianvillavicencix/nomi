@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Ban,
   Trash2,
+  Receipt,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDataProvider, useGetList, useNotify } from "ra-core";
@@ -303,6 +304,8 @@ export const InvoiceRowActions = ({
   const showMarkSent = canMarkClientInvoiceSent(invoice);
   const showVoid = canVoidClientInvoice(invoice);
   const showDelete = canDeleteClientInvoice(invoice);
+  const showResendReceipt =
+    Number(invoice.amount_paid ?? 0) > 0 && invoice.status !== "void";
 
   const { data: lineItems = [] } = useGetList<ClientInvoiceLineItem>(
     "client_invoice_line_items",
@@ -374,6 +377,22 @@ export const InvoiceRowActions = ({
     },
   });
 
+  const resendReceiptMutation = useMutation({
+    mutationFn: () =>
+      dataProvider.resendClientInvoicePaymentReceipt({
+        invoiceId: invoice.id,
+        force: true,
+      }),
+    onSuccess: () => {
+      notify("Payment receipt sent", { type: "success" });
+    },
+    onError: (error: Error) => {
+      notify(error.message || "Could not send payment receipt", {
+        type: "error",
+      });
+    },
+  });
+
   const handleManage = (action: "mark_sent" | "void" | "delete") => {
     if (action === "void") {
       const confirmed = window.confirm(
@@ -439,6 +458,22 @@ export const InvoiceRowActions = ({
         >
           <Mail className="size-3.5" />
           Send
+        </Button>
+      ) : null}
+      {showResendReceipt ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={resendReceiptMutation.isPending}
+          onClick={() => resendReceiptMutation.mutate()}
+        >
+          {resendReceiptMutation.isPending ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Receipt className="size-3.5" />
+          )}
+          Receipt
         </Button>
       ) : null}
       {showMarkSent ? (

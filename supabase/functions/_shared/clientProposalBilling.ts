@@ -189,7 +189,17 @@ export async function applyClientInvoicePaymentFromStripe(
   }
 
   if (invoice.stripe_payment_intent_id === params.stripePaymentIntentId) {
-    return { handled: true, skipped: true, duplicate: true };
+    const chargedAmount = Math.round(params.amountCents) / 100;
+    const receipt = await notifyInvoicePaymentReceipt(supabase, {
+      orgId: params.orgId,
+      invoiceId: params.invoiceId,
+      stripePaymentIntentId: params.stripePaymentIntentId,
+      chargedAmount,
+    });
+    if (!receipt.sent) {
+      console.warn("applyClientInvoicePaymentFromStripe.receipt", receipt);
+    }
+    return { handled: true, skipped: true, duplicate: true, receipt };
   }
 
   const remainderInstallmentNumbers = parseRemainderInstallmentNumbersFromMetadata(

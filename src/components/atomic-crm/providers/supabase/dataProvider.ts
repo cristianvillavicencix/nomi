@@ -831,6 +831,46 @@ const dataProviderWithCustomMethods = {
 
     return data;
   },
+  async resendClientInvoicePaymentReceipt({
+    invoiceId,
+    paymentIntentId,
+    chargedAmount,
+    force,
+  }: {
+    invoiceId: Identifier;
+    paymentIntentId?: string;
+    chargedAmount?: number;
+    force?: boolean;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoice_id: number;
+      payment_intent_id: string;
+      charged_amount: number;
+      receipt_sent: boolean;
+    }>("resend_client_invoice_payment_receipt", {
+      method: "POST",
+      body: {
+        invoice_id: Number(invoiceId),
+        ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
+        ...(chargedAmount != null ? { charged_amount: chargedAmount } : {}),
+        ...(force ? { force: true } : {}),
+      },
+    });
+
+    if (error || !data?.receipt_sent) {
+      console.error("resend_client_invoice_payment_receipt.error", error);
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to send payment receipt",
+            )
+          : "Failed to send payment receipt",
+      );
+    }
+
+    return data;
+  },
   async scheduleClientInvoice({
     invoiceId,
     to,

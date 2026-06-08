@@ -22,7 +22,7 @@ import {
   invoiceStatusVariant,
   type InvoiceStatusFilter,
 } from "@/lbs/billing/billingDisplayUtils";
-import { computeInvoiceBalanceDue } from "@/lbs/billing/invoicePaymentUtils";
+import { computeInvoiceBalanceDue, formatInvoicePaymentMethod, isInvoiceAutoPayActive } from "@/lbs/billing/invoicePaymentUtils";
 import type { ClientInvoice, Proposal } from "@/lbs/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -247,12 +247,19 @@ const ClientInvoicesTable = () => {
         source="status"
         label="Status"
         render={(record: ClientInvoice) => (
-          <Badge
-            variant={invoiceStatusVariant(record.status, record.due_date)}
-            className="capitalize"
-          >
-            {invoiceStatusLabel(record.status, record.due_date)}
-          </Badge>
+          <div className="flex flex-col items-start gap-1">
+            <Badge
+              variant={invoiceStatusVariant(record.status, record.due_date)}
+              className="capitalize"
+            >
+              {invoiceStatusLabel(record.status, record.due_date)}
+            </Badge>
+            {isInvoiceAutoPayActive(record) ? (
+              <Badge variant="outline" className="text-[10px] font-normal">
+                Auto-pay · {formatInvoicePaymentMethod(record) ?? "Card on file"}
+              </Badge>
+            ) : null}
+          </div>
         )}
       />
       <DataTable.Col

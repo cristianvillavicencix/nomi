@@ -1,6 +1,6 @@
 import {
   applyRemainderScheduleToCharges,
-  generateInvoiceBalanceCharges,
+  generateOriginalInvoiceBalanceCharges,
   parseInvoiceRemainderSchedule,
   type InvoiceRemainderScheduleConfig,
 } from "@/lbs/billing/invoiceRemainderSchedule";
@@ -38,6 +38,44 @@ export const computeInvoiceUpfrontAmount = (
 
 export const computeInvoiceBalanceDue = (total: number, amountPaid = 0) =>
   Math.max(Math.round((total - amountPaid) * 100) / 100, 0);
+
+/** Stripe minimum charge for USD card payments. */
+export const STRIPE_MINIMUM_CHARGE_USD = 0.5;
+
+export const meetsStripeMinimumCharge = (
+  amount: number,
+  balanceDue: number,
+) => {
+  const charge = Math.round(amount * 100) / 100;
+  const balance = Math.round(balanceDue * 100) / 100;
+  if (balance <= 0.01) return false;
+  if (balance <= STRIPE_MINIMUM_CHARGE_USD) {
+    return Math.abs(charge - balance) <= 0.001;
+  }
+  return charge >= STRIPE_MINIMUM_CHARGE_USD - 0.001;
+};
+
+export const isInvoiceAutoPayActive = (invoice: {
+  auto_charge_remainder?: boolean | null;
+  save_card_for_future_charges?: boolean | null;
+  stripe_payment_method_id?: string | null;
+  status?: string | null;
+}) =>
+  Boolean(invoice.auto_charge_remainder) &&
+  Boolean(invoice.save_card_for_future_charges) &&
+  Boolean(invoice.stripe_payment_method_id?.trim()) &&
+  invoice.status !== "paid" &&
+  invoice.status !== "void";
+
+export const formatInvoicePaymentMethod = (invoice: {
+  payment_method_brand?: string | null;
+  payment_method_last4?: string | null;
+}) => {
+  const last4 = invoice.payment_method_last4?.trim();
+  if (!last4) return null;
+  const brand = invoice.payment_method_brand?.trim() || "Card";
+  return `${brand} ····${last4}`;
+};
 
 export type InvoicePaymentScheduleTiming = "now" | "scheduled" | "paid";
 
@@ -130,14 +168,14 @@ export const buildInvoicePaymentSchedule = ({
     });
   }
 
-  const remainderAmount = depositPaid ? balance : remainderTarget;
+  const remainderAmount = remainderTarget;
   if (remainderAmount > 0.01) {
     const scheduleConfig = remainderSchedule
       ? remainderSchedule
       : parseInvoiceRemainderSchedule(null, dueDate ?? "");
 
-    const balanceCharges = applyRemainderScheduleToCharges(
-      generateInvoiceBalanceCharges({
+    const scheduledCharges = applyRemainderScheduleToCharges(
+      generateOriginalInvoiceBalanceCharges({
         balanceAmount: remainderAmount,
         config: scheduleConfig,
         invoiceDueDate: dueDate ?? new Date().toISOString().slice(0, 10),
@@ -146,16 +184,46 @@ export const buildInvoicePaymentSchedule = ({
       scheduleConfig,
     );
 
-    if (balanceCharges.length > 0) {
-      for (const charge of balanceCharges) {
+    const paidInstallmentNumbers = new Set(
+      scheduleConfig.paid_installment_numbers ?? [],
+    );
+    const unpaidCharges = scheduledCharges.filter(
+      (charge) => !paidInstallmentNumbers.has(charge.installment_number),
+    );
+
+    if (depositPaid && unpaidCharges.length > 0) {
+      const unpaidTotal = unpaidCharges.reduce((sum, row) => sum + row.amount, 0);
+      const delta = Math.round((balance - unpaidTotal) * 100) / 100;
+      if (Math.abs(delta) >= 0.01) {
+        const last = unpaidCharges[unpaidCharges.length - 1];
+        last.amount = Math.round((last.amount + delta) * 100) / 100;
+      }
+    }
+
+    const unpaidAmountByNumber = new Map(
+      unpaidCharges.map((charge) => [charge.installment_number, charge.amount]),
+    );
+
+    if (scheduledCharges.length > 0) {
+      for (const charge of scheduledCharges) {
+        const installmentPaid = paidInstallmentNumbers.has(
+          charge.installment_number,
+        );
         rows.push({
           key: `remainder-${charge.installment_number}`,
           label: autoDebit
             ? `${charge.label} (auto-debit)`
             : charge.label,
-          amount: charge.amount,
+          amount: installmentPaid
+            ? charge.amount
+            : (unpaidAmountByNumber.get(charge.installment_number) ??
+              charge.amount),
           dueDate: charge.due_date,
-          timing: depositPaid && !autoDebit ? "now" : "scheduled",
+          timing: installmentPaid
+            ? "paid"
+            : depositPaid && !autoDebit
+              ? "now"
+              : "scheduled",
           autoDebit,
         });
       }
