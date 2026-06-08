@@ -111,7 +111,8 @@ export const EmailDeliverySettingsSection = () => {
 
   const needsDomainVerification =
     data?.from_email?.includes("@resend.dev") === true ||
-    data?.from_email?.includes("@mailersend.net") === true;
+    data?.from_email?.includes("@mailersend.net") === true ||
+    data?.from_email?.includes(".mlsender.net") === true;
 
   return (
     <Card>
