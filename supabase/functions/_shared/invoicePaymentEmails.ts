@@ -11,11 +11,16 @@ import {
   INVOICE_ORGANIZATION_PHONE,
   INVOICE_ORGANIZATION_WEBSITE,
 } from "./invoiceOrganizationInfo.ts";
-import { resolveContactEmail } from "./clientProposalBilling.ts";
+import { isStripeMockMode, resolveContactEmail } from "./clientProposalBilling.ts";
 import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "./transactionalEmail.ts";
+import {
+  buildPaymentReceiptFilename,
+  generatePaymentReceiptPdfBase64,
+} from "./invoicePaymentReceiptPdf.ts";
+import { getStripe } from "./stripeClient.ts";
 
 const formatMoney = (amount: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", {
@@ -66,6 +71,60 @@ export async function resolveInvoicePortalUrl(
     return `${baseUrl}/portal/invoice/${tokenRow.token}`;
   }
   return baseUrl;
+}
+
+async function resolveInvoiceBillToName(
+  supabase: SupabaseClient,
+  invoice: {
+    contact_id?: number | null;
+    company_id?: number | null;
+  },
+) {
+  let companyName: string | null = null;
+  let contactName: string | null = null;
+
+  if (invoice.company_id) {
+    const { data: company } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", invoice.company_id)
+      .maybeSingle();
+    companyName = company?.name?.trim() || null;
+  }
+
+  if (invoice.contact_id) {
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("first_name, last_name")
+      .eq("id", invoice.contact_id)
+      .maybeSingle();
+    contactName = [contact?.first_name, contact?.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || null;
+  }
+
+  return companyName ?? contactName ?? "Client";
+}
+
+async function resolvePaymentReceiptDate(stripePaymentIntentId: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (isStripeMockMode()) return today;
+
+  try {
+    const stripe = getStripe();
+    const intent = await stripe.paymentIntents.retrieve(stripePaymentIntentId, {
+      expand: ["latest_charge"],
+    });
+    const charge = intent.latest_charge as { created?: number } | null;
+    if (charge?.created) {
+      return new Date(charge.created * 1000).toISOString().slice(0, 10);
+    }
+  } catch (error) {
+    console.warn("invoicePaymentEmails.receipt_date_lookup_failed", error);
+  }
+
+  return today;
 }
 
 async function resolveInvoiceRecipientEmail(
@@ -131,6 +190,7 @@ type InvoiceEmailRow = {
   amount_paid?: number | null;
   currency?: string | null;
   contact_id?: number | null;
+  company_id?: number | null;
   recipient_email?: string | null;
   upfront_percent?: number | null;
   auto_charge_remainder?: boolean | null;
@@ -155,7 +215,7 @@ export async function notifyInvoicePaymentReceipt(
   const { data: invoice } = await supabase
     .from("client_invoices")
     .select(
-      "id, org_id, invoice_number, amount, amount_paid, currency, contact_id, recipient_email, upfront_percent, auto_charge_remainder, save_card_for_future_charges, due_date, issue_date, remainder_schedule, payment_method_brand, payment_method_last4, status",
+      "id, org_id, invoice_number, amount, amount_paid, currency, contact_id, company_id, recipient_email, upfront_percent, auto_charge_remainder, save_card_for_future_charges, due_date, issue_date, remainder_schedule, payment_method_brand, payment_method_last4, status",
     )
     .eq("id", params.invoiceId)
     .eq("org_id", params.orgId)
@@ -275,12 +335,39 @@ export async function sendClientInvoicePaymentReceipt(
       ? ` (${params.invoice.payment_method_brand ?? "Card"} ····${params.invoice.payment_method_last4})`
       : "";
 
+  const billToName = await resolveInvoiceBillToName(supabase, params.invoice);
+  const paymentDate = await resolvePaymentReceiptDate(
+    params.stripePaymentIntentId,
+  );
+  const paymentMethodLabel = params.invoice.payment_method_last4
+    ? `${params.invoice.payment_method_brand ?? "Card"} ····${params.invoice.payment_method_last4}`
+    : null;
+  const receiptPdfBase64 = await generatePaymentReceiptPdfBase64({
+    invoiceNumber: params.invoice.invoice_number,
+    billToName,
+    billToEmail: to,
+    chargedAmount: params.chargedAmount,
+    totalPaid: Number(params.invoice.amount_paid) || 0,
+    invoiceTotal: Number(params.invoice.amount) || 0,
+    balanceDue: params.balanceDue,
+    currency,
+    paidInFull: params.paidInFull,
+    paymentMethodLabel,
+    paymentReference: params.stripePaymentIntentId,
+    paymentDate,
+  });
+  const receiptFilename = buildPaymentReceiptFilename(
+    params.invoice.invoice_number,
+    params.stripePaymentIntentId,
+  );
+
   const subject = params.paidInFull
     ? `${INVOICE_ORGANIZATION_NAME}: Payment receipt · ${params.invoice.invoice_number} paid in full`
     : `${INVOICE_ORGANIZATION_NAME}: Payment receipt · ${params.invoice.invoice_number}`;
 
   const textBody = [
     "Thank you for your payment.",
+    "A PDF receipt is attached to this email.",
     "",
     `Invoice: ${params.invoice.invoice_number}`,
     `Amount paid today: ${chargedFormatted}${cardHint}`,
@@ -305,6 +392,7 @@ export async function sendClientInvoicePaymentReceipt(
   const htmlBody = `
     <div style="font-family:system-ui,sans-serif;color:#0f172a;line-height:1.5;max-width:560px;">
       <p>Thank you for your payment.</p>
+      <p style="color:#64748b;font-size:13px;">A PDF receipt is attached to this email.</p>
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
         <tr><td style="padding:4px 0;color:#64748b;">Invoice</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(params.invoice.invoice_number)}</td></tr>
         <tr><td style="padding:4px 0;color:#64748b;">Paid today</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(chargedFormatted)}${escapeHtml(cardHint)}</td></tr>
@@ -330,6 +418,13 @@ export async function sendClientInvoicePaymentReceipt(
       textBody,
       htmlBody,
       replyTo: INVOICE_ORGANIZATION_EMAIL,
+      attachments: [
+        {
+          name: receiptFilename,
+          contentBase64: receiptPdfBase64,
+          contentType: "application/pdf",
+        },
+      ],
     });
     if (sendResult.skipped) {
       console.warn(
