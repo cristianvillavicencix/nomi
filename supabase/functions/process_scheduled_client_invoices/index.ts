@@ -5,7 +5,7 @@ import { isAuthorizedClientBillingCron } from "../_shared/clientProposalBilling.
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { markClientInvoiceSent } from "../_shared/clientInvoiceFlow.ts";
 import {
-  isTransactionalEmailConfigured,
+  isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
 
@@ -28,19 +28,6 @@ Deno.serve(
     }
 
     try {
-      if (!isTransactionalEmailConfigured()) {
-        return new Response(
-          JSON.stringify({
-            processed: 0,
-            sent: 0,
-            failed: 0,
-            skipped: true,
-            reason: "Transactional email is not configured",
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
       const now = new Date().toISOString();
       const { data: dueRows, error: listError } = await supabaseAdmin
         .from("client_invoices")
@@ -61,6 +48,15 @@ Deno.serve(
 
       for (const row of dueRows ?? []) {
         try {
+          if (!(await isOrgTransactionalEmailConfigured(row.org_id))) {
+            results.push({
+              invoice_id: row.id,
+              ok: false,
+              error: "Twilio is not configured for this organization",
+            });
+            continue;
+          }
+
           const to = row.recipient_email?.trim();
           const storagePath = row.scheduled_send_storage_path?.trim();
           if (!to || !storagePath) {
@@ -99,6 +95,8 @@ Deno.serve(
             `Please find attached invoice ${row.invoice_number} for ${row.description} (${row.currency} ${row.amount}).\n\nThank you for your business.`;
 
           await sendTransactionalEmail({
+            orgId: row.org_id,
+            orgName: org?.name ?? null,
             to,
             subject,
             textBody: message,

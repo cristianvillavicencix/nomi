@@ -7,7 +7,7 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { markClientInvoiceSent } from "../_shared/clientInvoiceFlow.ts";
 import {
-  isTransactionalEmailConfigured,
+  isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
 
@@ -96,8 +96,10 @@ Deno.serve(
         let emailSent = false;
         let emailSkipped = false;
 
-        if (isTransactionalEmailConfigured()) {
+        if (await isOrgTransactionalEmailConfigured(member.org_id)) {
           await sendTransactionalEmail({
+            orgId: member.org_id,
+            orgName: org?.name ?? null,
             to,
             subject,
             textBody: message,

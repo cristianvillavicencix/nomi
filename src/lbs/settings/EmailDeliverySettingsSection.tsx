@@ -23,6 +23,7 @@ export type EmailDeliverySettings = {
   from_email: string | null;
   reply_to: string | null;
   org_name: string | null;
+  uses_messaging_credentials?: boolean;
 };
 
 export const EmailDeliverySettingsSection = () => {
@@ -112,19 +113,18 @@ export const EmailDeliverySettingsSection = () => {
         </CardTitle>
         <CardDescription>
           Outbound email for invoices, portal verification codes, and web audit
-          reports. Uses Twilio Email (same account as SMS). Server credentials
-          are configured on Supabase.
+          reports. Uses the same Twilio Account SID and Auth Token as SMS
+          (Settings → Communications → Twilio).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!data?.configured ? (
           <Alert>
             <AlertDescription>
-              Set <code className="text-xs">TWILIO_ACCOUNT_SID</code>,{" "}
-              <code className="text-xs">TWILIO_AUTH_TOKEN</code>, and{" "}
-              <code className="text-xs">TWILIO_EMAIL_FROM</code> in Supabase Edge
-              Function secrets. Use the same Twilio account as SMS (Console →
-              Account Info).
+              Configure Twilio under <strong>Communications → Twilio</strong>{" "}
+              (Account SID, Auth Token, and phone number). Email uses those same
+              credentials. Also authenticate your domain in Twilio Console →
+              Email.
             </AlertDescription>
           </Alert>
         ) : null}

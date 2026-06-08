@@ -6,9 +6,7 @@ import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.
 import { assertOrgAdministrator } from "../_shared/messagingSettings.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
-  getTransactionalEmailProvider,
-  getTransactionalFromEmail,
-  isTransactionalEmailConfigured,
+  getOrgTransactionalEmailStatus,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
 
@@ -47,19 +45,22 @@ Deno.serve((req: Request) =>
           .eq("id", orgId)
           .maybeSingle();
 
+        const buildStatus = async (replyTo?: string | null) => {
+          const status = await getOrgTransactionalEmailStatus(orgId);
+          return {
+            configured: status.configured,
+            provider: status.provider,
+            from_email: status.from_email,
+            reply_to: replyTo ?? org?.email?.trim() ?? null,
+            org_name: org?.name ?? null,
+            uses_messaging_credentials: status.uses_messaging_credentials,
+          };
+        };
+
         if (action === "get") {
-          return new Response(
-            JSON.stringify({
-              configured: isTransactionalEmailConfigured(),
-              provider: getTransactionalEmailProvider(),
-              from_email: getTransactionalFromEmail(),
-              reply_to: org?.email?.trim() ?? null,
-              org_name: org?.name ?? null,
-            }),
-            {
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            },
-          );
+          return new Response(JSON.stringify(await buildStatus()), {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
         }
 
         await assertOrgAdministrator(user, orgId);
@@ -71,6 +72,8 @@ Deno.serve((req: Request) =>
           }
 
           await sendTransactionalEmail({
+            orgId,
+            orgName: org?.name ?? null,
             to,
             subject: "Nomi CRM test email",
             textBody:
@@ -104,13 +107,7 @@ Deno.serve((req: Request) =>
         }
 
         return new Response(
-          JSON.stringify({
-            configured: isTransactionalEmailConfigured(),
-            provider: getTransactionalEmailProvider(),
-            from_email: getTransactionalFromEmail(),
-            reply_to: updated?.email?.trim() ?? null,
-            org_name: org?.name ?? null,
-          }),
+          JSON.stringify(await buildStatus(updated?.email?.trim() ?? null)),
           {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           },

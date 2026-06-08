@@ -34,8 +34,13 @@ const sha256Hex = async (value: string) => {
     .join("");
 };
 
-const sendOtpEmail = async (to: string, code: string) => {
+const sendOtpEmail = async (
+  orgId: number,
+  to: string,
+  code: string,
+) => {
   await sendTransactionalEmail({
+    orgId,
     to,
     subject: "Your Nomi verification code",
     textBody: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
@@ -254,7 +259,7 @@ Deno.serve(
 
         if (insertError) throw new Error(insertError.message);
 
-        await sendOtpEmail(accountEmail, code);
+        await sendOtpEmail(account.org_id, accountEmail, code);
 
         return new Response(
           JSON.stringify({ ok: true, sent: true, expires_at: otpExpiresAt }),

@@ -77,11 +77,13 @@ Deno.serve((req: Request) =>
 
         const { data: org } = await supabaseAdmin
           .from("organizations")
-          .select("email")
+          .select("name, email")
           .eq("id", orgId)
           .maybeSingle();
 
         await sendTransactionalEmail({
+          orgId,
+          orgName: org?.name ?? null,
           to,
           subject,
           textBody: message,
