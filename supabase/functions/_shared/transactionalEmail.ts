@@ -27,23 +27,32 @@ export const isTransactionalEmailSkipped = () =>
 
 export type TransactionalEmailProvider = "mailersend" | "resend" | "postmark";
 
+export const getAvailableTransactionalEmailProviders = (): TransactionalEmailProvider[] => {
+  const providers: TransactionalEmailProvider[] = [];
+  if (getMailerSendApiToken() && getMailerSendFromEmail()) {
+    providers.push("mailersend");
+  }
+  if (getResendApiKey() && getResendFromEmail()) providers.push("resend");
+  if (getPostmarkServerToken() && getPostmarkFromEmail()) {
+    providers.push("postmark");
+  }
+  return providers;
+};
+
 export const getTransactionalEmailProvider = ():
   | TransactionalEmailProvider
-  | null => {
-  if (getMailerSendApiToken() && getMailerSendFromEmail()) return "mailersend";
-  if (getResendApiKey() && getResendFromEmail()) return "resend";
-  if (getPostmarkServerToken() && getPostmarkFromEmail()) return "postmark";
+  | null => getAvailableTransactionalEmailProviders()[0] ?? null;
+
+export const getTransactionalFromEmail = () => {
+  const primary = getTransactionalEmailProvider();
+  if (primary === "mailersend") return getMailerSendFromEmail() ?? null;
+  if (primary === "resend") return getResendFromEmail() ?? null;
+  if (primary === "postmark") return getPostmarkFromEmail() ?? null;
   return null;
 };
 
-export const getTransactionalFromEmail = () =>
-  getMailerSendFromEmail() ??
-  getResendFromEmail() ??
-  getPostmarkFromEmail() ??
-  null;
-
 export const isTransactionalEmailConfigured = () =>
-  Boolean(getTransactionalEmailProvider());
+  getAvailableTransactionalEmailProviders().length > 0;
 
 const escapeHtml = (value: string) =>
   value.replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -63,6 +72,75 @@ const parseEmailAddress = (value: string) => {
   }
   return { email: trimmed };
 };
+
+const shouldTryNextProvider = (
+  error: unknown,
+  provider: TransactionalEmailProvider,
+) => {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+
+  if (provider === "mailersend") {
+    return (
+      msg.includes("422") ||
+      msg.includes("trial") ||
+      msg.includes("ms42225") ||
+      msg.includes("unique recipients") ||
+      msg.includes("not verified") ||
+      msg.includes("domain")
+    );
+  }
+
+  if (provider === "resend") {
+    return msg.includes("403") || msg.includes("not verified");
+  }
+
+  return false;
+};
+
+const formatEmailSendFailure = (
+  failures: { provider: TransactionalEmailProvider; message: string }[],
+) => {
+  const combined = failures.map((f) => f.message).join(" ");
+  const lower = combined.toLowerCase();
+
+  if (
+    lower.includes("ms42225") ||
+    lower.includes("unique recipients") ||
+    lower.includes("trial account")
+  ) {
+    return (
+      "MailerSend trial limit: verify your domain at mailersend.com (Domains) to send to clients. " +
+      "A fallback provider was attempted automatically if configured."
+    );
+  }
+
+  if (lower.includes("not verified") && lower.includes("domain")) {
+    return (
+      "Email domain is not verified with your provider. Add and verify your domain " +
+      "(e.g. lbs.bz) in MailerSend or Resend, then update the FROM address secret on Supabase."
+    );
+  }
+
+  const last = failures[failures.length - 1];
+  return last?.message ?? "Could not send email";
+};
+
+async function sendViaProvider(
+  provider: TransactionalEmailProvider,
+  params: {
+    to: string;
+    subject: string;
+    textBody: string;
+    htmlBody: string;
+    replyTo?: string | null;
+    attachments?: EmailAttachment[];
+  },
+) {
+  if (provider === "mailersend") return sendViaMailerSend(params);
+  if (provider === "resend") return sendViaResend(params);
+  return sendViaPostmark(params);
+}
 
 async function sendViaMailerSend(params: {
   to: string;
@@ -242,8 +320,8 @@ export async function sendTransactionalEmail(params: {
     return { skipped: true as const, provider: null };
   }
 
-  const provider = getTransactionalEmailProvider();
-  if (!provider) {
+  const providers = getAvailableTransactionalEmailProviders();
+  if (providers.length === 0) {
     throw new Error(
       "Email is not configured. Set MAILERSEND_API_TOKEN and MAILERSEND_FROM_EMAIL on Supabase.",
     );
@@ -251,17 +329,38 @@ export async function sendTransactionalEmail(params: {
 
   const htmlBody = textToHtml(params.textBody);
   const sendParams = { ...params, htmlBody };
+  const failures: { provider: TransactionalEmailProvider; message: string }[] =
+    [];
 
-  if (provider === "mailersend") {
-    const result = await sendViaMailerSend(sendParams);
-    return { skipped: false as const, ...result };
+  for (let index = 0; index < providers.length; index += 1) {
+    const provider = providers[index];
+    const hasNext = index < providers.length - 1;
+
+    try {
+      const result = await sendViaProvider(provider, sendParams);
+      if (failures.length > 0) {
+        console.warn("transactional_email.fallback_success", {
+          provider: result.provider,
+          prior_failures: failures.map((f) => f.provider),
+        });
+      }
+      return { skipped: false as const, ...result };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not send email";
+      failures.push({ provider, message });
+      console.warn("transactional_email.provider_failed", {
+        provider,
+        message,
+      });
+
+      if (hasNext && shouldTryNextProvider(error, provider)) {
+        continue;
+      }
+
+      break;
+    }
   }
 
-  if (provider === "resend") {
-    const result = await sendViaResend(sendParams);
-    return { skipped: false as const, ...result };
-  }
-
-  const result = await sendViaPostmark(sendParams);
-  return { skipped: false as const, ...result };
+  throw new Error(formatEmailSendFailure(failures));
 }

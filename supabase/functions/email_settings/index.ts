@@ -6,6 +6,7 @@ import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.
 import { assertOrgAdministrator } from "../_shared/messagingSettings.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
+  getAvailableTransactionalEmailProviders,
   getTransactionalEmailProvider,
   getTransactionalFromEmail,
   isTransactionalEmailConfigured,
@@ -48,10 +49,12 @@ Deno.serve((req: Request) =>
           .maybeSingle();
 
         if (action === "get") {
+          const providers = getAvailableTransactionalEmailProviders();
           return new Response(
             JSON.stringify({
               configured: isTransactionalEmailConfigured(),
               provider: getTransactionalEmailProvider(),
+              fallback_providers: providers.slice(1),
               from_email: getTransactionalFromEmail(),
               reply_to: org?.email?.trim() ?? null,
               org_name: org?.name ?? null,
