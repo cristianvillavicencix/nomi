@@ -383,8 +383,13 @@ export const InvoiceRowActions = ({
         invoiceId: invoice.id,
         force: true,
       }),
-    onSuccess: () => {
-      notify("Payment receipt sent", { type: "success" });
+    onSuccess: (result) => {
+      notify(
+        result?.already_sent
+          ? "Payment receipt was already sent for this payment"
+          : "Payment receipt sent",
+        { type: "success" },
+      );
     },
     onError: (error: Error) => {
       notify(error.message || "Could not send payment receipt", {

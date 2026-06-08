@@ -847,6 +847,7 @@ const dataProviderWithCustomMethods = {
       payment_intent_id: string;
       charged_amount: number;
       receipt_sent: boolean;
+      already_sent?: boolean;
     }>("resend_client_invoice_payment_receipt", {
       method: "POST",
       body: {
@@ -858,7 +859,7 @@ const dataProviderWithCustomMethods = {
     });
 
     if (error || !data?.receipt_sent) {
-      console.error("resend_client_invoice_payment_receipt.error", error);
+      console.error("sendClientInvoicePaymentReceipt.error", error);
       throw new Error(
         error
           ? await readEdgeFunctionErrorMessage(

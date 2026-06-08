@@ -98,6 +98,19 @@ Deno.serve(
           forceResend: Boolean(body.force),
         });
 
+        if (!receipt.sent && receipt.reason === "duplicate") {
+          return new Response(
+            JSON.stringify({
+              invoice_id: invoice.id,
+              payment_intent_id: paymentIntentId,
+              charged_amount: chargedAmount,
+              receipt_sent: true,
+              already_sent: true,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+
         if (!receipt.sent) {
           const message =
             receipt.reason === "no_email"
@@ -106,8 +119,6 @@ Deno.serve(
               ? "Email is not configured for your organization"
               : receipt.reason === "email_skipped"
               ? "Email delivery is disabled on the server"
-              : receipt.reason === "duplicate"
-              ? "A receipt for this payment was already sent"
               : receipt.error ?? "Could not send payment receipt";
 
           return createErrorResponse(400, message);
@@ -119,6 +130,7 @@ Deno.serve(
             payment_intent_id: paymentIntentId,
             charged_amount: chargedAmount,
             receipt_sent: true,
+            already_sent: false,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
