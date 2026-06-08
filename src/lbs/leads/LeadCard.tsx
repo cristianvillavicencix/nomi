@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { Link } from "react-router";
-import { GripVertical, History, Mail, Phone } from "lucide-react";
+import { useDelete, useNotify, useRefresh } from "ra-core";
+import { GripVertical, History, Mail, Phone, Trash2 } from "lucide-react";
 
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
+import { Confirm } from "@/components/admin/confirm";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -39,9 +41,35 @@ export type LeadCardProps = {
 
 export const LeadCard = ({ lead, index }: LeadCardProps) => {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [deleteOne, { isPending: isDeleting }] = useDelete<Contact>();
   const name = displayName(lead);
   const email = primaryEmail(lead);
   const phone = primaryPhone(lead);
+
+  const handleDelete = () => {
+    deleteOne(
+      "contacts",
+      { id: lead.id, previousData: lead },
+      {
+        onSuccess: () => {
+          notify("Lead deleted", { type: "info" });
+          refresh();
+          setDeleteOpen(false);
+        },
+        onError: () => {
+          notify("Failed to delete lead", { type: "error" });
+        },
+      },
+    );
+  };
+
+  const stopCardAction = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
 
   return (
     <Draggable draggableId={String(lead.id)} index={index}>
@@ -77,10 +105,31 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                   "size-6",
                 )}
                 title="Activity history"
-                onClick={() => setHistoryOpen(true)}
+                onClick={(event) => {
+                  stopCardAction(event);
+                  setHistoryOpen(true);
+                }}
               >
                 <History className="size-3.5" />
                 <span className="sr-only">Activity history</span>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  cardActionClassName(snapshot.isDragging),
+                  "size-6 hover:text-destructive",
+                )}
+                title="Delete lead"
+                disabled={isDeleting}
+                onClick={(event) => {
+                  stopCardAction(event);
+                  setDeleteOpen(true);
+                }}
+              >
+                <Trash2 className="size-3.5" />
+                <span className="sr-only">Delete lead</span>
               </Button>
             </div>
 
@@ -143,6 +192,16 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
               lead={lead}
               open={historyOpen}
               onOpenChange={setHistoryOpen}
+            />
+            <Confirm
+              isOpen={deleteOpen}
+              title="Delete this lead?"
+              content="This action cannot be undone."
+              confirm="Delete"
+              confirmColor="warning"
+              onConfirm={handleDelete}
+              onClose={() => setDeleteOpen(false)}
+              loading={isDeleting}
             />
           </Card>
         </div>
