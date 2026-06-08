@@ -141,17 +141,27 @@ async function sendViaTwilioEmail(params: {
   replyTo?: string | null;
   attachments?: EmailAttachment[];
 }) {
+  const content: Record<string, unknown> = {
+    subject: params.subject,
+    text: params.textBody,
+    html: params.htmlBody,
+  };
+
+  if (params.attachments?.length) {
+    content.attachments = params.attachments.map((file) => ({
+      filename: file.name,
+      contentType: file.contentType,
+      content: file.contentBase64,
+    }));
+  }
+
   const body: Record<string, unknown> = {
     from: {
       address: params.from.email,
       name: params.from.name,
     },
     to: [{ address: params.to }],
-    content: {
-      subject: params.subject,
-      text: params.textBody,
-      html: params.htmlBody,
-    },
+    content,
   };
 
   if (params.replyTo?.trim()) {
@@ -160,14 +170,6 @@ async function sendViaTwilioEmail(params: {
       address: replyTo.email,
       ...(replyTo.name ? { name: replyTo.name } : {}),
     };
-  }
-
-  if (params.attachments?.length) {
-    body.attachments = params.attachments.map((file) => ({
-      filename: file.name,
-      contentType: file.contentType,
-      content: file.contentBase64,
-    }));
   }
 
   const credentials = btoa(`${params.accountSid}:${params.authToken}`);
