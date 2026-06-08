@@ -5,6 +5,9 @@ import { getStripe } from "./stripeClient.ts";
 import {
   markInstallmentPaidFromStripe,
 } from "./proposalFlow.ts";
+import { applyClientInvoicePaymentUpdate } from "./clientInvoicePayment.ts";
+import { parseRemainderInstallmentNumbersFromMetadata } from "./publicClientInvoicePaymentContext.ts";
+import { notifyInvoicePaymentReceipt } from "./invoicePaymentEmails.ts";
 
 export type ClientPaymentMetadataType =
   | "proposal_deposit"
@@ -27,6 +30,19 @@ export const isClientPaymentMetadata = (
     metadata.type === "proposal_deposit" ||
     metadata.type === "scheduled_installment"
   );
+};
+
+/** Card + in-page wallets (Apple Pay / Google Pay). No PayPal or redirect methods. */
+export const invoiceCheckoutPaymentIntentOptions = {
+  payment_method_types: ["card"],
+};
+
+/** Card, Apple Pay, and Google Pay — no redirect-based payment methods. */
+const walletFriendlyPaymentIntentOptions = {
+  automatic_payment_methods: {
+    enabled: true,
+    allow_redirects: "never" as const,
+  },
 };
 
 export const buildClientPaymentMetadata = (params: {
@@ -104,9 +120,21 @@ export async function resolveOrCreateInvoiceStripeCustomer(
     orgId: number;
     contactId?: number | null;
     companyId?: number | null;
+    existingCustomerId?: string | null;
     existingPaymentIntentId?: string | null;
   },
 ) {
+  if (params.existingCustomerId) {
+    try {
+      const customer = await stripe.customers.retrieve(params.existingCustomerId);
+      if (!("deleted" in customer && customer.deleted)) {
+        return customer as Stripe.Customer;
+      }
+    } catch {
+      /* create a new customer below */
+    }
+  }
+
   if (params.existingPaymentIntentId) {
     try {
       const intent = await stripe.paymentIntents.retrieve(
@@ -144,12 +172,13 @@ export async function applyClientInvoicePaymentFromStripe(
     invoiceId: number;
     stripePaymentIntentId: string;
     amountCents: number;
+    metadata?: Record<string, string> | null;
   },
 ) {
   const { data: invoice } = await supabase
     .from("client_invoices")
     .select(
-      "id, org_id, amount, amount_paid, status, upfront_percent, auto_charge_remainder, save_card_for_future_charges",
+      "id, org_id, amount, amount_paid, status, upfront_percent, auto_charge_remainder, save_card_for_future_charges, due_date, issue_date, remainder_schedule, stripe_payment_intent_id",
     )
     .eq("id", params.invoiceId)
     .eq("org_id", params.orgId)
@@ -163,29 +192,30 @@ export async function applyClientInvoicePaymentFromStripe(
     return { handled: true, skipped: true, duplicate: true };
   }
 
-  const total = Number(invoice.amount) || 0;
-  const paid = Number(invoice.amount_paid) || 0;
-  const chargeAmount = Math.round(params.amountCents) / 100;
-  const newPaid = Math.round((paid + chargeAmount) * 100) / 100;
-  const isPaidInFull = newPaid >= total - 0.01;
-  const now = new Date().toISOString();
+  const remainderInstallmentNumbers = parseRemainderInstallmentNumbersFromMetadata(
+    params.metadata,
+  );
 
-  const { data: updated } = await supabase
-    .from("client_invoices")
-    .update({
-      amount_paid: newPaid,
-      status: isPaidInFull ? "paid" : "sent",
-      paid_at: isPaidInFull ? now : null,
-      sent_at: invoice.status === "draft" ? now : undefined,
-      stripe_payment_intent_id: params.stripePaymentIntentId,
-      updated_at: now,
-    })
-    .eq("id", invoice.id)
-    .eq("org_id", params.orgId)
-    .select("*")
-    .single();
+  const result = await applyClientInvoicePaymentUpdate(supabase, {
+    invoice,
+    chargeAmount: Math.round(params.amountCents) / 100,
+    stripePaymentIntentId: params.stripePaymentIntentId,
+    newlyPaidInstallmentNumbers: remainderInstallmentNumbers,
+    clearAutoChargeError: params.metadata?.auto_charge === "1",
+  });
 
-  return { handled: true, invoice: updated, paid_in_full: isPaidInFull };
+  await notifyInvoicePaymentReceipt(supabase, {
+    orgId: params.orgId,
+    invoiceId: params.invoiceId,
+    stripePaymentIntentId: params.stripePaymentIntentId,
+    chargedAmount: result.charged_amount,
+  });
+
+  return {
+    handled: true,
+    invoice: result.invoice,
+    paid_in_full: result.paid_in_full,
+  };
 }
 
 export async function findDepositInstallment(
@@ -268,6 +298,231 @@ export async function attachPaymentMethodToCustomer(
   };
 }
 
+export async function createInvoiceCheckoutPaymentIntent(
+  stripe: Stripe,
+  params: {
+    amountCents: number;
+    currency: string;
+    customerId: string;
+    metadata: {
+      type: "client_invoice";
+      org_id: string;
+      invoice_id: string;
+      remainder_installment_numbers?: string;
+    };
+    idempotencyKey: string;
+    saveForFutureUse?: boolean;
+  },
+) {
+  return stripe.paymentIntents.create(
+    {
+      amount: params.amountCents,
+      currency: params.currency.toLowerCase(),
+      customer: params.customerId,
+      ...invoiceCheckoutPaymentIntentOptions,
+      ...(params.saveForFutureUse
+        ? { setup_future_usage: "off_session" as const }
+        : {}),
+      metadata: { ...params.metadata },
+    },
+    { idempotencyKey: params.idempotencyKey },
+  );
+}
+
+export async function updateInvoiceCheckoutPaymentIntent(
+  stripe: Stripe,
+  params: {
+    paymentIntentId: string;
+    amountCents: number;
+    invoiceId: number;
+    orgId: number;
+    metadata: {
+      type: "client_invoice";
+      org_id: string;
+      invoice_id: string;
+      remainder_installment_numbers?: string;
+    };
+  },
+) {
+  const intent = await stripe.paymentIntents.retrieve(params.paymentIntentId);
+  const metadata = intent.metadata ?? {};
+
+  if (
+    metadata.type !== "client_invoice" ||
+    Number(metadata.invoice_id) !== params.invoiceId ||
+    Number(metadata.org_id) !== params.orgId
+  ) {
+    throw new Error("Payment does not match this invoice");
+  }
+
+  if (
+    intent.status !== "requires_payment_method" &&
+    intent.status !== "requires_confirmation"
+  ) {
+    throw new Error("Payment is already in progress");
+  }
+
+  return stripe.paymentIntents.update(params.paymentIntentId, {
+    amount: params.amountCents,
+    metadata: params.metadata,
+  });
+}
+
+export async function finalizeInvoicePaymentFromIntent(
+  stripe: Stripe,
+  params: {
+    paymentIntentId: string;
+    invoice: {
+      id: number;
+      org_id: number;
+      save_card_for_future_charges?: boolean | null;
+      auto_charge_remainder?: boolean | null;
+      stripe_customer_id?: string | null;
+    };
+    chargeAmount: number;
+    remainderInstallmentNumbers: number[];
+  },
+) {
+  const intent = await stripe.paymentIntents.retrieve(params.paymentIntentId, {
+    expand: ["payment_method"],
+  });
+
+  const metadata = intent.metadata ?? {};
+  if (
+    metadata.type !== "client_invoice" ||
+    Number(metadata.invoice_id) !== params.invoice.id ||
+    Number(metadata.org_id) !== params.invoice.org_id
+  ) {
+    throw new Error("Payment does not match this invoice");
+  }
+
+  const intentAmount = Math.round(Number(intent.amount ?? 0)) / 100;
+  if (Math.abs(intentAmount - params.chargeAmount) > 0.01) {
+    throw new Error("Payment amount does not match the selected total");
+  }
+
+  if (intent.status !== "succeeded" && intent.status !== "processing") {
+    throw new Error("Payment has not completed yet");
+  }
+
+  const shouldSaveCard = Boolean(
+    params.invoice.save_card_for_future_charges ||
+      params.invoice.auto_charge_remainder,
+  );
+
+  let stripeCustomerId = params.invoice.stripe_customer_id ?? null;
+  let savedPaymentMethodId: string | null = null;
+  let paymentMethodBrand: string | null = null;
+  let paymentMethodLast4: string | null = null;
+
+  const customerId =
+    typeof intent.customer === "string"
+      ? intent.customer
+      : intent.customer?.id ?? stripeCustomerId;
+
+  const paymentMethod = intent.payment_method;
+  const paymentMethodId =
+    typeof paymentMethod === "string" ? paymentMethod : paymentMethod?.id;
+
+  if (customerId && paymentMethodId && shouldSaveCard) {
+    stripeCustomerId = customerId;
+    const cardInfo = await attachPaymentMethodToCustomer(
+      stripe,
+      customerId,
+      paymentMethodId,
+    );
+    savedPaymentMethodId = paymentMethodId;
+    paymentMethodBrand = cardInfo.brand;
+    paymentMethodLast4 = cardInfo.last4;
+  } else if (paymentMethod && typeof paymentMethod !== "string") {
+    paymentMethodBrand = paymentMethod.card?.brand ?? paymentMethod.type ?? null;
+    paymentMethodLast4 = paymentMethod.card?.last4 ?? null;
+  }
+
+  const metadataInstallments = parseRemainderInstallmentNumbersFromMetadata(
+    metadata,
+  );
+  const remainderInstallmentNumbers = metadataInstallments.length > 0
+    ? metadataInstallments
+    : params.remainderInstallmentNumbers;
+
+  return {
+    intent,
+    stripeCustomerId,
+    savedPaymentMethodId,
+    paymentMethodBrand,
+    paymentMethodLast4,
+    remainderInstallmentNumbers,
+  };
+}
+
+export async function createInvoicePaymentIntent(
+  stripe: Stripe,
+  params: {
+    amountCents: number;
+    currency: string;
+    customerId: string;
+    paymentMethodId: string;
+    metadata: {
+      type: "client_invoice";
+      org_id: string;
+      invoice_id: string;
+      remainder_installment_numbers?: string;
+    };
+    idempotencyKey: string;
+    saveForFutureUse?: boolean;
+  },
+) {
+  return stripe.paymentIntents.create(
+    {
+      amount: params.amountCents,
+      currency: params.currency.toLowerCase(),
+      customer: params.customerId,
+      payment_method: params.paymentMethodId,
+      confirm: true,
+      off_session: false,
+      ...walletFriendlyPaymentIntentOptions,
+      ...(params.saveForFutureUse
+        ? { setup_future_usage: "off_session" as const }
+        : {}),
+      metadata: { ...params.metadata },
+    },
+    { idempotencyKey: params.idempotencyKey },
+  );
+}
+
+export async function createOffSessionInvoicePaymentIntent(
+  stripe: Stripe,
+  params: {
+    amountCents: number;
+    currency: string;
+    customerId: string;
+    paymentMethodId: string;
+    metadata: {
+      type: "client_invoice";
+      org_id: string;
+      invoice_id: string;
+      remainder_installment_number: string;
+      auto_charge: "1";
+    };
+    idempotencyKey: string;
+  },
+) {
+  return stripe.paymentIntents.create(
+    {
+      amount: params.amountCents,
+      currency: params.currency.toLowerCase(),
+      customer: params.customerId,
+      payment_method: params.paymentMethodId,
+      confirm: true,
+      off_session: true,
+      ...walletFriendlyPaymentIntentOptions,
+      metadata: { ...params.metadata },
+    },
+    { idempotencyKey: params.idempotencyKey },
+  );
+}
+
 export async function createDepositPaymentIntent(
   stripe: Stripe,
   params: {
@@ -286,6 +541,7 @@ export async function createDepositPaymentIntent(
       customer: params.customerId,
       payment_method: params.paymentMethodId,
       confirm: true,
+      ...walletFriendlyPaymentIntentOptions,
       setup_future_usage: "off_session",
       metadata: { ...params.metadata },
     },
@@ -312,6 +568,7 @@ export async function createOffSessionInstallmentPaymentIntent(
       payment_method: params.paymentMethodId,
       confirm: true,
       off_session: true,
+      ...walletFriendlyPaymentIntentOptions,
       metadata: { ...params.metadata },
     },
     { idempotencyKey: params.idempotencyKey },
@@ -432,6 +689,7 @@ export async function processPaymentIntentSucceeded(
       invoiceId,
       stripePaymentIntentId: paymentIntent.id,
       amountCents: paymentIntent.amount ?? 0,
+      metadata: paymentIntent.metadata,
     });
   }
 

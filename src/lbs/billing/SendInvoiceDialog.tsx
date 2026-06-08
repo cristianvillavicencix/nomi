@@ -1,5 +1,13 @@
-import { useMutation } from "@tanstack/react-query";
-import { Loader2, Mail, Send, ExternalLink, CheckCircle2, Ban, Trash2 } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  Loader2,
+  Mail,
+  Send,
+  ExternalLink,
+  CheckCircle2,
+  Ban,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDataProvider, useGetList, useNotify } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
@@ -13,13 +21,21 @@ import {
 } from "@/lbs/billing/clientInvoicePdf";
 import { InvoiceShareLinkDialog } from "@/lbs/billing/InvoiceShareLinkDialog";
 import {
+  buildDefaultInvoiceEmailSubject,
+  buildInvoiceEmailHtml,
+  buildInvoiceEmailPlainText,
+  buildOrganizationEmailTagline,
+  resolveClientInvoiceShareUrl,
+  resolveInvoiceOrganizationName,
+} from "@/lbs/billing/invoiceEmailTemplate";
+import { getInvoiceOrganizationBranding } from "@/lbs/billing/invoiceOrganizationInfo";
+import {
   canDeleteClientInvoice,
   canMarkClientInvoiceSent,
   canSendClientInvoice,
   canVoidClientInvoice,
   resolveInvoiceRecipientEmail,
 } from "@/lbs/billing/billingUtils";
-import type { ClientInvoice, ClientInvoiceLineItem } from "@/lbs/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,38 +47,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-
-const useOrganizationAddress = () => {
-  const {
-    companyAddressLine1,
-    companyAddressLine2,
-    companyCity,
-    companyState,
-    companyPostalCode,
-    companyCountry,
-    companyWebsite,
-  } = useConfigurationContext();
-
-  const organizationAddress = useMemo(() => {
-    const parts = [
-      companyAddressLine1,
-      companyAddressLine2,
-      [companyCity, companyState, companyPostalCode].filter(Boolean).join(", "),
-      companyCountry,
-    ].filter(Boolean);
-    return parts.length ? parts.join("\n") : null;
-  }, [
-    companyAddressLine1,
-    companyAddressLine2,
-    companyCity,
-    companyState,
-    companyPostalCode,
-    companyCountry,
-  ]);
-
-  return { organizationAddress, companyWebsite };
-};
+import type { ClientInvoice, ClientInvoiceLineItem } from "@/lbs/types";
 
 const buildInvoicePdfContext = buildClientInvoicePdfContext;
 
@@ -70,7 +55,7 @@ export const SendInvoiceDialog = ({
   open,
   onOpenChange,
   invoice,
-  organizationName,
+  organizationName: organizationNameProp,
   company,
   contact,
   onSent,
@@ -85,9 +70,21 @@ export const SendInvoiceDialog = ({
 }) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const { organizationAddress, companyWebsite } = useOrganizationAddress();
+  const { title, companyLegalName } = useConfigurationContext();
+  const organizationName = useMemo(
+    () =>
+      resolveInvoiceOrganizationName({
+        title: organizationNameProp ?? title,
+        companyLegalName,
+      }),
+    [organizationNameProp, companyLegalName, title],
+  );
+  const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
+  const organizationAddress = invoiceBranding.address;
+  const companyWebsite = invoiceBranding.website;
+  const organizationTagline = useMemo(() => buildOrganizationEmailTagline(), []);
   const [to, setTo] = useState("");
-  const [message, setMessage] = useState("");
+  const [subject, setSubject] = useState("");
 
   const { data: lineItems = [] } = useGetList<ClientInvoiceLineItem>(
     "client_invoice_line_items",
@@ -99,8 +96,47 @@ export const SendInvoiceDialog = ({
     { enabled: Boolean(invoice?.id) },
   );
 
+  const {
+    data: shareLink,
+    isPending: shareLinkPending,
+    error: shareLinkError,
+  } = useQuery({
+    queryKey: ["invoice-send-share-link", invoice?.id],
+    queryFn: () =>
+      dataProvider.shareClientInvoice({
+        invoiceId: invoice!.id,
+        baseUrl: window.location.origin,
+      }),
+    enabled: open && Boolean(invoice?.id),
+    staleTime: 0,
+  });
+
+  const paymentUrl = shareLink
+    ? resolveClientInvoiceShareUrl(shareLink, window.location.origin)
+    : "";
+
+  const emailTemplateContext = useMemo(() => {
+    if (!invoice || !paymentUrl) return null;
+    return {
+      invoice,
+      lineItems,
+      organizationName,
+      paymentUrl,
+      contact,
+      organizationTagline,
+    };
+  }, [
+    invoice,
+    lineItems,
+    organizationName,
+    paymentUrl,
+    contact,
+    organizationTagline,
+  ]);
+
   useEffect(() => {
     if (!open || !invoice) return;
+
     setTo(
       resolveInvoiceRecipientEmail({
         company,
@@ -108,10 +144,8 @@ export const SendInvoiceDialog = ({
         fallbackEmail: invoice.recipient_email,
       }),
     );
-    setMessage(
-      `Please find attached invoice ${invoice.invoice_number} for ${invoice.description}.\n\nThank you for your business.`,
-    );
-  }, [open, invoice, company, contact]);
+    setSubject(buildDefaultInvoiceEmailSubject(invoice, organizationName));
+  }, [open, invoice, company, contact, organizationName]);
 
   const sendMutation = useMutation({
     mutationFn: async () => {
@@ -129,10 +163,15 @@ export const SendInvoiceDialog = ({
         }),
       );
       const pdfBase64 = await blobToBase64(blob);
+      if (!emailTemplateContext) {
+        throw new Error("Payment link is not ready yet");
+      }
       return dataProvider.sendClientInvoice({
         invoiceId: invoice.id,
         to,
-        message,
+        subject: subject.trim(),
+        message: buildInvoiceEmailPlainText(emailTemplateContext),
+        htmlMessage: buildInvoiceEmailHtml(emailTemplateContext),
         pdfBase64,
         filename: `${invoice.invoice_number}.pdf`,
       });
@@ -156,13 +195,21 @@ export const SendInvoiceDialog = ({
 
   if (!invoice) return null;
 
+  const canSend =
+    Boolean(to.trim()) &&
+    Boolean(subject.trim()) &&
+    !shareLinkPending &&
+    Boolean(paymentUrl) &&
+    Boolean(emailTemplateContext);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Send invoice {invoice.invoice_number}</DialogTitle>
           <DialogDescription>
-            Email the PDF invoice to your client.
+            Branded email with line items, payment schedule, and pay button.
+            The PDF invoice is attached automatically.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -176,14 +223,34 @@ export const SendInvoiceDialog = ({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="invoice-send-message">Message</Label>
-            <Textarea
-              id="invoice-send-message"
-              rows={4}
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
+            <Label htmlFor="invoice-send-subject">Subject</Label>
+            <Input
+              id="invoice-send-subject"
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
             />
           </div>
+          <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Email includes Latino Business Support branding, amount due, line
+            items, optional payment schedule, and a{" "}
+            <span className="font-medium text-foreground">Pay</span> button.
+          </div>
+          {shareLinkPending ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Generating payment link…
+            </p>
+          ) : null}
+          {shareLinkError ? (
+            <p className="text-sm text-destructive">
+              Could not generate payment link. Try again or use Share.
+            </p>
+          ) : paymentUrl ? (
+            <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Pay link:</span>{" "}
+              {paymentUrl}
+            </div>
+          ) : null}
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
@@ -191,7 +258,7 @@ export const SendInvoiceDialog = ({
           </Button>
           <Button
             type="button"
-            disabled={!to.trim() || sendMutation.isPending}
+            disabled={!canSend || sendMutation.isPending}
             onClick={() => sendMutation.mutate()}
           >
             {sendMutation.isPending ? (
@@ -228,7 +295,9 @@ export const InvoiceRowActions = ({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [downloading, setDownloading] = useState(false);
-  const { organizationAddress, companyWebsite } = useOrganizationAddress();
+  const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
+  const organizationAddress = invoiceBranding.address;
+  const companyWebsite = invoiceBranding.website;
 
   const showSend = canSendClientInvoice(invoice);
   const showMarkSent = canMarkClientInvoiceSent(invoice);
@@ -274,10 +343,7 @@ export const InvoiceRowActions = ({
         baseUrl: window.location.origin,
       }),
     onSuccess: (result) => {
-      const url =
-        result.short_url?.startsWith("http") || result.url?.startsWith("http")
-          ? result.short_url || result.url
-          : `${window.location.origin}${result.short_url || result.url}`;
+      const url = resolveClientInvoiceShareUrl(result, window.location.origin);
       setShareUrl(url);
       setShareOpen(true);
     },

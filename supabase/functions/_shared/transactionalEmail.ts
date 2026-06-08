@@ -22,23 +22,40 @@ export const isTransactionalEmailSkipped = () =>
 
 export type TransactionalEmailProvider = "twilio";
 
+const DEFAULT_ORGANIZATION_NAME = "Latino Business Support";
+
 const parseEmailAddress = (value: string) => {
   const trimmed = value.trim();
   const angle = trimmed.match(/^(.+?)\s*<([^>]+)>$/);
   if (angle) {
     const name = angle[1].replace(/^["']|["']$/g, "").trim();
-    return { email: angle[2].trim(), name: name || "Nomi CRM" };
+    return { email: angle[2].trim(), name: name || DEFAULT_ORGANIZATION_NAME };
   }
-  return { email: trimmed, name: "Nomi CRM" };
+  return { email: trimmed, name: DEFAULT_ORGANIZATION_NAME };
 };
 
 const escapeHtml = (value: string) =>
   value.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+const linkifyLine = (line: string) =>
+  escapeHtml(line).replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" style="color:#2563eb;text-decoration:underline;">$1</a>',
+  );
+
 const textToHtml = (textBody: string) =>
   textBody
     .split("\n")
-    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .map((line) => {
+      if (!line.trim()) return "<p>&nbsp;</p>";
+      if (line.trim().startsWith("Pay here:")) {
+        const url = line.replace(/^Pay here:\s*/i, "").trim();
+        if (/^https?:\/\//i.test(url)) {
+          return `<p style="margin:20px 0;"><a href="${escapeHtml(url)}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:600;">Pay here</a></p>`;
+        }
+      }
+      return `<p>${linkifyLine(line)}</p>`;
+    })
     .join("");
 
 const formatEmailSendFailure = (message: string) => {
@@ -86,7 +103,7 @@ const resolveFromAddress = async (
     .eq("id", orgId)
     .maybeSingle();
 
-  const name = orgName?.trim() || org?.name?.trim() || "Nomi CRM";
+  const name = orgName?.trim() || org?.name?.trim() || DEFAULT_ORGANIZATION_NAME;
   const address = org?.email?.trim() || "billing@lbs.bz";
   return { email: address, name };
 };
@@ -107,8 +124,8 @@ export async function getOrgTransactionalEmailStatus(orgId: number) {
   const fromPreview = fromOverride
     ? fromOverride
     : org?.email?.trim()
-      ? `${org?.name ?? "Nomi CRM"} <${org.email.trim()}>`
-      : `${org?.name ?? "Nomi CRM"} <billing@lbs.bz>`;
+      ? `${org?.name ?? DEFAULT_ORGANIZATION_NAME} <${org.email.trim()}>`
+      : `${org?.name ?? DEFAULT_ORGANIZATION_NAME} <billing@lbs.bz>`;
 
   return {
     configured,
@@ -200,6 +217,7 @@ export async function sendTransactionalEmail(params: {
   to: string;
   subject: string;
   textBody: string;
+  htmlBody?: string | null;
   replyTo?: string | null;
   attachments?: EmailAttachment[];
 }) {
@@ -219,7 +237,7 @@ export async function sendTransactionalEmail(params: {
   }
 
   const from = await resolveFromAddress(params.orgId, params.orgName);
-  const htmlBody = textToHtml(params.textBody);
+  const htmlBody = params.htmlBody?.trim() || textToHtml(params.textBody);
   const result = await sendViaTwilioEmail({
     accountSid: twilio.accountSid,
     authToken: twilio.authToken,

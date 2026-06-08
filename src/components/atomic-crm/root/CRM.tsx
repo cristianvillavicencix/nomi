@@ -67,10 +67,9 @@ import {
   renderLbsCustomRoutes,
   renderLbsProposalClientPreviewRoute,
   renderLbsPublicFormRoute,
+  renderLbsPublicPortalRoutes,
 } from "@/lbs/LbsCustomRoutes";
 import { isLbsMode } from "@/lbs/productMode";
-import { ClientPortalPage } from "@/lbs/portal/ClientPortalPage";
-import { ClientPortalInvoicePage } from "@/lbs/portal/ClientPortalInvoicePage";
 import proposals from "@/lbs/proposals";
 import contracts from "@/lbs/contracts";
 import tickets from "@/lbs/tickets";
@@ -301,11 +300,7 @@ const DesktopAdmin = (props: CoreAdminProps) => {
             <Route path="/sas/*" element={<Navigate to="/" replace />} />
             {renderLbsPublicFormRoute()}
             {renderLbsProposalClientPreviewRoute()}
-            <Route path="/portal" element={<ClientPortalPage />} />
-            <Route
-              path="/portal/invoice/:token"
-              element={<ClientPortalInvoicePage />}
-            />
+            {renderLbsPublicPortalRoutes()}
           </>
         ) : (
           <>
@@ -662,6 +657,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
               <Route path="/sas/*" element={<Navigate to="/" replace />} />
               {renderLbsPublicFormRoute()}
               {renderLbsProposalClientPreviewRoute()}
+              {renderLbsPublicPortalRoutes()}
             </>
           ) : (
             <>

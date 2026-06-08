@@ -12,6 +12,10 @@ export type InvoiceRemainderScheduleConfig = {
   installment_count: number;
   balance_start_date?: string | null;
   project_end_date?: string | null;
+  /** Remainder installment numbers (1-based) already paid early or via auto-debit. */
+  paid_installment_numbers?: number[];
+  /** Rescheduled due dates for unpaid remainder installments (same order). */
+  installment_due_dates?: string[];
 };
 
 export const INVOICE_REMAINDER_TIMING_OPTIONS: {
@@ -84,6 +88,16 @@ export const parseInvoiceRemainderSchedule = (
       typeof row.project_end_date === "string"
         ? row.project_end_date
         : invoiceDueDate,
+    paid_installment_numbers: Array.isArray(row.paid_installment_numbers)
+      ? row.paid_installment_numbers
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value) && value > 0)
+      : undefined,
+    installment_due_dates: Array.isArray(row.installment_due_dates)
+      ? row.installment_due_dates.filter(
+          (value): value is string => typeof value === "string" && Boolean(value.trim()),
+        )
+      : undefined,
   };
 };
 
@@ -200,6 +214,157 @@ export const generateInvoiceBalanceCharges = ({
   return rows;
 };
 
+/** Base schedule before early-pay shifts — ignores paid/rescheduled state. */
+export const generateOriginalInvoiceBalanceCharges = (params: {
+  balanceAmount: number;
+  config: InvoiceRemainderScheduleConfig;
+  invoiceDueDate: string;
+  issueDate: string;
+}) =>
+  generateInvoiceBalanceCharges({
+    ...params,
+    config: {
+      ...params.config,
+      paid_installment_numbers: undefined,
+      installment_due_dates: undefined,
+    },
+  });
+
+export const applyRemainderScheduleToCharges = (
+  allCharges: InvoiceBalanceChargeRow[],
+  config: InvoiceRemainderScheduleConfig,
+) => {
+  const paidNumbers = new Set(config.paid_installment_numbers ?? []);
+  if (!paidNumbers.size && !config.installment_due_dates?.length) {
+    return allCharges;
+  }
+
+  const unpaid = allCharges
+    .filter((row) => !paidNumbers.has(row.installment_number))
+    .sort((a, b) => a.installment_number - b.installment_number);
+  const originalSlots = allCharges.map((row) => row.due_date);
+  const rescheduled =
+    config.installment_due_dates?.length === unpaid.length
+      ? config.installment_due_dates
+      : originalSlots.slice(0, unpaid.length);
+
+  return unpaid.map((row, index) => ({
+    ...row,
+    due_date: rescheduled[index] ?? row.due_date,
+  }));
+};
+
+/**
+ * When the client pays remainder installment(s) early, shift unpaid dates
+ * forward into the vacated schedule slots (weekly/biweekly/monthly cadence preserved).
+ */
+export const rescheduleRemainderAfterEarlyPayments = ({
+  config,
+  allCharges,
+  newlyPaidInstallmentNumbers,
+}: {
+  config: InvoiceRemainderScheduleConfig;
+  allCharges: InvoiceBalanceChargeRow[];
+  newlyPaidInstallmentNumbers: number[];
+}) => {
+  const paid = [
+    ...new Set([
+      ...(config.paid_installment_numbers ?? []),
+      ...newlyPaidInstallmentNumbers.filter((value) => value > 0),
+    ]),
+  ];
+  const unpaid = allCharges
+    .filter((row) => !paid.includes(row.installment_number))
+    .sort((a, b) => a.installment_number - b.installment_number);
+  const originalSlots = allCharges.map((row) => row.due_date);
+
+  return {
+    ...config,
+    paid_installment_numbers: paid,
+    installment_due_dates: originalSlots.slice(0, unpaid.length),
+  };
+};
+
+/** Preview due dates after paying selected installment(s) early (UI + validation). */
+export const previewRemainderScheduleAfterPayments = ({
+  total,
+  upfrontPercent,
+  config,
+  invoiceDueDate,
+  issueDate,
+  payingInstallmentNumbers,
+}: {
+  total: number;
+  upfrontPercent: number;
+  config: InvoiceRemainderScheduleConfig;
+  invoiceDueDate: string;
+  issueDate: string;
+  payingInstallmentNumbers: number[];
+}) => {
+  const depositTarget =
+    Math.round(total * (Math.min(Math.max(upfrontPercent, 1), 99) / 100) * 100) /
+    100;
+  const balanceAmount = Math.max(Math.round((total - depositTarget) * 100) / 100, 0);
+  const originalCharges = generateOriginalInvoiceBalanceCharges({
+    balanceAmount,
+    config,
+    invoiceDueDate,
+    issueDate,
+  });
+
+  if (!payingInstallmentNumbers.length) {
+    return applyRemainderScheduleToCharges(originalCharges, config);
+  }
+
+  const previewConfig = rescheduleRemainderAfterEarlyPayments({
+    config,
+    allCharges: originalCharges,
+    newlyPaidInstallmentNumbers: payingInstallmentNumbers,
+  });
+
+  return applyRemainderScheduleToCharges(originalCharges, previewConfig);
+};
+
+/** Unpaid remainder rows due on or before asOfDate (YYYY-MM-DD). */
+export const getUnpaidRemainderChargesDueBy = ({
+  total,
+  upfrontPercent,
+  config,
+  invoiceDueDate,
+  issueDate,
+  asOfDate,
+}: {
+  total: number;
+  upfrontPercent: number;
+  config: InvoiceRemainderScheduleConfig;
+  invoiceDueDate: string;
+  issueDate: string;
+  asOfDate: string;
+}) => {
+  const depositTarget =
+    Math.round(total * (Math.min(Math.max(upfrontPercent, 1), 99) / 100) * 100) /
+    100;
+  const balanceAmount = Math.max(Math.round((total - depositTarget) * 100) / 100, 0);
+  const originalCharges = generateOriginalInvoiceBalanceCharges({
+    balanceAmount,
+    config,
+    invoiceDueDate,
+    issueDate,
+  });
+  const scheduled = applyRemainderScheduleToCharges(originalCharges, config);
+  const paid = new Set(config.paid_installment_numbers ?? []);
+  return scheduled
+    .filter(
+      (row) => !paid.has(row.installment_number) && row.due_date <= asOfDate,
+    )
+    .sort((a, b) => a.installment_number - b.installment_number);
+};
+
+export const formatUsd = (value: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    value,
+  );
+
 export const remainderTimingIsRecurring = (timing: InvoiceRemainderTiming) =>
   timing === "weekly" || timing === "biweekly" || timing === "monthly";
 
@@ -242,8 +407,3 @@ export const describeInvoiceOnlinePaymentSummary = ({
   const timing = describeInvoiceRemainderTiming(remainderSchedule);
   return `${depositPercent}% deposit now (${formatUsd(deposit)}) · Balance ${formatUsd(balance)} — ${timing} (auto-debit)`;
 };
-
-const formatUsd = (value: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    value,
-  );

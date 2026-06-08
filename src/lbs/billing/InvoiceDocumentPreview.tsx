@@ -100,24 +100,24 @@ export const InvoiceDocumentPreview = ({
       ) : null}
 
       <div className={invoiceDocumentInnerClass}>
-        <div className="flex flex-wrap items-start justify-between gap-8">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+        <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-8">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-4xl">
               INVOICE
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               Invoice# {invoiceNumber}
             </p>
-            <div className="mt-8">
+            <div className="mt-6 sm:mt-8">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Balance Due
               </p>
-              <p className="text-4xl font-bold tabular-nums text-slate-900">
+              <p className="text-2xl font-bold tabular-nums text-slate-900 sm:text-4xl">
                 {formatMoney(balanceDue)}
               </p>
             </div>
           </div>
-          <div className="min-w-[200px] text-right text-sm">
+          <div className="min-w-0 text-left text-sm sm:min-w-[200px] sm:text-right">
             <p className="text-base font-semibold text-slate-900">
               {organizationName}
             </p>
@@ -168,8 +168,8 @@ export const InvoiceDocumentPreview = ({
           </div>
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-md border">
-          <table className="w-full text-sm">
+        <div className="mt-8 overflow-x-auto rounded-md border">
+          <table className="w-full min-w-[520px] text-sm">
             <thead>
               <tr className="bg-slate-700 text-left text-xs uppercase tracking-wide text-white">
                 <th className="px-3 py-2.5 font-medium">Item & Description</th>

@@ -68,11 +68,146 @@ export const ClientPortalLayout = ({
 
   const invoiceMode = mode === "invoice";
 
+  const languageToggle = (
+    <button
+      type="button"
+      className="shrink-0 rounded-md border px-2 py-1.5 text-xs"
+      onClick={() => {
+        const next = locale === "es" ? "en" : "es";
+        localStorage.setItem(PORTAL_LOCALE_KEY, next);
+        onLocaleChange(next);
+      }}
+    >
+      {copy.languageToggle}
+    </button>
+  );
+
+  const sidebarNav = invoiceMode ? (
+    <>
+      <div
+        className={cn(
+          "relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] bg-muted/30",
+        )}
+      >
+        <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r bg-emerald-500" />
+        <span className="text-muted-foreground">
+          <FileText className="size-4" />
+        </span>
+        <span className="text-[13px]">Invoice</span>
+      </div>
+      {fullPortalHref ? (
+        <Link
+          to={fullPortalHref}
+          className="relative mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] hover:bg-muted/40"
+        >
+          <span className="text-muted-foreground">
+            <LayoutDashboard className="size-4" />
+          </span>
+          <span className="text-[13px]">My project</span>
+        </Link>
+      ) : null}
+    </>
+  ) : (
+    navItems.map((item) => {
+      const isActive = activeView === item.id;
+      return (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onViewChange?.(item.id)}
+          className={cn(
+            "relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] hover:bg-muted/40",
+            isActive && "bg-muted/30",
+          )}
+        >
+          <span
+            className={cn(
+              "absolute left-0 top-1 bottom-1 w-[3px] rounded-r",
+              isActive ? "bg-emerald-500" : "bg-transparent",
+            )}
+          />
+          <span className="text-muted-foreground">{item.icon}</span>
+          <span className="text-[13px]">{item.label}</span>
+        </button>
+      );
+    })
+  );
+
+  const mobileNavItems = invoiceMode
+    ? [
+        { id: "invoice" as const, label: "Invoice", href: null as string | null },
+        ...(fullPortalHref
+          ? [{ id: "portal" as const, label: "My project", href: fullPortalHref }]
+          : []),
+      ]
+    : navItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        href: null as string | null,
+      }));
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="flex min-h-screen">
-        <aside className="w-[190px] shrink-0 border-r bg-white">
-          <div className="flex h-full flex-col">
+      <header className="border-b bg-white md:hidden">
+        <div className="flex items-start justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold tracking-tight text-[#0D3B6E]">
+              Nomi Portal
+            </div>
+            {accountEmail ? (
+              <div className="truncate text-[11px] text-muted-foreground">
+                {accountEmail}
+              </div>
+            ) : null}
+            {!invoiceMode && websiteUnlocked && isDeliveryNew(deliveryDeliveredAt) ? (
+              <div className="mt-1 text-[11px] font-medium text-emerald-700">
+                {copy.newBadge}
+              </div>
+            ) : null}
+          </div>
+          {languageToggle}
+        </div>
+
+        <nav className="flex gap-1 overflow-x-auto border-t px-2 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {mobileNavItems.map((item) => {
+            const isActive = invoiceMode
+              ? item.id === "invoice"
+              : activeView === item.id;
+
+            if ("href" in item && item.href) {
+              return (
+                <Link
+                  key={item.id}
+                  to={item.href}
+                  className="shrink-0 rounded-md px-3 py-2 text-[13px] text-[#0D3B6E] hover:bg-muted/40"
+                >
+                  {item.label}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  if (!invoiceMode) onViewChange?.(item.id as PortalView);
+                }}
+                className={cn(
+                  "shrink-0 rounded-md px-3 py-2 text-[13px] text-[#0D3B6E]",
+                  isActive ? "bg-muted/30 font-medium" : "hover:bg-muted/40",
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+      </header>
+
+      <div className="flex min-h-[calc(100dvh-4.5rem)] md:min-h-screen">
+        <aside className="hidden w-[190px] shrink-0 border-r bg-white md:flex">
+          <div className="flex h-full w-full flex-col">
             <div className="px-4 py-4">
               <div className="text-sm font-semibold tracking-tight text-[#0D3B6E]">
                 Nomi Portal
@@ -89,71 +224,10 @@ export const ClientPortalLayout = ({
               ) : null}
             </div>
 
-            <nav className="flex-1 px-2 py-2">
-              {invoiceMode ? (
-                <>
-                  <div
-                    className={cn(
-                      "relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] bg-muted/30",
-                    )}
-                  >
-                    <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r bg-emerald-500" />
-                    <span className="text-muted-foreground">
-                      <FileText className="size-4" />
-                    </span>
-                    <span className="text-[13px]">Invoice</span>
-                  </div>
-                  {fullPortalHref ? (
-                    <Link
-                      to={fullPortalHref}
-                      className="relative mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] hover:bg-muted/40"
-                    >
-                      <span className="text-muted-foreground">
-                        <LayoutDashboard className="size-4" />
-                      </span>
-                      <span className="text-[13px]">My project</span>
-                    </Link>
-                  ) : null}
-                </>
-              ) : (
-                navItems.map((item) => {
-                  const isActive = activeView === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => onViewChange?.(item.id)}
-                      className={cn(
-                        "relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] hover:bg-muted/40",
-                        isActive && "bg-muted/30",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute left-0 top-1 bottom-1 w-[3px] rounded-r",
-                          isActive ? "bg-emerald-500" : "bg-transparent",
-                        )}
-                      />
-                      <span className="text-muted-foreground">{item.icon}</span>
-                      <span className="text-[13px]">{item.label}</span>
-                    </button>
-                  );
-                })
-              )}
-            </nav>
+            <nav className="flex-1 px-2 py-2">{sidebarNav}</nav>
 
             <div className="border-t p-3">
-              <button
-                type="button"
-                className="w-full rounded-md border px-2 py-1.5 text-xs"
-                onClick={() => {
-                  const next = locale === "es" ? "en" : "es";
-                  localStorage.setItem(PORTAL_LOCALE_KEY, next);
-                  onLocaleChange(next);
-                }}
-              >
-                {copy.languageToggle}
-              </button>
+              {languageToggle}
               {!invoiceMode && (unreadNotifications ?? 0) > 0 ? (
                 <div className="mt-2 rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
                   {unreadNotifications} {copy.notificationTitle.toLowerCase()}

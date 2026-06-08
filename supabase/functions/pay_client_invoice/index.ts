@@ -5,15 +5,26 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import {
   amountToCents,
   attachPaymentMethodToCustomer,
+  createInvoicePaymentIntent,
+  finalizeInvoicePaymentFromIntent,
   isStripeMockMode,
   resolveContactEmail,
   resolveOrCreateInvoiceStripeCustomer,
 } from "../_shared/clientProposalBilling.ts";
+import { applyClientInvoicePaymentUpdate } from "../_shared/clientInvoicePayment.ts";
+import {
+  buildInvoicePaymentIntentMetadata,
+  resolvePublicClientInvoicePayment,
+} from "../_shared/publicClientInvoicePaymentContext.ts";
+import { notifyInvoicePaymentReceipt } from "../_shared/invoicePaymentEmails.ts";
 import { getStripe } from "../_shared/stripeClient.ts";
 
 type PayBody = {
   public_token?: string;
   payment_method_id?: string;
+  payment_intent_id?: string;
+  amount?: number;
+  remainder_installment_numbers?: number[];
 };
 
 Deno.serve(
@@ -24,184 +35,195 @@ Deno.serve(
 
     try {
       const body = (await req.json()) as PayBody;
-      const token = String(body.public_token ?? "").trim();
       const paymentMethodId = String(body.payment_method_id ?? "").trim();
+      const completedPaymentIntentId = String(body.payment_intent_id ?? "").trim();
 
-      if (!token) {
-        return createErrorResponse(400, "Missing public_token");
+      const resolved = await resolvePublicClientInvoicePayment(
+        supabaseAdmin,
+        body,
+      );
+      if (!resolved.ok) {
+        if (resolved.status === 409) {
+          const token = String(body.public_token ?? "").trim();
+          const { data: tokenRow } = await supabaseAdmin
+            .from("public_client_invoice_tokens")
+            .select("invoice_id")
+            .eq("token", token)
+            .maybeSingle();
+          if (tokenRow?.invoice_id) {
+            const { data: invoice } = await supabaseAdmin
+              .from("client_invoices")
+              .select("id, status, amount_paid")
+              .eq("id", tokenRow.invoice_id)
+              .maybeSingle();
+            if (invoice) {
+              return new Response(
+                JSON.stringify({
+                  invoice_id: invoice.id,
+                  status: invoice.status,
+                  already_paid: invoice.status === "paid",
+                  amount_paid: invoice.amount_paid,
+                }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+              );
+            }
+          }
+        }
+        return createErrorResponse(resolved.status, resolved.message);
       }
 
-      const { data: tokenRow } = await supabaseAdmin
-        .from("public_client_invoice_tokens")
-        .select("*")
-        .eq("token", token)
-        .maybeSingle();
-
-      if (!tokenRow) {
-        return createErrorResponse(403, "Invalid or expired link");
-      }
-
-      if (
-        tokenRow.expires_at &&
-        new Date(tokenRow.expires_at).getTime() < Date.now()
-      ) {
-        return createErrorResponse(410, "This invoice link has expired");
-      }
-
-      const { data: invoice } = await supabaseAdmin
-        .from("client_invoices")
-        .select(
-          "id, org_id, contact_id, company_id, amount, amount_paid, currency, status, upfront_percent, save_card_for_future_charges, auto_charge_remainder, stripe_payment_intent_id, recipient_email",
-        )
-        .eq("id", tokenRow.invoice_id)
-        .eq("org_id", tokenRow.org_id)
-        .maybeSingle();
-
-      if (!invoice?.id) {
-        return createErrorResponse(404, "Invoice not found");
-      }
-
-      if (invoice.status === "void" || invoice.status === "paid") {
-        return new Response(
-          JSON.stringify({
-            invoice_id: invoice.id,
-            status: invoice.status,
-            already_paid: invoice.status === "paid",
-            amount_paid: invoice.amount_paid,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      const total = Number(invoice.amount) || 0;
-      const paid = Number(invoice.amount_paid) || 0;
-      const balance = Math.max(Math.round((total - paid) * 100) / 100, 0);
-      if (balance <= 0) {
-        return new Response(
-          JSON.stringify({
-            invoice_id: invoice.id,
-            status: "paid",
-            already_paid: true,
-            amount_paid: paid,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      const upfrontPercent = Number(invoice.upfront_percent ?? 100);
-      const targetUpfront =
-        Math.round(total * (Math.min(Math.max(upfrontPercent, 1), 100) / 100) * 100) /
-        100;
-      const chargeAmount = Math.min(
-        Math.max(Math.round((targetUpfront - paid) * 100) / 100, 0),
-        balance,
-      ) || balance;
+      const { invoice, chargeAmount, remainderInstallmentNumbers } =
+        resolved.data;
 
       const mock = isStripeMockMode();
-      const now = new Date().toISOString();
       let paymentIntentId: string | null = invoice.stripe_payment_intent_id ?? null;
+      let stripeCustomerId: string | null = invoice.stripe_customer_id ?? null;
+      let savedPaymentMethodId: string | null =
+        invoice.stripe_payment_method_id ?? null;
+      let paymentMethodBrand: string | null = null;
+      let paymentMethodLast4: string | null = null;
+      let paidInstallmentNumbers = remainderInstallmentNumbers;
 
       if (!mock) {
-        if (!paymentMethodId) {
-          return createErrorResponse(400, "payment_method_id is required");
-        }
-
-        const email =
-          (await resolveContactEmail(supabaseAdmin, invoice.contact_id)) ??
-          invoice.recipient_email?.trim() ??
-          null;
-
-        if (!email) {
-          return createErrorResponse(
-            400,
-            "Contact email is required for card payments",
-          );
-        }
-
-        const { data: contact } = invoice.contact_id
-          ? await supabaseAdmin
-            .from("contacts")
-            .select("first_name, last_name")
-            .eq("id", invoice.contact_id)
-            .maybeSingle()
-          : { data: null };
-
-        const contactName = [contact?.first_name, contact?.last_name]
-          .filter(Boolean)
-          .join(" ");
-
         const stripe = getStripe();
-        const customer = await resolveOrCreateInvoiceStripeCustomer(stripe, {
-          email,
-          name: contactName || undefined,
-          orgId: invoice.org_id,
-          contactId: invoice.contact_id,
-          companyId: invoice.company_id,
-          existingPaymentIntentId: invoice.stripe_payment_intent_id,
-        });
 
-        await attachPaymentMethodToCustomer(
-          stripe,
-          customer.id,
-          paymentMethodId,
-        );
-
-        const intent = await stripe.paymentIntents.create({
-          amount: amountToCents(chargeAmount),
-          currency: (invoice.currency ?? "usd").toLowerCase(),
-          customer: customer.id,
-          payment_method: paymentMethodId,
-          confirm: true,
-          off_session: false,
-          metadata: {
-            type: "client_invoice",
-            org_id: String(invoice.org_id),
-            invoice_id: String(invoice.id),
-          },
-        });
-
-        if (intent.status !== "succeeded" && intent.status !== "processing") {
-          return createErrorResponse(400, "Payment could not be completed");
-        }
-        paymentIntentId = intent.id;
-
-        if (invoice.save_card_for_future_charges) {
-          await stripe.customers.update(customer.id, {
-            invoice_settings: { default_payment_method: paymentMethodId },
+        if (completedPaymentIntentId) {
+          const finalized = await finalizeInvoicePaymentFromIntent(stripe, {
+            paymentIntentId: completedPaymentIntentId,
+            invoice,
+            chargeAmount,
+            remainderInstallmentNumbers,
           });
+          paymentIntentId = finalized.intent.id;
+          stripeCustomerId = finalized.stripeCustomerId;
+          savedPaymentMethodId = finalized.savedPaymentMethodId;
+          paymentMethodBrand = finalized.paymentMethodBrand;
+          paymentMethodLast4 = finalized.paymentMethodLast4;
+          paidInstallmentNumbers = finalized.remainderInstallmentNumbers;
+        } else {
+          if (!paymentMethodId) {
+            return createErrorResponse(
+              400,
+              "payment_method_id or payment_intent_id is required",
+            );
+          }
+
+          const email =
+            (await resolveContactEmail(supabaseAdmin, invoice.contact_id)) ??
+              invoice.recipient_email?.trim() ??
+              null;
+
+          if (!email) {
+            return createErrorResponse(
+              400,
+              "Contact email is required for card payments",
+            );
+          }
+
+          const { data: contact } = invoice.contact_id
+            ? await supabaseAdmin
+              .from("contacts")
+              .select("first_name, last_name")
+              .eq("id", invoice.contact_id)
+              .maybeSingle()
+            : { data: null };
+
+          const contactName = [contact?.first_name, contact?.last_name]
+            .filter(Boolean)
+            .join(" ");
+
+          const shouldSaveCard = Boolean(
+            invoice.save_card_for_future_charges || invoice.auto_charge_remainder,
+          );
+
+          const customer = await resolveOrCreateInvoiceStripeCustomer(stripe, {
+            email,
+            name: contactName || undefined,
+            orgId: invoice.org_id,
+            contactId: invoice.contact_id,
+            companyId: invoice.company_id,
+            existingCustomerId: invoice.stripe_customer_id,
+            existingPaymentIntentId: invoice.stripe_payment_intent_id,
+          });
+          stripeCustomerId = customer.id;
+
+          const cardInfo = await attachPaymentMethodToCustomer(
+            stripe,
+            customer.id,
+            paymentMethodId,
+          );
+          paymentMethodBrand = cardInfo.brand;
+          paymentMethodLast4 = cardInfo.last4;
+          if (shouldSaveCard) {
+            savedPaymentMethodId = paymentMethodId;
+          }
+
+          const intent = await createInvoicePaymentIntent(stripe, {
+            amountCents: amountToCents(chargeAmount),
+            currency: invoice.currency ?? "usd",
+            customerId: customer.id,
+            paymentMethodId,
+            saveForFutureUse: shouldSaveCard,
+            idempotencyKey: `client-invoice-${invoice.id}-${amountToCents(chargeAmount)}-${remainderInstallmentNumbers.join(",") || "checkout"}`,
+            metadata: buildInvoicePaymentIntentMetadata(
+              invoice,
+              remainderInstallmentNumbers,
+            ),
+          });
+
+          if (intent.status === "requires_action") {
+            return new Response(
+              JSON.stringify({
+                invoice_id: invoice.id,
+                billing_mode: "stripe",
+                requires_action: true,
+                client_secret: intent.client_secret,
+                payment_intent_id: intent.id,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
+
+          if (intent.status !== "succeeded" && intent.status !== "processing") {
+            return createErrorResponse(400, "Payment could not be completed");
+          }
+          paymentIntentId = intent.id;
         }
       }
 
-      const newPaid = Math.round((paid + chargeAmount) * 100) / 100;
-      const isPaidInFull = newPaid >= total - 0.01;
-      const nextStatus = isPaidInFull ? "paid" : "sent";
+      const result = await applyClientInvoicePaymentUpdate(supabaseAdmin, {
+        invoice,
+        chargeAmount,
+        stripePaymentIntentId: paymentIntentId ?? `mock-${invoice.id}-${Date.now()}`,
+        newlyPaidInstallmentNumbers: paidInstallmentNumbers,
+        stripeCustomerId,
+        stripePaymentMethodId: savedPaymentMethodId,
+        paymentMethodBrand,
+        paymentMethodLast4,
+        clearAutoChargeError: true,
+      });
 
-      const { data: updated } = await supabaseAdmin
-        .from("client_invoices")
-        .update({
-          amount_paid: newPaid,
-          status: nextStatus,
-          paid_at: isPaidInFull ? now : null,
-          sent_at: invoice.status === "draft" ? now : undefined,
-          stripe_payment_intent_id: paymentIntentId,
-          updated_at: now,
-        })
-        .eq("id", invoice.id)
-        .select("*")
-        .single();
+      if (paymentIntentId && !mock) {
+        await notifyInvoicePaymentReceipt(supabaseAdmin, {
+          orgId: invoice.org_id,
+          invoiceId: invoice.id,
+          stripePaymentIntentId: paymentIntentId,
+          chargedAmount: result.charged_amount,
+        });
+      }
 
       return new Response(
         JSON.stringify({
-          invoice: updated,
-          charged_amount: chargeAmount,
-          amount_paid: newPaid,
-          balance_due: Math.max(Math.round((total - newPaid) * 100) / 100, 0),
-          paid_in_full: isPaidInFull,
+          invoice: result.invoice,
+          charged_amount: result.charged_amount,
+          amount_paid: result.amount_paid,
+          balance_due: result.balance_due,
+          paid_in_full: result.paid_in_full,
           billing_mode: mock ? "mock" : "stripe",
           auto_charge_scheduled:
             Boolean(invoice.auto_charge_remainder) &&
             Boolean(invoice.save_card_for_future_charges) &&
-            !isPaidInFull,
+            !result.paid_in_full,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

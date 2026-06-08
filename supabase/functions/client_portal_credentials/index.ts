@@ -42,7 +42,7 @@ const sendOtpEmail = async (
   await sendTransactionalEmail({
     orgId,
     to,
-    subject: "Your Nomi verification code",
+    subject: "Your Latino Business Support verification code",
     textBody: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
   });
 };

@@ -18,6 +18,8 @@ import {
   invoiceStatusVariant,
 } from "@/lbs/billing/billingDisplayUtils";
 import { lineItemsToInvoiceDrafts } from "@/lbs/billing/invoiceLineUtils";
+import { resolveInvoiceOrganizationName } from "@/lbs/billing/invoiceEmailTemplate";
+import { getInvoiceOrganizationBranding } from "@/lbs/billing/invoiceOrganizationInfo";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/lbs/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,32 +28,18 @@ export const StandaloneInvoiceShowPage = () => {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const {
-    title: organizationName,
-    companyWebsite,
-    companyAddressLine1,
-    companyAddressLine2,
-    companyCity,
-    companyState,
-    companyPostalCode,
-    companyCountry,
+    title,
+    companyLegalName,
   } = useConfigurationContext();
 
-  const organizationAddress = useMemo(() => {
-    const parts = [
-      companyAddressLine1,
-      companyAddressLine2,
-      [companyCity, companyState, companyPostalCode].filter(Boolean).join(", "),
-      companyCountry,
-    ].filter(Boolean);
-    return parts.length ? parts.join("\n") : null;
-  }, [
-    companyAddressLine1,
-    companyAddressLine2,
-    companyCity,
-    companyState,
-    companyPostalCode,
-    companyCountry,
-  ]);
+  const organizationName = useMemo(
+    () => resolveInvoiceOrganizationName({ title, companyLegalName }),
+    [title, companyLegalName],
+  );
+
+  const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
+  const organizationAddress = invoiceBranding.address;
+  const companyWebsite = invoiceBranding.website;
 
   const { data: invoice, isPending, error } = useGetOne<ClientInvoice>(
     "client_invoices",

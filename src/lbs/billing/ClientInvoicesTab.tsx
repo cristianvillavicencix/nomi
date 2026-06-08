@@ -8,6 +8,7 @@ import {
 import { Link, useNavigate } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { resolveInvoiceOrganizationName } from "@/lbs/billing/invoiceEmailTemplate";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
@@ -88,7 +89,11 @@ export const ClientInvoicesTab = () => {
 const ClientInvoicesTable = () => {
   const navigate = useNavigate();
   const refresh = useRefresh();
-  const { title: organizationName = "LBS" } = useConfigurationContext();
+  const { title, companyLegalName } = useConfigurationContext();
+  const organizationName = useMemo(
+    () => resolveInvoiceOrganizationName({ title, companyLegalName }),
+    [title, companyLegalName],
+  );
   const { data: invoices = [], isPending } = useListContext<ClientInvoice>();
 
   const companyIds = useMemo(

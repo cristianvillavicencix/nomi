@@ -1,4 +1,5 @@
 import {
+  applyRemainderScheduleToCharges,
   generateInvoiceBalanceCharges,
   parseInvoiceRemainderSchedule,
   type InvoiceRemainderScheduleConfig,
@@ -135,12 +136,15 @@ export const buildInvoicePaymentSchedule = ({
       ? remainderSchedule
       : parseInvoiceRemainderSchedule(null, dueDate ?? "");
 
-    const balanceCharges = generateInvoiceBalanceCharges({
-      balanceAmount: remainderAmount,
-      config: scheduleConfig,
-      invoiceDueDate: dueDate ?? new Date().toISOString().slice(0, 10),
-      issueDate: issueDate ?? new Date().toISOString().slice(0, 10),
-    });
+    const balanceCharges = applyRemainderScheduleToCharges(
+      generateInvoiceBalanceCharges({
+        balanceAmount: remainderAmount,
+        config: scheduleConfig,
+        invoiceDueDate: dueDate ?? new Date().toISOString().slice(0, 10),
+        issueDate: issueDate ?? new Date().toISOString().slice(0, 10),
+      }),
+      scheduleConfig,
+    );
 
     if (balanceCharges.length > 0) {
       for (const charge of balanceCharges) {
@@ -177,6 +181,8 @@ export const invoiceHasDepositPaymentPlan = (invoice: {
 
 export type InvoiceAmortizationRow = {
   paymentNumber: number;
+  /** Original remainder installment number (1-based), when applicable. */
+  remainderInstallmentNumber?: number;
   description: string;
   dueDate: string | null;
   amount: number;
@@ -237,8 +243,12 @@ export const buildInvoiceAmortizationSchedule = (params: {
       Math.round((balance - row.amount) * 100) / 100,
       0,
     );
+    const remainderMatch = row.key.match(/^remainder-(\d+)$/);
     const entry: InvoiceAmortizationRow = {
       paymentNumber,
+      remainderInstallmentNumber: remainderMatch
+        ? Number(remainderMatch[1])
+        : undefined,
       description: amortizationDescription(
         row,
         upfrontPercent,

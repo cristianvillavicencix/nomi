@@ -180,6 +180,11 @@ export type ClientInvoice = {
   sent_at?: string | null;
   paid_at?: string | null;
   stripe_payment_intent_id?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_payment_method_id?: string | null;
+  payment_method_brand?: string | null;
+  payment_method_last4?: string | null;
+  last_auto_charge_error?: string | null;
   recipient_email?: string | null;
   reference?: string | null;
   sales_person_id?: Identifier | null;

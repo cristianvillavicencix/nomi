@@ -57,6 +57,8 @@ import {
   type InvoiceRemainderScheduleConfig,
 } from "@/lbs/billing/invoiceRemainderSchedule";
 import { invoiceStatusLabel } from "@/lbs/billing/billingDisplayUtils";
+import { resolveInvoiceOrganizationName } from "@/lbs/billing/invoiceEmailTemplate";
+import { getInvoiceOrganizationBranding } from "@/lbs/billing/invoiceOrganizationInfo";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/lbs/types";
 import { Button } from "@/components/ui/button";
 
@@ -67,15 +69,18 @@ export const StandaloneInvoiceEditPage = () => {
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const {
-    title: organizationName,
-    companyWebsite,
-    companyAddressLine1,
-    companyAddressLine2,
-    companyCity,
-    companyState,
-    companyPostalCode,
-    companyCountry,
+    title,
+    companyLegalName,
   } = useConfigurationContext();
+
+  const organizationName = useMemo(
+    () => resolveInvoiceOrganizationName({ title, companyLegalName }),
+    [title, companyLegalName],
+  );
+
+  const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
+  const organizationAddress = invoiceBranding.address;
+  const companyWebsite = invoiceBranding.website;
 
   const [hydrated, setHydrated] = useState(false);
   const [billTo, setBillTo] = useState<BillToSelection | null>(null);
@@ -101,23 +106,6 @@ export const StandaloneInvoiceEditPage = () => {
   const [shareUrl, setShareUrl] = useState("");
   const [paymentSetupOpen, setPaymentSetupOpen] = useState(false);
   const [savedInvoice, setSavedInvoice] = useState<ClientInvoice | null>(null);
-
-  const organizationAddress = useMemo(() => {
-    const parts = [
-      companyAddressLine1,
-      companyAddressLine2,
-      [companyCity, companyState, companyPostalCode].filter(Boolean).join(", "),
-      companyCountry,
-    ].filter(Boolean);
-    return parts.length ? parts.join("\n") : null;
-  }, [
-    companyAddressLine1,
-    companyAddressLine2,
-    companyCity,
-    companyState,
-    companyPostalCode,
-    companyCountry,
-  ]);
 
   const { data: invoice, isPending, error } = useGetOne<ClientInvoice>(
     "client_invoices",

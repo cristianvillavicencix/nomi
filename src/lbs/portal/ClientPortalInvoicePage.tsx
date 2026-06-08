@@ -200,11 +200,11 @@ const InvoicePortalContent = ({
     : null;
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
+    <div className="px-3 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
       <div className={`mx-auto w-full ${INVOICE_DOCUMENT_MAX_WIDTH_CLASS}`}>
-        <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           {isPaid ? (
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-800">
+            <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 sm:w-auto sm:py-1.5">
               <CheckCircle2 className="size-4" />
               Paid in full
             </span>
@@ -212,7 +212,7 @@ const InvoicePortalContent = ({
             <Button
               type="button"
               size="sm"
-              className="bg-amber-500 text-amber-950 hover:bg-amber-400"
+              className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400 sm:w-auto"
               onClick={() => setPayOpen(true)}
             >
               <Wallet className="size-4" />
@@ -223,6 +223,7 @@ const InvoicePortalContent = ({
             type="button"
             variant="outline"
             size="sm"
+            className="w-full sm:w-auto"
             disabled={downloading}
             onClick={onDownload}
           >

@@ -75,7 +75,7 @@ Deno.serve((req: Request) =>
             orgId,
             orgName: org?.name ?? null,
             to,
-            subject: "Nomi CRM test email",
+            subject: "Latino Business Support test email",
             textBody:
               "Your transactional email integration is working.\n\nThis message was sent from Settings → Communications.",
             replyTo: org?.email?.trim() ?? null,

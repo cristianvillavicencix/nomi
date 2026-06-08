@@ -16,6 +16,7 @@ type SendBody = {
   to?: string;
   subject?: string;
   message?: string;
+  html_message?: string;
   pdf_base64?: string;
   filename?: string;
 };
@@ -85,10 +86,10 @@ Deno.serve(
 
         const subject =
           body.subject?.trim() ||
-          `Invoice ${invoice.invoice_number} from ${org?.name ?? "LBS"}`;
+          `${org?.name ?? "Latino Business Support"}: Invoice ${invoice.invoice_number}`;
         const message =
           body.message?.trim() ||
-          `Please find attached invoice ${invoice.invoice_number} for ${invoice.description} (${invoice.currency} ${invoice.amount}).\n\nThank you for your business.`;
+          `Your invoice ${invoice.invoice_number} is attached. Open the payment link in the email to pay online.`;
 
         const filename =
           body.filename?.trim() || `${invoice.invoice_number}.pdf`;
@@ -103,6 +104,7 @@ Deno.serve(
             to,
             subject,
             textBody: message,
+            htmlBody: body.html_message?.trim() || null,
             replyTo: org?.email?.trim() ?? null,
             attachments: [
               {

@@ -759,6 +759,7 @@ const dataProviderWithCustomMethods = {
     invoiceId,
     to,
     message,
+    htmlMessage,
     pdfBase64,
     filename,
     subject,
@@ -766,6 +767,7 @@ const dataProviderWithCustomMethods = {
     invoiceId: Identifier;
     to: string;
     message?: string;
+    htmlMessage?: string;
     pdfBase64: string;
     filename?: string;
     subject?: string;
@@ -782,6 +784,7 @@ const dataProviderWithCustomMethods = {
           invoice_id: Number(invoiceId),
           to,
           message,
+          html_message: htmlMessage,
           pdf_base64: pdfBase64,
           filename,
           subject,

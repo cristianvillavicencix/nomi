@@ -1,13 +1,16 @@
-import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
-import { loadStripe, type StripeCardElementChangeEvent } from "@stripe/stripe-js";
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { loadStripe, type StripePaymentElementChangeEvent } from "@stripe/stripe-js";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, Lock, Wallet } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Loader2, Lock } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { isClientBillingSkipped } from "@/lbs/billing/clientBillingProvider";
-import { parseInvoiceRemainderSchedule } from "@/lbs/billing/invoiceRemainderSchedule";
+import { parseInvoiceRemainderSchedule, previewRemainderScheduleAfterPayments } from "@/lbs/billing/invoiceRemainderSchedule";
 import {
   buildInvoiceAmortizationSchedule,
   buildInvoicePaymentSchedule,
@@ -15,13 +18,24 @@ import {
   computeInvoiceBalanceDue,
 } from "@/lbs/billing/invoicePaymentUtils";
 import {
-  InvoicePortalPaymentScheduleTable,
-  invoicePaymentConsentLabel,
-} from "@/lbs/billing/InvoicePortalPaymentScheduleTable";
+  InvoicePaymentAmountPicker,
+} from "@/lbs/billing/public/InvoicePaymentAmountPicker";
+import {
+  filterRemainderInstallmentRows,
+  invoicePaymentConsentLabelForAmount,
+  isInvoiceDepositPaid,
+  isValidInvoicePaymentAmount,
+  mapToRemainderInstallmentNumbers,
+  resolveDefaultSelectedInstallmentNumbers,
+  resolveEffectiveInstallmentSelection,
+  resolveInvoicePaymentAmount,
+} from "@/lbs/billing/public/invoicePaymentAmount";
 import {
   payPublicClientInvoice,
+  preparePublicClientInvoicePayment,
   type PublicInvoicePayload,
 } from "@/lbs/billing/public/publicInvoiceApi";
+import { cn } from "@/lib/utils";
 
 const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
   | string
@@ -29,14 +43,32 @@ const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
 
 const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
-const cardElementOptions = {
-  style: {
-    base: {
-      fontSize: "16px",
-      color: "#0f172a",
-      "::placeholder": { color: "#94a3b8" },
-    },
-    invalid: { color: "#dc2626" },
+const stripeElementsAppearance = {
+  theme: "stripe" as const,
+  variables: {
+    colorPrimary: "#2563eb",
+    borderRadius: "12px",
+    fontFamily: "system-ui, sans-serif",
+  },
+};
+
+const paymentElementOptions = {
+  layout: {
+    type: "accordion" as const,
+    defaultCollapsed: false,
+    radios: true,
+    spacedAccordionItems: false,
+  },
+  paymentMethodOrder: ["apple_pay", "google_pay", "card"],
+  wallets: {
+    applePay: "auto" as const,
+    googlePay: "auto" as const,
+  },
+  // Mandate copy is shown in our consent checkbox below (English).
+  terms: {
+    card: "never" as const,
+    applePay: "never" as const,
+    googlePay: "never" as const,
   },
 };
 
@@ -51,15 +83,20 @@ type PaymentFlowProps = {
 
 type InvoicePaymentSummary = {
   currency: string;
+  total: number;
+  amountPaid: number;
+  depositPaid: boolean;
   balanceDue: number;
   balanceDueFormatted: string;
   chargeAmount: number;
-  chargeFormatted: string;
   upfrontPercent: number;
-  remainderDue: number;
+  autoChargeRemainder: boolean;
+  saveCardForFutureCharges: boolean;
+  remainderSchedule: ReturnType<typeof parseInvoiceRemainderSchedule>;
   scheduleRows: ReturnType<typeof buildInvoicePaymentSchedule>;
   amortizationRows: ReturnType<typeof buildInvoiceAmortizationSchedule>;
-  isDepositPlan: boolean;
+  dueDate: string;
+  issueDate: string;
   isPaid: boolean;
 };
 
@@ -75,6 +112,10 @@ const buildPaymentSummary = (payload: PublicInvoicePayload): InvoicePaymentSumma
     upfrontPercent,
     amountPaid,
   );
+  const remainderSchedule = parseInvoiceRemainderSchedule(
+    invoice.remainder_schedule,
+    invoice.due_date,
+  );
   const scheduleParams = {
     total,
     amountPaid,
@@ -83,225 +124,444 @@ const buildPaymentSummary = (payload: PublicInvoicePayload): InvoicePaymentSumma
     saveCard: invoice.save_card_for_future_charges,
     dueDate: invoice.due_date,
     issueDate: invoice.issue_date,
-    remainderSchedule: parseInvoiceRemainderSchedule(
-      invoice.remainder_schedule,
-      invoice.due_date,
-    ),
+    remainderSchedule,
   };
-  const scheduleRows = buildInvoicePaymentSchedule(scheduleParams);
-  const amortizationRows = buildInvoiceAmortizationSchedule(scheduleParams);
-  const isDepositPlan = scheduleRows.some(
-    (row) => row.key === "deposit" || row.key.startsWith("remainder"),
-  );
 
   return {
     currency,
+    total,
+    amountPaid,
+    depositPaid: isInvoiceDepositPaid(total, upfrontPercent, amountPaid),
     balanceDue,
     balanceDueFormatted: formatMoney(balanceDue, currency),
     chargeAmount,
-    chargeFormatted: formatMoney(chargeAmount || balanceDue, currency),
     upfrontPercent,
-    remainderDue: Math.max(balanceDue - chargeAmount, 0),
-    scheduleRows,
-    amortizationRows,
-    isDepositPlan,
+    autoChargeRemainder: Boolean(invoice.auto_charge_remainder),
+    saveCardForFutureCharges: Boolean(invoice.save_card_for_future_charges),
+    remainderSchedule,
+    scheduleRows: buildInvoicePaymentSchedule(scheduleParams),
+    amortizationRows: buildInvoiceAmortizationSchedule(scheduleParams),
+    dueDate: invoice.due_date ?? new Date().toISOString().slice(0, 10),
+    issueDate: invoice.issue_date ?? new Date().toISOString().slice(0, 10),
     isPaid: invoice.status === "paid" || balanceDue <= 0,
   };
 };
 
-const InvoicePaymentFormBody = ({
-  payload,
+const useInvoicePaymentAmountState = (summary: InvoicePaymentSummary) => {
+  const upcomingInstallments = useMemo(
+    () => filterRemainderInstallmentRows(summary.amortizationRows),
+    [summary.amortizationRows],
+  );
+
+  const defaultSelection = useMemo(
+    () =>
+      resolveDefaultSelectedInstallmentNumbers(
+        upcomingInstallments,
+        summary.depositPaid,
+      ),
+    [upcomingInstallments, summary.depositPaid],
+  );
+
+  const [selectedInstallmentNumbers, setSelectedInstallmentNumbers] = useState<
+    number[]
+  >(defaultSelection);
+
+  useEffect(() => {
+    setSelectedInstallmentNumbers(defaultSelection);
+  }, [defaultSelection]);
+
+  const effectiveSelectedInstallmentNumbers = useMemo(
+    () =>
+      resolveEffectiveInstallmentSelection(
+        selectedInstallmentNumbers,
+        upcomingInstallments,
+        summary.depositPaid,
+      ),
+    [
+      selectedInstallmentNumbers,
+      upcomingInstallments,
+      summary.depositPaid,
+    ],
+  );
+
+  const toggleInstallment = (paymentNumber: number) => {
+    setSelectedInstallmentNumbers((prev) =>
+      prev.includes(paymentNumber)
+        ? prev.filter((value) => value !== paymentNumber)
+        : [...prev, paymentNumber],
+    );
+  };
+
+  const selectAllInstallments = () => {
+    setSelectedInstallmentNumbers(
+      upcomingInstallments.map((row) => row.paymentNumber),
+    );
+  };
+
+  const selectedAmount = useMemo(
+    () =>
+      resolveInvoicePaymentAmount({
+        selectedInstallmentNumbers: effectiveSelectedInstallmentNumbers,
+        balanceDue: summary.balanceDue,
+        depositDue: summary.depositPaid ? 0 : summary.chargeAmount,
+        upcomingInstallments,
+      }),
+    [
+      effectiveSelectedInstallmentNumbers,
+      summary.balanceDue,
+      summary.chargeAmount,
+      summary.depositPaid,
+      upcomingInstallments,
+    ],
+  );
+
+  const hasInstallmentPlan = upcomingInstallments.length > 0;
+  const amountValid = isValidInvoicePaymentAmount({
+    amount: selectedAmount,
+    balanceDue: summary.balanceDue,
+    depositPaid: summary.depositPaid,
+    hasInstallmentPlan,
+    effectiveInstallmentCount: effectiveSelectedInstallmentNumbers.length,
+  });
+
+  const remainderInstallmentNumbers = mapToRemainderInstallmentNumbers(
+    summary.amortizationRows,
+    effectiveSelectedInstallmentNumbers,
+  );
+
+  const previewDueDatesByInstallmentNumber = useMemo(() => {
+    if (!remainderInstallmentNumbers.length) return undefined;
+    const rows = previewRemainderScheduleAfterPayments({
+      total: summary.total,
+      upfrontPercent: summary.upfrontPercent,
+      config: summary.remainderSchedule,
+      invoiceDueDate: summary.dueDate,
+      issueDate: summary.issueDate,
+      payingInstallmentNumbers: remainderInstallmentNumbers,
+    });
+    return Object.fromEntries(
+      rows.map((row) => [row.installment_number, row.due_date]),
+    );
+  }, [
+    remainderInstallmentNumbers,
+    summary.remainderSchedule,
+    summary.total,
+    summary.upfrontPercent,
+    summary.dueDate,
+    summary.issueDate,
+  ]);
+
+  return {
+    selectedInstallmentNumbers,
+    effectiveSelectedInstallmentNumbers,
+    toggleInstallment,
+    selectAllInstallments,
+    clearSelectedInstallments: () => setSelectedInstallmentNumbers(defaultSelection),
+    selectedAmount,
+    amountValid,
+    upcomingInstallments,
+    hasInstallmentPlan,
+    remainderInstallmentNumbers,
+    previewDueDatesByInstallmentNumber,
+  };
+};
+
+type PaymentCheckoutSession = {
+  paymentIntentId: string;
+  clientSecret: string;
+  billingMode: string;
+};
+
+const useStablePaymentCheckoutSession = (
+  token: string,
+  summary: InvoicePaymentSummary,
+  paymentAmountState: ReturnType<typeof useInvoicePaymentAmountState>,
+) => {
+  const [session, setSession] = useState<PaymentCheckoutSession | null>(null);
+  const [initialError, setInitialError] = useState<Error | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const lastSyncedRef = useRef("");
+  const syncPromiseRef = useRef<Promise<void> | null>(null);
+  const initialPreparedRef = useRef(false);
+
+  const syncKey = `${paymentAmountState.selectedAmount}|${paymentAmountState.remainderInstallmentNumbers.join(",")}`;
+
+  const runPrepare = useCallback(
+    async (paymentIntentId?: string) => {
+      const result = await preparePublicClientInvoicePayment({
+        token,
+        amount: paymentAmountState.selectedAmount,
+        remainderInstallmentNumbers:
+          paymentAmountState.remainderInstallmentNumbers,
+        paymentIntentId,
+      });
+
+      if (result.billing_mode === "mock") {
+        setSession({
+          paymentIntentId: "",
+          clientSecret: "",
+          billingMode: "mock",
+        });
+        return result;
+      }
+
+      if (result.payment_intent_id && result.client_secret) {
+        setSession({
+          paymentIntentId: result.payment_intent_id,
+          clientSecret: result.client_secret,
+          billingMode: result.billing_mode ?? "stripe",
+        });
+      }
+
+      return result;
+    },
+    [
+      token,
+      paymentAmountState.selectedAmount,
+      paymentAmountState.remainderInstallmentNumbers,
+    ],
+  );
+
+  useEffect(() => {
+    setSession(null);
+    lastSyncedRef.current = "";
+    initialPreparedRef.current = false;
+  }, [token]);
+
+  useEffect(() => {
+    if (
+      summary.isPaid ||
+      !paymentAmountState.amountValid ||
+      initialPreparedRef.current
+    ) {
+      if (summary.isPaid || !paymentAmountState.amountValid) {
+        setIsInitialLoading(false);
+      }
+      return;
+    }
+
+    let cancelled = false;
+    setIsInitialLoading(true);
+    setInitialError(null);
+
+    runPrepare()
+      .then(() => {
+        if (!cancelled) {
+          lastSyncedRef.current = `${paymentAmountState.selectedAmount}|${paymentAmountState.remainderInstallmentNumbers.join(",")}`;
+          initialPreparedRef.current = true;
+        }
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setInitialError(error);
+      })
+      .finally(() => {
+        if (!cancelled) setIsInitialLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, summary.isPaid, paymentAmountState.amountValid, runPrepare]);
+
+  useEffect(() => {
+    if (isInitialLoading || !session?.paymentIntentId || summary.isPaid) return;
+    if (syncKey === lastSyncedRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      const promise = runPrepare(session.paymentIntentId)
+        .then(() => {
+          lastSyncedRef.current = syncKey;
+        })
+        .catch(() => {
+          // Keep the current session; pay will re-sync before confirm.
+        });
+      syncPromiseRef.current = promise.then(() => undefined);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    syncKey,
+    isInitialLoading,
+    session?.paymentIntentId,
+    summary.isPaid,
+    runPrepare,
+  ]);
+
+  const ensureSynced = useCallback(async () => {
+    if (summary.isPaid || !paymentAmountState.amountValid) return;
+    if (syncPromiseRef.current) {
+      await syncPromiseRef.current;
+    }
+    if (syncKey === lastSyncedRef.current) return;
+    await runPrepare(session?.paymentIntentId || undefined);
+    lastSyncedRef.current = syncKey;
+  }, [
+    summary.isPaid,
+    paymentAmountState.amountValid,
+    syncKey,
+    runPrepare,
+    session?.paymentIntentId,
+  ]);
+
+  return { session, isInitialLoading, initialError, ensureSynced };
+};
+
+const InvoicePaymentReviewActions = ({
   summary,
-  stripeCheckoutEnabled,
+  paymentAmountState,
   consent,
   onConsentChange,
-  cardComplete,
-  cardError,
-  onCardChange,
+  paymentReady,
+  paymentError,
   flowError,
   canPay,
   isPending,
   onPay,
 }: {
-  payload: PublicInvoicePayload;
   summary: InvoicePaymentSummary;
-  stripeCheckoutEnabled: boolean;
+  paymentAmountState: ReturnType<typeof useInvoicePaymentAmountState>;
   consent: boolean;
   onConsentChange: (value: boolean) => void;
-  cardComplete: boolean;
-  cardError: string | null;
-  onCardChange: (event: StripeCardElementChangeEvent) => void;
+  paymentReady: boolean;
+  paymentError: string | null;
   flowError: string | null;
   canPay: boolean;
   isPending: boolean;
   onPay: () => void;
 }) => {
-  const { invoice } = payload;
+  const { currency, balanceDue, autoChargeRemainder, saveCardForFutureCharges } =
+    summary;
   const {
-    currency,
-    balanceDue,
-    balanceDueFormatted,
-    chargeAmount,
-    chargeFormatted,
-    scheduleRows,
-    amortizationRows,
-    isDepositPlan,
-    isPaid,
-  } = summary;
+    effectiveSelectedInstallmentNumbers,
+    selectedAmount,
+    amountValid,
+    upcomingInstallments,
+  } = paymentAmountState;
 
-  if (isPaid) {
-    return (
-      <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        This invoice is paid in full. Thank you.
-      </p>
-    );
-  }
+  const selectedFormatted = formatMoney(selectedAmount, currency);
+
+  const consentLabel = invoicePaymentConsentLabelForAmount({
+    chargeAmount: selectedAmount,
+    balanceDue,
+    depositPaid: summary.depositPaid,
+    autoChargeRemainder,
+    saveCardForFutureCharges,
+    selectedInstallmentCount: effectiveSelectedInstallmentNumbers.length,
+    hasUpcomingAutoInstallments: upcomingInstallments.length > 0,
+  });
+
+  const payDisabled = !canPay || isPending || !amountValid;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-sm text-muted-foreground">Amount due</p>
-        <p className="text-2xl font-bold tabular-nums text-foreground">
-          {balanceDueFormatted}
-        </p>
-      </div>
-
-      <InvoicePortalPaymentScheduleTable
-        rows={amortizationRows}
-        currency={currency}
-        totalDue={balanceDue}
-        dueToday={chargeAmount}
-      />
-
-      {!isDepositPlan ? (
-        <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-          Full invoice balance due in one payment. The amount cannot be changed.
-        </div>
-      ) : null}
-
-      {stripeCheckoutEnabled ? (
-        <div className="space-y-3 rounded-lg border p-4">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Card details
-          </Label>
-          <div className="rounded-md border bg-background px-3 py-3">
-            <CardElement options={cardElementOptions} onChange={onCardChange} />
-          </div>
-          {cardError ? (
-            <p className="text-sm text-destructive">{cardError}</p>
-          ) : null}
-          {invoice.save_card_for_future_charges ? (
-            <p className="text-xs text-muted-foreground">
-              Your card will be saved for any remaining balance or future invoices.
-            </p>
-          ) : null}
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Lock className="size-3.5" />
-            Secure payment processed by Stripe
-          </p>
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Billing is in demo mode — no card required.
-        </p>
-      )}
-
-      <label className="flex items-start gap-2 text-sm">
+    <div className="space-y-3 px-6 pb-6 pt-2">
+      <label className="flex items-start gap-2.5 text-[13px] leading-snug text-muted-foreground">
         <Checkbox
           checked={consent}
           onCheckedChange={(checked) => onConsentChange(checked === true)}
+          className="mt-0.5 shrink-0"
         />
-        <span>{invoicePaymentConsentLabel(amortizationRows)}</span>
+        <span>{consentLabel}</span>
       </label>
+
+      {paymentError ? (
+        <p className="text-sm text-destructive">{paymentError}</p>
+      ) : null}
 
       {flowError ? (
         <p className="text-sm text-destructive">{flowError}</p>
       ) : null}
 
-      <Button
+      <button
         type="button"
-        className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
-        size="lg"
-        disabled={!canPay || isPending}
+        disabled={!canPay || isPending || !amountValid}
         onClick={onPay}
+        className={cn(
+          "flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-4 text-base font-medium text-white transition-colors",
+          payDisabled
+            ? "cursor-not-allowed opacity-50"
+            : "cursor-pointer hover:bg-blue-700",
+        )}
       >
         {isPending ? (
-          <Loader2 className="size-4 animate-spin" />
+          <>
+            <Loader2 className="size-4 animate-spin" />
+            Processing…
+          </>
         ) : (
-          <Wallet className="size-4" />
+          `Pay ${selectedFormatted}`
         )}
-        {isPending ? "Processing…" : isDepositPlan ? `Pay ${chargeFormatted} now` : `Pay ${chargeFormatted}`}
-      </Button>
+      </button>
+
+      <p className="text-center text-xs text-muted-foreground">
+        <Lock className="mr-1 inline size-3.5 align-text-bottom" />
+        Secure payment · Apple Pay, Google Pay, and cards accepted
+      </p>
     </div>
   );
 };
 
-const InvoiceMockPaymentForm = ({ token, payload, onSuccess }: PaymentFlowProps) => {
-  const [consent, setConsent] = useState(false);
-  const [flowError, setFlowError] = useState<string | null>(null);
-  const summary = buildPaymentSummary(payload);
-
-  const payMutation = useMutation({
-    mutationFn: () => payPublicClientInvoice({ token }),
-    onSuccess: () => {
-      setFlowError(null);
-      onSuccess();
-    },
-    onError: (error: Error) => setFlowError(error.message),
-  });
-
-  const canPay = consent && summary.balanceDue > 0 && !summary.isPaid;
-
-  return (
-    <InvoicePaymentFormBody
-      payload={payload}
-      summary={summary}
-      stripeCheckoutEnabled={false}
-      consent={consent}
-      onConsentChange={setConsent}
-      cardComplete
-      cardError={null}
-      onCardChange={() => undefined}
-      flowError={flowError}
-      canPay={canPay}
-      isPending={payMutation.isPending}
-      onPay={() => payMutation.mutate()}
-    />
-  );
-};
-
-const InvoiceStripePaymentForm = ({ token, payload, onSuccess }: PaymentFlowProps) => {
+const InvoiceStripePaymentFormInner = ({
+  token,
+  paymentIntentId,
+  chargeAmount,
+  remainderInstallmentNumbers,
+  summary,
+  paymentAmountState,
+  ensureSynced,
+  onSuccess,
+}: PaymentFlowProps & {
+  paymentIntentId: string;
+  chargeAmount: number;
+  remainderInstallmentNumbers: number[];
+  summary: InvoicePaymentSummary;
+  paymentAmountState: ReturnType<typeof useInvoicePaymentAmountState>;
+  ensureSynced: () => Promise<void>;
+}) => {
   const stripe = useStripe();
   const elements = useElements();
   const [consent, setConsent] = useState(false);
-  const [cardComplete, setCardComplete] = useState(false);
-  const [cardError, setCardError] = useState<string | null>(null);
+  const [paymentReady, setPaymentReady] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [flowError, setFlowError] = useState<string | null>(null);
-  const summary = buildPaymentSummary(payload);
+
+  useEffect(() => {
+    elements?.fetchUpdates().catch(() => {});
+  }, [chargeAmount, elements]);
 
   const payMutation = useMutation({
     mutationFn: async () => {
       if (!stripe || !elements) {
-        throw new Error("Card payments are not configured");
+        throw new Error("Payment options are not ready yet");
       }
 
-      const card = elements.getElement(CardElement);
-      if (!card) {
-        throw new Error("Enter your card details");
-      }
+      await ensureSynced();
 
-      const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
-        type: "card",
-        card,
+      const returnUrl = `${window.location.origin}${window.location.pathname}`;
+
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: returnUrl },
+        redirect: "if_required",
       });
 
-      if (pmError || !paymentMethod) {
-        throw new Error(pmError?.message ?? "Could not read card");
+      if (confirmError) {
+        throw new Error(confirmError.message ?? "Payment could not be completed");
+      }
+
+      const completedIntentId = paymentIntent?.id ?? paymentIntentId;
+      if (
+        paymentIntent?.status &&
+        paymentIntent.status !== "succeeded" &&
+        paymentIntent.status !== "processing"
+      ) {
+        throw new Error("Payment could not be completed");
       }
 
       return payPublicClientInvoice({
         token,
-        paymentMethodId: paymentMethod.id,
+        paymentIntentId: completedIntentId,
+        amount: chargeAmount,
+        remainderInstallmentNumbers,
       });
     },
     onSuccess: () => {
@@ -313,43 +573,288 @@ const InvoiceStripePaymentForm = ({ token, payload, onSuccess }: PaymentFlowProp
 
   const canPay =
     consent &&
-    cardComplete &&
-    !cardError &&
+    paymentReady &&
+    !paymentError &&
     summary.balanceDue > 0 &&
-    !summary.isPaid;
+    !summary.isPaid &&
+    paymentAmountState.amountValid;
 
   return (
-    <InvoicePaymentFormBody
-      payload={payload}
-      summary={summary}
-      stripeCheckoutEnabled
-      consent={consent}
-      onConsentChange={setConsent}
-      cardComplete={cardComplete}
-      cardError={cardError}
-      onCardChange={(event) => {
-        setCardComplete(event.complete);
-        setCardError(event.error?.message ?? null);
-      }}
-      flowError={flowError}
-      canPay={canPay}
-      isPending={payMutation.isPending}
-      onPay={() => payMutation.mutate()}
-    />
+    <>
+      <div className="px-6 pb-1 pt-4">
+        <p className="mb-2 text-[13px] text-muted-foreground">Payment method</p>
+        <PaymentElement
+          options={paymentElementOptions}
+          onChange={(event: StripePaymentElementChangeEvent) => {
+            setPaymentReady(event.complete);
+            setPaymentError(event.error?.message ?? null);
+          }}
+        />
+      </div>
+
+      <InvoicePaymentReviewActions
+        summary={summary}
+        paymentAmountState={paymentAmountState}
+        consent={consent}
+        onConsentChange={setConsent}
+        paymentReady={paymentReady}
+        paymentError={paymentError}
+        flowError={flowError}
+        canPay={canPay}
+        isPending={payMutation.isPending}
+        onPay={() => payMutation.mutate()}
+      />
+    </>
+  );
+};
+
+const InvoiceStripeCheckout = ({ token, payload, onSuccess }: PaymentFlowProps) => {
+  const [flowError, setFlowError] = useState<string | null>(null);
+  const [finalizingRedirect, setFinalizingRedirect] = useState(false);
+  const summary = useMemo(() => buildPaymentSummary(payload), [payload]);
+  const paymentAmountState = useInvoicePaymentAmountState(summary);
+  const checkout = useStablePaymentCheckoutSession(
+    token,
+    summary,
+    paymentAmountState,
+  );
+  const { invoice } = payload;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentIntentId = params.get("payment_intent");
+    const redirectStatus = params.get("redirect_status");
+    if (!paymentIntentId || redirectStatus !== "succeeded" || finalizingRedirect) {
+      return;
+    }
+
+    setFinalizingRedirect(true);
+    payPublicClientInvoice({ token, paymentIntentId })
+      .then(() => {
+        window.history.replaceState({}, "", window.location.pathname);
+        onSuccess();
+      })
+      .catch((error: Error) => {
+        setFlowError(error.message);
+        setFinalizingRedirect(false);
+      });
+  }, [token, onSuccess, finalizingRedirect]);
+
+  if (summary.isPaid) {
+    return (
+      <p className="mx-auto max-w-[560px] rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        This invoice is paid in full. Thank you.
+      </p>
+    );
+  }
+
+  if (finalizingRedirect) {
+    return (
+      <div className="mx-auto flex max-w-[560px] items-center justify-center gap-2 rounded-[14px] border border-border/60 bg-background px-6 py-10 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        Confirming your payment…
+      </div>
+    );
+  }
+
+  const clientSecret = checkout.session?.clientSecret ?? null;
+  const paymentIntentId = checkout.session?.paymentIntentId ?? null;
+
+  return (
+    <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-none border-0 bg-background shadow-none sm:rounded-2xl sm:border sm:border-border/50 sm:shadow-sm">
+      <div className="flex items-start justify-between border-b border-border/40 px-6 pb-5 pt-6">
+        <div>
+          <p className="mb-1 text-[13px] text-muted-foreground">Balance due</p>
+          <p className="text-[30px] font-medium tabular-nums leading-none text-foreground">
+            {summary.balanceDueFormatted}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="mb-1 text-[13px] text-muted-foreground">Invoice</p>
+          <p className="text-sm font-medium text-foreground">
+            {invoice.invoice_number}
+          </p>
+        </div>
+      </div>
+
+      <InvoicePaymentAmountPicker
+        balanceDue={summary.balanceDue}
+        depositDue={summary.chargeAmount}
+        upfrontPercent={summary.upfrontPercent}
+        autoChargeRemainder={summary.autoChargeRemainder}
+        saveCardForFutureCharges={summary.saveCardForFutureCharges}
+        depositPaid={summary.depositPaid}
+        remainderSchedule={summary.remainderSchedule}
+        amortizationRows={summary.amortizationRows}
+        currency={summary.currency}
+        selectedInstallmentNumbers={
+          paymentAmountState.selectedInstallmentNumbers.length > 0
+            ? paymentAmountState.selectedInstallmentNumbers
+            : paymentAmountState.effectiveSelectedInstallmentNumbers
+        }
+        onToggleInstallment={paymentAmountState.toggleInstallment}
+        onSelectAllInstallments={paymentAmountState.selectAllInstallments}
+        onClearSelectedInstallments={paymentAmountState.clearSelectedInstallments}
+        previewDueDatesByInstallmentNumber={
+          paymentAmountState.previewDueDatesByInstallmentNumber
+        }
+      />
+
+      {checkout.isInitialLoading ? (
+        <div className="flex items-center gap-2 px-6 py-4 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Loading payment options…
+        </div>
+      ) : checkout.initialError ? (
+        <p className="px-6 pb-4 text-sm text-destructive">
+          {checkout.initialError.message}
+        </p>
+      ) : checkout.session?.billingMode === "mock" || !clientSecret ? (
+        <p className="px-6 pb-4 text-sm text-amber-900">
+          Stripe is not configured on the server. Set{" "}
+          <code className="text-xs">STRIPE_SECRET_KEY</code> in Supabase Edge
+          Function secrets.
+        </p>
+      ) : clientSecret && paymentIntentId && stripePromise ? (
+        <Elements
+          key={paymentIntentId}
+          stripe={stripePromise}
+          options={{
+            clientSecret,
+            appearance: stripeElementsAppearance,
+          }}
+        >
+          <InvoiceStripePaymentFormInner
+            token={token}
+            payload={payload}
+            onSuccess={onSuccess}
+            paymentIntentId={paymentIntentId}
+            chargeAmount={paymentAmountState.selectedAmount}
+            remainderInstallmentNumbers={
+              paymentAmountState.remainderInstallmentNumbers
+            }
+            summary={summary}
+            paymentAmountState={paymentAmountState}
+            ensureSynced={checkout.ensureSynced}
+          />
+        </Elements>
+      ) : flowError ? (
+        <p className="px-6 pb-4 text-sm text-destructive">{flowError}</p>
+      ) : null}
+    </div>
+  );
+};
+
+const InvoiceMockPaymentForm = ({ token, payload, onSuccess }: PaymentFlowProps) => {
+  const [consent, setConsent] = useState(false);
+  const [flowError, setFlowError] = useState<string | null>(null);
+  const summary = useMemo(() => buildPaymentSummary(payload), [payload]);
+  const paymentAmountState = useInvoicePaymentAmountState(summary);
+  const { invoice } = payload;
+
+  const payMutation = useMutation({
+    mutationFn: () =>
+      payPublicClientInvoice({
+        token,
+        amount: paymentAmountState.selectedAmount,
+        remainderInstallmentNumbers: paymentAmountState.remainderInstallmentNumbers,
+      }),
+    onSuccess: () => {
+      setFlowError(null);
+      onSuccess();
+    },
+    onError: (error: Error) => setFlowError(error.message),
+  });
+
+  const canContinue =
+    consent &&
+    summary.balanceDue > 0 &&
+    !summary.isPaid &&
+    paymentAmountState.amountValid;
+
+  if (summary.isPaid) {
+    return (
+      <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        This invoice is paid in full. Thank you.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-none border-0 bg-background shadow-none sm:rounded-2xl sm:border sm:border-border/50 sm:shadow-sm">
+      <div className="flex items-start justify-between border-b border-border/40 px-6 pb-5 pt-6">
+        <div>
+          <p className="mb-1 text-[13px] text-muted-foreground">Balance due</p>
+          <p className="text-[30px] font-medium tabular-nums leading-none text-foreground">
+            {summary.balanceDueFormatted}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="mb-1 text-[13px] text-muted-foreground">Invoice</p>
+          <p className="text-sm font-medium text-foreground">{invoice.invoice_number}</p>
+        </div>
+      </div>
+
+      <InvoicePaymentAmountPicker
+        balanceDue={summary.balanceDue}
+        depositDue={summary.chargeAmount}
+        upfrontPercent={summary.upfrontPercent}
+        autoChargeRemainder={summary.autoChargeRemainder}
+        saveCardForFutureCharges={summary.saveCardForFutureCharges}
+        depositPaid={summary.depositPaid}
+        remainderSchedule={summary.remainderSchedule}
+        amortizationRows={summary.amortizationRows}
+        currency={summary.currency}
+        selectedInstallmentNumbers={
+          paymentAmountState.selectedInstallmentNumbers.length > 0
+            ? paymentAmountState.selectedInstallmentNumbers
+            : paymentAmountState.effectiveSelectedInstallmentNumbers
+        }
+        onToggleInstallment={paymentAmountState.toggleInstallment}
+        onSelectAllInstallments={paymentAmountState.selectAllInstallments}
+        onClearSelectedInstallments={paymentAmountState.clearSelectedInstallments}
+        previewDueDatesByInstallmentNumber={
+          paymentAmountState.previewDueDatesByInstallmentNumber
+        }
+      />
+
+      <InvoicePaymentReviewActions
+        summary={summary}
+        paymentAmountState={paymentAmountState}
+        consent={consent}
+        onConsentChange={setConsent}
+        paymentReady
+        paymentError={null}
+        flowError={flowError}
+        canPay={canContinue}
+        isPending={payMutation.isPending}
+        onPay={() => payMutation.mutate()}
+      />
+
+      <p className="-mt-2 pb-6 text-center text-xs text-muted-foreground">
+        Demo mode · No card required
+      </p>
+    </div>
   );
 };
 
 export const PublicInvoicePaymentFlow = (props: PaymentFlowProps) => {
-  const stripeMock = isClientBillingSkipped();
-  const useStripeElements = !stripeMock && Boolean(stripePromise);
+  const billingSkipped = isClientBillingSkipped();
+  const useStripeElements = Boolean(stripePromise) && !billingSkipped;
+
+  if (!stripePromise && !billingSkipped) {
+    return (
+      <div className="mx-auto max-w-[560px] rounded-[14px] border border-amber-200 bg-amber-50 px-6 py-5 text-sm text-amber-900">
+        Card payments are not configured. Add{" "}
+        <code className="text-xs">VITE_STRIPE_PUBLISHABLE_KEY</code> to enable
+        Stripe checkout.
+      </div>
+    );
+  }
 
   if (!useStripeElements) {
     return <InvoiceMockPaymentForm {...props} />;
   }
 
-  return (
-    <Elements stripe={stripePromise}>
-      <InvoiceStripePaymentForm {...props} />
-    </Elements>
-  );
+  return <InvoiceStripeCheckout {...props} />;
 };

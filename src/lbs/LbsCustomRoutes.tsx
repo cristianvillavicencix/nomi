@@ -17,6 +17,8 @@ import { ProposalShortUrlRedirect } from "@/lbs/proposals/public/ProposalShortUr
 import { PublicInvoicePage } from "@/lbs/billing/public/PublicInvoicePage";
 import { InvoiceShortUrlRedirect } from "@/lbs/billing/public/InvoiceShortUrlRedirect";
 import { PortalShortUrlRedirect } from "@/lbs/portal/PortalShortUrlRedirect";
+import { ClientPortalPage } from "@/lbs/portal/ClientPortalPage";
+import { ClientPortalInvoicePage } from "@/lbs/portal/ClientPortalInvoicePage";
 import { FormsListPage } from "@/lbs/forms-v2/FormsListPage";
 import { FormBuilderPage } from "@/lbs/forms-v2/builder/FormBuilderPage";
 import { SubmissionsListPage } from "@/lbs/forms-v2/submissions/SubmissionsListPage";
@@ -62,6 +64,16 @@ type ProtectedRouteProps = {
   action: string;
   children: JSX.Element;
 };
+
+export const renderLbsPublicPortalRoutes = () => (
+  <>
+    <Route path="/portal" element={<ClientPortalPage />} />
+    <Route
+      path="/portal/invoice/:token"
+      element={<ClientPortalInvoicePage />}
+    />
+  </>
+);
 
 export const renderLbsPublicFormRoute = () => (
   <>

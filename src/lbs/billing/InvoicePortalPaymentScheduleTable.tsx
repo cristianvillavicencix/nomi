@@ -39,12 +39,14 @@ export const InvoicePortalPaymentScheduleTable = ({
   currency = "USD",
   totalDue,
   dueToday,
+  selectedPaymentNumber = null,
   className,
 }: {
   rows: InvoiceAmortizationRow[];
   currency?: string;
   totalDue: number;
   dueToday: number;
+  selectedPaymentNumber?: number | null;
   className?: string;
 }) => {
   if (!rows.length) return null;
@@ -106,6 +108,8 @@ export const InvoicePortalPaymentScheduleTable = ({
                 className={cn(
                   "border-b last:border-b-0",
                   row.timing === "now" && "bg-amber-50/60",
+                  selectedPaymentNumber === row.paymentNumber &&
+                    "bg-primary/5 ring-1 ring-inset ring-primary/30",
                 )}
               >
                 <td className="px-3 py-3 tabular-nums text-muted-foreground">

@@ -93,6 +93,9 @@ export const resolvePublicInvoiceShortCode = async (shortCode: string) => {
 export const payPublicClientInvoice = (params: {
   token: string;
   paymentMethodId?: string;
+  paymentIntentId?: string;
+  amount?: number;
+  remainderInstallmentNumbers?: number[];
 }) =>
   invokePublicFunction<{
     invoice: PublicInvoicePayload["invoice"];
@@ -102,7 +105,31 @@ export const payPublicClientInvoice = (params: {
     paid_in_full: boolean;
     billing_mode?: string;
     auto_charge_scheduled?: boolean;
+    requires_action?: boolean;
+    client_secret?: string;
+    payment_intent_id?: string;
   }>("pay_client_invoice", {
     public_token: params.token,
     payment_method_id: params.paymentMethodId,
+    payment_intent_id: params.paymentIntentId,
+    amount: params.amount,
+    remainder_installment_numbers: params.remainderInstallmentNumbers,
+  });
+
+export const preparePublicClientInvoicePayment = (params: {
+  token: string;
+  amount?: number;
+  remainderInstallmentNumbers?: number[];
+  paymentIntentId?: string;
+}) =>
+  invokePublicFunction<{
+    billing_mode?: string;
+    charge_amount: number;
+    client_secret: string | null;
+    payment_intent_id: string | null;
+  }>("prepare_client_invoice_payment", {
+    public_token: params.token,
+    amount: params.amount,
+    remainder_installment_numbers: params.remainderInstallmentNumbers,
+    payment_intent_id: params.paymentIntentId,
   });

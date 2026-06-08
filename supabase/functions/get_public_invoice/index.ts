@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
+import { getPublicInvoiceOrganization } from "../_shared/invoiceOrganizationInfo.ts";
 
 type GetPublicInvoiceBody = {
   token?: string;
@@ -116,11 +117,7 @@ Deno.serve(
         .eq("invoice_id", invoice.id)
         .order("sort_order", { ascending: true });
 
-      const { data: org } = await supabaseAdmin
-        .from("organizations")
-        .select("name, website, address")
-        .eq("id", tokenRow.org_id)
-        .maybeSingle();
+      const defaultOrganization = getPublicInvoiceOrganization();
 
       let companyName: string | null = null;
       let contactName: string | null = null;
@@ -166,7 +163,7 @@ Deno.serve(
         }
       }
 
-      const orgAddress = org?.address?.trim() || null;
+      const orgAddress = defaultOrganization.address;
 
       let portalToken: string | null = null;
       if (invoiceRow?.contact_id) {
@@ -191,8 +188,8 @@ Deno.serve(
           invoice: invoicePayload,
           line_items: lineItems ?? [],
           organization: {
-            name: org?.name ?? "Invoice",
-            website: org?.website ?? null,
+            name: defaultOrganization.name,
+            website: defaultOrganization.website,
             address: orgAddress,
           },
           bill_to: {

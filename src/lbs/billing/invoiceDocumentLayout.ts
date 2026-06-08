@@ -6,4 +6,4 @@ export const invoiceDocumentOuterClass = `mx-auto w-full ${INVOICE_DOCUMENT_MAX_
 export const invoiceDocumentArticleClass =
   "relative overflow-hidden rounded-lg border bg-white text-slate-900 shadow-md";
 
-export const invoiceDocumentInnerClass = "p-8 md:p-10";
+export const invoiceDocumentInnerClass = "p-4 sm:p-8 md:p-10";

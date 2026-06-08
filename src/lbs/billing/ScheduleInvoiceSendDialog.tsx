@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import { useDataProvider, useGetList, useNotify } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { getInvoiceOrganizationBranding } from "@/lbs/billing/invoiceOrganizationInfo";
 import {
   blobToBase64,
   buildClientInvoicePdfContext,
@@ -66,32 +66,9 @@ export const ScheduleInvoiceSendDialog = ({
 }: ScheduleInvoiceSendDialogProps) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const {
-    companyAddressLine1,
-    companyAddressLine2,
-    companyCity,
-    companyState,
-    companyPostalCode,
-    companyCountry,
-    companyWebsite,
-  } = useConfigurationContext();
-
-  const organizationAddress = useMemo(() => {
-    const parts = [
-      companyAddressLine1,
-      companyAddressLine2,
-      [companyCity, companyState, companyPostalCode].filter(Boolean).join(", "),
-      companyCountry,
-    ].filter(Boolean);
-    return parts.length ? parts.join("\n") : null;
-  }, [
-    companyAddressLine1,
-    companyAddressLine2,
-    companyCity,
-    companyState,
-    companyPostalCode,
-    companyCountry,
-  ]);
+  const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
+  const organizationAddress = invoiceBranding.address;
+  const companyWebsite = invoiceBranding.website;
 
   const companyId = company?.id ?? contact?.company_id ?? null;
 
