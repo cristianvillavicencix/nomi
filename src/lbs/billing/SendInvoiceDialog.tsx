@@ -140,7 +140,7 @@ export const SendInvoiceDialog = ({
     onSuccess: (result) => {
       if (result.email_skipped) {
         notify(
-          "Invoice marked as sent. Email is not configured (Resend) — use Share to send the portal link.",
+          "Invoice marked as sent. Email is not configured — use Share to send the portal link.",
           { type: "warning" },
         );
       } else {

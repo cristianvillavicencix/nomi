@@ -19,7 +19,7 @@ import { useDataProvider } from "ra-core";
 
 export type EmailDeliverySettings = {
   configured: boolean;
-  provider: "resend" | "postmark" | null;
+  provider: "mailersend" | "resend" | "postmark" | null;
   from_email: string | null;
   reply_to: string | null;
   org_name: string | null;
@@ -101,14 +101,17 @@ export const EmailDeliverySettingsSection = () => {
   }
 
   const providerLabel =
-    data?.provider === "resend"
-      ? "Resend"
-      : data?.provider === "postmark"
-        ? "Postmark (legacy)"
-        : "Not configured";
+    data?.provider === "mailersend"
+      ? "MailerSend"
+      : data?.provider === "resend"
+        ? "Resend (fallback)"
+        : data?.provider === "postmark"
+          ? "Postmark (legacy)"
+          : "Not configured";
 
   const needsDomainVerification =
-    data?.from_email?.includes("@resend.dev") === true;
+    data?.from_email?.includes("@resend.dev") === true ||
+    data?.from_email?.includes("@mailersend.net") === true;
 
   return (
     <Card>
@@ -119,17 +122,17 @@ export const EmailDeliverySettingsSection = () => {
         </CardTitle>
         <CardDescription>
           Outbound email for invoices, portal verification codes, and web audit
-          reports. API keys are configured on the server (Resend).
+          reports. API keys are configured on the server (MailerSend).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {needsDomainVerification ? (
           <Alert>
             <AlertDescription>
-              Resend is using a sandbox sender. Verify your domain (e.g.{" "}
-              <strong>lbs.bz</strong>) in the Resend dashboard, then update the{" "}
-              <code className="text-xs">RESEND_FROM_EMAIL</code> secret on
-              Supabase to a branded address like{" "}
+              Email is using a trial/sandbox sender. Verify your domain (e.g.{" "}
+              <strong>lbs.bz</strong>) in the MailerSend dashboard, then update
+              the <code className="text-xs">MAILERSEND_FROM_EMAIL</code> secret
+              on Supabase to a branded address like{" "}
               <strong>billing@lbs.bz</strong>.
             </AlertDescription>
           </Alert>
