@@ -10,6 +10,7 @@ import {
   resolveBillToDisplay,
 } from "@/lbs/billing/billingUtils";
 import type { InvoicePaymentCollectionMode } from "@/lbs/billing/invoicePaymentUtils";
+import { computeInvoiceBalanceDue } from "@/lbs/billing/invoicePaymentUtils";
 import {
   describeInvoiceOnlinePaymentSummary,
   type InvoiceRemainderScheduleConfig,
@@ -95,6 +96,8 @@ export type InlineInvoiceEditorProps = {
   contact?: Contact | null;
   /** When set, shows the assigned invoice number instead of "Draft". */
   invoiceNumber?: string | null;
+  /** Payments already collected against this invoice. */
+  amountPaid?: number;
   /** Ribbon text on the document corner (defaults to "Draft" on create). */
   documentRibbon?: string | null;
 };
@@ -130,12 +133,14 @@ export const InlineInvoiceEditor = ({
   company,
   contact,
   invoiceNumber,
+  amountPaid = 0,
   documentRibbon = DRAFT_INVOICE_NUMBER_LABEL,
 }: InlineInvoiceEditorProps) => {
   const { subtotal, feeAmount, total } = calculateInvoiceTotals(
     lines,
     discountPercent,
   );
+  const balanceDue = computeInvoiceBalanceDue(total, amountPaid);
   const paymentSummary = describeInvoiceOnlinePaymentSummary({
     paymentMode,
     depositPercent,
@@ -201,8 +206,13 @@ export const InlineInvoiceEditor = ({
                   Balance Due
                 </p>
                 <p className="text-4xl font-bold tabular-nums text-slate-900">
-                  {formatMoney(total)}
+                  {formatMoney(balanceDue)}
                 </p>
+                {amountPaid > 0.01 ? (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {formatMoney(amountPaid)} paid · {formatMoney(total)} total
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="min-w-[200px] text-right text-sm">
@@ -447,11 +457,20 @@ export const InlineInvoiceEditor = ({
                   {formatMoney(total)}
                 </span>
 
+                {amountPaid > 0.01 ? (
+                  <>
+                    <span className={totalsLabelClass}>Amount Paid</span>
+                    <span className={cn(totalsValueClass, "text-emerald-700")}>
+                      -{formatMoney(amountPaid)}
+                    </span>
+                  </>
+                ) : null}
+
                 <span className={cn(totalsLabelClass, "font-semibold text-slate-900")}>
                   Balance Due
                 </span>
                 <span className={cn(totalsValueClass, "font-semibold")}>
-                  {formatMoney(total)}
+                  {formatMoney(balanceDue)}
                 </span>
               </div>
             </div>

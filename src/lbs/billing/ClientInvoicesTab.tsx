@@ -22,6 +22,7 @@ import {
   invoiceStatusVariant,
   type InvoiceStatusFilter,
 } from "@/lbs/billing/billingDisplayUtils";
+import { computeInvoiceBalanceDue } from "@/lbs/billing/invoicePaymentUtils";
 import type { ClientInvoice, Proposal } from "@/lbs/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -219,8 +220,28 @@ const ClientInvoicesTable = () => {
       <DataTable.Col source="description" label="Description" />
       <DataTable.Col
         source="amount"
-        label="Amount"
-        render={(record: ClientInvoice) => <MoneyText value={record.amount} />}
+        label="Balance"
+        render={(record: ClientInvoice) => {
+          const balanceDue = computeInvoiceBalanceDue(
+            Number(record.amount) || 0,
+            Number(record.amount_paid) || 0,
+          );
+          const amountPaid = Number(record.amount_paid) || 0;
+          return (
+            <div className="text-right">
+              <MoneyText value={balanceDue} />
+              {amountPaid > 0.01 && record.status !== "paid" ? (
+                <p className="text-[11px] text-muted-foreground">
+                  {amountPaid.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: record.currency ?? "USD",
+                  })}{" "}
+                  paid
+                </p>
+              ) : null}
+            </div>
+          );
+        }}
       />
       <DataTable.Col
         source="status"

@@ -458,6 +458,7 @@ export const StandaloneInvoiceEditPage = () => {
           company={company}
           contact={contact}
           invoiceNumber={invoice.invoice_number}
+          amountPaid={Number(invoice.amount_paid) || 0}
           documentRibbon={statusRibbon}
         />
       </div>

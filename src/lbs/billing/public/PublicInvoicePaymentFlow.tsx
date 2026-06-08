@@ -224,9 +224,13 @@ const useInvoicePaymentAmountState = (summary: InvoicePaymentSummary) => {
     effectiveInstallmentCount: effectiveSelectedInstallmentNumbers.length,
   });
 
-  const remainderInstallmentNumbers = mapToRemainderInstallmentNumbers(
-    summary.amortizationRows,
-    effectiveSelectedInstallmentNumbers,
+  const remainderInstallmentNumbers = useMemo(
+    () =>
+      mapToRemainderInstallmentNumbers(
+        summary.amortizationRows,
+        effectiveSelectedInstallmentNumbers,
+      ),
+    [summary.amortizationRows, effectiveSelectedInstallmentNumbers],
   );
 
   const previewDueDatesByInstallmentNumber = useMemo(() => {
@@ -284,43 +288,47 @@ const useStablePaymentCheckoutSession = (
   const syncPromiseRef = useRef<Promise<void> | null>(null);
   const initialPreparedRef = useRef(false);
 
-  const syncKey = `${paymentAmountState.selectedAmount}|${paymentAmountState.remainderInstallmentNumbers.join(",")}`;
+  const selectedAmount = paymentAmountState.selectedAmount;
+  const remainderKey = paymentAmountState.remainderInstallmentNumbers.join(",");
+  const syncKey = `${selectedAmount}|${remainderKey}`;
 
-  const runPrepare = useCallback(
-    async (paymentIntentId?: string) => {
-      const result = await preparePublicClientInvoicePayment({
-        token,
-        amount: paymentAmountState.selectedAmount,
-        remainderInstallmentNumbers:
-          paymentAmountState.remainderInstallmentNumbers,
-        paymentIntentId,
-      });
+  const paymentStateRef = useRef({
+    selectedAmount,
+    remainderInstallmentNumbers: paymentAmountState.remainderInstallmentNumbers,
+  });
+  paymentStateRef.current = {
+    selectedAmount,
+    remainderInstallmentNumbers: paymentAmountState.remainderInstallmentNumbers,
+  };
 
-      if (result.billing_mode === "mock") {
-        setSession({
-          paymentIntentId: "",
-          clientSecret: "",
-          billingMode: "mock",
-        });
-        return result;
-      }
-
-      if (result.payment_intent_id && result.client_secret) {
-        setSession({
-          paymentIntentId: result.payment_intent_id,
-          clientSecret: result.client_secret,
-          billingMode: result.billing_mode ?? "stripe",
-        });
-      }
-
-      return result;
-    },
-    [
+  const runPrepare = useCallback(async (paymentIntentId?: string) => {
+    const result = await preparePublicClientInvoicePayment({
       token,
-      paymentAmountState.selectedAmount,
-      paymentAmountState.remainderInstallmentNumbers,
-    ],
-  );
+      amount: paymentStateRef.current.selectedAmount,
+      remainderInstallmentNumbers:
+        paymentStateRef.current.remainderInstallmentNumbers,
+      paymentIntentId,
+    });
+
+    if (result.billing_mode === "mock") {
+      setSession({
+        paymentIntentId: "",
+        clientSecret: "",
+        billingMode: "mock",
+      });
+      return result;
+    }
+
+    if (result.payment_intent_id && result.client_secret) {
+      setSession({
+        paymentIntentId: result.payment_intent_id,
+        clientSecret: result.client_secret,
+        billingMode: result.billing_mode ?? "stripe",
+      });
+    }
+
+    return result;
+  }, [token]);
 
   useEffect(() => {
     setSession(null);
@@ -329,16 +337,11 @@ const useStablePaymentCheckoutSession = (
   }, [token]);
 
   useEffect(() => {
-    if (
-      summary.isPaid ||
-      !paymentAmountState.amountValid ||
-      initialPreparedRef.current
-    ) {
-      if (summary.isPaid || !paymentAmountState.amountValid) {
-        setIsInitialLoading(false);
-      }
+    if (summary.isPaid || !paymentAmountState.amountValid) {
+      setIsInitialLoading(false);
       return;
     }
+    if (initialPreparedRef.current) return;
 
     let cancelled = false;
     setIsInitialLoading(true);
@@ -347,7 +350,7 @@ const useStablePaymentCheckoutSession = (
     runPrepare()
       .then(() => {
         if (!cancelled) {
-          lastSyncedRef.current = `${paymentAmountState.selectedAmount}|${paymentAmountState.remainderInstallmentNumbers.join(",")}`;
+          lastSyncedRef.current = syncKey;
           initialPreparedRef.current = true;
         }
       })

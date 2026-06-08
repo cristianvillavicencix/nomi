@@ -11,6 +11,7 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { computeInvoiceBalanceDue } from "@/lbs/billing/invoicePaymentUtils";
 import { InvoiceDocumentPreview } from "@/lbs/billing/InvoiceDocumentPreview";
 import { canEditClientInvoice } from "@/lbs/billing/billingUtils";
 import {
@@ -144,6 +145,10 @@ export const StandaloneInvoiceShowPage = () => {
           discountAmount={Number(invoice.discount_amount) || 0}
           feeAmount={Number(invoice.fee_amount) || 0}
           total={Number(invoice.amount) || 0}
+          balanceDue={computeInvoiceBalanceDue(
+            Number(invoice.amount) || 0,
+            Number(invoice.amount_paid) || 0,
+          )}
         />
       </div>
     </div>
