@@ -4,17 +4,13 @@ export type EmailAttachment = {
   contentType: string;
 };
 
-const getMailerSendApiToken = () =>
-  Deno.env.get("MAILERSEND_API_TOKEN")?.trim();
-const getMailerSendFromEmail = () =>
-  Deno.env.get("MAILERSEND_FROM_EMAIL")?.trim();
+const getTwilioSendGridApiKey = () =>
+  Deno.env.get("TWILIO_SENDGRID_API_KEY")?.trim() ??
+  Deno.env.get("SENDGRID_API_KEY")?.trim();
 
-const getResendApiKey = () => Deno.env.get("RESEND_API_KEY")?.trim();
-const getResendFromEmail = () => Deno.env.get("RESEND_FROM_EMAIL")?.trim();
-
-const getPostmarkServerToken = () =>
-  Deno.env.get("POSTMARK_SERVER_TOKEN")?.trim();
-const getPostmarkFromEmail = () => Deno.env.get("POSTMARK_FROM_EMAIL")?.trim();
+const getTwilioSendGridFromEmail = () =>
+  Deno.env.get("TWILIO_SENDGRID_FROM_EMAIL")?.trim() ??
+  Deno.env.get("SENDGRID_FROM_EMAIL")?.trim();
 
 const isSkipFlagOn = (value: string | undefined) => {
   const flag = value?.trim().toLowerCase();
@@ -25,34 +21,21 @@ export const isTransactionalEmailSkipped = () =>
   isSkipFlagOn(Deno.env.get("SKIP_TRANSACTIONAL_EMAIL")) ||
   isSkipFlagOn(Deno.env.get("SKIP_POSTMARK_EMAIL"));
 
-export type TransactionalEmailProvider = "mailersend" | "resend" | "postmark";
+export type TransactionalEmailProvider = "twilio";
 
-export const getAvailableTransactionalEmailProviders = (): TransactionalEmailProvider[] => {
-  const providers: TransactionalEmailProvider[] = [];
-  if (getMailerSendApiToken() && getMailerSendFromEmail()) {
-    providers.push("mailersend");
-  }
-  if (getResendApiKey() && getResendFromEmail()) providers.push("resend");
-  if (getPostmarkServerToken() && getPostmarkFromEmail()) {
-    providers.push("postmark");
-  }
-  return providers;
-};
+export const getAvailableTransactionalEmailProviders =
+  (): TransactionalEmailProvider[] =>
+    getTwilioSendGridApiKey() && getTwilioSendGridFromEmail() ? ["twilio"] : [];
 
 export const getTransactionalEmailProvider = ():
   | TransactionalEmailProvider
   | null => getAvailableTransactionalEmailProviders()[0] ?? null;
 
-export const getTransactionalFromEmail = () => {
-  const primary = getTransactionalEmailProvider();
-  if (primary === "mailersend") return getMailerSendFromEmail() ?? null;
-  if (primary === "resend") return getResendFromEmail() ?? null;
-  if (primary === "postmark") return getPostmarkFromEmail() ?? null;
-  return null;
-};
+export const getTransactionalFromEmail = () =>
+  getTwilioSendGridFromEmail() ?? null;
 
 export const isTransactionalEmailConfigured = () =>
-  getAvailableTransactionalEmailProviders().length > 0;
+  Boolean(getTransactionalEmailProvider());
 
 const escapeHtml = (value: string) =>
   value.replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -73,76 +56,24 @@ const parseEmailAddress = (value: string) => {
   return { email: trimmed };
 };
 
-const shouldTryNextProvider = (
-  error: unknown,
-  provider: TransactionalEmailProvider,
-) => {
-  if (!(error instanceof Error)) return false;
-  const msg = error.message.toLowerCase();
-
-  if (provider === "mailersend") {
-    return (
-      msg.includes("422") ||
-      msg.includes("trial") ||
-      msg.includes("ms42225") ||
-      msg.includes("unique recipients") ||
-      msg.includes("not verified") ||
-      msg.includes("domain")
-    );
-  }
-
-  if (provider === "resend") {
-    return msg.includes("403") || msg.includes("not verified");
-  }
-
-  return false;
-};
-
-const formatEmailSendFailure = (
-  failures: { provider: TransactionalEmailProvider; message: string }[],
-) => {
-  const combined = failures.map((f) => f.message).join(" ");
-  const lower = combined.toLowerCase();
+const formatEmailSendFailure = (message: string) => {
+  const lower = message.toLowerCase();
 
   if (
-    lower.includes("ms42225") ||
-    lower.includes("unique recipients") ||
-    lower.includes("trial account")
+    lower.includes("verified") ||
+    lower.includes("sender identity") ||
+    lower.includes("from address")
   ) {
     return (
-      "MailerSend trial limit: verify your domain at mailersend.com (Domains) to send to clients. " +
-      "A fallback provider was attempted automatically if configured."
+      "Twilio SendGrid sender is not verified. In Twilio Console → Email, verify your domain " +
+      "and set TWILIO_SENDGRID_FROM_EMAIL on Supabase to a verified address (e.g. billing@lbs.bz)."
     );
   }
 
-  if (lower.includes("not verified") && lower.includes("domain")) {
-    return (
-      "Email domain is not verified with your provider. Add and verify your domain " +
-      "(e.g. lbs.bz) in MailerSend or Resend, then update the FROM address secret on Supabase."
-    );
-  }
-
-  const last = failures[failures.length - 1];
-  return last?.message ?? "Could not send email";
+  return message;
 };
 
-async function sendViaProvider(
-  provider: TransactionalEmailProvider,
-  params: {
-    to: string;
-    subject: string;
-    textBody: string;
-    htmlBody: string;
-    replyTo?: string | null;
-    attachments?: EmailAttachment[];
-  },
-) {
-  if (provider === "mailersend") return sendViaMailerSend(params);
-  if (provider === "resend") return sendViaResend(params);
-  return sendViaPostmark(params);
-}
-
-async function sendViaMailerSend(params: {
+async function sendViaTwilioSendGrid(params: {
   to: string;
   subject: string;
   textBody: string;
@@ -150,24 +81,30 @@ async function sendViaMailerSend(params: {
   replyTo?: string | null;
   attachments?: EmailAttachment[];
 }) {
-  const apiToken = getMailerSendApiToken();
-  const fromRaw = getMailerSendFromEmail();
-  if (!apiToken || !fromRaw) {
+  const apiKey = getTwilioSendGridApiKey();
+  const fromRaw = getTwilioSendGridFromEmail();
+  if (!apiKey || !fromRaw) {
     throw new Error(
-      "MailerSend is not configured (MAILERSEND_API_TOKEN / MAILERSEND_FROM_EMAIL).",
+      "Twilio SendGrid is not configured (TWILIO_SENDGRID_API_KEY / TWILIO_SENDGRID_FROM_EMAIL).",
     );
   }
 
   const from = parseEmailAddress(fromRaw);
   const body: Record<string, unknown> = {
+    personalizations: [
+      {
+        to: [{ email: params.to }],
+      },
+    ],
     from: {
       email: from.email,
       ...(from.name ? { name: from.name } : {}),
     },
-    to: [{ email: params.to }],
     subject: params.subject,
-    text: params.textBody,
-    html: params.htmlBody,
+    content: [
+      { type: "text/plain", value: params.textBody },
+      { type: "text/html", value: params.htmlBody },
+    ],
   };
 
   if (params.replyTo?.trim()) {
@@ -180,68 +117,14 @@ async function sendViaMailerSend(params: {
 
   if (params.attachments?.length) {
     body.attachments = params.attachments.map((file) => ({
-      filename: file.name,
       content: file.contentBase64,
+      filename: file.name,
+      type: file.contentType,
       disposition: "attachment",
     }));
   }
 
-  const res = await fetch("https://api.mailersend.com/v1/email", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(
-      `Could not send email via MailerSend (${res.status}) ${text}`,
-    );
-  }
-
-  return { provider: "mailersend" as const };
-}
-
-async function sendViaResend(params: {
-  to: string;
-  subject: string;
-  textBody: string;
-  htmlBody: string;
-  replyTo?: string | null;
-  attachments?: EmailAttachment[];
-}) {
-  const apiKey = getResendApiKey();
-  const from = getResendFromEmail();
-  if (!apiKey || !from) {
-    throw new Error(
-      "Resend is not configured (RESEND_API_KEY / RESEND_FROM_EMAIL).",
-    );
-  }
-
-  const body: Record<string, unknown> = {
-    from,
-    to: [params.to],
-    subject: params.subject,
-    text: params.textBody,
-    html: params.htmlBody,
-  };
-
-  if (params.replyTo?.trim()) {
-    body.reply_to = params.replyTo.trim();
-  }
-
-  if (params.attachments?.length) {
-    body.attachments = params.attachments.map((file) => ({
-      filename: file.name,
-      content: file.contentBase64,
-      content_type: file.contentType,
-    }));
-  }
-
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -252,57 +135,14 @@ async function sendViaResend(params: {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Could not send email via Resend (${res.status}) ${text}`);
-  }
-
-  return { provider: "resend" as const };
-}
-
-async function sendViaPostmark(params: {
-  to: string;
-  subject: string;
-  textBody: string;
-  htmlBody: string;
-  replyTo?: string | null;
-  attachments?: EmailAttachment[];
-}) {
-  const token = getPostmarkServerToken();
-  const from = getPostmarkFromEmail();
-  if (!token || !from) {
     throw new Error(
-      "Postmark is not configured (POSTMARK_SERVER_TOKEN / POSTMARK_FROM_EMAIL).",
+      formatEmailSendFailure(
+        `Could not send email via Twilio SendGrid (${res.status}) ${text}`,
+      ),
     );
   }
 
-  const res = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": token,
-    },
-    body: JSON.stringify({
-      From: from,
-      To: params.to,
-      Subject: params.subject,
-      TextBody: params.textBody,
-      HtmlBody: params.htmlBody,
-      ReplyTo: params.replyTo?.trim() || undefined,
-      Attachments: (params.attachments ?? []).map((file) => ({
-        Name: file.name,
-        Content: file.contentBase64,
-        ContentType: file.contentType,
-        ContentID: null,
-      })),
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Could not send email via Postmark (${res.status}) ${text}`);
-  }
-
-  return { provider: "postmark" as const };
+  return { provider: "twilio" as const };
 }
 
 export async function sendTransactionalEmail(params: {
@@ -320,47 +160,13 @@ export async function sendTransactionalEmail(params: {
     return { skipped: true as const, provider: null };
   }
 
-  const providers = getAvailableTransactionalEmailProviders();
-  if (providers.length === 0) {
+  if (!isTransactionalEmailConfigured()) {
     throw new Error(
-      "Email is not configured. Set MAILERSEND_API_TOKEN and MAILERSEND_FROM_EMAIL on Supabase.",
+      "Email is not configured. Set TWILIO_SENDGRID_API_KEY and TWILIO_SENDGRID_FROM_EMAIL on Supabase.",
     );
   }
 
   const htmlBody = textToHtml(params.textBody);
-  const sendParams = { ...params, htmlBody };
-  const failures: { provider: TransactionalEmailProvider; message: string }[] =
-    [];
-
-  for (let index = 0; index < providers.length; index += 1) {
-    const provider = providers[index];
-    const hasNext = index < providers.length - 1;
-
-    try {
-      const result = await sendViaProvider(provider, sendParams);
-      if (failures.length > 0) {
-        console.warn("transactional_email.fallback_success", {
-          provider: result.provider,
-          prior_failures: failures.map((f) => f.provider),
-        });
-      }
-      return { skipped: false as const, ...result };
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not send email";
-      failures.push({ provider, message });
-      console.warn("transactional_email.provider_failed", {
-        provider,
-        message,
-      });
-
-      if (hasNext && shouldTryNextProvider(error, provider)) {
-        continue;
-      }
-
-      break;
-    }
-  }
-
-  throw new Error(formatEmailSendFailure(failures));
+  const result = await sendViaTwilioSendGrid({ ...params, htmlBody });
+  return { skipped: false as const, ...result };
 }

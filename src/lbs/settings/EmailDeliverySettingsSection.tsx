@@ -19,8 +19,7 @@ import { useDataProvider } from "ra-core";
 
 export type EmailDeliverySettings = {
   configured: boolean;
-  provider: "mailersend" | "resend" | "postmark" | null;
-  fallback_providers?: ("mailersend" | "resend" | "postmark")[];
+  provider: "twilio" | null;
   from_email: string | null;
   reply_to: string | null;
   org_name: string | null;
@@ -102,20 +101,7 @@ export const EmailDeliverySettingsSection = () => {
   }
 
   const providerLabel =
-    data?.provider === "mailersend"
-      ? "MailerSend"
-      : data?.provider === "resend"
-        ? "Resend (fallback)"
-        : data?.provider === "postmark"
-          ? "Postmark (legacy)"
-          : "Not configured";
-
-  const needsDomainVerification =
-    data?.from_email?.includes("@resend.dev") === true ||
-    data?.from_email?.includes("@mailersend.net") === true ||
-    data?.from_email?.includes(".mlsender.net") === true;
-
-  const isMailerSendTrial = data?.from_email?.includes(".mlsender.net") === true;
+    data?.provider === "twilio" ? "Twilio SendGrid" : "Not configured";
 
   return (
     <Card>
@@ -126,29 +112,18 @@ export const EmailDeliverySettingsSection = () => {
         </CardTitle>
         <CardDescription>
           Outbound email for invoices, portal verification codes, and web audit
-          reports. API keys are configured on the server (MailerSend).
+          reports. Uses Twilio SendGrid (same Twilio account as SMS). API keys
+          are configured on the server.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isMailerSendTrial ? (
+        {!data?.configured ? (
           <Alert>
             <AlertDescription>
-              MailerSend trial accounts can only email a few unique recipients
-              until you verify your own domain. Add <strong>lbs.bz</strong> in
-              MailerSend → Domains. Until then, Resend is used automatically as
-              a fallback when MailerSend blocks a send.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
-        {needsDomainVerification && !isMailerSendTrial ? (
-          <Alert>
-            <AlertDescription>
-              Email is using a trial/sandbox sender. Verify your domain (e.g.{" "}
-              <strong>lbs.bz</strong>) in the MailerSend dashboard, then update
-              the <code className="text-xs">MAILERSEND_FROM_EMAIL</code> secret
-              on Supabase to a branded address like{" "}
-              <strong>billing@lbs.bz</strong>.
+              Set <code className="text-xs">TWILIO_SENDGRID_API_KEY</code> and{" "}
+              <code className="text-xs">TWILIO_SENDGRID_FROM_EMAIL</code> in
+              Supabase Edge Function secrets. Create the API key in Twilio
+              Console → Email → SendGrid.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -166,21 +141,6 @@ export const EmailDeliverySettingsSection = () => {
           </Badge>
           <span className="text-sm text-muted-foreground">
             Provider: {providerLabel}
-            {data?.fallback_providers?.length ? (
-              <>
-                {" "}
-                · Fallback:{" "}
-                {data.fallback_providers
-                  .map((p) =>
-                    p === "resend"
-                      ? "Resend"
-                      : p === "postmark"
-                        ? "Postmark"
-                        : "MailerSend",
-                  )
-                  .join(", ")}
-              </>
-            ) : null}
           </span>
         </div>
 
