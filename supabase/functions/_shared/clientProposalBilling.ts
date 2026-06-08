@@ -310,7 +310,7 @@ export async function createInvoiceCheckoutPaymentIntent(
       invoice_id: string;
       remainder_installment_numbers?: string;
     };
-    idempotencyKey: string;
+    idempotencyKey?: string;
     saveForFutureUse?: boolean;
   },
 ) {
@@ -325,7 +325,9 @@ export async function createInvoiceCheckoutPaymentIntent(
         : {}),
       metadata: { ...params.metadata },
     },
-    { idempotencyKey: params.idempotencyKey },
+    params.idempotencyKey
+      ? { idempotencyKey: params.idempotencyKey }
+      : undefined,
   );
 }
 

@@ -90,26 +90,6 @@ Deno.serve(
       );
       const existingPaymentIntentId = String(body.payment_intent_id ?? "").trim();
 
-      if (existingPaymentIntentId) {
-        const intent = await updateInvoiceCheckoutPaymentIntent(stripe, {
-          paymentIntentId: existingPaymentIntentId,
-          amountCents: amountToCents(chargeAmount),
-          invoiceId: invoice.id,
-          orgId: invoice.org_id,
-          metadata,
-        });
-
-        return new Response(
-          JSON.stringify({
-            billing_mode: "stripe",
-            charge_amount: chargeAmount,
-            client_secret: intent.client_secret,
-            payment_intent_id: intent.id,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
       const customer = await resolveOrCreateInvoiceStripeCustomer(stripe, {
         email,
         name: contactName || undefined,
@@ -120,14 +100,35 @@ Deno.serve(
         existingPaymentIntentId: invoice.stripe_payment_intent_id,
       });
 
-      const intent = await createInvoiceCheckoutPaymentIntent(stripe, {
-        amountCents: amountToCents(chargeAmount),
-        currency: invoice.currency ?? "usd",
-        customerId: customer.id,
-        saveForFutureUse: shouldSaveCard,
-        idempotencyKey: `client-invoice-prepare-${invoice.id}-${amountToCents(chargeAmount)}-${remainderInstallmentNumbers.join(",") || "checkout"}`,
-        metadata,
-      });
+      const createCheckoutIntent = () =>
+        createInvoiceCheckoutPaymentIntent(stripe, {
+          amountCents: amountToCents(chargeAmount),
+          currency: invoice.currency ?? "usd",
+          customerId: customer.id,
+          saveForFutureUse: shouldSaveCard,
+          metadata,
+        });
+
+      let intent;
+      if (existingPaymentIntentId) {
+        try {
+          intent = await updateInvoiceCheckoutPaymentIntent(stripe, {
+            paymentIntentId: existingPaymentIntentId,
+            amountCents: amountToCents(chargeAmount),
+            invoiceId: invoice.id,
+            orgId: invoice.org_id,
+            metadata,
+          });
+        } catch (updateError) {
+          console.warn(
+            "prepare_client_invoice_payment.update_failed",
+            updateError,
+          );
+          intent = await createCheckoutIntent();
+        }
+      } else {
+        intent = await createCheckoutIntent();
+      }
 
       return new Response(
         JSON.stringify({

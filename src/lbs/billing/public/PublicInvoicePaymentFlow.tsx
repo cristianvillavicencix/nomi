@@ -283,10 +283,12 @@ const useStablePaymentCheckoutSession = (
 ) => {
   const [session, setSession] = useState<PaymentCheckoutSession | null>(null);
   const [initialError, setInitialError] = useState<Error | null>(null);
+  const [syncError, setSyncError] = useState<Error | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const lastSyncedRef = useRef("");
   const syncPromiseRef = useRef<Promise<void> | null>(null);
   const initialPreparedRef = useRef(false);
+  const prepareInFlightRef = useRef<Promise<unknown> | null>(null);
 
   const selectedAmount = paymentAmountState.selectedAmount;
   const remainderKey = paymentAmountState.remainderInstallmentNumbers.join(",");
@@ -302,32 +304,46 @@ const useStablePaymentCheckoutSession = (
   };
 
   const runPrepare = useCallback(async (paymentIntentId?: string) => {
-    const result = await preparePublicClientInvoicePayment({
-      token,
-      amount: paymentStateRef.current.selectedAmount,
-      remainderInstallmentNumbers:
-        paymentStateRef.current.remainderInstallmentNumbers,
-      paymentIntentId,
-    });
-
-    if (result.billing_mode === "mock") {
-      setSession({
-        paymentIntentId: "",
-        clientSecret: "",
-        billingMode: "mock",
+    const execute = async () => {
+      const result = await preparePublicClientInvoicePayment({
+        token,
+        amount: paymentStateRef.current.selectedAmount,
+        remainderInstallmentNumbers:
+          paymentStateRef.current.remainderInstallmentNumbers,
+        paymentIntentId,
       });
+
+      if (result.billing_mode === "mock") {
+        setSession({
+          paymentIntentId: "",
+          clientSecret: "",
+          billingMode: "mock",
+        });
+        return result;
+      }
+
+      if (result.payment_intent_id && result.client_secret) {
+        setSession({
+          paymentIntentId: result.payment_intent_id,
+          clientSecret: result.client_secret,
+          billingMode: result.billing_mode ?? "stripe",
+        });
+      }
+
       return result;
+    };
+
+    if (prepareInFlightRef.current) {
+      await prepareInFlightRef.current;
     }
 
-    if (result.payment_intent_id && result.client_secret) {
-      setSession({
-        paymentIntentId: result.payment_intent_id,
-        clientSecret: result.client_secret,
-        billingMode: result.billing_mode ?? "stripe",
-      });
-    }
-
-    return result;
+    const promise = execute();
+    prepareInFlightRef.current = promise.finally(() => {
+      if (prepareInFlightRef.current === promise) {
+        prepareInFlightRef.current = null;
+      }
+    });
+    return promise;
   }, [token]);
 
   useEffect(() => {
@@ -374,9 +390,10 @@ const useStablePaymentCheckoutSession = (
       const promise = runPrepare(session.paymentIntentId)
         .then(() => {
           lastSyncedRef.current = syncKey;
+          setSyncError(null);
         })
-        .catch(() => {
-          // Keep the current session; pay will re-sync before confirm.
+        .catch((error: Error) => {
+          setSyncError(error);
         });
       syncPromiseRef.current = promise.then(() => undefined);
     }, 350);
@@ -406,7 +423,7 @@ const useStablePaymentCheckoutSession = (
     session?.paymentIntentId,
   ]);
 
-  return { session, isInitialLoading, initialError, ensureSynced };
+  return { session, isInitialLoading, initialError, syncError, ensureSynced };
 };
 
 const InvoicePaymentReviewActions = ({
@@ -711,6 +728,10 @@ const InvoiceStripeCheckout = ({ token, payload, onSuccess }: PaymentFlowProps) 
       ) : checkout.initialError ? (
         <p className="px-6 pb-4 text-sm text-destructive">
           {checkout.initialError.message}
+        </p>
+      ) : checkout.syncError ? (
+        <p className="px-6 pb-4 text-sm text-destructive">
+          {checkout.syncError.message}
         </p>
       ) : checkout.session?.billingMode === "mock" || !clientSecret ? (
         <p className="px-6 pb-4 text-sm text-amber-900">
