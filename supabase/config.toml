@@ -245,6 +245,9 @@ verify_jwt = false
 [functions.process_invoice_payment_reminders]
 verify_jwt = false
 
+[functions.process_missed_invoice_payment_receipts]
+verify_jwt = false
+
 [functions.resend_client_invoice_payment_receipt]
 verify_jwt = false
 

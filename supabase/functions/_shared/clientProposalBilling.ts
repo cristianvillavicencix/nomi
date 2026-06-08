@@ -87,6 +87,19 @@ export const isAuthorizedClientBillingCron = (req: Request) => {
   if (secret && auth === `Bearer ${secret}`) {
     return true;
   }
+  if (auth?.startsWith("Bearer ")) {
+    const token = auth.slice("Bearer ".length);
+    try {
+      const payload = JSON.parse(
+        atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+      ) as { role?: string };
+      if (payload.role === "service_role") {
+        return true;
+      }
+    } catch {
+      // ignore malformed bearer tokens
+    }
+  }
   return false;
 };
 

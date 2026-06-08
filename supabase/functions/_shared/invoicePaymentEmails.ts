@@ -86,14 +86,14 @@ async function hasEmailBeenSent(
 ) {
   const { data } = await supabase
     .from("client_invoice_email_logs")
-    .select("id")
+    .select("id, delivery_status")
     .eq("invoice_id", invoiceId)
     .eq("reference_key", referenceKey)
     .maybeSingle();
-  return Boolean(data?.id);
+  return data?.delivery_status === "sent";
 }
 
-async function logEmailSent(
+async function logEmailAttempt(
   supabase: SupabaseClient,
   params: {
     orgId: number;
@@ -101,17 +101,25 @@ async function logEmailSent(
     emailType: "payment_receipt" | "payment_reminder";
     referenceKey: string;
     recipientEmail: string;
+    deliveryStatus: "sent" | "failed" | "skipped";
+    errorMessage?: string | null;
   },
 ) {
-  const { error } = await supabase.from("client_invoice_email_logs").insert({
-    org_id: params.orgId,
-    invoice_id: params.invoiceId,
-    email_type: params.emailType,
-    reference_key: params.referenceKey,
-    recipient_email: params.recipientEmail,
-  });
-  if (error && !error.message.includes("duplicate")) {
-    console.warn("invoicePaymentEmails.log_failed", error.message);
+  const { error } = await supabase.from("client_invoice_email_logs").upsert(
+    {
+      org_id: params.orgId,
+      invoice_id: params.invoiceId,
+      email_type: params.emailType,
+      reference_key: params.referenceKey,
+      recipient_email: params.recipientEmail,
+      delivery_status: params.deliveryStatus,
+      error_message: params.errorMessage?.trim() || null,
+      sent_at: new Date().toISOString(),
+    },
+    { onConflict: "invoice_id,reference_key" },
+  );
+  if (error) {
+    console.warn("invoicePaymentEmails.log_attempt_failed", error.message);
   }
 }
 
@@ -192,15 +200,59 @@ export async function sendClientInvoicePaymentReceipt(
 
   const to = await resolveInvoiceRecipientEmail(supabase, params.invoice);
   if (!to) {
+    await logEmailAttempt(supabase, {
+      orgId: params.invoice.org_id,
+      invoiceId: params.invoice.id,
+      emailType: "payment_receipt",
+      referenceKey,
+      recipientEmail: "unknown",
+      deliveryStatus: "skipped",
+      errorMessage: "no_email",
+    });
     return { sent: false, skipped: true, reason: "no_email" as const };
   }
 
-  if (!(await isOrgTransactionalEmailConfigured(params.invoice.org_id))) {
+  let emailConfigured = false;
+  try {
+    emailConfigured = await isOrgTransactionalEmailConfigured(
+      params.invoice.org_id,
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "email_config_check_failed";
+    console.error("invoicePaymentEmails.receipt_config_failed", message);
+    await logEmailAttempt(supabase, {
+      orgId: params.invoice.org_id,
+      invoiceId: params.invoice.id,
+      emailType: "payment_receipt",
+      referenceKey,
+      recipientEmail: to,
+      deliveryStatus: "failed",
+      errorMessage: message,
+    });
+    return {
+      sent: false,
+      skipped: true,
+      reason: "email_not_configured" as const,
+      error: message,
+    };
+  }
+
+  if (!emailConfigured) {
     console.warn(
       "invoicePaymentEmails.receipt_skipped",
       "Twilio email not configured for org",
       params.invoice.org_id,
     );
+    await logEmailAttempt(supabase, {
+      orgId: params.invoice.org_id,
+      invoiceId: params.invoice.id,
+      emailType: "payment_receipt",
+      referenceKey,
+      recipientEmail: to,
+      deliveryStatus: "skipped",
+      errorMessage: "email_not_configured",
+    });
     return { sent: false, skipped: true, reason: "email_not_configured" as const };
   }
 
@@ -284,18 +336,38 @@ export async function sendClientInvoicePaymentReceipt(
         "invoicePaymentEmails.receipt_skipped",
         "SKIP_TRANSACTIONAL_EMAIL",
       );
+      await logEmailAttempt(supabase, {
+        orgId: params.invoice.org_id,
+        invoiceId: params.invoice.id,
+        emailType: "payment_receipt",
+        referenceKey,
+        recipientEmail: to,
+        deliveryStatus: "skipped",
+        errorMessage: "email_skipped",
+      });
       return { sent: false, skipped: true, reason: "email_skipped" as const };
     }
-    await logEmailSent(supabase, {
+    await logEmailAttempt(supabase, {
       orgId: params.invoice.org_id,
       invoiceId: params.invoice.id,
       emailType: "payment_receipt",
       referenceKey,
       recipientEmail: to,
+      deliveryStatus: "sent",
     });
     return { sent: true, skipped: false };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "send_failed";
     console.error("invoicePaymentEmails.receipt_failed", error);
+    await logEmailAttempt(supabase, {
+      orgId: params.invoice.org_id,
+      invoiceId: params.invoice.id,
+      emailType: "payment_receipt",
+      referenceKey,
+      recipientEmail: to,
+      deliveryStatus: "failed",
+      errorMessage: message,
+    });
     return {
       sent: false,
       skipped: true,
@@ -512,12 +584,13 @@ export async function sendClientInvoicePaymentReminder(
       htmlBody,
       replyTo: INVOICE_ORGANIZATION_EMAIL,
     });
-    await logEmailSent(supabase, {
+    await logEmailAttempt(supabase, {
       orgId: params.invoice.org_id,
       invoiceId: params.invoice.id,
       emailType: "payment_reminder",
       referenceKey,
       recipientEmail: to,
+      deliveryStatus: "sent",
     });
     return { sent: true, skipped: false };
   } catch (error) {

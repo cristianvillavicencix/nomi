@@ -228,6 +228,7 @@ Deno.serve(
           billing_mode: mock ? "mock" : "stripe",
           receipt_sent: receipt?.sent ?? false,
           receipt_skipped_reason: receipt?.sent ? null : receipt?.reason ?? null,
+          receipt_error: receipt?.sent ? null : receipt?.error ?? null,
           auto_charge_scheduled:
             Boolean(invoice.auto_charge_remainder) &&
             Boolean(invoice.save_card_for_future_charges) &&

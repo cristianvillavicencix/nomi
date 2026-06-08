@@ -109,7 +109,12 @@ const resolveFromAddress = async (
 };
 
 export async function isOrgTransactionalEmailConfigured(orgId: number) {
-  return Boolean(await resolveOrgTwilioCredentials(orgId));
+  try {
+    return Boolean(await resolveOrgTwilioCredentials(orgId));
+  } catch (error) {
+    console.error("transactional_email.config_check_failed", orgId, error);
+    return false;
+  }
 }
 
 export async function getOrgTransactionalEmailStatus(orgId: number) {
@@ -181,13 +186,7 @@ async function sendViaTwilioEmail(params: {
     content,
   };
 
-  if (params.replyTo?.trim()) {
-    const replyTo = parseEmailAddress(params.replyTo);
-    body.replyTo = {
-      address: replyTo.email,
-      ...(replyTo.name ? { name: replyTo.name } : {}),
-    };
-  }
+  // Twilio Email API (comms.twilio.com/v1/Emails) rejects replyTo — contact info stays in the body.
 
   const credentials = btoa(`${params.accountSid}:${params.authToken}`);
   const res = await fetch("https://comms.twilio.com/v1/Emails", {
