@@ -54,10 +54,8 @@ const stripeElementsAppearance = {
 
 const paymentElementOptions = {
   layout: {
-    type: "accordion" as const,
+    type: "tabs" as const,
     defaultCollapsed: false,
-    radios: true,
-    spacedAccordionItems: false,
   },
   paymentMethodOrder: ["apple_pay", "google_pay", "card"],
   wallets: {
