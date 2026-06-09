@@ -1300,6 +1300,11 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   }),
   sendTestTransactionalEmail: async () => ({ ok: true }),
   sendTestSms: async () => ({ ok: true }),
+  sendMeetingLink: async ({ to, meetingUrl }) => ({
+    sent: true,
+    to: to ?? "client@example.com",
+    meeting_url: meetingUrl,
+  }),
   sendClientSms: async ({
     conversationId,
     contactId,

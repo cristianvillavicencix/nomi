@@ -4,12 +4,14 @@ import {
 } from "@/lbs/calendar/calendarReminderOptions";
 
 const NULLABLE_ID_FIELDS = [
-  "person_id",
   "contact_id",
   "deal_id",
   "company_id",
   "organization_member_id",
 ] as const;
+
+/** Dropped from calendar_events in B3 — never send to PostgREST. */
+const STRIPPED_LEGACY_FIELDS = ["person_id"] as const;
 
 const toNullableId = (value: unknown) => {
   if (value === "" || value == null) return null;
@@ -21,6 +23,10 @@ export const prepareCalendarEventWriteData = (
   data: Record<string, unknown>,
 ) => {
   const next: Record<string, unknown> = { ...data };
+
+  STRIPPED_LEGACY_FIELDS.forEach((field) => {
+    delete next[field];
+  });
 
   NULLABLE_ID_FIELDS.forEach((field) => {
     if (field in next) {

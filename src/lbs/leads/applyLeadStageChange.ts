@@ -141,7 +141,6 @@ export const applyLeadStageChange = async ({
         contact_id: lead.id,
         company_id: lead.company_id ?? null,
         deal_id: null,
-        person_id: null,
         meeting_url: null,
         organization_member_id: organizationMemberId,
         completed_at: null,

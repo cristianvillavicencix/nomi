@@ -297,7 +297,6 @@ export type CalendarEventRecord = {
   description?: string | null;
   meeting_url?: string | null;
   deal_id?: Identifier | null;
-  person_id?: Identifier | null;
   contact_id?: Identifier | null;
   company_id?: Identifier | null;
   organization_member_id?: Identifier | null;

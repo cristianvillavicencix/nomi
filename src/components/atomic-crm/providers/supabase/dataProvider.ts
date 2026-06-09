@@ -2381,6 +2381,48 @@ const dataProviderWithCustomMethods = {
     }
     return data;
   },
+  async sendMeetingLink({
+    contactId,
+    to,
+    meetingUrl,
+    title,
+    message,
+  }: {
+    contactId?: Identifier;
+    to?: string;
+    meetingUrl: string;
+    title?: string;
+    message?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      sent: boolean;
+      to: string;
+      meeting_url: string;
+    }>("send_meeting_link", {
+      method: "POST",
+      body: {
+        meeting_url: meetingUrl,
+        ...(contactId != null ? { contact_id: Number(contactId) } : {}),
+        ...(to ? { to } : {}),
+        ...(title ? { title } : {}),
+        ...(message ? { message } : {}),
+      },
+    });
+
+    if (error || !data?.sent) {
+      console.error("sendMeetingLink.error", error);
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Could not send meeting link",
+            )
+          : "Could not send meeting link",
+      );
+    }
+
+    return data;
+  },
   async sendClientSms(params: {
     conversationId?: Identifier;
     contactId?: Identifier;

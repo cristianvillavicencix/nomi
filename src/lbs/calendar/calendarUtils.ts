@@ -118,6 +118,19 @@ export const toDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+/** Next 5-minute boundary from now, for instant meeting scheduling. */
+export const roundToNextFiveMinutes = (date = new Date()) => {
+  const next = new Date(date);
+  const minutes = next.getMinutes();
+  const remainder = minutes % 5;
+  const addMinutes =
+    remainder === 0 && next.getSeconds() === 0 ? 0 : 5 - remainder;
+  next.setMinutes(minutes + addMinutes, 0, 0);
+  const hours = String(next.getHours()).padStart(2, "0");
+  const mins = String(next.getMinutes()).padStart(2, "0");
+  return `${hours}:${mins}:00`;
+};
+
 export const parseDateKey = (value: string) => {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Plus, Video } from "lucide-react";
+import { Plus, Video, Zap } from "lucide-react";
 import { useGetList, useGetMany, type Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +35,7 @@ import {
 import { toDateKey } from "@/lbs/calendar/calendarUtils";
 import { MeetingLinkActions } from "@/lbs/meetings/MeetingLinkActions";
 import { MeetingDoneSwitch } from "@/lbs/meetings/MeetingDoneSwitch";
+import { QuickMeetingDialog } from "@/lbs/meetings/QuickMeetingDialog";
 
 type MeetingsTab = "upcoming" | "past";
 
@@ -59,6 +60,7 @@ export const MeetingsPage = () => {
   const todayKey = toDateKey(new Date());
   const [tab, setTab] = useState<MeetingsTab>("upcoming");
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [editId, setEditId] = useState<Identifier | null>(null);
   const [editDateKey, setEditDateKey] = useState(todayKey);
 
@@ -122,7 +124,6 @@ export const MeetingsPage = () => {
       duration_minutes: DEFAULT_MEETING_DURATION_MINUTES,
       remind_before_minutes: 15,
       description: "",
-      person_id: null,
       contact_id: null,
       deal_id: null,
       meeting_url: null,
@@ -148,6 +149,15 @@ export const MeetingsPage = () => {
           <Button
             type="button"
             size="sm"
+            onClick={() => setQuickOpen(true)}
+          >
+            <Zap className="size-4" />
+            Quick call
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
             onClick={() => {
               setEditId(null);
               setEditDateKey(todayKey);
@@ -177,14 +187,19 @@ export const MeetingsPage = () => {
               Schedule a meeting and choose a contact to generate the call link.
             </p>
             {tab === "upcoming" ? (
-              <Button
-                type="button"
-                className="mt-4"
-                variant="outline"
-                onClick={() => setScheduleOpen(true)}
-              >
-                Schedule meeting
-              </Button>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <Button type="button" onClick={() => setQuickOpen(true)}>
+                  <Zap className="size-4" />
+                  Quick call
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setScheduleOpen(true)}
+                >
+                  Schedule meeting
+                </Button>
+              </div>
             ) : null}
           </div>
         ) : (
@@ -272,6 +287,8 @@ export const MeetingsPage = () => {
           </div>
         )}
       </ScrollableContentArea>
+
+      <QuickMeetingDialog open={quickOpen} onOpenChange={setQuickOpen} />
 
       <CalendarReminderDialog
         open={scheduleOpen}
