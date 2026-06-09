@@ -9,27 +9,7 @@ const LbsProjectShowPage = lazy(() =>
   })),
 );
 
-const isContractorBuild =
-  import.meta.env.VITE_PRODUCT_MODE === "contractor";
-
-const ContractorDealShow = isContractorBuild
-  ? lazy(() =>
-      import("@/contractor/deals/ContractorDealShow").then((m) => ({
-        default: m.ContractorDealShow,
-      })),
-    )
-  : null;
-
-/** Routes LBS agency projects vs contractor deal show (build-specific lazy chunk). */
 export const DealShow = ({ id }: { id?: string }) => {
-  if (isContractorBuild && ContractorDealShow) {
-  return (
-      <Suspense fallback={<ShowFallback />}>
-        <ContractorDealShow id={id} />
-      </Suspense>
-    );
-  }
-
   return (
     <Suspense fallback={<ShowFallback />}>
       <LbsProjectShowPage id={id} />

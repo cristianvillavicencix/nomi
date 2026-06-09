@@ -5,9 +5,7 @@ import { DashboardActivityLog } from "./DashboardActivityLog";
 import { DashboardStepper } from "./DashboardStepper";
 import { DealsChart } from "./DealsChart";
 import { HotContacts } from "./HotContacts";
-import { TasksList } from "./TasksList";
 import { Welcome } from "./Welcome";
-import { isLbsMode } from "@/lbs/productMode";
 import { LbsDashboardTasks } from "@/lbs/dashboard/LbsDashboardTasks";
 
 export const Dashboard = () => {
@@ -61,7 +59,7 @@ export const Dashboard = () => {
       </div>
 
       <div className="md:col-span-3">
-        {isLbsMode() ? <LbsDashboardTasks /> : <TasksList />}
+        <LbsDashboardTasks />
       </div>
     </div>
   );

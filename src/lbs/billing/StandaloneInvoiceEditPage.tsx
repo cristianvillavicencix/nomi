@@ -25,6 +25,7 @@ import { InvoiceShareLinkDialog } from "@/lbs/billing/InvoiceShareLinkDialog";
 import { InlineInvoiceEditor } from "@/lbs/billing/InlineInvoiceEditor";
 import { InvoiceOnlinePaymentSetupDialog } from "@/lbs/billing/InvoiceOnlinePaymentSetupDialog";
 import { ScheduleInvoiceSendDialog } from "@/lbs/billing/ScheduleInvoiceSendDialog";
+import { InvoiceStaffChargeDialog } from "@/lbs/billing/InvoiceStaffChargeDialog";
 import { SendInvoiceDialog } from "@/lbs/billing/SendInvoiceDialog";
 import {
   billToSelectionFromClient,
@@ -49,6 +50,7 @@ import {
 import {
   invoicePaymentModeFromRecord,
   upfrontPercentFromMode,
+  canChargeClientInvoice,
   type InvoicePaymentCollectionMode,
 } from "@/lbs/billing/invoicePaymentUtils";
 import {
@@ -105,6 +107,7 @@ export const StandaloneInvoiceEditPage = () => {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [paymentSetupOpen, setPaymentSetupOpen] = useState(false);
+  const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
   const [savedInvoice, setSavedInvoice] = useState<ClientInvoice | null>(null);
 
   const { data: invoice, isPending, error } = useGetOne<ClientInvoice>(
@@ -407,6 +410,9 @@ export const StandaloneInvoiceEditPage = () => {
             onAction={(action) => saveMutation.mutate(action)}
             cancelTo="/billing"
             onConfigurePayment={() => setPaymentSetupOpen(true)}
+            showCharge={invoice ? canChargeClientInvoice(invoice) : false}
+            onCharge={() => setChargeDialogOpen(true)}
+            chargeDisabled={saveMutation.isPending}
           />
         </PageActions>
       </div>
@@ -496,6 +502,17 @@ export const StandaloneInvoiceEditPage = () => {
         lineItems={scheduleLineItems}
         onScheduled={() => refresh()}
       />
+
+      {invoice && canChargeClientInvoice(invoice) ? (
+        <InvoiceStaffChargeDialog
+          invoice={invoice}
+          company={company}
+          contact={contact}
+          open={chargeDialogOpen}
+          onOpenChange={setChargeDialogOpen}
+          onSuccess={() => refresh()}
+        />
+      ) : null}
     </div>
   );
 };

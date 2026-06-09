@@ -53,12 +53,10 @@ import {
   getUserCompletionDurationLabel,
 } from "@/components/atomic-crm/tasks/taskTiming";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { isLbsMode } from "@/lbs/productMode";
 
 export const TaskTable = ({
   tasks,
   status = "open",
-  showContact = false,
   showProject = false,
   emptyMessage = "No tasks yet.",
 }: {
@@ -69,7 +67,6 @@ export const TaskTable = ({
   emptyMessage?: string;
 }) => {
   const isMobile = useIsMobile();
-  const lbsMode = isLbsMode();
   const sortedTasks = sortTasksByPriorityAndDue(tasks);
   const taskIds = useMemo(
     () => sortedTasks.map((task) => task.id),
@@ -81,56 +78,20 @@ export const TaskTable = ({
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
-  if (lbsMode) {
-    return (
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10" />
-              <TableHead>Description</TableHead>
-              <TableHead className="w-[120px] whitespace-nowrap">Due</TableHead>
-              <TableHead className="w-[120px] whitespace-nowrap">
-                {status === "done" ? "Completed in" : "Open for"}
-              </TableHead>
-              <TableHead className="w-[120px]">Assigned</TableHead>
-              <TableHead className="w-[100px]">Priority</TableHead>
-              <TableHead className="w-[72px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedTasks.map((task) => (
-              <TaskTableRow
-                key={String(task.id)}
-                task={task}
-                isMobile={isMobile}
-                variant="simple"
-                status={status}
-                participants={participantsByTaskId[String(task.id)] ?? []}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    );
-  }
-
   return (
     <div className="overflow-x-auto rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-10" />
-            <TableHead className="whitespace-nowrap">Type</TableHead>
             <TableHead>Description</TableHead>
             {showProject ? <TableHead>Project</TableHead> : null}
-            {showContact ? <TableHead>Contact</TableHead> : null}
-            <TableHead>Due</TableHead>
-            <TableHead className="hidden md:table-cell whitespace-nowrap">
+            <TableHead className="w-[120px] whitespace-nowrap">Due</TableHead>
+            <TableHead className="w-[120px] whitespace-nowrap">
               {status === "done" ? "Completed in" : "Open for"}
             </TableHead>
-            <TableHead className="hidden md:table-cell">Assigned</TableHead>
-            <TableHead className="hidden lg:table-cell">Priority</TableHead>
+            <TableHead className="w-[120px]">Assigned</TableHead>
+            <TableHead className="w-[100px]">Priority</TableHead>
             <TableHead className="w-[72px] text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -139,10 +100,8 @@ export const TaskTable = ({
             <TaskTableRow
               key={String(task.id)}
               task={task}
-              showContact={showContact}
-              showProject={showProject}
               isMobile={isMobile}
-              variant="default"
+              showProject={showProject}
               status={status}
               participants={participantsByTaskId[String(task.id)] ?? []}
             />
@@ -155,18 +114,14 @@ export const TaskTable = ({
 
 const TaskTableRow = ({
   task,
-  showContact = false,
   showProject = false,
   isMobile,
-  variant,
   status = "open",
   participants = [],
 }: {
   task: TaskRecord;
-  showContact?: boolean;
   showProject?: boolean;
   isMobile: boolean;
-  variant: "simple" | "default";
   status?: TaskStatusFilter;
   participants?: TaskParticipant[];
 }) => {
@@ -198,7 +153,6 @@ const TaskTableRow = ({
             } as TaskParticipant)
           : null))
       : getOpenTaskAgeLabel(task);
-  const isSimple = variant === "simple";
 
   const handleDelete = async () => {
     try {
@@ -251,39 +205,15 @@ const TaskTableRow = ({
           />
         </TableCell>
 
-        {!isSimple ? (
-          <TableCell className="max-w-[140px] whitespace-nowrap align-top">
-            <div className={isDoneForUser ? "line-through" : undefined}>
-              {task.type && task.type !== "none" ? (
-                <Badge variant="outline">{typeLabel}</Badge>
-              ) : (
-                <span className="text-sm text-muted-foreground">—</span>
-              )}
-              {task.internal ? (
-                <Badge
-                  variant="secondary"
-                  className="ml-2 text-[10px] uppercase"
-                >
-                  Internal
-                </Badge>
-              ) : null}
-            </div>
-          </TableCell>
-        ) : null}
-
-        <TableCell
-          className={
-            isSimple ? "max-w-[360px] align-top" : "max-w-[280px] align-top"
-          }
-        >
+        <TableCell className="max-w-[360px] align-top">
           <TaskDescriptionCell
             text={task.text}
             isDone={isDoneForUser}
-            useMentions={isSimple}
+            useMentions
           />
         </TableCell>
 
-        {!isSimple && showProject ? (
+        {showProject ? (
           <TableCell className="max-w-[180px] align-top">
             {task.deal_id ? (
               <ReferenceField<TaskRecord, Deal>
@@ -307,68 +237,38 @@ const TaskTableRow = ({
           </TableCell>
         ) : null}
 
-        {!isSimple && showContact ? (
-          <TableCell className="max-w-[160px] align-top">
-            <ReferenceField<TaskRecord, Contact>
-              source="contact_id"
-              reference="contacts"
-              record={task}
-              link="show"
-              render={({ referenceRecord }) =>
-                referenceRecord ? (
-                  <span className="truncate text-sm">
-                    {referenceRecord.first_name} {referenceRecord.last_name}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )
-              }
-            />
-          </TableCell>
-        ) : null}
-
-        <TableCell className="whitespace-nowrap text-sm align-top">
-          <span
-            className={
-              isTaskOverdue(task)
-                ? "font-medium text-red-600"
-                : "text-muted-foreground"
-            }
-          >
-            <DateField source="due_date" record={task} />
-          </span>
+        <TableCell className="whitespace-nowrap align-top">
+          <DateField source="due_date" record={task} />
+          {isTaskOverdue(task) && !isDoneForUser ? (
+            <Badge variant="destructive" className="ml-2 text-[10px]">
+              Overdue
+            </Badge>
+          ) : null}
         </TableCell>
 
-        <TableCell className="whitespace-nowrap text-sm align-top text-muted-foreground">
+        <TableCell className="whitespace-nowrap align-top text-sm text-muted-foreground">
           {timingLabel ?? "—"}
         </TableCell>
 
-        <TableCell
-          className={`text-sm text-muted-foreground align-top ${isSimple ? "" : "hidden md:table-cell"}`}
-        >
-          {assignedCell}
+        <TableCell className="align-top">{assignedCell}</TableCell>
+
+        <TableCell className="align-top">
+          {task.priority && task.priority !== "normal" ? (
+            <Badge
+              variant="outline"
+              className={getTaskPriorityClassName(task.priority)}
+            >
+              {getTaskPriorityLabel(task.priority)}
+            </Badge>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
         </TableCell>
 
-        <TableCell
-          className={`align-top ${isSimple ? "" : "hidden lg:table-cell"}`}
-        >
-          <Badge
-            variant="outline"
-            className={getTaskPriorityClassName(task.priority)}
-          >
-            {getTaskPriorityLabel(task.priority)}
-          </Badge>
-        </TableCell>
-
-        <TableCell className="text-right align-top">
+        <TableCell className="align-top text-right">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8"
-              >
+              <Button variant="ghost" size="icon" className="size-8">
                 <MoreVertical className="size-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -378,7 +278,8 @@ const TaskTableRow = ({
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-destructive"
+                variant="destructive"
+                disabled={isDeleting}
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 className="size-4" />
@@ -390,43 +291,41 @@ const TaskTableRow = ({
       </TableRow>
 
       {isMobile ? (
-        <TaskEditSheet
-          taskId={task.id}
+        <TaskEdit
           open={editOpen}
           onOpenChange={setEditOpen}
+          taskId={task.id}
         />
       ) : (
-        <TaskEdit
-          taskId={task.id}
+        <TaskEditSheet
           open={editOpen}
-          close={() => setEditOpen(false)}
+          onOpenChange={setEditOpen}
+          taskId={task.id}
         />
       )}
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete task?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This will permanently remove the task. This action cannot be undone.
+            This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setDeleteOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
               Cancel
             </Button>
             <Button
-              type="button"
               variant="destructive"
-              onClick={handleDelete}
               disabled={isDeleting}
+              onClick={handleDelete}
             >
-              {isDeleting ? <Loader2 className="size-4 animate-spin" /> : null}
-              Delete
+              {isDeleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

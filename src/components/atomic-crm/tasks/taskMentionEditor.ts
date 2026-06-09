@@ -1,5 +1,5 @@
-import type { OrganizationMember, Person } from "@/components/atomic-crm/types";
-import { getPersonName } from "@/components/atomic-crm/tasks/taskPeopleOptions";
+import type { OrganizationMember } from "@/components/atomic-crm/types";
+import { getMemberName } from "@/components/atomic-crm/tasks/taskMemberOptions";
 import {
   type TaskMentionSegment,
   parseTaskMentionSegments,
@@ -9,7 +9,7 @@ import {
 export const MENTION_SPAN_SELECTOR = "[data-mention-type][data-mention-id]";
 
 export const createMentionSpan = (
-  type: "person" | "member",
+  type: "member",
   id: string | number,
   name: string,
 ) => {
@@ -47,7 +47,7 @@ const appendSegment = (
     return;
   }
 
-  parent.appendChild(createMentionSpan(segment.type, segment.id, segment.name));
+  parent.appendChild(createMentionSpan("member", segment.id, segment.name));
 };
 
 export const renderTaskMentionEditorContent = (
@@ -230,12 +230,11 @@ export const findActiveMentionInEditor = (
 
 export const insertMentionInEditor = (
   mentionRange: Range,
-  type: "person" | "member",
   id: string | number,
   name: string,
 ) => {
   mentionRange.deleteContents();
-  const span = createMentionSpan(type, id, name);
+  const span = createMentionSpan("member", id, name);
   mentionRange.insertNode(span);
 
   const space = document.createTextNode(" ");
@@ -249,26 +248,13 @@ export const insertMentionInEditor = (
   selection?.addRange(nextRange);
 };
 
-export const insertTaskPersonMentionInEditor = (
-  mentionRange: Range,
-  person: Pick<Person, "id" | "first_name" | "last_name">,
-) =>
-  insertMentionInEditor(
-    mentionRange,
-    "person",
-    person.id,
-    getPersonName(person),
-  );
-
 export const insertTaskMemberMentionInEditor = (
   mentionRange: Range,
-  member: Pick<OrganizationMember, "id" | "first_name" | "last_name">,
-) => {
-  const name =
-    [member.first_name, member.last_name].filter(Boolean).join(" ") ||
-    "Team member";
-  return insertMentionInEditor(mentionRange, "member", member.id, name);
-};
+  member: Pick<OrganizationMember, "id" | "first_name" | "last_name" | "email">,
+) => insertMentionInEditor(mentionRange, member.id, getMemberName(member));
+
+/** @deprecated Legacy alias */
+export const insertTaskPersonMentionInEditor = insertTaskMemberMentionInEditor;
 
 export const taskMentionEditorHasTokenSyntax = (text?: string | null) =>
   taskTextHasMentionTokens(text);

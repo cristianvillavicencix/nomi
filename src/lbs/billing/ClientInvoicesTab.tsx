@@ -22,7 +22,7 @@ import {
   invoiceStatusVariant,
   type InvoiceStatusFilter,
 } from "@/lbs/billing/billingDisplayUtils";
-import { computeInvoiceBalanceDue, formatInvoicePaymentMethod, isInvoiceAutoPayActive } from "@/lbs/billing/invoicePaymentUtils";
+import { computeInvoiceBalanceDue } from "@/lbs/billing/invoicePaymentUtils";
 import type { ClientInvoice, Proposal } from "@/lbs/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -167,7 +167,7 @@ const ClientInvoicesTable = () => {
   if (!invoices.length) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        No invoices yet. Create one from a proposal or issue from Collections.
+        No invoices yet. Save a proposal with a payment plan or create a standalone invoice.
       </p>
     );
   }
@@ -254,11 +254,6 @@ const ClientInvoicesTable = () => {
             >
               {invoiceStatusLabel(record.status, record.due_date)}
             </Badge>
-            {isInvoiceAutoPayActive(record) ? (
-              <Badge variant="outline" className="text-[10px] font-normal">
-                Auto-pay · {formatInvoicePaymentMethod(record) ?? "Card on file"}
-              </Badge>
-            ) : null}
           </div>
         )}
       />

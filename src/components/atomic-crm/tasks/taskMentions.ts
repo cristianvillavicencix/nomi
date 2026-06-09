@@ -1,40 +1,20 @@
 import type { Identifier } from "ra-core";
-import type {
-  OrganizationMember,
-  Person,
-  Task,
-} from "@/components/atomic-crm/types";
-import { getPersonName } from "@/components/atomic-crm/tasks/taskPeopleOptions";
+import type { OrganizationMember, Task } from "@/components/atomic-crm/types";
+import { getMemberName } from "@/components/atomic-crm/tasks/taskMemberOptions";
 
-/** Stored tokens: @[Name](person:42) or @[Name](member:5) */
+/** Legacy stored tokens: @[Name](person:42) — treated as member ids during display. */
 export const TASK_PERSON_MENTION_REGEX = /@\[([^\]]+)\]\(person:(\d+)\)/g;
 
 export const TASK_MEMBER_MENTION_REGEX = /@\[([^\]]+)\]\(member:(\d+)\)/g;
 
 export const TASK_ANY_MENTION_REGEX = /@\[([^\]]+)\]\((person|member):(\d+)\)/g;
 
-export const buildTaskPersonMentionToken = (
-  person: Pick<Person, "id" | "first_name" | "last_name">,
-) => `@[${getPersonName(person)}](person:${person.id})`;
-
 export const buildTaskMemberMentionToken = (
-  member: Pick<OrganizationMember, "id" | "first_name" | "last_name">,
-) => {
-  const name =
-    [member.first_name, member.last_name].filter(Boolean).join(" ") ||
-    "Team member";
-  return `@[${name}](member:${member.id})`;
-};
+  member: Pick<OrganizationMember, "id" | "first_name" | "last_name" | "email">,
+) => `@[${getMemberName(member)}](member:${member.id})`;
 
-export const extractMentionPersonIds = (text?: string | null): number[] => {
-  if (!text) return [];
-  const ids = new Set<number>();
-  for (const match of text.matchAll(TASK_PERSON_MENTION_REGEX)) {
-    const id = Number(match[2]);
-    if (Number.isFinite(id)) ids.add(id);
-  }
-  return Array.from(ids);
-};
+/** @deprecated Legacy alias — new mentions use member tokens. */
+export const buildTaskPersonMentionToken = buildTaskMemberMentionToken;
 
 export const extractMentionMemberIds = (text?: string | null): number[] => {
   if (!text) return [];
@@ -43,8 +23,15 @@ export const extractMentionMemberIds = (text?: string | null): number[] => {
     const id = Number(match[2]);
     if (Number.isFinite(id)) ids.add(id);
   }
+  for (const match of text.matchAll(TASK_PERSON_MENTION_REGEX)) {
+    const id = Number(match[2]);
+    if (Number.isFinite(id)) ids.add(id);
+  }
   return Array.from(ids);
 };
+
+/** @deprecated Legacy alias — person tokens are member ids now. */
+export const extractMentionPersonIds = extractMentionMemberIds;
 
 export const taskTextHasMentionTokens = (text?: string | null) =>
   Boolean(text && /@\[[^\]]+\]\((person|member):\d+\)/.test(text));
@@ -77,24 +64,11 @@ export const insertTaskMentionToken = (
   return { text: `${nextText}${after}`, cursor: nextCursor };
 };
 
-export const insertTaskPersonMention = (
-  text: string,
-  cursor: number,
-  mentionStart: number,
-  person: Pick<Person, "id" | "first_name" | "last_name">,
-) =>
-  insertTaskMentionToken(
-    text,
-    cursor,
-    mentionStart,
-    buildTaskPersonMentionToken(person),
-  );
-
 export const insertTaskMemberMention = (
   text: string,
   cursor: number,
   mentionStart: number,
-  member: Pick<OrganizationMember, "id" | "first_name" | "last_name">,
+  member: Pick<OrganizationMember, "id" | "first_name" | "last_name" | "email">,
 ) =>
   insertTaskMentionToken(
     text,
@@ -103,9 +77,11 @@ export const insertTaskMemberMention = (
     buildTaskMemberMentionToken(member),
   );
 
+/** @deprecated Legacy alias */
+export const insertTaskPersonMention = insertTaskMemberMention;
+
 export type TaskMentionSegment =
   | { type: "text"; value: string }
-  | { type: "person"; name: string; id: Identifier }
   | { type: "member"; name: string; id: Identifier };
 
 export const parseTaskMentionSegments = (
@@ -121,11 +97,7 @@ export const parseTaskMentionSegments = (
     if (matchIndex > lastIndex) {
       segments.push({ type: "text", value: text.slice(lastIndex, matchIndex) });
     }
-    segments.push(
-      match[2] === "member"
-        ? { type: "member", name: match[1], id: match[3] }
-        : { type: "person", name: match[1], id: match[3] },
-    );
+    segments.push({ type: "member", name: match[1], id: match[3] });
     lastIndex = matchIndex + match[0].length;
   }
 
@@ -140,7 +112,7 @@ export const buildLegacyTaskMentionPrefix = ({
   assigneePersonIds = [],
   collaboratorPersonIds = [],
   organizationMember,
-  peopleById,
+  membersById,
 }: {
   assigneePersonIds?: Identifier[];
   collaboratorPersonIds?: Identifier[];
@@ -148,19 +120,19 @@ export const buildLegacyTaskMentionPrefix = ({
     OrganizationMember,
     "id" | "first_name" | "last_name" | "email"
   > | null;
-  peopleById: Record<string, Person>;
+  membersById: Record<string, OrganizationMember>;
 }) => {
   const tokens: string[] = [];
-  const seenPeople = new Set<string>();
-  const allPersonIds = [...assigneePersonIds, ...collaboratorPersonIds];
+  const seenMembers = new Set<string>();
+  const allMemberIds = [...assigneePersonIds, ...collaboratorPersonIds];
 
-  allPersonIds.forEach((personId) => {
-    const key = String(personId);
-    if (seenPeople.has(key)) return;
-    const person = peopleById[key];
-    if (!person) return;
-    seenPeople.add(key);
-    tokens.push(buildTaskPersonMentionToken(person));
+  allMemberIds.forEach((memberId) => {
+    const key = String(memberId);
+    if (seenMembers.has(key)) return;
+    const member = membersById[key];
+    if (!member) return;
+    seenMembers.add(key);
+    tokens.push(buildTaskMemberMentionToken(member));
   });
 
   let mentionedMemberIds: number[] = [];
@@ -180,7 +152,7 @@ export const buildLegacyTaskMentionPrefix = ({
 
 export const migrateLegacyTaskRecord = (
   task: Task,
-  peopleById: Record<string, Person>,
+  membersById: Record<string, OrganizationMember>,
   organizationMember?: OrganizationMember | null,
 ) => {
   if (taskTextHasMentionTokens(task.text)) return task;
@@ -191,13 +163,9 @@ export const migrateLegacyTaskRecord = (
     organizationMember:
       organizationMember ??
       (task.organization_member_id != null
-        ? ({
-            id: task.organization_member_id,
-            first_name: "",
-            last_name: "",
-          } as OrganizationMember)
+        ? membersById[String(task.organization_member_id)]
         : null),
-    peopleById,
+    membersById,
   });
 
   if (!prefix) return task;
@@ -215,24 +183,18 @@ export const migrateLegacyTaskRecord = (
 
 export const applyMentionIdsToTaskData = (data: Record<string, unknown>) => {
   const text = String(data.text ?? "");
-  const personIds = extractMentionPersonIds(text);
   const memberIds = extractMentionMemberIds(text);
 
-  if (personIds.length === 0 && memberIds.length === 0) return data;
+  if (memberIds.length === 0) return data;
 
   return {
     ...data,
-    ...(personIds.length > 0
-      ? {
-          assignee_person_ids: personIds,
-          collaborator_person_ids: [],
-        }
-      : {}),
-    ...(memberIds.length > 0 ? { mentioned_member_ids: memberIds } : {}),
+    assignee_person_ids: memberIds,
+    collaborator_person_ids: [],
+    mentioned_member_ids: memberIds,
   };
 };
 
-// Backward-compatible aliases
-export const buildTaskMentionToken = buildTaskPersonMentionToken;
-export const insertTaskMention = insertTaskPersonMention;
-export const TASK_MENTION_TOKEN_REGEX = TASK_PERSON_MENTION_REGEX;
+export const buildTaskMentionToken = buildTaskMemberMentionToken;
+export const insertTaskMention = insertTaskMemberMention;
+export const TASK_MENTION_TOKEN_REGEX = TASK_MEMBER_MENTION_REGEX;

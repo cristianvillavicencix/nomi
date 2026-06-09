@@ -61,9 +61,8 @@ export function buildAssignedProjectDealIdSet(
     salesperson_ids?: Identifier[];
   }>,
   organizationMemberId: Identifier,
-  personId?: Identifier | null,
 ): Set<string> {
   return new Set(
-    collectMyProjectDealIds(deals, organizationMemberId, personId).map(String),
+    collectMyProjectDealIds(deals, organizationMemberId).map(String),
   );
 }

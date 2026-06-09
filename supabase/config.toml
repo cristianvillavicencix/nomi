@@ -251,6 +251,12 @@ verify_jwt = false
 [functions.resend_client_invoice_payment_receipt]
 verify_jwt = false
 
+[functions.charge_client_invoice_on_file]
+verify_jwt = false
+
+[functions.send_client_invoice_payment_link]
+verify_jwt = false
+
 [functions.get_public_deal_brief]
 verify_jwt = false
 

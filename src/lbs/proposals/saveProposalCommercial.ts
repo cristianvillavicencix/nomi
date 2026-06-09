@@ -1,5 +1,7 @@
 import type { DataProvider, Identifier } from "ra-core";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type {
+  ClientInvoice,
   Proposal,
   ProposalLineItem,
   ProposalPaymentInstallment,
@@ -9,17 +11,21 @@ import {
   calculateProposalTotals,
   computeValidUntil,
   formatProposalNumber,
-  generatePaymentInstallments,
   lineTotal,
   recurringSummaryFromLines,
-  type PaymentScheduleConfig,
   type ProposalLineDraft,
 } from "@/lbs/proposals/proposalCommercialUtils";
 import {
   DEFAULT_CURRENCY,
-  DEFAULT_DEPOSIT_PERCENT,
   DEFAULT_VALIDITY_DAYS,
 } from "@/lbs/proposals/proposalCommercialConstants";
+import {
+  depositPercentFromOnlinePaymentSetup,
+  generateInstallmentsFromOnlinePaymentSetup,
+  onlinePaymentSetupToProposalSchedule,
+  serializeProposalPaymentScheduleConfig,
+  type OnlinePaymentSetup,
+} from "@/lbs/billing/onlinePaymentSetupBridge";
 
 export type SaveProposalCommercialInput = {
   orgId: number;
@@ -31,9 +37,8 @@ export type SaveProposalCommercialInput = {
     organization_member_id?: Identifier | null;
   };
   lines: ProposalLineDraft[];
-  scheduleConfig: PaymentScheduleConfig;
+  onlinePaymentSetup: OnlinePaymentSetup;
   validityDays?: number;
-  depositPercent?: number;
 };
 
 const deleteExistingChildren = async (
@@ -92,20 +97,67 @@ const deleteExistingChildren = async (
   ]);
 };
 
+const voidDraftProposalInstallmentInvoices = async (
+  dataProvider: DataProvider,
+  proposalId: Identifier,
+) => {
+  const { data: invoices } = await dataProvider.getList<ClientInvoice>(
+    "client_invoices",
+    {
+      filter: {
+        "proposal_id@eq": proposalId,
+        "status@eq": "draft",
+      },
+      pagination: { page: 1, perPage: 500 },
+      sort: { field: "id", order: "ASC" },
+    },
+  );
+
+  await Promise.all(
+    invoices
+      .filter((row) => row.installment_id != null)
+      .map((row) =>
+        dataProvider.update("client_invoices", {
+          id: row.id,
+          data: { status: "void" },
+          previousData: row,
+        }),
+      ),
+  );
+};
+
+const syncProposalInvoices = async (
+  dataProvider: DataProvider,
+  proposalId: Identifier,
+) => {
+  const provider = dataProvider as CrmDataProvider;
+  if (!provider.syncProposalInvoices) {
+    return [];
+  }
+  return provider.syncProposalInvoices({ proposalId });
+};
+
 export const saveProposalCommercial = async (
   dataProvider: DataProvider,
   input: SaveProposalCommercialInput,
   existingProposalId?: Identifier | null,
 ) => {
   const validityDays = input.validityDays ?? DEFAULT_VALIDITY_DAYS;
-  const depositPercent = input.depositPercent ?? DEFAULT_DEPOSIT_PERCENT;
-  const totals = calculateProposalTotals(input.lines, depositPercent);
   const validUntil = computeValidUntil(validityDays);
+  const depositPercent = depositPercentFromOnlinePaymentSetup(
+    input.onlinePaymentSetup,
+  );
+  const totals = calculateProposalTotals(input.lines, depositPercent);
+  const { scheduleConfig } = onlinePaymentSetupToProposalSchedule(
+    input.onlinePaymentSetup,
+    validUntil,
+  );
   const recurringSummary = recurringSummaryFromLines(input.lines);
-  const installments = generatePaymentInstallments({
-    depositAmount: totals.depositAmount,
-    balanceAmount: totals.balanceAmount,
-    config: input.scheduleConfig,
+  const installments = generateInstallmentsFromOnlinePaymentSetup({
+    setup: input.onlinePaymentSetup,
+    oneTimeTotal: totals.oneTimeTotal,
+    anchorDate: validUntil,
+    issueDate: new Date().toISOString().slice(0, 10),
   });
 
   const proposalPayload: Partial<Proposal> = {
@@ -119,7 +171,10 @@ export const saveProposalCommercial = async (
     currency: input.proposal.currency ?? DEFAULT_CURRENCY,
     validity_days: validityDays,
     valid_until: validUntil,
-    payment_schedule_config: input.scheduleConfig as Record<string, unknown>,
+    payment_schedule_config: serializeProposalPaymentScheduleConfig(
+      input.onlinePaymentSetup,
+      validUntil,
+    ),
     recurring_summary: recurringSummary,
     org_id: input.orgId,
   };
@@ -128,6 +183,7 @@ export const saveProposalCommercial = async (
   let proposalRecord: Proposal;
 
   if (proposalId != null) {
+    await voidDraftProposalInstallmentInvoices(dataProvider, proposalId);
     const { data: previousData } = await dataProvider.getOne<Proposal>(
       "proposals",
       { id: proposalId },
@@ -188,9 +244,9 @@ export const saveProposalCommercial = async (
         proposal_id: proposalId!,
         deposit_amount: totals.depositAmount,
         balance_amount: totals.balanceAmount,
-        deposit_due_date: input.scheduleConfig.deposit_due_date ?? validUntil,
-        installment_frequency: input.scheduleConfig.installment_frequency,
-        installment_count: input.scheduleConfig.installment_count,
+        deposit_due_date: scheduleConfig.deposit_due_date ?? validUntil,
+        installment_frequency: scheduleConfig.installment_frequency,
+        installment_count: scheduleConfig.installment_count,
         currency: proposalRecord.currency ?? DEFAULT_CURRENCY,
       },
     },
@@ -218,5 +274,14 @@ export const saveProposalCommercial = async (
     ),
   );
 
-  return { proposal: proposalRecord, schedule, installments };
+  let syncedInvoices: unknown[] = [];
+  if (totals.oneTimeTotal > 0.01 && installments.length > 0) {
+    try {
+      syncedInvoices = await syncProposalInvoices(dataProvider, proposalId!);
+    } catch (error) {
+      console.error("saveProposalCommercial.syncProposalInvoices", error);
+    }
+  }
+
+  return { proposal: proposalRecord, schedule, installments, syncedInvoices };
 };

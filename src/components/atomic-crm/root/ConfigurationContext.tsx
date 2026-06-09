@@ -12,8 +12,6 @@ import {
   defaultConfiguration,
   withCurrentProductName,
 } from "./defaultConfiguration";
-import { type PayrollSettings } from "@/payroll/rules";
-import { isLbsMode } from "@/lbs/productMode";
 import { hasLegacyProjectPipeline } from "@/lbs/deals/lbsProjectConstants";
 
 export const CONFIGURATION_STORE_KEY = "app.configuration";
@@ -46,7 +44,6 @@ export interface ConfigurationContextValue {
   title: string;
   darkModeLogo: string;
   lightModeLogo: string;
-  payrollSettings?: PayrollSettings;
   googleWorkplaceDomain?: string;
   disableEmailPasswordAuthentication?: boolean;
 }
@@ -116,16 +113,6 @@ const getDefaultPipeline = (pipelines: DealPipeline[]) =>
 const toLegacyDealStages = (stages: DealPipelineStage[]): DealStage[] =>
   stages.map((stage) => ({ value: stage.id, label: stage.label }));
 
-const toLegacyPipelineStatuses = (stages: DealPipelineStage[]): string[] =>
-  stages
-    .filter(
-      (stage) =>
-        stage.id === "won" ||
-        stage.label.toLowerCase().includes("won") ||
-        stage.label.toLowerCase().includes("closed"),
-    )
-    .map((stage) => stage.id);
-
 export const useConfigurationContext = () => {
   const [config] = useStore<ConfigurationContextValue>(
     CONFIGURATION_STORE_KEY,
@@ -139,23 +126,19 @@ export const useConfigurationContext = () => {
       ...config,
     });
     let dealPipelines = normalizeDealPipelines(merged);
-    if (isLbsMode()) {
-      const defaultPipeline = getDefaultPipeline(dealPipelines);
-      const stageIds = defaultPipeline?.stages.map((stage) => stage.id) ?? [];
-      if (hasLegacyProjectPipeline(stageIds)) {
-        dealPipelines = defaultConfiguration.dealPipelines;
-      }
-    }
     const defaultPipeline = getDefaultPipeline(dealPipelines);
-    const defaultStages = defaultPipeline?.stages ?? [];
+    const stageIds = defaultPipeline?.stages.map((stage) => stage.id) ?? [];
+    if (hasLegacyProjectPipeline(stageIds)) {
+      dealPipelines = defaultConfiguration.dealPipelines;
+    }
+    const resolvedDefaultPipeline = getDefaultPipeline(dealPipelines);
+    const defaultStages = resolvedDefaultPipeline?.stages ?? [];
 
     return {
       ...merged,
       dealPipelines,
       dealStages: toLegacyDealStages(defaultStages),
-      dealPipelineStatuses: isLbsMode()
-        ? defaultConfiguration.dealPipelineStatuses
-        : toLegacyPipelineStatuses(defaultStages),
+      dealPipelineStatuses: defaultConfiguration.dealPipelineStatuses,
     };
   }, [config]);
 };

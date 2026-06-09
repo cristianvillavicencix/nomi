@@ -5,10 +5,86 @@ import {
   parseInvoiceRemainderSchedule,
   rescheduleRemainderAfterEarlyPayments,
 } from "./invoiceRemainderSchedule.ts";
+import { markInstallmentPaidFromStripe } from "./proposalFlow.ts";
+
+const isDepositInstallment = (row: {
+  installment_number?: number | null;
+  label?: string | null;
+}) =>
+  row.installment_number === 1 ||
+  row.label?.toLowerCase().includes("deposit") === true;
+
+/** After an invoice linked to a proposal installment is paid, sync proposal/deal state. */
+export async function syncProposalInstallmentFromPaidInvoice(
+  supabase: SupabaseClient,
+  params: {
+    invoiceId: number;
+    orgId: number;
+    stripePaymentIntentId: string;
+    paymentMethod?: string;
+  },
+) {
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select("id, org_id, status, installment_id, proposal_id, deal_id")
+    .eq("id", params.invoiceId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (
+    !invoice?.installment_id ||
+    !invoice.proposal_id ||
+    invoice.status !== "paid"
+  ) {
+    return { synced: false };
+  }
+
+  const installmentId = Number(invoice.installment_id);
+  const proposalId = Number(invoice.proposal_id);
+
+  const [{ data: installment }, { data: proposal }] = await Promise.all([
+    supabase
+      .from("proposal_payment_installments")
+      .select("id, installment_number, label, status")
+      .eq("id", installmentId)
+      .eq("org_id", params.orgId)
+      .maybeSingle(),
+    supabase
+      .from("proposals")
+      .select("id, deal_id, contract_id")
+      .eq("id", proposalId)
+      .eq("org_id", params.orgId)
+      .maybeSingle(),
+  ]);
+
+  if (!installment?.id) {
+    return { synced: false, reason: "installment_not_found" };
+  }
+
+  if (installment.status === "paid") {
+    return { synced: true, alreadyPaid: true };
+  }
+
+  const dealId = invoice.deal_id ?? proposal?.deal_id ?? null;
+  const contractId = proposal?.contract_id ?? null;
+
+  return markInstallmentPaidFromStripe(supabase, {
+    orgId: params.orgId,
+    proposalId,
+    dealId,
+    contractId,
+    installmentId,
+    stripePaymentIntentId: params.stripePaymentIntentId,
+    paymentMethod: params.paymentMethod ?? "stripe",
+    isDeposit: isDepositInstallment(installment),
+    skipInvoiceUpdate: true,
+  });
+}
 
 type InvoicePaymentRow = {
   id: number;
   org_id: number;
+  proposal_id?: number | null;
   amount: number;
   amount_paid: number;
   status: string;
@@ -20,6 +96,40 @@ type InvoicePaymentRow = {
   remainder_schedule?: Record<string, unknown> | null;
   stripe_payment_intent_id?: string | null;
 };
+
+export async function propagateProposalCardToSiblingInvoices(
+  supabase: SupabaseClient,
+  orgId: number,
+  proposalId: number,
+  card: {
+    stripeCustomerId?: string | null;
+    stripePaymentMethodId?: string | null;
+    paymentMethodBrand?: string | null;
+    paymentMethodLast4?: string | null;
+  },
+) {
+  if (!card.stripePaymentMethodId) return;
+
+  await supabase
+    .from("client_invoices")
+    .update({
+      ...(card.stripeCustomerId
+        ? { stripe_customer_id: card.stripeCustomerId }
+        : {}),
+      stripe_payment_method_id: card.stripePaymentMethodId,
+      ...(card.paymentMethodBrand
+        ? { payment_method_brand: card.paymentMethodBrand }
+        : {}),
+      ...(card.paymentMethodLast4
+        ? { payment_method_last4: card.paymentMethodLast4 }
+        : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("org_id", orgId)
+    .eq("proposal_id", proposalId)
+    .is("stripe_payment_method_id", null)
+    .in("status", ["draft", "sent"]);
+}
 
 export async function applyClientInvoicePaymentUpdate(
   supabase: SupabaseClient,
@@ -43,13 +153,28 @@ export async function applyClientInvoicePaymentUpdate(
 
   if (invoice.stripe_payment_intent_id === params.stripePaymentIntentId) {
     const balanceDue = Math.max(Math.round((total - paid) * 100) / 100, 0);
+    const paidInFull = paid >= total - 0.01;
+    if (paidInFull) {
+      try {
+        await syncProposalInstallmentFromPaidInvoice(supabase, {
+          invoiceId: invoice.id,
+          orgId: invoice.org_id,
+          stripePaymentIntentId: params.stripePaymentIntentId,
+        });
+      } catch (error) {
+        console.error(
+          "applyClientInvoicePaymentUpdate.syncProposalInstallment.duplicate",
+          error,
+        );
+      }
+    }
     return {
       duplicate: true,
       invoice,
       charged_amount: params.chargeAmount,
       amount_paid: paid,
       balance_due: balanceDue,
-      paid_in_full: paid >= total - 0.01,
+      paid_in_full: paidInFull,
     };
   }
 
@@ -114,6 +239,35 @@ export async function applyClientInvoicePaymentUpdate(
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (params.stripePaymentMethodId && invoice.proposal_id) {
+    await propagateProposalCardToSiblingInvoices(
+      supabase,
+      invoice.org_id,
+      Number(invoice.proposal_id),
+      {
+        stripeCustomerId: params.stripeCustomerId,
+        stripePaymentMethodId: params.stripePaymentMethodId,
+        paymentMethodBrand: params.paymentMethodBrand,
+        paymentMethodLast4: params.paymentMethodLast4,
+      },
+    );
+  }
+
+  if (isPaidInFull) {
+    try {
+      await syncProposalInstallmentFromPaidInvoice(supabase, {
+        invoiceId: invoice.id,
+        orgId: invoice.org_id,
+        stripePaymentIntentId: params.stripePaymentIntentId,
+      });
+    } catch (error) {
+      console.error(
+        "applyClientInvoicePaymentUpdate.syncProposalInstallment",
+        error,
+      );
+    }
   }
 
   return {

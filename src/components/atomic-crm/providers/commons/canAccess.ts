@@ -1,16 +1,10 @@
 // FIXME: This should be exported from the ra-core package
-import { isLbsMode } from "@/lbs/productMode";
 import {
   getCapabilityForResourceAction,
   hasCapability,
   resolveEffectivePermissions,
 } from "@/lib/permissions/permissionCatalog";
 import type { MemberModulePermissions } from "../../types";
-import {
-  legacyRoleFinance,
-  legacyRolePeople,
-  legacyRoleSales,
-} from "./memberModuleAccess";
 
 type CanAccessParams<
   RecordType extends Record<string, any> = Record<string, any>,
@@ -133,68 +127,20 @@ export const canAccess = <
     return true;
   }
 
-  if (isLbsMode()) {
-    if (LBS_DENIED_RESOURCES.has(params.resource)) {
-      return false;
-    }
-    if (params.resource === "reports") {
-      const hit = canAccessViaCatalog(identity, "reports", params.action);
-      return hit ?? false;
-    }
-    const catalogHit = canAccessViaCatalog(
-      identity,
-      params.resource,
-      params.action,
-    );
-    if (catalogHit != null) {
-      return catalogHit;
-    }
-    return true;
-  }
-
-  const roles = getAccessRoles(identity);
-
-  if (roles.includes("admin")) {
-    return true;
-  }
-
-  const canAccessFinance = legacyRoleFinance(roles);
-  const canAccessPeople = legacyRolePeople(roles);
-  const canAccessSales = legacyRoleSales(roles);
-
-  if (
-    params.resource === "organization_members" ||
-    params.resource === "configuration"
-  ) {
+  if (LBS_DENIED_RESOURCES.has(params.resource)) {
     return false;
   }
-
-  if (
-    params.resource === "payments" ||
-    params.resource === "payment_lines" ||
-    params.resource === "payroll_runs" ||
-    params.resource === "payroll_run_lines" ||
-    params.resource === "employee_loans" ||
-    params.resource === "employee_loan_deductions"
-  ) {
-    return canAccessFinance;
-  }
-
-  if (params.resource === "people" || params.resource === "time_entries") {
-    return canAccessPeople || canAccessFinance;
-  }
-
-  if (
-    params.resource === "deals" ||
-    params.resource === "companies" ||
-    params.resource === "contacts"
-  ) {
-    return canAccessSales;
-  }
-
   if (params.resource === "reports") {
-    return canAccessFinance || canAccessPeople || canAccessSales;
+    const hit = canAccessViaCatalog(identity, "reports", params.action);
+    return hit ?? false;
   }
-
+  const catalogHit = canAccessViaCatalog(
+    identity,
+    params.resource,
+    params.action,
+  );
+  if (catalogHit != null) {
+    return catalogHit;
+  }
   return true;
 };

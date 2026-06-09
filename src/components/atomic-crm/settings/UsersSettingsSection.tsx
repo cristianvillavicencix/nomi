@@ -32,8 +32,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import { DEFAULT_SEAT_USD_PER_MONTH } from "@/platform/billingDefaults";
-import { inviteBillingSeatGateDisabled } from "@/platform/inviteBillingGate";
+import { DEFAULT_SEAT_USD_PER_MONTH } from "./billingDefaults";
+import { inviteBillingSeatGateDisabled } from "./inviteBillingGate";
 
 const SKIP_INVITE_SEAT_BILLING = inviteBillingSeatGateDisabled();
 import type { AccessIdentity } from "../providers/commons/canAccess";

@@ -129,22 +129,31 @@ export const InvoiceLineItemsSection = ({
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[480px] table-fixed text-sm">
+            <colgroup>
+              <col className="w-8" />
+              <col />
+              <col style={{ width: "3.75rem" }} />
+              <col style={{ width: "5.25rem" }} />
+              <col style={{ width: "5.5rem" }} />
+              <col style={{ width: "2.25rem" }} />
+            </colgroup>
             <thead>
               <tr className="border-b bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-3 py-2 font-medium">#</th>
+                <th className="px-2 py-2 font-medium text-center">#</th>
                 <th className="px-3 py-2 font-medium">Item & description</th>
-                <th className="px-3 py-2 font-medium w-24">Qty</th>
-                <th className="px-3 py-2 font-medium w-20">Unit</th>
-                <th className="px-3 py-2 font-medium w-28 text-right">Rate</th>
-                <th className="px-3 py-2 font-medium w-28 text-right">Amount</th>
-                <th className="w-10" />
+                <th className="px-1 py-2 font-medium text-center">Qty</th>
+                <th className="px-1 py-2 font-medium text-center">Rate</th>
+                <th className="px-1 py-2 font-medium text-center">Amount</th>
+                <th className="w-9" />
               </tr>
             </thead>
             <tbody>
               {lines.map((line, index) => (
                 <tr key={line.key} className="border-b last:border-0">
-                  <td className="px-3 py-2 text-muted-foreground">{index + 1}</td>
+                  <td className="px-1 py-2 text-center text-muted-foreground tabular-nums">
+                    {index + 1}
+                  </td>
                   <td className="px-3 py-2">
                     <Input
                       value={line.description}
@@ -155,7 +164,7 @@ export const InvoiceLineItemsSection = ({
                       className="h-8"
                     />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-1 py-2">
                     <Input
                       type="number"
                       min="0"
@@ -166,19 +175,10 @@ export const InvoiceLineItemsSection = ({
                           quantity: Number(event.target.value) || 0,
                         })
                       }
-                      className="h-8"
+                      className="h-8 px-1 text-center tabular-nums"
                     />
                   </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      value={line.unit}
-                      onChange={(event) =>
-                        updateLine(line.key, { unit: event.target.value })
-                      }
-                      className="h-8"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
+                  <td className="px-1 py-2">
                     <Input
                       type="number"
                       min="0"
@@ -189,10 +189,10 @@ export const InvoiceLineItemsSection = ({
                           unit_price: Number(event.target.value) || 0,
                         })
                       }
-                      className="h-8 text-right"
+                      className="h-8 px-1 text-center tabular-nums"
                     />
                   </td>
-                  <td className="px-3 py-2 text-right font-medium">
+                  <td className="px-1 py-2 text-center font-medium tabular-nums">
                     <MoneyText
                       value={invoiceLineTotal(line.quantity, line.unit_price)}
                     />

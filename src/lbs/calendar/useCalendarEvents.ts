@@ -4,10 +4,10 @@ import type {
   CalendarEventRecord,
   Contact,
   Deal,
-  Person,
+  OrganizationMember,
   Task,
 } from "@/components/atomic-crm/types";
-import { getPersonName } from "@/components/atomic-crm/tasks/taskPeopleOptions";
+import { formatOrganizationMemberName } from "@/lbs/billing/billingUtils";
 import {
   buildCalendarEntryEvent,
   buildDealCalendarEvents,
@@ -72,12 +72,12 @@ export const useCalendarEvents = ({
       { staleTime: 30_000 },
     );
 
-  const personIds = useMemo(
+  const memberIds = useMemo(
     () =>
       Array.from(
         new Set(
           reminders
-            .map((entry) => entry.person_id)
+            .map((entry) => entry.organization_member_id)
             .filter((id) => id != null)
             .map(String),
         ),
@@ -98,10 +98,10 @@ export const useCalendarEvents = ({
     [reminders],
   );
 
-  const { data: people = [] } = useGetMany<Person>(
-    "people",
-    { ids: personIds },
-    { enabled: personIds.length > 0, staleTime: 60_000 },
+  const { data: members = [] } = useGetMany<OrganizationMember>(
+    "organization_members",
+    { ids: memberIds },
+    { enabled: memberIds.length > 0, staleTime: 60_000 },
   );
 
   const { data: contacts = [] } = useGetMany<Contact>(
@@ -110,11 +110,11 @@ export const useCalendarEvents = ({
     { enabled: contactIds.length > 0, staleTime: 60_000 },
   );
 
-  const peopleById = useMemo(() => {
-    const map = new Map<string, Person>();
-    people.forEach((person) => map.set(String(person.id), person));
+  const membersById = useMemo(() => {
+    const map = new Map<string, OrganizationMember>();
+    members.forEach((member) => map.set(String(member.id), member));
     return map;
-  }, [people]);
+  }, [members]);
 
   const contactsById = useMemo(() => {
     const map = new Map<string, Contact>();
@@ -141,10 +141,10 @@ export const useCalendarEvents = ({
     const reminderEvents = reminders
       .map((entry) =>
         buildCalendarEntryEvent(entry, {
-          assignedName: entry.person_id
-            ? peopleById.get(String(entry.person_id))
-              ? getPersonName(peopleById.get(String(entry.person_id))!)
-              : null
+          assignedName: entry.organization_member_id
+            ? formatOrganizationMemberName(
+                membersById.get(String(entry.organization_member_id)),
+              )
             : null,
           contactName: entry.contact_id
             ? getContactName(contactsById.get(String(entry.contact_id)))
@@ -161,7 +161,7 @@ export const useCalendarEvents = ({
   }, [
     contactsById,
     deals,
-    peopleById,
+    membersById,
     range.end,
     range.start,
     reminders,

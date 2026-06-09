@@ -1,7 +1,6 @@
 import {
   EditBase,
   Form,
-  useDataProvider,
   useNotify,
   useRecordContext,
   useRedirect,
@@ -22,16 +21,13 @@ import { clearFormDraft } from "@/lib/formPersistence/formDraftStorage";
 import { CompanyAvatar } from "../companies/CompanyAvatar";
 import type { Deal } from "../types";
 import { DealInputs } from "./DealInputs";
-import { syncProjectAssignments } from "./projectAssignments";
 import { normalizeProjectPayload } from "./projectForm";
-import { isLbsMode } from "@/lbs/productMode";
 
 const dealEditDraftKey = (id: string) => `crm:deal-edit:${id}`;
 
 export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
   const redirect = useRedirect();
   const notify = useNotify();
-  const dataProvider = useDataProvider();
 
   const handleClose = () => {
     redirect("/deals", undefined, undefined, undefined, {
@@ -48,23 +44,6 @@ export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
       mutationOptions={{
         onSuccess: async (deal: Deal) => {
           clearFormDraft(dealEditDraftKey(String(id)));
-          if (!isLbsMode()) {
-            try {
-              await syncProjectAssignments(
-                dataProvider,
-                deal.id,
-                deal.salesperson_ids,
-                deal.subcontractor_ids,
-              );
-            } catch {
-              notify(
-                "Project updated, but assignments could not be fully synced",
-                {
-                  type: "warning",
-                },
-              );
-            }
-          }
           notify("Project updated");
           redirect(`/deals/${id}/show`, undefined, undefined, undefined, {
             _scrollToTop: false,

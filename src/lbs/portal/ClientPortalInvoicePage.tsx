@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Download, Loader2, Wallet } from "lucide-react";
-import { useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { InvoiceDocumentPreview } from "@/lbs/billing/InvoiceDocumentPreview";
 import {
@@ -14,6 +14,7 @@ import {
   type PublicInvoicePayload,
 } from "@/lbs/billing/public/publicInvoiceApi";
 import { PayInvoiceDialog } from "@/lbs/billing/public/PayInvoiceDialog";
+import { PublicInvoicePaymentFlow } from "@/lbs/billing/public/PublicInvoicePaymentFlow";
 import { ClientPortalLayout } from "@/lbs/portal/ClientPortalLayout";
 import {
   PORTAL_LOCALE_KEY,
@@ -131,6 +132,36 @@ export const ClientPortalInvoicePage = () => {
   };
 
   const accountEmail = payload?.bill_to.email ?? null;
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const payRequested =
+    searchParams.get("pay") === "1" || searchParams.get("pay") === "true";
+
+  const payModeActive = Boolean(
+    payload &&
+      payRequested &&
+      payload.invoice.status !== "paid" &&
+      computeInvoiceBalanceDue(
+        Number(payload.invoice.amount) || 0,
+        Number(payload.invoice.amount_paid) || 0,
+      ) > 0.01,
+  );
+
+  if (!loading && !error && payModeActive && payload) {
+    return (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 py-10">
+        <PublicInvoicePaymentFlow
+          token={payload.token}
+          payload={payload}
+          focusPaymentEntry
+          onSuccess={() => {
+            loadInvoice();
+            navigate(`/portal/invoice/${payload.token}`, { replace: true });
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <ClientPortalLayout
@@ -172,6 +203,7 @@ const InvoicePortalContent = ({
   onDownload: () => void;
   onPaymentSuccess: () => void;
 }) => {
+  const navigate = useNavigate();
   const [payOpen, setPayOpen] = useState(false);
   const { invoice, line_items, organization, bill_to } = payload;
   const lines = useMemo(() => lineItemsToInvoiceDrafts(line_items), [line_items]);
@@ -198,6 +230,11 @@ const InvoicePortalContent = ({
           : undefined,
       }
     : null;
+
+  const handlePaymentSuccess = () => {
+    onPaymentSuccess();
+    navigate(`/portal/invoice/${payload.token}`, { replace: true });
+  };
 
   return (
     <div className="px-3 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
@@ -273,7 +310,7 @@ const InvoicePortalContent = ({
           onOpenChange={setPayOpen}
           token={payload.token}
           payload={payload}
-          onSuccess={onPaymentSuccess}
+          onSuccess={handlePaymentSuccess}
         />
       ) : null}
     </div>

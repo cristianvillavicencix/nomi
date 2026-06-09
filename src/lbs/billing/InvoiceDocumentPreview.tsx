@@ -169,13 +169,19 @@ export const InvoiceDocumentPreview = ({
         </div>
 
         <div className="mt-8 overflow-x-auto rounded-md border">
-          <table className="w-full min-w-[520px] text-sm">
+          <table className="w-full table-fixed text-sm">
+            <colgroup>
+              <col />
+              <col style={{ width: "3.75rem" }} />
+              <col style={{ width: "5.25rem" }} />
+              <col style={{ width: "5.5rem" }} />
+            </colgroup>
             <thead>
               <tr className="bg-slate-700 text-left text-xs uppercase tracking-wide text-white">
                 <th className="px-3 py-2.5 font-medium">Item & Description</th>
-                <th className="w-24 px-3 py-2.5 font-medium text-right">Qty</th>
-                <th className="w-28 px-3 py-2.5 font-medium text-right">Rate</th>
-                <th className="w-28 px-3 py-2.5 font-medium text-right">Amount</th>
+                <th className="px-1 py-2.5 font-medium text-center">Qty</th>
+                <th className="px-1 py-2.5 font-medium text-center">Rate</th>
+                <th className="px-1 py-2.5 font-medium text-center">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -201,14 +207,13 @@ export const InvoiceDocumentPreview = ({
                         </div>
                       ) : null}
                     </td>
-                    <td className="px-3 py-3 align-middle text-right tabular-nums">
+                    <td className="px-1 py-3 align-middle text-center tabular-nums">
                       {line.quantity.toFixed(2)}
-                      <div className="text-xs text-slate-500">{line.unit}</div>
                     </td>
-                    <td className="px-3 py-3 align-middle text-right tabular-nums">
+                    <td className="px-1 py-3 align-middle text-center tabular-nums">
                       {formatMoney(line.unit_price)}
                     </td>
-                    <td className="px-3 py-3 align-middle text-right font-medium tabular-nums">
+                    <td className="px-1 py-3 align-middle text-center font-medium tabular-nums">
                       {formatMoney(line.quantity * line.unit_price)}
                     </td>
                   </tr>

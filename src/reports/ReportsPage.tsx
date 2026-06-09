@@ -1,120 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useGetIdentity } from "ra-core";
-import { useLocation, useNavigate } from "react-router";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useNavigate } from "react-router";
 import {
   PageLayout,
   ScrollableContentArea,
   StickyPageHeader,
-  StickyTabsBar,
 } from "@/components/atomic-crm/layout/page-shell";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { getAccessRoles } from "@/components/atomic-crm/providers/commons/canAccess";
-import { isLbsMode } from "@/lbs/productMode";
-import { LaborCostByPersonReportPage } from "./LaborCostByPersonReportPage";
-import { PayrollSummaryReportPage } from "./PayrollSummaryReportPage";
-import { ProjectProfitabilityReportPage } from "./ProjectProfitabilityReportPage";
-import { SalesCommissionsReportPage } from "./SalesCommissionsReportPage";
 import { WebAgencyMetricsReportPage } from "./WebAgencyMetricsReportPage";
 
-export type ReportTab =
-  | "project-profitability"
-  | "payroll-summary"
-  | "labor-cost-by-person"
-  | "sales-commissions"
-  | "web-agency-metrics";
+export type ReportTab = "web-agency-metrics";
 
-export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
-  const location = useLocation();
+export const ReportsPage = (_props: { initialTab?: ReportTab }) => {
   const navigate = useNavigate();
   const { data: identity } = useGetIdentity();
   const roles = getAccessRoles(identity as any);
-  const lbsMode = isLbsMode();
-  const canViewFinanceReports =
-    roles.includes("admin") ||
-    roles.includes("accountant") ||
-    roles.includes("payroll_manager");
-  const canViewPeopleReports = canViewFinanceReports || roles.includes("hr");
-  const canViewSalesReports =
-    roles.includes("admin") || roles.includes("sales_manager");
   const canViewLbsReports =
     roles.includes("admin") ||
     roles.includes("sales_manager") ||
     roles.includes("user");
 
-  const availableTabs: ReportTab[] = lbsMode
-    ? canViewLbsReports
-      ? ["web-agency-metrics"]
-      : []
-    : [
-        ...(canViewSalesReports ? (["project-profitability"] as ReportTab[]) : []),
-        ...(canViewFinanceReports ? (["payroll-summary"] as ReportTab[]) : []),
-        ...(canViewPeopleReports ? (["labor-cost-by-person"] as ReportTab[]) : []),
-        ...(canViewSalesReports ? (["sales-commissions"] as ReportTab[]) : []),
-      ];
-
-  const getTabFromPath = (): ReportTab => {
-    if (location.pathname.includes("/reports/web-agency-metrics")) {
-      return "web-agency-metrics";
-    }
-    if (location.pathname.includes("/reports/payroll-summary")) {
-      return "payroll-summary";
-    }
-    if (location.pathname.includes("/reports/labor-cost-by-person")) {
-      return "labor-cost-by-person";
-    }
-    if (location.pathname.includes("/reports/sales-commissions")) {
-      return "sales-commissions";
-    }
-    if (lbsMode) return "web-agency-metrics";
-    return initialTab ?? "project-profitability";
-  };
-
-  const fallbackTab = availableTabs[0] ?? "web-agency-metrics";
-  const [tab, setTab] = useState<ReportTab>(getTabFromPath());
-
   useEffect(() => {
-    const nextTab = getTabFromPath();
-    setTab(availableTabs.includes(nextTab) ? nextTab : fallbackTab);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableTabs.join(","), location.pathname, initialTab, fallbackTab]);
-
-  useEffect(() => {
-    if (!availableTabs.length) {
+    if (!canViewLbsReports) {
       navigate("/", { replace: true });
-      return;
     }
+  }, [canViewLbsReports, navigate]);
 
-    const nextTab = getTabFromPath();
-    if (!availableTabs.includes(nextTab)) {
-      navigate(`/reports/${fallbackTab}`, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableTabs.join(","), fallbackTab, navigate]);
-
-  const handleTabChange = (next: string) => {
-    const nextTab = next as ReportTab;
-    if (!availableTabs.includes(nextTab)) return;
-    setTab(nextTab);
-    navigate(`/reports/${nextTab}`);
-  };
-
-  if (lbsMode) {
-    return (
-      <PageLayout>
-        <StickyPageHeader className="pb-2">
-          <div className="flex items-center justify-end">
-            <ModuleInfoPopover
-              title="Reports"
-              description="Win rate, closed deals, and revenue trends for your web agency pipeline."
-            />
-          </div>
-        </StickyPageHeader>
-        <ScrollableContentArea>
-          <WebAgencyMetricsReportPage embedded />
-        </ScrollableContentArea>
-      </PageLayout>
-    );
+  if (!canViewLbsReports) {
+    return null;
   }
 
   return (
@@ -123,65 +37,13 @@ export const ReportsPage = ({ initialTab }: { initialTab?: ReportTab }) => {
         <div className="flex items-center justify-end">
           <ModuleInfoPopover
             title="Reports"
-            description="Executive visibility across profitability, payroll, labor, and commissions."
+            description="Win rate, closed deals, and revenue trends for your web agency pipeline."
           />
         </div>
       </StickyPageHeader>
-      <Tabs
-        value={tab}
-        onValueChange={handleTabChange}
-        className="flex min-h-0 flex-1 flex-col"
-      >
-        <StickyTabsBar className="pb-2">
-          <div className="overflow-x-auto">
-            <TabsList className="inline-flex h-10 w-max min-w-full items-center justify-start gap-1">
-              {canViewSalesReports ? (
-                <TabsTrigger value="project-profitability">
-                  Project Profitability
-                </TabsTrigger>
-              ) : null}
-              {canViewFinanceReports ? (
-                <TabsTrigger value="payroll-summary">
-                  Payroll Summary
-                </TabsTrigger>
-              ) : null}
-              {canViewPeopleReports ? (
-                <TabsTrigger value="labor-cost-by-person">
-                  Labor Cost by Person
-                </TabsTrigger>
-              ) : null}
-              {canViewSalesReports ? (
-                <TabsTrigger value="sales-commissions">
-                  Sales Commissions
-                </TabsTrigger>
-              ) : null}
-            </TabsList>
-          </div>
-        </StickyTabsBar>
-
-        <ScrollableContentArea>
-          {canViewSalesReports ? (
-            <TabsContent value="project-profitability" className="pt-2">
-              <ProjectProfitabilityReportPage embedded />
-            </TabsContent>
-          ) : null}
-          {canViewFinanceReports ? (
-            <TabsContent value="payroll-summary" className="pt-2">
-              <PayrollSummaryReportPage embedded />
-            </TabsContent>
-          ) : null}
-          {canViewPeopleReports ? (
-            <TabsContent value="labor-cost-by-person" className="pt-2">
-              <LaborCostByPersonReportPage embedded />
-            </TabsContent>
-          ) : null}
-          {canViewSalesReports ? (
-            <TabsContent value="sales-commissions" className="pt-2">
-              <SalesCommissionsReportPage embedded />
-            </TabsContent>
-          ) : null}
-        </ScrollableContentArea>
-      </Tabs>
+      <ScrollableContentArea>
+        <WebAgencyMetricsReportPage embedded />
+      </ScrollableContentArea>
     </PageLayout>
   );
 };

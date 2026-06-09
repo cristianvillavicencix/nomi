@@ -1,4 +1,4 @@
-import { Loader2, ChevronDown, Clock, ExternalLink, Printer, Send, Settings2 } from "lucide-react";
+import { Loader2, ChevronDown, Clock, CreditCard, ExternalLink, Printer, Send, Settings2 } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,9 @@ type InvoiceCreateActionsProps = {
   /** Cancel link target (defaults to Billing list). */
   cancelTo?: string;
   onConfigurePayment?: () => void;
+  showCharge?: boolean;
+  onCharge?: () => void;
+  chargeDisabled?: boolean;
 };
 
 export const InvoiceCreateActions = ({
@@ -30,6 +33,9 @@ export const InvoiceCreateActions = ({
   onAction,
   cancelTo = "/billing",
   onConfigurePayment,
+  showCharge = false,
+  onCharge,
+  chargeDisabled = false,
 }: InvoiceCreateActionsProps) => {
   const isActionPending = (action: InvoiceCreateAction) =>
     isPending && pendingAction === action;
@@ -45,6 +51,18 @@ export const InvoiceCreateActions = ({
         >
           <Settings2 className="size-4" />
           Configure payment
+        </Button>
+      ) : null}
+
+      {showCharge && onCharge ? (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending || chargeDisabled}
+          onClick={onCharge}
+        >
+          <CreditCard className="size-4" />
+          Charge
         </Button>
       ) : null}
 

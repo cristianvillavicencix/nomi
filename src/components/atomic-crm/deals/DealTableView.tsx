@@ -16,7 +16,6 @@ import {
   Trash,
 } from "lucide-react";
 
-import { MoneyText } from "@/lib/permissions/MoneyText";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -34,7 +33,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { isLbsMode } from "@/lbs/productMode";
 import { ProjectDeliveryCountdownText } from "@/lbs/deals/ProjectDeliveryCountdownText";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type {
@@ -42,7 +40,6 @@ import type {
   Contact,
   Deal,
   OrganizationMember,
-  Person,
 } from "../types";
 import { ProjectAssignedAvatars } from "@/lbs/deals/ProjectAssignedAvatars";
 import { getStageColor, getStageLabel } from "./pipelines";
@@ -55,7 +52,6 @@ export const DealTableView = () => {
   const notify = useNotify();
   const refresh = useRefresh();
   const config = useConfigurationContext();
-  const lbsMode = isLbsMode();
   const { data: deals = [], isPending } = useListContext<Deal>();
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("DESC");
@@ -81,27 +77,20 @@ export const DealTableView = () => {
       ),
     [deals],
   );
-  const salesIds = useMemo(
+  const memberIds = useMemo(
     () =>
       Array.from(
         new Set(
-          deals
-            .map((deal) => deal.organization_member_id)
-            .filter(
-              (salesId): salesId is NonNullable<typeof salesId> =>
-                salesId != null,
-            ),
-        ),
-      ),
-    [deals],
-  );
-  const peopleIds = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          deals.flatMap((deal) =>
-            Array.isArray(deal.salesperson_ids) ? deal.salesperson_ids : [],
-          ),
+          deals.flatMap((deal) => {
+            const ids: Array<NonNullable<Deal["organization_member_id"]>> = [];
+            if (deal.organization_member_id != null) {
+              ids.push(deal.organization_member_id);
+            }
+            if (Array.isArray(deal.salesperson_ids)) {
+              ids.push(...deal.salesperson_ids);
+            }
+            return ids;
+          }),
         ),
       ),
     [deals],
@@ -119,13 +108,8 @@ export const DealTableView = () => {
   );
   const { data: sales = [] } = useGetMany<OrganizationMember>(
     "organization_members",
-    { ids: salesIds },
-    { enabled: salesIds.length > 0 },
-  );
-  const { data: people = [] } = useGetMany<Person>(
-    "people",
-    { ids: peopleIds },
-    { enabled: lbsMode && peopleIds.length > 0 },
+    { ids: memberIds },
+    { enabled: memberIds.length > 0 },
   );
 
   const companiesById = useMemo(
@@ -139,11 +123,6 @@ export const DealTableView = () => {
   const salesById = useMemo(
     () => Object.fromEntries(sales.map((sale) => [String(sale.id), sale])),
     [sales],
-  );
-  const peopleById = useMemo(
-    () =>
-      Object.fromEntries(people.map((person) => [String(person.id), person])),
-    [people],
   );
   const sortedDeals = useMemo(() => {
     const records = [...deals];
@@ -254,17 +233,7 @@ export const DealTableView = () => {
               sortOrder={sortOrder}
               onSort={handleSort}
             />
-            <TableHead className={cn("min-w-[120px]", !lbsMode && "hidden")}>
-              Days left
-            </TableHead>
-            <SortableHead
-              label="Value"
-              field="amount"
-              sortField={sortField}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-              className={cn("text-right", lbsMode && "hidden")}
-            />
+            <TableHead className="min-w-[120px]">Days left</TableHead>
             <TableHead>Assigned</TableHead>
             <SortableHead
               label="Updated"
@@ -355,21 +324,12 @@ export const DealTableView = () => {
                     {getStageLabel(config, deal.stage, deal.pipeline_id)}
                   </Badge>
                 </TableCell>
-                <TableCell
-                  className={cn(
-                    "min-w-[120px] whitespace-normal",
-                    !lbsMode && "hidden",
-                  )}
-                >
+                <TableCell className="min-w-[120px] whitespace-normal">
                   <ProjectDeliveryCountdownText record={deal} />
-                </TableCell>
-                <TableCell className={cn("text-right", lbsMode && "hidden")}>
-                  <MoneyText value={deal.amount} />
                 </TableCell>
                 <TableCell className="max-w-[180px]">
                   <ProjectAssignedAvatars
                     deal={deal}
-                    peopleById={peopleById}
                     membersById={salesById}
                     onClick={stopPropagation}
                   />

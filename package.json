@@ -5,9 +5,7 @@
   "scripts": {
     "test": "node -e \"console.log('No unit tests configured.'); process.exit(0)\"",
     "dev": "vite",
-    "dev:demo": "vite --config vite.demo.config",
     "build": "tsc && vite build",
-    "build:demo": "tsc && vite build --config vite.demo.config",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "lint:apply": "eslint **/*.{mjs,ts,tsx} --fix",

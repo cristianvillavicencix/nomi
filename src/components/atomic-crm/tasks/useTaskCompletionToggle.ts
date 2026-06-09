@@ -7,7 +7,7 @@ import {
   toggleTaskParticipantCompletion,
 } from "@/components/atomic-crm/tasks/taskParticipants";
 import { taskUsesParticipantCompletion } from "@/components/atomic-crm/tasks/taskUserCompletion";
-import { useCurrentMemberPerson } from "@/components/atomic-crm/tasks/useCurrentMemberPerson";
+import { useCurrentOrganizationMember } from "@/components/atomic-crm/tasks/useCurrentOrganizationMember";
 
 export const useTaskCompletionToggle = (
   task: Task,
@@ -17,11 +17,11 @@ export const useTaskCompletionToggle = (
   const notify = useNotify();
   const queryClient = useQueryClient();
   const [update, { isPending }] = useUpdate();
-  const { identity, personId } = useCurrentMemberPerson();
+  const { memberId } = useCurrentOrganizationMember();
 
   const usesParticipantCompletion = taskUsesParticipantCompletion(participants);
   const currentParticipant = usesParticipantCompletion
-    ? findCurrentUserParticipant(participants, personId, identity?.id)
+    ? findCurrentUserParticipant(participants, memberId)
     : undefined;
   const isDone = Boolean(task.done_date);
 
@@ -35,7 +35,7 @@ export const useTaskCompletionToggle = (
     try {
       if (usesParticipantCompletion) {
         if (!currentParticipant) {
-          notify("Only tagged people can mark their part on this task.", {
+          notify("Only tagged team members can mark their part on this task.", {
             type: "warning",
           });
           return;

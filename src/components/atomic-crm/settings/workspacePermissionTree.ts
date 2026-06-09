@@ -1,4 +1,3 @@
-import { isLbsMode } from "@/lbs/productMode";
 import {
   CAPABILITIES,
   collapsePermissionsForSave as collapseCatalogPermissions,
@@ -33,12 +32,9 @@ export const getWorkspacePermissionGroups = (): WorkspacePermissionGroup[] => {
       scopeable: cap.scopeable,
     })),
   }));
-  if (isLbsMode()) {
-    return groups.filter(
-      (group) => !["People", "Time", "Payroll"].includes(group.label),
-    );
-  }
-  return groups;
+  return groups.filter(
+    (group) => !["People", "Time", "Payroll"].includes(group.label),
+  );
 };
 
 export function deriveModuleFlagsFromCapabilities(
@@ -55,9 +51,6 @@ export function deriveModuleFlagsFromCapabilities(
     messaging: "messaging.",
     deal_operations: "deal_operations.",
     deal_financials: "deal_financials.",
-    payroll: "payroll.",
-    people: "people.",
-    time: "time.",
     reports: "reports.",
     view_amounts: "view_amounts.",
   };

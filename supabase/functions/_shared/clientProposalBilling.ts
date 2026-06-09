@@ -528,7 +528,8 @@ export async function createOffSessionInvoicePaymentIntent(
       org_id: string;
       invoice_id: string;
       remainder_installment_number: string;
-      auto_charge: "1";
+      auto_charge: "0" | "1";
+      staff_charge?: "1";
     };
     idempotencyKey: string;
   },

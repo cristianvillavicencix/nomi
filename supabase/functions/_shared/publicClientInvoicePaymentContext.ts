@@ -10,6 +10,7 @@ export type ResolvedPublicInvoicePayment = {
   invoice: {
     id: number;
     org_id: number;
+    proposal_id: number | null;
     contact_id: number | null;
     company_id: number | null;
     amount: number;
@@ -64,7 +65,7 @@ export async function resolvePublicClientInvoicePayment(
   const { data: invoice } = await supabase
     .from("client_invoices")
     .select(
-      "id, org_id, contact_id, company_id, amount, amount_paid, currency, status, upfront_percent, save_card_for_future_charges, auto_charge_remainder, stripe_payment_intent_id, stripe_customer_id, stripe_payment_method_id, recipient_email, issue_date, due_date, remainder_schedule",
+      "id, org_id, proposal_id, contact_id, company_id, amount, amount_paid, currency, status, upfront_percent, save_card_for_future_charges, auto_charge_remainder, stripe_payment_intent_id, stripe_customer_id, stripe_payment_method_id, recipient_email, issue_date, due_date, remainder_schedule",
     )
     .eq("id", tokenRow.invoice_id)
     .eq("org_id", tokenRow.org_id)

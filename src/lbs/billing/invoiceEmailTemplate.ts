@@ -42,6 +42,13 @@ export const resolveClientInvoiceShareUrl = (
   return candidate.startsWith("http") ? candidate : `${origin}${candidate}`;
 };
 
+/** Opens the public invoice portal directly on Stripe payment entry. */
+export const withInvoicePaymentQuery = (url: string) => {
+  if (!url) return url;
+  if (/[?&]pay=1(?:&|$)/.test(url)) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}pay=1`;
+};
+
 export const buildDefaultInvoiceEmailSubject = (
   invoice: ClientInvoice,
   organizationName: string,

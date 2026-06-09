@@ -1,66 +1,29 @@
-import { Import, PanelTop, Settings, User } from "lucide-react";
-import { CanAccess, useUserMenu } from "ra-core";
+import { Settings, User } from "lucide-react";
+import { useUserMenu } from "ra-core";
 import { Link } from "react-router";
-import {
-  DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ImportPage } from "../misc/ImportPage";
-import { useNavigationLayoutPreference } from "./navigationLayoutPreference";
-import { isLbsMode } from "@/lbs/productMode";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { SettingsPage } from "../settings/SettingsPage";
+import { ProfilePage } from "../settings/ProfilePage";
 
 export const CRMUserMenuItems = () => (
   <>
+    <SettingsMenu />
     <ProfileMenu />
-    {!isLbsMode() ? (
-      <CanAccess resource="configuration" action="edit">
-        <SettingsMenu />
-      </CanAccess>
-    ) : null}
-    <NavigationLayoutMenu />
-    {!isLbsMode() ? (
-      <>
-        <DropdownMenuSeparator />
-        <ImportFromJsonMenuItem />
-      </>
-    ) : null}
   </>
 );
 
-const NavigationLayoutMenu = () => {
+const SettingsMenu = () => {
   const userMenuContext = useUserMenu();
-  const [layoutMode, setLayoutMode] = useNavigationLayoutPreference();
-
   if (!userMenuContext) {
-    throw new Error("<NavigationLayoutMenu> must be used inside <UserMenu>");
+    throw new Error("<SettingsMenu> must be used inside <UserMenu>");
   }
-
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <PanelTop />
-        Navigation layout
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
-        <DropdownMenuRadioGroup
-          value={layoutMode}
-          onValueChange={(value) => {
-            if (value === "top" || value === "sidebar") {
-              setLayoutMode(value);
-            }
-            userMenuContext.onClose();
-          }}
-        >
-          <DropdownMenuRadioItem value="top">Top</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="sidebar">Sidebar</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
+    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
+      <Link to={SettingsPage.path} className="flex items-center gap-2">
+        <Settings />
+        General
+      </Link>
+    </DropdownMenuItem>
   );
 };
 
@@ -71,37 +34,9 @@ const ProfileMenu = () => {
   }
   return (
     <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
-      <Link to="/profile" className="flex items-center gap-2">
+      <Link to={ProfilePage.path} className="flex items-center gap-2">
         <User />
         Profile
-      </Link>
-    </DropdownMenuItem>
-  );
-};
-
-const SettingsMenu = () => {
-  const userMenuContext = useUserMenu();
-  if (!userMenuContext) {
-    throw new Error("<SettingsMenu> must be used inside <UserMenu>");
-  }
-  return (
-    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
-      <Link to="/settings" className="flex items-center gap-2">
-        <Settings /> Settings
-      </Link>
-    </DropdownMenuItem>
-  );
-};
-
-const ImportFromJsonMenuItem = () => {
-  const userMenuContext = useUserMenu();
-  if (!userMenuContext) {
-    throw new Error("<ImportFromJsonMenuItem> must be used inside <UserMenu>");
-  }
-  return (
-    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
-      <Link to={ImportPage.path} className="flex items-center gap-2">
-        <Import /> Import data
       </Link>
     </DropdownMenuItem>
   );

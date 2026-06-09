@@ -10,68 +10,31 @@ const toNumericIds = (value: unknown): number[] => {
     .filter((item) => Number.isFinite(item));
 };
 
-export const normalizeTaskPersonIds = (
-  assigneePersonIds: unknown,
-  collaboratorPersonIds: unknown,
+export const normalizeTaskMemberIds = (
+  assigneeMemberIds: unknown,
+  collaboratorMemberIds: unknown,
 ) => {
-  const assignees = Array.from(new Set(toNumericIds(assigneePersonIds)));
+  const assignees = Array.from(new Set(toNumericIds(assigneeMemberIds)));
   const assigneeSet = new Set(assignees);
   const collaborators = Array.from(
     new Set(
-      toNumericIds(collaboratorPersonIds).filter((id) => !assigneeSet.has(id)),
+      toNumericIds(collaboratorMemberIds).filter((id) => !assigneeSet.has(id)),
     ),
   );
 
   return { assignees, collaborators };
 };
 
+/** @deprecated Legacy people junction — no longer synced. */
 export const syncTaskAssignees = async (
-  dataProvider: DataProvider,
-  taskId: Identifier,
-  assigneePersonIds: unknown,
-  collaboratorPersonIds: unknown,
-) => {
-  const { assignees, collaborators } = normalizeTaskPersonIds(
-    assigneePersonIds,
-    collaboratorPersonIds,
-  );
+  _dataProvider: DataProvider,
+  _taskId: Identifier,
+  _assigneePersonIds: unknown,
+  _collaboratorPersonIds: unknown,
+) => undefined;
 
-  const existing = await dataProvider.getList<{
-    id: Identifier;
-    role: TaskAssigneeRole;
-  }>("task_assignees", {
-    filter: { "task_id@eq": taskId },
-    pagination: { page: 1, perPage: 500 },
-    sort: { field: "id", order: "ASC" },
-  });
-
-  if (existing.data.length > 0) {
-    await dataProvider.deleteMany("task_assignees", {
-      ids: existing.data.map((item) => item.id),
-    });
-  }
-
-  await Promise.all([
-    ...assignees.map((personId) =>
-      dataProvider.create("task_assignees", {
-        data: {
-          task_id: taskId,
-          person_id: personId,
-          role: "assignee" satisfies TaskAssigneeRole,
-        },
-      }),
-    ),
-    ...collaborators.map((personId) =>
-      dataProvider.create("task_assignees", {
-        data: {
-          task_id: taskId,
-          person_id: personId,
-          role: "collaborator" satisfies TaskAssigneeRole,
-        },
-      }),
-    ),
-  ]);
-};
+/** @deprecated Alias for normalizeTaskMemberIds */
+export const normalizeTaskPersonIds = normalizeTaskMemberIds;
 
 export const stripTaskAssignmentFields = (data: Record<string, unknown>) => {
   const {
@@ -85,16 +48,21 @@ export const stripTaskAssignmentFields = (data: Record<string, unknown>) => {
 export const createTaskTagNotifications = async (
   dataProvider: DataProvider,
   taskId: Identifier,
-  assigneePersonIds: unknown,
-  collaboratorPersonIds: unknown,
+  assigneeMemberIds: unknown,
+  collaboratorMemberIds: unknown,
   mentionedMemberIds: unknown = [],
 ) => {
-  const { assignees, collaborators } = normalizeTaskPersonIds(
-    assigneePersonIds,
-    collaboratorPersonIds,
+  const { assignees, collaborators } = normalizeTaskMemberIds(
+    assigneeMemberIds,
+    collaboratorMemberIds,
   );
-  const personIds = [...assignees, ...collaborators];
-  const memberIds = toNumericIds(mentionedMemberIds);
+  const memberIds = [
+    ...new Set([
+      ...assignees,
+      ...collaborators,
+      ...toNumericIds(mentionedMemberIds),
+    ]),
+  ];
 
   const { data: existing = [] } =
     await dataProvider.getList<TaskTagNotification>("task_tag_notifications", {
@@ -104,60 +72,21 @@ export const createTaskTagNotifications = async (
     });
 
   const existingKeys = new Set(
-    existing.map((entry) =>
-      entry.person_id != null
-        ? `person:${entry.person_id}:${entry.recipient_organization_member_id}`
-        : `member:${entry.recipient_organization_member_id}`,
+    existing.map(
+      (entry) => `member:${entry.recipient_organization_member_id}`,
     ),
   );
 
-  const [{ data: people }, { data: members }] = await Promise.all([
-    personIds.length > 0
-      ? dataProvider.getList<{
-          id: Identifier;
-          email?: string | null;
-          org_id?: Identifier | null;
-        }>("people", {
-          filter: { "id@in": `(${personIds.join(",")})` },
-          pagination: { page: 1, perPage: personIds.length },
-          sort: { field: "id", order: "ASC" },
-        })
-      : Promise.resolve({ data: [] }),
-    dataProvider.getList<{
-      id: Identifier;
-      email?: string | null;
-      disabled?: boolean;
-    }>("organization_members", {
-      pagination: { page: 1, perPage: 500 },
-      sort: { field: "id", order: "ASC" },
-      filter: {},
-    }),
-  ]);
-
-  const notifications: Promise<unknown>[] = people.flatMap((person) => {
-    const normalizedEmail = person.email?.trim().toLowerCase();
-    if (!normalizedEmail) return [];
-
-    const recipient = members.find(
-      (member) =>
-        !member.disabled &&
-        member.email?.trim().toLowerCase() === normalizedEmail,
-    );
-    if (!recipient) return [];
-
-    const key = `person:${person.id}:${recipient.id}`;
-    if (existingKeys.has(key)) return [];
-
-    return [
-      dataProvider.create("task_tag_notifications", {
-        data: {
-          task_id: taskId,
-          person_id: person.id,
-          recipient_organization_member_id: recipient.id,
-        },
-      }),
-    ];
+  const { data: members } = await dataProvider.getList<{
+    id: Identifier;
+    disabled?: boolean;
+  }>("organization_members", {
+    pagination: { page: 1, perPage: 500 },
+    sort: { field: "id", order: "ASC" },
+    filter: {},
   });
+
+  const notifications: Promise<unknown>[] = [];
 
   memberIds.forEach((memberId) => {
     const recipient = members.find(

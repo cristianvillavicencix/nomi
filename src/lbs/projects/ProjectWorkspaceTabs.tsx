@@ -123,9 +123,6 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   const canViewPayments = useMemberCapability(
     "deal_financials.collections.view",
   );
-  const canViewCommissions = useMemberCapability(
-    "deal_financials.commissions.view",
-  );
   const resourcesProgress = useMemo(
     () =>
       resourcesSchemaMissing
@@ -139,10 +136,7 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   );
 
   const canViewFinancials =
-    canViewExpenses ||
-    canViewChangeOrders ||
-    canViewPayments ||
-    canViewCommissions;
+    canViewExpenses || canViewChangeOrders || canViewPayments;
 
   useDealsRealtime();
   useDealResourcesRealtime(record.id, !resourcesSchemaMissing);

@@ -618,12 +618,14 @@ export async function markInstallmentPaidFromStripe(
   params: {
     orgId: number;
     proposalId: number;
-    contractId: number;
-    dealId: number;
+    contractId?: number | null;
+    dealId?: number | null;
     installmentId: number;
     stripePaymentIntentId: string;
     paymentMethod?: string;
     isDeposit?: boolean;
+    /** When paying via client invoice, the invoice row is already updated. */
+    skipInvoiceUpdate?: boolean;
   },
 ) {
   const now = new Date().toISOString();
@@ -656,73 +658,84 @@ export async function markInstallmentPaidFromStripe(
       .eq("id", params.installmentId);
   }
 
-  const ref = `proposal-installment-${params.installmentId}`;
-  const { data: existingPayment } = await supabase
-    .from("deal_client_payments")
-    .select("id")
-    .eq("deal_id", params.dealId)
-    .eq("reference_number", ref)
-    .maybeSingle();
+  const dealId = params.dealId != null ? Number(params.dealId) : NaN;
+  const contractId =
+    params.contractId != null ? Number(params.contractId) : NaN;
 
-  if (existingPayment?.id) {
-    await supabase
+  if (Number.isFinite(dealId)) {
+    const ref = `proposal-installment-${params.installmentId}`;
+    const { data: existingPayment } = await supabase
       .from("deal_client_payments")
-      .update({
-        status: "cleared",
+      .select("id")
+      .eq("deal_id", dealId)
+      .eq("reference_number", ref)
+      .maybeSingle();
+
+    if (existingPayment?.id) {
+      await supabase
+        .from("deal_client_payments")
+        .update({
+          status: "cleared",
+          payment_method: paymentMethod === "mock" ? "other" : "card",
+          installment_id: params.installmentId,
+          stripe_payment_intent_id: params.stripePaymentIntentId,
+          updated_at: now,
+        })
+        .eq("id", existingPayment.id);
+    } else {
+      await supabase.from("deal_client_payments").insert({
+        deal_id: dealId,
+        payment_date: now.slice(0, 10),
+        amount: installment.amount ?? 0,
         payment_method: paymentMethod === "mock" ? "other" : "card",
+        reference_number: ref,
+        status: "cleared",
         installment_id: params.installmentId,
         stripe_payment_intent_id: params.stripePaymentIntentId,
-        updated_at: now,
-      })
-      .eq("id", existingPayment.id);
-  } else {
-    await supabase.from("deal_client_payments").insert({
-      deal_id: params.dealId,
-      payment_date: now.slice(0, 10),
-      amount: installment.amount ?? 0,
-      payment_method: paymentMethod === "mock" ? "other" : "card",
-      reference_number: ref,
-      status: "cleared",
-      installment_id: params.installmentId,
-      stripe_payment_intent_id: params.stripePaymentIntentId,
-      notes: "Proposal installment payment",
-    });
+        notes: "Proposal installment payment",
+      });
+    }
   }
 
-  if (params.isDeposit) {
+  if (params.isDeposit && Number.isFinite(contractId)) {
     await supabase
       .from("contracts")
       .update({
         deposit_paid_at: now,
         updated_at: now,
       })
-      .eq("id", params.contractId);
+      .eq("id", contractId);
   }
 
-  await supabase
-    .from("client_invoices")
-    .update({
-      status: "paid",
-      paid_at: now,
-      stripe_payment_intent_id: params.stripePaymentIntentId,
-      updated_at: now,
-    })
-    .eq("installment_id", params.installmentId)
-    .not("status", "eq", "void");
+  if (!params.skipInvoiceUpdate) {
+    await supabase
+      .from("client_invoices")
+      .update({
+        status: "paid",
+        paid_at: now,
+        stripe_payment_intent_id: params.stripePaymentIntentId,
+        updated_at: now,
+      })
+      .eq("installment_id", params.installmentId)
+      .not("status", "eq", "void");
+  }
 
-  const { data: proposal } = await supabase
-    .from("proposals")
-    .select("amount, contact_id")
-    .eq("id", params.proposalId)
-    .maybeSingle();
+  let paidInFull = false;
+  if (Number.isFinite(dealId)) {
+    const { data: proposal } = await supabase
+      .from("proposals")
+      .select("amount, contact_id")
+      .eq("id", params.proposalId)
+      .maybeSingle();
 
-  const paidInFull = await finalizeProposalIfPaidInFull(
-    supabase,
-    params.proposalId,
-    params.dealId,
-    proposal?.amount ?? 0,
-    proposal?.contact_id ?? null,
-  );
+    paidInFull = await finalizeProposalIfPaidInFull(
+      supabase,
+      params.proposalId,
+      dealId,
+      proposal?.amount ?? 0,
+      proposal?.contact_id ?? null,
+    );
+  }
 
   return { paidInFull, alreadyPaid: wasPaid };
 }

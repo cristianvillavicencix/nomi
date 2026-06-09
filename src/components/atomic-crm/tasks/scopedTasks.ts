@@ -8,7 +8,6 @@ export type TaskScopeFilter = "mine" | "team" | "my_projects" | "tagged";
 export type GetScopedTasksParams = {
   scope: TaskScopeFilter;
   organizationMemberId: Identifier;
-  personId?: Identifier | null;
   projectDealIds?: Identifier[];
   projectId?: Identifier | null;
   status: TaskStatusFilter;
@@ -26,7 +25,6 @@ export type GetScopedTasksResult = {
 export const buildScopedTaskFilter = ({
   scope,
   organizationMemberId,
-  personId,
   projectDealIds,
   status,
   typeFilter = "all",
@@ -46,9 +44,6 @@ export const buildScopedTaskFilter = ({
   if (scope === "mine") {
     filter["@scope"] = "mine";
     filter.organization_member_id = organizationMemberId;
-    if (personId != null) {
-      filter["@person_id"] = personId;
-    }
   } else if (scope === "my_projects") {
     filter["@scope"] = "my_projects";
     filter["@project_deal_ids"] = projectDealIds ?? [];
@@ -60,7 +55,6 @@ export const buildScopedTaskFilter = ({
 export const taskMatchesMineScope = (
   task: Task,
   organizationMemberId: Identifier,
-  personId?: Identifier | null,
 ) => {
   const memberKey = String(organizationMemberId);
   const mentionedMembers = (task.mentioned_member_ids ?? []).map(String);
@@ -72,12 +66,9 @@ export const taskMatchesMineScope = (
     return true;
   }
 
-  if (personId == null) return false;
-
-  const personKey = String(personId);
   const assignees = (task.assignee_person_ids ?? []).map(String);
   const collaborators = (task.collaborator_person_ids ?? []).map(String);
-  return assignees.includes(personKey) || collaborators.includes(personKey);
+  return assignees.includes(memberKey) || collaborators.includes(memberKey);
 };
 
 export const taskMatchesProjectScope = (

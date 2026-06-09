@@ -1,25 +1,13 @@
-import {
-  BarChart3,
-  Building2,
-  Clock3,
-  FolderKanban,
-  Home,
-  Landmark,
-  Moon,
-  ReceiptText,
-  Sun,
-  Users,
-} from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { Suspense, type ReactNode } from "react";
 import { useGetIdentity } from "ra-core";
-import { Link, matchPath, useLocation, useMatch } from "react-router";
+import { Link, useLocation, useMatch } from "react-router";
 import { ErrorBoundary } from "react-error-boundary";
 import { UserMenu } from "@/components/admin/user-menu";
 import { useTheme } from "@/components/admin/use-theme";
 import { Error } from "@/components/admin/error";
 import { Notification } from "@/components/admin/notification";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -27,8 +15,6 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -37,18 +23,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { canAccess } from "../providers/commons/canAccess";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
-import { isLbsMode } from "@/lbs/productMode";
 import { LbsSidebarNav } from "@/lbs/LbsSidebarNav";
 import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
 import { WebsiteAuditBackgroundWatcher } from "@/lbs/website-monitor/audit/WebsiteAuditBackgroundWatcher";
 import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
-import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
 import {
   PageActionsProvider,
   PageActionsSlot,
@@ -59,6 +42,7 @@ import {
   isProposalFocusModePath,
   isProposalPreviewPath,
 } from "@/lbs/proposals/proposalFocusMode";
+
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();
   const activeTheme = theme === "dark" ? "dark" : "light";
@@ -174,109 +158,9 @@ const SidebarFooterControls = () => {
 };
 
 const SidebarNavigation = () => {
-  const location = useLocation();
-  const { data: identity } = useGetIdentity();
   const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
-  const { enabled: websiteMonitorEnabled } = useWebsiteMonitorEnabled(isLbsMode());
+  const { enabled: websiteMonitorEnabled } = useWebsiteMonitorEnabled(true);
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
-  const canViewSales = canAccess(identity as any, {
-    action: "list",
-    resource: "deals",
-  });
-  const canViewPeople = canAccess(identity as any, {
-    action: "list",
-    resource: "people",
-  });
-  const canViewHours = canAccess(identity as any, {
-    action: "list",
-    resource: "time_entries",
-  });
-  const canViewPayments = canAccess(identity as any, {
-    action: "list",
-    resource: "payments",
-  });
-  const canViewPayroll = canAccess(identity as any, {
-    action: "list",
-    resource: "payroll_runs",
-  });
-  const canViewLoans = canViewPayments || canViewPayroll;
-  const canViewReports = canAccess(identity as any, {
-    action: "list",
-    resource: "reports",
-  });
-
-  const isActive = (pattern: string) => {
-    if (pattern === "/") return location.pathname === "/";
-    return !!matchPath(pattern, location.pathname);
-  };
-
-  if (isLbsMode()) {
-    return (
-      <Sidebar variant="floating" collapsible="icon" className="print:hidden">
-        <SidebarHeader className="px-2 pt-2 pb-0">
-          <div className="relative">
-            <SidebarMenu className="group-data-[collapsible=icon]:hidden">
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className="h-auto py-2 pr-8">
-                  <Link to="/" className="gap-2">
-                    <img
-                      className="[.light_&]:hidden h-6"
-                      src={darkModeLogo}
-                      alt={title}
-                    />
-                    <img
-                      className="[.dark_&]:hidden h-6"
-                      src={lightModeLogo}
-                      alt={title}
-                    />
-                    <span className="text-base font-semibold truncate">
-                      {title}
-                    </span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-            <div className="relative hidden h-10 items-center justify-center group-data-[collapsible=icon]:flex">
-              <Link
-                to="/"
-                className="absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-150 ease-out group-hover:opacity-0 group-hover:scale-95"
-              >
-                <img
-                  className="[.light_&]:hidden h-6"
-                  src={darkModeLogo}
-                  alt={title}
-                />
-                <img
-                  className="[.dark_&]:hidden h-6"
-                  src={lightModeLogo}
-                  alt={title}
-                />
-              </Link>
-              <SidebarTrigger
-                className="absolute inset-0 m-auto opacity-0 pointer-events-none transition-[opacity,transform] duration-150 ease-out scale-95 group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto"
-                variant="ghost"
-                size="icon"
-              />
-            </div>
-            <SidebarTrigger
-              className="absolute top-1.5 right-1.5 opacity-100 transition-opacity group-data-[collapsible=icon]:hidden"
-              variant="ghost"
-              size="icon"
-            />
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <LbsSidebarNav
-            websiteMonitorEnabled={websiteMonitorEnabled}
-            messagesUnreadCount={messagesUnreadCount}
-          />
-        </SidebarContent>
-        <SidebarFooter className="p-2 group-data-[collapsible=icon]:p-1">
-          <SidebarFooterControls />
-        </SidebarFooter>
-      </Sidebar>
-    );
-  }
 
   return (
     <Sidebar variant="floating" collapsible="icon" className="print:hidden">
@@ -333,101 +217,10 @@ const SidebarNavigation = () => {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Overview</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarItem
-              to="/"
-              label="Dashboard"
-              icon={<Home />}
-              active={isActive("/")}
-            />
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {canViewSales ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>CRM</SidebarGroupLabel>
-            <SidebarMenu>
-              <SidebarItem
-                to="/deals"
-                label="Projects"
-                icon={<FolderKanban />}
-                active={isActive("/deals/*")}
-              />
-              <SidebarItem
-                to="/companies"
-                label="Companies"
-                icon={<Building2 />}
-                active={isActive("/companies/*")}
-              />
-              <SidebarItem
-                to="/contacts"
-                label="Contacts"
-                icon={<Users />}
-                active={isActive("/contacts/*")}
-              />
-            </SidebarMenu>
-          </SidebarGroup>
-        ) : null}
-
-        {canViewHours ||
-        canViewPayments ||
-        canViewPayroll ||
-        canViewLoans ||
-        canViewReports ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>Time &amp; pay</SidebarGroupLabel>
-            <SidebarMenu>
-              {canViewHours ? (
-                <SidebarItem
-                  to="/time_entries"
-                  label="Hours"
-                  icon={<Clock3 />}
-                  active={isActive("/time_entries/*")}
-                />
-              ) : null}
-              {canViewPayroll ? (
-                <SidebarItem
-                  to="/payroll_runs"
-                  label="Payroll"
-                  icon={<ReceiptText />}
-                  active={isActive("/payroll_runs/*")}
-                />
-              ) : null}
-              {canViewLoans ? (
-                <SidebarItem
-                  to="/employee_loans"
-                  label="Loans"
-                  icon={<Landmark />}
-                  active={isActive("/employee_loans/*")}
-                />
-              ) : null}
-              {canViewReports ? (
-                <SidebarItem
-                  to="/reports"
-                  label="Reports"
-                  icon={<BarChart3 />}
-                  active={isActive("/reports/*")}
-                />
-              ) : null}
-            </SidebarMenu>
-          </SidebarGroup>
-        ) : null}
-
-        {canViewPeople ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>Team</SidebarGroupLabel>
-            <SidebarMenu>
-              <SidebarItem
-                to="/people"
-                label="People"
-                icon={<Users />}
-                active={isActive("/people/*")}
-              />
-            </SidebarMenu>
-          </SidebarGroup>
-        ) : null}
+        <LbsSidebarNav
+          websiteMonitorEnabled={websiteMonitorEnabled}
+          messagesUnreadCount={messagesUnreadCount}
+        />
       </SidebarContent>
       <SidebarFooter className="p-2 group-data-[collapsible=icon]:p-1">
         <SidebarFooterControls />
@@ -435,37 +228,6 @@ const SidebarNavigation = () => {
     </Sidebar>
   );
 };
-
-const SidebarItem = ({
-  to,
-  label,
-  icon,
-  active,
-  badgeCount = 0,
-}: {
-  to: string;
-  label: string;
-  icon: ReactNode;
-  active: boolean;
-  badgeCount?: number;
-}) => (
-  <SidebarMenuItem>
-    <SidebarMenuButton asChild isActive={active}>
-      <Link to={to} state={{ _scrollToTop: true }} className="relative">
-        {icon}
-        <span className="truncate">{label}</span>
-        {badgeCount > 0 ? (
-          <Badge
-            variant="default"
-            className="ml-auto rounded-full border-0 bg-blue-500 px-1.5 py-0 text-[10px] text-white group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0.5 group-data-[collapsible=icon]:right-0.5 group-data-[collapsible=icon]:ml-0"
-          >
-            {formatUnreadBadgeCount(badgeCount)}
-          </Badge>
-        ) : null}
-      </Link>
-    </SidebarMenuButton>
-  </SidebarMenuItem>
-);
 
 export const SidebarLayout = ({ children }: { children: ReactNode }) => {
   useConfigurationLoader();

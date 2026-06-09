@@ -35,7 +35,6 @@ import type { Contact, Deal, Task as TData } from "../types";
 import { TaskEditSheet } from "./TaskEditSheet";
 import { TaskEdit } from "./TaskEdit";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { isLbsMode } from "@/lbs/productMode";
 
 export const Task = ({
   task,
@@ -127,7 +126,7 @@ export const Task = ({
               ) : null}
             </div>
             <div className="text-sm">
-              {isLbsMode() ? <TaskMentionText text={task.text} /> : task.text}
+              <TaskMentionText text={task.text} />
             </div>
             <div className="text-sm text-muted-foreground">
               due&nbsp;
@@ -135,10 +134,9 @@ export const Task = ({
               {showAssignee ? (
                 <>
                   {" · "}
-                  {isLbsMode() &&
-                  ((task.assignee_person_ids?.length ?? 0) > 0 ||
-                    (task.collaborator_person_ids?.length ?? 0) > 0 ||
-                    (task.mentioned_member_ids?.length ?? 0) > 0) ? (
+                  {(task.assignee_person_ids?.length ?? 0) > 0 ||
+                  (task.collaborator_person_ids?.length ?? 0) > 0 ||
+                  (task.mentioned_member_ids?.length ?? 0) > 0 ? (
                     <span className="inline-flex align-middle">
                       <TaskAssignedAvatars
                         task={task}

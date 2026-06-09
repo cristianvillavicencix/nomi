@@ -22,26 +22,17 @@ import {
 } from "@/components/admin/form";
 import { InputHelperText } from "@/components/admin/input-helper-text";
 import { cn } from "@/lib/utils";
-import type {
-  Deal,
-  OrganizationMember,
-  Person,
-} from "@/components/atomic-crm/types";
+import type { Deal, OrganizationMember } from "@/components/atomic-crm/types";
 import {
   findActiveMentionInEditor,
   insertTaskMemberMentionInEditor,
-  insertTaskPersonMentionInEditor,
   renderTaskMentionEditorContent,
   serializeTaskMentionEditor,
 } from "@/components/atomic-crm/tasks/taskMentionEditor";
 import {
-  getPersonName,
-  getPersonOptionText,
-} from "@/components/atomic-crm/tasks/taskPeopleOptions";
-
-type MentionCandidate =
-  | { kind: "person"; person: Person; onTeam: boolean; dedupeKey: string }
-  | { kind: "member"; member: OrganizationMember; dedupeKey: string };
+  getMemberName,
+  getMemberOptionText,
+} from "@/components/atomic-crm/tasks/taskMemberOptions";
 
 type TaskDescriptionMentionInputProps = {
   source?: string;
@@ -52,16 +43,6 @@ type TaskDescriptionMentionInputProps = {
   defaultDealId?: string | number | null;
   autoFocus?: boolean;
 };
-
-const getMemberOptionText = (member: OrganizationMember) => {
-  const fullName = [member.first_name, member.last_name]
-    .filter(Boolean)
-    .join(" ");
-  return member.email ? `${fullName} (${member.email})` : fullName;
-};
-
-const normalizeEmail = (value?: string | null) =>
-  value?.trim().toLowerCase() ?? "";
 
 export const TaskDescriptionMentionInput = ({
   source = "text",
@@ -104,11 +85,11 @@ export const TaskDescriptionMentionInput = ({
   const mentionOpen = mentionRange != null;
   const searchText = mentionQuery.trim();
 
-  const { data: people = [], isPending: isPeoplePending } = useGetList<Person>(
-    "people",
+  const { data: members = [], isPending } = useGetList<OrganizationMember>(
+    "organization_members",
     {
       filter: {
-        "status@eq": "active",
+        "disabled@neq": true,
         ...(searchText ? { q: searchText } : {}),
       },
       pagination: { page: 1, perPage: 20 },
@@ -117,56 +98,14 @@ export const TaskDescriptionMentionInput = ({
     { enabled: mentionOpen, staleTime: 10_000 },
   );
 
-  const { data: members = [], isPending: isMembersPending } =
-    useGetList<OrganizationMember>(
-      "organization_members",
-      {
-        filter: {
-          "disabled@neq": true,
-          ...(searchText ? { q: searchText } : {}),
-        },
-        pagination: { page: 1, perPage: 20 },
-        sort: { field: "first_name", order: "ASC" },
-      },
-      { enabled: mentionOpen, staleTime: 10_000 },
-    );
-
   const candidates = useMemo(() => {
-    const reservedEmails = new Set<string>();
-    const next: MentionCandidate[] = [];
-
-    const sortedPeople = [...people].sort((left, right) => {
+    return [...members].sort((left, right) => {
       const leftOnTeam = teamIdSet.has(String(left.id)) ? 0 : 1;
       const rightOnTeam = teamIdSet.has(String(right.id)) ? 0 : 1;
       if (leftOnTeam !== rightOnTeam) return leftOnTeam - rightOnTeam;
-      return getPersonName(left).localeCompare(getPersonName(right));
+      return getMemberName(left).localeCompare(getMemberName(right));
     });
-
-    sortedPeople.forEach((person) => {
-      const email = normalizeEmail(person.email);
-      if (email) reservedEmails.add(email);
-      next.push({
-        kind: "person",
-        person,
-        onTeam: teamIdSet.has(String(person.id)),
-        dedupeKey: `person:${person.id}`,
-      });
-    });
-
-    members.forEach((member) => {
-      const email = normalizeEmail(member.email);
-      if (email && reservedEmails.has(email)) return;
-      next.push({
-        kind: "member",
-        member,
-        dedupeKey: `member:${member.id}`,
-      });
-    });
-
-    return next;
-  }, [members, people, teamIdSet]);
-
-  const isPending = isPeoplePending || isMembersPending;
+  }, [members, teamIdSet]);
 
   const syncEditorFromValue = (value?: string | null) => {
     const editor = editorRef.current;
@@ -213,14 +152,10 @@ export const TaskDescriptionMentionInput = ({
     updateMentionState();
   };
 
-  const selectCandidate = (candidate: MentionCandidate) => {
+  const selectCandidate = (member: OrganizationMember) => {
     if (!mentionRange) return;
 
-    if (candidate.kind === "person") {
-      insertTaskPersonMentionInEditor(mentionRange, candidate.person);
-    } else {
-      insertTaskMemberMentionInEditor(mentionRange, candidate.member);
-    }
+    insertTaskMemberMentionInEditor(mentionRange, member);
 
     setMentionRange(null);
     setMentionQuery("");
@@ -299,7 +234,7 @@ export const TaskDescriptionMentionInput = ({
             <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
               {isPending ? (
                 <div className="px-3 py-2 text-sm text-muted-foreground">
-                  Loading people…
+                  Loading team members…
                 </div>
               ) : candidates.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-muted-foreground">
@@ -307,27 +242,21 @@ export const TaskDescriptionMentionInput = ({
                 </div>
               ) : (
                 <ul className="max-h-48 overflow-y-auto py-1">
-                  {candidates.map((candidate, index) => (
-                    <li key={candidate.dedupeKey}>
+                  {candidates.map((member, index) => (
+                    <li key={`member:${member.id}`}>
                       <button
                         type="button"
                         className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted ${
                           index === highlightedIndex ? "bg-muted" : ""
                         }`}
                         onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => selectCandidate(candidate)}
+                        onClick={() => selectCandidate(member)}
                       >
-                        <span>
-                          {candidate.kind === "person"
-                            ? getPersonOptionText(candidate.person)
-                            : getMemberOptionText(candidate.member)}
-                        </span>
+                        <span>{getMemberOptionText(member)}</span>
                         <span className="ml-2 text-[10px] uppercase text-muted-foreground">
-                          {candidate.kind === "person"
-                            ? candidate.onTeam
-                              ? "Project"
-                              : "Employee"
-                            : "CRM user"}
+                          {teamIdSet.has(String(member.id))
+                            ? "Project"
+                            : "Team member"}
                         </span>
                       </button>
                     </li>
@@ -338,7 +267,7 @@ export const TaskDescriptionMentionInput = ({
           ) : null}
         </div>
       </FormControl>
-      <InputHelperText helperText="Use @ to tag employees or CRM users directly in the description." />
+      <InputHelperText helperText="Use @ to tag team members directly in the description." />
       <FormError />
     </FormField>
   );

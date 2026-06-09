@@ -53,7 +53,9 @@ const inlineFieldClass =
   "h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0";
 
 const inlineTableInputClass =
-  "h-8 w-full min-w-0 border-0 bg-white/80 px-2 shadow-none focus-visible:ring-1 focus-visible:ring-slate-300 rounded-sm";
+  "h-8 w-full min-w-0 border-0 bg-white/80 px-1 shadow-none focus-visible:ring-1 focus-visible:ring-slate-300 rounded-sm tabular-nums text-center";
+
+const invoiceLineNumericCellClass = "px-1 py-2 align-middle text-center";
 
 const metadataRowClass = "flex items-center gap-3 py-0 leading-none";
 const metadataLabelClass = "w-[6.75rem] shrink-0 text-slate-500";
@@ -333,17 +335,21 @@ export const InlineInvoiceEditor = ({
           </div>
 
           <div className="mt-10 overflow-visible rounded-md border border-slate-200">
-            <table className="w-full text-sm">
+            <table className="w-full table-fixed text-sm">
+              <colgroup>
+                <col />
+                <col style={{ width: "3.75rem" }} />
+                <col style={{ width: "5.25rem" }} />
+                <col style={{ width: "5.5rem" }} />
+                <col style={{ width: "2.25rem" }} />
+              </colgroup>
               <thead>
                 <tr className="bg-slate-700 text-left text-[11px] uppercase tracking-wide text-white">
                   <th className="px-3 py-2.5 font-medium">Item & Description</th>
-                  <th className="w-24 px-3 py-2.5 font-medium text-right">Qty</th>
-                  <th className="w-20 px-3 py-2.5 font-medium text-right">Unit</th>
-                  <th className="w-28 px-3 py-2.5 font-medium text-right">Rate</th>
-                  <th className="w-28 px-3 py-2.5 font-medium text-right">
-                    Amount
-                  </th>
-                  <th className="w-10" />
+                  <th className="px-1 py-2.5 font-medium text-center">Qty</th>
+                  <th className="px-1 py-2.5 font-medium text-center">Rate</th>
+                  <th className="px-1 py-2.5 font-medium text-center">Amount</th>
+                  <th className="w-9" />
                 </tr>
               </thead>
               <tbody>
@@ -355,7 +361,7 @@ export const InlineInvoiceEditor = ({
                         onChange={(patch) => updateLine(line.key, patch)}
                       />
                     </td>
-                    <td className="px-2 py-2 align-middle">
+                    <td className={invoiceLineNumericCellClass}>
                       <Input
                         type="number"
                         min="0"
@@ -366,19 +372,10 @@ export const InlineInvoiceEditor = ({
                             quantity: Number(event.target.value) || 0,
                           })
                         }
-                        className={cn(inlineTableInputClass, "text-right")}
+                        className={inlineTableInputClass}
                       />
                     </td>
-                    <td className="px-2 py-2 align-middle">
-                      <Input
-                        value={line.unit}
-                        onChange={(event) =>
-                          updateLine(line.key, { unit: event.target.value })
-                        }
-                        className={cn(inlineTableInputClass, "text-right")}
-                      />
-                    </td>
-                    <td className="px-2 py-2 align-middle">
+                    <td className={invoiceLineNumericCellClass}>
                       <Input
                         type="number"
                         min="0"
@@ -389,15 +386,20 @@ export const InlineInvoiceEditor = ({
                             unit_price: Number(event.target.value) || 0,
                           })
                         }
-                        className={cn(inlineTableInputClass, "text-right")}
+                        className={inlineTableInputClass}
                       />
                     </td>
-                    <td className="px-3 py-2 align-middle text-right font-medium tabular-nums">
+                    <td
+                      className={cn(
+                        invoiceLineNumericCellClass,
+                        "text-sm font-medium tabular-nums",
+                      )}
+                    >
                       {invoiceLineTotal(line.quantity, line.unit_price).toFixed(
                         2,
                       )}
                     </td>
-                    <td className="px-1 py-2 align-middle">
+                    <td className="px-0 py-2 align-middle">
                       <Button
                         type="button"
                         variant="ghost"
@@ -507,9 +509,14 @@ export const InlineInvoiceEditor = ({
             </p>
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
               <p className="text-sm text-slate-700">{paymentSummary}</p>
+              {cardOnFile ? (
+                <p className="mt-2 text-sm text-slate-700">
+                  Card on file · {cardOnFile}
+                </p>
+              ) : null}
               {autoChargeRemainder && cardOnFile ? (
                 <p className="mt-2 text-sm font-medium text-emerald-800">
-                  Auto-pay active · {cardOnFile}
+                  Auto-pay active — remaining installments charge automatically.
                 </p>
               ) : null}
             </div>

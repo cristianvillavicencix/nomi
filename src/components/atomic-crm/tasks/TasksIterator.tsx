@@ -3,8 +3,6 @@ import { useListContext } from "ra-core";
 
 import { Task } from "./Task";
 
-import { isLbsMode } from "@/lbs/productMode";
-
 export const TasksIterator = ({
   showContact,
   showDeal,
@@ -32,7 +30,7 @@ export const TasksIterator = ({
         <Task
           task={task}
           showContact={showContact}
-          showDeal={showDeal ?? isLbsMode()}
+          showDeal={showDeal ?? true}
           showAssignee={showAssignee}
           key={task.id}
         />

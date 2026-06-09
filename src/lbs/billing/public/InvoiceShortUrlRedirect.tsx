@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { resolvePublicInvoiceShortCode } from "@/lbs/billing/public/publicInvoiceApi";
 
 export const InvoiceShortUrlRedirect = () => {
   const { shortCode = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!shortCode) {
@@ -17,7 +18,10 @@ export const InvoiceShortUrlRedirect = () => {
 
     void resolvePublicInvoiceShortCode(shortCode)
       .then((token) => {
-        if (!cancelled) navigate(`/portal/invoice/${token}`, { replace: true });
+        if (!cancelled) {
+          const search = location.search?.trim() || "";
+          navigate(`/portal/invoice/${token}${search}`, { replace: true });
+        }
       })
       .catch(() => {
         if (!cancelled) navigate("/", { replace: true });
@@ -26,7 +30,7 @@ export const InvoiceShortUrlRedirect = () => {
     return () => {
       cancelled = true;
     };
-  }, [navigate, shortCode]);
+  }, [navigate, shortCode, location.search]);
 
   return (
     <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">

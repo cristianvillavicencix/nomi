@@ -4,7 +4,6 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { BillingCollectionsTab } from "@/lbs/billing/BillingCollectionsTab";
 import { BillingRevenueChart } from "@/lbs/billing/BillingRevenueChart";
 import { ClientInvoicesTab } from "@/lbs/billing/ClientInvoicesTab";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
@@ -26,16 +25,11 @@ export const ClientBillingPage = () => {
         </div>
       </PageActions>
 
-      <Tabs defaultValue="collections" className="space-y-4">
+      <Tabs defaultValue="invoices" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="collections">Collections</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="collections">
-          <BillingCollectionsTab />
-        </TabsContent>
 
         <TabsContent value="invoices">
           <ClientInvoicesTab />

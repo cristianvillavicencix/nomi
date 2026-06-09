@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
-import { isLbsMode } from "@/lbs/productMode";
 import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 import type { WebsiteAudit } from "@/lbs/website-monitor/audit/types";
 import { useWebsiteAuditProgress } from "@/lbs/website-monitor/audit/useWebsiteAuditProgress";
@@ -231,7 +230,7 @@ export const WebsiteAuditBackgroundWatcher = () => {
   useEffect(() => subscribeWebsiteAuditWatches(syncWatches), [syncWatches]);
 
   useEffect(() => {
-    if (!isLbsMode() || !websiteMonitorEnabled) return;
+    if (!websiteMonitorEnabled) return;
 
     let cancelled = false;
 
@@ -283,7 +282,7 @@ export const WebsiteAuditBackgroundWatcher = () => {
     [dismissedIds, location.pathname, watches],
   );
 
-  if (!isLbsMode() || !websiteMonitorEnabled || visibleWatches.length === 0) {
+  if (!websiteMonitorEnabled || visibleWatches.length === 0) {
     return null;
   }
 

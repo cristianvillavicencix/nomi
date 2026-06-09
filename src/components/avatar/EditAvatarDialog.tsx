@@ -20,15 +20,12 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { AvatarPicker, type AvatarPickerValue } from "./AvatarPicker";
 import type { AvatarBearingRecord, AvatarType } from "./resolveAvatar";
 
-type SaveTarget =
-  | { kind: "organization_member"; id: string | number }
-  | { kind: "person"; id: string | number };
+type SaveTarget = { kind: "organization_member"; id: string | number };
 
 /**
  * Reusable confirm-modal wrapping AvatarPicker. Used from places that
- * don't already host a form (e.g. profile page, people show). The save
- * routes to `dataProvider.organizationMemberUpdate` for org members and to
- * `dataProvider.update("people")` for people rows.
+ * don't already host a form (e.g. profile page). Saves via
+ * `dataProvider.organizationMemberUpdate`.
  */
 export const EditAvatarDialog = ({
   open,
@@ -66,21 +63,10 @@ export const EditAvatarDialog = ({
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (target.kind === "organization_member") {
-        await dataProvider.organizationMemberUpdate(target.id, {
-          avatar_type: value.avatar_type,
-          avatar_url: value.avatar_url,
-        } as any);
-      } else {
-        await dataProvider.update("people", {
-          id: target.id,
-          data: {
-            avatar_type: value.avatar_type,
-            avatar_url: value.avatar_url,
-          },
-          previousData: record as any,
-        });
-      }
+      await dataProvider.organizationMemberUpdate(target.id, {
+        avatar_type: value.avatar_type,
+        avatar_url: value.avatar_url,
+      } as any);
       notify("Avatar actualizado", { type: "info" });
       refresh();
       onOpenChange(false);

@@ -23,10 +23,6 @@ import {
   createStageTasksForDeal,
   getStageTasksCreatedMessage,
 } from "@/lbs/deals/dealStageTaskTemplates";
-import {
-  ensureCommissionsForWonDeal,
-  getCommissionAutomationMessage,
-} from "@/lbs/deals/dealCommissionAutomation";
 import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
 import { getBriefStageAdvanceCheck } from "@/lbs/deals/projectBriefProgress";
 import { getLaunchStageAdvanceCheck } from "@/lbs/projects/launch/launchChecklistGate";
@@ -154,13 +150,6 @@ const ProjectShowContent = () => {
               organizationMemberId: identity.id,
             });
 
-            const commissionCount = await ensureCommissionsForWonDeal({
-              dataProvider,
-              deal: { ...record, stage: stageId },
-            });
-            const commissionMessage =
-              getCommissionAutomationMessage(commissionCount);
-            if (commissionMessage) notify(commissionMessage, { type: "info" });
           } catch {
             notify("Stage updated, but automations could not run", {
               type: "warning",

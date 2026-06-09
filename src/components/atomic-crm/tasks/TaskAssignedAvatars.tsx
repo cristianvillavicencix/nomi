@@ -4,14 +4,13 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type {
   OrganizationMember,
-  Person,
   Task,
   TaskParticipant,
 } from "@/components/atomic-crm/types";
 import {
-  getPersonInitials,
-  getPersonName,
-} from "@/components/atomic-crm/tasks/taskPeopleOptions";
+  getMemberInitials,
+  getMemberName,
+} from "@/components/atomic-crm/tasks/taskMemberOptions";
 import { isParticipantComplete } from "@/components/atomic-crm/tasks/taskParticipants";
 
 type TaskAssignedAvatarsProps = {
@@ -19,19 +18,6 @@ type TaskAssignedAvatarsProps = {
   participants?: TaskParticipant[];
   size?: "sm" | "md";
 };
-
-const getMemberInitials = (
-  member: Pick<OrganizationMember, "first_name" | "last_name">,
-) => {
-  const first = (member.first_name ?? "").trim().charAt(0);
-  const last = (member.last_name ?? "").trim().charAt(0);
-  return `${first}${last}`.toUpperCase() || "—";
-};
-
-const getMemberName = (
-  member: Pick<OrganizationMember, "first_name" | "last_name">,
-) =>
-  [member.first_name, member.last_name].filter(Boolean).join(" ") || "CRM user";
 
 export const TaskAssignedAvatars = ({
   task,
@@ -47,51 +33,42 @@ export const TaskAssignedAvatars = ({
   const mentionedMemberIds = Array.isArray(task.mentioned_member_ids)
     ? task.mentioned_member_ids.map(String).filter(Boolean)
     : [];
-  const allPeopleIds = Array.from(
-    new Set([...assigneeIds, ...collaboratorIds]),
-  );
-
-  const { data: people = [] } = useGetList<Person>(
-    "people",
-    {
-      filter:
-        allPeopleIds.length > 0
-          ? { "id@in": `(${allPeopleIds.join(",")})` }
-          : { "id@eq": -1 },
-      pagination: { page: 1, perPage: Math.max(allPeopleIds.length, 1) },
-      sort: { field: "id", order: "ASC" },
-    },
-    { enabled: allPeopleIds.length > 0, staleTime: 60_000 },
+  const allMemberIds = Array.from(
+    new Set([...assigneeIds, ...collaboratorIds, ...mentionedMemberIds]),
   );
 
   const { data: members = [] } = useGetList<OrganizationMember>(
     "organization_members",
     {
       filter:
-        mentionedMemberIds.length > 0
-          ? { "id@in": `(${mentionedMemberIds.join(",")})` }
+        allMemberIds.length > 0
+          ? { "id@in": `(${allMemberIds.join(",")})` }
           : { "id@eq": -1 },
-      pagination: { page: 1, perPage: Math.max(mentionedMemberIds.length, 1) },
+      pagination: { page: 1, perPage: Math.max(allMemberIds.length, 1) },
       sort: { field: "id", order: "ASC" },
     },
-    { enabled: mentionedMemberIds.length > 0, staleTime: 60_000 },
+    { enabled: allMemberIds.length > 0, staleTime: 60_000 },
   );
 
-  const peopleById = Object.fromEntries(
-    people.map((person) => [String(person.id), person]),
+  const membersById = Object.fromEntries(
+    members.map((member) => [String(member.id), member]),
   );
   const assignees = assigneeIds
-    .map((id) => peopleById[id])
-    .filter((person): person is Person => Boolean(person));
+    .map((id) => membersById[id])
+    .filter((member): member is OrganizationMember => Boolean(member));
   const collaborators = collaboratorIds
     .filter((id) => !assigneeIds.includes(id))
-    .map((id) => peopleById[id])
-    .filter((person): person is Person => Boolean(person));
+    .map((id) => membersById[id])
+    .filter((member): member is OrganizationMember => Boolean(member));
+  const mentionedOnly = mentionedMemberIds
+    .filter((id) => !assigneeIds.includes(id) && !collaboratorIds.includes(id))
+    .map((id) => membersById[id])
+    .filter((member): member is OrganizationMember => Boolean(member));
 
   if (
     assignees.length === 0 &&
     collaborators.length === 0 &&
-    members.length === 0
+    mentionedOnly.length === 0
   ) {
     return <span className="text-muted-foreground">—</span>;
   }
@@ -100,86 +77,71 @@ export const TaskAssignedAvatars = ({
   const textClass = size === "md" ? "text-xs" : "text-[10px]";
   const completedAvatarClass = "grayscale opacity-50";
 
+  const renderMemberAvatar = (
+    member: OrganizationMember,
+    role: "Assignee" | "Collaborator" | "Mentioned",
+    linkClassName: string,
+  ) => {
+    const done = isParticipantComplete(participants, { memberId: member.id });
+    const name = getMemberName(member);
+    return (
+      <Link
+        key={`${role}-${String(member.id)}`}
+        to={`/organization_members/${member.id}`}
+        title={`${name} · ${role}${done ? " · Done" : ""}`}
+        aria-label={`${name} · ${role}${done ? " · Done" : ""}`}
+        className={cn(
+          linkClassName,
+          done && completedAvatarClass,
+        )}
+      >
+        <Avatar className={avatarClass}>
+          <AvatarImage
+            src={member.avatar?.src ?? undefined}
+            alt={name}
+          />
+          <AvatarFallback
+            className={cn(
+              textClass,
+              "font-medium",
+              role === "Assignee"
+                ? "bg-primary/10 text-primary"
+                : role === "Collaborator"
+                  ? "bg-muted"
+                  : "bg-blue-50 text-blue-700",
+            )}
+          >
+            {getMemberInitials(member)}
+          </AvatarFallback>
+        </Avatar>
+      </Link>
+    );
+  };
+
   return (
     <div className="flex items-center">
       <div className="flex -space-x-2">
-        {assignees.map((person) => {
-          const done = isParticipantComplete(participants, {
-            personId: person.id,
-          });
-          return (
-            <Link
-              key={`assignee-${String(person.id)}`}
-              to={`/people/${person.id}/show`}
-              title={`${getPersonName(person)} · Assignee${done ? " · Done" : ""}`}
-              aria-label={`${getPersonName(person)} · Assignee${done ? " · Done" : ""}`}
-              className={cn(
-                "rounded-full ring-2 ring-background transition-transform hover:z-10 hover:scale-105",
-                done && completedAvatarClass,
-              )}
-            >
-              <Avatar className={avatarClass}>
-                <AvatarFallback
-                  className={`bg-primary/10 text-primary ${textClass} font-medium`}
-                >
-                  {getPersonInitials(person)}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-          );
-        })}
-        {collaborators.map((person) => {
-          const done = isParticipantComplete(participants, {
-            personId: person.id,
-          });
-          return (
-            <Link
-              key={`collaborator-${String(person.id)}`}
-              to={`/people/${person.id}/show`}
-              title={`${getPersonName(person)} · Collaborator${done ? " · Done" : ""}`}
-              aria-label={`${getPersonName(person)} · Collaborator${done ? " · Done" : ""}`}
-              className={cn(
-                "rounded-full ring-2 ring-dashed ring-muted-foreground/40 transition-transform hover:z-10 hover:scale-105",
-                done && completedAvatarClass,
-              )}
-            >
-              <Avatar className={avatarClass}>
-                <AvatarFallback className={`bg-muted ${textClass} font-medium`}>
-                  {getPersonInitials(person)}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-          );
-        })}
-        {members.map((member) => {
-          const done = isParticipantComplete(participants, {
-            memberId: member.id,
-          });
-          return (
-            <Link
-              key={`member-${String(member.id)}`}
-              to={`/organization_members/${member.id}`}
-              title={`${getMemberName(member)} · CRM user${done ? " · Done" : ""}`}
-              aria-label={`${getMemberName(member)} · CRM user${done ? " · Done" : ""}`}
-              className={cn(
-                "rounded-full ring-2 ring-blue-200 transition-transform hover:z-10 hover:scale-105",
-                done && completedAvatarClass,
-              )}
-            >
-              <Avatar className={avatarClass}>
-                <AvatarImage
-                  src={member.avatar?.src ?? undefined}
-                  alt={getMemberName(member)}
-                />
-                <AvatarFallback
-                  className={`bg-blue-50 text-blue-700 ${textClass} font-medium`}
-                >
-                  {getMemberInitials(member)}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-          );
-        })}
+        {assignees.map((member) =>
+          renderMemberAvatar(
+            member,
+            "Assignee",
+            "rounded-full ring-2 ring-background transition-transform hover:z-10 hover:scale-105",
+          ),
+        )}
+        {collaborators.map((member) =>
+          renderMemberAvatar(
+            member,
+            "Collaborator",
+            "rounded-full ring-2 ring-dashed ring-muted-foreground/40 transition-transform hover:z-10 hover:scale-105",
+          ),
+        )}
+        {mentionedOnly.map((member) =>
+          renderMemberAvatar(
+            member,
+            "Mentioned",
+            "rounded-full ring-2 ring-blue-200 transition-transform hover:z-10 hover:scale-105",
+          ),
+        )}
       </div>
     </div>
   );

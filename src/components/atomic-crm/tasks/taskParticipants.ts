@@ -2,34 +2,24 @@ import type { DataProvider, Identifier } from "ra-core";
 import type { Task, TaskParticipant } from "@/components/atomic-crm/types";
 import type { TaskAssignmentPayload } from "@/components/atomic-crm/tasks/persistTaskAssignmentSideEffects";
 
-export type DesiredTaskParticipant =
-  | { person_id: Identifier; organization_member_id?: null }
-  | { person_id?: null; organization_member_id: Identifier };
+export type DesiredTaskParticipant = {
+  organization_member_id: Identifier;
+};
 
 const participantKey = (participant: {
-  person_id?: Identifier | null;
   organization_member_id?: Identifier | null;
-}) =>
-  participant.person_id != null
-    ? `person:${participant.person_id}`
-    : `member:${participant.organization_member_id}`;
+}) => `member:${participant.organization_member_id}`;
 
 export const buildDesiredTaskParticipants = (
   payload: TaskAssignmentPayload,
   ownerOrganizationMemberId?: Identifier | null,
 ): DesiredTaskParticipant[] => {
-  const personIds = Array.from(
-    new Set([
-      ...payload.assignee_person_ids,
-      ...payload.collaborator_person_ids,
-    ]),
-  );
   const memberIds = Array.from(
     new Set(
       [
-        ...payload.mentioned_member_ids.filter((memberId) =>
-          Number.isFinite(Number(memberId)),
-        ),
+        ...payload.assignee_person_ids,
+        ...payload.collaborator_person_ids,
+        ...payload.mentioned_member_ids,
         ...(ownerOrganizationMemberId != null
           ? [Number(ownerOrganizationMemberId)]
           : []),
@@ -37,26 +27,19 @@ export const buildDesiredTaskParticipants = (
     ),
   );
 
-  const participants: DesiredTaskParticipant[] = personIds.map((personId) => ({
-    person_id: personId,
+  return memberIds.map((memberId) => ({
+    organization_member_id: memberId,
   }));
-
-  memberIds.forEach((memberId) => {
-    participants.push({ organization_member_id: memberId });
-  });
-
-  return participants;
 };
 
 export const getTaskParticipantCount = (task: Task) => {
-  const personIds = new Set<string>();
-  (task.assignee_person_ids ?? []).forEach((id) => personIds.add(String(id)));
-  (task.collaborator_person_ids ?? []).forEach((id) =>
-    personIds.add(String(id)),
-  );
   const memberIds = new Set<string>();
+  (task.assignee_person_ids ?? []).forEach((id) => memberIds.add(String(id)));
+  (task.collaborator_person_ids ?? []).forEach((id) =>
+    memberIds.add(String(id)),
+  );
   (task.mentioned_member_ids ?? []).forEach((id) => memberIds.add(String(id)));
-  return personIds.size + memberIds.size;
+  return memberIds.size;
 };
 
 export const taskRequiresAllParticipantsComplete = (task: Task) =>
@@ -64,23 +47,15 @@ export const taskRequiresAllParticipantsComplete = (task: Task) =>
 
 export const isParticipantComplete = (
   participants: TaskParticipant[],
-  target: { personId?: Identifier; memberId?: Identifier },
+  target: { memberId?: Identifier },
 ) =>
-  participants.some((entry) => {
-    if (!entry.completed_at) return false;
-    if (
-      target.personId != null &&
-      entry.person_id != null &&
-      String(entry.person_id) === String(target.personId)
-    ) {
-      return true;
-    }
-    return (
+  participants.some(
+    (entry) =>
+      Boolean(entry.completed_at) &&
       target.memberId != null &&
       entry.organization_member_id != null &&
-      String(entry.organization_member_id) === String(target.memberId)
-    );
-  });
+      String(entry.organization_member_id) === String(target.memberId),
+  );
 
 export const syncTaskParticipants = async (
   dataProvider: DataProvider,
@@ -125,8 +100,8 @@ export const syncTaskParticipants = async (
         dataProvider.create("task_participants", {
           data: {
             task_id: taskId,
-            person_id: entry.person_id ?? null,
-            organization_member_id: entry.organization_member_id ?? null,
+            person_id: null,
+            organization_member_id: entry.organization_member_id,
             completed_at: null,
           },
         }),
@@ -169,23 +144,14 @@ export const recomputeTaskDoneDate = async (
 
 export const findCurrentUserParticipant = (
   participants: TaskParticipant[],
-  personId?: Identifier | null,
   organizationMemberId?: Identifier | null,
 ) =>
-  participants.find((entry) => {
-    if (
-      personId != null &&
-      entry.person_id != null &&
-      String(entry.person_id) === String(personId)
-    ) {
-      return true;
-    }
-    return (
+  participants.find(
+    (entry) =>
       organizationMemberId != null &&
       entry.organization_member_id != null &&
-      String(entry.organization_member_id) === String(organizationMemberId)
-    );
-  });
+      String(entry.organization_member_id) === String(organizationMemberId),
+  );
 
 export const toggleTaskParticipantCompletion = async (
   dataProvider: DataProvider,

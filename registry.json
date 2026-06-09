@@ -56,7 +56,7 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/tasks/useCurrentMemberPerson.ts",
+          "path": "src/components/atomic-crm/tasks/useCurrentOrganizationMember.ts",
           "type": "registry:component"
         },
         {
@@ -72,10 +72,6 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/tasks/taskPeopleOptions.ts",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/tasks/taskParticipants.ts",
           "type": "registry:component"
         },
@@ -85,6 +81,10 @@
         },
         {
           "path": "src/components/atomic-crm/tasks/taskMentionEditor.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/tasks/taskMemberOptions.ts",
           "type": "registry:component"
         },
         {
@@ -241,6 +241,14 @@
         },
         {
           "path": "src/components/atomic-crm/settings/tenantBrandingFlags.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/settings/inviteBillingGate.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/settings/billingDefaults.ts",
           "type": "registry:component"
         },
         {
@@ -776,10 +784,6 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/deals/DealInputsContractor.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/deals/DealInputs.tsx",
           "type": "registry:component"
         },
@@ -821,10 +825,6 @@
         },
         {
           "path": "src/components/atomic-crm/dashboard/TasksListEmpty.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "src/components/atomic-crm/dashboard/TasksList.tsx",
           "type": "registry:component"
         },
         {

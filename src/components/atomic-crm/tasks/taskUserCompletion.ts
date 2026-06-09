@@ -23,7 +23,6 @@ export const isTaskOpenForUser = (
   task: Task,
   participants: TaskParticipant[],
   organizationMemberId: Identifier,
-  personId?: Identifier | null,
 ) => {
   if (!taskUsesParticipantCompletion(participants)) {
     return task.done_date == null;
@@ -31,7 +30,6 @@ export const isTaskOpenForUser = (
 
   const userParticipant = findCurrentUserParticipant(
     participants,
-    personId,
     organizationMemberId,
   );
   if (!userParticipant) {
@@ -45,7 +43,6 @@ export const isTaskDoneForUser = (
   task: Task,
   participants: TaskParticipant[],
   organizationMemberId: Identifier,
-  personId?: Identifier | null,
 ) => {
   if (!taskUsesParticipantCompletion(participants)) {
     return task.done_date != null;
@@ -53,7 +50,6 @@ export const isTaskDoneForUser = (
 
   const userParticipant = findCurrentUserParticipant(
     participants,
-    personId,
     organizationMemberId,
   );
   if (userParticipant) {

@@ -70,13 +70,59 @@ const paymentElementOptions = {
   },
 };
 
+/** Payment link: card field only — no wallets or extra payment tabs. */
+const cardOnlyPaymentElementOptions = {
+  layout: {
+    type: "accordion" as const,
+    defaultCollapsed: false,
+    radios: "never" as const,
+    spacedAccordionItems: false,
+  },
+  paymentMethodOrder: ["card"],
+  wallets: {
+    applePay: "never" as const,
+    googlePay: "never" as const,
+  },
+  terms: {
+    card: "never" as const,
+  },
+};
+
 const formatMoney = (value: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
+
+const resolveFocusPaymentEntryLabels = (
+  summary: InvoicePaymentSummary,
+  selectedAmount: number,
+  currency: string,
+) => {
+  const savingCard =
+    summary.saveCardForFutureCharges || summary.autoChargeRemainder;
+
+  if (!savingCard) {
+    return {
+      submitLabel: `Pay ${formatMoney(selectedAmount, currency)}`,
+      pendingLabel: "Processing…",
+      footnote: null as string | null,
+    };
+  }
+
+  const chargeToday = selectedAmount > 0.01;
+  return {
+    submitLabel: "Add card",
+    pendingLabel: "Adding card…",
+    footnote: chargeToday
+      ? `A payment of ${formatMoney(selectedAmount, currency)} will be processed today. Your card is saved for future automatic charges.`
+      : "Your card is saved securely with Stripe for scheduled payments on this invoice.",
+  };
+};
 
 type PaymentFlowProps = {
   token: string;
   payload: PublicInvoicePayload;
   onSuccess: () => void;
+  /** Payment link: card entry only — no invoice summary or amount picker. */
+  focusPaymentEntry?: boolean;
 };
 
 type InvoicePaymentSummary = {
@@ -435,6 +481,7 @@ const InvoicePaymentReviewActions = ({
   canPay,
   isPending,
   onPay,
+  focusPaymentEntry = false,
 }: {
   summary: InvoicePaymentSummary;
   paymentAmountState: ReturnType<typeof useInvoicePaymentAmountState>;
@@ -446,6 +493,7 @@ const InvoicePaymentReviewActions = ({
   canPay: boolean;
   isPending: boolean;
   onPay: () => void;
+  focusPaymentEntry?: boolean;
 }) => {
   const { currency, balanceDue, autoChargeRemainder, saveCardForFutureCharges } =
     summary;
@@ -468,18 +516,24 @@ const InvoicePaymentReviewActions = ({
     hasUpcomingAutoInstallments: upcomingInstallments.length > 0,
   });
 
+  const focusLabels = focusPaymentEntry
+    ? resolveFocusPaymentEntryLabels(summary, selectedAmount, currency)
+    : null;
+
   const payDisabled = !canPay || isPending || !amountValid;
 
   return (
-    <div className="space-y-3 px-6 pb-6 pt-2">
-      <label className="flex items-start gap-2.5 text-[13px] leading-snug text-muted-foreground">
-        <Checkbox
-          checked={consent}
-          onCheckedChange={(checked) => onConsentChange(checked === true)}
-          className="mt-0.5 shrink-0"
-        />
-        <span>{consentLabel}</span>
-      </label>
+    <div className={cn("space-y-3", focusPaymentEntry ? "px-4 pb-5 pt-1" : "px-6 pb-6 pt-2")}>
+      {!focusPaymentEntry ? (
+        <label className="flex items-start gap-2.5 text-[13px] leading-snug text-muted-foreground">
+          <Checkbox
+            checked={consent}
+            onCheckedChange={(checked) => onConsentChange(checked === true)}
+            className="mt-0.5 shrink-0"
+          />
+          <span>{consentLabel}</span>
+        </label>
+      ) : null}
 
       {paymentError ? (
         <p className="text-sm text-destructive">{paymentError}</p>
@@ -489,12 +543,19 @@ const InvoicePaymentReviewActions = ({
         <p className="text-sm text-destructive">{flowError}</p>
       ) : null}
 
+      {focusLabels?.footnote ? (
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
+          {focusLabels.footnote}
+        </p>
+      ) : null}
+
       <button
         type="button"
         disabled={!canPay || isPending || !amountValid}
         onClick={onPay}
         className={cn(
-          "flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-4 text-base font-medium text-white transition-colors",
+          "flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-base font-medium text-white transition-colors",
+          focusPaymentEntry ? "py-3.5" : "py-4",
           payDisabled
             ? "cursor-not-allowed opacity-50"
             : "cursor-pointer hover:bg-blue-700",
@@ -503,17 +564,26 @@ const InvoicePaymentReviewActions = ({
         {isPending ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            Processing…
+            {focusLabels?.pendingLabel ?? "Processing…"}
           </>
+        ) : focusLabels ? (
+          focusLabels.submitLabel
         ) : (
           `Pay ${selectedFormatted}`
         )}
       </button>
 
-      <p className="text-center text-xs text-muted-foreground">
-        <Lock className="mr-1 inline size-3.5 align-text-bottom" />
-        Secure payment · Apple Pay, Google Pay, and cards accepted
-      </p>
+      {!focusPaymentEntry ? (
+        <p className="text-center text-xs text-muted-foreground">
+          <Lock className="mr-1 inline size-3.5 align-text-bottom" />
+          Secure payment · Apple Pay, Google Pay, and cards accepted
+        </p>
+      ) : (
+        <p className="text-center text-[11px] text-muted-foreground">
+          <Lock className="mr-1 inline size-3 align-text-bottom" />
+          Secured by Stripe
+        </p>
+      )}
     </div>
   );
 };
@@ -527,6 +597,7 @@ const InvoiceStripePaymentFormInner = ({
   paymentAmountState,
   ensureSynced,
   onSuccess,
+  focusPaymentEntry = false,
 }: PaymentFlowProps & {
   paymentIntentId: string;
   chargeAmount: number;
@@ -537,7 +608,7 @@ const InvoiceStripePaymentFormInner = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
-  const [consent, setConsent] = useState(false);
+  const [consent, setConsent] = useState(focusPaymentEntry);
   const [paymentReady, setPaymentReady] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [flowError, setFlowError] = useState<string | null>(null);
@@ -590,7 +661,7 @@ const InvoiceStripePaymentFormInner = ({
   });
 
   const canPay =
-    consent &&
+    (focusPaymentEntry || consent) &&
     paymentReady &&
     !paymentError &&
     summary.balanceDue > 0 &&
@@ -599,10 +670,14 @@ const InvoiceStripePaymentFormInner = ({
 
   return (
     <>
-      <div className="px-6 pb-1 pt-4">
-        <p className="mb-2 text-[13px] text-muted-foreground">Payment method</p>
+      <div className={cn(focusPaymentEntry ? "px-4 pb-1 pt-5" : "px-6 pb-1 pt-4")}>
+        {!focusPaymentEntry ? (
+          <p className="mb-2 text-[13px] text-muted-foreground">Payment method</p>
+        ) : null}
         <PaymentElement
-          options={paymentElementOptions}
+          options={
+            focusPaymentEntry ? cardOnlyPaymentElementOptions : paymentElementOptions
+          }
           onChange={(event: StripePaymentElementChangeEvent) => {
             setPaymentReady(event.complete);
             setPaymentError(event.error?.message ?? null);
@@ -621,12 +696,18 @@ const InvoiceStripePaymentFormInner = ({
         canPay={canPay}
         isPending={payMutation.isPending}
         onPay={() => payMutation.mutate()}
+        focusPaymentEntry={focusPaymentEntry}
       />
     </>
   );
 };
 
-const InvoiceStripeCheckout = ({ token, payload, onSuccess }: PaymentFlowProps) => {
+const InvoiceStripeCheckout = ({
+  token,
+  payload,
+  onSuccess,
+  focusPaymentEntry = false,
+}: PaymentFlowProps) => {
   const [flowError, setFlowError] = useState<string | null>(null);
   const [finalizingRedirect, setFinalizingRedirect] = useState(false);
   const summary = useMemo(() => buildPaymentSummary(payload), [payload]);
@@ -678,48 +759,61 @@ const InvoiceStripeCheckout = ({ token, payload, onSuccess }: PaymentFlowProps) 
   const clientSecret = checkout.session?.clientSecret ?? null;
   const paymentIntentId = checkout.session?.paymentIntentId ?? null;
 
-  return (
-    <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-none border-0 bg-background shadow-none sm:rounded-2xl sm:border sm:border-border/50 sm:shadow-sm">
-      <div className="flex items-start justify-between border-b border-border/40 px-6 pb-5 pt-6">
-        <div>
-          <p className="mb-1 text-[13px] text-muted-foreground">Balance due</p>
-          <p className="text-[30px] font-medium tabular-nums leading-none text-foreground">
-            {summary.balanceDueFormatted}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="mb-1 text-[13px] text-muted-foreground">Invoice</p>
-          <p className="text-sm font-medium text-foreground">
-            {invoice.invoice_number}
-          </p>
-        </div>
-      </div>
+  const shellClass = focusPaymentEntry
+    ? "mx-auto w-full max-w-[420px]"
+    : "mx-auto w-full max-w-[560px] overflow-hidden rounded-none border-0 bg-background shadow-none sm:rounded-2xl sm:border sm:border-border/50 sm:shadow-sm";
 
-      <InvoicePaymentAmountPicker
-        balanceDue={summary.balanceDue}
-        depositDue={summary.chargeAmount}
-        upfrontPercent={summary.upfrontPercent}
-        autoChargeRemainder={summary.autoChargeRemainder}
-        saveCardForFutureCharges={summary.saveCardForFutureCharges}
-        depositPaid={summary.depositPaid}
-        remainderSchedule={summary.remainderSchedule}
-        amortizationRows={summary.amortizationRows}
-        currency={summary.currency}
-        selectedInstallmentNumbers={
-          paymentAmountState.selectedInstallmentNumbers.length > 0
-            ? paymentAmountState.selectedInstallmentNumbers
-            : paymentAmountState.effectiveSelectedInstallmentNumbers
-        }
-        onToggleInstallment={paymentAmountState.toggleInstallment}
-        onSelectAllInstallments={paymentAmountState.selectAllInstallments}
-        onClearSelectedInstallments={paymentAmountState.clearSelectedInstallments}
-        previewDueDatesByInstallmentNumber={
-          paymentAmountState.previewDueDatesByInstallmentNumber
-        }
-      />
+  return (
+    <div className={shellClass}>
+      {!focusPaymentEntry ? (
+        <div className="flex items-start justify-between border-b border-border/40 px-6 pb-5 pt-6">
+          <div>
+            <p className="mb-1 text-[13px] text-muted-foreground">Balance due</p>
+            <p className="text-[30px] font-medium tabular-nums leading-none text-foreground">
+              {summary.balanceDueFormatted}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="mb-1 text-[13px] text-muted-foreground">Invoice</p>
+            <p className="text-sm font-medium text-foreground">
+              {invoice.invoice_number}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {!focusPaymentEntry ? (
+        <InvoicePaymentAmountPicker
+          balanceDue={summary.balanceDue}
+          depositDue={summary.chargeAmount}
+          upfrontPercent={summary.upfrontPercent}
+          autoChargeRemainder={summary.autoChargeRemainder}
+          saveCardForFutureCharges={summary.saveCardForFutureCharges}
+          depositPaid={summary.depositPaid}
+          remainderSchedule={summary.remainderSchedule}
+          amortizationRows={summary.amortizationRows}
+          currency={summary.currency}
+          selectedInstallmentNumbers={
+            paymentAmountState.selectedInstallmentNumbers.length > 0
+              ? paymentAmountState.selectedInstallmentNumbers
+              : paymentAmountState.effectiveSelectedInstallmentNumbers
+          }
+          onToggleInstallment={paymentAmountState.toggleInstallment}
+          onSelectAllInstallments={paymentAmountState.selectAllInstallments}
+          onClearSelectedInstallments={paymentAmountState.clearSelectedInstallments}
+          previewDueDatesByInstallmentNumber={
+            paymentAmountState.previewDueDatesByInstallmentNumber
+          }
+        />
+      ) : null}
 
       {checkout.isInitialLoading ? (
-        <div className="flex items-center gap-2 px-6 py-4 text-sm text-muted-foreground">
+        <div
+          className={cn(
+            "flex items-center gap-2 text-sm text-muted-foreground",
+            focusPaymentEntry ? "justify-center px-4 py-8" : "px-6 py-4",
+          )}
+        >
           <Loader2 className="size-4 animate-spin" />
           Loading payment options…
         </div>
@@ -750,6 +844,7 @@ const InvoiceStripeCheckout = ({ token, payload, onSuccess }: PaymentFlowProps) 
             token={token}
             payload={payload}
             onSuccess={onSuccess}
+            focusPaymentEntry={focusPaymentEntry}
             paymentIntentId={paymentIntentId}
             chargeAmount={paymentAmountState.selectedAmount}
             remainderInstallmentNumbers={
@@ -767,8 +862,13 @@ const InvoiceStripeCheckout = ({ token, payload, onSuccess }: PaymentFlowProps) 
   );
 };
 
-const InvoiceMockPaymentForm = ({ token, payload, onSuccess }: PaymentFlowProps) => {
-  const [consent, setConsent] = useState(false);
+const InvoiceMockPaymentForm = ({
+  token,
+  payload,
+  onSuccess,
+  focusPaymentEntry = false,
+}: PaymentFlowProps) => {
+  const [consent, setConsent] = useState(focusPaymentEntry);
   const [flowError, setFlowError] = useState<string | null>(null);
   const summary = useMemo(() => buildPaymentSummary(payload), [payload]);
   const paymentAmountState = useInvoicePaymentAmountState(summary);
@@ -789,7 +889,7 @@ const InvoiceMockPaymentForm = ({ token, payload, onSuccess }: PaymentFlowProps)
   });
 
   const canContinue =
-    consent &&
+    (focusPaymentEntry || consent) &&
     summary.balanceDue > 0 &&
     !summary.isPaid &&
     paymentAmountState.amountValid;
@@ -799,6 +899,29 @@ const InvoiceMockPaymentForm = ({ token, payload, onSuccess }: PaymentFlowProps)
       <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
         This invoice is paid in full. Thank you.
       </p>
+    );
+  }
+
+  if (focusPaymentEntry) {
+    return (
+      <div className="mx-auto w-full max-w-[420px]">
+        <InvoicePaymentReviewActions
+          summary={summary}
+          paymentAmountState={paymentAmountState}
+          consent={consent}
+          onConsentChange={setConsent}
+          paymentReady
+          paymentError={null}
+          flowError={flowError}
+          canPay={canContinue}
+          isPending={payMutation.isPending}
+          onPay={() => payMutation.mutate()}
+          focusPaymentEntry
+        />
+        <p className="pb-2 text-center text-xs text-muted-foreground">
+          Demo mode · No card required
+        </p>
+      </div>
     );
   }
 

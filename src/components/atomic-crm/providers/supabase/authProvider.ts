@@ -1,7 +1,6 @@
 import type { AuthProvider } from "ra-core";
 import { supabaseAuthProvider } from "ra-supabase-core";
 
-import { isPlatformConsolePath } from "@/platform/platformConsolePaths";
 import { canAccess } from "../commons/canAccess";
 import type { MemberModulePermissions } from "../../types";
 import { supabase } from "./supabase";
@@ -120,12 +119,6 @@ function isPublicAuthRoute(): boolean {
   return segment("set-password") || segment("forgot-password");
 }
 
-/** `/sas/*` (consola Nomi) o path legado/typo; no exige ficha de `organization_members`. */
-function isPlatformConsoleAuthRoute(): boolean {
-  if (typeof window === "undefined") return false;
-  return isPlatformConsolePath(window.location.pathname);
-}
-
 export const authProvider: AuthProvider = {
   ...baseAuthProvider,
   checkError: async (error) => {
@@ -171,9 +164,6 @@ export const authProvider: AuthProvider = {
   },
   checkAuth: async (params) => {
     if (isPublicAuthRoute()) {
-      return;
-    }
-    if (isPlatformConsoleAuthRoute()) {
       return;
     }
 

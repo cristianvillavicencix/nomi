@@ -10,9 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toSlug } from "@/lib/toSlug";
 import { ArrayInput } from "@/components/admin/array-input";
-import { BooleanInput } from "@/components/admin/boolean-input";
-import { NumberInput } from "@/components/admin/number-input";
-import { SelectInput } from "@/components/admin/select-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { TextInput } from "@/components/admin/text-input";
 
@@ -33,21 +30,13 @@ import { MessagingSettingsSection } from "@/lbs/settings/MessagingSettingsSectio
 import { DataImportSection } from "@/lbs/settings/DataImportSection";
 import { WebsiteMonitorSettingsSection } from "@/lbs/settings/WebsiteMonitorSettingsSection";
 import { CommercialSettingsSection } from "@/lbs/settings/CommercialSettingsSection";
-import { isLbsMode } from "@/lbs/productMode";
+import { FormsSettingsSection } from "@/lbs/settings/FormsSettingsSection";
 import { useLbsPipelineConfig } from "@/lbs/deals/useLbsPipelineConfig";
-
-const CONTRACTOR_SETTINGS_TAB_IDS = [
-  "general",
-  "users",
-  "payments",
-  "projects",
-  "notes",
-  "tasks",
-] as const;
 
 const LBS_SETTINGS_TAB_IDS = [
   "general",
   "users",
+  "forms",
   "messaging",
   "web-monitor",
   "commercial",
@@ -57,31 +46,21 @@ const LBS_SETTINGS_TAB_IDS = [
   "data",
 ] as const;
 
-const SETTINGS_TAB_IDS = isLbsMode()
-  ? LBS_SETTINGS_TAB_IDS
-  : CONTRACTOR_SETTINGS_TAB_IDS;
+const SETTINGS_TAB_IDS = LBS_SETTINGS_TAB_IDS;
 type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];
 
-const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = isLbsMode()
-  ? [
-      { id: "general", label: "Company Settings" },
-      { id: "users", label: "Users" },
-      { id: "messaging", label: "Communications" },
-      { id: "web-monitor", label: "Web Monitor" },
-      { id: "commercial", label: "Proposals & contracts" },
-      { id: "projects", label: "Project Stages" },
-      { id: "notes", label: "Lead Statuses" },
-      { id: "tasks", label: "Task Types" },
-      { id: "data", label: "Data Import" },
-    ]
-  : [
-      { id: "general", label: "General" },
-      { id: "users", label: "Users" },
-      { id: "payments", label: "Payments" },
-      { id: "projects", label: "Projects" },
-      { id: "notes", label: "Notes" },
-      { id: "tasks", label: "Tasks" },
-    ];
+const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = [
+  { id: "general", label: "Company Settings" },
+  { id: "users", label: "Users" },
+  { id: "forms", label: "Forms" },
+  { id: "messaging", label: "Communications" },
+  { id: "web-monitor", label: "Web Monitor" },
+  { id: "commercial", label: "Proposals & contracts" },
+  { id: "projects", label: "Project Stages" },
+  { id: "notes", label: "Lead Statuses" },
+  { id: "tasks", label: "Task Types" },
+  { id: "data", label: "Data Import" },
+];
 
 const isSettingsTabId = (value: string | null): value is SettingsTabId =>
   value != null && (SETTINGS_TAB_IDS as readonly string[]).includes(value);
@@ -194,48 +173,6 @@ const transformFormValues = (
       dealStages: ensureValues(data.dealStages),
       dealPipelineStatuses: data.dealPipelineStatuses,
       noteStatuses: ensureValues(data.noteStatuses),
-      payrollSettings: {
-        overtimeEnabledGlobally: Boolean(
-          data.payrollSettings?.overtimeEnabledGlobally ?? true,
-        ),
-        overtimeWeeklyThreshold: Number(
-          data.payrollSettings?.overtimeWeeklyThreshold ?? 40,
-        ),
-        defaultOvertimeMultiplier: Number(
-          data.payrollSettings?.defaultOvertimeMultiplier ?? 1.5,
-        ),
-        defaultHoursPerWeekReference: Number(
-          data.payrollSettings?.defaultHoursPerWeekReference ?? 40,
-        ),
-        lunchAutoSuggestHours: Number(
-          data.payrollSettings?.lunchAutoSuggestHours ?? 6,
-        ),
-        lunchAutoSuggestMinutes: Number(
-          data.payrollSettings?.lunchAutoSuggestMinutes ?? 30,
-        ),
-        usFederalHolidaysEnabled: Boolean(
-          data.payrollSettings?.usFederalHolidaysEnabled ?? true,
-        ),
-        customHolidays: data.payrollSettings?.customHolidays ?? [],
-        defaultPaySchedule:
-          data.payrollSettings?.defaultPaySchedule ?? "biweekly",
-        companyPaySchedule:
-          data.payrollSettings?.companyPaySchedule ??
-          data.payrollSettings?.defaultPaySchedule ??
-          "biweekly",
-        defaultPaymentMethod:
-          data.payrollSettings?.defaultPaymentMethod ?? "bank_deposit",
-        weeklyPayday: data.payrollSettings?.weeklyPayday ?? "Friday",
-        biweeklyAnchorDate:
-          data.payrollSettings?.biweeklyAnchorDate ?? "2026-01-02",
-        monthlyPayRule: data.payrollSettings?.monthlyPayRule ?? "end_of_month",
-        monthlyDayOfMonth: Number(
-          data.payrollSettings?.monthlyDayOfMonth ?? 30,
-        ),
-        payday: data.payrollSettings?.payday ?? "Friday",
-        payPeriodStartDay: Number(data.payrollSettings?.payPeriodStartDay ?? 1),
-        payPeriodEndDay: Number(data.payrollSettings?.payPeriodEndDay ?? 14),
-      },
     } as ConfigurationContextValue,
   };
 };
@@ -262,19 +199,17 @@ const SettingsPageContent = () => {
       mutationOptions={{
         onSuccess: async (data: any) => {
           updateConfiguration(data.config);
-          if (isLbsMode()) {
-            try {
-              await dataProvider.syncOrganizationPipelineStages(
-                data.config.dealPipelines ?? [],
-              );
-              await queryClient.invalidateQueries({
-                queryKey: ["organization_pipeline_stages"],
-              });
-            } catch {
-              notify("Settings saved, but pipeline stages failed to sync", {
-                type: "warning",
-              });
-            }
+          try {
+            await dataProvider.syncOrganizationPipelineStages(
+              data.config.dealPipelines ?? [],
+            );
+            await queryClient.invalidateQueries({
+              queryKey: ["organization_pipeline_stages"],
+            });
+          } catch {
+            notify("Settings saved, but pipeline stages failed to sync", {
+              type: "warning",
+            });
           }
           notify("Configuration saved successfully");
         },
@@ -283,7 +218,7 @@ const SettingsPageContent = () => {
         },
       }}
     >
-      <SettingsForm config={isLbsMode() ? lbsConfig : currentConfig} />
+      <SettingsForm config={lbsConfig} />
     </EditBase>
   );
 };
@@ -327,7 +262,6 @@ const SettingsForm = ({
       dealStages: config.dealStages,
       dealPipelineStatuses: config.dealPipelineStatuses,
       noteStatuses: config.noteStatuses,
-      payrollSettings: config.payrollSettings,
     }),
     [config],
   );
@@ -466,133 +400,11 @@ const SettingsFormFields = () => {
 
       {activeTab === "general" ? <SettingsGeneralTab /> : null}
       {activeTab === "users" ? <UsersSettingsSection /> : null}
-      {activeTab === "messaging" && isLbsMode() ? (
-        <MessagingSettingsSection />
-      ) : null}
-      {activeTab === "web-monitor" && isLbsMode() ? (
-        <WebsiteMonitorSettingsSection />
-      ) : null}
-      {activeTab === "commercial" && isLbsMode() ? (
-        <CommercialSettingsSection />
-      ) : null}
-      {activeTab === "data" && isLbsMode() ? <DataImportSection /> : null}
-      {activeTab === "payments" && !isLbsMode() ? (
-        <div className="space-y-8 max-w-6xl">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Pay schedule &amp; methods
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <SelectInput
-              source="payrollSettings.companyPaySchedule"
-              choices={[
-                { id: "weekly", name: "Weekly" },
-                { id: "biweekly", name: "Biweekly" },
-                { id: "semimonthly", name: "Semi-monthly" },
-                { id: "monthly", name: "Monthly" },
-              ]}
-              label="Payroll frequency"
-            />
-            <SelectInput
-              source="payrollSettings.defaultPaymentMethod"
-              choices={[
-                { id: "cash", name: "Cash" },
-                { id: "check", name: "Check" },
-                { id: "zelle", name: "Zelle" },
-                { id: "bank_deposit", name: "Bank deposit" },
-              ]}
-              label="Default payment method"
-            />
-          </div>
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Pay timing
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <TextInput
-              source="payrollSettings.weeklyPayday"
-              label="Weekly payday"
-            />
-            <TextInput
-              source="payrollSettings.biweeklyAnchorDate"
-              label="Biweekly anchor (YYYY-MM-DD)"
-            />
-            <SelectInput
-              source="payrollSettings.monthlyPayRule"
-              label="Monthly rule"
-              choices={[
-                { id: "end_of_month", name: "End of month" },
-                { id: "day_of_month", name: "Day of month" },
-              ]}
-            />
-            <NumberInput
-              source="payrollSettings.monthlyDayOfMonth"
-              label="Monthly day"
-            />
-            <NumberInput
-              source="payrollSettings.payPeriodStartDay"
-              label="Period start day"
-            />
-            <NumberInput
-              source="payrollSettings.payPeriodEndDay"
-              label="Period end day"
-            />
-            <TextInput
-              source="payrollSettings.payday"
-              label="Payday (legacy label)"
-            />
-          </div>
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Overtime
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <BooleanInput
-              source="payrollSettings.overtimeEnabledGlobally"
-              label="Overtime on"
-            />
-            <NumberInput
-              source="payrollSettings.overtimeWeeklyThreshold"
-              label="Weekly OT threshold"
-            />
-            <NumberInput
-              source="payrollSettings.defaultOvertimeMultiplier"
-              label="OT multiplier"
-            />
-            <NumberInput
-              source="payrollSettings.defaultHoursPerWeekReference"
-              label="Default hours / week"
-            />
-          </div>
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Time entry
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <NumberInput
-              source="payrollSettings.lunchAutoSuggestHours"
-              label="Lunch after (h)"
-            />
-            <NumberInput
-              source="payrollSettings.lunchAutoSuggestMinutes"
-              label="Lunch (min)"
-            />
-            <BooleanInput
-              source="payrollSettings.usFederalHolidaysEnabled"
-              label="US federal holidays"
-            />
-          </div>
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Holidays
-          </h2>
-          <ArrayInput
-            source="payrollSettings.customHolidays"
-            label={false}
-            helperText={false}
-          >
-            <SimpleFormIterator inline disableReordering>
-              <TextInput source="date" label="Date (YYYY-MM-DD)" />
-              <TextInput source="label" label="Label" />
-            </SimpleFormIterator>
-          </ArrayInput>
-        </div>
-      ) : null}
+      {activeTab === "forms" ? <FormsSettingsSection /> : null}
+      {activeTab === "messaging" ? <MessagingSettingsSection /> : null}
+      {activeTab === "web-monitor" ? <WebsiteMonitorSettingsSection /> : null}
+      {activeTab === "commercial" ? <CommercialSettingsSection /> : null}
+      {activeTab === "data" ? <DataImportSection /> : null}
       {activeTab === "projects" ? (
         <div className="space-y-6 max-w-6xl">
           <PipelinesEditor
@@ -643,6 +455,7 @@ const SettingsFormFields = () => {
       ) : null}
 
       {activeTab !== "users" &&
+      activeTab !== "forms" &&
       activeTab !== "messaging" &&
       activeTab !== "data" &&
       activeTab !== "web-monitor" ? (

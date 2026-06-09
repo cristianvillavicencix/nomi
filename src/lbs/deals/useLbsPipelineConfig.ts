@@ -11,8 +11,6 @@ import type {
   DealStage,
   OrganizationPipelineStage,
 } from "@/components/atomic-crm/types";
-import { isLbsMode } from "@/lbs/productMode";
-
 const toLegacyDealStages = (stages: DealPipelineStage[]): DealStage[] =>
   stages.map((stage) => ({ value: stage.id, label: stage.label }));
 
@@ -77,7 +75,6 @@ const mergeOrgStagesIntoConfig = (
 
 export const useLbsPipelineConfig = (): ConfigurationContextValue => {
   const config = useConfigurationContext();
-  const lbsMode = isLbsMode();
 
   const { data: orgStages = [], isSuccess } =
     useGetList<OrganizationPipelineStage>("organization_pipeline_stages", {
@@ -86,7 +83,7 @@ export const useLbsPipelineConfig = (): ConfigurationContextValue => {
     });
 
   return useMemo(() => {
-    if (!lbsMode || !isSuccess) return config;
+    if (!isSuccess) return config;
     return mergeOrgStagesIntoConfig(config, orgStages);
-  }, [config, isSuccess, lbsMode, orgStages]);
+  }, [config, isSuccess, orgStages]);
 };

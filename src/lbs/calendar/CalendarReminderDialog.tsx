@@ -23,8 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Contact } from "@/components/atomic-crm/types";
-import { getPersonOptionText } from "@/components/atomic-crm/tasks/taskPeopleOptions";
+import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import { formatOrganizationMemberName } from "@/lbs/billing/billingUtils";
 import { prepareCalendarEventWriteData } from "@/lbs/calendar/calendarEventWriteData";
 import { CalendarTimeInput } from "@/lbs/calendar/CalendarTimeInput";
 import {
@@ -42,6 +42,9 @@ const dealOptionText = (choice: {
 }) => choice.name?.trim() || `Project #${choice.id}`;
 
 const contactOptionText = (contact: Contact) => getContactDisplayName(contact);
+
+const memberOptionText = (member: OrganizationMember) =>
+  formatOrganizationMemberName(member) ?? `Member #${member.id}`;
 
 const formatRemindBefore = (value?: number | null) =>
   value == null ? REMIND_BEFORE_NONE : value;
@@ -131,13 +134,13 @@ const CalendarEventForm = ({
         />
       </ReferenceInput>
       <ReferenceInput
-        source="person_id"
-        reference="people"
-        filter={{ "status@eq": "active" }}
+        source="organization_member_id"
+        reference="organization_members"
       >
         <AutocompleteInput
           label="Assigned"
-          optionText={getPersonOptionText}
+          optionText={memberOptionText}
+          inputText={memberOptionText}
           helperText={false}
           modal
           filterToQuery={(searchText) => ({ q: searchText })}
@@ -262,7 +265,6 @@ export const CalendarReminderDialog = ({
           remind_before_minutes: 15,
           description: "",
           meeting_url: null,
-          person_id: null,
           contact_id: null,
           deal_id: null,
           organization_member_id: identity.id,

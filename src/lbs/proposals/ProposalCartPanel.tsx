@@ -1,25 +1,16 @@
-import { ArrowRight, Loader2, ShoppingBag, Trash2 } from "lucide-react";
+import { ArrowRight, Loader2, ShoppingBag, Trash2, Wallet } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { NumberInput } from "@/components/admin/number-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { isClientBillingSkipped } from "@/lbs/billing/clientBillingProvider";
+import type { OnlinePaymentSetup } from "@/lbs/billing/onlinePaymentSetupBridge";
 import {
-  generatePaymentInstallments,
-  type PaymentScheduleConfig,
   type ProposalLineDraft,
   type ProposalTotals,
 } from "@/lbs/proposals/proposalCommercialUtils";
-import { INSTALLMENT_FREQUENCIES } from "@/lbs/proposals/proposalCommercialConstants";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 
 const SectionLabel = ({ children }: { children: ReactNode }) => (
@@ -27,19 +18,6 @@ const SectionLabel = ({ children }: { children: ReactNode }) => (
     {children}
   </p>
 );
-
-const PlanDot = ({ variant }: { variant: "deposit" | "installment" }) => (
-  <span
-    className={cn(
-      "size-2 shrink-0 rounded-full",
-      variant === "deposit" ? "bg-amber-500" : "bg-primary",
-    )}
-    aria-hidden
-  />
-);
-
-const planInputClass =
-  "h-8 rounded-md border border-border/80 bg-background px-2 text-sm shadow-none tabular-nums focus-visible:ring-1 focus-visible:ring-ring";
 
 const cartAmountInputClass =
   "h-8 rounded-md border-0 bg-muted/60 px-2.5 text-sm shadow-none tabular-nums focus-visible:ring-1 focus-visible:ring-ring";
@@ -102,36 +80,21 @@ const CartLineRow = ({
   </div>
 );
 
-const installmentFrequencyPhrase = (
-  frequency: PaymentScheduleConfig["installment_frequency"],
-  count: number,
-) => {
-  const cadence =
-    frequency === "weekly"
-      ? "weekly"
-      : frequency === "biweekly"
-        ? "biweekly"
-        : frequency === "monthly"
-          ? "monthly"
-          : "scheduled";
-  return `${count} ${cadence} payment${count === 1 ? "" : "s"} of`;
-};
-
 export const ProposalCartPanel = ({
   lines,
   onChange,
   totals,
-  depositPercent,
-  scheduleConfig,
-  onScheduleChange,
+  onlinePaymentSetup,
+  paymentSummary,
+  onConfigurePayment,
   isSaving = false,
 }: {
   lines: ProposalLineDraft[];
   onChange: (lines: ProposalLineDraft[]) => void;
   totals: ProposalTotals;
-  depositPercent: number;
-  scheduleConfig: PaymentScheduleConfig;
-  onScheduleChange: (config: PaymentScheduleConfig) => void;
+  onlinePaymentSetup: OnlinePaymentSetup;
+  paymentSummary: string;
+  onConfigurePayment: () => void;
   isSaving?: boolean;
 }) => {
   const oneTimeLines = useMemo(
@@ -142,21 +105,6 @@ export const ProposalCartPanel = ({
     () => lines.filter((line) => line.billing_type === "recurring"),
     [lines],
   );
-
-  const installments = useMemo(
-    () =>
-      generatePaymentInstallments({
-        depositAmount: totals.depositAmount,
-        balanceAmount: totals.balanceAmount,
-        config: scheduleConfig,
-      }),
-    [totals.depositAmount, totals.balanceAmount, scheduleConfig],
-  );
-
-  const balanceInstallments = installments.filter(
-    (row) => row.label !== "Deposit (50%)",
-  );
-  const perInstallmentAmount = balanceInstallments[0]?.amount ?? 0;
 
   const updateLine = (key: string, patch: Partial<ProposalLineDraft>) => {
     onChange(
@@ -174,7 +122,6 @@ export const ProposalCartPanel = ({
   return (
     <Card className="w-full min-w-0 overflow-hidden shadow-sm lg:sticky lg:top-4">
       <CardContent className="p-0">
-        {/* Header */}
         <div className="flex items-center gap-2.5 border-b bg-muted/20 px-3 py-2.5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-primary">
             <ShoppingBag className="size-5" strokeWidth={1.75} />
@@ -253,96 +200,26 @@ export const ProposalCartPanel = ({
           ) : null}
 
           {hasLines && totals.oneTimeTotal > 0 ? (
-            <section className="space-y-2 border-t border-border/60 pt-2.5">
-              <SectionLabel>Payment plan</SectionLabel>
-
-              <div className="flex items-center gap-2">
-                <PlanDot variant="deposit" />
-                <div className="flex min-w-0 flex-1 items-center justify-between gap-2 text-sm">
-                  <span>Deposit at signing ({depositPercent}%)</span>
-                  <MoneyText
-                    value={totals.depositAmount}
-                    className="shrink-0 font-bold tabular-nums"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pl-4 text-sm">
-                <span className="text-foreground">Balance in</span>
-                <Input
-                  type="number"
-                  min={1}
-                  max={52}
-                  className={cn(planInputClass, "w-12 text-center")}
-                  value={scheduleConfig.installment_count}
-                  onChange={(event) =>
-                    onScheduleChange({
-                      ...scheduleConfig,
-                      installment_count: Math.max(
-                        1,
-                        Number(event.target.value) || 1,
-                      ),
-                    })
-                  }
-                />
-                <span className="text-foreground">installments</span>
-                <Select
-                  value={scheduleConfig.installment_frequency}
-                  onValueChange={(value) =>
-                    onScheduleChange({
-                      ...scheduleConfig,
-                      installment_frequency:
-                        value as PaymentScheduleConfig["installment_frequency"],
-                    })
-                  }
-                >
-                  <SelectTrigger
-                    className={cn(planInputClass, "h-8 w-[7.25rem]")}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INSTALLMENT_FREQUENCIES.filter(
-                      (entry) => entry.value !== "custom",
-                    ).map((entry) => (
-                      <SelectItem key={entry.value} value={entry.value}>
-                        {entry.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {balanceInstallments.length > 0 ? (
-                <div className="flex items-center gap-2">
-                  <PlanDot variant="installment" />
-                  <div className="flex min-w-0 flex-1 items-center justify-between gap-2 text-sm">
-                    <span className="text-muted-foreground">
-                      {installmentFrequencyPhrase(
-                        scheduleConfig.installment_frequency,
-                        scheduleConfig.installment_count,
-                      )}
-                    </span>
-                    <MoneyText
-                      value={perInstallmentAmount}
-                      className="shrink-0 text-base font-bold tabular-nums"
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="flex justify-between gap-2 pl-4 text-xs leading-snug text-muted-foreground">
-                <span>
-                  {stripeSkipped
-                    ? "Manual payment tracking"
-                    : "Automatic debit (Stripe)"}
-                </span>
-                <span className="text-right">
-                  {stripeSkipped
-                    ? "billing skipped in dev"
-                    : "when credentials are connected"}
-                </span>
-              </div>
+            <section className="space-y-2.5 border-t border-border/60 pt-2.5">
+              <SectionLabel>Online payment</SectionLabel>
+              <p className="text-sm leading-snug text-muted-foreground">
+                {paymentSummary}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={onConfigurePayment}
+              >
+                <Wallet className="size-3.5" />
+                Configure payment
+              </Button>
+              <p className="text-xs leading-snug text-muted-foreground">
+                {stripeSkipped
+                  ? "Stripe billing is skipped in dev — schedule is saved for production."
+                  : "Matches invoice checkout: deposit, saved card, and automatic balance charges."}
+              </p>
             </section>
           ) : null}
 

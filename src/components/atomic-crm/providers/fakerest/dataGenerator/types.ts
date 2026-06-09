@@ -4,19 +4,9 @@ import type {
   ContactNote,
   Deal,
   DealNote,
-  EmployeeLoan,
-  EmployeeLoanDeduction,
-  EmployeePtoAdjustment,
-  Payment,
-  PaymentLine,
-  PayrollRun,
-  PayrollRunLine,
-  Person,
   OrganizationMember,
   Tag,
-  TimeEntry,
   Task,
-  TaskAssignee,
   TaskParticipant,
   TaskTagNotification,
   CalendarEventRecord,
@@ -50,21 +40,11 @@ export interface Db {
   deals: Deal[];
   deal_notes: DealNote[];
   organizationMembers: OrganizationMember[];
-  people: Person[];
   tags: Tag[];
   tasks: Task[];
-  task_assignees: TaskAssignee[];
   task_participants: TaskParticipant[];
   task_tag_notifications: TaskTagNotification[];
   calendar_events: CalendarEventRecord[];
-  time_entries: TimeEntry[];
-  payments: Payment[];
-  payment_lines: PaymentLine[];
-  payroll_runs: PayrollRun[];
-  payroll_run_lines: PayrollRunLine[];
-  employee_loans: EmployeeLoan[];
-  employee_loan_deductions: EmployeeLoanDeduction[];
-  employee_pto_adjustments: EmployeePtoAdjustment[];
   proposals: Proposal[];
   proposal_line_items: ProposalLineItem[];
   proposal_payment_schedules: ProposalPaymentSchedule[];

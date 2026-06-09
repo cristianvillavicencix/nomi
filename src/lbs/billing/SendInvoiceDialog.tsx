@@ -8,6 +8,9 @@ import {
   Ban,
   Trash2,
   Receipt,
+  MoreHorizontal,
+  FileDown,
+  CreditCard,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDataProvider, useGetList, useNotify } from "ra-core";
@@ -21,6 +24,7 @@ import {
   generateClientInvoicePdfBlob,
 } from "@/lbs/billing/clientInvoicePdf";
 import { InvoiceShareLinkDialog } from "@/lbs/billing/InvoiceShareLinkDialog";
+import { InvoiceStaffChargeDialog } from "@/lbs/billing/InvoiceStaffChargeDialog";
 import {
   buildDefaultInvoiceEmailSubject,
   buildInvoiceEmailHtml,
@@ -37,7 +41,15 @@ import {
   canVoidClientInvoice,
   resolveInvoiceRecipientEmail,
 } from "@/lbs/billing/billingUtils";
+import { canChargeClientInvoice } from "@/lbs/billing/invoicePaymentUtils";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -294,6 +306,7 @@ export const InvoiceRowActions = ({
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [sendOpen, setSendOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [chargeOpen, setChargeOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [downloading, setDownloading] = useState(false);
   const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
@@ -306,6 +319,7 @@ export const InvoiceRowActions = ({
   const showDelete = canDeleteClientInvoice(invoice);
   const showResendReceipt =
     Number(invoice.amount_paid ?? 0) > 0 && invoice.status !== "void";
+  const showCharge = canChargeClientInvoice(invoice);
 
   const { data: lineItems = [] } = useGetList<ClientInvoiceLineItem>(
     "client_invoice_line_items",
@@ -428,107 +442,116 @@ export const InvoiceRowActions = ({
     }
   };
 
+  const showDestructiveActions = showVoid || showDelete;
+  const isBusy =
+    downloading ||
+    shareMutation.isPending ||
+    manageMutation.isPending ||
+    resendReceiptMutation.isPending;
+
   return (
-    <div className="flex flex-wrap justify-end gap-1">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={downloading}
-        onClick={() => void handleDownload()}
-      >
-        {downloading ? <Loader2 className="size-3.5 animate-spin" /> : null}
-        PDF
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={!showSend || shareMutation.isPending}
-        onClick={() => shareMutation.mutate()}
-      >
-        {shareMutation.isPending ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : (
-          <ExternalLink className="size-3.5" />
-        )}
-        Share
-      </Button>
-      {showSend ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setSendOpen(true)}
-        >
-          <Mail className="size-3.5" />
-          Send
-        </Button>
-      ) : null}
-      {showResendReceipt ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={resendReceiptMutation.isPending}
-          onClick={() => resendReceiptMutation.mutate()}
-        >
-          {resendReceiptMutation.isPending ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <Receipt className="size-3.5" />
-          )}
-          Receipt
-        </Button>
-      ) : null}
-      {showMarkSent ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={manageMutation.isPending}
-          onClick={() => handleManage("mark_sent")}
-        >
-          {manageMutation.isPending ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <CheckCircle2 className="size-3.5" />
-          )}
-          Mark as sent
-        </Button>
-      ) : null}
-      {showVoid ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={manageMutation.isPending}
-          onClick={() => handleManage("void")}
-        >
-          {manageMutation.isPending ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <Ban className="size-3.5" />
-          )}
-          Void
-        </Button>
-      ) : null}
-      {showDelete ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={manageMutation.isPending}
-          onClick={() => handleManage("delete")}
-        >
-          {manageMutation.isPending ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <Trash2 className="size-3.5" />
-          )}
-          Delete
-        </Button>
-      ) : null}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            aria-label="Invoice actions"
+            disabled={isBusy}
+          >
+            {isBusy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <MoreHorizontal className="size-4" />
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem
+            disabled={downloading}
+            onSelect={() => void handleDownload()}
+          >
+            {downloading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FileDown className="size-4" />
+            )}
+            Download PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={!showSend || shareMutation.isPending}
+            onSelect={() => shareMutation.mutate()}
+          >
+            {shareMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ExternalLink className="size-4" />
+            )}
+            Share
+          </DropdownMenuItem>
+          {showSend ? (
+            <DropdownMenuItem onSelect={() => setSendOpen(true)}>
+              <Mail className="size-4" />
+              Send
+            </DropdownMenuItem>
+          ) : null}
+          {showCharge ? (
+            <DropdownMenuItem onSelect={() => setChargeOpen(true)}>
+              <CreditCard className="size-4" />
+              Charge
+            </DropdownMenuItem>
+          ) : null}
+          {showResendReceipt ? (
+            <DropdownMenuItem
+              disabled={resendReceiptMutation.isPending}
+              onSelect={() => resendReceiptMutation.mutate()}
+            >
+              {resendReceiptMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Receipt className="size-4" />
+              )}
+              Receipt
+            </DropdownMenuItem>
+          ) : null}
+          {showMarkSent ? (
+            <DropdownMenuItem
+              disabled={manageMutation.isPending}
+              onSelect={() => handleManage("mark_sent")}
+            >
+              {manageMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="size-4" />
+              )}
+              Mark as sent
+            </DropdownMenuItem>
+          ) : null}
+          {showDestructiveActions ? <DropdownMenuSeparator /> : null}
+          {showVoid ? (
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={manageMutation.isPending}
+              onSelect={() => handleManage("void")}
+            >
+              <Ban className="size-4" />
+              Void
+            </DropdownMenuItem>
+          ) : null}
+          {showDelete ? (
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={manageMutation.isPending}
+              onSelect={() => handleManage("delete")}
+            >
+              <Trash2 className="size-4" />
+              Delete
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <SendInvoiceDialog
         open={sendOpen}
         onOpenChange={setSendOpen}
@@ -544,6 +567,16 @@ export const InvoiceRowActions = ({
         shareUrl={shareUrl}
         invoiceNumber={invoice.invoice_number}
       />
-    </div>
+      {showCharge ? (
+        <InvoiceStaffChargeDialog
+          invoice={invoice}
+          company={company}
+          contact={contact}
+          open={chargeOpen}
+          onOpenChange={setChargeOpen}
+          onSuccess={onRefresh}
+        />
+      ) : null}
+    </>
   );
 };

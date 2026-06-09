@@ -1,9 +1,15 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import {
+  clientInvoicePaymentFromProposalInstallment,
+  clientInvoicePaymentFromProposalSetup,
+  parseProposalOnlinePaymentSetup,
+} from "./proposalInvoicePaymentBridge.ts";
 
 type InstallmentRow = {
   id: number;
   org_id: number;
   proposal_id: number;
+  installment_number: number;
   label: string;
   due_date: string;
   amount: number;
@@ -39,7 +45,7 @@ export async function issueClientInvoiceFromInstallment(
   const { data: installment, error: installmentError } = await supabase
     .from("proposal_payment_installments")
     .select(
-      "id, org_id, proposal_id, label, due_date, amount, status, stripe_payment_intent_id, paid_at",
+      "id, org_id, proposal_id, installment_number, label, due_date, amount, status, stripe_payment_intent_id, paid_at",
     )
     .eq("id", installmentId)
     .eq("org_id", orgId)
@@ -53,10 +59,25 @@ export async function issueClientInvoiceFromInstallment(
 
   const { data: proposal } = await supabase
     .from("proposals")
-    .select("id, deal_id, company_id, contact_id, currency, title, proposal_number")
+    .select(
+      "id, deal_id, company_id, contact_id, currency, title, proposal_number, deposit_percent, payment_schedule_config, valid_until",
+    )
     .eq("id", row.proposal_id)
     .eq("org_id", orgId)
     .maybeSingle();
+
+  const anchorDate =
+    row.due_date ||
+    (proposal?.valid_until ? String(proposal.valid_until) : new Date().toISOString().slice(0, 10));
+  const onlinePayment = parseProposalOnlinePaymentSetup({
+    paymentScheduleConfig: proposal?.payment_schedule_config,
+    depositPercent: Number(proposal?.deposit_percent ?? 50),
+    anchorDate,
+  });
+  const paymentFields = clientInvoicePaymentFromProposalInstallment(
+    onlinePayment,
+    row,
+  );
 
   const { data: invoiceNumber, error: numberError } = await supabase.rpc(
     "next_client_invoice_number",
@@ -88,6 +109,10 @@ export async function issueClientInvoiceFromInstallment(
       status: invoiceStatus,
       paid_at: row.status === "paid" ? row.paid_at ?? now : null,
       stripe_payment_intent_id: row.stripe_payment_intent_id ?? null,
+      save_card_for_future_charges: paymentFields.save_card_for_future_charges,
+      upfront_percent: paymentFields.upfront_percent,
+      auto_charge_remainder: paymentFields.auto_charge_remainder,
+      remainder_schedule: paymentFields.remainder_schedule,
     })
     .select("*")
     .single();
@@ -105,43 +130,47 @@ type InstallmentForAutoIssue = {
   status?: string;
 };
 
-/** Creates a draft invoice for the first pending installment when a proposal is accepted. */
+/** Issue (or return existing) client invoices for every installment on a proposal. */
+export async function syncProposalInstallmentInvoices(
+  supabase: SupabaseClient,
+  orgId: number,
+  proposalId: number,
+) {
+  const { data: installments, error } = await supabase
+    .from("proposal_payment_installments")
+    .select("id")
+    .eq("proposal_id", proposalId)
+    .eq("org_id", orgId)
+    .order("installment_number", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const invoices = [];
+  for (const row of installments ?? []) {
+    const invoice = await issueClientInvoiceFromInstallment(
+      supabase,
+      orgId,
+      row.id,
+    );
+    invoices.push(invoice);
+  }
+
+  return invoices;
+}
+
+/** Ensures all installment invoices exist after proposal accept (idempotent). */
 export async function autoIssueInvoiceOnProposalAccept(
   supabase: SupabaseClient,
   orgId: number,
   proposalId: number,
-  installments: InstallmentForAutoIssue[],
+  _installments: InstallmentForAutoIssue[],
 ) {
-  const sorted = [...installments].sort(
-    (a, b) => (a.installment_number ?? 0) - (b.installment_number ?? 0),
-  );
-
-  const firstPending = sorted.find(
-    (row) =>
-      row.status !== "paid" &&
-      row.status !== "waived" &&
-      row.status !== "void",
-  );
-
-  if (firstPending?.id) {
-    try {
-      await issueClientInvoiceFromInstallment(
-        supabase,
-        orgId,
-        firstPending.id,
-      );
-    } catch (error) {
-      console.error("autoIssueInvoiceOnProposalAccept.installment", error);
-    }
-    return;
-  }
-
-  if (sorted.length === 0) {
-    try {
-      await issueClientInvoiceFromProposal(supabase, orgId, { proposalId });
-    } catch (error) {
-      console.error("autoIssueInvoiceOnProposalAccept.proposal", error);
-    }
+  try {
+    await syncProposalInstallmentInvoices(supabase, orgId, proposalId);
+  } catch (error) {
+    console.error("autoIssueInvoiceOnProposalAccept.sync", error);
   }
 }
 
@@ -169,7 +198,7 @@ export async function issueClientInvoiceFromProposal(
   const { data: proposal, error: proposalError } = await supabase
     .from("proposals")
     .select(
-      "id, deal_id, company_id, contact_id, currency, title, proposal_number, amount, deposit_amount, balance_amount, valid_until",
+      "id, deal_id, company_id, contact_id, currency, title, proposal_number, amount, deposit_amount, balance_amount, valid_until, deposit_percent, payment_schedule_config",
     )
     .eq("id", input.proposalId)
     .eq("org_id", orgId)
@@ -213,6 +242,16 @@ export async function issueClientInvoiceFromProposal(
 
   const now = new Date().toISOString();
 
+  const onlinePayment = parseProposalOnlinePaymentSetup({
+    paymentScheduleConfig: proposal.payment_schedule_config,
+    depositPercent: Number(proposal.deposit_percent ?? 50),
+    anchorDate: dueDate,
+  });
+  const paymentFields = clientInvoicePaymentFromProposalSetup(
+    onlinePayment,
+    dueDate,
+  );
+
   const { data: invoice, error: insertError } = await supabase
     .from("client_invoices")
     .insert({
@@ -229,6 +268,10 @@ export async function issueClientInvoiceFromProposal(
       currency: proposal.currency ?? "USD",
       description,
       status: "draft",
+      save_card_for_future_charges: paymentFields.save_card_for_future_charges,
+      upfront_percent: paymentFields.upfront_percent,
+      auto_charge_remainder: paymentFields.auto_charge_remainder,
+      remainder_schedule: paymentFields.remainder_schedule,
     })
     .select("*")
     .single();

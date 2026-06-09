@@ -19,15 +19,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { InvoicePaymentCollectionMode } from "@/lbs/billing/invoicePaymentUtils";
 import { buildInvoicePaymentSchedule } from "@/lbs/billing/invoicePaymentUtils";
 import { InvoicePaymentSchedulePanel } from "@/lbs/billing/InvoicePaymentSchedulePanel";
 import {
   generateInvoiceBalanceCharges,
   INVOICE_REMAINDER_TIMING_OPTIONS,
   remainderTimingIsRecurring,
-  type InvoiceRemainderScheduleConfig,
 } from "@/lbs/billing/invoiceRemainderSchedule";
+import type { InvoiceOnlinePaymentSetup } from "@/lbs/billing/onlinePaymentSetupBridge";
+export type { InvoiceOnlinePaymentSetup, OnlinePaymentSetup } from "@/lbs/billing/onlinePaymentSetupBridge";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { cn } from "@/lib/utils";
 
@@ -35,13 +35,6 @@ const formatMoney = (value: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
     value,
   );
-
-export type InvoiceOnlinePaymentSetup = {
-  paymentMode: InvoicePaymentCollectionMode;
-  depositPercent: number;
-  saveCard: boolean;
-  remainderSchedule: InvoiceRemainderScheduleConfig;
-};
 
 type InvoiceOnlinePaymentSetupDialogProps = {
   open: boolean;
@@ -51,6 +44,8 @@ type InvoiceOnlinePaymentSetupDialogProps = {
   dueDate: string;
   value: InvoiceOnlinePaymentSetup;
   onApply: (value: InvoiceOnlinePaymentSetup) => void;
+  /** Adjust helper copy for invoice vs proposal builder. */
+  context?: "invoice" | "proposal";
 };
 
 export const InvoiceOnlinePaymentSetupDialog = ({
@@ -61,6 +56,7 @@ export const InvoiceOnlinePaymentSetupDialog = ({
   dueDate,
   value,
   onApply,
+  context = "invoice",
 }: InvoiceOnlinePaymentSetupDialogProps) => {
   const [draft, setDraft] = useState(value);
 
@@ -128,8 +124,9 @@ export const InvoiceOnlinePaymentSetupDialog = ({
             Online payment
           </DialogTitle>
           <DialogDescription>
-            Choose how the client pays this invoice online. Deposits can split
-            the balance over time with automatic card charges.
+            {context === "proposal"
+              ? "Same settings used when this proposal becomes an invoice — deposit, auto-charges, and saved card."
+              : "Choose how the client pays this invoice online. Deposits can split the balance over time with automatic card charges."}
           </DialogDescription>
         </DialogHeader>
 

@@ -25,18 +25,8 @@ export const filterScopedTasks = (
     const participants = participantsByTaskId[String(task.id)] ?? [];
     if (usesUserCompletion) {
       return params.status === "open"
-        ? isTaskOpenForUser(
-            task,
-            participants,
-            params.organizationMemberId,
-            params.personId,
-          )
-        : isTaskDoneForUser(
-            task,
-            participants,
-            params.organizationMemberId,
-            params.personId,
-          );
+        ? isTaskOpenForUser(task, participants, params.organizationMemberId)
+        : isTaskDoneForUser(task, participants, params.organizationMemberId);
     }
 
     if (params.status === "open") {
@@ -63,14 +53,13 @@ export const filterScopedTasks = (
 
   if (params.scope === "mine") {
     filtered = filtered.filter((task) =>
-      taskMatchesMineScope(task, params.organizationMemberId, params.personId),
+      taskMatchesMineScope(task, params.organizationMemberId),
     );
   } else if (params.scope === "my_projects") {
     filtered = filtered.filter((task) =>
       taskMatchesProjectScope(task, params.projectDealIds ?? []),
     );
   }
-  // scope "tagged" and "team": tasks are pre-filtered in the data provider
 
   const sortField = params.sort?.field ?? "due_date";
   const sortMultiplier = params.sort?.order === "DESC" ? -1 : 1;
@@ -105,18 +94,17 @@ export const collectMyProjectDealIds = (
     salesperson_ids?: Identifier[];
   }>,
   organizationMemberId: Identifier,
-  personId?: Identifier | null,
 ) => {
   const dealIds = new Set<string>();
+  const memberKey = String(organizationMemberId);
 
   deals.forEach((deal) => {
-    if (String(deal.organization_member_id) === String(organizationMemberId)) {
+    if (String(deal.organization_member_id) === memberKey) {
       dealIds.add(String(deal.id));
     }
     if (
-      personId != null &&
       Array.isArray(deal.salesperson_ids) &&
-      deal.salesperson_ids.some((id) => String(id) === String(personId))
+      deal.salesperson_ids.some((id) => String(id) === memberKey)
     ) {
       dealIds.add(String(deal.id));
     }

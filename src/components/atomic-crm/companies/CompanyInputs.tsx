@@ -5,7 +5,6 @@ import { PhoneInput } from "@/components/admin/phone-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { TextInput } from "@/components/admin/text-input";
 import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
-import { isLbsMode } from "@/lbs/productMode";
 import {
   applyGoogleAddressToCompanyForm,
   applyGoogleBusinessToCompanyForm,
@@ -58,7 +57,7 @@ export const CompanyInputs = () => {
 const CompanyDisplayInputs = () => {
   const record = useRecordContext<Company>();
   const { setValue } = useFormContext<Company>();
-  const placesEnabled = isLbsMode() && isGooglePlacesEnabled();
+  const placesEnabled = isGooglePlacesEnabled();
 
   return (
     <div className="flex gap-4 flex-1 flex-row">
@@ -132,7 +131,7 @@ const CompanyContextInputs = () => {
 
 const CompanyAddressInputs = () => {
   const { setValue } = useFormContext<Company>();
-  const placesEnabled = isLbsMode() && isGooglePlacesEnabled();
+  const placesEnabled = isGooglePlacesEnabled();
 
   return (
     <div className="flex flex-col gap-4">

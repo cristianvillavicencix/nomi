@@ -38,7 +38,7 @@ export const getCalendarEntryKind = (
 ): CalendarEntryKind => {
   if (record.meeting_url?.trim()) return "meeting";
   if (record.contact_id || record.deal_id) return "activity";
-  if (record.person_id) return "scheduled_task";
+  if (record.organization_member_id) return "scheduled_task";
   return "reminder";
 };
 

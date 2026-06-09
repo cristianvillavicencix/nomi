@@ -8,7 +8,6 @@ import type { Identifier } from "ra-core";
 export const useScopedTasks = ({
   scope,
   organizationMemberId,
-  personId,
   projectDealIds,
   projectId,
   status,
@@ -18,7 +17,6 @@ export const useScopedTasks = ({
 }: {
   scope: TaskScopeFilter;
   organizationMemberId?: Identifier | null;
-  personId?: Identifier | null;
   projectDealIds?: Identifier[];
   projectId?: Identifier | null;
   status: TaskStatusFilter;
@@ -33,7 +31,6 @@ export const useScopedTasks = ({
       "scopedTasks",
       scope,
       organizationMemberId,
-      personId,
       projectDealIds,
       projectId,
       status,
@@ -44,7 +41,6 @@ export const useScopedTasks = ({
       dataProvider.getScopedTasks({
         scope,
         organizationMemberId: organizationMemberId!,
-        personId,
         projectDealIds,
         projectId,
         status,
@@ -66,21 +62,18 @@ export const useScopedTasks = ({
 
 export const useMyProjectDealIds = ({
   organizationMemberId,
-  personId,
   enabled = true,
 }: {
   organizationMemberId?: Identifier | null;
-  personId?: Identifier | null;
   enabled?: boolean;
 }) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
 
   return useQuery({
-    queryKey: ["myProjectDealIds", organizationMemberId, personId],
+    queryKey: ["myProjectDealIds", organizationMemberId],
     queryFn: () =>
       dataProvider.getMyProjectDealIds({
         organizationMemberId: organizationMemberId!,
-        personId,
       }),
     enabled: enabled && organizationMemberId != null,
     staleTime: 60_000,

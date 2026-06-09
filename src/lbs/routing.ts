@@ -1,19 +1,17 @@
-import { isLbsMode } from "@/lbs/productMode";
 import { LBS_LEAD_STATUSES } from "@/lbs/navigation";
 
 export const getClientShowPath = (companyId: string | number) =>
-  isLbsMode() ? `/clients/${companyId}/show` : `/companies/${companyId}/show`;
+  `/clients/${companyId}/show`;
 
 export const getClientEditPath = (companyId: string | number) =>
-  isLbsMode() ? `/clients/${companyId}/edit` : `/companies/${companyId}/edit`;
+  `/clients/${companyId}/edit`;
 
-export const getClientCreatePath = () =>
-  isLbsMode() ? "/clients/create" : "/companies/create";
+export const getClientCreatePath = () => "/clients/create";
 
-export const getLeadsListPath = () => (isLbsMode() ? "/leads" : "/contacts");
+export const getLeadsListPath = () => "/leads";
 
 export const getLeadShowPath = (contactId: string | number) =>
-  isLbsMode() ? `/leads/${contactId}/show` : `/contacts/${contactId}/show`;
+  `/leads/${contactId}/show`;
 
 export const getContactShowPath = (contactId: string | number) =>
   `/contacts/${contactId}/show`;
@@ -59,14 +57,12 @@ export const getClientDealCreatePath = (
 };
 
 export const getPersonListPath = (status?: string | null) =>
-  isLbsMode() && isLeadStatus(status)
-    ? getLeadsListPath()
-    : getClientsListPath();
+  isLeadStatus(status) ? getLeadsListPath() : getClientsListPath();
 
 export const getPersonShowPath = (contact: {
   id: string | number;
   status?: string | null;
 }) =>
-  isLbsMode() && isLeadStatus(contact.status)
+  isLeadStatus(contact.status)
     ? getLeadShowPath(contact.id)
     : getContactShowPath(contact.id);

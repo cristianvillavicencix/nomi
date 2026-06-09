@@ -5,12 +5,10 @@ import {
   CalendarDays,
   FileSignature,
   FileText,
-  FormInput,
   Globe,
   Home,
   ListChecks,
   Receipt,
-  Settings,
   Ticket,
   UserPlus,
   Video,
@@ -57,7 +55,7 @@ export const filterLbsNavGroups = (
     }))
     .filter((group) => group.items.length > 0);
 
-/** Top-level links rendered outside collapsible groups. */
+/** Top-level links rendered outside group headers. */
 export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   {
     to: "/",
@@ -68,23 +66,23 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
     resource: "deals",
     action: "list",
   },
+  {
+    to: "/leads",
+    label: "Leads",
+    icon: UserPlus,
+    activePattern: "/leads/*",
+    capability: "crm.contacts.view",
+    resource: "contacts",
+    action: "list",
+  },
 ];
 
 export const LBS_NAV_GROUPS: LbsNavGroup[] = [
   {
-    id: "sales",
-    label: "Sales",
-    icon: Briefcase,
+    id: "pipeline",
+    label: "Pipeline",
+    icon: Building2,
     items: [
-      {
-        to: "/leads",
-        label: "Leads",
-        icon: UserPlus,
-        activePattern: "/leads/*",
-        capability: "crm.contacts.view",
-        resource: "contacts",
-        action: "list",
-      },
       {
         to: "/clients",
         label: "Clients",
@@ -103,6 +101,13 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
         resource: "deals",
         action: "list",
       },
+    ],
+  },
+  {
+    id: "close-billing",
+    label: "Close & bill",
+    icon: FileSignature,
+    items: [
       {
         to: "/proposals",
         label: "Proposals",
@@ -133,8 +138,8 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
     ],
   },
   {
-    id: "work",
-    label: "Work",
+    id: "daily-work",
+    label: "Daily work",
     icon: ListChecks,
     items: [
       {
@@ -173,11 +178,20 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
         resource: "conversations",
         action: "list",
       },
+      {
+        to: "/tickets",
+        label: "Tickets",
+        icon: Ticket,
+        activePattern: "/tickets/*",
+        capability: "support.tickets.view",
+        resource: "tickets",
+        action: "list",
+      },
     ],
   },
   {
-    id: "monitoring",
-    label: "Monitoring",
+    id: "tools",
+    label: "Tools",
     icon: Globe,
     items: [
       {
@@ -187,39 +201,6 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
         activePattern: "/web-monitor/*",
         capability: "crm.companies.view",
         resource: "monitored_websites",
-        action: "list",
-      },
-    ],
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-    items: [
-      {
-        to: "/settings",
-        label: "General",
-        icon: Settings,
-        activePattern: "/settings/*",
-        resource: "organization_members",
-        action: "list",
-      },
-      {
-        to: "/forms-v2",
-        label: "Forms",
-        icon: FormInput,
-        activePattern: "/forms-v2/*",
-        capability: "forms.manage",
-        resource: "forms",
-        action: "list",
-      },
-      {
-        to: "/tickets",
-        label: "Tickets",
-        icon: Ticket,
-        activePattern: "/tickets/*",
-        capability: "support.tickets.view",
-        resource: "tickets",
         action: "list",
       },
     ],
@@ -248,7 +229,7 @@ export const LBS_PLACEHOLDER_MODULES = {
   billing: {
     title: "Billing",
     description:
-      "Track collections, issue numbered invoices (INV-YYYY-####), email PDFs, and view monthly revenue.",
+      "Track invoices (INV-YYYY-####), email PDFs, collect payments, and view monthly revenue.",
     phase: 4,
   },
   webForms: {

@@ -16,8 +16,6 @@ import type {
   Deal,
   DealNote,
   EmailAndType,
-  Payment,
-  PayrollRun,
   PhoneNumberAndType,
   OrganizationMember,
   OrganizationMemberFormData,
@@ -53,13 +51,6 @@ import {
   fakeAcceptProposal,
   fakeSendProposal,
 } from "./proposalFlow";
-import {
-  applyLoanDeductions,
-  calculateCompensationGross,
-  getPersonCompensationProfile,
-} from "@/payroll/rules";
-import { buildReceiptNumber, normalizeLoanPayload } from "@/loans/helpers";
-import { canApprovePayroll } from "@/payroll/permissions";
 import { canMutateCrmResource } from "../commons/crmPermissions";
 import type { CrmDataProvider } from "../types";
 import {
@@ -254,18 +245,7 @@ async function fetchAndUpdateCompanyData(
 const dataProviderWithCustomMethod: CrmDataProvider = {
   ...baseDataProvider,
   getList: async (resource: string, params: GetListParams) => {
-    let request = params;
-    if (
-      resource === "time_entries" &&
-      params.filter &&
-      typeof params.filter === "object" &&
-      "__hours_all_statuses" in params.filter
-    ) {
-      const { __hours_all_statuses: _legacy, ...rest } =
-        params.filter as Record<string, unknown>;
-      request = { ...params, filter: rest };
-    }
-    const result = await baseDataProvider.getList(resource, request);
+    const result = await baseDataProvider.getList(resource, params);
     if (resource === "companies") {
       return {
         ...result,
@@ -336,13 +316,6 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     ) {
       throw new Error(`Not authorized to update ${resource}`);
     }
-    if (
-      resource === "time_entries" &&
-      params?.data?.status === "approved" &&
-      !canApprovePayroll(params?.meta?.identity ?? identity)
-    ) {
-      throw new Error("Only owner/admin/accountant can approve time entries");
-    }
     return baseDataProvider.update(resource, params);
   },
   updateMany: async (resource: string, params: any) => {
@@ -358,13 +331,6 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       })
     ) {
       throw new Error(`Not authorized to update ${resource}`);
-    }
-    if (
-      resource === "time_entries" &&
-      params?.data?.status === "approved" &&
-      !canApprovePayroll(params?.meta?.identity ?? identity)
-    ) {
-      throw new Error("Only owner/admin/accountant can approve time entries");
     }
     return baseDataProvider.updateMany(resource, params);
   },
@@ -485,18 +451,13 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
   getMyProjectDealIds: async (params: {
     organizationMemberId: Identifier;
-    personId?: Identifier | null;
   }) => {
     const { data: deals } = await baseDataProvider.getList<Deal>("deals", {
       pagination: { page: 1, perPage: 5000 },
       sort: { field: "id", order: "ASC" },
       filter: {},
     });
-    return collectMyProjectDealIds(
-      deals,
-      params.organizationMemberId,
-      params.personId,
-    );
+    return collectMyProjectDealIds(deals, params.organizationMemberId);
   },
   signUp: async (
     _data: SignUpData,
@@ -655,6 +616,25 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       },
     });
     return invoice;
+  },
+  syncProposalInvoices: async ({ proposalId }: { proposalId: Identifier }) => {
+    const { data: installments } = await baseDataProvider.getList(
+      "proposal_payment_installments",
+      {
+        filter: { "proposal_id@eq": proposalId },
+        pagination: { page: 1, perPage: 500 },
+        sort: { field: "installment_number", order: "ASC" },
+      },
+    );
+
+    const invoices = [];
+    for (const installment of installments) {
+      const invoice = await dataProviderWithCustomMethod.issueClientInvoice({
+        installmentId: installment.id,
+      });
+      invoices.push(invoice);
+    }
+    return invoices;
   },
   createStandaloneClientInvoice: async (body) => {
     const year = new Date().getFullYear();
@@ -1267,412 +1247,6 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     return config;
   },
   syncOrganizationPipelineStages: async () => undefined,
-  generatePaymentLines: async (paymentId: Identifier): Promise<number> => {
-    const { data: payment } = await dataProvider.getOne<any>("payments", {
-      id: paymentId,
-    });
-    const paymentCategory = payment.category ?? "mixed";
-
-    const { data: approvedEntries } = await dataProvider.getList<any>(
-      "time_entries",
-      {
-        filter: {
-          status: "approved",
-          "date@gte": payment.pay_period_start,
-          "date@lte": payment.pay_period_end,
-        },
-        pagination: { page: 1, perPage: 10_000 },
-        sort: { field: "id", order: "ASC" },
-      },
-    );
-
-    const { data: existingLines } = await dataProvider.getList<any>(
-      "payment_lines",
-      {
-        filter: { source_type: "time_entry" },
-        pagination: { page: 1, perPage: 10_000 },
-        sort: { field: "id", order: "ASC" },
-      },
-    );
-
-    const linkedTimeEntryIds = new Set(
-      existingLines
-        .filter((line) => line.source_type === "time_entry")
-        .map((line) => line.source_id),
-    );
-
-    const { data: allPeople } = await dataProvider.getList<any>("people", {
-      filter: { status: "active" },
-      pagination: { page: 1, perPage: 10_000 },
-      sort: { field: "id", order: "ASC" },
-    });
-
-    let createdCount = 0;
-
-    if (paymentCategory === "hourly" || paymentCategory === "mixed") {
-      for (const entry of approvedEntries) {
-        if (linkedTimeEntryIds.has(entry.id)) {
-          continue;
-        }
-
-        const person = allPeople.find(
-          (candidate) => candidate.id === entry.person_id,
-        );
-        const compensation = getPersonCompensationProfile(person ?? {});
-        if (compensation.unit !== "hour" && compensation.unit !== "day") {
-          continue;
-        }
-
-        const rate =
-          compensation.unit === "day"
-            ? Number(person?.day_rate ?? compensation.amount ?? 0) /
-              Math.max(1, Number(person?.paid_day_hours ?? 8))
-            : Number(person?.hourly_rate ?? compensation.amount ?? 0);
-        const regularHours = Number(
-          entry.regular_hours ?? Math.min(entry.hours ?? 0, 8),
-        );
-        const overtimeHours = Number(
-          entry.overtime_hours ?? Math.max(0, Number(entry.hours ?? 0) - 8),
-        );
-        const overtimeMultiplier = Number(
-          person?.overtime_rate_multiplier ?? 1.5,
-        );
-        const overtimeEnabled = Boolean(person?.overtime_enabled);
-        const regularPay = Number((regularHours * rate).toFixed(2));
-        const overtimePay = Number(
-          (
-            overtimeHours *
-            rate *
-            (overtimeEnabled ? overtimeMultiplier : 1)
-          ).toFixed(2),
-        );
-        const totalPay = Number((regularPay + overtimePay).toFixed(2));
-
-        await dataProvider.create("payment_lines", {
-          data: {
-            payment_id: paymentId,
-            person_id: entry.person_id,
-            project_id: entry.project_id,
-            compensation_type: compensation.unit === "day" ? "daily" : "hourly",
-            compensation_unit: compensation.unit,
-            compensation_amount: compensation.amount,
-            source_type: "time_entry",
-            source_id: entry.id,
-            source_reference: `time_entry:${entry.id}`,
-            qty_hours: entry.hours,
-            regular_hours: regularHours,
-            overtime_hours: overtimeHours,
-            rate,
-            regular_pay: regularPay,
-            overtime_pay: overtimePay,
-            bonuses: 0,
-            deductions: 0,
-            total_pay: totalPay,
-            amount: totalPay,
-            notes: `Generated from time entry #${entry.id}`,
-          },
-        });
-        createdCount++;
-      }
-    }
-
-    if (paymentCategory === "salaried" || paymentCategory === "mixed") {
-      const start = new Date(`${payment.pay_period_start}T00:00:00`);
-      const end = new Date(`${payment.pay_period_end}T00:00:00`);
-      const periodDays = Math.max(
-        1,
-        Math.round((end.getTime() - start.getTime()) / 86400000) + 1,
-      );
-
-      for (const person of allPeople) {
-        const compensation = getPersonCompensationProfile(person ?? {});
-        if (compensation.unit !== "week" && compensation.unit !== "month") {
-          continue;
-        }
-
-        const salaryAmount =
-          compensation.unit === "week"
-            ? Number((compensation.amount * (periodDays / 7)).toFixed(2))
-            : Number(
-                (
-                  compensation.amount *
-                  (periodDays /
-                    new Date(
-                      start.getFullYear(),
-                      start.getMonth() + 1,
-                      0,
-                    ).getDate())
-                ).toFixed(2),
-              );
-
-        if (!salaryAmount) continue;
-
-        await dataProvider.create("payment_lines", {
-          data: {
-            payment_id: paymentId,
-            person_id: person.id,
-            project_id: null,
-            compensation_type:
-              compensation.unit === "week" ? "weekly_salary" : "monthly_salary",
-            compensation_unit: compensation.unit,
-            compensation_amount: compensation.amount,
-            source_type: "salary",
-            source_id: person.id,
-            source_reference: `salary:${person.id}`,
-            qty_hours: null,
-            regular_hours: null,
-            overtime_hours: null,
-            rate: null,
-            regular_pay: salaryAmount,
-            overtime_pay: 0,
-            bonuses: 0,
-            deductions: 0,
-            total_pay: salaryAmount,
-            amount: salaryAmount,
-            notes: "Generated salaried base line",
-          },
-        });
-        createdCount++;
-      }
-    }
-
-    if (
-      paymentCategory === "sales_commissions" ||
-      paymentCategory === "mixed"
-    ) {
-      const { data: wonDeals } = await dataProvider.getList<any>("deals", {
-        filter: {
-          stage: "won",
-          "expected_closing_date@gte": payment.pay_period_start,
-          "expected_closing_date@lte": payment.pay_period_end,
-        },
-        pagination: { page: 1, perPage: 10_000 },
-        sort: { field: "id", order: "ASC" },
-      });
-
-      for (const deal of wonDeals) {
-        // Support multiple salespersons per deal
-        const salespersonIds = [
-          deal.organization_member_id,
-          ...(deal.salesperson_ids || []),
-        ].filter((id, index, self) => self.indexOf(id) === index); // Remove duplicates
-
-        for (const salespersonId of salespersonIds) {
-          const person = allPeople.find(
-            (candidate) => candidate.id === salespersonId,
-          );
-          if (!person || person.type !== "salesperson") continue;
-
-          const rate = Number(person.commission_rate ?? 0);
-          const totalPay = Number(
-            ((Number(deal.amount ?? 0) * rate) / 100).toFixed(2),
-          );
-
-          await dataProvider.create("payment_lines", {
-            data: {
-              payment_id: paymentId,
-              person_id: person.id,
-              project_id: deal.id,
-              compensation_type: "commission",
-              source_type: "commission",
-              source_id: deal.id,
-              source_reference: `commission:deal:${deal.id}`,
-              qty_hours: null,
-              regular_hours: null,
-              overtime_hours: null,
-              rate,
-              regular_pay: totalPay,
-              overtime_pay: 0,
-              bonuses: 0,
-              deductions: 0,
-              total_pay: totalPay,
-              amount: totalPay,
-              notes: `Generated commission from project #${deal.id}`,
-            },
-          });
-          createdCount++;
-        }
-      }
-    }
-
-    return createdCount;
-  },
-  generatePayrollRun: async (payrollRunId: Identifier): Promise<number> => {
-    const { data: payrollRun } = await dataProvider.getOne<any>(
-      "payroll_runs",
-      {
-        id: payrollRunId,
-      },
-    );
-
-    const { data: people } = await dataProvider.getList<any>("people", {
-      filter: { status: "active" },
-      pagination: { page: 1, perPage: 10_000 },
-      sort: { field: "id", order: "ASC" },
-    });
-
-    const { data: approvedEntries } = await dataProvider.getList<any>(
-      "time_entries",
-      {
-        filter: {
-          status: "approved",
-          "date@gte": payrollRun.pay_period_start,
-          "date@lte": payrollRun.pay_period_end,
-        },
-        pagination: { page: 1, perPage: 10_000 },
-        sort: { field: "date", order: "ASC" },
-      },
-    );
-
-    const { data: loans } = await dataProvider.getList<any>("employee_loans", {
-      filter: { active: true },
-      pagination: { page: 1, perPage: 10_000 },
-      sort: { field: "loan_date", order: "ASC" },
-    });
-
-    let createdCount = 0;
-
-    for (const person of people) {
-      const compensation = getPersonCompensationProfile(person);
-      const personEntries = approvedEntries.filter(
-        (entry) => entry.person_id === person.id,
-      );
-      const regularHours = Number(
-        personEntries
-          .reduce((sum, entry) => sum + Number(entry.regular_hours ?? 0), 0)
-          .toFixed(2),
-      );
-      const overtimeHours = Number(
-        personEntries
-          .reduce((sum, entry) => sum + Number(entry.overtime_hours ?? 0), 0)
-          .toFixed(2),
-      );
-      const paidLeaveHours = Number(
-        personEntries
-          .filter((entry) =>
-            ["holiday", "sick_day", "vacation_day", "day_off"].includes(
-              entry.day_type ?? "worked_day",
-            ),
-          )
-          .reduce((sum, entry) => sum + Number(entry.payable_hours ?? 0), 0)
-          .toFixed(2),
-      );
-
-      if (compensation.unit === "commission") {
-        continue;
-      }
-      const compensationResult = calculateCompensationGross({
-        person,
-        regularHours,
-        overtimeHours,
-        paidLeaveHours,
-        payPeriodStart: payrollRun.pay_period_start,
-        payPeriodEnd: payrollRun.pay_period_end,
-      });
-
-      let grossPay = compensationResult.grossPay;
-      const baseSalaryAmount = compensationResult.baseAmount ?? 0;
-
-      grossPay = Number(grossPay.toFixed(2));
-      if (grossPay <= 0) continue;
-
-      const personLoans = loans.filter(
-        (loan) => loan.employee_id === person.id && !loan.paused,
-      );
-      const loanResult = applyLoanDeductions({
-        grossPay,
-        otherDeductions: 0,
-        loans: personLoans,
-        payrollDateIso: payrollRun.payday,
-      });
-
-      const line = await dataProvider.create("payroll_run_lines", {
-        data: {
-          payroll_run_id: payrollRunId,
-          employee_id: person.id,
-          compensation_type:
-            compensation.unit === "day"
-              ? "daily"
-              : compensation.unit === "week"
-                ? "weekly_salary"
-                : compensation.unit === "month"
-                  ? "monthly_salary"
-                  : "hourly",
-          compensation_unit: compensation.unit,
-          compensation_amount: compensation.amount,
-          payment_method: person.payment_method ?? "bank_deposit",
-          regular_hours: regularHours || null,
-          overtime_hours: overtimeHours || null,
-          paid_leave_hours: paidLeaveHours || null,
-          base_salary_amount: baseSalaryAmount || null,
-          unpaid_absence_deduction: 0,
-          loan_deductions: loanResult.totalLoanDeductions,
-          other_deductions: 0,
-          gross_pay: grossPay,
-          total_deductions: loanResult.totalLoanDeductions,
-          net_pay: loanResult.netPay,
-          payment_reference: null,
-          payment_notes: null,
-        },
-      });
-      createdCount++;
-
-      for (const loanDeduction of loanResult.deductions) {
-        await dataProvider.create("employee_loan_deductions", {
-          data: {
-            loan_id: loanDeduction.loanId,
-            payroll_run_id: payrollRunId,
-            deduction_date: payrollRun.payday,
-            scheduled_amount: loanDeduction.scheduledAmount,
-            deducted_amount: loanDeduction.deductedAmount,
-            remaining_balance_after: loanDeduction.remainingBalanceAfter,
-            receipt_number: buildReceiptNumber("DEDUCT", payrollRun.payday),
-            receipt_generated_at: new Date().toISOString(),
-            notes: `Generated in payroll run #${payrollRunId}`,
-          },
-        });
-
-        const nextStatus =
-          loanDeduction.remainingBalanceAfter <= 0 ? "completed" : "active";
-        await dataProvider.update("employee_loans", {
-          id: loanDeduction.loanId,
-          data: {
-            remaining_balance: loanDeduction.remainingBalanceAfter,
-            active: loanDeduction.remainingBalanceAfter > 0,
-            paused: false,
-            status: nextStatus,
-            completed_at:
-              loanDeduction.remainingBalanceAfter <= 0
-                ? new Date().toISOString()
-                : null,
-            start_next_payroll: false,
-          },
-          previousData: personLoans.find(
-            (loan) => loan.id === loanDeduction.loanId,
-          ),
-        });
-      }
-
-      for (const entry of personEntries) {
-        await dataProvider.update("time_entries", {
-          id: entry.id,
-          data: {
-            status: "included_in_payroll",
-            included_in_payroll: true,
-            payroll_run_id: payrollRunId,
-          },
-          previousData: entry,
-        });
-      }
-
-      void line;
-    }
-
-    return createdCount;
-  },
-  releasePayrollRunLinkedResources: async (payrollRunId: Identifier) => {
-    await releasePayrollRunResourcesOnCancel(dataProvider, payrollRunId);
-  },
   stripeCreateCheckoutSession: async () => {
     throw new Error("Stripe billing is not available in demo mode");
   },
@@ -1819,93 +1393,6 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
 };
 
-const roundMoney = (value: number) =>
-  Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
-
-/** Mirrors DB trigger: cancel payroll run releases hours and related rows (demo / FakeRest). */
-const releasePayrollRunResourcesOnCancel = async (
-  dp: CrmDataProvider,
-  runId: Identifier,
-) => {
-  const { data: deductions } = await dp.getList<any>(
-    "employee_loan_deductions",
-    {
-      filter: { payroll_run_id: runId },
-      pagination: { page: 1, perPage: 10_000 },
-      sort: { field: "id", order: "ASC" },
-    },
-  );
-
-  for (const ded of deductions) {
-    const { data: loan } = await dp.getOne<any>("employee_loans", {
-      id: ded.loan_id,
-    });
-    if (loan) {
-      const nextBalance = roundMoney(
-        Number(loan.remaining_balance ?? 0) + Number(ded.deducted_amount ?? 0),
-      );
-      await dp.update("employee_loans", {
-        id: loan.id,
-        data: {
-          remaining_balance: nextBalance,
-          active: true,
-          status: nextBalance > 0 ? "active" : (loan.status ?? "active"),
-        },
-        previousData: loan,
-      });
-    }
-    await dp.delete("employee_loan_deductions", {
-      id: ded.id,
-      previousData: ded,
-    });
-  }
-
-  const { data: entries } = await dp.getList<any>("time_entries", {
-    filter: { payroll_run_id: runId },
-    pagination: { page: 1, perPage: 10_000 },
-    sort: { field: "id", order: "ASC" },
-  });
-
-  for (const entry of entries) {
-    await dp.update("time_entries", {
-      id: entry.id,
-      data: {
-        payroll_run_id: null,
-        included_in_payroll: false,
-        status:
-          entry.status === "included_in_payroll" ? "approved" : entry.status,
-      },
-      previousData: entry,
-    });
-  }
-
-  const { data: lines } = await dp.getList<any>("payroll_run_lines", {
-    filter: { payroll_run_id: runId },
-    pagination: { page: 1, perPage: 10_000 },
-    sort: { field: "id", order: "ASC" },
-  });
-
-  for (const line of lines) {
-    await dp.delete("payroll_run_lines", {
-      id: line.id,
-      previousData: line,
-    });
-  }
-
-  const { data: payments } = await dp.getList<any>("payments", {
-    filter: { payroll_run_id: runId },
-    pagination: { page: 1, perPage: 100 },
-    sort: { field: "id", order: "DESC" },
-  });
-
-  for (const payment of payments) {
-    await dp.update("payments", {
-      id: payment.id,
-      data: { payroll_run_id: null },
-      previousData: payment,
-    });
-  }
-};
 
 async function updateCompany(
   companyId: Identifier,
@@ -2270,42 +1757,6 @@ export const dataProvider = withLifecycleCallbacks(
       },
     } satisfies ResourceCallbacks<Company>,
     {
-      resource: "people",
-      beforeCreate: async (params) => {
-        params.data.email = normalizeEmailValue(params.data.email, "email");
-        params.data.phone = normalizePhoneValue(params.data.phone);
-        return params;
-      },
-      beforeUpdate: async (params) => {
-        params.data.email = normalizeEmailValue(params.data.email, "email");
-        params.data.phone = normalizePhoneValue(params.data.phone);
-        return params;
-      },
-      beforeGetList: async (params) => {
-        return applyFullTextSearch(
-          ["first_name", "last_name", "email", "phone"],
-          {
-            useContactFtsColumns: false,
-          },
-        )(params);
-      },
-    },
-    {
-      resource: "employee_loans",
-      beforeCreate: async (params) => {
-        return {
-          ...params,
-          data: normalizeLoanPayload(params.data),
-        };
-      },
-      beforeUpdate: async (params) => {
-        return {
-          ...params,
-          data: normalizeLoanPayload(params.data),
-        };
-      },
-    },
-    {
       resource: "deals",
       beforeCreate: async (params) => {
         return {
@@ -2349,98 +1800,6 @@ export const dataProvider = withLifecycleCallbacks(
       resource: "deal_notes",
       beforeSave: async (params) => preserveAttachmentMimeType(params),
     } satisfies ResourceCallbacks<DealNote>,
-    {
-      resource: "payroll_runs",
-      beforeUpdate: async (params) => {
-        const { data, previousData } = params;
-        if (
-          data.status === "cancelled" &&
-          previousData &&
-          previousData.status !== "cancelled"
-        ) {
-          return {
-            ...params,
-            data: { ...data, manual_deduction_total: null },
-          };
-        }
-        return params;
-      },
-      afterUpdate: async (result, dp) => {
-        const run = result.data as PayrollRun;
-        if (run.status !== "cancelled") {
-          return result;
-        }
-
-        const [
-          { data: entrySample },
-          { data: linesSample },
-          { data: dedSample },
-        ] = await Promise.all([
-          dp.getList("time_entries", {
-            filter: { payroll_run_id: run.id },
-            pagination: { page: 1, perPage: 1 },
-            sort: { field: "id", order: "ASC" },
-          }),
-          dp.getList("payroll_run_lines", {
-            filter: { payroll_run_id: run.id },
-            pagination: { page: 1, perPage: 1 },
-            sort: { field: "id", order: "ASC" },
-          }),
-          dp.getList("employee_loan_deductions", {
-            filter: { payroll_run_id: run.id },
-            pagination: { page: 1, perPage: 1 },
-            sort: { field: "id", order: "ASC" },
-          }),
-        ]);
-
-        if (
-          entrySample.length === 0 &&
-          linesSample.length === 0 &&
-          dedSample.length === 0
-        ) {
-          return result;
-        }
-
-        await releasePayrollRunResourcesOnCancel(dp, run.id);
-        return result;
-      },
-    } satisfies ResourceCallbacks<PayrollRun>,
-    {
-      resource: "payments",
-      afterUpdate: async (result, dp) => {
-        const payment = result.data as {
-          payroll_run_id?: number | string | null;
-          status?: string;
-          paid_at?: string | null;
-        };
-        if (!payment?.payroll_run_id) {
-          return result;
-        }
-        const { data: run } = await dp.getOne<PayrollRun>("payroll_runs", {
-          id: payment.payroll_run_id,
-        });
-        if (!run) {
-          return result;
-        }
-        if (payment.status === "paid" && run.status !== "cancelled") {
-          await dp.update("payroll_runs", {
-            id: run.id,
-            data: {
-              status: "paid",
-              paid_at: payment.paid_at ?? new Date().toISOString(),
-            },
-            previousData: run,
-          });
-        } else if (run.status === "paid" && payment.status !== "paid") {
-          await dp.update("payroll_runs", {
-            id: run.id,
-            data: { status: "approved", paid_at: null },
-            previousData: run,
-          });
-        }
-        return result;
-      },
-    } satisfies ResourceCallbacks<Payment>,
   ],
 ) as CrmDataProvider;
 

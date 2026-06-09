@@ -43,7 +43,6 @@ import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { getIsInitialized } from "./authProvider";
 import { supabase } from "./supabase";
-import { canApprovePayroll } from "@/payroll/permissions";
 import { canMutateCrmResource } from "../commons/crmPermissions";
 import {
   buildCompanyPayloadFromUpsert,
@@ -322,14 +321,7 @@ const dataProviderWithCustomMethods = {
     return baseDataProvider.create(resource, params);
   },
   async update(resource: string, params: any) {
-    const identity = await assertMutationAllowed(resource, "update", params);
-    if (
-      resource === "time_entries" &&
-      params?.data?.status === "approved" &&
-      !canApprovePayroll(params?.meta?.identity ?? identity)
-    ) {
-      throw new Error("Only owner/admin/accountant can approve time entries");
-    }
+    await assertMutationAllowed(resource, "update", params);
 
     if (resource === "configuration") {
       const nested = params?.data?.config;
@@ -344,15 +336,7 @@ const dataProviderWithCustomMethods = {
     return baseDataProvider.update(resource, params);
   },
   async updateMany(resource: string, params: any) {
-    const identity = await assertMutationAllowed(resource, "update", params);
-    if (
-      resource === "time_entries" &&
-      params?.data?.status === "approved" &&
-      !canApprovePayroll(params?.meta?.identity ?? identity)
-    ) {
-      throw new Error("Only owner/admin/accountant can approve time entries");
-    }
-
+    await assertMutationAllowed(resource, "update", params);
     return baseDataProvider.updateMany(resource, params);
   },
   async delete(resource: string, params: any) {
@@ -365,16 +349,6 @@ const dataProviderWithCustomMethods = {
   },
   async getList(resource: string, params: GetListParams) {
     let request = params;
-    if (
-      resource === "time_entries" &&
-      params.filter &&
-      typeof params.filter === "object" &&
-      "__hours_all_statuses" in params.filter
-    ) {
-      const { __hours_all_statuses: _legacy, ...rest } =
-        params.filter as Record<string, unknown>;
-      request = { ...params, filter: rest };
-    }
 
     if (resource === "companies") {
       return baseDataProvider.getList("companies_summary", request);
@@ -705,6 +679,24 @@ const dataProviderWithCustomMethods = {
 
     return data.invoice;
   },
+  async syncProposalInvoices({ proposalId }: { proposalId: Identifier }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoices: Record<string, unknown>[];
+    }>("issue_client_invoice", {
+      method: "POST",
+      body: {
+        proposal_id: Number(proposalId),
+        sync_all_installments: true,
+      },
+    });
+
+    if (error || !data?.invoices) {
+      console.error("syncProposalInvoices.error", error);
+      throw new Error("Failed to sync proposal invoices");
+    }
+
+    return data.invoices;
+  },
   async createStandaloneClientInvoice(body: {
     company_id?: number | null;
     contact_id?: number | null;
@@ -867,6 +859,80 @@ const dataProviderWithCustomMethods = {
               "Failed to send payment receipt",
             )
           : "Failed to send payment receipt",
+      );
+    }
+
+    return data;
+  },
+  async chargeClientInvoiceOnFile({
+    invoiceId,
+    amount,
+  }: {
+    invoiceId: Identifier;
+    amount?: number;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+      charged_amount: number;
+      amount_paid: number;
+      balance_due: number;
+      paid_in_full: boolean;
+      receipt_sent?: boolean;
+    }>("charge_client_invoice_on_file", {
+      method: "POST",
+      body: {
+        invoice_id: Number(invoiceId),
+        ...(amount != null ? { amount } : {}),
+      },
+    });
+
+    if (error || !data?.invoice) {
+      console.error("chargeClientInvoiceOnFile.error", error);
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Could not charge the card on file",
+            )
+          : "Could not charge the card on file",
+      );
+    }
+
+    return data;
+  },
+  async sendClientInvoicePaymentLink({
+    invoiceId,
+    to,
+    message,
+  }: {
+    invoiceId: Identifier;
+    to?: string;
+    message?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      sent: boolean;
+      to: string;
+      payment_url: string;
+      invoice_id: number;
+    }>("send_client_invoice_payment_link", {
+      method: "POST",
+      body: {
+        invoice_id: Number(invoiceId),
+        base_url: window.location.origin,
+        ...(to ? { to } : {}),
+        ...(message ? { message } : {}),
+      },
+    });
+
+    if (error || !data?.sent) {
+      console.error("sendClientInvoicePaymentLink.error", error);
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Could not send payment link",
+            )
+          : "Could not send payment link",
       );
     }
 
@@ -1729,47 +1795,6 @@ const dataProviderWithCustomMethods = {
 
     invalidateResourceQueries("organization_pipeline_stages");
   },
-  async generatePaymentLines(paymentId: Identifier): Promise<number> {
-    const { data, error } = await supabase.rpc("generate_payment_lines", {
-      p_payment_id: paymentId,
-    });
-
-    if (error) {
-      console.error("generate_payment_lines.error", error);
-      throw new Error("Failed to generate payment lines");
-    }
-
-    return Number(data ?? 0);
-  },
-  async generatePayrollRun(payrollRunId: Identifier): Promise<number> {
-    const { data, error } = await supabase.rpc("generate_payroll_run", {
-      p_payroll_run_id: payrollRunId,
-    });
-
-    if (error) {
-      console.error("generate_payroll_run.error", error);
-      throw new Error("Failed to generate payroll run lines");
-    }
-
-    return Number(data ?? 0);
-  },
-  async releasePayrollRunLinkedResources(
-    payrollRunId: Identifier,
-  ): Promise<void> {
-    const { error } = await supabase.rpc(
-      "release_payroll_run_linked_resources",
-      {
-        p_run_id: payrollRunId,
-      },
-    );
-
-    if (error) {
-      console.error("release_payroll_run_linked_resources.error", error);
-      throw new Error(
-        error.message ?? "Failed to release hours for this payroll run",
-      );
-    }
-  },
   async stripeCreateCheckoutSession(params: {
     orgId: number;
     returnPath?: string;
@@ -1927,10 +1952,10 @@ const dataProviderWithCustomMethods = {
         `organization_member_id.eq.${params.organizationMemberId}`,
       ];
       orParts.push(`mentioned_member_ids.cs.{${params.organizationMemberId}}`);
-      if (params.personId != null) {
-        orParts.push(`assignee_person_ids.cs.{${params.personId}}`);
-        orParts.push(`collaborator_person_ids.cs.{${params.personId}}`);
-      }
+      orParts.push(`assignee_person_ids.cs.{${params.organizationMemberId}}`);
+      orParts.push(
+        `collaborator_person_ids.cs.{${params.organizationMemberId}}`,
+      );
       query = query.or(orParts.join(","));
     } else if (params.scope === "my_projects") {
       const dealIds = (params.projectDealIds ?? [])
@@ -1990,7 +2015,6 @@ const dataProviderWithCustomMethods = {
   },
   async getMyProjectDealIds(params: {
     organizationMemberId: Identifier;
-    personId?: Identifier | null;
   }) {
     const { data: deals, error } = await supabase
       .from("deals")
@@ -2001,11 +2025,7 @@ const dataProviderWithCustomMethods = {
       throw new Error("Failed to load projects");
     }
 
-    return collectMyProjectDealIds(
-      deals ?? [],
-      params.organizationMemberId,
-      params.personId,
-    );
+    return collectMyProjectDealIds(deals ?? [], params.organizationMemberId);
   },
   async ensureProjectConversation(params: {
     dealId: Identifier;
@@ -2929,33 +2949,22 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
     },
   },
   {
-    resource: "deal_notes",
-    beforeSave: async (data: DealNote, _, __) => {
-      if (data.attachments) {
-        data.attachments = await Promise.all(
-          data.attachments.map((fi) => uploadToBucket(fi)),
-        );
-      }
-      return data;
-    },
-  },
-  {
-    resource: "deal_subcontractor_entries",
-    beforeSave: async (data: any) => {
-      if (data.invoice_attachments) {
-        data.invoice_attachments = await Promise.all(
-          data.invoice_attachments.map((fi: RAFile) => uploadToBucket(fi)),
-        );
-      }
-      return data;
-    },
-  },
-  {
     resource: "deal_expenses",
     beforeSave: async (data: any) => {
       if (data.attachments) {
         data.attachments = await Promise.all(
           data.attachments.map((fi: RAFile) => uploadToBucket(fi)),
+        );
+      }
+      return data;
+    },
+  },
+  {
+    resource: "deal_notes",
+    beforeSave: async (data: DealNote, _, __) => {
+      if (data.attachments) {
+        data.attachments = await Promise.all(
+          data.attachments.map((fi) => uploadToBucket(fi)),
         );
       }
       return data;
@@ -3049,42 +3058,6 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
     resource: "contacts_summary",
     beforeGetList: async (params) => {
       return applyFullTextSearch(["first_name", "last_name"])(params);
-    },
-  },
-  {
-    resource: "people",
-    beforeCreate: async (params) => {
-      params.data.email = normalizeEmailValue(params.data.email, "email");
-      params.data.phone = normalizePhoneValue(params.data.phone);
-      return params;
-    },
-    beforeUpdate: async (params) => {
-      params.data.email = normalizeEmailValue(params.data.email, "email");
-      params.data.phone = normalizePhoneValue(params.data.phone);
-      return params;
-    },
-    beforeGetList: async (params) => {
-      return applyFullTextSearch(
-        ["first_name", "last_name", "email", "phone"],
-        {
-          useContactFtsColumns: false,
-        },
-      )(params);
-    },
-  },
-  {
-    resource: "employee_loans",
-    beforeCreate: async (params) => {
-      return {
-        ...params,
-        data: normalizeLoanPayload(params.data),
-      };
-    },
-    beforeUpdate: async (params) => {
-      return {
-        ...params,
-        data: normalizeLoanPayload(params.data),
-      };
     },
   },
   {

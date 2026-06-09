@@ -1,5 +1,4 @@
 import { Route, Navigate } from "react-router";
-import { isLbsMode } from "@/lbs/productMode";
 import { LeadsListPage } from "@/lbs/leads/LeadsListPage";
 import { ClientsListPage } from "@/lbs/clients/ClientsListPage";
 import { ClientShowPage } from "@/lbs/clients/ClientShowPage";
@@ -104,10 +103,6 @@ export const renderLbsCustomRoutes = ({
 }: {
   ProtectedRoute: (props: ProtectedRouteProps) => JSX.Element;
 }) => {
-  if (!isLbsMode()) {
-    return null;
-  }
-
   return (
     <>
       <Route path="/contacts" element={<Navigate to="/clients" replace />} />

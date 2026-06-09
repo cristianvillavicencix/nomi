@@ -8,7 +8,7 @@ import { type TaskStatusFilter } from "@/components/atomic-crm/tasks/taskConstan
 import { TaskTable } from "@/components/atomic-crm/tasks/TaskTable";
 import { TasksCalendarPanel } from "@/components/atomic-crm/tasks/TasksCalendarPanel";
 import { TasksFilterPopover } from "@/components/atomic-crm/tasks/TasksFilterPopover";
-import { useCurrentMemberPerson } from "@/components/atomic-crm/tasks/useCurrentMemberPerson";
+import { useCurrentOrganizationMember } from "@/components/atomic-crm/tasks/useCurrentOrganizationMember";
 import {
   useMyProjectDealIds,
   useScopedTasks,
@@ -18,41 +18,34 @@ import {
   useMarkTaskTagNotificationsRead,
   useUnreadTaskTagNotifications,
 } from "@/components/atomic-crm/tasks/useTaskTagNotifications";
-import { isLbsMode } from "@/lbs/productMode";
 
 export const TasksPageContent = () => {
-  const {
-    identity,
-    personId,
-    isPending: isMemberPending,
-  } = useCurrentMemberPerson();
+  const { memberId, isPending: isMemberPending } =
+    useCurrentOrganizationMember();
   const { taskTypes } = useConfigurationContext();
   const { preferences, setPreferences } = useTaskPreferences();
-  const { status, scope, typeFilter, priorityFilter, projectId } = preferences;
-  const lbsMode = isLbsMode();
+  const { status, scope, priorityFilter, projectId } = preferences;
   const {
     notifications: unreadTagNotifications,
     total: unreadTaggedCount,
     refetch: refetchTagNotifications,
-  } = useUnreadTaskTagNotifications(identity?.id);
+  } = useUnreadTaskTagNotifications(memberId);
   const { markRead } = useMarkTaskTagNotificationsRead();
 
   const { data: projectDealIds = [], isPending: isProjectsPending } =
     useMyProjectDealIds({
-      organizationMemberId: identity?.id,
-      personId,
-      enabled: lbsMode && scope === "my_projects",
+      organizationMemberId: memberId,
+      enabled: scope === "my_projects",
     });
 
   const { data: scopedTasksResult, isPending: isTasksPending } = useScopedTasks(
     {
       scope,
-      organizationMemberId: identity?.id,
-      personId,
+      organizationMemberId: memberId,
       projectDealIds,
-      projectId: lbsMode ? projectId : null,
+      projectId,
       status,
-      typeFilter: lbsMode ? "all" : typeFilter,
+      typeFilter: "all",
       priorityFilter,
       enabled: scope !== "my_projects" || projectDealIds.length > 0,
     },
@@ -68,19 +61,13 @@ export const TasksPageContent = () => {
     const taggedLabel =
       unreadTaggedCount > 0 ? `Tagged me (${unreadTaggedCount})` : "Tagged me";
 
-    const options = [
+    return [
       { value: "mine" as const, label: "My tasks" },
       { value: "tagged" as const, label: taggedLabel },
       { value: "team" as const, label: "All team" },
+      { value: "my_projects" as const, label: "My projects" },
     ];
-    if (lbsMode) {
-      return [
-        ...options,
-        { value: "my_projects" as const, label: "My projects" },
-      ];
-    }
-    return options;
-  }, [lbsMode, unreadTaggedCount]);
+  }, [unreadTaggedCount]);
 
   const emptyMessage = useMemo(() => {
     if (scope === "tagged") {
@@ -146,7 +133,7 @@ export const TasksPageContent = () => {
             onChange={setPreferences}
             scopeOptions={scopeOptions}
             taskTypes={taskTypes}
-            lbsMode={lbsMode}
+            lbsMode
             unreadTaggedCount={unreadTaggedCount}
           />
         </div>
@@ -156,8 +143,7 @@ export const TasksPageContent = () => {
         <TaskTable
           tasks={tasks}
           status={status}
-          showContact={!lbsMode}
-          showProject={lbsMode && projectId == null}
+          showProject={projectId == null}
           emptyMessage={emptyMessage}
         />
 

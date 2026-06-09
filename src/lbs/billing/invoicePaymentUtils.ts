@@ -77,6 +77,28 @@ export const formatInvoicePaymentMethod = (invoice: {
   return `${brand} ····${last4}`;
 };
 
+export const canChargeClientInvoice = (invoice: {
+  status?: string | null;
+  amount?: number | null;
+  amount_paid?: number | null;
+}) => {
+  if (invoice.status === "void" || invoice.status === "paid") return false;
+  const balance = computeInvoiceBalanceDue(
+    Number(invoice.amount) || 0,
+    Number(invoice.amount_paid) || 0,
+  );
+  if (balance <= 0.01) return false;
+  return meetsStripeMinimumCharge(balance, balance);
+};
+
+export const hasInvoiceCardOnFile = (invoice: {
+  stripe_customer_id?: string | null;
+  stripe_payment_method_id?: string | null;
+  payment_method_last4?: string | null;
+}) =>
+  Boolean(invoice.stripe_customer_id?.trim()) &&
+  Boolean(invoice.stripe_payment_method_id?.trim());
+
 export type InvoicePaymentScheduleTiming = "now" | "scheduled" | "paid";
 
 export type InvoicePaymentScheduleRow = {

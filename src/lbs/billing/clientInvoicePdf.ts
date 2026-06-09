@@ -131,18 +131,8 @@ const buildLineItemsTable = (
               ? { stack: [{ text: title, bold: true }, { text: detail, fontSize: 9, color: "#64748b" }] }
               : title,
           {
-            stack: [
-              {
-                text: Number(line.quantity).toFixed(2),
-                alignment: "right",
-              },
-              {
-                text: line.unit ?? "ea",
-                fontSize: 8,
-                color: "#64748b",
-                alignment: "right",
-              },
-            ],
+            text: Number(line.quantity).toFixed(2),
+            alignment: "right",
           },
           {
             text: Number(line.unit_price).toFixed(2),

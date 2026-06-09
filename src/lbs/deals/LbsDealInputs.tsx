@@ -15,14 +15,8 @@ import type {
   Deal,
   OrganizationMember,
 } from "@/components/atomic-crm/types";
-import { AutocompleteCompanyInput } from "@/components/atomic-crm/companies/AutocompleteCompanyInput";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LbsProjectClientFields } from "@/lbs/deals/LbsProjectClientFields";
-import { isLbsMode } from "@/lbs/productMode";
-import {
-  lbsProjectContactName,
-  lbsProjectContactOptionText,
-} from "@/lbs/deals/LbsProjectContactOption";
 import { optionalGithubRepo } from "@/lbs/deals/githubRepo";
 import {
   getLbsProjectScopeMode,
@@ -260,42 +254,18 @@ export const LbsDealInputs = ({
               helperText={false}
               placeholder="e.g. Acme Corp website redesign"
             />
-            {isLbsMode() ? (
-              <LbsProjectClientFields />
-            ) : (
-              <>
-                <ReferenceInput
-                  source="contact_id"
-                  reference="contacts_summary"
-                >
-                  <AutocompleteInput
-                    label="Client contact"
-                    optionText={lbsProjectContactOptionText}
-                    inputText={lbsProjectContactName}
-                    validate={required()}
-                    helperText={false}
-                    placeholder="Search contact"
-                    filterToQuery={(searchText) => ({ q: searchText })}
-                  />
-                </ReferenceInput>
-                <ReferenceInput source="company_id" reference="companies">
-                  <AutocompleteCompanyInput validate={undefined} />
-                </ReferenceInput>
-              </>
-            )}
-            {isLbsMode() ? (
-              <ReferenceInput
-                source="accepted_proposal_id"
-                reference="proposals"
-              >
-                <AutocompleteInput
-                  label="Accepted proposal (optional)"
-                  optionText="title"
-                  helperText={false}
-                  filterToQuery={(searchText) => ({ q: searchText })}
-                />
-              </ReferenceInput>
-            ) : null}
+            <LbsProjectClientFields />
+            <ReferenceInput
+              source="accepted_proposal_id"
+              reference="proposals"
+            >
+              <AutocompleteInput
+                label="Accepted proposal (optional)"
+                optionText="title"
+                helperText={false}
+                filterToQuery={(searchText) => ({ q: searchText })}
+              />
+            </ReferenceInput>
             <SelectInput
               source="category"
               label="Service category"

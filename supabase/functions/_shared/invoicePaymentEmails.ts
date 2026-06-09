@@ -53,6 +53,7 @@ export async function resolveInvoicePortalUrl(
   supabase: SupabaseClient,
   invoiceId: number,
   orgId: number,
+  options?: { openPayment?: boolean },
 ) {
   const { data: tokenRow } = await supabase
     .from("public_client_invoice_tokens")
@@ -64,11 +65,12 @@ export async function resolveInvoicePortalUrl(
     .maybeSingle();
 
   const baseUrl = resolvePublicAppBaseUrl();
+  const payQuery = options?.openPayment ? "?pay=1" : "";
   if (tokenRow?.short_code) {
-    return `${baseUrl}/iv/${tokenRow.short_code}`;
+    return `${baseUrl}/iv/${tokenRow.short_code}${payQuery}`;
   }
   if (tokenRow?.token) {
-    return `${baseUrl}/portal/invoice/${tokenRow.token}`;
+    return `${baseUrl}/portal/invoice/${tokenRow.token}${payQuery}`;
   }
   return baseUrl;
 }
@@ -321,6 +323,7 @@ export async function sendClientInvoicePaymentReceipt(
     supabase,
     params.invoice.id,
     params.invoice.org_id,
+    { openPayment: !params.paidInFull },
   );
   const chargedFormatted = formatMoney(params.chargedAmount, currency);
   const balanceFormatted = formatMoney(params.balanceDue, currency);
@@ -609,8 +612,8 @@ export async function sendClientInvoicePaymentReminder(
     supabase,
     params.invoice.id,
     params.invoice.org_id,
+    { openPayment: true },
   );
-  const amountFormatted = formatMoney(params.target.amount, currency);
   const dueFormatted = formatDate(params.target.dueDate);
   const totalBalance = Math.max(
     Math.round((Number(params.invoice.amount) - Number(params.invoice.amount_paid || 0)) * 100) /

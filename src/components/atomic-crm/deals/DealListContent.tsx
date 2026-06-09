@@ -18,15 +18,10 @@ import {
 import { getPipelineStages } from "./pipelines";
 import type { DealsByStage } from "./stages";
 import { getDealsByStage } from "./stages";
-import { isLbsMode } from "@/lbs/productMode";
 import {
   createStageTasksForDeal,
   getStageTasksCreatedMessage,
 } from "@/lbs/deals/dealStageTaskTemplates";
-import {
-  ensureCommissionsForWonDeal,
-  getCommissionAutomationMessage,
-} from "@/lbs/deals/dealCommissionAutomation";
 import type { LbsDeal } from "@/lbs/types";
 
 export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
@@ -101,7 +96,7 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
     )
       .then(async ({ stageChanged, newStage }) => {
         refetch();
-        if (isLbsMode() && stageChanged && newStage && identity?.id) {
+        if (stageChanged && newStage && identity?.id) {
           try {
             const count = await createStageTasksForDeal({
               dataProvider,
@@ -118,19 +113,6 @@ export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
             });
           }
 
-          try {
-            const commissionCount = await ensureCommissionsForWonDeal({
-              dataProvider,
-              deal: { ...(sourceDeal as LbsDeal), stage: newStage },
-            });
-            const commissionMessage =
-              getCommissionAutomationMessage(commissionCount);
-            if (commissionMessage) notify(commissionMessage, { type: "info" });
-          } catch {
-            notify("Project moved, but commissions could not be created", {
-              type: "warning",
-            });
-          }
         }
       })
       .catch((error: unknown) => {

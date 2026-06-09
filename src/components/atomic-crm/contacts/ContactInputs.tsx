@@ -14,9 +14,7 @@ import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
-import { isLinkedinUrl } from "../misc/isLinkedInUrl";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import { isLbsMode } from "@/lbs/productMode";
 import { InterestedServiceInput } from "@/lbs/leads/InterestedServiceInput";
 import { LBS_LEAD_SOURCE_CHOICES } from "@/lbs/leads/leadFormConstants";
 import { LeadReferrerInputs } from "@/lbs/leads/LeadReferrerInputs";
@@ -44,32 +42,22 @@ export const ContactInputs = () => {
   );
 };
 
-const ContactBasicsSection = () => {
-  const lbsMode = isLbsMode();
-  return (
-    <div className="flex flex-col gap-4">
-      <h6 className="text-lg font-semibold">Contact</h6>
-      <div className="grid gap-4 md:grid-cols-2">
-        <TextInput
-          source="first_name"
-          validate={required()}
-          helperText={false}
-        />
-        <TextInput
-          source="last_name"
-          validate={required()}
-          helperText={false}
-        />
-      </div>
-      <div className={lbsMode ? "" : "grid gap-4 md:grid-cols-2"}>
-        {lbsMode ? null : <TextInput source="title" helperText={false} />}
-        <ReferenceInput source="company_id" reference="companies" perPage={10}>
-          <AutocompleteCompanyInput />
-        </ReferenceInput>
-      </div>
+const ContactBasicsSection = () => (
+  <div className="flex flex-col gap-4">
+    <h6 className="text-lg font-semibold">Contact</h6>
+    <div className="grid gap-4 md:grid-cols-2">
+      <TextInput
+        source="first_name"
+        validate={required()}
+        helperText={false}
+      />
+      <TextInput source="last_name" validate={required()} helperText={false} />
     </div>
-  );
-};
+    <ReferenceInput source="company_id" reference="companies" perPage={10}>
+      <AutocompleteCompanyInput />
+    </ReferenceInput>
+  </div>
+);
 
 const ContactPersonalInformationInputs = () => {
   const { getValues, setValue } = useFormContext();
@@ -159,7 +147,7 @@ const ContactPersonalInformationInputs = () => {
           />
         </SimpleFormIterator>
       </ArrayInput>
-      {isLbsMode() && isGooglePlacesEnabled() ? (
+      {isGooglePlacesEnabled() ? (
         <GooglePlacesAutocompleteInput
           source="address"
           label="Address"
@@ -169,14 +157,6 @@ const ContactPersonalInformationInputs = () => {
         />
       ) : (
         <TextInput source="address" helperText={false} />
-      )}
-      {isLbsMode() ? null : (
-        <TextInput
-          source="linkedin_url"
-          label="Linkedin URL"
-          helperText={false}
-          validate={isLinkedinUrl}
-        />
       )}
     </div>
   );
@@ -200,21 +180,17 @@ const ContactManagementInputs = () => {
         }))}
         validate={required()}
       />
-      {isLbsMode() ? (
-        <>
-          <SelectInput
-            source="lead_source"
-            label="Lead source"
-            choices={LBS_LEAD_SOURCE_CHOICES.map((entry) => ({
-              id: entry.id,
-              name: entry.name,
-            }))}
-            helperText={false}
-          />
-          <LeadReferrerInputs />
-          <InterestedServiceInput />
-        </>
-      ) : null}
+      <SelectInput
+        source="lead_source"
+        label="Lead source"
+        choices={LBS_LEAD_SOURCE_CHOICES.map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+        }))}
+        helperText={false}
+      />
+      <LeadReferrerInputs />
+      <InterestedServiceInput />
       <ReferenceInput
         reference="organization_members"
         source="organization_member_id"

@@ -1,11 +1,8 @@
-import { SlidersHorizontal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
-  useDataProvider,
   useGetIdentity,
   useListContext,
   useListFilterContext,
-  useNotify,
 } from "ra-core";
 import { matchPath, useLocation } from "react-router";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
@@ -20,32 +17,17 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import {
-  useConfigurationContext,
-  useConfigurationUpdater,
-} from "../root/ConfigurationContext";
+import { useConfigurationContext } from "../root/ConfigurationContext";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
-import { isLbsMode } from "@/lbs/productMode";
 import { DealArchivedList } from "./DealArchivedList";
 import { DealEdit } from "./DealEdit";
-import { DealEmpty } from "./DealEmpty";
-import { DealListContent } from "./DealListContent";
 import { DealTableView } from "./DealTableView";
 import { DealShow } from "./DealShow";
 import { ProjectCreateFlow } from "@/lbs/deals/ProjectCreateFlow";
 import { LbsDealBoardContent } from "@/lbs/deals/LbsDealBoardContent";
-import { getDefaultPipeline, getPipelineById } from "./pipelines";
+import { getDefaultPipeline } from "./pipelines";
 import { useDealsViewPreference } from "./useDealsViewPreference";
 
 const DealList = () => {
@@ -93,19 +75,25 @@ const DealLayout = () => {
   const matchCreate = matchPath("/deals/create", location.pathname);
   const matchEdit = matchPath("/deals/:id", location.pathname);
   const { view } = useDealsViewPreference();
-  const lbsMode = isLbsMode();
-
-  const { data, isPending, filterValues } = useListContext();
+  const { filterValues } = useListContext();
+  const { filterValues: listFilterValues, displayedFilters, setFilters } =
+    useListFilterContext();
   const config = useConfigurationContext();
   const selectedPipelineId =
     (filterValues?.pipeline_id as string | undefined) ||
     getDefaultPipeline(config)?.id ||
     "default";
-  const hasFilters = filterValues && Object.keys(filterValues).length > 0;
 
-  if (isPending) return null;
+  useEffect(() => {
+    if (!listFilterValues.pipeline_id && selectedPipelineId) {
+      setFilters(
+        { ...listFilterValues, pipeline_id: selectedPipelineId },
+        displayedFilters,
+      );
+    }
+  }, [displayedFilters, listFilterValues, selectedPipelineId, setFilters]);
 
-  if (view === "board" && lbsMode) {
+  if (view === "board") {
     return (
       <div className="w-full">
         <LbsDealBoardContent pipelineId={selectedPipelineId} />
@@ -119,22 +107,9 @@ const DealLayout = () => {
     );
   }
 
-  if (!data?.length && !hasFilters && view === "board")
-    return (
-      <>
-        <DealEmpty>
-          <DealArchivedList />
-        </DealEmpty>
-      </>
-    );
-
   return (
     <div className="w-full">
-      {view === "board" ? (
-        <DealListContent pipelineId={selectedPipelineId} />
-      ) : (
-        <DealTableView />
-      )}
+      <DealTableView />
       <DealArchivedList />
       <ProjectCreateFlow />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />
@@ -143,40 +118,13 @@ const DealLayout = () => {
 };
 
 const DealActions = () => {
-  const config = useConfigurationContext();
   const { data: identity } = useGetIdentity();
-  const lbsMode = isLbsMode();
   const { view, setView } = useDealsViewPreference();
-  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
-  const selectedPipelineId =
-    (filterValues.pipeline_id as string | undefined) ||
-    getDefaultPipeline(config)?.id ||
-    "default";
   const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
-
-  useEffect(() => {
-    if (!filterValues.pipeline_id && selectedPipelineId) {
-      setFilters(
-        { ...filterValues, pipeline_id: selectedPipelineId },
-        displayedFilters,
-      );
-    }
-  }, [displayedFilters, filterValues, selectedPipelineId, setFilters]);
 
   return (
     <PageActions>
       <PageTitle label="Deals" />
-      <div className="flex min-w-0 items-center gap-2">
-        {!lbsMode ? (
-          <>
-            <PipelineSelect />
-            <OnlyMineSwitch />
-            {canManageSales ? (
-              <ManageStagesButton pipelineId={selectedPipelineId} />
-            ) : null}
-          </>
-        ) : null}
-      </div>
       <div className="ml-auto flex items-center gap-2">
         <ToggleGroup
           type="single"
@@ -206,283 +154,6 @@ const DealActions = () => {
         />
       </div>
     </PageActions>
-  );
-};
-
-const ManageStagesButton = ({ pipelineId }: { pipelineId: string }) => {
-  const [manageOpen, setManageOpen] = useState(false);
-
-  return (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => setManageOpen(true)}
-      >
-        Manage Stages
-      </Button>
-      <ManageStagesDialog
-        open={manageOpen}
-        onOpenChange={setManageOpen}
-        pipelineId={pipelineId}
-      />
-    </>
-  );
-};
-
-const OnlyMineSwitch = () => {
-  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
-  const { identity } = useGetIdentity();
-
-  const isActive = typeof filterValues.organization_member_id !== "undefined";
-  const handleChange = () => {
-    const nextFilterValues = { ...filterValues };
-    if (isActive) {
-      delete nextFilterValues.organization_member_id;
-    } else {
-      nextFilterValues.organization_member_id = identity?.id;
-    }
-    setFilters(nextFilterValues, displayedFilters);
-  };
-
-  return (
-    <div className="flex h-9 shrink-0 items-center gap-2 rounded-md border border-input px-3">
-      <Switch
-        id="projects-only-mine"
-        checked={isActive}
-        onCheckedChange={handleChange}
-      />
-      <Label
-        htmlFor="projects-only-mine"
-        className="hidden text-sm font-normal xl:inline"
-      >
-        Only companies I manage
-      </Label>
-      <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-    </div>
-  );
-};
-
-const PipelineSelect = () => {
-  const config = useConfigurationContext();
-  const { filterValues, displayedFilters, setFilters } = useListFilterContext();
-  const selectedPipelineId =
-    (filterValues.pipeline_id as string | undefined) ||
-    getDefaultPipeline(config)?.id ||
-    "default";
-
-  return (
-    <select
-      className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-      value={selectedPipelineId}
-      onChange={(event) =>
-        setFilters(
-          { ...filterValues, pipeline_id: event.target.value },
-          displayedFilters,
-        )
-      }
-    >
-      {config.dealPipelines.map((pipeline) => (
-        <option key={pipeline.id} value={pipeline.id}>
-          {pipeline.label}
-        </option>
-      ))}
-    </select>
-  );
-};
-
-const ManageStagesDialog = ({
-  open,
-  onOpenChange,
-  pipelineId,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  pipelineId: string;
-}) => {
-  const config = useConfigurationContext();
-  const setConfig = useConfigurationUpdater();
-  const dataProvider = useDataProvider();
-  const notify = useNotify();
-  const pipeline = getPipelineById(config, pipelineId);
-  const [draftStages, setDraftStages] = useState(pipeline?.stages ?? []);
-  const { data: deals = [] } = useListContext();
-
-  useEffect(() => {
-    setDraftStages(pipeline?.stages ?? []);
-  }, [pipeline?.id, pipeline?.stages]);
-
-  if (!pipeline) return null;
-
-  const handleSave = async () => {
-    if (!draftStages.length) {
-      notify("At least one stage is required", { type: "error" });
-      return;
-    }
-
-    const nextPipelines = config.dealPipelines.map((item) =>
-      item.id === pipeline.id
-        ? {
-            ...item,
-            stages: draftStages.map((stage, index) => ({
-              ...stage,
-              id: stage.id || stage.label.toLowerCase().replace(/\s+/g, "-"),
-              order: index + 1,
-              pipelineId: pipeline.id,
-            })),
-          }
-        : item,
-    );
-    const nextConfig = { ...config, dealPipelines: nextPipelines };
-    setConfig(nextConfig);
-    await dataProvider.updateConfiguration(nextConfig);
-    notify("Pipeline stages updated");
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Manage Stages - {pipeline.label}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-2">
-          {draftStages.map((stage, index) => (
-            <div
-              key={stage.id || index}
-              className="grid grid-cols-[1fr_auto_auto_auto] gap-2"
-            >
-              <input
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                value={stage.label}
-                onChange={(event) =>
-                  setDraftStages((prev) =>
-                    prev.map((item, itemIndex) =>
-                      itemIndex === index
-                        ? {
-                            ...item,
-                            label: event.target.value,
-                            id:
-                              event.target.value
-                                .toLowerCase()
-                                .replace(/\s+/g, "-") || item.id,
-                          }
-                        : item,
-                    ),
-                  )
-                }
-              />
-              <input
-                type="color"
-                value={stage.color || "#64748b"}
-                onChange={(event) =>
-                  setDraftStages((prev) =>
-                    prev.map((item, itemIndex) =>
-                      itemIndex === index
-                        ? { ...item, color: event.target.value }
-                        : item,
-                    ),
-                  )
-                }
-                className="h-9 w-10 rounded-md border border-input bg-background p-1"
-              />
-              <div className="flex gap-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={index === 0}
-                  onClick={() =>
-                    setDraftStages((prev) => {
-                      const next = [...prev];
-                      [next[index - 1], next[index]] = [
-                        next[index],
-                        next[index - 1],
-                      ];
-                      return next;
-                    })
-                  }
-                >
-                  ↑
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={index === draftStages.length - 1}
-                  onClick={() =>
-                    setDraftStages((prev) => {
-                      const next = [...prev];
-                      [next[index + 1], next[index]] = [
-                        next[index],
-                        next[index + 1],
-                      ];
-                      return next;
-                    })
-                  }
-                >
-                  ↓
-                </Button>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const inUse = deals.some(
-                    (deal) =>
-                      (deal.pipeline_id || pipeline.id) === pipeline.id &&
-                      deal.stage === stage.id,
-                  );
-                  if (inUse) {
-                    notify("This stage is in use by projects", {
-                      type: "error",
-                    });
-                    return;
-                  }
-                  setDraftStages((prev) =>
-                    prev.filter((_, itemIndex) => itemIndex !== index),
-                  );
-                }}
-              >
-                Delete
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              setDraftStages((prev) => [
-                ...prev,
-                {
-                  id: `stage-${Date.now()}`,
-                  label: "New Stage",
-                  color: "#64748b",
-                  order: prev.length + 1,
-                  pipelineId: pipeline.id,
-                },
-              ])
-            }
-          >
-            Add Stage
-          </Button>
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSave}>
-            Save
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 };
 

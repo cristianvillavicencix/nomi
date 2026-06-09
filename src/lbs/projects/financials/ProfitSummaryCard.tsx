@@ -3,7 +3,6 @@ import { useGetList } from "ra-core";
 import type {
   DealChangeOrder,
   DealClientPayment,
-  DealCommission,
   DealExpense,
 } from "@/components/atomic-crm/types";
 import { MoneyText } from "@/lib/permissions/MoneyText";
@@ -48,15 +47,6 @@ export const ProfitSummaryCard = ({ record }: { record: LbsDeal }) => {
     },
     { staleTime: 30_000 },
   );
-  const { data: commissions = [] } = useGetList<DealCommission>(
-    "deal_commissions",
-    {
-      filter: { "deal_id@eq": record.id },
-      pagination: { page: 1, perPage: 500 },
-      sort: { field: "created_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
   const { data: payments = [] } = useGetList<DealClientPayment>(
     "deal_client_payments",
     {
@@ -68,15 +58,8 @@ export const ProfitSummaryCard = ({ record }: { record: LbsDeal }) => {
   );
 
   const summary = useMemo(
-    () =>
-      buildProjectProfitSummary(
-        record,
-        expenses,
-        changeOrders,
-        commissions,
-        payments,
-      ),
-    [record, expenses, changeOrders, commissions, payments],
+    () => buildProjectProfitSummary(record, expenses, changeOrders, payments),
+    [record, expenses, changeOrders, payments],
   );
 
   return (
@@ -97,11 +80,6 @@ export const ProfitSummaryCard = ({ record }: { record: LbsDeal }) => {
         <SummaryRow
           label="Expenses"
           value={-summary.expenses}
-          className="text-destructive"
-        />
-        <SummaryRow
-          label="Commissions"
-          value={-summary.commissions}
           className="text-destructive"
         />
         <div className="my-2 border-t" />

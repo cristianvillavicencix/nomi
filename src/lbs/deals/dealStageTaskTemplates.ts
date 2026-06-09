@@ -8,7 +8,6 @@ import {
   getIncompleteBriefSections,
   getProjectBriefProgress,
 } from "@/lbs/deals/projectBriefProgress";
-import { isLbsMode } from "@/lbs/productMode";
 import type { LbsDeal } from "@/lbs/types";
 
 type StageTaskTemplate = {
@@ -102,8 +101,6 @@ export const createBriefGapTasksForDeal = async ({
   deal: LbsDeal;
   organizationMemberId?: Identifier;
 }) => {
-  if (!isLbsMode()) return 0;
-
   const contactId = getDealContactId(deal);
   if (!contactId || !organizationMemberId) return 0;
 
@@ -160,7 +157,6 @@ export const createStageTasksForDeal = async ({
   previousStage?: string | null;
   organizationMemberId?: Identifier;
 }) => {
-  if (!isLbsMode()) return 0;
   const normalized = normalizeLbsProjectStage(newStage);
   if (previousStage && normalizeLbsProjectStage(previousStage) === normalized) {
     return 0;

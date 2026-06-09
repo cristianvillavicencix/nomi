@@ -17,7 +17,6 @@ import type { Db } from "./types";
 export default (): Db => {
   const db = {} as Db;
   db.organizationMembers = generateOrganizationMembers(db);
-  db.people = [];
   db.tags = generateTags(db);
   db.companies = generateCompanies(db);
   db.contacts = generateContacts(db);
@@ -25,7 +24,6 @@ export default (): Db => {
   db.deals = generateDeals(db);
   db.deal_notes = generateDealNotes(db);
   db.tasks = generateTasks(db);
-  db.task_assignees = [];
   db.task_participants = [];
   db.task_tag_notifications = [];
   db.calendar_events = [];
@@ -33,14 +31,6 @@ export default (): Db => {
     ...task,
     mentioned_member_ids: [],
   }));
-  db.time_entries = [];
-  db.payments = [];
-  db.payment_lines = [];
-  db.payroll_runs = [];
-  db.payroll_run_lines = [];
-  db.employee_loans = [];
-  db.employee_loan_deductions = [];
-  db.employee_pto_adjustments = [];
   db.proposals = [];
   db.proposal_line_items = [];
   db.proposal_payment_schedules = [];

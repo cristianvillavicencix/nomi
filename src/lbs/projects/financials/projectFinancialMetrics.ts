@@ -1,7 +1,6 @@
 import type {
   DealChangeOrder,
   DealClientPayment,
-  DealCommission,
   DealExpense,
 } from "@/components/atomic-crm/types";
 import type { LbsDeal } from "@/lbs/types";
@@ -31,19 +30,6 @@ export const getApprovedChangeOrdersTotal = (
 export const getExpensesTotal = (expenses: DealExpense[]) =>
   expenses.reduce((sum, entry) => sum + toNumber(entry.amount), 0);
 
-export const getCommissionCostEstimate = (
-  commissions: DealCommission[],
-  collectedAmount: number,
-) =>
-  commissions.reduce((sum, commission) => {
-    const value = toNumber(commission.commission_value);
-    if (commission.commission_type === "fixed") return sum + value;
-    if (commission.basis === "payments_collected") {
-      return sum + collectedAmount * (value / 100);
-    }
-    return sum;
-  }, 0);
-
 export const getProjectBaseValue = (record: LbsDeal) =>
   toNumber(record.original_project_value) ||
   toNumber(record.estimated_value) ||
@@ -65,7 +51,6 @@ export type ProjectProfitSummary = {
   collected: number;
   pending: number;
   expenses: number;
-  commissions: number;
   estimatedProfit: number;
   marginPercent: number | null;
 };
@@ -74,7 +59,6 @@ export const buildProjectProfitSummary = (
   record: LbsDeal,
   expenses: DealExpense[],
   changeOrders: DealChangeOrder[],
-  commissions: DealCommission[],
   payments: DealClientPayment[],
 ): ProjectProfitSummary => {
   const projectValue = getProjectBaseValue(record);
@@ -83,8 +67,7 @@ export const buildProjectProfitSummary = (
   const collected = getCollectedPaymentsTotal(payments);
   const pending = Math.max(0, currentValue - collected);
   const expenseTotal = getExpensesTotal(expenses);
-  const commissionTotal = getCommissionCostEstimate(commissions, collected);
-  const estimatedProfit = collected - expenseTotal - commissionTotal;
+  const estimatedProfit = collected - expenseTotal;
   const marginPercent =
     collected > 0 ? (estimatedProfit / collected) * 100 : null;
 
@@ -95,7 +78,6 @@ export const buildProjectProfitSummary = (
     collected,
     pending,
     expenses: expenseTotal,
-    commissions: commissionTotal,
     estimatedProfit,
     marginPercent,
   };

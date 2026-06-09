@@ -5,11 +5,12 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
-import { issueClientInvoiceFromInstallment, issueClientInvoiceFromProposal } from "../_shared/clientInvoiceFlow.ts";
+import { issueClientInvoiceFromInstallment, issueClientInvoiceFromProposal, syncProposalInstallmentInvoices } from "../_shared/clientInvoiceFlow.ts";
 
 type IssueBody = {
   installment_id?: number;
   proposal_id?: number;
+  sync_all_installments?: boolean;
   amount?: number;
   due_date?: string;
   description?: string;
@@ -59,6 +60,17 @@ Deno.serve(
         }
 
         if (proposalId && Number.isFinite(proposalId)) {
+          if (body.sync_all_installments) {
+            const invoices = await syncProposalInstallmentInvoices(
+              supabaseAdmin,
+              member.org_id,
+              proposalId,
+            );
+            return new Response(JSON.stringify({ invoices }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
           const invoice = await issueClientInvoiceFromProposal(
             supabaseAdmin,
             member.org_id,

@@ -13,21 +13,19 @@ import { useLocation, useNavigate } from "react-router";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { resolveEffectiveModules } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
-import type { Company, Contact, Person } from "@/components/atomic-crm/types";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import { cn } from "@/lib/utils";
 import { LBS_CONTACT_STATUSES, LBS_LEAD_STATUSES } from "@/lbs/navigation";
-import { isLbsMode } from "@/lbs/productMode";
 import {
   getClientShowPath,
   getContactShowPath,
   getLeadShowPath,
 } from "@/lbs/routing";
-import { resolveAvatarUrl } from "@/components/avatar/resolveAvatar";
 
 /**
  * Global Spotlight search. One button — searches across every module
  * the current user has access to (Leads, Clients, Contacts, Projects,
- * People) and renders results grouped by module. The module matching the
+ * Projects) and renders results grouped by module. The module matching the
  * current URL is shown first so search "starts where you are".
  */
 export type SpotlightSearchButtonProps = {
@@ -55,7 +53,7 @@ export type SpotlightSearchButtonProps = {
   renderItem?: (record: RaRecord, isActive: boolean) => ReactNode;
 };
 
-type ModuleId = "leads" | "clients" | "contacts" | "deals" | "people";
+type ModuleId = "leads" | "clients" | "contacts" | "deals";
 
 type ResolvedSuggestion = {
   moduleId: ModuleId;
@@ -108,11 +106,10 @@ export const SpotlightSearchButton = ({
   // Module access matrix — adapts to product mode (LBS vs contractor).
   const moduleAccess = useMemo(
     () => ({
-      leads: isLbsMode() && modulePermissions.crm,
+      leads: modulePermissions.crm,
       clients: modulePermissions.crm,
       contacts: modulePermissions.crm,
       deals: modulePermissions.deal_operations,
-      people: modulePermissions.people,
     }),
     [modulePermissions],
   );
@@ -124,7 +121,6 @@ export const SpotlightSearchButton = ({
     if (matchesPathByPrefix("/companies")(pathname)) return "clients";
     if (matchesPathByPrefix("/contacts")(pathname)) return "contacts";
     if (matchesPathByPrefix("/deals")(pathname)) return "deals";
-    if (matchesPathByPrefix("/people")(pathname)) return "people";
     return null;
   }, [pathname]);
 
@@ -171,16 +167,6 @@ export const SpotlightSearchButton = ({
       filter: trimmedQuery ? { q: trimmedQuery } : {},
     },
     { enabled: open && moduleAccess.deals, staleTime: 15_000 },
-  );
-
-  const peopleQuery = useGetList(
-    "people",
-    {
-      pagination: { page: 1, perPage: perModuleLimit },
-      sort: { field: "last_name", order: "ASC" },
-      filter: trimmedQuery ? { q: trimmedQuery } : {},
-    },
-    { enabled: open && moduleAccess.people, staleTime: 15_000 },
   );
 
   // Build grouped suggestion list. Each group is the module's section.
@@ -286,30 +272,6 @@ export const SpotlightSearchButton = ({
       ),
     });
 
-    const buildPersonRow = (record: Person): ResolvedSuggestion => ({
-      moduleId: "people",
-      moduleLabel: "Personas",
-      record,
-      href: `/people/${record.id}/show`,
-      renderRow: () => (
-        <>
-          <img
-            src={resolveAvatarUrl(record, 64)}
-            alt=""
-            className="size-7 rounded-full object-cover"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {fullName(record) || record.business_name || "Sin nombre"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {truncatedJoin([record.type, record.email, record.phone])}
-            </p>
-          </div>
-        </>
-      ),
-    });
-
     const all: { id: ModuleId; label: string; rows: ResolvedSuggestion[] }[] =
       [];
     if (moduleAccess.leads) {
@@ -340,14 +302,6 @@ export const SpotlightSearchButton = ({
         rows: (dealsQuery.data ?? []).map(buildDealRow),
       });
     }
-    if (moduleAccess.people) {
-      all.push({
-        id: "people",
-        label: "Personas",
-        rows: (peopleQuery.data ?? []).map(buildPersonRow),
-      });
-    }
-
     // Sort so the current module's section is rendered first.
     if (currentModule) {
       const idx = all.findIndex((g) => g.id === currentModule);
@@ -363,12 +317,10 @@ export const SpotlightSearchButton = ({
     moduleAccess.contacts,
     moduleAccess.deals,
     moduleAccess.leads,
-    moduleAccess.people,
     clientsQuery.data,
     contactsQuery.data,
     dealsQuery.data,
     leadsQuery.data,
-    peopleQuery.data,
   ]);
 
   // Flat list used for keyboard navigation.
@@ -442,7 +394,7 @@ export const SpotlightSearchButton = ({
     clientsQuery.isFetching ||
     contactsQuery.isFetching ||
     dealsQuery.isFetching ||
-    peopleQuery.isFetching;
+    false;
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>

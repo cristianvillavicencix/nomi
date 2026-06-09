@@ -4,7 +4,6 @@ import {
   useDataProvider,
   useGetIdentity,
   useListContext,
-  useNotify,
   useRedirect,
   type GetListResult,
 } from "ra-core";
@@ -19,7 +18,6 @@ import { FormToolbar } from "@/components/admin/simple-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { clearFormDraft } from "@/lib/formPersistence/formDraftStorage";
-import { isLbsMode } from "@/lbs/productMode";
 import {
   LBS_DEFAULT_AGENCY_PROJECT_TYPE,
   LBS_DEFAULT_AGENCY_STAGE,
@@ -32,7 +30,6 @@ import { emptyWebsiteBriefValues } from "@/lbs/deals/websiteBriefSchema";
 
 import type { Deal } from "../types";
 import { DealInputs } from "./DealInputs";
-import { syncProjectAssignments } from "./projectAssignments";
 import { normalizeProjectPayload } from "./projectForm";
 
 const DEAL_CREATE_DRAFT_KEY = "crm:deal-create";
@@ -46,7 +43,6 @@ export const DealCreate = ({
 }) => {
   const redirect = useRedirect();
   const dataProvider = useDataProvider();
-  const notify = useNotify();
   const { data: allDeals } = useListContext<Deal>();
 
   const handleClose = () => {
@@ -58,24 +54,9 @@ export const DealCreate = ({
   };
 
   const queryClient = useQueryClient();
-  const lbsMode = isLbsMode();
 
   const onSuccess = async (deal: Deal) => {
     clearFormDraft(DEAL_CREATE_DRAFT_KEY);
-    if (!lbsMode) {
-      try {
-        await syncProjectAssignments(
-          dataProvider,
-          deal.id,
-          deal.salesperson_ids,
-          deal.subcontractor_ids,
-        );
-      } catch {
-        notify("Project saved, but assignments could not be fully synced", {
-          type: "warning",
-        });
-      }
-    }
 
     if (!allDeals) {
       if (onClose) {
@@ -145,23 +126,16 @@ export const DealCreate = ({
       <Form
         defaultValues={{
           organization_member_id: identity?.id,
-          category: lbsMode ? LBS_DEFAULT_PROJECT_CATEGORY : "retail",
-          stage: lbsMode ? LBS_DEFAULT_AGENCY_STAGE : "lead",
-          project_type: lbsMode
-            ? LBS_DEFAULT_AGENCY_PROJECT_TYPE
-            : "roofing",
-          lifecycle_phase: lbsMode
-            ? LBS_DEFAULT_LIFECYCLE_PHASE
-            : undefined,
-          delivery_status: lbsMode
-            ? LBS_DEFAULT_DELIVERY_STATUS
-            : undefined,
-          priority: lbsMode ? LBS_DEFAULT_PROJECT_PRIORITY : undefined,
-          estimated_value: lbsMode ? undefined : 0,
-          amount: lbsMode ? undefined : 0,
+          category: LBS_DEFAULT_PROJECT_CATEGORY,
+          stage: LBS_DEFAULT_AGENCY_STAGE,
+          project_type: LBS_DEFAULT_AGENCY_PROJECT_TYPE,
+          lifecycle_phase: LBS_DEFAULT_LIFECYCLE_PHASE,
+          delivery_status: LBS_DEFAULT_DELIVERY_STATUS,
+          priority: LBS_DEFAULT_PROJECT_PRIORITY,
+          estimated_value: undefined,
+          amount: undefined,
           notes: "",
-          project_address: lbsMode ? undefined : "",
-          website_brief: lbsMode ? emptyWebsiteBriefValues() : undefined,
+          website_brief: emptyWebsiteBriefValues(),
           company_id: presetCompanyId ? Number(presetCompanyId) : null,
           contact_id: presetContactId ? Number(presetContactId) : null,
           contact_ids: presetContactId ? [Number(presetContactId)] : [],
@@ -172,7 +146,7 @@ export const DealCreate = ({
         }}
       >
         <FormGuardProvider draftKey={DEAL_CREATE_DRAFT_KEY} enabled>
-          <DealCreateDialogShell onClose={handleClose} lbsMode={lbsMode} />
+          <DealCreateDialogShell onClose={handleClose} />
         </FormGuardProvider>
       </Form>
     </Create>
@@ -181,10 +155,8 @@ export const DealCreate = ({
 
 const DealCreateDialogShell = ({
   onClose,
-  lbsMode,
 }: {
   onClose: () => void;
-  lbsMode: boolean;
 }) => {
   const guardedClose = useGuardedDialogClose((next) => {
     if (!next) onClose();
@@ -197,9 +169,8 @@ const DealCreateDialogShell = ({
           New Project
         </DialogTitle>
         <DialogDescription>
-          {lbsMode
-            ? "Set up a website or digital marketing project with service details, budget, and goals."
-            : "Create and configure a construction project with contact, address, stage, and assignments."}
+          Set up a website or digital marketing project with service details,
+          budget, and goals.
         </DialogDescription>
         <DealInputs />
         <FormToolbar>

@@ -27,17 +27,11 @@ import deals from "../deals";
 import { DesktopLayout } from "../layout/DesktopLayout";
 import { MobileLayout } from "../layout/MobileLayout";
 import { withLbsMessagesProvider } from "@/lbs/messages/withLbsMessagesProvider";
-import { ImportPage } from "../misc/ImportPage";
 import {
   authProvider as defaultAuthProvider,
   dataProvider as defaultDataProvider,
 } from "../providers/supabase";
 import organizationMembers from "../organizationMembers";
-import people from "@/people";
-import timeEntries from "@/timeEntries";
-import payments from "@/payments";
-import payrollRuns from "@/payrollRuns";
-import loans from "@/loans";
 import { ProfilePage } from "../settings/ProfilePage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { ReportsPage } from "@/reports";
@@ -69,7 +63,6 @@ import {
   renderLbsPublicFormRoute,
   renderLbsPublicPortalRoutes,
 } from "@/lbs/LbsCustomRoutes";
-import { isLbsMode } from "@/lbs/productMode";
 import proposals from "@/lbs/proposals";
 import contracts from "@/lbs/contracts";
 import tickets from "@/lbs/tickets";
@@ -77,17 +70,7 @@ import { ContactListMobile } from "../contacts/ContactList.tsx";
 import { ContactShow } from "../contacts/ContactShow.tsx";
 import { CompanyShow } from "../companies/CompanyShow.tsx";
 import { NoteShowPage } from "../notes/NoteShowPage.tsx";
-import { PeopleQuickViewPage } from "@/people/PeopleQuickViewPage";
-import { ContactQuickViewPage } from "../contacts/ContactQuickViewPage";
-import { CompanyQuickViewPage } from "../companies/CompanyQuickViewPage";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  OldPlatformToSasRedirect,
-  PlatafformToSasRedirect,
-} from "@/platform/PlatafformRedirect";
-import { PlatformApp } from "@/platform/PlatformApp";
-import { PlatformEmpresasPage } from "@/platform/PlatformEmpresasPage";
-import { PlatformEmpresaDetailPage } from "@/platform/PlatformEmpresaDetailPage";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -290,37 +273,17 @@ const DesktopAdmin = (props: CoreAdminProps) => {
           element={<ForgotPasswordPage />}
         />
         <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
-        {isLbsMode() ? (
-          <>
-            <Route path="/platafform" element={<Navigate to="/" replace />} />
-            <Route path="/platafform/*" element={<Navigate to="/" replace />} />
-            <Route path="/platform" element={<Navigate to="/" replace />} />
-            <Route path="/platform/*" element={<Navigate to="/" replace />} />
-            <Route path="/sas" element={<Navigate to="/" replace />} />
-            <Route path="/sas/*" element={<Navigate to="/" replace />} />
-            {renderLbsPublicFormRoute()}
-            {renderLbsProposalClientPreviewRoute()}
-            {renderLbsPublicPortalRoutes()}
-          </>
-        ) : (
-          <>
-            <Route
-              path="/platafform"
-              element={<Navigate to="/sas" replace />}
-            />
-            <Route path="/platafform/*" element={<PlatafformToSasRedirect />} />
-            <Route path="/platform" element={<Navigate to="/sas" replace />} />
-            <Route path="/platform/*" element={<OldPlatformToSasRedirect />} />
-            <Route path="/sas/*" element={<PlatformApp />}>
-              <Route index element={<Navigate to="/sas/empresas" replace />} />
-              <Route path="empresas" element={<PlatformEmpresasPage />} />
-              <Route
-                path="empresas/:id"
-                element={<PlatformEmpresaDetailPage />}
-              />
-            </Route>
-          </>
-        )}
+        <>
+          <Route path="/platafform" element={<Navigate to="/" replace />} />
+          <Route path="/platafform/*" element={<Navigate to="/" replace />} />
+          <Route path="/platform" element={<Navigate to="/" replace />} />
+          <Route path="/platform/*" element={<Navigate to="/" replace />} />
+          <Route path="/sas" element={<Navigate to="/" replace />} />
+          <Route path="/sas/*" element={<Navigate to="/" replace />} />
+          {renderLbsPublicFormRoute()}
+          {renderLbsProposalClientPreviewRoute()}
+          {renderLbsPublicPortalRoutes()}
+        </>
       </CustomRoutes>
 
       <CustomRoutes>
@@ -333,153 +296,12 @@ const DesktopAdmin = (props: CoreAdminProps) => {
             </ProtectedRoute>
           }
         />
-        <Route
-          path={ImportPage.path}
-          element={isLbsMode() ? <Navigate to="/" replace /> : <ImportPage />}
-        />
-        {!isLbsMode() ? (
-          <Route
-            path="/contacts/:id/show"
-            element={
-              <ProtectedRoute resource="contacts" action="list">
-                <ContactQuickViewPage />
-              </ProtectedRoute>
-            }
-          />
-        ) : null}
-        {!isLbsMode() ? (
-          <>
-            <Route
-              path="/companies/:id/show"
-              element={
-                <ProtectedRoute resource="companies" action="list">
-                  <CompanyQuickViewPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/companies/:id/show/:tab"
-              element={
-                <ProtectedRoute resource="companies" action="list">
-                  <CompanyQuickViewPage />
-                </ProtectedRoute>
-              }
-            />
-          </>
-        ) : null}
-        {!isLbsMode() ? (
-          <>
-            <Route
-              path="/people/employees"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="employee" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/people/employees/:id"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="employee" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/people/employees/:id/:tab"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="employee" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/people/salespeople"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="salesperson" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/people/salespeople/:id"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="salesperson" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/people/salespeople/:id/:tab"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="salesperson" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/people/subcontractors"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="subcontractor" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/people/subcontractors/:id"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="subcontractor" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/people/subcontractors/:id/:tab"
-              element={
-                <ProtectedRoute resource="people" action="list">
-                  <PeopleQuickViewPage type="subcontractor" />
-                </ProtectedRoute>
-              }
-            />
-          </>
-        ) : null}
+        <Route path="/import" element={<Navigate to="/" replace />} />
         <Route
           path="/reports"
           element={
             <ProtectedRoute resource="reports" action="list">
               <ReportsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports/project-profitability"
-          element={
-            <ProtectedRoute resource="reports" action="list">
-              <ReportsPage initialTab="project-profitability" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports/payroll-summary"
-          element={
-            <ProtectedRoute resource="reports" action="list">
-              <ReportsPage initialTab="payroll-summary" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports/labor-cost-by-person"
-          element={
-            <ProtectedRoute resource="reports" action="list">
-              <ReportsPage initialTab="labor-cost-by-person" />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports/sales-commissions"
-          element={
-            <ProtectedRoute resource="reports" action="list">
-              <ReportsPage initialTab="sales-commissions" />
             </ProtectedRoute>
           }
         />
@@ -493,100 +315,61 @@ const DesktopAdmin = (props: CoreAdminProps) => {
         />
         <Route path="/projects" element={<Navigate to="/deals" replace />} />
         {renderLbsCustomRoutes({ ProtectedRoute })}
-        {isLbsMode() ? (
-          <>
-            <Route
-              path="/time_entries/*"
-              element={<Navigate to="/" replace />}
-            />
-            <Route
-              path="/payroll_runs/*"
-              element={<Navigate to="/" replace />}
-            />
-            <Route path="/payments/*" element={<Navigate to="/" replace />} />
-            <Route
-              path="/employee_loans/*"
-              element={<Navigate to="/" replace />}
-            />
-            <Route path="/people/*" element={<Navigate to="/" replace />} />
-          </>
-        ) : null}
+        <Route path="/time_entries/*" element={<Navigate to="/" replace />} />
+        <Route path="/payroll_runs/*" element={<Navigate to="/" replace />} />
+        <Route path="/payments/*" element={<Navigate to="/" replace />} />
+        <Route path="/employee_loans/*" element={<Navigate to="/" replace />} />
+        <Route path="/people/*" element={<Navigate to="/" replace />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
-      {!isLbsMode() ? (
-        <>
-          <Resource name="people" {...people} />
-          <Resource name="time_entries" {...timeEntries} />
-          <Resource name="payments" {...payments} />
-          <Resource name="payment_lines" />
-          <Resource name="payroll_runs" {...payrollRuns} />
-          <Resource name="payroll_run_lines" />
-          <Resource name="employee_loans" {...loans} />
-          <Resource name="employee_loan_deductions" />
-          <Resource name="employee_pto_adjustments" />
-        </>
-      ) : null}
-      {isLbsMode() ? (
-        <>
-          <Resource name="proposals" {...proposals} />
-          <Resource name="contracts" {...contracts} />
-          <Resource name="forms" />
-          <Resource name="form_submissions" />
-          <Resource name="form_instances" />
-          <Resource name="form_submissions_v2" />
-          <Resource name="form_submission_events" />
-          <Resource name="public_form_tokens" />
-          <Resource name="form_templates" />
-          <Resource name="tickets" {...tickets} />
-          <Resource name="ticket_messages" />
-          <Resource name="conversations" />
-          <Resource name="conversation_participants" />
-          <Resource name="conversation_messages" />
-          <Resource name="message_templates" />
-          <Resource name="voice_calls" />
-          <Resource name="deal_resources" />
-          <Resource name="deal_access_entries" />
-          <Resource name="deal_secrets" />
-          <Resource name="deal_expenses" />
-          <Resource name="deal_change_orders" />
-          <Resource name="deal_commissions" />
-          <Resource name="proposal_line_items" />
-          <Resource name="proposal_payment_schedules" />
-          <Resource name="proposal_payment_installments" />
-          <Resource name="client_invoices" />
-          <Resource name="client_invoice_line_items" />
-          <Resource name="proposal_templates" />
-          <Resource name="service_packages" />
-          <Resource name="service_addons" />
-          <Resource name="organization_contract_terms" />
-          <Resource name="deal_client_payments" />
-          <Resource name="organization_pipeline_stages" />
-          <Resource name="deal_launch_checklist_items" />
-          <Resource name="launch_checklist_templates" />
-          <Resource name="deal_milestones" />
-          <Resource name="maintenance_retainers" />
-          <Resource name="maintenance_hours_log" />
-          <Resource name="client_portal_accounts" />
-          <Resource name="client_portal_deal_access" />
-          <Resource name="project_deliveries" />
-          <Resource name="project_delivery_notifications" />
-          <Resource name="deal_approvals" />
-          <Resource name="report_web_agency_metrics" />
-          <Resource name="deal_activity_unified" />
-        </>
-      ) : null}
+      <Resource name="proposals" {...proposals} />
+      <Resource name="contracts" {...contracts} />
+      <Resource name="forms" />
+      <Resource name="form_submissions" />
+      <Resource name="form_instances" />
+      <Resource name="form_submissions_v2" />
+      <Resource name="form_submission_events" />
+      <Resource name="public_form_tokens" />
+      <Resource name="form_templates" />
+      <Resource name="tickets" {...tickets} />
+      <Resource name="ticket_messages" />
+      <Resource name="conversations" />
+      <Resource name="conversation_participants" />
+      <Resource name="conversation_messages" />
+      <Resource name="message_templates" />
+      <Resource name="voice_calls" />
+      <Resource name="deal_resources" />
+      <Resource name="deal_access_entries" />
+      <Resource name="deal_secrets" />
+      <Resource name="deal_expenses" />
+      <Resource name="deal_change_orders" />
+      <Resource name="proposal_line_items" />
+      <Resource name="proposal_payment_schedules" />
+      <Resource name="proposal_payment_installments" />
+      <Resource name="client_invoices" />
+      <Resource name="client_invoice_line_items" />
+      <Resource name="proposal_templates" />
+      <Resource name="service_packages" />
+      <Resource name="service_addons" />
+      <Resource name="organization_contract_terms" />
+      <Resource name="deal_client_payments" />
+      <Resource name="organization_pipeline_stages" />
+      <Resource name="deal_launch_checklist_items" />
+      <Resource name="launch_checklist_templates" />
+      <Resource name="deal_milestones" />
+      <Resource name="maintenance_retainers" />
+      <Resource name="maintenance_hours_log" />
+      <Resource name="client_portal_accounts" />
+      <Resource name="client_portal_deal_access" />
+      <Resource name="project_deliveries" />
+      <Resource name="project_delivery_notifications" />
+      <Resource name="deal_approvals" />
+      <Resource name="report_web_agency_metrics" />
+      <Resource name="deal_activity_unified" />
       <Resource name="contacts" {...contacts} />
       <Resource name="companies" {...companies} />
       <Resource name="contact_notes" />
       <Resource name="deal_notes" />
-      {!isLbsMode() ? (
-        <>
-          <Resource name="deal_subcontractor_entries" />
-          <Resource name="deal_expenses" />
-          <Resource name="deal_change_orders" />
-          <Resource name="deal_commissions" />
-        </>
-      ) : null}
       <Resource name="tasks" {...tasks} />
       <Resource name="organization_members" {...organizationMembers} />
       <Resource name="tags" />
@@ -644,52 +427,20 @@ const MobileAdmin = (props: CoreAdminProps) => {
             element={<ForgotPasswordPage />}
           />
           <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
-          {isLbsMode() ? (
-            <>
-              <Route path="/platafform" element={<Navigate to="/" replace />} />
-              <Route
-                path="/platafform/*"
-                element={<Navigate to="/" replace />}
-              />
-              <Route path="/platform" element={<Navigate to="/" replace />} />
-              <Route path="/platform/*" element={<Navigate to="/" replace />} />
-              <Route path="/sas" element={<Navigate to="/" replace />} />
-              <Route path="/sas/*" element={<Navigate to="/" replace />} />
-              {renderLbsPublicFormRoute()}
-              {renderLbsProposalClientPreviewRoute()}
-              {renderLbsPublicPortalRoutes()}
-            </>
-          ) : (
-            <>
-              <Route
-                path="/platafform"
-                element={<Navigate to="/sas" replace />}
-              />
-              <Route
-                path="/platafform/*"
-                element={<PlatafformToSasRedirect />}
-              />
-              <Route
-                path="/platform"
-                element={<Navigate to="/sas" replace />}
-              />
-              <Route
-                path="/platform/*"
-                element={<OldPlatformToSasRedirect />}
-              />
-              <Route path="/sas/*" element={<PlatformApp />}>
-                <Route
-                  index
-                  element={<Navigate to="/sas/empresas" replace />}
-                />
-                <Route path="empresas" element={<PlatformEmpresasPage />} />
-                <Route
-                  path="empresas/:id"
-                  element={<PlatformEmpresaDetailPage />}
-                />
-              </Route>
-            </>
-          )}
+          <>
+            <Route path="/platafform" element={<Navigate to="/" replace />} />
+            <Route
+              path="/platafform/*"
+              element={<Navigate to="/" replace />}
+            />
+            <Route path="/platform" element={<Navigate to="/" replace />} />
+            <Route path="/platform/*" element={<Navigate to="/" replace />} />
+            <Route path="/sas" element={<Navigate to="/" replace />} />
+            <Route path="/sas/*" element={<Navigate to="/" replace />} />
+            {renderLbsPublicFormRoute()}
+            {renderLbsProposalClientPreviewRoute()}
+            {renderLbsPublicPortalRoutes()}
+          </>
         </CustomRoutes>
         <Resource
           name="contacts"

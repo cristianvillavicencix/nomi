@@ -2,10 +2,8 @@ import { Plus } from "lucide-react";
 import {
   CreateBase,
   Form,
-  RecordRepresentation,
   useDataProvider,
   useGetIdentity,
-  useGetOne,
   useNotify,
   useRecordContext,
   useUpdate,
@@ -30,15 +28,12 @@ import {
 
 import { TaskFormContent } from "./TaskFormContent";
 import { normalizeTaskCreateData } from "./taskConstants";
-import { isLbsMode } from "@/lbs/productMode";
 
 export const AddTask = ({
-  selectContact,
   display = "chip",
   contactId,
   contactIds,
   dealId,
-  contactFilter,
   dueDate,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
@@ -68,16 +63,6 @@ export const AddTask = ({
     contactId ??
     (contactIds?.length === 1 ? contactIds[0] : undefined) ??
     contact?.id;
-  const scopedContactFilter =
-    contactIds && contactIds.length > 1
-      ? { "id@in": `(${contactIds.join(",")})` }
-      : contactFilter;
-  const shouldSelectContact = selectContact ?? resolvedContactId == null;
-  const { data: linkedContact } = useGetOne(
-    "contacts",
-    { id: resolvedContactId! },
-    { enabled: resolvedContactId != null && !shouldSelectContact },
-  );
 
   const handleSuccess = async (data: any) => {
     setOpen(false);
@@ -85,15 +70,15 @@ export const AddTask = ({
       notify("Task added");
       return;
     }
-    const contact = await dataProvider.getOne("contacts", {
+    const contactRecord = await dataProvider.getOne("contacts", {
       id: data.contact_id,
     });
-    if (!contact.data) return;
+    if (!contactRecord.data) return;
 
     await update("contacts", {
-      id: contact.data.id,
+      id: contactRecord.data.id,
       data: { last_seen: new Date().toISOString() },
-      previousData: contact.data,
+      previousData: contactRecord.data,
     });
 
     notify("Task added");
@@ -164,26 +149,9 @@ export const AddTask = ({
             <DialogContent className="lg:max-w-xl overflow-y-auto max-h-9/10 top-1/20 translate-y-0">
               <Form className="flex flex-col gap-4">
                 <DialogHeader>
-                  <DialogTitle>
-                    {isLbsMode()
-                      ? "New task"
-                      : !shouldSelectContact
-                        ? "Create a new task for "
-                        : "Create a new task"}
-                    {!isLbsMode() && !shouldSelectContact && (
-                      <RecordRepresentation
-                        record={linkedContact ?? contact}
-                        resource="contacts"
-                      />
-                    )}
-                  </DialogTitle>
+                  <DialogTitle>New task</DialogTitle>
                 </DialogHeader>
-                <TaskFormContent
-                  selectContact={!isLbsMode() && shouldSelectContact}
-                  contactFilter={scopedContactFilter}
-                  showDealLink={!isLbsMode() && dealId == null}
-                  defaultDealId={dealId}
-                />
+                <TaskFormContent defaultDealId={dealId} />
                 <DialogFooter className="w-full justify-end">
                   <DialogSaveButton />
                 </DialogFooter>

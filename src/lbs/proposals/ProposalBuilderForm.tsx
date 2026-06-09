@@ -13,9 +13,16 @@ import { Eye, Loader2, Save } from "lucide-react";
 import { TextInput } from "@/components/admin/text-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Company, Contact } from "@/components/atomic-crm/types";
+import { InvoiceOnlinePaymentSetupDialog } from "@/lbs/billing/InvoiceOnlinePaymentSetupDialog";
+import {
+  defaultProposalOnlinePaymentSetup,
+  depositPercentFromOnlinePaymentSetup,
+  parseProposalOnlinePaymentSetup,
+  type OnlinePaymentSetup,
+} from "@/lbs/billing/onlinePaymentSetupBridge";
+import { describeInvoiceOnlinePaymentSummary } from "@/lbs/billing/invoiceRemainderSchedule";
 import type {
   Proposal,
   ProposalLineItem,
@@ -25,25 +32,16 @@ import { ProposalCrmLinksCard } from "@/lbs/proposals/ProposalCrmLinksCard";
 import { ProposalCartPanel } from "@/lbs/proposals/ProposalCartPanel";
 import { ProposalCatalogPanel } from "@/lbs/proposals/ProposalCatalogPanel";
 import {
-  DEFAULT_DEPOSIT_PERCENT,
   DEFAULT_VALIDITY_DAYS,
 } from "@/lbs/proposals/proposalCommercialConstants";
 import {
   calculateProposalTotals,
   computeValidUntil,
-  type PaymentScheduleConfig,
   type ProposalLineDraft,
 } from "@/lbs/proposals/proposalCommercialUtils";
 import { saveProposalCommercial } from "@/lbs/proposals/saveProposalCommercial";
 
 export const PROPOSAL_BUILDER_FORM_ID = "proposal-builder-form";
-
-const defaultScheduleConfig = (): PaymentScheduleConfig => ({
-  installment_frequency: "weekly",
-  installment_count: 4,
-  deposit_due_date: computeValidUntil(DEFAULT_VALIDITY_DAYS),
-  balance_start_date: null,
-});
 
 type ProposalFormValues = {
   title: string;
@@ -52,28 +50,34 @@ type ProposalFormValues = {
   deal_id: unknown;
   notes: string;
   validity_days: number;
-  deposit_percent: number;
 };
 
 const ProposalBuilderFields = ({
   lines,
   setLines,
-  scheduleConfig,
-  setScheduleConfig,
+  onlinePaymentSetup,
+  setOnlinePaymentSetup,
   isSaving,
   proposalId,
 }: {
   lines: ProposalLineDraft[];
   setLines: (lines: ProposalLineDraft[]) => void;
-  scheduleConfig: PaymentScheduleConfig;
-  setScheduleConfig: (config: PaymentScheduleConfig) => void;
+  onlinePaymentSetup: OnlinePaymentSetup;
+  setOnlinePaymentSetup: (value: OnlinePaymentSetup) => void;
   isSaving: boolean;
   proposalId?: string | number;
 }) => {
   const { watch, setValue } = useFormContext<ProposalFormValues>();
-  const depositPercent = watch("deposit_percent") ?? DEFAULT_DEPOSIT_PERCENT;
+  const validityDays = watch("validity_days") ?? DEFAULT_VALIDITY_DAYS;
   const companyId = watch("company_id");
   const title = watch("title");
+  const [paymentSetupOpen, setPaymentSetupOpen] = useState(false);
+
+  const anchorDate = useMemo(
+    () => computeValidUntil(validityDays),
+    [validityDays],
+  );
+  const issueDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const { data: company } = useGetOne<Company>(
     "companies",
@@ -87,9 +91,21 @@ const ProposalBuilderFields = ({
     }
   }, [company?.name, setValue, title]);
 
+  const depositPercent = depositPercentFromOnlinePaymentSetup(onlinePaymentSetup);
   const totals = useMemo(
     () => calculateProposalTotals(lines, depositPercent),
     [lines, depositPercent],
+  );
+
+  const paymentSummary = useMemo(
+    () =>
+      describeInvoiceOnlinePaymentSummary({
+        paymentMode: onlinePaymentSetup.paymentMode,
+        depositPercent: onlinePaymentSetup.depositPercent,
+        total: totals.oneTimeTotal,
+        remainderSchedule: onlinePaymentSetup.remainderSchedule,
+      }),
+    [onlinePaymentSetup, totals.oneTimeTotal],
   );
 
   return (
@@ -123,16 +139,30 @@ const ProposalBuilderFields = ({
         </div>
         <div className="min-w-0 lg:sticky lg:top-2 lg:self-start">
           <ProposalCartPanel
-          lines={lines}
-          onChange={setLines}
-          totals={totals}
-          depositPercent={depositPercent}
-          scheduleConfig={scheduleConfig}
-          onScheduleChange={setScheduleConfig}
-          isSaving={isSaving}
+            lines={lines}
+            onChange={setLines}
+            totals={totals}
+            onlinePaymentSetup={onlinePaymentSetup}
+            paymentSummary={paymentSummary}
+            onConfigurePayment={() => setPaymentSetupOpen(true)}
+            isSaving={isSaving}
           />
         </div>
       </div>
+
+      <InvoiceOnlinePaymentSetupDialog
+        open={paymentSetupOpen}
+        onOpenChange={setPaymentSetupOpen}
+        total={totals.oneTimeTotal}
+        issueDate={issueDate}
+        dueDate={anchorDate}
+        value={onlinePaymentSetup}
+        context="proposal"
+        onApply={(next) => {
+          setOnlinePaymentSetup(next);
+          setPaymentSetupOpen(false);
+        }}
+      />
     </div>
   );
 };
@@ -148,11 +178,12 @@ export const ProposalBuilderForm = ({
   const dataProvider = useDataProvider();
   const { identity } = useGetIdentity();
   const orgId = Number(identity?.org_id ?? 1);
-  const [isSaving, setIsSaving] = useState(false);
+
   const [lines, setLines] = useState<ProposalLineDraft[]>([]);
-  const [scheduleConfig, setScheduleConfig] = useState<PaymentScheduleConfig>(
-    defaultScheduleConfig,
+  const [onlinePaymentSetup, setOnlinePaymentSetup] = useState<OnlinePaymentSetup>(
+    () => defaultProposalOnlinePaymentSetup(computeValidUntil(DEFAULT_VALIDITY_DAYS)),
   );
+  const [isSaving, setIsSaving] = useState(false);
 
   const { data: proposal, isPending: isProposalPending } = useGetOne<Proposal>(
     "proposals",
@@ -165,7 +196,7 @@ export const ProposalBuilderForm = ({
       "proposal_line_items",
       {
         filter: { "proposal_id@eq": proposalId },
-        pagination: { page: 1, perPage: 200 },
+        pagination: { page: 1, perPage: 500 },
         sort: { field: "sort_order", order: "ASC" },
       },
       { enabled: proposalId != null },
@@ -176,7 +207,7 @@ export const ProposalBuilderForm = ({
       "proposal_payment_schedules",
       {
         filter: { "proposal_id@eq": proposalId },
-        pagination: { page: 1, perPage: 1 },
+        pagination: { page: 1, perPage: 10 },
         sort: { field: "id", order: "ASC" },
       },
       { enabled: proposalId != null },
@@ -203,20 +234,17 @@ export const ProposalBuilderForm = ({
     }
 
     const schedule = schedules[0];
-    const configFromProposal = proposal?.payment_schedule_config as
-      | PaymentScheduleConfig
-      | undefined;
+    const anchorDate =
+      proposal?.valid_until ??
+      schedule?.deposit_due_date ??
+      computeValidUntil(proposal?.validity_days ?? DEFAULT_VALIDITY_DAYS);
 
-    setScheduleConfig(
-      configFromProposal ??
-        (schedule
-          ? {
-              installment_frequency: schedule.installment_frequency,
-              installment_count: schedule.installment_count,
-              deposit_due_date: schedule.deposit_due_date,
-              balance_start_date: null,
-            }
-          : defaultScheduleConfig()),
+    setOnlinePaymentSetup(
+      parseProposalOnlinePaymentSetup({
+        paymentScheduleConfig: proposal?.payment_schedule_config,
+        depositPercent: proposal?.deposit_percent ?? 50,
+        anchorDate,
+      }),
     );
   }, [
     proposalId,
@@ -226,6 +254,9 @@ export const ProposalBuilderForm = ({
     existingLines,
     schedules,
     proposal?.payment_schedule_config,
+    proposal?.deposit_percent,
+    proposal?.valid_until,
+    proposal?.validity_days,
   ]);
 
   const companyIdFromUrl = searchParams.get("company_id");
@@ -256,7 +287,6 @@ export const ProposalBuilderForm = ({
       proposal?.deal_id ?? (dealIdFromUrl ? Number(dealIdFromUrl) : null),
     notes: proposal?.notes ?? "",
     validity_days: proposal?.validity_days ?? DEFAULT_VALIDITY_DAYS,
-    deposit_percent: proposal?.deposit_percent ?? DEFAULT_DEPOSIT_PERCENT,
   };
 
   return (
@@ -276,7 +306,8 @@ export const ProposalBuilderForm = ({
 
           setIsSaving(true);
           try {
-            const { proposal: saved } = await saveProposalCommercial(
+            const { proposal: saved, syncedInvoices } =
+              await saveProposalCommercial(
               dataProvider,
               {
                 orgId,
@@ -286,13 +317,18 @@ export const ProposalBuilderForm = ({
                   notes: values.notes?.trim() || null,
                 },
                 lines: filledLines,
-                scheduleConfig,
+                onlinePaymentSetup,
                 validityDays: values.validity_days,
-                depositPercent: values.deposit_percent,
               },
               proposalId ?? null,
             );
-            notify("Proposal saved", { type: "success" });
+            const invoiceCount = syncedInvoices?.length ?? 0;
+            notify(
+              invoiceCount > 0
+                ? `Proposal saved — ${invoiceCount} invoice${invoiceCount === 1 ? "" : "s"} ready in Billing`
+                : "Proposal saved",
+              { type: "success" },
+            );
             navigate(`/proposals/${saved.id}/preview`);
           } catch (error) {
             notify(
@@ -309,8 +345,8 @@ export const ProposalBuilderForm = ({
         <ProposalBuilderFields
           lines={lines}
           setLines={setLines}
-          scheduleConfig={scheduleConfig}
-          setScheduleConfig={setScheduleConfig}
+          onlinePaymentSetup={onlinePaymentSetup}
+          setOnlinePaymentSetup={setOnlinePaymentSetup}
           isSaving={isSaving}
           proposalId={proposalId}
         />

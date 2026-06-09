@@ -3,7 +3,6 @@
  * When `module_permissions` is null in DB → legacy `roles[]` only.
  * When set (object) → frontend uses capabilities; `roles[]` is auto-synced server-side for Postgres RLS.
  */
-import { isLbsMode } from "@/lbs/productMode";
 import {
   CAPABILITY_IDS,
   getStoredRolePreset,
@@ -30,9 +29,6 @@ export const defaultModulePermissionsObject = (): Required<
   messaging: false,
   deal_operations: false,
   deal_financials: false,
-  payroll: false,
-  people: false,
-  time: false,
   reports: false,
   view_amounts: false,
 });
@@ -45,9 +41,6 @@ const allTrue = (): Required<Record<MemberModuleKey, boolean>> => ({
   messaging: true,
   deal_operations: true,
   deal_financials: true,
-  payroll: true,
-  people: true,
-  time: true,
   reports: true,
   view_amounts: true,
 });
@@ -136,47 +129,26 @@ export function deriveRolesFromModulePermissions(
   if (preset === "read_only") return ["employee"];
   if (preset === "user") return ["employee"];
 
-  if (isLbsMode()) {
-    const perms = mod as Record<string, boolean | string>;
-    const roles = new Set<string>();
-    if (hasCapability(perms, "admin.users.manage")) roles.add("sales_manager");
-    if (
-      CAPABILITY_IDS.some(
-        (id) =>
-          id.startsWith("deal_financials.") &&
-          hasCapability(perms, id, { administrator: false }),
-      ) ||
-      hasCapability(perms, "view_amounts.show", { administrator: false })
-    ) {
-      roles.add("sales_manager");
-    } else if (
-      CAPABILITY_IDS.some((id) =>
-        hasCapability(perms, id, { administrator: false }),
-      )
-    ) {
-      roles.add("employee");
-    }
-    return roles.size > 0 ? Array.from(roles) : ["employee"];
-  }
-
-  const m = mergeStored(mod as MemberModulePermissions);
+  const perms = mod as Record<string, boolean | string>;
   const roles = new Set<string>();
-  if (m.payroll) roles.add("payroll_manager");
-  if (m.people || m.time) roles.add("hr");
-  const crmBand =
-    m.crm ||
-    m.proposals ||
-    m.forms ||
-    m.support ||
-    m.messaging ||
-    m.deal_operations ||
-    m.deal_financials;
-  if (crmBand) {
-    if (m.deal_financials || m.view_amounts) roles.add("sales_manager");
-    else roles.add("employee");
+  if (hasCapability(perms, "admin.users.manage")) roles.add("sales_manager");
+  if (
+    CAPABILITY_IDS.some(
+      (id) =>
+        id.startsWith("deal_financials.") &&
+        hasCapability(perms, id, { administrator: false }),
+    ) ||
+    hasCapability(perms, "view_amounts.show", { administrator: false })
+  ) {
+    roles.add("sales_manager");
+  } else if (
+    CAPABILITY_IDS.some((id) =>
+      hasCapability(perms, id, { administrator: false }),
+    )
+  ) {
+    roles.add("employee");
   }
-  if (m.reports && roles.size === 0) roles.add("employee");
-  return Array.from(roles);
+  return roles.size > 0 ? Array.from(roles) : ["employee"];
 }
 
 export function legacyRoleFinance(roles: AccessRole[]): boolean {

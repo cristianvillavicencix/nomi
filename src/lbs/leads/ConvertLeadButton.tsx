@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { isLbsMode } from "@/lbs/productMode";
 import { LBS_LEAD_STATUSES } from "@/lbs/navigation";
 
 export const ConvertLeadButton = ({ record }: { record: Contact }) => {
@@ -28,7 +27,6 @@ export const ConvertLeadButton = ({ record }: { record: Contact }) => {
   const navigate = useNavigate();
 
   const isLead =
-    isLbsMode() &&
     record.status != null &&
     (LBS_LEAD_STATUSES as readonly string[]).includes(record.status);
 

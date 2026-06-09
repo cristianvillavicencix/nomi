@@ -13,7 +13,6 @@ import { TagsListEdit } from "./TagsListEdit";
 import { Avatar } from "./Avatar";
 import { ConvertLeadButton } from "@/lbs/leads/ConvertLeadButton";
 import { getClientShowPath, getPersonShowPath } from "@/lbs/routing";
-import { isLbsMode } from "@/lbs/productMode";
 import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
 import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 
@@ -142,8 +141,8 @@ export const ContactHeader = ({
               {!embedded ? <ConvertLeadButton record={record} /> : null}
               {!embedded ? <TagsListEdit buttonOnly /> : null}
               {!embedded ? <AddTask display="chip" /> : null}
-              {isLbsMode() ? <OpenClientSmsButton contact={record} /> : null}
-              {isLbsMode() && !embedded ? (
+              <OpenClientSmsButton contact={record} />
+              {!embedded ? (
                 <SendFormButton
                   context={{
                     type: record.status === "lead" ? "lead" : "contact",
