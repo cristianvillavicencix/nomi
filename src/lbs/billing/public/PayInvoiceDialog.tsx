@@ -23,16 +23,22 @@ type PayInvoiceDialogProps = {
   onSuccess: () => void;
 };
 
+const stopDrawerPointerCapture = (event: { stopPropagation: () => void }) => {
+  event.stopPropagation();
+};
+
 const PayInvoiceFlowBody = ({
   open,
   token,
   payload,
   onSuccess,
+  sheetLayout = false,
 }: {
   open: boolean;
   token: string;
   payload: PublicInvoicePayload;
   onSuccess: () => void;
+  sheetLayout?: boolean;
 }) =>
   open ? (
     <PublicInvoicePaymentFlow
@@ -40,6 +46,7 @@ const PayInvoiceFlowBody = ({
       token={token}
       payload={payload}
       onSuccess={onSuccess}
+      sheetLayout={sheetLayout}
     />
   ) : null;
 
@@ -63,26 +70,29 @@ export const PayInvoiceDialog = ({
         open={open}
         onOpenChange={onOpenChange}
         direction="bottom"
+        handleOnly
+        repositionInputs={false}
         shouldScaleBackground
       >
         <DrawerContent
           className={cn(
-            "max-h-[92dvh] gap-0 rounded-t-2xl border-t p-0",
-            "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+            "mt-0 flex h-[92dvh] max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-t-2xl border-t p-0",
           )}
         >
           <DrawerHeader className="sr-only">
             <DrawerTitle>Pay invoice</DrawerTitle>
           </DrawerHeader>
           <div
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]"
             data-vaul-no-drag
+            onPointerDownCapture={stopDrawerPointerCapture}
           >
             <PayInvoiceFlowBody
               open={open}
               token={token}
               payload={payload}
               onSuccess={handleSuccess}
+              sheetLayout
             />
           </div>
         </DrawerContent>

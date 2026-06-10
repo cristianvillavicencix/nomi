@@ -127,6 +127,8 @@ type PaymentFlowProps = {
   onSuccess: () => void;
   /** Payment link: card entry only — no invoice summary or amount picker. */
   focusPaymentEntry?: boolean;
+  /** Bottom-sheet layout: sticky pay footer + full-width body. */
+  sheetLayout?: boolean;
 };
 
 type InvoicePaymentSummary = {
@@ -486,6 +488,7 @@ const InvoicePaymentReviewActions = ({
   isPending,
   onPay,
   focusPaymentEntry = false,
+  sheetLayout = false,
 }: {
   summary: InvoicePaymentSummary;
   paymentAmountState: ReturnType<typeof useInvoicePaymentAmountState>;
@@ -498,6 +501,7 @@ const InvoicePaymentReviewActions = ({
   isPending: boolean;
   onPay: () => void;
   focusPaymentEntry?: boolean;
+  sheetLayout?: boolean;
 }) => {
   const { currency, balanceDue, autoChargeRemainder, saveCardForFutureCharges } =
     summary;
@@ -530,9 +534,11 @@ const InvoicePaymentReviewActions = ({
     <div
       className={cn(
         "space-y-3",
-        focusPaymentEntry
-          ? "px-4 pb-5 pt-1 sm:px-6"
-          : `${publicInvoicePaymentSectionPadding} pb-6 pt-2`,
+        sheetLayout
+          ? "sticky bottom-0 z-10 border-t border-border/50 bg-background px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-6px_20px_rgba(15,23,42,0.06)]"
+          : focusPaymentEntry
+            ? "px-4 pb-5 pt-1 sm:px-6"
+            : `${publicInvoicePaymentSectionPadding} pb-6 pt-2`,
       )}
     >
       {!focusPaymentEntry ? (
@@ -609,6 +615,7 @@ const InvoiceStripePaymentFormInner = ({
   ensureSynced,
   onSuccess,
   focusPaymentEntry = false,
+  sheetLayout = false,
 }: PaymentFlowProps & {
   paymentIntentId: string;
   chargeAmount: number;
@@ -686,6 +693,7 @@ const InvoiceStripePaymentFormInner = ({
           focusPaymentEntry
             ? "px-4 pb-1 pt-5 sm:px-6"
             : `${publicInvoicePaymentSectionPadding} pb-1 pt-4`,
+          sheetLayout && "pb-4",
         )}
       >
         {!focusPaymentEntry ? (
@@ -714,6 +722,7 @@ const InvoiceStripePaymentFormInner = ({
         isPending={payMutation.isPending}
         onPay={() => payMutation.mutate()}
         focusPaymentEntry={focusPaymentEntry}
+        sheetLayout={sheetLayout}
       />
     </>
   );
@@ -724,6 +733,7 @@ const InvoiceStripeCheckout = ({
   payload,
   onSuccess,
   focusPaymentEntry = false,
+  sheetLayout = false,
 }: PaymentFlowProps) => {
   const [flowError, setFlowError] = useState<string | null>(null);
   const [finalizingRedirect, setFinalizingRedirect] = useState(false);
@@ -776,9 +786,11 @@ const InvoiceStripeCheckout = ({
   const clientSecret = checkout.session?.clientSecret ?? null;
   const paymentIntentId = checkout.session?.paymentIntentId ?? null;
 
-  const shellClass = focusPaymentEntry
-    ? "mx-auto w-full max-w-[420px]"
-    : publicInvoicePaymentShellClass;
+  const shellClass = sheetLayout
+    ? "w-full"
+    : focusPaymentEntry
+      ? "mx-auto w-full max-w-[420px]"
+      : publicInvoicePaymentShellClass;
 
   return (
     <div className={shellClass}>
@@ -864,6 +876,7 @@ const InvoiceStripeCheckout = ({
             payload={payload}
             onSuccess={onSuccess}
             focusPaymentEntry={focusPaymentEntry}
+            sheetLayout={sheetLayout}
             paymentIntentId={paymentIntentId}
             chargeAmount={paymentAmountState.selectedAmount}
             remainderInstallmentNumbers={
@@ -886,6 +899,7 @@ const InvoiceMockPaymentForm = ({
   payload,
   onSuccess,
   focusPaymentEntry = false,
+  sheetLayout = false,
 }: PaymentFlowProps) => {
   const [consent, setConsent] = useState(focusPaymentEntry);
   const [flowError, setFlowError] = useState<string | null>(null);
@@ -945,7 +959,7 @@ const InvoiceMockPaymentForm = ({
   }
 
   return (
-    <div className={publicInvoicePaymentShellClass}>
+    <div className={sheetLayout ? "w-full" : publicInvoicePaymentShellClass}>
       <div
         className={`flex flex-col gap-2 border-b border-border/40 ${publicInvoicePaymentSectionPadding} pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:pb-5 sm:pt-6`}
       >
@@ -995,11 +1009,14 @@ const InvoiceMockPaymentForm = ({
         canPay={canContinue}
         isPending={payMutation.isPending}
         onPay={() => payMutation.mutate()}
+        sheetLayout={sheetLayout}
       />
 
+      {!sheetLayout ? (
       <p className={`-mt-2 pb-6 text-center text-xs text-muted-foreground ${publicInvoicePaymentSectionPadding}`}>
         Demo mode · No card required
       </p>
+      ) : null}
     </div>
   );
 };
