@@ -1,21 +1,19 @@
-import { required, useGetOne } from "ra-core";
+import { required, useGetIdentity, useGetList, useGetOne } from "ra-core";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { AutocompleteArrayInput } from "@/components/admin/autocomplete-array-input";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { DateInput } from "@/components/admin/date-input";
 import { NumberInput } from "@/components/admin/number-input";
-import { ReferenceArrayInput } from "@/components/admin/reference-array-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import type {
   Contact,
   Deal,
   OrganizationMember,
 } from "@/components/atomic-crm/types";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { buildAutoProjectName } from "@/lbs/deals/buildAutoProjectName";
 import { LbsProjectClientFields } from "@/lbs/deals/LbsProjectClientFields";
 import { optionalGithubRepo } from "@/lbs/deals/githubRepo";
 import {
@@ -29,20 +27,17 @@ import {
   lbsProjectTypeChoices,
 } from "@/lbs/deals/lbsProjectConstants";
 import { LBS_PROJECT_PRIORITIES } from "@/lbs/deals/lbsAgencyProjectModel";
+import { lbsProjectContactName } from "@/lbs/deals/LbsProjectContactOption";
+import type { Proposal } from "@/lbs/types";
 
 const toNumber = (value: unknown): number | null => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const getMemberOptionText = (member?: Partial<OrganizationMember>) => {
-  if (!member) return "";
-  const fullName = [member.first_name, member.last_name]
-    .filter(Boolean)
-    .join(" ");
-  if (member.email) return `${fullName} (${member.email})`;
-  return fullName;
-};
+const isAdminMember = (member: OrganizationMember) =>
+  member.administrator === true ||
+  (Array.isArray(member.roles) && member.roles.includes("admin"));
 
 const withCurrentCustomChoice = (
   choices: Array<{ value: string; label: string }>,
@@ -100,12 +95,15 @@ export const LbsDealInputs = ({
 }: { createStep?: 1 | 2 } = {}) => {
   const showStep = (step: 1 | 2) => !createStep || createStep === step;
   const isMobile = useIsMobile();
-  const { dealCategories } = useConfigurationContext();
+  const isCreateFlow = createStep != null;
+  const { identity } = useGetIdentity();
   const { control, setValue, getValues } = useFormContext<
     Deal & Record<string, unknown>
   >();
   const contactId = useWatch({ control, name: "contact_id" });
   const contactIds = useWatch({ control, name: "contact_ids" });
+  const companyName = useWatch({ control, name: "company_name" });
+  const acceptedProposalId = useWatch({ control, name: "accepted_proposal_id" });
   const stage = useWatch({ control, name: "stage" });
   const projectType = useWatch({ control, name: "project_type" });
   const category = useWatch({ control, name: "category" });
@@ -113,13 +111,30 @@ export const LbsDealInputs = ({
   const amount = useWatch({ control, name: "amount" });
   const notes = useWatch({ control, name: "notes" });
   const description = useWatch({ control, name: "description" });
+  const projectName = useWatch({ control, name: "name" });
 
   const selectedContactId = toNumber(contactId);
+  const selectedProposalId = toNumber(acceptedProposalId);
   const previousContactId = useRef<number | null>(null);
+  const teamAssignedRef = useRef(false);
   const { data: selectedContact } = useGetOne<Contact>(
-    "contacts_summary",
+    "contacts",
     { id: selectedContactId as number },
     { enabled: selectedContactId != null },
+  );
+  const { data: selectedProposal } = useGetOne<Proposal>(
+    "proposals",
+    { id: selectedProposalId as number },
+    { enabled: selectedProposalId != null },
+  );
+  const { data: organizationMembers = [] } = useGetList<OrganizationMember>(
+    "organization_members",
+    {
+      pagination: { page: 1, perPage: 200 },
+      sort: { field: "last_name", order: "ASC" },
+      filter: { "disabled@neq": true },
+    },
+    { enabled: isCreateFlow },
   );
 
   const stageChoices = useMemo(
@@ -225,6 +240,62 @@ export const LbsDealInputs = ({
     }
   }, [description, notes, setValue]);
 
+  useEffect(() => {
+    if (!isCreateFlow || teamAssignedRef.current) return;
+    if (!identity?.id && organizationMembers.length === 0) return;
+
+    const adminIds = organizationMembers
+      .filter(isAdminMember)
+      .map((member) => Number(member.id))
+      .filter(Number.isFinite);
+    const teamIds = Array.from(
+      new Set(
+        [Number(identity?.id), ...adminIds].filter((id) => Number.isFinite(id)),
+      ),
+    );
+
+    if (teamIds.length === 0) return;
+    setValue("salesperson_ids", teamIds, { shouldDirty: false });
+    teamAssignedRef.current = true;
+  }, [identity?.id, isCreateFlow, organizationMembers, setValue]);
+
+  const autoProjectName = useMemo(
+    () =>
+      buildAutoProjectName({
+        companyName:
+          typeof companyName === "string" && companyName.trim()
+            ? companyName
+            : selectedContact?.company_name,
+        contactName: selectedContact ? lbsProjectContactName(selectedContact) : "",
+        projectType: String(projectType ?? ""),
+        proposalTitle: selectedProposal?.title,
+      }),
+    [
+      companyName,
+      projectType,
+      selectedContact,
+      selectedProposal?.title,
+    ],
+  );
+
+  useEffect(() => {
+    if (!autoProjectName) return;
+    if (projectName === autoProjectName) return;
+    setValue("name", autoProjectName, { shouldDirty: false });
+  }, [autoProjectName, projectName, setValue]);
+
+  useEffect(() => {
+    const proposalAmount = toNumber(selectedProposal?.amount);
+    if (proposalAmount == null || proposalAmount <= 0) return;
+    setValue("estimated_value", proposalAmount, { shouldDirty: false });
+    setValue("amount", proposalAmount, { shouldDirty: false });
+  }, [selectedProposal?.amount, setValue]);
+
+  const proposalBudgetLocked =
+    selectedProposalId != null &&
+    toNumber(selectedProposal?.amount) != null &&
+    toNumber(selectedProposal?.amount)! > 0;
+
   const scopeMode = getLbsProjectScopeMode(String(projectType ?? ""));
 
   useEffect(() => {
@@ -247,34 +318,37 @@ export const LbsDealInputs = ({
       {showStep(1) ? (
         <FormSection title="Project overview" showDivider={false}>
           <div className={`grid gap-4 ${gridClass}`}>
-            <TextInput
-              source="name"
-              label="Project name"
-              validate={required()}
-              helperText={false}
-              placeholder="e.g. Acme Corp website redesign"
-            />
+            <div className={isMobile ? undefined : "md:col-span-2"}>
+              <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  Project name
+                </p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {autoProjectName || "Select a client and service to generate"}
+                </p>
+              </div>
+            </div>
             <LbsProjectClientFields />
             <ReferenceInput
               source="accepted_proposal_id"
               reference="proposals"
+              filter={
+                selectedContactId != null
+                  ? { "contact_id@eq": selectedContactId }
+                  : undefined
+              }
             >
               <AutocompleteInput
                 label="Accepted proposal (optional)"
                 optionText="title"
-                helperText={false}
+                helperText={
+                  proposalBudgetLocked
+                    ? "Budget is taken from this proposal."
+                    : false
+                }
                 filterToQuery={(searchText) => ({ q: searchText })}
               />
             </ReferenceInput>
-            <SelectInput
-              source="category"
-              label="Service category"
-              choices={dealCategories}
-              optionText="label"
-              optionValue="value"
-              helperText={false}
-              validate={required()}
-            />
             <AutocompleteInput
               source="project_type"
               label="Service type"
@@ -321,14 +395,28 @@ export const LbsDealInputs = ({
               label="Delivery date"
               helperText={false}
             />
-            <NumberInput
-              source="estimated_value"
-              label="Project budget (USD)"
-              helperText={false}
-              validate={optionalPositiveCurrency}
-              min={0}
-              step={0.01}
-            />
+            {!proposalBudgetLocked ? (
+              <NumberInput
+                source="estimated_value"
+                label="Project budget (USD)"
+                helperText={false}
+                validate={optionalPositiveCurrency}
+                min={0}
+                step={0.01}
+              />
+            ) : (
+              <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  Project budget (USD)
+                </p>
+                <p className="mt-1 text-sm font-medium tabular-nums text-foreground">
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                  }).format(toNumber(selectedProposal?.amount) ?? 0)}
+                </p>
+              </div>
+            )}
             <TextInput
               source="github_repo"
               label="GitHub repository"
@@ -336,21 +424,6 @@ export const LbsDealInputs = ({
               placeholder="lbs-web/acme-roofing"
               validate={optionalGithubRepo}
             />
-            <div className={isMobile ? undefined : "md:col-span-2"}>
-              <ReferenceArrayInput
-                source="salesperson_ids"
-                reference="organization_members"
-                filter={{ "disabled@neq": true }}
-              >
-                <AutocompleteArrayInput
-                  label="Assign team"
-                  optionText={getMemberOptionText}
-                  helperText={false}
-                  placeholder="Select team members"
-                  filterToQuery={(searchText) => ({ q: searchText })}
-                />
-              </ReferenceArrayInput>
-            </div>
             <div className={isMobile ? undefined : "md:col-span-2"}>
               <TextInput
                 source="notes"

@@ -74,7 +74,7 @@ export const LbsProjectClientFields = () => {
 
   return (
     <>
-      <ReferenceInput source="contact_id" reference="contacts_summary">
+      <ReferenceInput source="contact_id" reference="contacts">
         <AutocompleteInput
           label="Client contact"
           optionText={lbsProjectContactOptionText}
