@@ -11,6 +11,7 @@ import {
 } from "@/lbs/clients/clientShowUtils";
 import { getGithubRepoLabel, getGithubRepoUrl } from "@/lbs/deals/githubRepo";
 import { ProjectPortalLinkButton } from "@/lbs/portal/ProjectPortalLinkButton";
+import { getClientShowPath } from "@/lbs/routing";
 import type { LbsDeal } from "@/lbs/types";
 
 const CompactLine = ({
@@ -84,7 +85,7 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
         left={
           record.company_id && companyName ? (
             <Link
-              to={`/clients/${record.company_id}/show`}
+              to={getClientShowPath(record.company_id)}
               className="link-action"
             >
               {companyName}

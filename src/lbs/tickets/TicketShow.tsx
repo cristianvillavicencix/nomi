@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddTask } from "@/components/atomic-crm/tasks/AddTask";
 import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
 import type { Ticket, TicketMessage } from "@/lbs/types";
-import { TicketReplyForm } from "@/lbs/tickets/TicketReplyForm";
+import { getClientShowPath } from "@/lbs/routing";
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return "—";
@@ -73,7 +73,7 @@ const TicketShowContent = () => {
                 source="company_id"
                 reference="companies"
                 record={record}
-                link={(companyId) => `/clients/${companyId}/show`}
+                link={(companyId) => getClientShowPath(companyId)}
               />
             ) : (
               "—"

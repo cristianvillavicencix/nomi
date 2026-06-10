@@ -4,7 +4,7 @@ import { useDataProvider, useGetOne, useNotify } from "ra-core";
 import { useNavigate } from "react-router";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { Button } from "@/components/ui/button";
+import { getClientShowPath } from "@/lbs/routing";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -86,7 +86,7 @@ export const ConvertLeadButton = ({ record }: { record: Contact }) => {
         notify("Lead converted to client");
       }
       setOpen(false);
-      navigate(`/clients/${company_id}/show`);
+      navigate(getClientShowPath(company_id));
     },
     onError: (error: Error) => {
       notify(error.message || "Failed to convert lead", { type: "error" });

@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { getClientShowPath } from "@/lbs/routing";
 
 const getContactEmail = (contact: Contact) =>
   contact.email_jsonb?.find((row) => row.isPrimary)?.email?.trim() ??
@@ -245,7 +245,7 @@ export const ScheduleInvoiceSendDialog = ({
                 No contact persons found.{" "}
                 {companyId ? (
                   <Link
-                    to={`/clients/${companyId}/show`}
+                    to={getClientShowPath(companyId)}
                     className="font-medium text-blue-700 hover:underline"
                   >
                     + Add New

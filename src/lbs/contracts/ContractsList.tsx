@@ -12,7 +12,7 @@ import {
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Contract } from "@/lbs/types";
-import { Badge } from "@/components/ui/badge";
+import { getClientShowPath } from "@/lbs/routing";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "—";
@@ -96,7 +96,7 @@ const ContractsListLayout = () => {
               source="company_id"
               reference="companies"
               record={record}
-              link={(id) => `/clients/${id}/show`}
+              link={(id) => getClientShowPath(id)}
             />
           ) : (
             "—"

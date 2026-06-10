@@ -5,6 +5,7 @@ import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordMo
 import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getClientShowPath } from "@/lbs/routing";
 import type { Contract } from "@/lbs/types";
 
 const formatDate = (value?: string | null) => {
@@ -70,7 +71,7 @@ const ContractShowContent = () => {
                 source="company_id"
                 reference="companies"
                 record={record}
-                link={(companyId) => `/clients/${companyId}/show`}
+                link={(companyId) => getClientShowPath(companyId)}
               />
             ) : (
               "—"

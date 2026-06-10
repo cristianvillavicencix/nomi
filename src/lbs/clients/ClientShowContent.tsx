@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { CompanyWithPrimaryContact } from "@/lbs/clients/clientProfile";
 import { ClientActivityTab } from "@/lbs/clients/ClientActivityTab";
 import { ClientAddContactDialog } from "@/lbs/clients/ClientAddContactDialog";
+import { ClientEditDialog } from "@/lbs/clients/ClientEditDialog";
 import { ClientFinancialTab } from "@/lbs/clients/ClientFinancialTab";
 import { ClientCollapsibleRelatedSidebar } from "@/lbs/clients/ClientCollapsibleRelatedSidebar";
 import { ClientRelatedSidebar } from "@/lbs/clients/ClientRelatedSidebar";
@@ -30,12 +31,28 @@ export const ClientShowContent = () => {
   const resolved = resolveClientTabFromUrl(searchParams.get("tab"));
   const currentTab = getValidClientTab(resolved.tab);
   const [addContactOpen, setAddContactOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [primarySheetOpen, setPrimarySheetOpen] = useState(false);
   const [sidebarContactId, setSidebarContactId] = useState<Identifier | null>(
     null,
   );
 
   const counts = useClientTabCounts(record?.id ?? "");
+
+  useEffect(() => {
+    if (searchParams.get("edit") === "1") {
+      setEditOpen(true);
+    }
+  }, [searchParams]);
+
+  const handleEditOpenChange = (open: boolean) => {
+    setEditOpen(open);
+    if (!open && searchParams.get("edit") === "1") {
+      const next = new URLSearchParams(searchParams);
+      next.delete("edit");
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   useEffect(() => {
     const rawTab = searchParams.get("tab");
@@ -164,7 +181,10 @@ export const ClientShowContent = () => {
 
   return (
     <div className="mt-2 pb-4">
-      <ClientShowActions record={record} />
+      <ClientShowActions
+        record={record}
+        onEdit={() => setEditOpen(true)}
+      />
 
       {isMobile ? (
         <div className="space-y-4">
@@ -180,6 +200,11 @@ export const ClientShowContent = () => {
         </div>
       )}
 
+      <ClientEditDialog
+        companyId={record.id}
+        open={editOpen}
+        onOpenChange={handleEditOpenChange}
+      />
       <ClientAddContactDialog
         companyId={record.id}
         open={addContactOpen}

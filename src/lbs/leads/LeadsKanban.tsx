@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { LeadStageChangeDialog } from "@/lbs/leads/LeadStageChangeDialog";
+import { getClientShowPath } from "@/lbs/routing";
 import {
   LBS_LEAD_KANBAN_STAGES,
   type LeadStageId,
@@ -227,7 +227,7 @@ export const LeadsKanban = () => {
         onConverted={(companyId) => {
           setConvertCandidate(null);
           refresh();
-          navigate(`/clients/${companyId}/show`);
+          navigate(getClientShowPath(companyId));
         }}
       />
     </>

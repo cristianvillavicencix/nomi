@@ -1,12 +1,17 @@
 import { Navigate, useParams, useSearchParams } from "react-router";
+import {
+  getClientEditPath,
+  getClientShowPath,
+  getCompaniesListPath,
+} from "@/lbs/routing";
 
-/** Legacy /companies/* → LBS /clients/* */
-export const CompanyToClientShowRedirect = () => {
+/** Legacy `/companies/:id/show` → `/companies/:id` */
+export const LegacyCompanyShowRedirect = () => {
   const { id, tab } = useParams();
   const [searchParams] = useSearchParams();
 
   if (!id) {
-    return <Navigate to="/clients" replace />;
+    return <Navigate to={getCompaniesListPath()} replace />;
   }
 
   const nextSearchParams = new URLSearchParams(searchParams);
@@ -16,16 +21,24 @@ export const CompanyToClientShowRedirect = () => {
 
   const query = nextSearchParams.toString();
   return (
-    <Navigate to={`/clients/${id}/show${query ? `?${query}` : ""}`} replace />
+    <Navigate
+      to={`${getClientShowPath(id)}${query ? `?${query}` : ""}`}
+      replace
+    />
   );
 };
 
-export const CompanyToClientEditRedirect = () => {
+export const LegacyCompanyEditRedirect = () => {
   const { id } = useParams();
 
   if (!id) {
-    return <Navigate to="/clients" replace />;
+    return <Navigate to={getCompaniesListPath()} replace />;
   }
 
-  return <Navigate to={`/clients/${id}/edit`} replace />;
+  return <Navigate to={getClientEditPath(id)} replace />;
 };
+
+/** Legacy `/companies/create` → open new-company dialog on list */
+export const LegacyCompanyCreateRedirect = () => (
+  <Navigate to="/companies?create=company" replace />
+);

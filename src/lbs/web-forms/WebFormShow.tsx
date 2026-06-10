@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Form, FormSubmission } from "@/lbs/types";
 import { buildWebsiteIntakePayload } from "@/lbs/web-forms/intakeMapping";
 import { SendWebFormPanel } from "@/lbs/web-forms/SendWebFormPanel";
-import { getWebFormTypeLabel } from "@/lbs/web-forms/webFormLinks";
+import { getClientShowPath } from "@/lbs/routing";
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return "—";
@@ -67,7 +67,7 @@ const WebFormShowContent = () => {
       if (result?.deal_id) {
         navigate(`/deals/${result.deal_id}/show`);
       } else if (result?.company_id) {
-        navigate(`/clients/${result.company_id}/show`);
+        navigate(getClientShowPath(result.company_id));
       }
     },
     onError: (error: Error) => {

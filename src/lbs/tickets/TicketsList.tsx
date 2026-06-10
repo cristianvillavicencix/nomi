@@ -13,7 +13,7 @@ import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopo
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import { CreateTicketButton } from "@/lbs/tickets/CreateTicketButton";
 import type { Ticket } from "@/lbs/types";
-import { Badge } from "@/components/ui/badge";
+import { getClientShowPath } from "@/lbs/routing";
 
 export const TicketsList = () => {
   const { identity } = useGetIdentity();
@@ -96,7 +96,7 @@ const TicketsListLayout = () => {
               source="company_id"
               reference="companies"
               record={record}
-              link={(id) => `/clients/${id}/show`}
+              link={(id) => getClientShowPath(id)}
             />
           ) : (
             "—"

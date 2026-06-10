@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useGetIdentity, useNotify } from "ra-core";
 import { Link, useSearchParams } from "react-router";
+import { getFindDuplicatesPath } from "@/lbs/routing";
 import {
   AlertTriangle,
   Building2,
@@ -453,7 +454,7 @@ export const DataImportSection = () => {
         </CardHeader>
         <CardContent>
           <Button asChild variant="outline">
-            <Link to="/clients/find-duplicates">Open duplicate finder</Link>
+            <Link to={getFindDuplicatesPath()}>Open duplicate finder</Link>
           </Button>
         </CardContent>
       </Card>

@@ -22,6 +22,7 @@ import {
   getContactEmail,
   getContactFullName,
 } from "@/lbs/clients/clientShowUtils";
+import { ManualHandoffControl } from "@/lbs/deals/ManualHandoffControl";
 import { BriefProgressBar } from "@/lbs/deals/BriefProgressBar";
 import { BriefSectionApprovalActions } from "@/lbs/deals/BriefSectionApprovalActions";
 import { SendProjectWebFormDialog } from "@/lbs/deals/SendProjectWebFormDialog";
@@ -138,6 +139,8 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
 
   return (
     <div className="space-y-4">
+      <ManualHandoffControl record={record} />
+
       <div className="flex flex-wrap justify-end gap-2">
         <Button
           type="button"

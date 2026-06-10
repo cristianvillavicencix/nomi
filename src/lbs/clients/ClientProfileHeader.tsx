@@ -49,7 +49,7 @@ import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 import {
   getClientDealCreatePath,
   getClientEditPath,
-  getClientsListPath,
+  getCompaniesListPath,
 } from "@/lbs/routing";
 import type { Contact } from "@/components/atomic-crm/types";
 
@@ -109,7 +109,7 @@ export const ClientProfileHeader = ({
         onSuccess: () => {
           notify("Client deleted", { type: "info" });
           setDeleteOpen(false);
-          navigate(getClientsListPath());
+          navigate(getCompaniesListPath());
         },
         onError: () => {
           notify("Failed to delete client", { type: "error" });

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, MoreHorizontal, Pencil, Trash } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
   RecordContextProvider,
   useDelete,
@@ -19,20 +19,24 @@ import {
   PageActionsTrailing,
 } from "@/components/atomic-crm/layout/PageActions";
 import type { CompanyWithPrimaryContact } from "@/lbs/clients/clientProfile";
-import { getClientEditPath, getClientsListPath } from "@/lbs/routing";
+import { getCompaniesListPath } from "@/lbs/routing";
 
 type ClientShowActionsProps = {
   record: CompanyWithPrimaryContact;
+  onEdit?: () => void;
 };
 
-export const ClientShowActions = ({ record }: ClientShowActionsProps) => {
+export const ClientShowActions = ({
+  record,
+  onEdit,
+}: ClientShowActionsProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const notify = useNotify();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteOne, { isPending: isDeleting }] = useDelete();
 
-  const listPath = location.state?.from ?? getClientsListPath();
+  const listPath = location.state?.from ?? getCompaniesListPath();
 
   const handleDelete = () => {
     deleteOne(
@@ -40,12 +44,12 @@ export const ClientShowActions = ({ record }: ClientShowActionsProps) => {
       { id: record.id, previousData: record },
       {
         onSuccess: () => {
-          notify("Empresa eliminada", { type: "info" });
+          notify("Company deleted", { type: "info" });
           setDeleteOpen(false);
-          navigate(getClientsListPath());
+          navigate(getCompaniesListPath());
         },
         onError: () => {
-          notify("No se pudo eliminar la empresa", { type: "error" });
+          notify("Failed to delete company", { type: "error" });
         },
       },
     );
@@ -62,7 +66,7 @@ export const ClientShowActions = ({ record }: ClientShowActionsProps) => {
           onClick={() => navigate(listPath)}
         >
           <ChevronLeft className="size-4" />
-          <span className="text-sm font-semibold">Empresas</span>
+          <span className="text-sm font-semibold">Companies</span>
         </Button>
       </PageActions>
 
@@ -74,24 +78,22 @@ export const ClientShowActions = ({ record }: ClientShowActionsProps) => {
                 variant="ghost"
                 size="icon"
                 className="size-9"
-                aria-label="Más opciones"
+                aria-label="More options"
               >
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link to={getClientEditPath(record.id)}>
-                  <Pencil className="size-4" />
-                  Editar
-                </Link>
+              <DropdownMenuItem onClick={() => onEdit?.()}>
+                <Pencil className="size-4" />
+                Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash className="size-4" />
-                Eliminar
+                Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -100,9 +102,9 @@ export const ClientShowActions = ({ record }: ClientShowActionsProps) => {
 
       <Confirm
         isOpen={deleteOpen}
-        title="¿Eliminar esta empresa?"
-        content="Se elimina el registro de la empresa. Los contactos y proyectos vinculados pueden permanecer en el sistema."
-        confirm="Eliminar"
+        title="Delete this company?"
+        content="This removes the company record. Linked contacts and projects may remain in the system."
+        confirm="Delete"
         confirmColor="warning"
         onConfirm={handleDelete}
         onClose={() => setDeleteOpen(false)}

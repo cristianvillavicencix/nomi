@@ -1,12 +1,23 @@
 import { LBS_LEAD_STATUSES } from "@/lbs/navigation";
 
+export const getCompaniesListPath = () => "/companies";
+
+export const getContactsListPath = () => "/contacts";
+
+/** @deprecated Use getCompaniesListPath */
+export const getClientsListPath = getCompaniesListPath;
+
 export const getClientShowPath = (companyId: string | number) =>
-  `/clients/${companyId}/show`;
+  `/companies/${companyId}`;
 
 export const getClientEditPath = (companyId: string | number) =>
-  `/clients/${companyId}/edit`;
+  `/companies/${companyId}?edit=1`;
 
-export const getClientCreatePath = () => "/clients/create";
+export const getClientCreatePath = () => "/companies?create=company";
+
+export const getContactCreatePath = () => "/contacts?create=contact";
+
+export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 
 export const getLeadsListPath = () => "/leads";
 
@@ -19,14 +30,10 @@ export const getContactShowPath = (contactId: string | number) =>
 export const isLeadStatus = (status?: string | null) =>
   !!status && (LBS_LEAD_STATUSES as readonly string[]).includes(status);
 
-export const getClientsListPath = () => "/clients";
-
 export const getWebMonitorPath = () => "/web-monitor";
 
 export const getWebMonitorShowPath = (siteId: string | number) =>
   `/web-monitor/${siteId}/show`;
-
-export const getContactsListPath = () => "/clients?tab=contacts";
 
 export const getClientProposalCreatePath = (
   companyId?: string | number | null,
@@ -57,7 +64,7 @@ export const getClientDealCreatePath = (
 };
 
 export const getPersonListPath = (status?: string | null) =>
-  isLeadStatus(status) ? getLeadsListPath() : getClientsListPath();
+  isLeadStatus(status) ? getLeadsListPath() : getContactsListPath();
 
 export const getPersonShowPath = (contact: {
   id: string | number;

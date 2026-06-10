@@ -1,8 +1,14 @@
 import { Route, Navigate } from "react-router";
 import { LeadsListPage } from "@/lbs/leads/LeadsListPage";
-import { ClientsListPage } from "@/lbs/clients/ClientsListPage";
+import { CompaniesListPage } from "@/lbs/clients/CompaniesListPage";
+import { ContactsListPage } from "@/lbs/clients/ContactsListPage";
 import { ClientShowPage } from "@/lbs/clients/ClientShowPage";
-import { ClientEditPage } from "@/lbs/clients/ClientEditPage";
+import {
+  LegacyClientEditRedirect,
+  LegacyClientIdRedirect,
+  LegacyClientShowRedirect,
+  LegacyClientsListRedirect,
+} from "@/lbs/clients/ClientRouteRedirects";
 import { FindDuplicatesPage } from "@/lbs/clients/FindDuplicatesPage";
 import { LeadCreatePage } from "@/lbs/leads/LeadCreatePage";
 import { LeadShowPage } from "@/lbs/leads/LeadShowPage";
@@ -54,8 +60,9 @@ const MessagesPage = lazy(() =>
   })),
 );
 import {
-  CompanyToClientEditRedirect,
-  CompanyToClientShowRedirect,
+  LegacyCompanyCreateRedirect,
+  LegacyCompanyEditRedirect,
+  LegacyCompanyShowRedirect,
 } from "@/lbs/CompanyRouteRedirects";
 
 type ProtectedRouteProps = {
@@ -105,27 +112,54 @@ export const renderLbsCustomRoutes = ({
 }) => {
   return (
     <>
-      <Route path="/contacts" element={<Navigate to="/clients" replace />} />
+      <Route path="/contacts/create" element={<Navigate to="/contacts?create=contact" replace />} />
       <Route
-        path="/contacts/create"
-        element={<Navigate to="/leads/create" replace />}
+        path="/contacts"
+        element={
+          <ProtectedRoute resource="contacts" action="list">
+            <ContactsListPage />
+          </ProtectedRoute>
+        }
       />
-      <Route path="/companies" element={<Navigate to="/clients" replace />} />
       <Route
         path="/companies/create"
-        element={<Navigate to="/clients?create=company" replace />}
+        element={<LegacyCompanyCreateRedirect />}
       />
       <Route
-        path="/companies/:id/show"
-        element={<CompanyToClientShowRedirect />}
-      />
-      <Route
-        path="/companies/:id/show/:tab"
-        element={<CompanyToClientShowRedirect />}
+        path="/companies/find-duplicates"
+        element={
+          <ProtectedRoute resource="contacts" action="edit">
+            <FindDuplicatesPage />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/companies/:id/edit"
-        element={<CompanyToClientEditRedirect />}
+        element={<LegacyCompanyEditRedirect />}
+      />
+      <Route
+        path="/companies/:id/show/:tab"
+        element={<LegacyCompanyShowRedirect />}
+      />
+      <Route
+        path="/companies/:id/show"
+        element={<LegacyCompanyShowRedirect />}
+      />
+      <Route
+        path="/companies/:id"
+        element={
+          <ProtectedRoute resource="companies" action="list">
+            <ClientShowPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/companies"
+        element={
+          <ProtectedRoute resource="companies" action="list">
+            <CompaniesListPage />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/calendar"
@@ -217,40 +251,16 @@ export const renderLbsCustomRoutes = ({
       />
       <Route
         path="/clients/create"
-        element={<Navigate to="/clients?create=company" replace />}
+        element={<Navigate to="/companies?create=company" replace />}
       />
-      <Route
-        path="/clients"
-        element={
-          <ProtectedRoute resource="companies" action="list">
-            <ClientsListPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/clients" element={<LegacyClientsListRedirect />} />
       <Route
         path="/clients/find-duplicates"
-        element={
-          <ProtectedRoute resource="contacts" action="edit">
-            <FindDuplicatesPage />
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/companies/find-duplicates" replace />}
       />
-      <Route
-        path="/clients/:id/show"
-        element={
-          <ProtectedRoute resource="companies" action="list">
-            <ClientShowPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/clients/:id/edit"
-        element={
-          <ProtectedRoute resource="companies" action="edit">
-            <ClientEditPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/clients/:id/show" element={<LegacyClientShowRedirect />} />
+      <Route path="/clients/:id/edit" element={<LegacyClientEditRedirect />} />
+      <Route path="/clients/:id" element={<LegacyClientIdRedirect />} />
       <Route
         path="/tickets/create"
         element={

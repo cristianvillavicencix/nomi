@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { ProposalPageShell } from "@/lbs/proposals/ProposalPageShell";
+import { getClientShowPath } from "@/lbs/routing";
 import { ProposalSendActions } from "@/lbs/proposals/ProposalSendActions";
 import { CreateClientInvoiceButton } from "@/lbs/billing/CreateClientInvoiceDialog";
 import type {
@@ -186,7 +187,7 @@ const ProposalShowContent = () => {
                   source="company_id"
                   reference="companies"
                   record={record}
-                  link={(companyId) => `/clients/${companyId}/show`}
+                  link={(companyId) => getClientShowPath(companyId)}
                 />
               ) : (
                 "—"

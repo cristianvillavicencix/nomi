@@ -40,6 +40,7 @@ import {
 import { exportSubmissionPdf } from "@/lbs/forms-v2/submissions/submissionPdfExport";
 import { buildSubmissionStatusPatch } from "@/lbs/forms-v2/submissions/submissionStatusUpdate";
 import type { FormInstance, FormSubmissionV2 } from "@/lbs/forms-v2/types";
+import { getClientShowPath } from "@/lbs/routing";
 
 const formatEventLabel = (event: FormSubmissionEvent) => {
   switch (event.event_type) {
@@ -292,7 +293,7 @@ export const SubmissionDetailPage = () => {
                 Company:{" "}
                 {submission.company_id ? (
                   <Link
-                    to={`/clients/${submission.company_id}/show`}
+                    to={getClientShowPath(submission.company_id)}
                     className="text-primary hover:underline"
                   >
                     #{submission.company_id}

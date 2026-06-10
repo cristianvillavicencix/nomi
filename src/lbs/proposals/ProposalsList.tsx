@@ -14,7 +14,7 @@ import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopo
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Proposal } from "@/lbs/types";
 import { Badge } from "@/components/ui/badge";
-import { MoneyText } from "@/lib/permissions/MoneyText";
+import { getClientShowPath } from "@/lbs/routing";
 
 const formatDate = (value?: string | null) => {
   const date = new Date(`${value}T12:00:00`);
@@ -114,7 +114,7 @@ const ProposalsListLayout = () => {
               source="company_id"
               reference="companies"
               record={record}
-              link={(id) => `/clients/${id}/show`}
+              link={(id) => getClientShowPath(id)}
             />
           ) : (
             "—"

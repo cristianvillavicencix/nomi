@@ -117,8 +117,8 @@ export const SpotlightSearchButton = ({
   // Detect the "home" module from the current URL.
   const currentModule: ModuleId | null = useMemo(() => {
     if (matchesPathByPrefix("/leads")(pathname)) return "leads";
-    if (matchesPathByPrefix("/clients")(pathname)) return "clients";
     if (matchesPathByPrefix("/companies")(pathname)) return "clients";
+    if (matchesPathByPrefix("/clients")(pathname)) return "clients";
     if (matchesPathByPrefix("/contacts")(pathname)) return "contacts";
     if (matchesPathByPrefix("/deals")(pathname)) return "deals";
     return null;

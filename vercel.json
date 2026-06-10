@@ -9,6 +9,38 @@
       "schedule": "0 15 * * *"
     }
   ],
+  "redirects": [
+    {
+      "source": "/clients/create",
+      "destination": "/companies?create=company",
+      "permanent": false
+    },
+    {
+      "source": "/clients/find-duplicates",
+      "destination": "/companies/find-duplicates",
+      "permanent": false
+    },
+    {
+      "source": "/clients/:id/edit",
+      "destination": "/companies/:id",
+      "permanent": false
+    },
+    {
+      "source": "/clients",
+      "destination": "/companies",
+      "permanent": false
+    },
+    {
+      "source": "/clients/:id/show",
+      "destination": "/companies/:id",
+      "permanent": false
+    },
+    {
+      "source": "/clients/:id",
+      "destination": "/companies/:id",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!assets/|icons/|manifest\\.json|favicon|sw\\.js|workbox-|api/).*)",
