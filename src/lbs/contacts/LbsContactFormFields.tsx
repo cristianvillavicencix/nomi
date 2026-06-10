@@ -90,9 +90,8 @@ const CompactContactFields = ({
         source="company_id"
         reference="companies"
         perPage={10}
-        validate={required()}
       >
-        <AutocompleteCompanyInput />
+        <AutocompleteCompanyInput validate={required()} />
       </ReferenceInput>
     )}
   </div>
@@ -124,9 +123,8 @@ const ContactBasicsSection = ({
         source="company_id"
         reference="companies"
         perPage={10}
-        validate={required()}
       >
-        <AutocompleteCompanyInput />
+        <AutocompleteCompanyInput validate={required()} />
       </ReferenceInput>
     )}
   </div>

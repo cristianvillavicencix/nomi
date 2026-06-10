@@ -1,16 +1,16 @@
 import type { Identifier } from "ra-core";
 import {
   buildLbsClientContextLinks,
-  mergePrimaryEmailChannels,
-  mergePrimaryPhoneChannels,
   parseLbsClientContextLinks,
   type LbsBillingAddress,
 } from "@/lbs/clients/clientContextLinks";
-import { splitClientFullName } from "@/lbs/clients/ClientCreateForm";
+import { splitClientFullName } from "@/lbs/clients/clientFormUtils";
 import {
   formValuesToEmailJsonb,
   formValuesToPhoneJsonb,
   getPrimaryChannelValue,
+  mergePrimaryEmailChannels,
+  mergePrimaryPhoneChannels,
 } from "@/lbs/clients/clientChannels";
 import {
   cleanSocialLinksForSave,
@@ -266,4 +266,4 @@ export const clientCreateFormValuesToUpsertInput = (
   },
 });
 
-export { splitClientFullName } from "@/lbs/clients/ClientCreateForm";
+export { splitClientFullName } from "@/lbs/clients/clientFormUtils";

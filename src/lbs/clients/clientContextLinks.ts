@@ -178,36 +178,6 @@ export const buildLbsClientContextLinks = (
   return links;
 };
 
-export const mergePrimaryEmailChannels = (
-  existing: EmailAndType[] | undefined,
-  primaryValue: string,
-): EmailAndType[] | undefined => {
-  const trimmed = primaryValue.trim();
-  if (!existing?.length) {
-    return trimmed ? [{ email: trimmed, type: "Work" }] : undefined;
-  }
-  const [first, ...rest] = existing;
-  const primary = trimmed || first.email?.trim() || "";
-  const extras = rest.filter((entry) => entry.email?.trim());
-  if (!primary && extras.length === 0) return undefined;
-  return [{ email: primary, type: first.type ?? "Work" }, ...extras];
-};
-
-export const mergePrimaryPhoneChannels = (
-  existing: PhoneNumberAndType[] | undefined,
-  primaryValue: string,
-): PhoneNumberAndType[] | undefined => {
-  const trimmed = primaryValue.trim();
-  if (!existing?.length) {
-    return trimmed ? [{ number: trimmed, type: "Work" }] : undefined;
-  }
-  const [first, ...rest] = existing;
-  const primary = trimmed || first.number?.trim() || "";
-  const extras = rest.filter((entry) => entry.number?.trim());
-  if (!primary && extras.length === 0) return undefined;
-  return [{ number: primary, type: first.type ?? "Work" }, ...extras];
-};
-
 export const formatBillingAddress = (company: {
   address?: string | null;
   city?: string | null;
