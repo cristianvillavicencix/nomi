@@ -89,9 +89,8 @@ BEGIN
 
   BEGIN
     UPDATE public.companies c
-    SET primary_contact_id = pick.contact_id
-    FROM LATERAL (
-      SELECT pco.id AS contact_id
+    SET primary_contact_id = (
+      SELECT pco.id
       FROM public.contacts pco
       WHERE pco.company_id = c.id
       ORDER BY
@@ -99,7 +98,7 @@ BEGIN
         pco.first_seen ASC NULLS LAST,
         pco.id ASC
       LIMIT 1
-    ) pick
+    )
     WHERE c.primary_contact_id IS NULL
       AND EXISTS (SELECT 1 FROM public.contacts ct WHERE ct.company_id = c.id);
 

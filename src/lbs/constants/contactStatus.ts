@@ -15,21 +15,14 @@ export const CONTACT_STATUS_CHOICES = [
 export type ContactStatusValue =
   (typeof CONTACT_STATUS_CHOICES)[number]["value"];
 
-/** Shown on /leads — includes legacy buckets until data migration runs. */
-export const LBS_LEAD_STATUSES = [
-  "lead",
-  "prospect",
-  "warm",
-  "cold",
-  "new",
-] as const;
+/** Shown on /leads */
+export const LBS_LEAD_STATUSES = ["lead", "prospect"] as const;
 
-/** Shown on /contacts — includes legacy `contact` until data migration runs. */
+/** Shown on /contacts */
 export const LBS_CONTACT_STATUSES = [
   "client",
   "contact_only",
   "inactive",
-  "contact",
 ] as const;
 
 export const LBS_CLIENT_STATUS: ContactStatusValue = "client";

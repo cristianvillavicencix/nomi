@@ -109,6 +109,9 @@ BEGIN
       WHEN 'painting' THEN 'painting'
       WHEN 'cleaning' THEN 'cleaning'
       WHEN 'other' THEN 'other'
+      WHEN 'utilities' THEN 'other'
+      WHEN 'information-technology' THEN 'other'
+      WHEN 'management isv' THEN 'other'
       ELSE c.sector
     END
     WHERE c.sector IS NOT NULL
