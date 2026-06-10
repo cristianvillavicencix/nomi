@@ -43,6 +43,11 @@ export const formatStructuredAddressDisplay = ({
   return parts.length ? parts.join(" · ") : "—";
 };
 
+import {
+  firstAddressLine,
+  stripEmbeddedLocationSuffix,
+} from "@/lbs/clients/addressSuffixStrip";
+
 export type CompanyAddressDisplaySource = {
   address?: string | null;
   city?: string | null;
@@ -51,25 +56,21 @@ export type CompanyAddressDisplaySource = {
   country?: string | null;
 };
 
-const firstAddressLine = (address?: string | null) =>
-  address?.trim().split("\n")[0]?.trim() ?? "";
-
-/** When structured columns exist, trim city/state/zip from a composed address line. */
+/** When structured columns exist, strip only a trailing location suffix. */
 export const streetLineForDisplay = (
   company: CompanyAddressDisplaySource,
 ): string => {
   const line = firstAddressLine(company.address);
   if (!line) return "";
 
-  const city = company.city?.trim();
-  if (city) {
-    const idx = line.toLowerCase().indexOf(city.toLowerCase());
-    if (idx > 0) {
-      return line.slice(0, idx).replace(/,\s*$/, "").trim() || line;
-    }
-  }
-
-  return line;
+  return (
+    stripEmbeddedLocationSuffix(line, {
+      city: company.city,
+      stateAbbr: company.state_abbr,
+      zipcode: company.zipcode,
+      country: company.country,
+    }) ?? line
+  );
 };
 
 /** Profile/list display: structured columns first, raw address column as fallback. */
