@@ -9,6 +9,7 @@ import {
   ChevronsUpDown,
   ExternalLink,
   Loader2,
+  Search,
   Star,
   UserPlus,
   X,
@@ -26,8 +27,10 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -57,10 +60,12 @@ const contactPickerLabel = (contact: Contact) => {
   return email !== "—" ? `${name} · ${email}` : name;
 };
 
-const contactCompanyLabel = (contact: Contact) =>
-  contact.company_name?.trim() || "No company";
+const isUnassignedContact = (contact: Pick<Contact, "company_id">) =>
+  contact.company_id == null || contact.company_id === "";
 
 const SEARCH_THRESHOLD = 5;
+
+const UNASSIGNED_CONTACT_FILTER = { "company_id@is": null } as const;
 
 type PrimaryContactReferenceCardProps = {
   mode: "create" | "edit";
@@ -74,6 +79,265 @@ type PrimaryContactReferenceCardProps = {
   onSelectContact: (contactId: Identifier) => void;
   onSelectDraftContact?: (draft: PrimaryContactDraft) => void;
   onClearContact?: () => void;
+};
+
+const SelectedPrimaryContactRow = ({
+  name,
+  email,
+  phone,
+  profileHref,
+  onRemove,
+}: {
+  name: string;
+  email: string;
+  phone: string;
+  profileHref?: string;
+  onRemove: () => void;
+}) => (
+  <div className="flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2.5">
+    <Avatar className="size-8 shrink-0">
+      <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
+    </Avatar>
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-sm font-medium leading-tight">{name}</p>
+      <p className="truncate text-xs text-muted-foreground">
+        {[email, phone].filter(Boolean).join(" · ") || "No email or phone"}
+      </p>
+    </div>
+    {profileHref ? (
+      <Button asChild variant="ghost" size="icon" className="size-8 shrink-0">
+        <Link
+          to={profileHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open contact profile"
+        >
+          <ExternalLink className="size-4" />
+        </Link>
+      </Button>
+    ) : null}
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-8 shrink-0"
+      onClick={onRemove}
+      aria-label="Remove primary contact"
+    >
+      <X className="size-4" />
+    </Button>
+  </div>
+);
+
+const CreatePrimaryContactPicker = ({
+  selectedContactId,
+  draftPrimaryContact,
+  onSelectContact,
+  onSelectDraftContact,
+  onClearContact,
+}: Pick<
+  PrimaryContactReferenceCardProps,
+  | "selectedContactId"
+  | "draftPrimaryContact"
+  | "onSelectContact"
+  | "onSelectDraftContact"
+  | "onClearContact"
+>) => {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newContactOpen, setNewContactOpen] = useState(false);
+  const [optimisticContact, setOptimisticContact] = useState<Contact | null>(
+    null,
+  );
+
+  const trimmedSearch = searchQuery.trim();
+  const shouldFetchUnassigned =
+    searchOpen && (trimmedSearch.length > 0 || searchOpen);
+
+  const { data: unassignedContacts = [], isFetching } = useGetList<Contact>(
+    "contacts",
+    {
+      filter: {
+        ...UNASSIGNED_CONTACT_FILTER,
+        ...(trimmedSearch ? { q: trimmedSearch } : {}),
+      },
+      pagination: { page: 1, perPage: 20 },
+      sort: { field: "last_name", order: "ASC" },
+    },
+    { enabled: shouldFetchUnassigned },
+  );
+
+  const contacts = useMemo(
+    () => unassignedContacts.filter(isUnassignedContact),
+    [unassignedContacts],
+  );
+
+  const activeContact = useMemo(() => {
+    if (draftPrimaryContact?.fullName.trim()) {
+      const parts = draftPrimaryContact.fullName.trim().split(/\s+/);
+      return {
+        first_name: parts[0] ?? "",
+        last_name: parts.slice(1).join(" ") || parts[0] || "",
+        email_jsonb: draftPrimaryContact.email
+          ? [{ email: draftPrimaryContact.email, type: "Work" as const }]
+          : [],
+        phone_jsonb: draftPrimaryContact.phone
+          ? [{ number: draftPrimaryContact.phone, type: "Work" as const }]
+          : [],
+      } satisfies Partial<Contact> as Contact;
+    }
+    if (selectedContactId == null) return undefined;
+    if (
+      optimisticContact &&
+      String(optimisticContact.id) === String(selectedContactId)
+    ) {
+      return optimisticContact;
+    }
+    return contacts.find((c) => String(c.id) === String(selectedContactId));
+  }, [contacts, draftPrimaryContact, optimisticContact, selectedContactId]);
+
+  const hasSelection =
+    selectedContactId != null || draftPrimaryContact != null;
+
+  const rowName = activeContact ? getContactFullName(activeContact) : "";
+  const rowEmail =
+    activeContact != null ? getContactEmail(activeContact) : "";
+  const rowEmailDisplay = rowEmail !== "—" ? rowEmail : "";
+  const rowPhone = pickPrimaryPhone(activeContact);
+
+  const selectContact = (contact: Contact) => {
+    setOptimisticContact(contact);
+    onSelectContact(contact.id);
+    setSearchOpen(false);
+    setSearchQuery("");
+  };
+
+  const clearSelection = () => {
+    setOptimisticContact(null);
+    onClearContact?.();
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+          <PopoverAnchor asChild>
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  if (!searchOpen) setSearchOpen(true);
+                }}
+                onFocus={() => setSearchOpen(true)}
+                placeholder="Search unassigned contacts…"
+                className="pl-9"
+                aria-expanded={searchOpen}
+                aria-autocomplete="list"
+              />
+            </div>
+          </PopoverAnchor>
+          <PopoverContent
+            className="w-[var(--radix-popover-trigger-width)] p-0"
+            align="start"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+          >
+            <Command shouldFilter={false}>
+              <CommandList>
+                {isFetching ? (
+                  <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Loading contacts…
+                  </div>
+                ) : contacts.length === 0 ? (
+                  <CommandEmpty>
+                    {trimmedSearch
+                      ? "No unassigned contacts match your search."
+                      : "No unassigned contacts found."}
+                  </CommandEmpty>
+                ) : (
+                  <CommandGroup heading="Unassigned contacts">
+                    {contacts.map((contact) => {
+                      const name = getContactFullName(contact);
+                      const contactEmail = getContactEmail(contact);
+                      const isSelected =
+                        selectedContactId != null &&
+                        String(contact.id) === String(selectedContactId);
+
+                      return (
+                        <CommandItem
+                          key={String(contact.id)}
+                          value={String(contact.id)}
+                          onSelect={() => selectContact(contact)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 size-4 shrink-0",
+                              isSelected ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{name}</p>
+                            {contactEmail !== "—" ? (
+                              <p className="truncate text-xs text-muted-foreground">
+                                {contactEmail}
+                              </p>
+                            ) : null}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0 gap-2 sm:w-auto"
+          onClick={() => setNewContactOpen(true)}
+        >
+          <UserPlus className="size-4" />
+          Add contact
+        </Button>
+      </div>
+
+      {hasSelection && activeContact ? (
+        <SelectedPrimaryContactRow
+          name={rowName}
+          email={rowEmailDisplay}
+          phone={rowPhone}
+          profileHref={
+            activeContact.id != null
+              ? getPersonShowPath(activeContact)
+              : undefined
+          }
+          onRemove={clearSelection}
+        />
+      ) : null}
+
+      <p className="text-xs text-muted-foreground">
+        Only contacts without a company are listed. Save the company form to
+        link your selection as primary.
+      </p>
+
+      <ContactFormDialog
+        open={newContactOpen}
+        onOpenChange={setNewContactOpen}
+        deferCreate
+        title="New contact"
+        description="Contact details are saved with the company — nothing is written until you create the company."
+        submitLabel="Add contact"
+        onDraftSubmit={(draft) => {
+          onSelectDraftContact?.(draft);
+        }}
+      />
+    </div>
+  );
 };
 
 export const PrimaryContactReferenceCard = ({
@@ -93,11 +357,20 @@ export const PrimaryContactReferenceCard = ({
   const [optimisticContact, setOptimisticContact] = useState<Contact | null>(
     null,
   );
-  const [globalSearch, setGlobalSearch] = useState("");
-  const [pendingReassign, setPendingReassign] = useState<Contact | null>(null);
 
   const isCreate = mode === "create";
-  const trimmedGlobalSearch = globalSearch.trim();
+
+  if (isCreate) {
+    return (
+      <CreatePrimaryContactPicker
+        selectedContactId={selectedContactId}
+        draftPrimaryContact={draftPrimaryContact}
+        onSelectContact={onSelectContact}
+        onSelectDraftContact={onSelectDraftContact}
+        onClearContact={onClearContact}
+      />
+    );
+  }
 
   const { data: companyContacts = [], isPending: companyContactsPending } =
     useGetList<Contact>(
@@ -108,28 +381,11 @@ export const PrimaryContactReferenceCard = ({
         sort: { field: "first_name", order: "ASC" },
       },
       {
-        enabled: !isCreate && companyId != null && companyId !== "",
-      },
-    );
-
-  const { data: globalContacts = [], isFetching: globalContactsFetching } =
-    useGetList<Contact>(
-      "contacts",
-      {
-        filter: { q: trimmedGlobalSearch },
-        pagination: { page: 1, perPage: 20 },
-        sort: { field: "last_name", order: "ASC" },
-      },
-      {
-        enabled: isCreate && pickerOpen && trimmedGlobalSearch.length > 0,
+        enabled: companyId != null && companyId !== "",
       },
     );
 
   const contacts = useMemo(() => {
-    if (isCreate) {
-      return globalContacts;
-    }
-
     const byId = new Map<string, Contact>();
     for (const contact of companyContacts) {
       byId.set(String(contact.id), contact);
@@ -151,29 +407,9 @@ export const PrimaryContactReferenceCard = ({
     return [...byId.values()].sort((left, right) =>
       getContactFullName(left).localeCompare(getContactFullName(right)),
     );
-  }, [
-    companyContacts,
-    companyId,
-    globalContacts,
-    isCreate,
-    optimisticContact,
-    primaryContact,
-  ]);
+  }, [companyContacts, companyId, optimisticContact, primaryContact]);
 
   const activeContact = useMemo(() => {
-    if (draftPrimaryContact?.fullName.trim()) {
-      const parts = draftPrimaryContact.fullName.trim().split(/\s+/);
-      return {
-        first_name: parts[0] ?? "",
-        last_name: parts.slice(1).join(" ") || parts[0] || "",
-        email_jsonb: draftPrimaryContact.email
-          ? [{ email: draftPrimaryContact.email, type: "Work" as const }]
-          : [],
-        phone_jsonb: draftPrimaryContact.phone
-          ? [{ number: draftPrimaryContact.phone, type: "Work" as const }]
-          : [],
-      } satisfies Partial<Contact> as Contact;
-    }
     if (selectedContactId == null) return undefined;
     if (
       primaryContact &&
@@ -188,19 +424,10 @@ export const PrimaryContactReferenceCard = ({
       return optimisticContact;
     }
     return contacts.find((c) => String(c.id) === String(selectedContactId));
-  }, [
-    contacts,
-    draftPrimaryContact,
-    optimisticContact,
-    primaryContact,
-    selectedContactId,
-  ]);
+  }, [contacts, optimisticContact, primaryContact, selectedContactId]);
 
-  const hasSelection =
-    selectedContactId != null || draftPrimaryContact != null;
-
-  const isPending = isCreate ? globalContactsFetching : companyContactsPending;
-  const showSearch = isCreate || contacts.length > SEARCH_THRESHOLD;
+  const isPending = companyContactsPending;
+  const showSearch = contacts.length > SEARCH_THRESHOLD;
 
   const displayName = activeContact
     ? getContactFullName(activeContact)
@@ -210,11 +437,8 @@ export const PrimaryContactReferenceCard = ({
   const phone = pickPrimaryPhone(activeContact);
   const emailDisplay = email !== "—" ? email : "";
 
-  const pickerTriggerLabel = isCreate
-    ? trimmedGlobalSearch.length > 0
-      ? "Search results"
-      : "Search contacts by name or email…"
-    : activeContact != null
+  const pickerTriggerLabel =
+    activeContact != null
       ? contactPickerLabel(activeContact)
       : contacts.length > 0
         ? "Select primary contact"
@@ -222,64 +446,30 @@ export const PrimaryContactReferenceCard = ({
 
   const openNewContact = () => {
     setPickerOpen(false);
-    setPendingReassign(null);
     setNewContactOpen(true);
   };
 
   const requestSelectContact = (contact: Contact) => {
-    if (isCreate && contact.company_id != null && contact.company_id !== "") {
-      setPendingReassign(contact);
-      return;
-    }
-    setPendingReassign(null);
     setOptimisticContact(contact);
     onSelectContact(contact.id);
     setPickerOpen(false);
-    setGlobalSearch("");
-  };
-
-  const confirmReassign = () => {
-    if (!pendingReassign?.id) return;
-    setOptimisticContact(pendingReassign);
-    onSelectContact(pendingReassign.id);
-    setPendingReassign(null);
-    setPickerOpen(false);
-    setGlobalSearch("");
   };
 
   const clearSelection = () => {
-    setPendingReassign(null);
     setOptimisticContact(null);
     onClearContact?.();
   };
 
   const renderPicker = (trigger: ReactNode) => (
-    <Popover
-      open={pickerOpen}
-      onOpenChange={(open) => {
-        setPickerOpen(open);
-        if (!open) {
-          setPendingReassign(null);
-          setGlobalSearch("");
-        }
-      }}
-    >
+    <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         className="w-[min(100vw-2rem,24rem)] p-0 sm:w-[var(--radix-popover-trigger-width)]"
         align="start"
       >
-        <Command shouldFilter={!isCreate && showSearch}>
+        <Command shouldFilter={showSearch}>
           {showSearch ? (
-            <CommandInput
-              placeholder={
-                isCreate
-                  ? "Search by name or email…"
-                  : "Search contacts…"
-              }
-              value={isCreate ? globalSearch : undefined}
-              onValueChange={isCreate ? setGlobalSearch : undefined}
-            />
+            <CommandInput placeholder="Search contacts…" />
           ) : null}
           <CommandList>
             {isPending ? (
@@ -289,26 +479,17 @@ export const PrimaryContactReferenceCard = ({
               </div>
             ) : (
               <>
-                {isCreate && trimmedGlobalSearch.length === 0 ? (
+                {contacts.length === 0 ? (
                   <CommandEmpty>
-                    Type a name or email to search contacts.
-                  </CommandEmpty>
-                ) : contacts.length === 0 ? (
-                  <CommandEmpty>
-                    {isCreate
-                      ? "No contacts match your search."
-                      : "No contacts linked to this company."}
+                    No contacts linked to this company.
                   </CommandEmpty>
                 ) : (
-                  <CommandGroup
-                    heading={isCreate ? "Contacts" : "Company contacts"}
-                  >
+                  <CommandGroup heading="Company contacts">
                     {contacts.map((contact) => {
                       const isSelected =
                         selectedContactId != null &&
                         String(contact.id) === String(selectedContactId);
                       const isSavedPrimary =
-                        !isCreate &&
                         savedPrimaryContactId != null &&
                         String(contact.id) === String(savedPrimaryContactId);
                       const name = getContactFullName(contact);
@@ -317,7 +498,7 @@ export const PrimaryContactReferenceCard = ({
                       return (
                         <CommandItem
                           key={String(contact.id)}
-                          value={`${name} ${contactEmail !== "—" ? contactEmail : ""} ${contactCompanyLabel(contact)}`.trim()}
+                          value={`${name} ${contactEmail !== "—" ? contactEmail : ""}`.trim()}
                           onSelect={() => requestSelectContact(contact)}
                         >
                           <Check
@@ -346,11 +527,6 @@ export const PrimaryContactReferenceCard = ({
                                 {contactEmail}
                               </p>
                             ) : null}
-                            {isCreate ? (
-                              <p className="truncate text-xs text-muted-foreground">
-                                {contactCompanyLabel(contact)}
-                              </p>
-                            ) : null}
                           </div>
                         </CommandItem>
                       );
@@ -376,60 +552,8 @@ export const PrimaryContactReferenceCard = ({
     </Popover>
   );
 
-  if (isCreate && !hasSelection && !pendingReassign) {
-    return (
-      <>
-        {renderPicker(
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full justify-start sm:w-auto"
-          >
-            Add primary contact (optional)
-          </Button>,
-        )}
-        <ContactFormDialog
-          open={newContactOpen}
-          onOpenChange={setNewContactOpen}
-          deferCreate
-          title="New primary contact"
-          description="Contact details are saved with the company — nothing is written until you create the company."
-          submitLabel="Add contact"
-          onDraftSubmit={(draft) => {
-            onSelectDraftContact?.(draft);
-          }}
-        />
-      </>
-    );
-  }
-
   return (
     <div className="space-y-3">
-      {pendingReassign ? (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-          <p>
-            This contact belongs to{" "}
-            <span className="font-medium">
-              {contactCompanyLabel(pendingReassign)}
-            </span>
-            . Saving will move them to this company.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" size="sm" onClick={confirmReassign}>
-              Confirm
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setPendingReassign(null)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
       <div className="flex items-start gap-3 rounded-lg border bg-muted/20 p-4">
         <Avatar className="size-10">
           <AvatarFallback>{initials(displayName)}</AvatarFallback>
@@ -443,11 +567,6 @@ export const PrimaryContactReferenceCard = ({
             {[emailDisplay, phone].filter(Boolean).join(" · ") ||
               "No email or phone"}
           </p>
-          {isCreate && activeContact?.company_name ? (
-            <p className="text-xs text-muted-foreground">
-              Current company: {contactCompanyLabel(activeContact)}
-            </p>
-          ) : null}
         </div>
         {activeContact?.id != null ? (
           <Button asChild variant="ghost" size="icon" className="shrink-0">
@@ -482,7 +601,7 @@ export const PrimaryContactReferenceCard = ({
             )}
           </Button>,
         )}
-        {hasSelection ? (
+        {selectedContactId != null ? (
           <Button
             type="button"
             variant="ghost"
@@ -497,27 +616,18 @@ export const PrimaryContactReferenceCard = ({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {isCreate
-          ? "Choose an existing contact or create a new one. Save the company form to link them as primary."
-          : "Person details are edited in their contact profile — here you only choose who is primary. Save the company form to apply your selection."}
+        Person details are edited in their contact profile — here you only
+        choose who is primary. Save the company form to apply your selection.
       </p>
 
       <ContactFormDialog
         open={newContactOpen}
         onOpenChange={setNewContactOpen}
-        lockCompanyId={isCreate ? undefined : companyId}
-        deferCreate={isCreate}
+        lockCompanyId={companyId}
         title="New primary contact"
-        description={
-          isCreate
-            ? "Contact details are saved with the company — nothing is written until you create the company."
-            : "Creates a contact for this company. Save the company form to set them as primary."
-        }
-        submitLabel={isCreate ? "Add contact" : "Create contact"}
+        description="Creates a contact for this company. Save the company form to set them as primary."
+        submitLabel="Create contact"
         navigateOnCreate={false}
-        onDraftSubmit={(draft) => {
-          onSelectDraftContact?.(draft);
-        }}
         onCreated={(contact) => {
           if (contact.id != null) {
             setOptimisticContact(contact);
