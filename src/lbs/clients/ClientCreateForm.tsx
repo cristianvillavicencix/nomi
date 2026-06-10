@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { Identifier } from "ra-core";
 import { useFormContext, useWatch } from "react-hook-form";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
@@ -16,8 +16,19 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronDown } from "lucide-react";
 import { LBS_COMPANY_INDUSTRY_CHOICES } from "@/lbs/leads/leadFormConstants";
 import { PrimaryContactReferenceCard } from "@/lbs/clients/PrimaryContactReferenceCard";
+import { getContactFullName } from "@/lbs/clients/clientShowUtils";
 import { ClientSocialLinksInput } from "@/lbs/clients/ClientSocialLinksInput";
 import type { ClientSocialLinkValue } from "@/lbs/clients/clientSocialLinks";
+import {
+  COMPANY_CHANNEL_TYPE_CHOICES,
+  type ClientChannelFormValue,
+} from "@/lbs/clients/clientChannels";
+import { ProgressiveMultiChannelInput } from "@/lbs/shared/ProgressiveMultiChannelInput";
+import {
+  BILLING_ADDRESS_FIELD_NAMES,
+  BUSINESS_ADDRESS_FIELD_NAMES,
+  StructuredAddressFields,
+} from "@/lbs/clients/StructuredAddressFields";
 import type { Contact } from "@/components/atomic-crm/types";
 
 export type ClientCreateFormValues = {
@@ -26,14 +37,22 @@ export type ClientCreateFormValues = {
   primary_phone: string;
   selected_primary_contact_id: Identifier | null;
   company_name: string;
-  company_email: string;
-  company_phone: string;
+  company_emails: ClientChannelFormValue[];
+  company_phones: ClientChannelFormValue[];
   company_website: string;
   company_sector: string;
   social_links: ClientSocialLinkValue[];
   company_address: string;
+  company_city: string;
+  company_state_abbr: string;
+  company_zipcode: string;
+  company_country: string;
   billing_same_as_business: boolean;
   billing_address: string;
+  billing_city: string;
+  billing_state_abbr: string;
+  billing_zipcode: string;
+  billing_country: string;
   invoice_same_as_primary: boolean;
   invoice_contact_name: string;
   invoice_email: string;
@@ -74,6 +93,42 @@ export const ClientCreateFormFields = ({
     ClientCreateFormValues,
     "selected_primary_contact_id"
   >({ name: "selected_primary_contact_id" });
+  const primaryNameDraft = useWatch<
+    ClientCreateFormValues,
+    "primary_full_name"
+  >({ name: "primary_full_name" });
+  const primaryEmailDraft = useWatch<ClientCreateFormValues, "primary_email">({
+    name: "primary_email",
+  });
+  const primaryPhoneDraft = useWatch<ClientCreateFormValues, "primary_phone">({
+    name: "primary_phone",
+  });
+
+  const primaryContactSummary = useMemo(() => {
+    if (mode === "edit") {
+      if (
+        primaryContact &&
+        selectedPrimaryId != null &&
+        String(primaryContact.id) === String(selectedPrimaryId)
+      ) {
+        return getContactFullName(primaryContact);
+      }
+      return selectedPrimaryId != null ? "Contact selected" : null;
+    }
+    return (
+      primaryNameDraft?.trim() ||
+      primaryEmailDraft?.trim() ||
+      primaryPhoneDraft?.trim() ||
+      null
+    );
+  }, [
+    mode,
+    primaryContact,
+    primaryEmailDraft,
+    primaryNameDraft,
+    primaryPhoneDraft,
+    selectedPrimaryId,
+  ]);
 
   return (
     <div className="flex flex-col gap-6 p-1">
@@ -98,8 +153,22 @@ export const ClientCreateFormFields = ({
             helperText={false}
           />
         )}
-        <EmailInput source="company_email" label="Email" helperText={false} />
-        <PhoneInput source="company_phone" label="Phone" helperText={false} />
+        <ProgressiveMultiChannelInput<ClientCreateFormValues>
+          source="company_emails"
+          kind="email"
+          label="Email"
+          valueKey="value"
+          typeChoices={COMPANY_CHANNEL_TYPE_CHOICES}
+          addLabel="+ Add email"
+        />
+        <ProgressiveMultiChannelInput<ClientCreateFormValues>
+          source="company_phones"
+          kind="phone"
+          label="Phone"
+          valueKey="value"
+          typeChoices={COMPANY_CHANNEL_TYPE_CHOICES}
+          addLabel="+ Add phone"
+        />
         <TextInput
           source="company_website"
           label="Website"
@@ -118,61 +187,71 @@ export const ClientCreateFormFields = ({
         {placesEnabled ? (
           <GooglePlacesAutocompleteInput
             source="company_address"
-            label="Address"
+            label="Street"
             mode="address"
-            multiline
             helperText={false}
             onPlaceDetails={(details) =>
               applyGoogleAddressToClientForm(setValue, details, "company")
             }
           />
-        ) : (
-          <TextInput
-            source="company_address"
-            label="Address"
-            helperText={false}
-            multiline
-          />
-        )}
-      </section>
-
-      <Separator />
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Primary contact</h2>
-        {mode === "create" ? (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              This will create a contact linked to the company.
-            </p>
-            <TextInput
-              source="primary_full_name"
-              label="Full name"
-              validate={requiredName}
-              helperText={false}
-            />
-            <EmailInput
-              source="primary_email"
-              label="Email"
-              helperText={false}
-            />
-            <PhoneInput
-              source="primary_phone"
-              label="Phone"
-              helperText={false}
-            />
-          </div>
-        ) : companyId != null ? (
-          <PrimaryContactReferenceCard
-            companyId={companyId}
-            selectedContactId={selectedPrimaryId}
-            primaryContact={primaryContact}
-            onSelectContact={(id) =>
-              setValue("selected_primary_contact_id", id, { shouldDirty: true })
-            }
-          />
         ) : null}
+        <StructuredAddressFields prefix="company" forceShowCountry={placesEnabled} showStreet={!placesEnabled} />
       </section>
+
+      <details className="group rounded-md border">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+          <span className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+            <span>
+              Primary contact
+              <span className="ml-1.5 font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </span>
+            {primaryContactSummary ? (
+              <span className="truncate font-normal text-muted-foreground">
+                — {primaryContactSummary}
+              </span>
+            ) : null}
+          </span>
+          <ChevronDown className="size-4 shrink-0 opacity-60 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-4 border-t px-4 pt-4 pb-4">
+          {mode === "create" ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Creates a contact linked to this company. Leave collapsed if you
+                do not need one yet.
+              </p>
+              <TextInput
+                source="primary_full_name"
+                label="Full name"
+                helperText={false}
+              />
+              <EmailInput
+                source="primary_email"
+                label="Email"
+                helperText={false}
+              />
+              <PhoneInput
+                source="primary_phone"
+                label="Phone"
+                helperText={false}
+              />
+            </>
+          ) : companyId != null ? (
+            <PrimaryContactReferenceCard
+              companyId={companyId}
+              selectedContactId={selectedPrimaryId}
+              primaryContact={primaryContact}
+              onSelectContact={(id) =>
+                setValue("selected_primary_contact_id", id, {
+                  shouldDirty: true,
+                })
+              }
+            />
+          ) : null}
+        </div>
+      </details>
 
       <Separator />
 
@@ -214,25 +293,24 @@ const BillingAddressFields = () => {
     name: "billing_same_as_business",
   });
   const { setValue } = useFormContext<ClientCreateFormValues>();
-  const companyAddress = useWatch<ClientCreateFormValues, "company_address">({
-    name: "company_address",
+
+  const businessValues = useWatch<ClientCreateFormValues>({
+    name: BUSINESS_ADDRESS_FIELD_NAMES,
   });
 
   useEffect(() => {
     if (!billingSameAsBusiness) return;
-    setValue("billing_address", companyAddress ?? "", { shouldDirty: true });
-  }, [billingSameAsBusiness, companyAddress, setValue]);
+    BUSINESS_ADDRESS_FIELD_NAMES.forEach((source, index) => {
+      const billingField = BILLING_ADDRESS_FIELD_NAMES[index];
+      setValue(billingField, businessValues?.[index] ?? "", {
+        shouldDirty: true,
+      });
+    });
+  }, [billingSameAsBusiness, businessValues, setValue]);
 
   if (billingSameAsBusiness) return null;
 
-  return (
-    <TextInput
-      source="billing_address"
-      label="Billing address"
-      helperText={false}
-      multiline
-    />
-  );
+  return <StructuredAddressFields prefix="billing" />;
 };
 
 const InvoiceContactFields = ({

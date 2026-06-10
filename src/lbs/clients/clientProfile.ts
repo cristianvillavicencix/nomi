@@ -9,6 +9,10 @@ import {
   getInvoiceContactSummary,
   parseLbsClientContextLinks,
 } from "@/lbs/clients/clientContextLinks";
+import {
+  formatStructuredAddressDisplay,
+  resolveCompanyAddressForDisplay,
+} from "@/lbs/clients/clientAddressUtils";
 
 export type CompanyWithPrimaryContact = Company & {
   primary_contact_id?: Contact["id"] | null;
@@ -115,18 +119,8 @@ export const getPrimaryContactPhone = (company: CompanyWithPrimaryContact) =>
   company.phone_number?.trim() ||
   "—";
 
-export const formatCompanyAddress = (company: CompanyWithPrimaryContact) => {
-  const parts = [
-    company.address,
-    [company.city, company.state_abbr].filter(Boolean).join(", "),
-    company.zipcode,
-    company.country,
-  ]
-    .map((part) => String(part ?? "").trim())
-    .filter(Boolean);
-
-  return parts.length ? parts.join(" · ") : "—";
-};
+export const formatCompanyAddress = (company: CompanyWithPrimaryContact) =>
+  resolveCompanyAddressForDisplay(company);
 
 export const getClientStatus = (company: CompanyWithPrimaryContact) =>
   company.primary_contact_status?.trim() || "—";
@@ -135,19 +129,13 @@ export const formatClientHeaderAddress = (
   company: CompanyWithPrimaryContact,
   contactAddress?: string | null,
 ) => {
-  const structured = [
-    company.address,
-    [company.city, company.state_abbr].filter(Boolean).join(", "),
-    company.zipcode,
-  ]
-    .map((part) => String(part ?? "").trim())
-    .filter(Boolean)
-    .join(", ");
-
-  if (structured) return structured;
+  const fromCompany = resolveCompanyAddressForDisplay(company);
+  if (fromCompany !== "—") {
+    return fromCompany.replace(/ · /g, ", ");
+  }
 
   const fallback = String(contactAddress ?? "").trim();
-  return fallback || formatCompanyAddress(company).replace(/ · /g, ", ");
+  return fallback || "—";
 };
 
 export const pickPrimaryContact = (

@@ -1,12 +1,11 @@
 import type { Contact } from "@/components/atomic-crm/types";
 import type { ClientCreateFormValues } from "@/lbs/clients/ClientCreateForm";
 import { parseLbsClientContextLinks } from "@/lbs/clients/clientContextLinks";
+import { mergeClientSocialLinksForForm } from "@/lbs/clients/clientChannels";
 import {
-  emailsToFormValues,
-  getPrimaryChannelValue,
-  mergeClientSocialLinksForForm,
-  phonesToFormValues,
-} from "@/lbs/clients/clientChannels";
+  resolveCompanyOwnEmails,
+  resolveCompanyOwnPhones,
+} from "@/lbs/clients/companyChannelResolvers";
 import {
   collectCompanySocialLinks,
   collectContactSocialLinks,
@@ -14,14 +13,12 @@ import {
 import type { CompanyWithPrimaryContact } from "@/lbs/clients/clientProfile";
 
 const pickPrimaryEmail = (contact?: Contact | null) =>
-  getPrimaryChannelValue(
-    emailsToFormValues(contact?.email_jsonb ?? undefined),
-  );
+  contact?.email_jsonb?.find((e) => e.email?.trim())?.email?.trim() ?? "";
 
 const pickPrimaryPhone = (contact?: Contact | null) =>
-  getPrimaryChannelValue(
-    phonesToFormValues(contact?.phone_jsonb ?? undefined),
-  );
+  contact?.phone_jsonb?.find((p) => p.number?.trim())?.number?.trim() ?? "";
+
+const trimOrEmpty = (value?: string | null) => value?.trim() ?? "";
 
 export const companyToClientFormValues = (
   company: CompanyWithPrimaryContact,
@@ -43,11 +40,10 @@ export const companyToClientFormValues = (
     selected_primary_contact_id:
       primaryContact?.id ?? company.primary_contact_id ?? null,
     company_name: company.name?.trim() ?? "",
-    company_email: getPrimaryChannelValue(
-      emailsToFormValues(ctx.companyEmails, ctx.businessEmail),
-    ),
-    company_phone: getPrimaryChannelValue(
-      phonesToFormValues(ctx.companyPhones, company.phone_number),
+    company_emails: resolveCompanyOwnEmails(company.context_links),
+    company_phones: resolveCompanyOwnPhones(
+      company.context_links,
+      company.phone_number,
     ),
     company_website: company.website?.trim() ?? "",
     company_sector: company.sector?.trim() ?? "",
@@ -58,21 +54,17 @@ export const companyToClientFormValues = (
       );
       return links.length > 0 ? links : [{ url: "" }];
     })(),
-    company_address: formatStructuredAddress({
-      address: company.address,
-      city: company.city,
-      stateAbbr: company.state_abbr,
-      zipcode: company.zipcode,
-      country: company.country,
-    }),
+    company_address: trimOrEmpty(company.address),
+    company_city: trimOrEmpty(company.city),
+    company_state_abbr: trimOrEmpty(company.state_abbr),
+    company_zipcode: trimOrEmpty(company.zipcode),
+    company_country: trimOrEmpty(company.country),
     billing_same_as_business: billingSameAsBusiness,
-    billing_address: formatStructuredAddress({
-      address: billing.address,
-      city: billing.city,
-      stateAbbr: billing.stateAbbr,
-      zipcode: billing.zipcode,
-      country: billing.country,
-    }),
+    billing_address: trimOrEmpty(billing.address),
+    billing_city: trimOrEmpty(billing.city),
+    billing_state_abbr: trimOrEmpty(billing.stateAbbr),
+    billing_zipcode: trimOrEmpty(billing.zipcode),
+    billing_country: trimOrEmpty(billing.country),
     invoice_same_as_primary: invoiceSameAsPrimary,
     invoice_contact_name: ctx.invoiceContactName ?? "",
     invoice_email: ctx.invoiceEmail ?? "",
@@ -81,43 +73,28 @@ export const companyToClientFormValues = (
   };
 };
 
-const formatStructuredAddress = ({
-  address,
-  city,
-  stateAbbr,
-  zipcode,
-  country,
-}: {
-  address?: string | null;
-  city?: string | null;
-  stateAbbr?: string | null;
-  zipcode?: string | null;
-  country?: string | null;
-}) =>
-  [
-    address?.trim() ?? "",
-    [city?.trim(), [stateAbbr?.trim(), zipcode?.trim()].filter(Boolean).join(" ")]
-      .filter(Boolean)
-      .join(", "),
-    country?.trim() ?? "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-
 export const emptyClientFormValues = (): ClientCreateFormValues => ({
   primary_full_name: "",
   primary_email: "",
   primary_phone: "",
   selected_primary_contact_id: null,
   company_name: "",
-  company_email: "",
-  company_phone: "",
+  company_emails: [{ value: "", type: "Work", isPrimary: true }],
+  company_phones: [{ value: "", type: "Work", isPrimary: true }],
   company_website: "",
   company_sector: "",
   social_links: [{ url: "" }],
   company_address: "",
+  company_city: "",
+  company_state_abbr: "",
+  company_zipcode: "",
+  company_country: "",
   billing_same_as_business: true,
   billing_address: "",
+  billing_city: "",
+  billing_state_abbr: "",
+  billing_zipcode: "",
+  billing_country: "",
   invoice_same_as_primary: true,
   invoice_contact_name: "",
   invoice_email: "",
