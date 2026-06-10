@@ -1,0 +1,228 @@
+WARN: no SMS provider is enabled. Disabling phone login
+Initialising login role...
+[
+  {
+    "created_at": "2026-05-26 18:13:12.626735+00",
+    "id": 591,
+    "name": "CT Home Evolution LLC",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:13.803239+00",
+    "id": 601,
+    "name": "David Corredor",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:14.585639+00",
+    "id": 609,
+    "name": "Skyline Roofing Contractor LLC",
+    "sector": "Roofing"
+  },
+  {
+    "created_at": "2026-05-26 18:13:14.88024+00",
+    "id": 612,
+    "name": "Real State Roofing",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:16.181397+00",
+    "id": 625,
+    "name": "Safe Roofing Adjusters",
+    "sector": "Restoration"
+  },
+  {
+    "created_at": "2026-05-26 18:13:17.712275+00",
+    "id": 640,
+    "name": "G\u0026G Lopez All Pro Handyman \u0026 Cleaning Service LLC",
+    "sector": "Roofing"
+  },
+  {
+    "created_at": "2026-05-26 18:13:17.806513+00",
+    "id": 641,
+    "name": "Skyler LLC",
+    "sector": "Siding"
+  },
+  {
+    "created_at": "2026-05-26 18:13:18.608861+00",
+    "id": 643,
+    "name": "BMC ROOFING \u0026 SIDING",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:18.706534+00",
+    "id": 644,
+    "name": "GM Rofing and Siding LLC",
+    "sector": "Roofing"
+  },
+  {
+    "created_at": "2026-05-26 18:13:18.802908+00",
+    "id": 645,
+    "name": "Home Evolution Contractor",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:18.897663+00",
+    "id": 646,
+    "name": "Edgar Abrigo",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:18.991274+00",
+    "id": 647,
+    "name": "cristian",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:19.108439+00",
+    "id": 648,
+    "name": "precisionrestorationroofing",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:19.204145+00",
+    "id": 649,
+    "name": "First Restoration Services",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:19.299483+00",
+    "id": 650,
+    "name": "CHE Roofing",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:19.395382+00",
+    "id": 651,
+    "name": "Castro Construction Guilford",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:20.041566+00",
+    "id": 656,
+    "name": "custom general service LLC",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:30.116074+00",
+    "id": 662,
+    "name": "BLUE HANDYMAN LLC",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:30.613194+00",
+    "id": 667,
+    "name": "Pepito Roofing",
+    "sector": "Real Estate"
+  },
+  {
+    "created_at": "2026-05-26 18:13:30.710248+00",
+    "id": 668,
+    "name": "G\u0026S Home Improvement CT",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:30.808851+00",
+    "id": 669,
+    "name": "Rock Home Contractor LLC",
+    "sector": "Roofing"
+  },
+  {
+    "created_at": "2026-05-26 18:13:30.916609+00",
+    "id": 670,
+    "name": "Luis LLuman",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:31.016135+00",
+    "id": 671,
+    "name": "Castro Construction",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:31.121494+00",
+    "id": 672,
+    "name": "Luis",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:31.221638+00",
+    "id": 673,
+    "name": "SkyTop",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:31.316981+00",
+    "id": 674,
+    "name": "Kelly Alencastro",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:31.697986+00",
+    "id": 678,
+    "name": "United Restoration \u0026 Remodeling LLC",
+    "sector": "Roofing"
+  },
+  {
+    "created_at": "2026-05-26 18:13:32.735131+00",
+    "id": 687,
+    "name": "United Pro Restoration",
+    "sector": "Restoration"
+  },
+  {
+    "created_at": "2026-05-26 18:13:33.818473+00",
+    "id": 697,
+    "name": "Mr General Builder",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:33.916002+00",
+    "id": 698,
+    "name": "Jose Ramos",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:34.706438+00",
+    "id": 704,
+    "name": "Rock Home Contractor",
+    "sector": "Roofing"
+  },
+  {
+    "created_at": "2026-05-26 18:13:37.015056+00",
+    "id": 728,
+    "name": "GRG Construction",
+    "sector": "Roofing"
+  },
+  {
+    "created_at": "2026-05-26 18:13:37.416355+00",
+    "id": 732,
+    "name": "Mr. Rolando Quinde",
+    "sector": "Roofing"
+  },
+  {
+    "created_at": "2026-05-26 18:13:38.682056+00",
+    "id": 745,
+    "name": "Mike Home Improvments",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:39.157092+00",
+    "id": 750,
+    "name": "Skyler",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 18:13:41.337081+00",
+    "id": 770,
+    "name": "Zoho",
+    "sector": null
+  },
+  {
+    "created_at": "2026-05-26 20:58:36.51+00",
+    "id": 777,
+    "name": "Mr General Builder ",
+    "sector": null
+  }
+]
+A new version of Supabase CLI is available: v2.105.0 (currently installed v2.92.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

@@ -835,7 +835,6 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       created = true;
     }
 
-    const contactPayload = buildContactPayloadFromUpsert(input, companyId);
     const { data: contacts } = await baseDataProvider.getList<Contact>(
       "contacts",
       {
@@ -848,7 +847,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       (candidate) => String(candidate.company_id) === String(companyId),
     );
 
-    const primaryEmail = input.primary.email?.trim().toLowerCase();
+    const primaryEmail = input.primary.emails?.[0]?.value?.trim().toLowerCase();
     let contact =
       (input.primaryContactId
         ? companyContacts.find(
@@ -875,7 +874,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         "contacts",
         {
           id: contact.id,
-          data: contactPayload,
+          data: buildContactPayloadFromUpsert(input, companyId, "update"),
           previousData: contact,
         },
       );
@@ -884,7 +883,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       const { data: newContact } = await baseDataProvider.create<Contact>(
         "contacts",
         {
-          data: contactPayload,
+          data: buildContactPayloadFromUpsert(input, companyId, "create"),
         },
       );
       contact = newContact;

@@ -12,7 +12,7 @@ import { PhoneInput } from "@/components/admin/phone-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Separator } from "@/components/ui/separator";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { LBS_COMPANY_INDUSTRY_CHOICES } from "@/lbs/leads/leadFormConstants";
 import { ClientChannelsInput } from "@/lbs/clients/ClientChannelsInput";
 import { getPrimaryChannelValue } from "@/lbs/clients/clientChannels";
 import type { ClientChannelFormValue } from "@/lbs/clients/clientChannels";
@@ -63,8 +63,11 @@ const optionalUrl = (url?: string) => {
 
 export const ClientCreateFormFields = () => {
   const { setValue } = useFormContext<ClientCreateFormValues>();
-  const { companySectors } = useConfigurationContext();
   const placesEnabled = isGooglePlacesEnabled();
+  const industryChoices = LBS_COMPANY_INDUSTRY_CHOICES.map((entry) => ({
+    value: entry.id,
+    label: entry.name,
+  }));
 
   return (
     <div className="flex flex-col gap-6 p-1">
@@ -107,12 +110,12 @@ export const ClientCreateFormFields = () => {
         />
         <SelectInput
           source="company_sector"
-          label="Tipo de empresa"
-          choices={companySectors}
+          label="Industry"
+          choices={industryChoices}
           optionText="label"
           optionValue="value"
           helperText={false}
-          emptyText="Selecciona tipo de empresa"
+          emptyText="Select industry"
         />
         <AddressFields prefix="company" readOnly={false} />
       </section>

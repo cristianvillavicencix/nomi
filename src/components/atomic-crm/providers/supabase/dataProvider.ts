@@ -1165,8 +1165,6 @@ const dataProviderWithCustomMethods = {
       created = true;
     }
 
-    const contactPayload = buildContactPayloadFromUpsert(input, companyId);
-
     const resolvePrimaryContactId = async () => {
       if (input.primaryContactId) {
         const { data: existingPrimary } = await supabase
@@ -1177,6 +1175,11 @@ const dataProviderWithCustomMethods = {
           .maybeSingle();
 
         if (existingPrimary?.id) {
+          const contactPayload = buildContactPayloadFromUpsert(
+            input,
+            companyId,
+            "update",
+          );
           const { data: updatedContact, error: updateContactError } =
             await supabase
               .from("contacts")
@@ -1206,6 +1209,11 @@ const dataProviderWithCustomMethods = {
         );
 
         if (matchedByEmail?.id) {
+          const contactPayload = buildContactPayloadFromUpsert(
+            input,
+            companyId,
+            "update",
+          );
           const { data: updatedContact, error: updateContactError } =
             await supabase
               .from("contacts")
@@ -1231,6 +1239,11 @@ const dataProviderWithCustomMethods = {
         .maybeSingle();
 
       if (existingByName?.id) {
+        const contactPayload = buildContactPayloadFromUpsert(
+          input,
+          companyId,
+          "update",
+        );
         const { data: updatedContact, error: updateContactError } =
           await supabase
             .from("contacts")
@@ -1245,6 +1258,11 @@ const dataProviderWithCustomMethods = {
         return updatedContact.id as Identifier;
       }
 
+      const contactPayload = buildContactPayloadFromUpsert(
+        input,
+        companyId,
+        "create",
+      );
       const { data: newContact, error: createContactError } = await supabase
         .from("contacts")
         .insert({

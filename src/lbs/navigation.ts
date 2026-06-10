@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BookUser,
   Briefcase,
   Building2,
   CalendarDays,
@@ -11,6 +12,7 @@ import {
   Receipt,
   Ticket,
   UserPlus,
+  Users,
   Video,
   MessageSquare,
 } from "lucide-react";
@@ -23,6 +25,14 @@ export type LbsNavItem = {
   capability?: string;
   resource?: string;
   action?: string;
+};
+
+export type LbsNavCollapsibleGroup = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  storageKey: string;
+  children: LbsNavItem[];
 };
 
 export type LbsNavGroup = {
@@ -77,21 +87,39 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   },
 ];
 
+export const LBS_CLIENTS_NAV_COLLAPSIBLE: LbsNavCollapsibleGroup = {
+  id: "clients",
+  label: "Clients",
+  icon: Users,
+  storageKey: "sidebar_clients_open",
+  children: [
+    {
+      to: "/companies",
+      label: "Companies",
+      icon: Building2,
+      activePattern: "/companies/*",
+      capability: "crm.companies.view",
+      resource: "companies",
+      action: "list",
+    },
+    {
+      to: "/contacts",
+      label: "Contacts",
+      icon: BookUser,
+      activePattern: "/contacts/*",
+      capability: "crm.contacts.view",
+      resource: "contacts",
+      action: "list",
+    },
+  ],
+};
+
 export const LBS_NAV_GROUPS: LbsNavGroup[] = [
   {
     id: "pipeline",
     label: "Pipeline",
     icon: Building2,
     items: [
-      {
-        to: "/clients",
-        label: "Clients",
-        icon: Building2,
-        activePattern: "/clients/*",
-        capability: "crm.companies.view",
-        resource: "companies",
-        action: "list",
-      },
       {
         to: "/deals",
         label: "Deals",
@@ -210,6 +238,7 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
 /** Flat list for top navigation and legacy callers. */
 export const LBS_NAV_ITEMS: LbsNavItem[] = [
   ...LBS_NAV_STANDALONE,
+  ...LBS_CLIENTS_NAV_COLLAPSIBLE.children,
   ...LBS_NAV_GROUPS.flatMap((group) => group.items),
 ];
 
@@ -247,17 +276,14 @@ export const LBS_PLACEHOLDER_MODULES = {
 } as const;
 
 /**
- * Status values on `contacts` that mark the row as a "lead" (vs. a client
- * contact). The pipeline position itself lives in `contacts.lead_stage`
- * (new/contacted/talking/quoted/closing/paused/won/lost) — these are just
- * the lifecycle bucket markers.
- *
- * Legacy values ('warm', 'cold', 'prospect') are kept so existing rows
- * stay visible until migrated.
+ * Contact status filters — canonical choices live in `@/lbs/constants/contactStatus`.
+ * Legacy values remain in filter arrays until cleanup script 04 is applied.
  */
-export const LBS_LEAD_STATUSES = ["lead", "warm", "cold", "prospect"] as const;
-
-/** People linked to client companies (post-conversion or assigned). */
-export const LBS_CONTACT_STATUSES = ["client", "contact"] as const;
-
-export const LBS_CLIENT_STATUS = "client";
+export {
+  CONTACT_STATUS_CHOICES,
+  CONTACT_STATUS_LEGACY_MAP,
+  LBS_CLIENT_STATUS,
+  LBS_CONTACT_STATUSES,
+  LBS_LEAD_STATUSES,
+} from "@/lbs/constants/contactStatus";
+export type { ContactStatusValue } from "@/lbs/constants/contactStatus";

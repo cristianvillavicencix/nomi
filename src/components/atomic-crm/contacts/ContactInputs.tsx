@@ -14,7 +14,7 @@ import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
-import { useConfigurationContext } from "../root/ConfigurationContext";
+import { CONTACT_STATUS_CHOICES } from "@/lbs/constants/contactStatus";
 import { InterestedServiceInput } from "@/lbs/leads/InterestedServiceInput";
 import { LBS_LEAD_SOURCE_CHOICES } from "@/lbs/leads/leadFormConstants";
 import { LeadReferrerInputs } from "@/lbs/leads/LeadReferrerInputs";
@@ -165,8 +165,6 @@ const ContactPersonalInformationInputs = () => {
 const personalInfoTypes = [{ id: "Work" }, { id: "Home" }, { id: "Other" }];
 
 const ContactManagementInputs = () => {
-  const { noteStatuses } = useConfigurationContext();
-
   return (
     <div className="flex flex-col gap-4">
       <h6 className="text-lg font-semibold">Management</h6>
@@ -174,9 +172,9 @@ const ContactManagementInputs = () => {
         source="status"
         label="Status"
         helperText={false}
-        choices={noteStatuses.map((status) => ({
-          id: status.value,
-          name: status.label,
+        choices={CONTACT_STATUS_CHOICES.map((entry) => ({
+          id: entry.value,
+          name: entry.label,
         }))}
         validate={required()}
       />

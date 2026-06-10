@@ -56,6 +56,10 @@ export function withCurrentProductName<
  */
 export const primaryBusinessSectorUnsetToken = "__unset__";
 
+/**
+ * GICS-style sector list — used by atomic-crm CompanyInputs only.
+ * @deprecated LBS client forms use LBS_COMPANY_INDUSTRY_CHOICES instead.
+ */
 export const defaultCompanySectors = [
   { value: "communication-services", label: "Communication Services" },
   { value: "consumer-discretionary", label: "Consumer Discretionary" },

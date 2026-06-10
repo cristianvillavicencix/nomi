@@ -94,8 +94,6 @@ export const buildQuickClientUpsertInput = (
     },
     business: {
       name: values.businessName.trim(),
-      emails,
-      phones,
     },
     billing: {
       sameAsBusiness: true,
@@ -162,25 +160,55 @@ export const buildCompanyPayloadFromUpsert = (
   };
 };
 
-export const buildContactPayloadFromUpsert = (
+export type ContactUpsertMode = "create" | "update";
+
+const buildContactFormFields = (
   input: LbsClientUpsertInput,
   companyId: Identifier,
 ) => {
   const { firstName, lastName } = splitClientFullName(input.primary.fullName);
-  const now = new Date().toISOString();
-
   return {
     first_name: firstName,
     last_name: lastName || firstName,
     company_id: companyId,
-    status: LBS_CLIENT_STATUS,
     email_jsonb: formValuesToEmailJsonb(input.primary.emails),
     phone_jsonb: formValuesToPhoneJsonb(input.primary.phones),
     address: input.primary.address?.trim() || null,
-    linkedin_url: null,
-    lead_source: null,
-    interested_service: null,
     organization_member_id: input.organizationMemberId,
+  };
+};
+
+/** Fields managed by the LBS client form — omitted on update when not in the form. */
+export const LBS_CLIENT_FORM_UNMANAGED_CONTACT_FIELDS = [
+  "lead_source",
+  "interested_service",
+  "lead_source_other",
+  "referred_by_contact_id",
+  "referred_by_company_id",
+  "linkedin_url",
+  "tags",
+  "first_seen",
+  "status",
+] as const;
+
+export const buildContactPayloadFromUpsert = (
+  input: LbsClientUpsertInput,
+  companyId: Identifier,
+  mode: ContactUpsertMode = "create",
+) => {
+  const formFields = buildContactFormFields(input, companyId);
+
+  if (mode === "update") {
+    return {
+      ...formFields,
+      last_seen: new Date().toISOString(),
+    };
+  }
+
+  const now = new Date().toISOString();
+  return {
+    ...formFields,
+    status: LBS_CLIENT_STATUS,
     first_seen: now,
     last_seen: now,
     tags: [],
