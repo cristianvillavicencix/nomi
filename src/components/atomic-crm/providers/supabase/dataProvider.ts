@@ -3059,18 +3059,7 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   },
   {
     resource: "contacts",
-    beforeGetList: async (params) => {
-      return applyFullTextSearch([
-        "full_name",
-        "first_name",
-        "last_name",
-        "company_name",
-        "title",
-        "email",
-        "phone",
-        "background",
-      ])(params);
-    },
+    beforeGetList: async (params) => applyContactListSearch(params),
   },
   {
     resource: "companies",
@@ -3105,16 +3094,7 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   },
   {
     resource: "contacts_summary",
-    beforeGetList: async (params) => {
-      return applyFullTextSearch([
-        "full_name",
-        "first_name",
-        "last_name",
-        "company_name",
-        "email",
-        "phone",
-      ])(params);
-    },
+    beforeGetList: async (params) => applyContactListSearch(params),
   },
   {
     resource: "deals",
@@ -3258,6 +3238,40 @@ export const dataProvider = wrapDataProviderWithQueryInvalidation(
     lifeCycleCallbacks,
   ) as CrmDataProvider,
 );
+
+const CONTACT_SEARCH_COLUMNS = [
+  "first_name",
+  "last_name",
+  "company_name",
+  "email",
+  "phone",
+];
+
+/** Match "Jose Quezada" via first_name + last_name AND; single tokens use @or. */
+const applyContactListSearch = (params: GetListParams) => {
+  if (!params.filter?.q) {
+    return params;
+  }
+  const { q, ...filter } = params.filter;
+  const trimmed = String(q).trim();
+  if (!trimmed) {
+    return { ...params, filter };
+  }
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return {
+      ...params,
+      filter: {
+        ...filter,
+        "first_name@ilike": normalizePostgrestIlikeQuery(words[0] ?? ""),
+        "last_name@ilike": normalizePostgrestIlikeQuery(words.slice(1).join(" ")),
+      },
+    };
+  }
+
+  return applyFullTextSearch(CONTACT_SEARCH_COLUMNS)(params);
+};
 
 const applyFullTextSearch =
   (columns: string[], options: { useContactFtsColumns?: boolean } = {}) =>
