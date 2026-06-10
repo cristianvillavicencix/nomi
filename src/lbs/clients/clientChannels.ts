@@ -102,6 +102,8 @@ export const phonesToFormValues = (
     ? [{ value: legacy, type: "Work", isPrimary: true }]
     : [emptyChannelRow()];
 };
+
+export const formValuesToEmailJsonb = (
   channels?: ClientChannelFormValue[] | null,
 ): EmailAndType[] =>
   cleanChannelFormValues(channels).map((entry) => ({
