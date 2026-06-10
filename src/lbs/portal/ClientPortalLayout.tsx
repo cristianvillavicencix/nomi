@@ -146,9 +146,18 @@ export const ClientPortalLayout = ({
         href: null as string | null,
       }));
 
+  const showMobileNav = !invoiceMode || Boolean(fullPortalHref);
+  const mobileHeaderClass = invoiceMode ? "lg:hidden" : "md:hidden";
+  const sidebarClass = invoiceMode ? "hidden lg:flex" : "hidden md:flex";
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white">
-      <header className="border-b bg-white md:hidden">
+    <div
+      className={cn(
+        "min-h-screen overflow-x-hidden",
+        invoiceMode ? "bg-slate-50 lg:bg-white" : "bg-white",
+      )}
+    >
+      <header className={cn("border-b bg-white", mobileHeaderClass)}>
         <div className="flex items-start justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <div className="text-sm font-semibold tracking-tight text-[#0D3B6E]">
@@ -168,8 +177,9 @@ export const ClientPortalLayout = ({
           {languageToggle}
         </div>
 
-        <nav className="flex gap-1 overflow-x-auto border-t px-2 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {mobileNavItems.map((item) => {
+        {showMobileNav ? (
+          <nav className="flex gap-1 overflow-x-auto border-t px-2 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {mobileNavItems.map((item) => {
             const isActive = invoiceMode
               ? item.id === "invoice"
               : activeView === item.id;
@@ -202,11 +212,18 @@ export const ClientPortalLayout = ({
               </button>
             );
           })}
-        </nav>
+          </nav>
+        ) : null}
       </header>
 
-      <div className="flex min-h-[calc(100dvh-4.5rem)] md:min-h-screen">
-        <aside className="hidden w-[190px] shrink-0 border-r bg-white md:flex">
+      <div
+        className={cn(
+          "flex",
+          invoiceMode ? "min-h-[calc(100dvh-3rem)] lg:min-h-screen" : "min-h-[calc(100dvh-4.5rem)] md:min-h-screen",
+          !invoiceMode && !showMobileNav && "min-h-[calc(100dvh-3rem)]",
+        )}
+      >
+        <aside className={cn("w-[190px] shrink-0 border-r bg-white", sidebarClass)}>
           <div className="flex h-full w-full flex-col">
             <div className="px-4 py-4">
               <div className="text-sm font-semibold tracking-tight text-[#0D3B6E]">
@@ -237,7 +254,14 @@ export const ClientPortalLayout = ({
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-x-hidden bg-white">{children}</main>
+        <main
+          className={cn(
+            "min-w-0 flex-1 overflow-x-hidden",
+            invoiceMode ? "bg-slate-50 lg:bg-white" : "bg-white",
+          )}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

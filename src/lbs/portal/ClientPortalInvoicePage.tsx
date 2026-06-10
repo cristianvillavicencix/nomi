@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, Loader2, Wallet } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { Button } from "@/components/ui/button";
 import { InvoiceDocumentPreview } from "@/lbs/billing/InvoiceDocumentPreview";
 import {
   buildClientInvoicePdfContext,
@@ -16,6 +15,8 @@ import {
 import { PayInvoiceDialog } from "@/lbs/billing/public/PayInvoiceDialog";
 import { PublicInvoicePaymentFlow } from "@/lbs/billing/public/PublicInvoicePaymentFlow";
 import { ClientPortalLayout } from "@/lbs/portal/ClientPortalLayout";
+import { InvoicePortalActions } from "@/lbs/portal/InvoicePortalActions";
+import { PortalInvoiceCompactView } from "@/lbs/portal/PortalInvoiceCompactView";
 import {
   PORTAL_LOCALE_KEY,
   type PortalLocale,
@@ -237,46 +238,9 @@ const InvoicePortalContent = ({
   };
 
   return (
-    <div className="overflow-x-hidden px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-6 md:px-8 md:py-8">
-      <div className={`mx-auto w-full ${INVOICE_DOCUMENT_MAX_WIDTH_CLASS}`}>
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          {isPaid ? (
-            <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 sm:w-auto sm:py-1.5">
-              <CheckCircle2 className="size-4" />
-              Paid in full
-            </span>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400 sm:w-auto"
-              onClick={() => setPayOpen(true)}
-            >
-              <Wallet className="size-4" />
-              Pay now
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full sm:w-auto"
-            disabled={downloading}
-            onClick={onDownload}
-          >
-            {downloading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Download className="size-4" />
-            )}
-            Download invoice
-          </Button>
-        </div>
-
-        <InvoiceDocumentPreview
-          organizationName={organization.name}
-          organizationWebsite={organization.website}
-          organizationAddress={organization.address}
+    <>
+      <div className="overflow-x-hidden bg-slate-50 px-4 py-4 pb-36 lg:hidden">
+        <PortalInvoiceCompactView
           invoiceNumber={invoice.invoice_number}
           status={invoice.status}
           issueDate={invoice.issue_date}
@@ -291,18 +255,66 @@ const InvoicePortalContent = ({
           feeAmount={Number(invoice.fee_amount) || 0}
           total={total}
           balanceDue={balanceDue}
-          className="pb-0"
+          currency={currency}
+          isPaid={isPaid}
+          balanceFormatted={balanceFormatted}
+          downloading={downloading}
+          onPay={() => setPayOpen(true)}
+          onDownload={onDownload}
         />
-
-        {!isPaid ? (
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Amount due:{" "}
-            <span className="font-semibold tabular-nums text-foreground">
-              {balanceFormatted}
-            </span>
-          </p>
-        ) : null}
       </div>
+
+      <div className="hidden overflow-x-hidden px-3 py-4 lg:block lg:px-8 lg:py-8">
+        <div className={`mx-auto w-full ${INVOICE_DOCUMENT_MAX_WIDTH_CLASS}`}>
+          <InvoicePortalActions
+            layout="toolbar"
+            isPaid={isPaid}
+            balanceFormatted={balanceFormatted}
+            downloading={downloading}
+            onPay={() => setPayOpen(true)}
+            onDownload={onDownload}
+          />
+
+          <InvoiceDocumentPreview
+            organizationName={organization.name}
+            organizationWebsite={organization.website}
+            organizationAddress={organization.address}
+            invoiceNumber={invoice.invoice_number}
+            status={invoice.status}
+            issueDate={invoice.issue_date}
+            dueDate={invoice.due_date}
+            terms={invoice.terms ?? "Net 30"}
+            company={company}
+            contact={contact}
+            lines={lines}
+            termsAndConditions={invoice.notes}
+            subtotal={Number(invoice.subtotal ?? invoice.amount) || 0}
+            discountAmount={Number(invoice.discount_amount) || 0}
+            feeAmount={Number(invoice.fee_amount) || 0}
+            total={total}
+            balanceDue={balanceDue}
+            className="pb-0"
+          />
+
+          {!isPaid ? (
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Amount due:{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {balanceFormatted}
+              </span>
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <InvoicePortalActions
+        layout="sticky"
+        isPaid={isPaid}
+        balanceFormatted={balanceFormatted}
+        downloading={downloading}
+        onPay={() => setPayOpen(true)}
+        onDownload={onDownload}
+      />
 
       {!isPaid ? (
         <PayInvoiceDialog
@@ -313,6 +325,6 @@ const InvoicePortalContent = ({
           onSuccess={handlePaymentSuccess}
         />
       ) : null}
-    </div>
+    </>
   );
 };
