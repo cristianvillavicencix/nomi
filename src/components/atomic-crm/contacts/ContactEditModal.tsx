@@ -75,35 +75,45 @@ const ContactEditModalShell = ({
 }: {
   onOpenChange: (open: boolean) => void;
   contactId: Identifier;
+}) => (
+  <Dialog open onOpenChange={onOpenChange}>
+    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+      <Form className="flex flex-col gap-4">
+        <FormGuardProvider draftKey={contactEditDraftKey(contactId)} enabled>
+          <ContactEditModalBody onOpenChange={onOpenChange} />
+        </FormGuardProvider>
+      </Form>
+    </DialogContent>
+  </Dialog>
+);
+
+const ContactEditModalBody = ({
+  onOpenChange,
+}: {
+  onOpenChange: (open: boolean) => void;
 }) => {
   const guardedClose = useGuardedDialogClose(onOpenChange);
 
   return (
-    <Dialog open onOpenChange={guardedClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
-        <Form className="flex flex-col gap-4">
-          <FormGuardProvider draftKey={contactEditDraftKey(contactId)} enabled>
-            <DialogHeader>
-              <DialogTitle>
-                Edit <RecordRepresentation />
-              </DialogTitle>
-            </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>
+          Edit <RecordRepresentation />
+        </DialogTitle>
+      </DialogHeader>
 
-            <ContactFormFields />
+      <ContactFormFields />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => guardedClose(false)}
-              >
-                Cancel
-              </Button>
-              <DialogSaveButton label="Save" />
-            </DialogFooter>
-          </FormGuardProvider>
-        </Form>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => guardedClose(false)}
+        >
+          Cancel
+        </Button>
+        <DialogSaveButton label="Save" />
+      </DialogFooter>
+    </>
   );
 };
