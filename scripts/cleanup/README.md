@@ -11,6 +11,7 @@ npx supabase db query --linked --agent=no -f scripts/cleanup/01_backfill_primary
 npx supabase db query --linked --agent=no -f scripts/cleanup/02_fix_phone_in_last_name.sql
 npx supabase db query --linked --agent=no -f scripts/cleanup/03_normalize_company_sector.sql
 npx supabase db query --linked --agent=no -f scripts/cleanup/04_normalize_contact_status.sql
+npx supabase db query --linked --agent=no -f scripts/cleanup/05_extend_primary_contact_triggers.sql
 ```
 
 ## Apply (after explicit approval)
