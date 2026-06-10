@@ -20,6 +20,10 @@ import {
 } from "@/lbs/clients/clientContextLinks";
 import { ClientExtraEmailsIndicator } from "@/lbs/clients/ClientExtraEmailsIndicator";
 import { ClientSocialLinksDisplay } from "@/lbs/clients/ClientSocialLinksDisplay";
+import {
+  resolveCompanyEmailForDisplay,
+  resolveCompanyPhoneForDisplay,
+} from "@/lbs/clients/companyChannelResolvers";
 import { mailtoHref } from "@/lib/linking";
 
 const ProfileField = ({
@@ -66,6 +70,8 @@ export const ClientOverviewTab = ({
     primaryContact,
     primaryEmail !== "—" ? primaryEmail : undefined,
   );
+  const businessEmail = resolveCompanyEmailForDisplay(record);
+  const businessPhone = resolveCompanyPhoneForDisplay(record);
   const businessSocialLinks = collectBusinessSocialLinks(record);
 
   return (
@@ -76,7 +82,19 @@ export const ClientOverviewTab = ({
           <ProfileField label="Business name" value={record.name || "—"} />
           <ProfileField
             label="Business phone"
-            value={record.phone_number?.trim() || "—"}
+            value={businessPhone !== "—" ? businessPhone : "—"}
+          />
+          <ProfileField
+            label="Business email"
+            value={
+              businessEmail !== "—" ? (
+                <a href={mailtoHref(businessEmail)} className="link-action font-normal">
+                  {businessEmail}
+                </a>
+              ) : (
+                "—"
+              )
+            }
           />
           <ProfileField
             label="Website"

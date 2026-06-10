@@ -5,7 +5,7 @@ import type {
 import type { ClientSocialLinkValue } from "@/lbs/clients/clientSocialLinks";
 import { normalizeSocialUrl } from "@/lbs/clients/clientSocialLinks";
 
-export type ClientChannelType = EmailAndType["type"];
+export type ClientChannelType = EmailAndType["type"] | "Billing";
 
 export type ClientChannelFormValue = {
   value: string;
@@ -18,6 +18,14 @@ export const CHANNEL_TYPE_CHOICES = [
   { id: "Home", name: "Home" },
   { id: "Other", name: "Other" },
 ] as const;
+
+export const COMPANY_CHANNEL_TYPE_CHOICES = [
+  { id: "Work", name: "Work" },
+  { id: "Billing", name: "Billing" },
+  { id: "Other", name: "Other" },
+] as const;
+
+export const CONTACT_CHANNEL_TYPE_CHOICES = CHANNEL_TYPE_CHOICES;
 
 const emptyChannelRow = (): ClientChannelFormValue => ({
   value: "",
@@ -71,7 +79,7 @@ export const emailsToFormValues = (
     .filter((entry) => entry.email?.trim())
     .map((entry, index) => ({
       value: entry.email.trim(),
-      type: entry.type ?? "Work",
+      type: (entry.type ?? "Work") as ClientChannelType,
       isPrimary: index === 0,
     }));
 
@@ -91,7 +99,7 @@ export const phonesToFormValues = (
     .filter((entry) => entry.number?.trim())
     .map((entry, index) => ({
       value: entry.number.trim(),
-      type: entry.type ?? "Work",
+      type: (entry.type ?? "Work") as ClientChannelType,
       isPrimary: index === 0,
     }));
 
@@ -103,12 +111,52 @@ export const phonesToFormValues = (
     : [emptyChannelRow()];
 };
 
+/** Load all company email rows from context_links (primary + extras). */
+export const companyEmailsToFormValues = (
+  companyEmails?: EmailAndType[] | null,
+  businessEmail?: string | null,
+): ClientChannelFormValue[] => {
+  const rows = (companyEmails ?? [])
+    .filter((entry) => entry.email?.trim())
+    .map((entry, index) => ({
+      value: entry.email.trim(),
+      type: (entry.type ?? "Work") as ClientChannelType,
+      isPrimary: index === 0,
+    }));
+
+  const primary = businessEmail?.trim();
+  if (rows.length === 0) {
+    return primary
+      ? [{ value: primary, type: "Work", isPrimary: true }]
+      : [emptyChannelRow()];
+  }
+
+  if (
+    primary &&
+    rows[0].value !== primary &&
+    !rows.some((row) => row.value === primary)
+  ) {
+    return [
+      { value: primary, type: "Work", isPrimary: true },
+      ...rows.map((row) => ({ ...row, isPrimary: false })),
+    ];
+  }
+
+  return rows;
+};
+
+/** Load all company phone rows from context_links and phone_number. */
+export const companyPhonesToFormValues = (
+  companyPhones?: PhoneNumberAndType[] | null,
+  legacyPrimary?: string | null,
+): ClientChannelFormValue[] => phonesToFormValues(companyPhones, legacyPrimary);
+
 export const formValuesToEmailJsonb = (
   channels?: ClientChannelFormValue[] | null,
 ): EmailAndType[] =>
   cleanChannelFormValues(channels).map((entry) => ({
     email: entry.value,
-    type: entry.type,
+    type: entry.type as EmailAndType["type"],
   }));
 
 export const formValuesToPhoneJsonb = (
@@ -116,38 +164,8 @@ export const formValuesToPhoneJsonb = (
 ): PhoneNumberAndType[] =>
   cleanChannelFormValues(channels).map((entry) => ({
     number: entry.value,
-    type: entry.type,
+    type: entry.type as PhoneNumberAndType["type"],
   }));
-
-export const mergePrimaryEmailChannels = (
-  existing: EmailAndType[] | undefined,
-  primaryValue: string,
-): EmailAndType[] | undefined => {
-  const trimmed = primaryValue.trim();
-  if (!existing?.length) {
-    return trimmed ? [{ email: trimmed, type: "Work" }] : undefined;
-  }
-  const [first, ...rest] = existing;
-  const primary = trimmed || first.email?.trim() || "";
-  const extras = rest.filter((entry) => entry.email?.trim());
-  if (!primary && extras.length === 0) return undefined;
-  return [{ email: primary, type: first.type ?? "Work" }, ...extras];
-};
-
-export const mergePrimaryPhoneChannels = (
-  existing: PhoneNumberAndType[] | undefined,
-  primaryValue: string,
-): PhoneNumberAndType[] | undefined => {
-  const trimmed = primaryValue.trim();
-  if (!existing?.length) {
-    return trimmed ? [{ number: trimmed, type: "Work" }] : undefined;
-  }
-  const [first, ...rest] = existing;
-  const primary = trimmed || first.number?.trim() || "";
-  const extras = rest.filter((entry) => entry.number?.trim());
-  if (!primary && extras.length === 0) return undefined;
-  return [{ number: primary, type: first.type ?? "Work" }, ...extras];
-};
 
 export const mergeClientSocialLinksForForm = (
   companyLinks: ClientSocialLinkValue[],

@@ -4,12 +4,20 @@ vi.mock("@/components/atomic-crm/providers/supabase/supabase", () => ({
   supabase: {},
 }));
 
+import { companyToClientFormValues } from "./clientFormValues";
 import {
   buildContactPayloadFromUpsert,
+  buildCompanyPayloadFromUpsert,
   buildQuickClientUpsertInput,
+  clientCreateFormValuesToUpsertInput,
   LBS_CLIENT_FORM_UNMANAGED_CONTACT_FIELDS,
   type LbsClientUpsertInput,
 } from "./lbsClientUpsert";
+import {
+  resolveCompanyEmailForDisplay,
+  resolveCompanyOwnEmails,
+} from "./companyChannelResolvers";
+import type { CompanyWithPrimaryContact } from "./clientProfile";
 
 const baseInput = (): LbsClientUpsertInput => ({
   organizationMemberId: 1,
@@ -91,5 +99,91 @@ describe("buildQuickClientUpsertInput", () => {
     expect(input.business.emails).toBeUndefined();
     expect(input.business.phones).toBeUndefined();
     expect(input.business.name).toBe("Acme Corp");
+  });
+});
+
+describe("company channel resolvers", () => {
+  it("resolveCompanyEmailForDisplay falls back to invoice email", () => {
+    expect(
+      resolveCompanyEmailForDisplay({
+        context_links: [
+          "lbs:invoice_email=realstateroofing@gmail.com",
+          "lbs:invoice_phone=+1-5188675186",
+        ],
+        primary_contact_email_jsonb: [],
+      }),
+    ).toBe("realstateroofing@gmail.com");
+  });
+
+  it("resolveCompanyOwnEmails ignores contact and invoice data", () => {
+    const rows = resolveCompanyOwnEmails([
+      "lbs:invoice_email=realstateroofing@gmail.com",
+    ]);
+    expect(rows).toEqual([{ value: "", type: "Work", isPrimary: true }]);
+  });
+});
+
+describe("context_links save invariant", () => {
+  const companyWithLinks = (
+    contextLinks: string[],
+  ): CompanyWithPrimaryContact => ({
+    id: 42,
+    name: "Test Co",
+    context_links: contextLinks,
+    phone_number: "+15551234567",
+    primary_contact_id: null,
+    primary_contact_first_name: null,
+    primary_contact_last_name: null,
+    primary_contact_status: null,
+    primary_contact_email_jsonb: null,
+    primary_contact_phone_jsonb: null,
+  });
+
+  it("preserves context_links when saving two company-owned emails unchanged", () => {
+    const existingLinks = [
+      'lbs:company_emails=[{"email":"billing@test.co","type":"Billing"},{"email":"info@test.co","type":"Work"}]',
+      "lbs:company_phones=[{\"number\":\"+15551234567\",\"type\":\"Work\"}]",
+      "lbs:billing_same_as_business=true",
+      "lbs:invoice_same_as_primary=true",
+      "lbs:invoice_email=info@test.co",
+      "lbs:invoice_phone=+15551234567",
+    ];
+
+    const formValues = companyToClientFormValues(companyWithLinks(existingLinks));
+    const payload = buildCompanyPayloadFromUpsert(
+      {
+        ...clientCreateFormValuesToUpsertInput(formValues, 1),
+        companyId: 42,
+      },
+      existingLinks,
+    );
+
+    expect(JSON.stringify(payload.context_links)).toBe(
+      JSON.stringify(existingLinks),
+    );
+  });
+
+  it("preserves invoice-only context_links on unchanged save", () => {
+    const existingLinks = [
+      "lbs:company_phones=[{\"number\":\"+1-5188675186\",\"type\":\"Work\"}]",
+      "lbs:billing_same_as_business=true",
+      "lbs:invoice_same_as_primary=true",
+      "lbs:invoice_contact_name=Jose Lema",
+      "lbs:invoice_email=realstateroofing@gmail.com",
+      "lbs:invoice_phone=+1-5188675186",
+    ];
+
+    const formValues = companyToClientFormValues(companyWithLinks(existingLinks));
+    const payload = buildCompanyPayloadFromUpsert(
+      {
+        ...clientCreateFormValuesToUpsertInput(formValues, 1),
+        companyId: 42,
+      },
+      existingLinks,
+    );
+
+    expect(JSON.stringify(payload.context_links)).toBe(
+      JSON.stringify(existingLinks),
+    );
   });
 });

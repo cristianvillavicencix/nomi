@@ -178,6 +178,37 @@ export const buildLbsClientContextLinks = (
   return links;
 };
 
+/** Preserves legacy email storage shape (business_email vs company_emails) on roundtrip saves. */
+export const resolveCompanyOwnedEmailStorage = (
+  companyEmails: EmailAndType[],
+  existingLinks?: string[] | null,
+): Pick<LbsClientContextData, "businessEmail" | "companyEmails"> => {
+  if (companyEmails.length === 0) {
+    return { businessEmail: undefined, companyEmails: undefined };
+  }
+
+  const existing = parseLbsClientContextLinks(existingLinks);
+  const hadArray = (existing.companyEmails?.length ?? 0) > 0;
+  const hadBusiness = Boolean(existing.businessEmail?.trim());
+  const primary = companyEmails[0]?.email?.trim() ?? "";
+
+  if (companyEmails.length > 1) {
+    return { companyEmails, businessEmail: undefined };
+  }
+
+  if (hadArray && hadBusiness) {
+    return { companyEmails, businessEmail: primary || undefined };
+  }
+  if (hadArray) {
+    return { companyEmails, businessEmail: undefined };
+  }
+  if (hadBusiness) {
+    return { businessEmail: primary || undefined, companyEmails: undefined };
+  }
+
+  return { businessEmail: primary || undefined, companyEmails: undefined };
+};
+
 export const formatBillingAddress = (company: {
   address?: string | null;
   city?: string | null;

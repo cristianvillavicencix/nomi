@@ -1,16 +1,15 @@
 import type { Identifier } from "ra-core";
 import {
   buildLbsClientContextLinks,
-  parseLbsClientContextLinks,
+  resolveCompanyOwnedEmailStorage,
   type LbsBillingAddress,
 } from "@/lbs/clients/clientContextLinks";
 import { splitClientFullName } from "@/lbs/clients/clientFormUtils";
 import {
+  cleanChannelFormValues,
   formValuesToEmailJsonb,
   formValuesToPhoneJsonb,
   getPrimaryChannelValue,
-  mergePrimaryEmailChannels,
-  mergePrimaryPhoneChannels,
 } from "@/lbs/clients/clientChannels";
 import {
   cleanSocialLinksForSave,
@@ -64,9 +63,31 @@ export type LbsClientUpsertInput = {
 
 export type LbsClientUpsertResult = {
   company_id: Identifier;
-  contact_id: Identifier;
+  contact_id: Identifier | null;
   created: boolean;
 };
+
+export const hasPrimaryContactInput = (
+  input: Pick<LbsClientUpsertInput, "primaryContactId" | "primary">,
+): boolean => {
+  if (input.primaryContactId != null) return true;
+  if (input.primary.fullName?.trim()) return true;
+  if (getPrimaryChannelValue(input.primary.emails)) return true;
+  if (getPrimaryChannelValue(input.primary.phones)) return true;
+  return false;
+};
+
+export const hasPrimaryContactDraft = (
+  values: Pick<
+    import("@/lbs/clients/ClientCreateForm").ClientCreateFormValues,
+    "primary_full_name" | "primary_email" | "primary_phone"
+  >,
+): boolean =>
+  Boolean(
+    values.primary_full_name?.trim() ||
+      values.primary_email?.trim() ||
+      values.primary_phone?.trim(),
+  );
 
 export type QuickCreateClientInput = {
   businessName: string;
@@ -124,25 +145,14 @@ export const buildCompanyPayloadFromUpsert = (
         country: input.billing.country?.trim() || undefined,
       };
 
-  const existingCtx = parseLbsClientContextLinks(existingLinks);
-  const primaryBusinessEmail = getPrimaryChannelValue(input.business.emails);
-  const primaryBusinessPhone = getPrimaryChannelValue(input.business.phones);
-  const companyEmails =
-    existingCtx.companyEmails?.length
-      ? mergePrimaryEmailChannels(
-          existingCtx.companyEmails,
-          primaryBusinessEmail,
-        )
-      : formValuesToEmailJsonb(input.business.emails);
-  const companyPhones =
-    existingCtx.companyPhones?.length
-      ? mergePrimaryPhoneChannels(
-          existingCtx.companyPhones,
-          primaryBusinessPhone,
-        )
-      : formValuesToPhoneJsonb(input.business.phones);
+  const companyEmails = formValuesToEmailJsonb(input.business.emails);
+  const companyPhones = formValuesToPhoneJsonb(input.business.phones);
   const companySocialLinks = cleanSocialLinksForSave(
     input.business.socialLinks,
+  );
+  const ownedEmailStorage = resolveCompanyOwnedEmailStorage(
+    companyEmails,
+    existingLinks,
   );
 
   return {
@@ -160,8 +170,8 @@ export const buildCompanyPayloadFromUpsert = (
     organization_member_id: input.organizationMemberId,
     context_links: buildLbsClientContextLinks(
       {
-        businessEmail: getPrimaryChannelValue(input.business.emails),
-        companyEmails,
+        businessEmail: ownedEmailStorage.businessEmail,
+        companyEmails: ownedEmailStorage.companyEmails,
         companyPhones,
         billingSameAsBusiness: input.billing.sameAsBusiness,
         billingAddress,
@@ -248,17 +258,25 @@ export const clientCreateFormValuesToUpsertInput = (
   },
   business: {
     name: values.company_name,
-    emails: singleChannelFromValue(values.company_email),
-    phones: singleChannelFromValue(values.company_phone),
+    emails: cleanChannelFormValues(values.company_emails),
+    phones: cleanChannelFormValues(values.company_phones),
     website: values.company_website,
     sector: values.company_sector,
     socialLinks: values.social_links,
     address: values.company_address,
+    city: values.company_city,
+    stateAbbr: values.company_state_abbr,
+    zipcode: values.company_zipcode,
+    country: values.company_country,
     notes: values.notes,
   },
   billing: {
     sameAsBusiness: values.billing_same_as_business,
     address: values.billing_address,
+    city: values.billing_city,
+    stateAbbr: values.billing_state_abbr,
+    zipcode: values.billing_zipcode,
+    country: values.billing_country,
     invoiceSameAsPrimary: values.invoice_same_as_primary,
     invoiceContactName: values.invoice_contact_name,
     invoiceEmail: values.invoice_email,

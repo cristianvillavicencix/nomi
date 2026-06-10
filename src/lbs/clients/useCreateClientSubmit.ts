@@ -7,7 +7,10 @@ import {
 } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { ClientCreateFormValues } from "@/lbs/clients/ClientCreateForm";
-import { clientCreateFormValuesToUpsertInput } from "@/lbs/clients/lbsClientUpsert";
+import {
+  clientCreateFormValuesToUpsertInput,
+  hasPrimaryContactDraft,
+} from "@/lbs/clients/lbsClientUpsert";
 
 export const useCreateClientSubmit = () => {
   const { identity } = useGetIdentity();
@@ -20,21 +23,25 @@ export const useCreateClientSubmit = () => {
     values: ClientCreateFormValues,
   ): Promise<number | string | null> => {
     if (!identity?.id) {
-      notify("Debes iniciar sesión para crear un cliente", { type: "error" });
+      notify("You must be signed in to create a client", { type: "error" });
       return null;
     }
 
     const companyName = values.company_name.trim();
-    const primaryName = values.primary_full_name.trim();
-    if (!companyName || !primaryName) {
-      notify("El nombre de la empresa y del contacto principal son obligatorios", {
+    if (!companyName) {
+      notify("Company name is required", { type: "warning" });
+      return null;
+    }
+
+    if (hasPrimaryContactDraft(values) && !values.primary_full_name.trim()) {
+      notify("Primary contact name is required when adding contact details", {
         type: "warning",
       });
       return null;
     }
 
     if (!("upsertLbsClient" in dataProvider)) {
-      notify("La creación de clientes no está disponible en este entorno", {
+      notify("Client creation is not available in this environment", {
         type: "error",
       });
       return null;
@@ -45,14 +52,14 @@ export const useCreateClientSubmit = () => {
       const result = await dataProvider.upsertLbsClient(
         clientCreateFormValuesToUpsertInput(values, identity.id),
       );
-      notify(result.created ? "Cliente creado" : "Cliente actualizado", {
+      notify(result.created ? "Client created" : "Client updated", {
         type: "info",
       });
       refresh();
       return result.company_id;
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : "No se pudo guardar el cliente",
+        error instanceof Error ? error.message : "Failed to save client",
         { type: "error" },
       );
       return null;

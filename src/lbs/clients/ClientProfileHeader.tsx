@@ -29,16 +29,17 @@ import {
   AvatarFallback,
   Avatar as UiAvatar,
 } from "@/components/ui/avatar";
+import {
+  resolveCompanyEmailForDisplay,
+  resolveCompanyPhoneForDisplay,
+} from "@/lbs/clients/companyChannelResolvers";
 import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
 import {
   formatClientHeaderAddress,
   collectBusinessSocialLinks,
-  collectClientEmails,
   getClientStatus,
   getExtraClientEmails,
-  getPrimaryContactEmailFromContact,
   getPrimaryContactFullName,
-  getPrimaryContactPhone,
   type CompanyWithPrimaryContact,
 } from "@/lbs/clients/clientProfile";
 import { ClientExtraEmailsIndicator } from "@/lbs/clients/ClientExtraEmailsIndicator";
@@ -76,20 +77,24 @@ export const ClientProfileHeader = ({
 
   const personName = getPrimaryContactFullName(record);
   const businessName = record.name?.trim() || "";
-  const contactEmail = getPrimaryContactEmailFromContact(primaryContact);
-  const allEmails = collectClientEmails(record, primaryContact);
-  const displayEmail =
-    contactEmail !== "—" ? contactEmail : (allEmails[0]?.email ?? "");
+  const displaySource = {
+    ...record,
+    primary_contact_email_jsonb:
+      primaryContact?.email_jsonb ?? record.primary_contact_email_jsonb,
+    primary_contact_phone_jsonb:
+      primaryContact?.phone_jsonb ?? record.primary_contact_phone_jsonb,
+  };
+  const displayEmail = resolveCompanyEmailForDisplay(displaySource);
   const extraEmails = getExtraClientEmails(
     record,
     primaryContact,
-    displayEmail || undefined,
+    displayEmail !== "—" ? displayEmail : undefined,
   );
-  const phone = getPrimaryContactPhone(record);
+  const phone = resolveCompanyPhoneForDisplay(displaySource);
   const businessSocialLinks = collectBusinessSocialLinks(record);
   const address = formatClientHeaderAddress(record, primaryContact?.address);
   const status = getClientStatus(record);
-  const emailValue = displayEmail;
+  const emailValue = displayEmail !== "—" ? displayEmail : "";
   const phoneValue = phone !== "—" ? phone : "";
   const emailLink = emailValue ? mailtoHref(emailValue) : "";
   const phoneLink = phoneValue ? normalizePhoneForTel(phoneValue) : null;

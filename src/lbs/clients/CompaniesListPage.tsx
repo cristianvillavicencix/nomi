@@ -29,11 +29,12 @@ import { CompanyEmpty } from "@/components/atomic-crm/companies/CompanyEmpty";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import {
   collectBusinessSocialLinks,
-  getPrimaryContactEmail,
-  getPrimaryContactPhone,
   type CompanyWithPrimaryContact,
 } from "@/lbs/clients/clientProfile";
-import { getBusinessEmailFromLinks } from "@/lbs/clients/clientContextLinks";
+import {
+  resolveCompanyEmailForDisplay,
+  resolveCompanyPhoneForDisplay,
+} from "@/lbs/clients/companyChannelResolvers";
 import { ClientEditDialog } from "@/lbs/clients/ClientEditDialog";
 import { ClientSocialLinksDisplay } from "@/lbs/clients/ClientSocialLinksDisplay";
 import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
@@ -49,11 +50,8 @@ const normalizeWebsiteHref = (website?: string | null) => {
   return `https://${trimmed}`;
 };
 
-const getCompanyListEmail = (record: CompanyWithPrimaryContact) => {
-  const contactEmail = getPrimaryContactEmail(record);
-  if (contactEmail !== "—") return contactEmail;
-  return getBusinessEmailFromLinks(record.context_links)?.trim() || "—";
-};
+const getCompanyListEmail = (record: CompanyWithPrimaryContact) =>
+  resolveCompanyEmailForDisplay(record);
 
 export const CompaniesListPage = () => {
   const { identity } = useGetIdentity();
@@ -176,7 +174,7 @@ const CompaniesLayout = () => {
           label="Phone"
           render={(record: CompanyWithPrimaryContact) => {
             const { display, telHref } = normalizePhoneForTel(
-              getPrimaryContactPhone(record),
+              resolveCompanyPhoneForDisplay(record),
             );
             if (!telHref || display === "—") return display;
             return (
