@@ -12,11 +12,7 @@ export const applyGoogleBusinessToClientForm = (
     setValue("company_website", details.website, { shouldDirty: true });
   }
   if (details.phone) {
-    setValue(
-      "company_phones",
-      [{ value: details.phone, type: "Work", isPrimary: true }],
-      { shouldDirty: true },
-    );
+    setValue("company_phone", details.phone, { shouldDirty: true });
   }
   applyGoogleAddressToClientForm(setValue, details, "company");
 };
@@ -24,12 +20,10 @@ export const applyGoogleBusinessToClientForm = (
 export const applyGoogleAddressToClientForm = (
   setValue: UseFormSetValue<ClientCreateFormValues>,
   details: GooglePlaceDetails,
-  prefix: "company" | "billing" | "primary" = "company",
+  prefix: "company" | "billing" = "company",
 ) => {
   if (details.formattedAddress) {
-    const field =
-      prefix === "primary" ? "primary_address" : `${prefix}_address`;
-    setValue(field as "primary_address", details.formattedAddress, {
+    setValue(`${prefix}_address`, details.formattedAddress, {
       shouldDirty: true,
     });
   }

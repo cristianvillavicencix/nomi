@@ -869,7 +869,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
             (lastName || firstName).toLowerCase(),
       );
 
-    if (contact) {
+    if (contact && input.linkPrimaryContactOnly) {
+      // Link only — contact body is edited in the contact profile.
+    } else if (contact) {
       const { data: updatedContact } = await baseDataProvider.update<Contact>(
         "contacts",
         {

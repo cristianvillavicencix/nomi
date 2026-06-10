@@ -1,14 +1,13 @@
 import type { Identifier } from "ra-core";
 import {
   buildLbsClientContextLinks,
+  mergePrimaryEmailChannels,
+  mergePrimaryPhoneChannels,
+  parseLbsClientContextLinks,
   type LbsBillingAddress,
 } from "@/lbs/clients/clientContextLinks";
+import { splitClientFullName } from "@/lbs/clients/ClientCreateForm";
 import {
-  formatCompanyAddressForPrimary,
-  splitClientFullName,
-} from "@/lbs/clients/ClientCreateForm";
-import {
-  cleanChannelFormValues,
   formValuesToEmailJsonb,
   formValuesToPhoneJsonb,
   getPrimaryChannelValue,
@@ -27,6 +26,8 @@ export type LbsClientUpsertInput = {
   companyId?: Identifier;
   /** When editing, pass the current primary contact id. */
   primaryContactId?: Identifier;
+  /** When true on edit, only link primary_contact_id — do not mutate contact body. */
+  linkPrimaryContactOnly?: boolean;
   primary: {
     fullName: string;
     emails?: ClientChannelFormValue[];
@@ -123,8 +124,23 @@ export const buildCompanyPayloadFromUpsert = (
         country: input.billing.country?.trim() || undefined,
       };
 
-  const companyEmails = formValuesToEmailJsonb(input.business.emails);
-  const companyPhones = formValuesToPhoneJsonb(input.business.phones);
+  const existingCtx = parseLbsClientContextLinks(existingLinks);
+  const primaryBusinessEmail = getPrimaryChannelValue(input.business.emails);
+  const primaryBusinessPhone = getPrimaryChannelValue(input.business.phones);
+  const companyEmails =
+    existingCtx.companyEmails?.length
+      ? mergePrimaryEmailChannels(
+          existingCtx.companyEmails,
+          primaryBusinessEmail,
+        )
+      : formValuesToEmailJsonb(input.business.emails);
+  const companyPhones =
+    existingCtx.companyPhones?.length
+      ? mergePrimaryPhoneChannels(
+          existingCtx.companyPhones,
+          primaryBusinessPhone,
+        )
+      : formValuesToPhoneJsonb(input.business.phones);
   const companySocialLinks = cleanSocialLinksForSave(
     input.business.socialLinks,
   );
@@ -215,6 +231,11 @@ export const buildContactPayloadFromUpsert = (
   };
 };
 
+const singleChannelFromValue = (value?: string) =>
+  value?.trim()
+    ? [{ value: value.trim(), type: "Work" as const, isPrimary: true }]
+    : [];
+
 export const clientCreateFormValuesToUpsertInput = (
   values: import("@/lbs/clients/ClientCreateForm").ClientCreateFormValues,
   organizationMemberId: Identifier,
@@ -222,33 +243,22 @@ export const clientCreateFormValuesToUpsertInput = (
   organizationMemberId,
   primary: {
     fullName: values.primary_full_name,
-    emails: cleanChannelFormValues(values.primary_emails),
-    phones: cleanChannelFormValues(values.primary_phones),
-    address: values.primary_same_as_company_address
-      ? formatCompanyAddressForPrimary(values)
-      : values.primary_address,
+    emails: singleChannelFromValue(values.primary_email),
+    phones: singleChannelFromValue(values.primary_phone),
   },
   business: {
     name: values.company_name,
-    emails: cleanChannelFormValues(values.company_emails),
-    phones: cleanChannelFormValues(values.company_phones),
+    emails: singleChannelFromValue(values.company_email),
+    phones: singleChannelFromValue(values.company_phone),
     website: values.company_website,
     sector: values.company_sector,
     socialLinks: values.social_links,
     address: values.company_address,
-    city: values.company_city,
-    stateAbbr: values.company_state_abbr,
-    zipcode: values.company_zipcode,
-    country: values.company_country,
     notes: values.notes,
   },
   billing: {
     sameAsBusiness: values.billing_same_as_business,
     address: values.billing_address,
-    city: values.billing_city,
-    stateAbbr: values.billing_state_abbr,
-    zipcode: values.billing_zipcode,
-    country: values.billing_country,
     invoiceSameAsPrimary: values.invoice_same_as_primary,
     invoiceContactName: values.invoice_contact_name,
     invoiceEmail: values.invoice_email,

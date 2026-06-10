@@ -1175,6 +1175,9 @@ const dataProviderWithCustomMethods = {
           .maybeSingle();
 
         if (existingPrimary?.id) {
+          if (input.linkPrimaryContactOnly) {
+            return existingPrimary.id as Identifier;
+          }
           const contactPayload = buildContactPayloadFromUpsert(
             input,
             companyId,
