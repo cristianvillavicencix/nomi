@@ -26,6 +26,13 @@ import { LBS_CLIENT_STATUS } from "@/lbs/navigation";
 import { getPersonShowPath } from "@/lbs/routing";
 import type { PrimaryContactDraft } from "@/lbs/clients/primaryContactDraft";
 import {
+  COMPANY_DRAFT_NAME_FIELD,
+  COMPANY_DRAFT_SECTOR_FIELD,
+  PRIMARY_MOVE_CONFIRMED_FIELD,
+  hasCompanySelection,
+  resolveContactCompanyForSave,
+} from "@/lbs/contacts/companyDraft";
+import {
   compactContactFieldsToPayload,
   LbsContactFormFields,
 } from "@/lbs/contacts/LbsContactFormFields";
@@ -67,6 +74,9 @@ const defaultCreateValues = (lockCompanyId?: Identifier) => ({
   _compact_full_name: "",
   _compact_email: "",
   _compact_phone: "",
+  [COMPANY_DRAFT_NAME_FIELD]: "",
+  [COMPANY_DRAFT_SECTOR_FIELD]: "",
+  [PRIMARY_MOVE_CONFIRMED_FIELD]: false,
 });
 
 const ContactFormDialogChrome = ({
@@ -233,15 +243,20 @@ export const ContactFormDialog = ({
             const useCompact =
               String(values._compact_full_name ?? "").trim().length > 0;
             const now = new Date().toISOString();
-            const companyId = allowOrphanContact
-              ? null
-              : lockCompanyId ?? values.company_id;
+            const effectiveLock =
+              allowOrphanContact || deferCreate
+                ? PENDING_COMPANY_LOCK
+                : lockCompanyId;
             if (
               !allowOrphanContact &&
-              (companyId == null || companyId === "")
+              !hasCompanySelection(values, effectiveLock)
             ) {
               throw new Error("Company is required");
             }
+            const { companyId, companyDraft } = resolveContactCompanyForSave(
+              values,
+              effectiveLock,
+            );
             return {
               first_name: useCompact
                 ? compact.first_name
@@ -250,6 +265,8 @@ export const ContactFormDialog = ({
                 ? compact.last_name
                 : String(values.last_name ?? ""),
               company_id: companyId as Identifier | null,
+              [COMPANY_DRAFT_NAME_FIELD]: companyDraft?.name ?? "",
+              [COMPANY_DRAFT_SECTOR_FIELD]: companyDraft?.sector ?? "",
               status: String(values.status ?? LBS_CLIENT_STATUS),
               organization_member_id:
                 (values.organization_member_id as Identifier | undefined) ??

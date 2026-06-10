@@ -43,6 +43,12 @@ import {
 } from "@/lbs/clients/clientShowUtils";
 import type { PrimaryContactDraft } from "@/lbs/clients/primaryContactDraft";
 import { getPersonShowPath } from "@/lbs/routing";
+import {
+  EntitySearchGroup,
+  EntitySearchOption,
+  EntitySearchToolbar,
+  SelectedEntityRow,
+} from "@/lbs/shared/entityPickerUi";
 
 const pickPrimaryPhone = (contact?: Contact | null) =>
   contact?.phone_jsonb?.find((p) => p.number?.trim())?.number?.trim() ?? "";
@@ -94,39 +100,13 @@ const SelectedPrimaryContactRow = ({
   profileHref?: string;
   onRemove: () => void;
 }) => (
-  <div className="flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2.5">
-    <Avatar className="size-8 shrink-0">
-      <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
-    </Avatar>
-    <div className="min-w-0 flex-1">
-      <p className="truncate text-sm font-medium leading-tight">{name}</p>
-      <p className="truncate text-xs text-muted-foreground">
-        {[email, phone].filter(Boolean).join(" · ") || "No email or phone"}
-      </p>
-    </div>
-    {profileHref ? (
-      <Button asChild variant="ghost" size="icon" className="size-8 shrink-0">
-        <Link
-          to={profileHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Open contact profile"
-        >
-          <ExternalLink className="size-4" />
-        </Link>
-      </Button>
-    ) : null}
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="size-8 shrink-0"
-      onClick={onRemove}
-      aria-label="Remove primary contact"
-    >
-      <X className="size-4" />
-    </Button>
-  </div>
+  <SelectedEntityRow
+    title={name}
+    subtitle={[email, phone].filter(Boolean).join(" · ") || "No email or phone"}
+    profileHref={profileHref}
+    onRemove={onRemove}
+    removeAriaLabel="Remove primary contact"
+  />
 );
 
 const CreatePrimaryContactPicker = ({
@@ -219,92 +199,50 @@ const CreatePrimaryContactPicker = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Popover open={searchOpen} onOpenChange={setSearchOpen}>
-          <PopoverAnchor asChild>
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                  if (!searchOpen) setSearchOpen(true);
-                }}
-                onFocus={() => setSearchOpen(true)}
-                placeholder="Search unassigned contacts…"
-                className="pl-9"
-                aria-expanded={searchOpen}
-                aria-autocomplete="list"
-              />
-            </div>
-          </PopoverAnchor>
-          <PopoverContent
-            className="w-[var(--radix-popover-trigger-width)] p-0"
-            align="start"
-            onOpenAutoFocus={(event) => event.preventDefault()}
-          >
-            <Command shouldFilter={false}>
-              <CommandList>
-                {isFetching ? (
-                  <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    Loading contacts…
-                  </div>
-                ) : contacts.length === 0 ? (
-                  <CommandEmpty>
-                    {trimmedSearch
-                      ? "No unassigned contacts match your search."
-                      : "No unassigned contacts found."}
-                  </CommandEmpty>
-                ) : (
-                  <CommandGroup heading="Unassigned contacts">
-                    {contacts.map((contact) => {
-                      const name = getContactFullName(contact);
-                      const contactEmail = getContactEmail(contact);
-                      const isSelected =
-                        selectedContactId != null &&
-                        String(contact.id) === String(selectedContactId);
+      <EntitySearchToolbar
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        searchOpen={searchOpen}
+        onSearchOpenChange={setSearchOpen}
+        searchPlaceholder="Search unassigned contacts…"
+        addButtonLabel="Add contact"
+        addButtonIcon={<UserPlus className="size-4" />}
+        onAddClick={() => setNewContactOpen(true)}
+        isFetching={isFetching}
+        emptyMessage="No unassigned contacts found."
+        emptySearchMessage="No unassigned contacts match your search."
+        groupHeading="Unassigned contacts"
+      >
+        {!isFetching ? (
+          contacts.length === 0 ? (
+            <CommandEmpty>
+              {trimmedSearch
+                ? "No unassigned contacts match your search."
+                : "No unassigned contacts found."}
+            </CommandEmpty>
+          ) : (
+            <EntitySearchGroup heading="Unassigned contacts">
+              {contacts.map((contact) => {
+                const name = getContactFullName(contact);
+                const contactEmail = getContactEmail(contact);
+                const isSelected =
+                  selectedContactId != null &&
+                  String(contact.id) === String(selectedContactId);
 
-                      return (
-                        <CommandItem
-                          key={String(contact.id)}
-                          value={String(contact.id)}
-                          onSelect={() => selectContact(contact)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 size-4 shrink-0",
-                              isSelected ? "opacity-100" : "opacity-0",
-                            )}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium">{name}</p>
-                            {contactEmail !== "—" ? (
-                              <p className="truncate text-xs text-muted-foreground">
-                                {contactEmail}
-                              </p>
-                            ) : null}
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="shrink-0 gap-2 sm:w-auto"
-          onClick={() => setNewContactOpen(true)}
-        >
-          <UserPlus className="size-4" />
-          Add contact
-        </Button>
-      </div>
+                return (
+                  <EntitySearchOption
+                    key={String(contact.id)}
+                    label={name}
+                    sublabel={contactEmail !== "—" ? contactEmail : undefined}
+                    selected={isSelected}
+                    onSelect={() => selectContact(contact)}
+                  />
+                );
+              })}
+            </EntitySearchGroup>
+          )
+        ) : null}
+      </EntitySearchToolbar>
 
       {hasSelection && activeContact ? (
         <SelectedPrimaryContactRow

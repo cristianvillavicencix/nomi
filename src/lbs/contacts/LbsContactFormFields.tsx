@@ -15,8 +15,8 @@ import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
 import { SelectInput } from "@/components/admin/select-input";
 import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
-import { AutocompleteCompanyInput } from "@/components/atomic-crm/companies/AutocompleteCompanyInput";
 import { CONTACT_STATUS_CHOICES } from "@/lbs/constants/contactStatus";
+import { ContactCompanyPickerField } from "@/lbs/contacts/ContactCompanyPickerField";
 import type { Identifier } from "ra-core";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 
@@ -85,15 +85,7 @@ const CompactContactFields = ({
     />
     <EmailInput source="_compact_email" label="Email" helperText={false} />
     <PhoneInput source="_compact_phone" label="Phone" helperText={false} />
-    {lockCompanyId != null ? null : (
-      <ReferenceInput
-        source="company_id"
-        reference="companies"
-        perPage={10}
-      >
-        <AutocompleteCompanyInput validate={required()} />
-      </ReferenceInput>
-    )}
+    {lockCompanyId != null ? null : <ContactCompanyPickerField />}
   </div>
 );
 
@@ -118,15 +110,7 @@ const ContactBasicsSection = ({
       helperText={false}
       placeholder="Owner, Office manager, Estimator…"
     />
-    {lockCompanyId != null ? null : (
-      <ReferenceInput
-        source="company_id"
-        reference="companies"
-        perPage={10}
-      >
-        <AutocompleteCompanyInput validate={required()} />
-      </ReferenceInput>
-    )}
+    {lockCompanyId != null ? null : <ContactCompanyPickerField />}
   </div>
 );
 

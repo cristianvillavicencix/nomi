@@ -45,6 +45,11 @@ import { getIsInitialized } from "./authProvider";
 import { supabase } from "./supabase";
 import { canMutateCrmResource } from "../commons/crmPermissions";
 import {
+  persistContactWithCompany,
+  resolveContactCompanyFromPayload,
+} from "@/lbs/contacts/lbsContactUpsert";
+import { contactNeedsCompanyMove, shouldClearPrimaryOnCompany } from "@/lbs/clients/primaryContactRelink";
+import {
   buildCompanyPayloadFromUpsert,
   buildContactPayloadFromUpsert,
   hasPrimaryContactInput,
@@ -52,7 +57,6 @@ import {
   type LbsClientUpsertInput,
   type LbsClientUpsertResult,
 } from "@/lbs/clients/lbsClientUpsert";
-import { contactNeedsCompanyMove } from "@/lbs/clients/primaryContactRelink";
 import { lbsProjectTypeChoices } from "@/lbs/deals/lbsProjectConstants";
 import { normalizePostgrestIlikeQuery } from "../commons/postgrestSearchQuery";
 
@@ -320,10 +324,109 @@ const dataProviderWithCustomMethods = {
   ...baseDataProvider,
   async create(resource: string, params: any) {
     await assertMutationAllowed(resource, "create", params);
+
+    if (resource === "contacts") {
+      const { companyDraft } = resolveContactCompanyFromPayload(
+        params.data as Record<string, unknown>,
+      );
+      if (companyDraft) {
+        const memberId = await resolveOrganizationMemberId(
+          (params.data as Record<string, unknown>)
+            .organization_member_id as Identifier,
+        );
+        const { data: member, error: memberError } = await supabase
+          .from("organization_members")
+          .select("id, org_id")
+          .eq("id", memberId)
+          .single();
+
+        if (memberError || !member?.org_id) {
+          throw new Error("Organization member not found");
+        }
+
+        const contact = await persistContactWithCompany({
+          supabase,
+          member: member as { id: Identifier; org_id: Identifier },
+          contactData: params.data as Record<string, unknown>,
+          companyDraft,
+          isCreate: true,
+        });
+        return { data: contact };
+      }
+    }
+
     return baseDataProvider.create(resource, params);
   },
   async update(resource: string, params: any) {
     await assertMutationAllowed(resource, "update", params);
+
+    if (resource === "contacts") {
+      const data = params.data as Record<string, unknown>;
+      const previous = (params.previousData ?? {}) as Record<string, unknown>;
+      const { companyId, companyDraft } = resolveContactCompanyFromPayload(data);
+      const previousCompanyId = previous.company_id as
+        | Identifier
+        | null
+        | undefined;
+      const contactId = params.id as Identifier;
+      const companyChanged =
+        companyDraft != null ||
+        (companyId != null &&
+          previousCompanyId != null &&
+          String(companyId) !== String(previousCompanyId));
+
+      if (companyChanged && contactId != null) {
+        if (previousCompanyId != null) {
+          const { data: previousCompany, error: previousCompanyError } =
+            await supabase
+              .from("companies")
+              .select("primary_contact_id")
+              .eq("id", previousCompanyId)
+              .maybeSingle();
+
+          if (previousCompanyError) {
+            throw new Error("Failed to load previous company");
+          }
+
+          const mustConfirmMove = shouldClearPrimaryOnCompany(
+            previousCompany?.primary_contact_id,
+            contactId,
+          );
+
+          if (mustConfirmMove && data._primary_move_confirmed !== true) {
+            throw new Error(
+              "Confirm primary contact move before saving this contact",
+            );
+          }
+        }
+
+        const memberId = await resolveOrganizationMemberId(
+          (data.organization_member_id ??
+            previous.organization_member_id) as Identifier,
+        );
+        const { data: member, error: memberError } = await supabase
+          .from("organization_members")
+          .select("id, org_id")
+          .eq("id", memberId)
+          .single();
+
+        if (memberError || !member?.org_id) {
+          throw new Error("Organization member not found");
+        }
+
+        const contact = await persistContactWithCompany({
+          supabase,
+          member: member as { id: Identifier; org_id: Identifier },
+          contactData: data,
+          companyId,
+          companyDraft,
+          contactId,
+          previousCompanyId: previousCompanyId ?? null,
+          isCreate: false,
+        });
+        return { data: contact };
+      }
+    }
 
     if (resource === "configuration") {
       const nested = params?.data?.config;
