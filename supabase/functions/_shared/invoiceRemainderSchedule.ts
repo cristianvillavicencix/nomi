@@ -14,6 +14,15 @@ export type InvoiceRemainderScheduleConfig = {
   installment_due_dates?: string[];
 };
 
+export const defaultInvoiceRemainderSchedule = (
+  invoiceDueDate: string,
+): InvoiceRemainderScheduleConfig => ({
+  timing: "invoice_due_date",
+  installment_count: 1,
+  balance_start_date: null,
+  project_end_date: invoiceDueDate,
+});
+
 export type InvoiceBalanceChargeRow = {
   installment_number: number;
   label: string;
@@ -55,12 +64,7 @@ export const parseInvoiceRemainderSchedule = (
   invoiceDueDate: string,
 ): InvoiceRemainderScheduleConfig => {
   if (!raw || typeof raw !== "object") {
-    return {
-      timing: "invoice_due_date",
-      installment_count: 1,
-      balance_start_date: null,
-      project_end_date: invoiceDueDate,
-    };
+    return defaultInvoiceRemainderSchedule(invoiceDueDate);
   }
   const row = raw as Record<string, unknown>;
   const timing = row.timing as InvoiceRemainderTiming;

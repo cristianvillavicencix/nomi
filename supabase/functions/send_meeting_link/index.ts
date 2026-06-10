@@ -17,10 +17,16 @@ type SendMeetingLinkBody = {
   to?: string;
   meeting_url?: string;
   title?: string;
-  message?: string;
+  greeting?: string;
+  intro?: string;
+  signature?: string;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DEFAULT_INTRO = "Join our video call using the link below:";
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 Deno.serve(
   OptionsMiddleware(async (req) => {
@@ -85,22 +91,31 @@ Deno.serve(
 
         const orgName = org?.name?.trim() || INVOICE_ORGANIZATION_NAME;
         const meetingTitle = body.title?.trim() || "Video call";
-        const customMessage = body.message?.trim();
+        const greeting = body.greeting?.trim() || "Hi,";
+        const intro = body.intro?.trim() || DEFAULT_INTRO;
+        const signature =
+          body.signature?.trim() ||
+          `${member.first_name?.trim() || "Team"} from ${orgName}`;
         const subject = `${orgName}: ${meetingTitle}`;
+
         const textBody = [
-          customMessage ||
-            "Join our video call using the secure link below.",
+          greeting,
           "",
-          `Join: ${meetingUrl}`,
+          intro,
+          meetingUrl,
           "",
-          orgName,
+          signature,
         ].join("\n");
 
+        const introHtml = escapeHtml(intro).replace(/\n/g, "<br>");
         const htmlBody = `
-          <div style="font-family:system-ui,sans-serif;color:#0f172a;line-height:1.5;max-width:560px;">
-            <p>${customMessage ? customMessage.replace(/\n/g, "<br>") : "Join our video call using the button below."}</p>
-            <p style="margin:20px 0;"><a href="${meetingUrl}" style="display:inline-block;background:#378ADD;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Join video call</a></p>
-            <p style="color:#64748b;font-size:13px;">${orgName}</p>
+          <div style="font-family:system-ui,-apple-system,sans-serif;color:#0f172a;line-height:1.6;max-width:520px;margin:0 auto;">
+            <p style="margin:0 0 16px;font-size:16px;">${escapeHtml(greeting)}</p>
+            <p style="margin:0 0 20px;font-size:15px;color:#334155;">${introHtml}</p>
+            <p style="margin:0 0 24px;">
+              <a href="${escapeHtml(meetingUrl)}" style="display:inline-block;background:#378ADD;color:#ffffff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Join video call</a>
+            </p>
+            <p style="margin:0;font-size:14px;color:#64748b;">${escapeHtml(signature)}</p>
           </div>`;
 
         await sendTransactionalEmail({

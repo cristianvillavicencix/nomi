@@ -2386,13 +2386,17 @@ const dataProviderWithCustomMethods = {
     to,
     meetingUrl,
     title,
-    message,
+    greeting,
+    intro,
+    signature,
   }: {
     contactId?: Identifier;
     to?: string;
     meetingUrl: string;
     title?: string;
-    message?: string;
+    greeting?: string;
+    intro?: string;
+    signature?: string;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       sent: boolean;
@@ -2405,7 +2409,9 @@ const dataProviderWithCustomMethods = {
         ...(contactId != null ? { contact_id: Number(contactId) } : {}),
         ...(to ? { to } : {}),
         ...(title ? { title } : {}),
-        ...(message ? { message } : {}),
+        ...(greeting ? { greeting } : {}),
+        ...(intro ? { intro } : {}),
+        ...(signature ? { signature } : {}),
       },
     });
 

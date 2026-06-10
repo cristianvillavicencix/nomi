@@ -446,8 +446,9 @@ export const DataImportSection = () => {
             <GitMerge className="h-5 w-5" /> Find duplicates
           </CardTitle>
           <CardDescription>
-            After importing, find contacts that share email, phone, or name and
-            merge them in a single click.
+            After importing, find contacts that share email, phone, or name.
+            Safe matches can be merged in one click; shared inboxes are flagged
+            so separate people are not combined.
           </CardDescription>
         </CardHeader>
         <CardContent>

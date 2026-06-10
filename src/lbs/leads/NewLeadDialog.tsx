@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Form,
   useCreate,
+  useDataProvider,
   useGetIdentity,
   useNotify,
   useRefresh,
@@ -29,7 +30,14 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { clearFormDraft } from "@/lib/formPersistence/formDraftStorage";
-import type { Company } from "@/components/atomic-crm/types";
+import type { Company, Contact } from "@/components/atomic-crm/types";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { ContactDuplicateResolveDialog } from "@/lbs/contacts/ContactDuplicateResolveDialog";
+import {
+  findMatchingContacts,
+  type CreateDuplicateMatch,
+} from "@/lbs/contacts/contactDuplicateUtils";
+import { getLeadShowPath } from "@/lbs/routing";
 import {
   buildCompanyCreateData,
   buildContactCreatePayload,
@@ -48,6 +56,17 @@ import { validateNewLeadForm } from "./newLeadFormValidation";
 const NEW_LEAD_DRAFT_KEY = "lbs:new-lead";
 const NEW_LEAD_FORM_ID = "lbs-new-lead-form";
 
+const shouldCreateContactPerson = (values: NewLeadFormValues) =>
+  values.lead_type === "individual" ||
+  (values.lead_type === "business" && values.add_primary_contact);
+
+const getLeadFormChannels = (values: NewLeadFormValues) => ({
+  first_name: values.first_name,
+  last_name: values.last_name,
+  email: values.email_jsonb.find((row) => row.email?.trim())?.email ?? "",
+  phone: values.phone_jsonb.find((row) => row.number?.trim())?.number ?? "",
+});
+
 type NewLeadDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -57,10 +76,50 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
   const isMobile = useIsMobile();
   const [isSaving, setIsSaving] = useState(false);
   const { identity } = useGetIdentity();
+  const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
   const refresh = useRefresh();
   const navigate = useNavigate();
   const [create] = useCreate();
+  const [duplicateMatches, setDuplicateMatches] = useState<
+    CreateDuplicateMatch[]
+  >([]);
+  const [duplicatePromptOpen, setDuplicatePromptOpen] = useState(false);
+  const [pendingValues, setPendingValues] = useState<NewLeadFormValues | null>(
+    null,
+  );
+
+  const finishLeadCreate = async (values: NewLeadFormValues) => {
+    let companyId: number | string | null = null;
+    let companyName = "";
+
+    if (values.lead_type === "business") {
+      const created = (await create(
+        "companies",
+        {
+          data: buildCompanyCreateData(values, identity?.id),
+        },
+        { returnPromise: true },
+      )) as Company;
+      companyId = created?.id ?? null;
+      companyName = values.company_draft_name.trim();
+    }
+
+    const payload = buildContactCreatePayload(values, companyId, companyName);
+    const contact = await create(
+      "contacts",
+      { data: payload },
+      { returnPromise: true },
+    );
+
+    clearFormDraft(NEW_LEAD_DRAFT_KEY);
+    notify("Lead created", { type: "info" });
+    refresh();
+    onOpenChange(false);
+    if (contact?.id != null) {
+      navigate(getLeadShowPath(contact.id));
+    }
+  };
 
   const handleSubmit = async (values: NewLeadFormValues) => {
     try {
@@ -70,37 +129,21 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
         return;
       }
 
+      if (shouldCreateContactPerson(values)) {
+        const matches = await findMatchingContacts(
+          dataProvider,
+          getLeadFormChannels(values),
+        );
+        if (matches.length > 0) {
+          setPendingValues(values);
+          setDuplicateMatches(matches);
+          setDuplicatePromptOpen(true);
+          return;
+        }
+      }
+
       setIsSaving(true);
-
-      let companyId: number | string | null = null;
-      let companyName = "";
-
-      if (values.lead_type === "business") {
-        const created = (await create(
-          "companies",
-          {
-            data: buildCompanyCreateData(values, identity?.id),
-          },
-          { returnPromise: true },
-        )) as Company;
-        companyId = created?.id ?? null;
-        companyName = values.company_draft_name.trim();
-      }
-
-      const payload = buildContactCreatePayload(values, companyId, companyName);
-      const contact = await create(
-        "contacts",
-        { data: payload },
-        { returnPromise: true },
-      );
-
-      clearFormDraft(NEW_LEAD_DRAFT_KEY);
-      notify("Lead created", { type: "info" });
-      refresh();
-      onOpenChange(false);
-      if (contact?.id != null) {
-        navigate(`/leads/${contact.id}/show`);
-      }
+      await finishLeadCreate(values);
     } catch (error) {
       console.error("[NewLeadDialog] create failed", error);
       notify(
@@ -112,10 +155,18 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
     }
   };
 
+  const handleUseExistingContact = (contact: Contact) => {
+    clearFormDraft(NEW_LEAD_DRAFT_KEY);
+    refresh();
+    onOpenChange(false);
+    navigate(getLeadShowPath(contact.id));
+  };
+
   if (!open) return null;
 
   return (
-    <Dialog open onOpenChange={onOpenChange}>
+    <>
+      <Dialog open onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
         className={cn(
@@ -141,6 +192,24 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
         </Form>
       </DialogContent>
     </Dialog>
+
+      <ContactDuplicateResolveDialog
+        open={duplicatePromptOpen}
+        onOpenChange={setDuplicatePromptOpen}
+        matches={duplicateMatches}
+        pending={pendingValues ? getLeadFormChannels(pendingValues) : {}}
+        onUseExisting={handleUseExistingContact}
+        onCreateAnyway={async () => {
+          if (!pendingValues) return;
+          setIsSaving(true);
+          try {
+            await finishLeadCreate(pendingValues);
+          } finally {
+            setIsSaving(false);
+          }
+        }}
+      />
+    </>
   );
 };
 

@@ -58,6 +58,11 @@ import { useSendClientSms } from "@/lbs/messages/useClientSms";
 import { useMessagingEnabled } from "@/lbs/messages/useMessagingEnabled";
 import { MeetingContactTitleSync } from "@/lbs/meetings/meetingFormUtils";
 import { MeetingVideoCallSection } from "@/lbs/meetings/MeetingVideoCallSection";
+import { QuickMeetingContactCreateDialog } from "@/lbs/meetings/QuickMeetingContactCreateDialog";
+import {
+  buildQuickMeetingShareParts,
+  getSenderFirstName,
+} from "@/lbs/meetings/quickMeetingShareMessage";
 import { cn } from "@/lib/utils";
 
 const LBS_ACCENT = "#378ADD";
@@ -84,12 +89,6 @@ const formatDuration = (value?: number | null) =>
 const parseDuration = (value: string | number) => {
   if (value === DURATION_NONE || value === "" || value == null) return null;
   return Number(value);
-};
-
-const buildShareMessage = (contact?: Contact | null) => {
-  const firstName = contact?.first_name?.trim();
-  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
-  return `${greeting}\n\nJoin our video call using the link below.`;
 };
 
 const QuickMeetingContactCard = ({
@@ -252,16 +251,19 @@ export const QuickMeetingDialog = ({
 
       await dataProvider.create("calendar_events", { data: payload });
 
-      const notes = String(values.description ?? "").trim();
-      const greeting =
-        notes ||
-        buildShareMessage(
-          contactId
-            ? ((await dataProvider.getOne("contacts_summary", { id: contactId }))
-                .data as Contact)
-            : null,
-        );
-      const shareMessage = [greeting, meetingUrl].filter(Boolean).join("\n\n");
+      const contact = (
+        await dataProvider.getOne("contacts_summary", { id: contactId })
+      ).data as Contact;
+
+      const share = buildQuickMeetingShareParts({
+        contact,
+        meetingUrl,
+        notes: String(values.description ?? ""),
+        senderFirstName: getSenderFirstName(
+          identity as { first_name?: string; fullName?: string },
+        ),
+        orgName: emailSettings?.org_name,
+      });
 
       const errors: string[] = [];
 
@@ -271,7 +273,9 @@ export const QuickMeetingDialog = ({
             contactId,
             meetingUrl,
             title,
-            message: notes || greeting.split("\n\n")[0],
+            greeting: share.greeting,
+            intro: share.intro,
+            signature: share.signature,
           });
           notify(`Link sent to ${result.to}`, { type: "info" });
         } catch (error) {
@@ -286,7 +290,7 @@ export const QuickMeetingDialog = ({
           await sendClientSms({
             contactId,
             dealId: (values.deal_id as Identifier | null) ?? null,
-            body: shareMessage,
+            body: share.smsBody,
           });
           notify("Link sent via SMS", { type: "info" });
         } catch (error) {
@@ -359,8 +363,15 @@ const QuickMeetingFormBody = ({
 }) => {
   const notify = useNotify();
   const { setValue } = useFormContext();
+  const [createContactOpen, setCreateContactOpen] = useState(false);
+  const [createContactSeed, setCreateContactSeed] = useState("");
   const contactId = useWatch({ name: "contact_id" }) as Identifier | null;
   const meetingUrl = useWatch({ name: "meeting_url" }) as string | null;
+
+  const openCreateContact = (searchText?: string) => {
+    setCreateContactSeed(searchText?.trim() ?? "");
+    setCreateContactOpen(true);
+  };
 
   const { data: contact } = useGetOne<Contact>(
     "contacts_summary",
@@ -432,6 +443,11 @@ const QuickMeetingFormBody = ({
                 placeholder="Search contact…"
                 validate={(value) => (value ? undefined : "Required")}
                 filterToQuery={(searchText) => ({ q: searchText })}
+                createItemLabel={(filter) => `Add "${filter}" as new contact`}
+                onCreate={(filter) => {
+                  openCreateContact(filter);
+                  return undefined;
+                }}
               />
             </ReferenceInput>
           </div>
@@ -562,6 +578,16 @@ const QuickMeetingFormBody = ({
           isSubmitting={isSubmitting}
         />
       </div>
+
+      <QuickMeetingContactCreateDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+        initialName={createContactSeed}
+        onCreated={(created) => {
+          setValue("contact_id", created.id as Identifier, { shouldDirty: true });
+          setValue("meeting_url", null, { shouldDirty: true });
+        }}
+      />
     </>
   );
 };
