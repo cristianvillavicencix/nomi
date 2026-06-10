@@ -1,9 +1,11 @@
 import { required, useGetIdentity, useGetList, useGetOne } from "ra-core";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { AutocompleteArrayInput } from "@/components/admin/autocomplete-array-input";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { DateInput } from "@/components/admin/date-input";
 import { NumberInput } from "@/components/admin/number-input";
+import { ReferenceArrayInput } from "@/components/admin/reference-array-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
@@ -38,6 +40,18 @@ const toNumber = (value: unknown): number | null => {
 const isAdminMember = (member: OrganizationMember) =>
   member.administrator === true ||
   (Array.isArray(member.roles) && member.roles.includes("admin"));
+
+const memberDisplayName = (member: OrganizationMember) =>
+  [member.first_name, member.last_name].filter(Boolean).join(" ").trim() ||
+  member.email ||
+  "Team member";
+
+const getMemberOptionText = (member?: Partial<OrganizationMember>) => {
+  if (!member) return "";
+  const name = memberDisplayName(member as OrganizationMember);
+  if (member.email) return `${name} (${member.email})`;
+  return name;
+};
 
 const withCurrentCustomChoice = (
   choices: Array<{ value: string; label: string }>,
@@ -112,6 +126,7 @@ export const LbsDealInputs = ({
   const notes = useWatch({ control, name: "notes" });
   const description = useWatch({ control, name: "description" });
   const projectName = useWatch({ control, name: "name" });
+  const salespersonIds = useWatch({ control, name: "salesperson_ids" });
 
   const selectedContactId = toNumber(contactId);
   const selectedProposalId = toNumber(acceptedProposalId);
@@ -134,8 +149,41 @@ export const LbsDealInputs = ({
       sort: { field: "last_name", order: "ASC" },
       filter: { "disabled@neq": true },
     },
-    { enabled: isCreateFlow },
   );
+
+  const defaultCreateTeamIds = useMemo(() => {
+    const adminIds = organizationMembers
+      .filter(isAdminMember)
+      .map((member) => Number(member.id))
+      .filter(Number.isFinite);
+    return Array.from(
+      new Set(
+        [Number(identity?.id), ...adminIds].filter((id) => Number.isFinite(id)),
+      ),
+    );
+  }, [identity?.id, organizationMembers]);
+
+  const assignedTeamMembers = useMemo(() => {
+    const ids = (
+      isCreateFlow
+        ? defaultCreateTeamIds
+        : Array.isArray(salespersonIds)
+          ? salespersonIds.map((id) => Number(id))
+          : []
+    ).filter(Number.isFinite);
+
+    const byId = new Map(
+      organizationMembers.map((member) => [Number(member.id), member]),
+    );
+    return ids
+      .map((id) => byId.get(id))
+      .filter((member): member is OrganizationMember => member != null);
+  }, [
+    defaultCreateTeamIds,
+    isCreateFlow,
+    organizationMembers,
+    salespersonIds,
+  ]);
 
   const stageChoices = useMemo(
     () => withCurrentCustomChoice(lbsProjectStages, String(stage ?? "")),
@@ -242,22 +290,11 @@ export const LbsDealInputs = ({
 
   useEffect(() => {
     if (!isCreateFlow || teamAssignedRef.current) return;
-    if (!identity?.id && organizationMembers.length === 0) return;
+    if (defaultCreateTeamIds.length === 0) return;
 
-    const adminIds = organizationMembers
-      .filter(isAdminMember)
-      .map((member) => Number(member.id))
-      .filter(Number.isFinite);
-    const teamIds = Array.from(
-      new Set(
-        [Number(identity?.id), ...adminIds].filter((id) => Number.isFinite(id)),
-      ),
-    );
-
-    if (teamIds.length === 0) return;
-    setValue("salesperson_ids", teamIds, { shouldDirty: false });
+    setValue("salesperson_ids", defaultCreateTeamIds, { shouldDirty: false });
     teamAssignedRef.current = true;
-  }, [identity?.id, isCreateFlow, organizationMembers, setValue]);
+  }, [defaultCreateTeamIds, isCreateFlow, setValue]);
 
   const autoProjectName = useMemo(
     () =>
@@ -424,6 +461,56 @@ export const LbsDealInputs = ({
               placeholder="lbs-web/acme-roofing"
               validate={optionalGithubRepo}
             />
+            <div className={isMobile ? undefined : "md:col-span-2"}>
+              {isCreateFlow ? (
+                <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+                  <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                    Assigned team
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    The project creator and workspace administrators are added
+                    automatically.
+                  </p>
+                  {assignedTeamMembers.length > 0 ? (
+                    <ul className="mt-3 space-y-1.5">
+                      {assignedTeamMembers.map((member) => (
+                        <li
+                          key={member.id}
+                          className="flex items-center justify-between gap-2 text-sm"
+                        >
+                          <span className="font-medium text-foreground">
+                            {memberDisplayName(member)}
+                          </span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {Number(member.id) === Number(identity?.id)
+                              ? "Creator"
+                              : isAdminMember(member)
+                                ? "Admin"
+                                : "Team"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">—</p>
+                  )}
+                </div>
+              ) : (
+                <ReferenceArrayInput
+                  source="salesperson_ids"
+                  reference="organization_members"
+                  filter={{ "disabled@neq": true }}
+                >
+                  <AutocompleteArrayInput
+                    label="Assign team"
+                    optionText={getMemberOptionText}
+                    helperText={false}
+                    placeholder="Select team members"
+                    filterToQuery={(searchText) => ({ q: searchText })}
+                  />
+                </ReferenceArrayInput>
+              )}
+            </div>
             <div className={isMobile ? undefined : "md:col-span-2"}>
               <TextInput
                 source="notes"
