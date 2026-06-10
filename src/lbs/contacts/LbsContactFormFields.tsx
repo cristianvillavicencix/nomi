@@ -113,6 +113,12 @@ const ContactBasicsSection = ({
       />
       <TextInput source="last_name" validate={required()} helperText={false} />
     </div>
+    <TextInput
+      source="title"
+      label="Title / role"
+      helperText={false}
+      placeholder="Owner, Office manager, Estimator…"
+    />
     {lockCompanyId != null ? null : (
       <ReferenceInput
         source="company_id"

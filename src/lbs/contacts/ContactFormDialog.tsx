@@ -43,6 +43,7 @@ type ContactFormDialogProps = {
 const defaultCreateValues = (lockCompanyId?: Identifier) => ({
   first_name: "",
   last_name: "",
+  title: "",
   company_id: lockCompanyId ?? null,
   email_jsonb: [{ email: "", type: "Work" }],
   phone_jsonb: [{ number: "", type: "Work" }],

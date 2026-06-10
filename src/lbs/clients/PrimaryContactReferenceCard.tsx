@@ -66,6 +66,7 @@ export const PrimaryContactReferenceCard = ({
   const displayName = activeContact
     ? getContactFullName(activeContact)
     : "No primary contact";
+  const role = activeContact?.title?.trim() ?? "";
   const email = pickPrimaryEmail(activeContact);
   const phone = pickPrimaryPhone(activeContact);
 
@@ -77,6 +78,9 @@ export const PrimaryContactReferenceCard = ({
         </Avatar>
         <div className="min-w-0 flex-1 space-y-1">
           <p className="font-medium leading-tight">{displayName}</p>
+          {role ? (
+            <p className="text-sm text-muted-foreground">{role}</p>
+          ) : null}
           <p className="text-sm text-muted-foreground">
             {[email, phone].filter(Boolean).join(" · ") || "No email or phone"}
           </p>
