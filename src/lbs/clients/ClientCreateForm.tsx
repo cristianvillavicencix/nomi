@@ -63,6 +63,8 @@ export type ClientCreateFormValues = {
 export type ClientCreateFormFieldsProps = {
   mode: "create" | "edit";
   companyId?: Identifier;
+  /** Current `companies.primary_contact_id` when editing. */
+  savedPrimaryContactId?: Identifier | null;
   primaryContact?: Contact | null;
 };
 
@@ -81,6 +83,7 @@ const optionalUrl = (url?: string) => {
 export const ClientCreateFormFields = ({
   mode,
   companyId,
+  savedPrimaryContactId,
   primaryContact,
 }: ClientCreateFormFieldsProps) => {
   const { setValue } = useFormContext<ClientCreateFormValues>();
@@ -242,6 +245,7 @@ export const ClientCreateFormFields = ({
             <PrimaryContactReferenceCard
               companyId={companyId}
               selectedContactId={selectedPrimaryId}
+              savedPrimaryContactId={savedPrimaryContactId}
               primaryContact={primaryContact}
               onSelectContact={(id) =>
                 setValue("selected_primary_contact_id", id, {

@@ -115,6 +115,7 @@ export const ClientEditDialog = ({
                 isMobile={isMobile}
                 isSaving={isSaving}
                 companyId={company.id}
+                savedPrimaryContactId={company.primary_contact_id ?? null}
                 primaryContact={primaryContact ?? null}
                 onOpenChange={onOpenChange}
               />
@@ -131,6 +132,7 @@ const ClientEditDialogBody = ({
   isMobile,
   isSaving,
   companyId,
+  savedPrimaryContactId,
   primaryContact,
   onOpenChange,
 }: {
@@ -138,6 +140,7 @@ const ClientEditDialogBody = ({
   isMobile: boolean;
   isSaving: boolean;
   companyId: Identifier;
+  savedPrimaryContactId: Identifier | null;
   primaryContact: Contact | null;
   onOpenChange: (open: boolean) => void;
 }) => {
@@ -167,6 +170,7 @@ const ClientEditDialogBody = ({
         <ClientCreateFormFields
           mode="edit"
           companyId={companyId}
+          savedPrimaryContactId={savedPrimaryContactId}
           primaryContact={primaryContact}
         />
       </div>
