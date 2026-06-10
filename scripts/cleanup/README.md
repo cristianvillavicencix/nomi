@@ -12,6 +12,8 @@ npx supabase db query --linked --agent=no -f scripts/cleanup/02_fix_phone_in_las
 npx supabase db query --linked --agent=no -f scripts/cleanup/03_normalize_company_sector.sql
 npx supabase db query --linked --agent=no -f scripts/cleanup/04_normalize_contact_status.sql
 npx supabase db query --linked --agent=no -f scripts/cleanup/05_extend_primary_contact_triggers.sql
+npx supabase db query --linked --agent=no -f scripts/cleanup/05_dry_run_promotable_companies.sql
+npx supabase db query --linked --agent=no --output csv -f scripts/cleanup/05_dry_run_promotable_companies.sql > scripts/cleanup/reports/promotable_companies.csv
 ```
 
 ## Apply (after explicit approval)

@@ -29,6 +29,50 @@ BEGIN
       WHERE co.primary_contact_id = c.id
     );
   RAISE NOTICE 'D.1: contact_only contacts who are company primary (would promote to client): %', v_count;
+  RAISE NOTICE 'D.1 detail: run scripts/cleanup/05_dry_run_promotable_companies.sql for full company list with deals/proposals/invoices counts';
+
+  SELECT count(*) INTO v_count
+  FROM public.companies co
+  JOIN public.contacts c ON c.id = co.primary_contact_id
+  WHERE c.status = 'contact_only'
+    AND (
+      EXISTS (SELECT 1 FROM public.deals d WHERE d.company_id = co.id)
+      OR EXISTS (SELECT 1 FROM public.proposals p WHERE p.company_id = co.id)
+      OR EXISTS (SELECT 1 FROM public.client_invoices i WHERE i.company_id = co.id)
+    );
+  RAISE NOTICE 'D.1: companies with any deals/proposals/invoices (activity): %', v_count;
+
+  IF v_count > 0 AND v_count <= 20 THEN
+    RAISE NOTICE 'D.1 companies with activity:';
+    FOR rec IN
+      SELECT
+        co.id AS company_id,
+        co.name AS company_name,
+        coalesce(co.sector, '') AS sector,
+        (SELECT count(*) FROM public.deals d WHERE d.company_id = co.id) AS deals_count,
+        (SELECT count(*) FROM public.proposals p WHERE p.company_id = co.id) AS proposals_count,
+        (SELECT count(*) FROM public.client_invoices i WHERE i.company_id = co.id) AS invoices_count
+      FROM public.companies co
+      JOIN public.contacts c ON c.id = co.primary_contact_id
+      WHERE c.status = 'contact_only'
+        AND (
+          EXISTS (SELECT 1 FROM public.deals d WHERE d.company_id = co.id)
+          OR EXISTS (SELECT 1 FROM public.proposals p WHERE p.company_id = co.id)
+          OR EXISTS (SELECT 1 FROM public.client_invoices i WHERE i.company_id = co.id)
+        )
+      ORDER BY co.name
+    LOOP
+      RAISE NOTICE '  company_id=% name=% sector=% deals=% proposals=% invoices=%',
+        rec.company_id, rec.company_name, rec.sector,
+        rec.deals_count, rec.proposals_count, rec.invoices_count;
+    END LOOP;
+  END IF;
+
+  -- Legacy sample (first 20 contact rows) — prefer 05_dry_run_promotable_companies.sql
+  SELECT count(*) INTO v_count
+  FROM public.contacts c
+  WHERE c.status = 'contact_only'
+    AND EXISTS (SELECT 1 FROM public.companies co WHERE co.primary_contact_id = c.id);
 
   IF v_count > 0 AND v_count <= 20 THEN
     RAISE NOTICE 'D.1 sample rows:';
