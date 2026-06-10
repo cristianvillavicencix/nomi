@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Plus, Star, Trash2 } from "lucide-react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { EmailInput } from "@/components/admin/email-input";
@@ -35,6 +36,16 @@ export const ClientChannelsInput = ({
     control,
     name: source,
   });
+
+  useEffect(() => {
+    if (fields.length === 0) {
+      append({
+        value: "",
+        type: "Work",
+        isPrimary: true,
+      } satisfies ClientChannelFormValue);
+    }
+  }, [append, fields.length]);
 
   const appendChannel = () =>
     append({

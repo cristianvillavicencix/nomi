@@ -19,6 +19,12 @@ export const CHANNEL_TYPE_CHOICES = [
   { id: "Other", name: "Other" },
 ] as const;
 
+const emptyChannelRow = (): ClientChannelFormValue => ({
+  value: "",
+  type: "Work",
+  isPrimary: true,
+});
+
 export const getPrimaryChannelValue = (
   channels?: ClientChannelFormValue[] | null,
 ) => {
@@ -72,7 +78,9 @@ export const emailsToFormValues = (
   if (fromJson.length > 0) return fromJson;
 
   const legacy = legacyPrimary?.trim();
-  return legacy ? [{ value: legacy, type: "Work", isPrimary: true }] : [];
+  return legacy
+    ? [{ value: legacy, type: "Work", isPrimary: true }]
+    : [emptyChannelRow()];
 };
 
 export const phonesToFormValues = (
@@ -90,10 +98,10 @@ export const phonesToFormValues = (
   if (fromJson.length > 0) return fromJson;
 
   const legacy = legacyPrimary?.trim();
-  return legacy ? [{ value: legacy, type: "Work", isPrimary: true }] : [];
+  return legacy
+    ? [{ value: legacy, type: "Work", isPrimary: true }]
+    : [emptyChannelRow()];
 };
-
-export const formValuesToEmailJsonb = (
   channels?: ClientChannelFormValue[] | null,
 ): EmailAndType[] =>
   cleanChannelFormValues(channels).map((entry) => ({
