@@ -29,10 +29,15 @@ import {
   LbsContactFormFields,
 } from "@/lbs/contacts/LbsContactFormFields";
 
+/** Hide company field in LbsContactFormFields while creating an orphan contact. */
+export const PENDING_COMPANY_LOCK = "__pending_company__" as Identifier;
+
 type ContactFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lockCompanyId?: Identifier;
+  /** Allow creating a contact without company_id (assigned when the company saves). */
+  allowOrphanContact?: boolean;
   title?: string;
   description?: string;
   submitLabel?: string;
@@ -44,7 +49,8 @@ const defaultCreateValues = (lockCompanyId?: Identifier) => ({
   first_name: "",
   last_name: "",
   title: "",
-  company_id: lockCompanyId ?? null,
+  company_id:
+    lockCompanyId === PENDING_COMPANY_LOCK ? null : (lockCompanyId ?? null),
   email_jsonb: [{ email: "", type: "Work" }],
   phone_jsonb: [{ number: "", type: "Work" }],
   address: "",
@@ -60,6 +66,7 @@ export const ContactFormDialog = ({
   open,
   onOpenChange,
   lockCompanyId,
+  allowOrphanContact = false,
   title = "New contact",
   description = "Person linked to a client company. Company is required.",
   submitLabel = "Create contact",
@@ -74,6 +81,10 @@ export const ContactFormDialog = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const handleClose = () => onOpenChange(false);
+
+  const formLockCompanyId = allowOrphanContact
+    ? PENDING_COMPANY_LOCK
+    : lockCompanyId;
 
   if (!open) return null;
 
@@ -96,8 +107,13 @@ export const ContactFormDialog = ({
             const useCompact =
               String(values._compact_full_name ?? "").trim().length > 0;
             const now = new Date().toISOString();
-            const companyId = lockCompanyId ?? values.company_id;
-            if (companyId == null || companyId === "") {
+            const companyId = allowOrphanContact
+              ? null
+              : lockCompanyId ?? values.company_id;
+            if (
+              !allowOrphanContact &&
+              (companyId == null || companyId === "")
+            ) {
               throw new Error("Company is required");
             }
             return {
@@ -107,7 +123,7 @@ export const ContactFormDialog = ({
               last_name: useCompact
                 ? compact.last_name
                 : String(values.last_name ?? ""),
-              company_id: companyId as Identifier,
+              company_id: companyId as Identifier | null,
               status: String(values.status ?? LBS_CLIENT_STATUS),
               organization_member_id:
                 (values.organization_member_id as Identifier | undefined) ??
@@ -145,11 +161,15 @@ export const ContactFormDialog = ({
           <Form
             id="lbs-contact-form"
             className="flex min-h-0 flex-1 flex-col"
-            defaultValues={defaultCreateValues(lockCompanyId)}
+            defaultValues={defaultCreateValues(formLockCompanyId)}
           >
             <DialogHeader className="relative shrink-0 space-y-1 border-b bg-background px-5 py-4 pr-12 text-left sm:px-6 sm:pr-14">
               <DialogTitle>{title}</DialogTitle>
-              <DialogDescription>{description}</DialogDescription>
+              <DialogDescription>
+                {allowOrphanContact
+                  ? "Creates a contact without a company. The new company form will link them on save."
+                  : description}
+              </DialogDescription>
               <DialogClose
                 className="absolute top-3.5 right-3.5 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
                 disabled={isSaving}
@@ -162,7 +182,7 @@ export const ContactFormDialog = ({
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
               <LbsContactFormFields
                 variant="compact"
-                lockCompanyId={lockCompanyId}
+                lockCompanyId={formLockCompanyId}
               />
             </div>
 

@@ -47,10 +47,12 @@ import { canMutateCrmResource } from "../commons/crmPermissions";
 import {
   buildCompanyPayloadFromUpsert,
   buildContactPayloadFromUpsert,
+  hasPrimaryContactInput,
   splitClientFullName,
   type LbsClientUpsertInput,
   type LbsClientUpsertResult,
 } from "@/lbs/clients/lbsClientUpsert";
+import { contactNeedsCompanyMove } from "@/lbs/clients/primaryContactRelink";
 import { lbsProjectTypeChoices } from "@/lbs/deals/lbsProjectConstants";
 import { normalizePostgrestIlikeQuery } from "../commons/postgrestSearchQuery";
 
@@ -1167,35 +1169,68 @@ const dataProviderWithCustomMethods = {
 
     const resolvePrimaryContactId = async () => {
       if (input.primaryContactId) {
-        const { data: existingPrimary } = await supabase
-          .from("contacts")
-          .select("id")
-          .eq("id", input.primaryContactId)
-          .eq("company_id", companyId)
-          .maybeSingle();
+        const { data: existingContact, error: existingContactError } =
+          await supabase
+            .from("contacts")
+            .select("id, company_id")
+            .eq("id", input.primaryContactId)
+            .eq("org_id", member.org_id)
+            .maybeSingle();
 
-        if (existingPrimary?.id) {
-          if (input.linkPrimaryContactOnly) {
-            return existingPrimary.id as Identifier;
-          }
-          const contactPayload = buildContactPayloadFromUpsert(
-            input,
-            companyId,
-            "update",
-          );
-          const { data: updatedContact, error: updateContactError } =
-            await supabase
-              .from("contacts")
-              .update(contactPayload)
-              .eq("id", existingPrimary.id)
-              .select("id")
-              .single();
-
-          if (updateContactError || !updatedContact) {
-            throw new Error("Failed to update primary contact");
-          }
-          return updatedContact.id as Identifier;
+        if (existingContactError || !existingContact?.id) {
+          throw new Error("Primary contact not found");
         }
+
+        if (
+          contactNeedsCompanyMove(existingContact.company_id, companyId) ||
+          existingContact.company_id == null
+        ) {
+          if (contactNeedsCompanyMove(existingContact.company_id, companyId)) {
+            const { error: clearPrimaryError } = await supabase
+              .from("companies")
+              .update({ primary_contact_id: null })
+              .eq("primary_contact_id", existingContact.id)
+              .eq("org_id", member.org_id);
+
+            if (clearPrimaryError) {
+              throw new Error("Failed to clear previous primary contact link");
+            }
+          }
+
+          const { error: assignCompanyError } = await supabase
+            .from("contacts")
+            .update({
+              company_id: companyId,
+              last_seen: new Date().toISOString(),
+            })
+            .eq("id", existingContact.id);
+
+          if (assignCompanyError) {
+            throw new Error("Failed to assign primary contact to company");
+          }
+        }
+
+        if (input.linkPrimaryContactOnly) {
+          return existingContact.id as Identifier;
+        }
+
+        const contactPayload = buildContactPayloadFromUpsert(
+          input,
+          companyId,
+          "update",
+        );
+        const { data: updatedContact, error: updateContactError } =
+          await supabase
+            .from("contacts")
+            .update(contactPayload)
+            .eq("id", existingContact.id)
+            .select("id")
+            .single();
+
+        if (updateContactError || !updatedContact) {
+          throw new Error("Failed to update primary contact");
+        }
+        return updatedContact.id as Identifier;
       }
 
       const primaryEmail = input.primary.email?.trim().toLowerCase();
@@ -1281,7 +1316,9 @@ const dataProviderWithCustomMethods = {
       return newContact.id as Identifier;
     };
 
-    const contactId = await resolvePrimaryContactId();
+    const contactId = hasPrimaryContactInput(input)
+      ? await resolvePrimaryContactId()
+      : null;
 
     const { error: primaryLinkError } = await supabase
       .from("companies")

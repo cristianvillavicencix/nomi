@@ -10,6 +10,7 @@ import {
   buildCompanyPayloadFromUpsert,
   buildQuickClientUpsertInput,
   clientCreateFormValuesToUpsertInput,
+  hasPrimaryContactInput,
   LBS_CLIENT_FORM_UNMANAGED_CONTACT_FIELDS,
   type LbsClientUpsertInput,
 } from "./lbsClientUpsert";
@@ -185,5 +186,25 @@ describe("context_links save invariant", () => {
     expect(JSON.stringify(payload.context_links)).toBe(
       JSON.stringify(existingLinks),
     );
+  });
+});
+
+describe("hasPrimaryContactInput", () => {
+  it("returns true when only an existing contact id is selected", () => {
+    expect(
+      hasPrimaryContactInput({
+        primaryContactId: 55,
+        primary: { fullName: "", emails: [], phones: [] },
+      }),
+    ).toBe(true);
+  });
+
+  it("returns false when no contact is selected or drafted", () => {
+    expect(
+      hasPrimaryContactInput({
+        primaryContactId: undefined,
+        primary: { fullName: "", emails: [], phones: [] },
+      }),
+    ).toBe(false);
   });
 });

@@ -63,10 +63,15 @@ import { enrichCompanySummary } from "@/lbs/clients/clientProfile";
 import {
   buildCompanyPayloadFromUpsert,
   buildContactPayloadFromUpsert,
+  hasPrimaryContactInput,
   splitClientFullName,
   type LbsClientUpsertInput,
   type LbsClientUpsertResult,
 } from "@/lbs/clients/lbsClientUpsert";
+import {
+  contactNeedsCompanyMove,
+  shouldClearPrimaryOnCompany,
+} from "@/lbs/clients/primaryContactRelink";
 
 const baseDataProvider = fakeRestDataProvider(generateData(), true, 300);
 
@@ -848,56 +853,104 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     );
 
     const primaryEmail = input.primary.emails?.[0]?.value?.trim().toLowerCase();
-    let contact =
-      (input.primaryContactId
-        ? companyContacts.find(
-            (candidate) =>
-              String(candidate.id) === String(input.primaryContactId),
-          )
-        : undefined) ??
-      (primaryEmail
-        ? companyContacts.find((candidate) =>
-            candidate.email_jsonb?.some(
-              (entry) => entry.email?.trim().toLowerCase() === primaryEmail,
-            ),
-          )
-        : undefined) ??
-      companyContacts.find(
-        (candidate) =>
-          candidate.first_name?.toLowerCase() === firstName.toLowerCase() &&
-          candidate.last_name?.toLowerCase() ===
-            (lastName || firstName).toLowerCase(),
-      );
+    let contact: Contact | undefined;
 
-    if (contact && input.linkPrimaryContactOnly) {
-      // Link only — contact body is edited in the contact profile.
-    } else if (contact) {
-      const { data: updatedContact } = await baseDataProvider.update<Contact>(
-        "contacts",
-        {
-          id: contact.id,
-          data: buildContactPayloadFromUpsert(input, companyId, "update"),
-          previousData: contact,
-        },
-      );
-      contact = updatedContact;
-    } else {
-      const { data: newContact } = await baseDataProvider.create<Contact>(
-        "contacts",
-        {
-          data: buildContactPayloadFromUpsert(input, companyId, "create"),
-        },
-      );
-      contact = newContact;
+    if (hasPrimaryContactInput(input)) {
+      if (input.primaryContactId) {
+        const matched = contacts.find(
+          (candidate) =>
+            String(candidate.id) === String(input.primaryContactId),
+        );
+        if (matched) {
+          contact = matched;
+          if (
+            contactNeedsCompanyMove(contact.company_id, companyId) ||
+            contact.company_id == null
+          ) {
+            if (contactNeedsCompanyMove(contact.company_id, companyId)) {
+              const oldCompany = companies.find(
+                (entry) =>
+                  String(entry.id) === String(contact!.company_id) &&
+                  shouldClearPrimaryOnCompany(
+                    entry.primary_contact_id,
+                    contact!.id,
+                  ),
+              );
+              if (oldCompany) {
+                await baseDataProvider.update("companies", {
+                  id: oldCompany.id,
+                  data: { primary_contact_id: null },
+                  previousData: oldCompany,
+                });
+              }
+            }
+            const { data: movedContact } = await baseDataProvider.update<Contact>(
+              "contacts",
+              {
+                id: contact.id,
+                data: {
+                  company_id: companyId,
+                  last_seen: new Date().toISOString(),
+                },
+                previousData: contact,
+              },
+            );
+            contact = movedContact;
+          }
+        }
+      }
+
+      if (!contact) {
+        contact =
+          (primaryEmail
+            ? companyContacts.find((candidate) =>
+                candidate.email_jsonb?.some(
+                  (entry) => entry.email?.trim().toLowerCase() === primaryEmail,
+                ),
+              )
+            : undefined) ??
+          companyContacts.find(
+            (candidate) =>
+              candidate.first_name?.toLowerCase() === firstName.toLowerCase() &&
+              candidate.last_name?.toLowerCase() ===
+                (lastName || firstName).toLowerCase(),
+          );
+      }
+
+      if (contact && input.linkPrimaryContactOnly) {
+        // Link only — contact body is edited in the contact profile.
+      } else if (contact) {
+        const { data: updatedContact } = await baseDataProvider.update<Contact>(
+          "contacts",
+          {
+            id: contact.id,
+            data: buildContactPayloadFromUpsert(input, companyId, "update"),
+            previousData: contact,
+          },
+        );
+        contact = updatedContact;
+      } else {
+        const { data: newContact } = await baseDataProvider.create<Contact>(
+          "contacts",
+          {
+            data: buildContactPayloadFromUpsert(input, companyId, "create"),
+          },
+        );
+        contact = newContact;
+      }
     }
 
     await baseDataProvider.update("companies", {
       id: companyId,
-      data: { primary_contact_id: contact.id },
+      data: { primary_contact_id: contact?.id ?? null },
       previousData: existingCompany ?? { id: companyId },
     });
 
-    return { company_id: companyId, contact_id: contact.id, created };
+    return {
+      company_id: companyId,
+      contact_id: contact?.id ?? null,
+      created,
+    };
   },
   convertLeadToClient: async ({
     contactId,

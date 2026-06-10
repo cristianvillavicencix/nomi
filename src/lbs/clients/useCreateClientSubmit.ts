@@ -9,7 +9,6 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { ClientCreateFormValues } from "@/lbs/clients/ClientCreateForm";
 import {
   clientCreateFormValuesToUpsertInput,
-  hasPrimaryContactDraft,
 } from "@/lbs/clients/lbsClientUpsert";
 
 export const useCreateClientSubmit = () => {
@@ -33,13 +32,6 @@ export const useCreateClientSubmit = () => {
       return null;
     }
 
-    if (hasPrimaryContactDraft(values) && !values.primary_full_name.trim()) {
-      notify("Primary contact name is required when adding contact details", {
-        type: "warning",
-      });
-      return null;
-    }
-
     if (!("upsertLbsClient" in dataProvider)) {
       notify("Client creation is not available in this environment", {
         type: "error",
@@ -49,9 +41,11 @@ export const useCreateClientSubmit = () => {
 
     setIsSaving(true);
     try {
-      const result = await dataProvider.upsertLbsClient(
-        clientCreateFormValuesToUpsertInput(values, identity.id),
-      );
+      const result = await dataProvider.upsertLbsClient({
+        ...clientCreateFormValuesToUpsertInput(values, identity.id),
+        primaryContactId: values.selected_primary_contact_id ?? undefined,
+        linkPrimaryContactOnly: values.selected_primary_contact_id != null,
+      });
       notify(result.created ? "Client created" : "Client updated", {
         type: "info",
       });

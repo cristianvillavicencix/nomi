@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import type { Identifier } from "ra-core";
+import { useGetOne } from "ra-core";
 import { useFormContext, useWatch } from "react-hook-form";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
@@ -10,8 +11,6 @@ import {
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
-import { SelectInput } from "@/components/admin/select-input";
-import { TextInput } from "@/components/admin/text-input";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown } from "lucide-react";
 import { LBS_COMPANY_INDUSTRY_CHOICES } from "@/lbs/leads/leadFormConstants";
@@ -96,42 +95,26 @@ export const ClientCreateFormFields = ({
     ClientCreateFormValues,
     "selected_primary_contact_id"
   >({ name: "selected_primary_contact_id" });
-  const primaryNameDraft = useWatch<
-    ClientCreateFormValues,
-    "primary_full_name"
-  >({ name: "primary_full_name" });
-  const primaryEmailDraft = useWatch<ClientCreateFormValues, "primary_email">({
-    name: "primary_email",
-  });
-  const primaryPhoneDraft = useWatch<ClientCreateFormValues, "primary_phone">({
-    name: "primary_phone",
-  });
+
+  const { data: selectedPrimaryContact } = useGetOne<Contact>(
+    "contacts",
+    { id: selectedPrimaryId! },
+    { enabled: mode === "create" && selectedPrimaryId != null },
+  );
+
+  const resolvedPrimaryContact =
+    mode === "create" ? (selectedPrimaryContact ?? null) : (primaryContact ?? null);
 
   const primaryContactSummary = useMemo(() => {
-    if (mode === "edit") {
-      if (
-        primaryContact &&
-        selectedPrimaryId != null &&
-        String(primaryContact.id) === String(selectedPrimaryId)
-      ) {
-        return getContactFullName(primaryContact);
-      }
-      return selectedPrimaryId != null ? "Contact selected" : null;
+    if (selectedPrimaryId == null) return null;
+    if (
+      resolvedPrimaryContact &&
+      String(resolvedPrimaryContact.id) === String(selectedPrimaryId)
+    ) {
+      return getContactFullName(resolvedPrimaryContact);
     }
-    return (
-      primaryNameDraft?.trim() ||
-      primaryEmailDraft?.trim() ||
-      primaryPhoneDraft?.trim() ||
-      null
-    );
-  }, [
-    mode,
-    primaryContact,
-    primaryEmailDraft,
-    primaryNameDraft,
-    primaryPhoneDraft,
-    selectedPrimaryId,
-  ]);
+    return mode === "edit" ? "Contact selected" : null;
+  }, [mode, resolvedPrimaryContact, selectedPrimaryId]);
 
   return (
     <div className="flex flex-col gap-6 p-1">
@@ -220,35 +203,34 @@ export const ClientCreateFormFields = ({
         </summary>
         <div className="space-y-4 border-t px-4 pt-4 pb-4">
           {mode === "create" ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Creates a contact linked to this company. Leave collapsed if you
-                do not need one yet.
-              </p>
-              <TextInput
-                source="primary_full_name"
-                label="Full name"
-                helperText={false}
-              />
-              <EmailInput
-                source="primary_email"
-                label="Email"
-                helperText={false}
-              />
-              <PhoneInput
-                source="primary_phone"
-                label="Phone"
-                helperText={false}
-              />
-            </>
+            <PrimaryContactReferenceCard
+              mode="create"
+              selectedContactId={selectedPrimaryId}
+              onSelectContact={(id) =>
+                setValue("selected_primary_contact_id", id, {
+                  shouldDirty: true,
+                })
+              }
+              onClearContact={() =>
+                setValue("selected_primary_contact_id", null, {
+                  shouldDirty: true,
+                })
+              }
+            />
           ) : companyId != null ? (
             <PrimaryContactReferenceCard
+              mode="edit"
               companyId={companyId}
               selectedContactId={selectedPrimaryId}
               savedPrimaryContactId={savedPrimaryContactId}
               primaryContact={primaryContact}
               onSelectContact={(id) =>
                 setValue("selected_primary_contact_id", id, {
+                  shouldDirty: true,
+                })
+              }
+              onClearContact={() =>
+                setValue("selected_primary_contact_id", null, {
                   shouldDirty: true,
                 })
               }
@@ -270,7 +252,7 @@ export const ClientCreateFormFields = ({
           source="invoice_same_as_primary"
           label="Use same primary contact for invoices"
         />
-        <InvoiceContactFields primaryContact={primaryContact} />
+        <InvoiceContactFields primaryContact={resolvedPrimaryContact} />
       </section>
 
       <Separator />
