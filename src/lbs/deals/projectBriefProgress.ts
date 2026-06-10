@@ -9,6 +9,7 @@ import {
   lbsProjectStages,
   normalizeLbsProjectStage,
 } from "@/lbs/deals/lbsProjectConstants";
+import { isBriefRequirementsWaived } from "@/lbs/deals/projectManualHandoff";
 import type { LbsDeal } from "@/lbs/types";
 
 export const BRIEF_SETUP_FIELD_COUNT = 2;
@@ -69,7 +70,8 @@ export const getBriefStageAdvanceCheck = (
 
   if (
     !leavingPreDelivery ||
-    progress.percent >= BRIEF_MIN_PERCENT_TO_LEAVE_SETUP
+    progress.percent >= BRIEF_MIN_PERCENT_TO_LEAVE_SETUP ||
+    isBriefRequirementsWaived(record)
   ) {
     return { allowed: true as const, progress };
   }
@@ -104,6 +106,7 @@ export const mergeDealIntoIntakeValues = (
   }
 
   for (const [key, value] of Object.entries(brief)) {
+    if (key.startsWith("_")) continue;
     if (value != null && String(value).trim()) {
       next[key] = String(value);
     }

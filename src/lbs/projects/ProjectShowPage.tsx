@@ -23,6 +23,7 @@ import {
   createStageTasksForDeal,
   getStageTasksCreatedMessage,
 } from "@/lbs/deals/dealStageTaskTemplates";
+import { ManualHandoffBanner } from "@/lbs/deals/ManualHandoffControl";
 import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
 import { getBriefStageAdvanceCheck } from "@/lbs/deals/projectBriefProgress";
 import { getLaunchStageAdvanceCheck } from "@/lbs/projects/launch/launchChecklistGate";
@@ -165,6 +166,7 @@ const ProjectShowContent = () => {
   return (
     <div className="space-y-2">
       {record.archived_at ? <ArchivedTitle /> : null}
+      <ManualHandoffBanner record={record} />
       <div className="mb-3">
         <Button asChild variant="ghost" size="sm" className="gap-2">
           <Link to="/deals">

@@ -13,12 +13,15 @@ import {
   ArchiveRestore,
   ChevronDown,
   FileText,
+  HandMetal,
   MessageSquare,
   Pencil,
+  RotateCcw,
   Share2,
   Trash2,
 } from "lucide-react";
 import { Link } from "react-router";
+import { Confirm } from "@/components/admin/confirm";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,15 +32,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { canUseCrmPermission } from "@/components/atomic-crm/providers/commons/crmPermissions";
 import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
-import type { Contact, Deal } from "@/components/atomic-crm/types";
+import type { Contact } from "@/components/atomic-crm/types";
+import type { LbsDeal } from "@/lbs/types";
 import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
 import { getClientProposalCreatePath } from "@/lbs/routing";
 import type { SendFormContext } from "@/lbs/forms-v2/share/sendFormTypes";
 import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
+import { useManualHandoffActions } from "@/lbs/deals/useManualHandoffActions";
 import { useMessagesQuickAccessOptional } from "@/lbs/messages/messagesQuickAccessContext";
 import { useMessagingEnabled } from "@/lbs/messages/useMessagingEnabled";
 
-const getMainContactId = (record: Deal) => {
+const getMainContactId = (record: LbsDeal) => {
   if (record.contact_id != null) return Number(record.contact_id);
   if (Array.isArray(record.contact_ids) && record.contact_ids.length > 0) {
     return Number(record.contact_ids[0]);
@@ -45,12 +50,15 @@ const getMainContactId = (record: Deal) => {
   return null;
 };
 
-export const ProjectActionsMenu = ({ record }: { record: Deal }) => {
+export const ProjectActionsMenu = ({ record }: { record: LbsDeal }) => {
   const { data: identity } = useGetIdentity();
   const notify = useNotify();
   const refresh = useRefresh();
   const [update] = useUpdate();
   const [shareOpen, setShareOpen] = useState(false);
+  const [handoffConfirmOpen, setHandoffConfirmOpen] = useState(false);
+  const { waived, setWaived, isPending: isHandoffPending } =
+    useManualHandoffActions(record);
 
   const contactId = getMainContactId(record);
   const { data: contact } = useGetOne<Contact>(
@@ -176,6 +184,28 @@ export const ProjectActionsMenu = ({ record }: { record: Deal }) => {
             <Share2 className="size-4" />
             Share with team
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {waived ? (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                setHandoffConfirmOpen(true);
+              }}
+            >
+              <RotateCcw className="size-4" />
+              Restore brief requirements
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                setHandoffConfirmOpen(true);
+              }}
+            >
+              <HandMetal className="size-4" />
+              Enable manual handoff
+            </DropdownMenuItem>
+          )}
           {canManageSales ? (
             <>
               <DropdownMenuSeparator />
@@ -226,6 +256,26 @@ export const ProjectActionsMenu = ({ record }: { record: Deal }) => {
         open={shareOpen}
         onOpenChange={setShareOpen}
         hideTrigger
+      />
+
+      <Confirm
+        isOpen={handoffConfirmOpen}
+        title={
+          waived ? "Restore brief requirements?" : "Enable manual handoff?"
+        }
+        content={
+          waived
+            ? "The 70% brief requirement will apply again when moving this project toward delivery."
+            : "Use this for projects completed on another platform. The website brief will no longer block pipeline stage changes or delivery."
+        }
+        confirm={waived ? "Restore requirements" : "Enable manual handoff"}
+        confirmColor={waived ? "warning" : "primary"}
+        loading={isHandoffPending}
+        onClose={() => setHandoffConfirmOpen(false)}
+        onConfirm={() => {
+          setWaived(!waived);
+          setHandoffConfirmOpen(false);
+        }}
       />
     </>
   );
