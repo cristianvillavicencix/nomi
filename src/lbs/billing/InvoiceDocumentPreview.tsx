@@ -94,7 +94,7 @@ export const InvoiceDocumentPreview = ({
     <div className={cn(invoiceDocumentOuterClass, className)}>
       <article className={invoiceDocumentArticleClass}>
       {status === "sent" ? (
-        <div className="pointer-events-none absolute -left-10 top-5 z-10 w-36 -rotate-45 bg-blue-600 py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-white">
+        <div className="pointer-events-none absolute -left-6 top-4 z-10 w-28 -rotate-45 bg-blue-600 py-1 text-center text-[9px] font-semibold uppercase tracking-wider text-white sm:-left-10 sm:top-5 sm:w-36 sm:text-[10px]">
           Sent
         </div>
       ) : null}
@@ -168,8 +168,8 @@ export const InvoiceDocumentPreview = ({
           </div>
         </div>
 
-        <div className="mt-8 overflow-x-auto rounded-md border">
-          <table className="w-full table-fixed text-sm">
+        <div className="mt-8 overflow-x-auto rounded-md border [-webkit-overflow-scrolling:touch]">
+          <table className="w-full min-w-[300px] table-fixed text-xs sm:text-sm">
             <colgroup>
               <col />
               <col style={{ width: "3.75rem" }} />
@@ -224,7 +224,7 @@ export const InvoiceDocumentPreview = ({
         </div>
 
         <div className="mt-4 flex justify-end">
-          <div className="w-full max-w-[18rem] text-sm">
+          <div className="w-full max-w-none text-sm sm:max-w-[18rem]">
             <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-x-4">
               <span className="flex min-h-8 items-center text-slate-600">
                 Sub Total

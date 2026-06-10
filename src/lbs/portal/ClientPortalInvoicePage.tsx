@@ -149,7 +149,7 @@ export const ClientPortalInvoicePage = () => {
 
   if (!loading && !error && payModeActive && payload) {
     return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 py-10">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center overflow-x-hidden bg-background px-3 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-4 sm:py-10">
         <PublicInvoicePaymentFlow
           token={payload.token}
           payload={payload}
@@ -237,7 +237,7 @@ const InvoicePortalContent = ({
   };
 
   return (
-    <div className="px-3 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
+    <div className="overflow-x-hidden px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-6 md:px-8 md:py-8">
       <div className={`mx-auto w-full ${INVOICE_DOCUMENT_MAX_WIDTH_CLASS}`}>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           {isPaid ? (

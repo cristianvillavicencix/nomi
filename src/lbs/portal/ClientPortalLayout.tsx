@@ -147,7 +147,7 @@ export const ClientPortalLayout = ({
       }));
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen overflow-x-hidden bg-white">
       <header className="border-b bg-white md:hidden">
         <div className="flex items-start justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
@@ -237,7 +237,7 @@ export const ClientPortalLayout = ({
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 bg-white">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden bg-white">{children}</main>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { formatBillingDate } from "@/lbs/billing/billingDisplayUtils";
 import type { InvoiceAmortizationRow } from "@/lbs/billing/invoicePaymentUtils";
 import type { InvoiceRemainderScheduleConfig } from "@/lbs/billing/invoiceRemainderSchedule";
 import { filterRemainderInstallmentRows, findNextDueInstallment } from "@/lbs/billing/public/invoicePaymentAmount";
+import { publicInvoicePaymentSectionPadding } from "@/lbs/billing/public/payInvoiceDialogLayout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Check, ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -192,8 +193,8 @@ export const InvoicePaymentAmountPicker = ({
           : "Scheduled";
 
     return (
-      <div className="px-6 pb-1 pt-5">
-        <div className="mb-3 flex items-center justify-between gap-3">
+      <div className={`${publicInvoicePaymentSectionPadding} pb-1 pt-5`}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-foreground">Next payment due</p>
           {payAllButton}
         </div>
@@ -220,8 +221,8 @@ export const InvoicePaymentAmountPicker = ({
   }
 
   return (
-    <div className="px-6 pb-1 pt-5">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <div className={`${publicInvoicePaymentSectionPadding} pb-1 pt-5`}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-foreground">
           {showDepositRow ? "Deposit due today" : "Payment amount"}
         </p>

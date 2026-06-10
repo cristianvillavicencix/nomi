@@ -1,5 +1,5 @@
-/** On-screen invoice document width (~US Letter/A4). */
-export const INVOICE_DOCUMENT_MAX_WIDTH_CLASS = "max-w-[210mm]";
+/** On-screen invoice document width (~US Letter/A4), capped to viewport on small screens. */
+export const INVOICE_DOCUMENT_MAX_WIDTH_CLASS = "max-w-full sm:max-w-[210mm]";
 
 export const invoiceDocumentOuterClass = `mx-auto w-full ${INVOICE_DOCUMENT_MAX_WIDTH_CLASS} pb-8`;
 

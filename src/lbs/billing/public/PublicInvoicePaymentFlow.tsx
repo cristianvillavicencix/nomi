@@ -35,6 +35,10 @@ import {
   preparePublicClientInvoicePayment,
   type PublicInvoicePayload,
 } from "@/lbs/billing/public/publicInvoiceApi";
+import {
+  publicInvoicePaymentSectionPadding,
+  publicInvoicePaymentShellClass,
+} from "@/lbs/billing/public/payInvoiceDialogLayout";
 import { cn } from "@/lib/utils";
 
 const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
@@ -523,7 +527,14 @@ const InvoicePaymentReviewActions = ({
   const payDisabled = !canPay || isPending || !amountValid;
 
   return (
-    <div className={cn("space-y-3", focusPaymentEntry ? "px-4 pb-5 pt-1" : "px-6 pb-6 pt-2")}>
+    <div
+      className={cn(
+        "space-y-3",
+        focusPaymentEntry
+          ? "px-4 pb-5 pt-1 sm:px-6"
+          : `${publicInvoicePaymentSectionPadding} pb-6 pt-2`,
+      )}
+    >
       {!focusPaymentEntry ? (
         <label className="flex items-start gap-2.5 text-[13px] leading-snug text-muted-foreground">
           <Checkbox
@@ -670,7 +681,13 @@ const InvoiceStripePaymentFormInner = ({
 
   return (
     <>
-      <div className={cn(focusPaymentEntry ? "px-4 pb-1 pt-5" : "px-6 pb-1 pt-4")}>
+      <div
+        className={cn(
+          focusPaymentEntry
+            ? "px-4 pb-1 pt-5 sm:px-6"
+            : `${publicInvoicePaymentSectionPadding} pb-1 pt-4`,
+        )}
+      >
         {!focusPaymentEntry ? (
           <p className="mb-2 text-[13px] text-muted-foreground">Payment method</p>
         ) : null}
@@ -761,19 +778,21 @@ const InvoiceStripeCheckout = ({
 
   const shellClass = focusPaymentEntry
     ? "mx-auto w-full max-w-[420px]"
-    : "mx-auto w-full max-w-[560px] overflow-hidden rounded-none border-0 bg-background shadow-none sm:rounded-2xl sm:border sm:border-border/50 sm:shadow-sm";
+    : publicInvoicePaymentShellClass;
 
   return (
     <div className={shellClass}>
       {!focusPaymentEntry ? (
-        <div className="flex items-start justify-between border-b border-border/40 px-6 pb-5 pt-6">
-          <div>
+        <div
+          className={`flex flex-col gap-2 border-b border-border/40 ${publicInvoicePaymentSectionPadding} pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:pb-5 sm:pt-6`}
+        >
+          <div className="min-w-0">
             <p className="mb-1 text-[13px] text-muted-foreground">Balance due</p>
-            <p className="text-[30px] font-medium tabular-nums leading-none text-foreground">
+            <p className="text-[26px] font-medium tabular-nums leading-none text-foreground sm:text-[30px]">
               {summary.balanceDueFormatted}
             </p>
           </div>
-          <div className="text-right">
+          <div className="min-w-0 sm:text-right">
             <p className="mb-1 text-[13px] text-muted-foreground">Invoice</p>
             <p className="text-sm font-medium text-foreground">
               {invoice.invoice_number}
@@ -811,22 +830,22 @@ const InvoiceStripeCheckout = ({
         <div
           className={cn(
             "flex items-center gap-2 text-sm text-muted-foreground",
-            focusPaymentEntry ? "justify-center px-4 py-8" : "px-6 py-4",
+            focusPaymentEntry ? "justify-center px-4 py-8 sm:px-6" : `${publicInvoicePaymentSectionPadding} py-4`,
           )}
         >
           <Loader2 className="size-4 animate-spin" />
           Loading payment options…
         </div>
       ) : checkout.initialError ? (
-        <p className="px-6 pb-4 text-sm text-destructive">
+        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}>
           {checkout.initialError.message}
         </p>
       ) : checkout.syncError ? (
-        <p className="px-6 pb-4 text-sm text-destructive">
+        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}>
           {checkout.syncError.message}
         </p>
       ) : checkout.session?.billingMode === "mock" || !clientSecret ? (
-        <p className="px-6 pb-4 text-sm text-amber-900">
+        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-amber-900`}>
           Stripe is not configured on the server. Set{" "}
           <code className="text-xs">STRIPE_SECRET_KEY</code> in Supabase Edge
           Function secrets.
@@ -856,7 +875,7 @@ const InvoiceStripeCheckout = ({
           />
         </Elements>
       ) : flowError ? (
-        <p className="px-6 pb-4 text-sm text-destructive">{flowError}</p>
+        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}>{flowError}</p>
       ) : null}
     </div>
   );
@@ -926,15 +945,17 @@ const InvoiceMockPaymentForm = ({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-none border-0 bg-background shadow-none sm:rounded-2xl sm:border sm:border-border/50 sm:shadow-sm">
-      <div className="flex items-start justify-between border-b border-border/40 px-6 pb-5 pt-6">
-        <div>
+    <div className={publicInvoicePaymentShellClass}>
+      <div
+        className={`flex flex-col gap-2 border-b border-border/40 ${publicInvoicePaymentSectionPadding} pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:pb-5 sm:pt-6`}
+      >
+        <div className="min-w-0">
           <p className="mb-1 text-[13px] text-muted-foreground">Balance due</p>
-          <p className="text-[30px] font-medium tabular-nums leading-none text-foreground">
+          <p className="text-[26px] font-medium tabular-nums leading-none text-foreground sm:text-[30px]">
             {summary.balanceDueFormatted}
           </p>
         </div>
-        <div className="text-right">
+        <div className="min-w-0 sm:text-right">
           <p className="mb-1 text-[13px] text-muted-foreground">Invoice</p>
           <p className="text-sm font-medium text-foreground">{invoice.invoice_number}</p>
         </div>
@@ -976,7 +997,7 @@ const InvoiceMockPaymentForm = ({
         onPay={() => payMutation.mutate()}
       />
 
-      <p className="-mt-2 pb-6 text-center text-xs text-muted-foreground">
+      <p className={`-mt-2 pb-6 text-center text-xs text-muted-foreground ${publicInvoicePaymentSectionPadding}`}>
         Demo mode · No card required
       </p>
     </div>
@@ -989,7 +1010,7 @@ export const PublicInvoicePaymentFlow = (props: PaymentFlowProps) => {
 
   if (!stripePromise && !billingSkipped) {
     return (
-      <div className="mx-auto max-w-[560px] rounded-[14px] border border-amber-200 bg-amber-50 px-6 py-5 text-sm text-amber-900">
+      <div className={`mx-auto max-w-[560px] rounded-[14px] border border-amber-200 bg-amber-50 ${publicInvoicePaymentSectionPadding} py-5 text-sm text-amber-900`}>
         Card payments are not configured. Add{" "}
         <code className="text-xs">VITE_STRIPE_PUBLISHABLE_KEY</code> to enable
         Stripe checkout.
