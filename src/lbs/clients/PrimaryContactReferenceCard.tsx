@@ -38,6 +38,7 @@ import {
   getContactEmail,
   getContactFullName,
 } from "@/lbs/clients/clientShowUtils";
+import type { PrimaryContactDraft } from "@/lbs/clients/primaryContactDraft";
 import { getPersonShowPath } from "@/lbs/routing";
 
 const pickPrimaryPhone = (contact?: Contact | null) =>
@@ -68,7 +69,10 @@ type PrimaryContactReferenceCardProps = {
   /** FK on the company record (edit mode only). */
   savedPrimaryContactId?: Identifier | null;
   primaryContact?: Contact | null;
+  /** Local-only primary contact draft (create mode — not persisted until company save). */
+  draftPrimaryContact?: PrimaryContactDraft | null;
   onSelectContact: (contactId: Identifier) => void;
+  onSelectDraftContact?: (draft: PrimaryContactDraft) => void;
   onClearContact?: () => void;
 };
 
@@ -78,7 +82,9 @@ export const PrimaryContactReferenceCard = ({
   selectedContactId,
   savedPrimaryContactId,
   primaryContact,
+  draftPrimaryContact,
   onSelectContact,
+  onSelectDraftContact,
   onClearContact,
 }: PrimaryContactReferenceCardProps) => {
   const refresh = useRefresh();
@@ -155,6 +161,19 @@ export const PrimaryContactReferenceCard = ({
   ]);
 
   const activeContact = useMemo(() => {
+    if (draftPrimaryContact?.fullName.trim()) {
+      const parts = draftPrimaryContact.fullName.trim().split(/\s+/);
+      return {
+        first_name: parts[0] ?? "",
+        last_name: parts.slice(1).join(" ") || parts[0] || "",
+        email_jsonb: draftPrimaryContact.email
+          ? [{ email: draftPrimaryContact.email, type: "Work" as const }]
+          : [],
+        phone_jsonb: draftPrimaryContact.phone
+          ? [{ number: draftPrimaryContact.phone, type: "Work" as const }]
+          : [],
+      } satisfies Partial<Contact> as Contact;
+    }
     if (selectedContactId == null) return undefined;
     if (
       primaryContact &&
@@ -169,7 +188,16 @@ export const PrimaryContactReferenceCard = ({
       return optimisticContact;
     }
     return contacts.find((c) => String(c.id) === String(selectedContactId));
-  }, [contacts, optimisticContact, primaryContact, selectedContactId]);
+  }, [
+    contacts,
+    draftPrimaryContact,
+    optimisticContact,
+    primaryContact,
+    selectedContactId,
+  ]);
+
+  const hasSelection =
+    selectedContactId != null || draftPrimaryContact != null;
 
   const isPending = isCreate ? globalContactsFetching : companyContactsPending;
   const showSearch = isCreate || contacts.length > SEARCH_THRESHOLD;
@@ -348,7 +376,7 @@ export const PrimaryContactReferenceCard = ({
     </Popover>
   );
 
-  if (isCreate && selectedContactId == null && !pendingReassign) {
+  if (isCreate && !hasSelection && !pendingReassign) {
     return (
       <>
         {renderPicker(
@@ -363,17 +391,12 @@ export const PrimaryContactReferenceCard = ({
         <ContactFormDialog
           open={newContactOpen}
           onOpenChange={setNewContactOpen}
-          allowOrphanContact
+          deferCreate
           title="New primary contact"
-          description="Creates a contact without a company. They will be linked when you save this company."
-          submitLabel="Create contact"
-          navigateOnCreate={false}
-          onCreated={(contact) => {
-            if (contact.id != null) {
-              setOptimisticContact(contact);
-              onSelectContact(contact.id);
-              refresh();
-            }
+          description="Contact details are saved with the company — nothing is written until you create the company."
+          submitLabel="Add contact"
+          onDraftSubmit={(draft) => {
+            onSelectDraftContact?.(draft);
           }}
         />
       </>
@@ -459,7 +482,7 @@ export const PrimaryContactReferenceCard = ({
             )}
           </Button>,
         )}
-        {selectedContactId != null ? (
+        {hasSelection ? (
           <Button
             type="button"
             variant="ghost"
@@ -483,15 +506,18 @@ export const PrimaryContactReferenceCard = ({
         open={newContactOpen}
         onOpenChange={setNewContactOpen}
         lockCompanyId={isCreate ? undefined : companyId}
-        allowOrphanContact={isCreate}
+        deferCreate={isCreate}
         title="New primary contact"
         description={
           isCreate
-            ? "Creates a contact without a company. They will be linked when you save this company."
+            ? "Contact details are saved with the company — nothing is written until you create the company."
             : "Creates a contact for this company. Save the company form to set them as primary."
         }
-        submitLabel="Create contact"
+        submitLabel={isCreate ? "Add contact" : "Create contact"}
         navigateOnCreate={false}
+        onDraftSubmit={(draft) => {
+          onSelectDraftContact?.(draft);
+        }}
         onCreated={(contact) => {
           if (contact.id != null) {
             setOptimisticContact(contact);

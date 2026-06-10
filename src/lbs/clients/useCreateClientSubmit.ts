@@ -10,6 +10,7 @@ import type { ClientCreateFormValues } from "@/lbs/clients/ClientCreateForm";
 import {
   clientCreateFormValuesToUpsertInput,
 } from "@/lbs/clients/lbsClientUpsert";
+import { resolveCreatePrimaryUpsertOptions } from "@/lbs/clients/primaryContactDraft";
 
 export const useCreateClientSubmit = () => {
   const { identity } = useGetIdentity();
@@ -43,8 +44,7 @@ export const useCreateClientSubmit = () => {
     try {
       const result = await dataProvider.upsertLbsClient({
         ...clientCreateFormValuesToUpsertInput(values, identity.id),
-        primaryContactId: values.selected_primary_contact_id ?? undefined,
-        linkPrimaryContactOnly: values.selected_primary_contact_id != null,
+        ...resolveCreatePrimaryUpsertOptions(values),
       });
       notify(result.created ? "Client created" : "Client updated", {
         type: "info",

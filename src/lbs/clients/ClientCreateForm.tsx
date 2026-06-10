@@ -11,11 +11,17 @@ import {
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
+import { SelectInput } from "@/components/admin/select-input";
+import { TextInput } from "@/components/admin/text-input";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown } from "lucide-react";
 import { LBS_COMPANY_INDUSTRY_CHOICES } from "@/lbs/leads/leadFormConstants";
 import { PrimaryContactReferenceCard } from "@/lbs/clients/PrimaryContactReferenceCard";
 import { getContactFullName } from "@/lbs/clients/clientShowUtils";
+import {
+  getPrimaryContactDraftFromFormValues,
+  type PrimaryContactDraft,
+} from "@/lbs/clients/primaryContactDraft";
 import { ClientSocialLinksInput } from "@/lbs/clients/ClientSocialLinksInput";
 import type { ClientSocialLinkValue } from "@/lbs/clients/clientSocialLinks";
 import {
@@ -95,6 +101,34 @@ export const ClientCreateFormFields = ({
     ClientCreateFormValues,
     "selected_primary_contact_id"
   >({ name: "selected_primary_contact_id" });
+  const primaryFullName = useWatch<ClientCreateFormValues, "primary_full_name">({
+    name: "primary_full_name",
+  });
+  const primaryEmail = useWatch<ClientCreateFormValues, "primary_email">({
+    name: "primary_email",
+  });
+  const primaryPhone = useWatch<ClientCreateFormValues, "primary_phone">({
+    name: "primary_phone",
+  });
+
+  const draftPrimaryContact = useMemo(
+    () =>
+      mode === "create"
+        ? getPrimaryContactDraftFromFormValues({
+            selected_primary_contact_id: selectedPrimaryId,
+            primary_full_name: primaryFullName ?? "",
+            primary_email: primaryEmail ?? "",
+            primary_phone: primaryPhone ?? "",
+          })
+        : null,
+    [
+      mode,
+      primaryEmail,
+      primaryFullName,
+      primaryPhone,
+      selectedPrimaryId,
+    ],
+  );
 
   const { data: selectedPrimaryContact } = useGetOne<Contact>(
     "contacts",
@@ -102,19 +136,71 @@ export const ClientCreateFormFields = ({
     { enabled: mode === "create" && selectedPrimaryId != null },
   );
 
-  const resolvedPrimaryContact =
-    mode === "create" ? (selectedPrimaryContact ?? null) : (primaryContact ?? null);
+  const resolvedPrimaryContact = useMemo((): Contact | null => {
+    if (mode === "create") {
+      if (selectedPrimaryContact) return selectedPrimaryContact;
+      if (draftPrimaryContact) {
+        const parts = draftPrimaryContact.fullName.split(/\s+/).filter(Boolean);
+        return {
+          first_name: parts[0] ?? "",
+          last_name: parts.slice(1).join(" ") || parts[0] || "",
+          email_jsonb: draftPrimaryContact.email
+            ? [{ email: draftPrimaryContact.email, type: "Work" }]
+            : [],
+          phone_jsonb: draftPrimaryContact.phone
+            ? [{ number: draftPrimaryContact.phone, type: "Work" }]
+            : [],
+        } as Contact;
+      }
+      return null;
+    }
+    return primaryContact ?? null;
+  }, [
+    draftPrimaryContact,
+    mode,
+    primaryContact,
+    selectedPrimaryContact,
+  ]);
+
+  const applyExistingPrimary = (id: Identifier) => {
+    setValue("selected_primary_contact_id", id, { shouldDirty: true });
+    setValue("primary_full_name", "", { shouldDirty: true });
+    setValue("primary_email", "", { shouldDirty: true });
+    setValue("primary_phone", "", { shouldDirty: true });
+  };
+
+  const applyDraftPrimary = (draft: PrimaryContactDraft) => {
+    setValue("selected_primary_contact_id", null, { shouldDirty: true });
+    setValue("primary_full_name", draft.fullName, { shouldDirty: true });
+    setValue("primary_email", draft.email, { shouldDirty: true });
+    setValue("primary_phone", draft.phone, { shouldDirty: true });
+  };
+
+  const clearPrimarySelection = () => {
+    setValue("selected_primary_contact_id", null, { shouldDirty: true });
+    setValue("primary_full_name", "", { shouldDirty: true });
+    setValue("primary_email", "", { shouldDirty: true });
+    setValue("primary_phone", "", { shouldDirty: true });
+  };
 
   const primaryContactSummary = useMemo(() => {
+    if (draftPrimaryContact) return draftPrimaryContact.fullName;
     if (selectedPrimaryId == null) return null;
     if (
       resolvedPrimaryContact &&
-      String(resolvedPrimaryContact.id) === String(selectedPrimaryId)
+      ("id" in resolvedPrimaryContact
+        ? String(resolvedPrimaryContact.id) === String(selectedPrimaryId)
+        : true)
     ) {
       return getContactFullName(resolvedPrimaryContact);
     }
     return mode === "edit" ? "Contact selected" : null;
-  }, [mode, resolvedPrimaryContact, selectedPrimaryId]);
+  }, [
+    draftPrimaryContact,
+    mode,
+    resolvedPrimaryContact,
+    selectedPrimaryId,
+  ]);
 
   return (
     <div className="flex flex-col gap-6 p-1">
@@ -206,16 +292,10 @@ export const ClientCreateFormFields = ({
             <PrimaryContactReferenceCard
               mode="create"
               selectedContactId={selectedPrimaryId}
-              onSelectContact={(id) =>
-                setValue("selected_primary_contact_id", id, {
-                  shouldDirty: true,
-                })
-              }
-              onClearContact={() =>
-                setValue("selected_primary_contact_id", null, {
-                  shouldDirty: true,
-                })
-              }
+              draftPrimaryContact={draftPrimaryContact}
+              onSelectContact={applyExistingPrimary}
+              onSelectDraftContact={applyDraftPrimary}
+              onClearContact={clearPrimarySelection}
             />
           ) : companyId != null ? (
             <PrimaryContactReferenceCard
