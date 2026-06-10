@@ -1,12 +1,18 @@
 -- ============================================================================
 -- 05_extend_primary_contact_triggers.sql
 --
--- Phase 3 Block D: primary contact promotion / demotion
+-- Phase 3 Block D: primary contact promotion / demotion (HYBRID policy)
 --
--- D.1: When assigned as companies.primary_contact_id, promote to `client`
---      from ANY non-client status (including contact_only).
--- D.2: When replaced as primary, demote outgoing contact to `contact_only`
---      if they are not primary on any other company.
+-- Triggers (broad, future assignments):
+--   D.1: When assigned companies.primary_contact_id, promote to `client`
+--        from ANY non-client status (including contact_only).
+--   D.2: When replaced as primary, demote outgoing to `contact_only` if not
+--        primary on any other company.
+--
+-- Backfill (restricted):
+--   Only contact_only primaries whose company has activity_total > 0
+--   (deals, proposals, or client_invoices). Remaining contact_only primaries
+--   stay contact_only until a future primary assignment or new activity.
 --
 -- Usage: run as-is for dry-run. Set apply_changes := true to apply.
 -- ============================================================================
@@ -15,11 +21,12 @@ DO $$
 DECLARE
   apply_changes boolean := false;
   v_count integer;
+  v_backfill_count integer;
   rec record;
 BEGIN
-  RAISE NOTICE '=== 05 extend primary contact triggers (apply=%) ===', apply_changes;
+  RAISE NOTICE '=== 05 extend primary contact triggers (hybrid, apply=%) ===', apply_changes;
 
-  -- D.1 dry-run: contact_only primaries that would be promoted
+  -- All contact_only primaries (informational)
   SELECT count(*) INTO v_count
   FROM public.contacts c
   WHERE c.status = 'contact_only'
@@ -28,76 +35,81 @@ BEGIN
       FROM public.companies co
       WHERE co.primary_contact_id = c.id
     );
-  RAISE NOTICE 'D.1: contact_only contacts who are company primary (would promote to client): %', v_count;
-  RAISE NOTICE 'D.1 detail: run scripts/cleanup/05_dry_run_promotable_companies.sql for full company list with deals/proposals/invoices counts';
+  RAISE NOTICE 'Info: contact_only contacts who are company primary (total): %', v_count;
+  RAISE NOTICE 'Detail: scripts/cleanup/05_dry_run_promotable_companies.sql';
 
-  SELECT count(*) INTO v_count
-  FROM public.companies co
-  JOIN public.contacts c ON c.id = co.primary_contact_id
+  -- Hybrid backfill target: activity only
+  SELECT count(*) INTO v_backfill_count
+  FROM public.contacts c
   WHERE c.status = 'contact_only'
-    AND (
-      EXISTS (SELECT 1 FROM public.deals d WHERE d.company_id = co.id)
-      OR EXISTS (SELECT 1 FROM public.proposals p WHERE p.company_id = co.id)
-      OR EXISTS (SELECT 1 FROM public.client_invoices i WHERE i.company_id = co.id)
+    AND EXISTS (
+      SELECT 1
+      FROM public.companies co
+      WHERE co.primary_contact_id = c.id
+        AND (
+          EXISTS (SELECT 1 FROM public.deals d WHERE d.company_id = co.id)
+          OR EXISTS (SELECT 1 FROM public.proposals p WHERE p.company_id = co.id)
+          OR EXISTS (
+            SELECT 1 FROM public.client_invoices i WHERE i.company_id = co.id
+          )
+        )
     );
-  RAISE NOTICE 'D.1: companies with any deals/proposals/invoices (activity): %', v_count;
+  RAISE NOTICE 'Backfill UPDATE will affect % contact row(s) (activity_total > 0 only)', v_backfill_count;
 
-  IF v_count > 0 AND v_count <= 20 THEN
-    RAISE NOTICE 'D.1 companies with activity:';
+  IF v_backfill_count > 0 THEN
+    RAISE NOTICE 'Backfill targets:';
     FOR rec IN
       SELECT
+        c.id AS contact_id,
+        trim(coalesce(c.first_name, '') || ' ' || coalesce(c.last_name, '')) AS contact_name,
+        c.status,
         co.id AS company_id,
         co.name AS company_name,
         coalesce(co.sector, '') AS sector,
-        (SELECT count(*) FROM public.deals d WHERE d.company_id = co.id) AS deals_count,
-        (SELECT count(*) FROM public.proposals p WHERE p.company_id = co.id) AS proposals_count,
-        (SELECT count(*) FROM public.client_invoices i WHERE i.company_id = co.id) AS invoices_count
-      FROM public.companies co
-      JOIN public.contacts c ON c.id = co.primary_contact_id
+        (
+          SELECT count(*)::int FROM public.deals d WHERE d.company_id = co.id
+        ) AS deals_count,
+        (
+          SELECT count(*)::int FROM public.proposals p WHERE p.company_id = co.id
+        ) AS proposals_count,
+        (
+          SELECT count(*)::int FROM public.client_invoices i WHERE i.company_id = co.id
+        ) AS invoices_count
+      FROM public.contacts c
+      JOIN public.companies co ON co.primary_contact_id = c.id
       WHERE c.status = 'contact_only'
         AND (
           EXISTS (SELECT 1 FROM public.deals d WHERE d.company_id = co.id)
           OR EXISTS (SELECT 1 FROM public.proposals p WHERE p.company_id = co.id)
-          OR EXISTS (SELECT 1 FROM public.client_invoices i WHERE i.company_id = co.id)
+          OR EXISTS (
+            SELECT 1 FROM public.client_invoices i WHERE i.company_id = co.id
+          )
         )
-      ORDER BY co.name
+      ORDER BY co.id
     LOOP
-      RAISE NOTICE '  company_id=% name=% sector=% deals=% proposals=% invoices=%',
-        rec.company_id, rec.company_name, rec.sector,
+      RAISE NOTICE '  contact_id=% name=% company_id=% company=% sector=% deals=% proposals=% invoices=%',
+        rec.contact_id, rec.contact_name, rec.company_id, rec.company_name, rec.sector,
         rec.deals_count, rec.proposals_count, rec.invoices_count;
     END LOOP;
   END IF;
 
-  -- Legacy sample (first 20 contact rows) — prefer 05_dry_run_promotable_companies.sql
   SELECT count(*) INTO v_count
   FROM public.contacts c
   WHERE c.status = 'contact_only'
-    AND EXISTS (SELECT 1 FROM public.companies co WHERE co.primary_contact_id = c.id);
-
-  IF v_count > 0 AND v_count <= 20 THEN
-    RAISE NOTICE 'D.1 sample rows:';
-    FOR rec IN
-      SELECT c.id, c.first_name, c.last_name, c.status, co.id AS company_id, co.name AS company_name
-      FROM public.contacts c
-      JOIN public.companies co ON co.primary_contact_id = c.id
-      WHERE c.status = 'contact_only'
-      ORDER BY c.id
-      LIMIT 20
-    LOOP
-      RAISE NOTICE '  contact_id=% name=% % company_id=% company=%',
-        rec.id, rec.first_name, rec.last_name, rec.company_id, rec.company_name;
-    END LOOP;
-  END IF;
-
-  -- Other non-client primaries (edge cases)
-  SELECT count(*) INTO v_count
-  FROM public.contacts c
-  WHERE c.status NOT IN ('client')
-    AND c.status IS DISTINCT FROM 'client'
-    AND EXISTS (
-      SELECT 1 FROM public.companies co WHERE co.primary_contact_id = c.id
+    AND EXISTS (SELECT 1 FROM public.companies co WHERE co.primary_contact_id = c.id)
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.companies co
+      WHERE co.primary_contact_id = c.id
+        AND (
+          EXISTS (SELECT 1 FROM public.deals d WHERE d.company_id = co.id)
+          OR EXISTS (SELECT 1 FROM public.proposals p WHERE p.company_id = co.id)
+          OR EXISTS (
+            SELECT 1 FROM public.client_invoices i WHERE i.company_id = co.id
+          )
+        )
     );
-  RAISE NOTICE 'D.1: all non-client contacts who are company primary: %', v_count;
+  RAISE NOTICE 'Intentionally unchanged (contact_only primary, no activity): %', v_count;
 
   -- D.2 info: clients who are not primary anywhere (data hygiene, not modified)
   SELECT count(*) INTO v_count
@@ -114,12 +126,11 @@ BEGIN
   RAISE NOTICE 'D.2: demotion runs on primary_contact_id change (no bulk backfill)';
 
   IF NOT apply_changes THEN
-    RAISE NOTICE 'DRY-RUN complete. Review counts, then set apply_changes := true.';
+    RAISE NOTICE 'DRY-RUN complete. Backfill rows=%. Set apply_changes := true to apply.', v_backfill_count;
     RETURN;
   END IF;
 
   BEGIN
-    -- D.1: promote from any status except already client
     CREATE OR REPLACE FUNCTION public.promote_contact_to_client(p_contact_id bigint)
     RETURNS void
     LANGUAGE plpgsql
@@ -141,7 +152,6 @@ BEGIN
     COMMENT ON FUNCTION public.promote_contact_to_client(bigint) IS
       'Sets contacts.status to client when the person becomes a company primary (from any prior status).';
 
-    -- D.1: contact change trigger — primary linkage before lead-only guard
     CREATE OR REPLACE FUNCTION public.promote_contact_to_client_on_contact_change()
     RETURNS trigger
     LANGUAGE plpgsql
@@ -175,7 +185,6 @@ BEGIN
     END;
     $fn$;
 
-    -- D.2: demote outgoing primary + promote incoming
     CREATE OR REPLACE FUNCTION public.sync_primary_contact_client_status()
     RETURNS trigger
     LANGUAGE plpgsql
@@ -212,16 +221,29 @@ BEGIN
     END;
     $fn$;
 
-    -- Backfill D.1 for existing contact_only primaries
+    -- Hybrid backfill: activity only (not all contact_only primaries)
     UPDATE public.contacts c
     SET status = 'client'
     WHERE c.status = 'contact_only'
       AND EXISTS (
-        SELECT 1 FROM public.companies co WHERE co.primary_contact_id = c.id
+        SELECT 1
+        FROM public.companies co
+        WHERE co.primary_contact_id = c.id
+          AND (
+            EXISTS (SELECT 1 FROM public.deals d WHERE d.company_id = co.id)
+            OR EXISTS (SELECT 1 FROM public.proposals p WHERE p.company_id = co.id)
+            OR EXISTS (
+              SELECT 1 FROM public.client_invoices i WHERE i.company_id = co.id
+            )
+          )
       );
 
     GET DIAGNOSTICS v_count = ROW_COUNT;
-    RAISE NOTICE 'APPLIED: promoted % contact_only primaries to client', v_count;
+    RAISE NOTICE 'APPLIED: hybrid backfill promoted % contact(s) to client', v_count;
+
+    IF v_count <> v_backfill_count THEN
+      RAISE EXCEPTION 'Backfill row count mismatch: expected %, got %', v_backfill_count, v_count;
+    END IF;
 
     RAISE NOTICE 'APPLIED: updated promote/demote triggers for primary contact lifecycle';
   EXCEPTION WHEN OTHERS THEN
