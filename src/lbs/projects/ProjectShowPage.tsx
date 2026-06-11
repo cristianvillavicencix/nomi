@@ -36,6 +36,7 @@ import {
 } from "@/lbs/projects/projectDisplayPipeline";
 import { ProjectWorkspaceTabs } from "@/lbs/projects/ProjectWorkspaceTabs";
 import type { LbsDeal } from "@/lbs/types";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 const ArchivedTitle = () => (
   <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
@@ -205,17 +206,20 @@ const ProjectShowContent = () => {
 
 export const ProjectShowPage = ({ id }: { id?: string }) => {
   const [layoutMode] = useNavigationLayoutPreference();
-  const showExplorerPanel = layoutMode === "top" && !!id;
+  const validId = isValidRecordId(id) ? id : undefined;
+  const showExplorerPanel = layoutMode === "top" && !!validId;
 
   return (
     <div
       className={cn("w-full py-2", layoutMode === "sidebar" ? "px-4 py-4" : "")}
     >
       <div className={cn(showExplorerPanel ? "flex gap-4" : "")}>
-        {showExplorerPanel ? <DealsExplorerPanel currentDealId={id} /> : null}
+        {showExplorerPanel ? (
+          <DealsExplorerPanel currentDealId={validId} />
+        ) : null}
         <div className="min-w-0 flex-1">
-          {id ? (
-            <ShowBase id={id}>
+          {validId ? (
+            <ShowBase id={validId}>
               <ProjectShowContent />
             </ShowBase>
           ) : null}

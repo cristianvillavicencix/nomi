@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { useGetList, useGetOne } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { getContactDisplayName } from "@/lbs/messages/messageContactUtils";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 export const proposalContactOptionText = (contact: Contact) =>
   getContactDisplayName(contact);
@@ -21,8 +22,7 @@ export const useProposalCrmLinks = () => {
   const contactId = watch("contact_id");
   const prevCompanyIdRef = useRef(companyId);
 
-  const companyIdEnabled =
-    companyId != null && companyId !== "" && companyId !== false;
+  const companyIdEnabled = isValidRecordId(companyId);
 
   const { data: company } = useGetOne<Company>(
     "companies",

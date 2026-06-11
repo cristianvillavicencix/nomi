@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyText } from "@/lib/permissions/MoneyText";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 import { ProposalPageShell } from "@/lbs/proposals/ProposalPageShell";
 import { getClientShowPath } from "@/lbs/routing";
 import { ProposalSendActions } from "@/lbs/proposals/ProposalSendActions";
@@ -40,7 +41,7 @@ const formatDate = (value?: string | null) => {
 
 export const ProposalShow = () => {
   const { id } = useParams();
-  if (!id) return null;
+  if (!isValidRecordId(id)) return null;
 
   return (
     <ShowBase resource="proposals" id={id}>

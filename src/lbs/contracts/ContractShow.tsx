@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getClientShowPath } from "@/lbs/routing";
 import type { Contract } from "@/lbs/types";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "—";
@@ -21,7 +22,7 @@ const formatDate = (value?: string | null) => {
 
 export const ContractShow = () => {
   const { id } = useParams();
-  if (!id) return null;
+  if (!isValidRecordId(id)) return null;
 
   return (
     <ShowBase resource="contracts" id={id}>

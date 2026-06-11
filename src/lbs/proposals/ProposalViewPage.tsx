@@ -16,15 +16,16 @@ import {
 import { resolveProposalDocumentContent } from "@/lbs/proposals/document/proposalLocalizedContent";
 import { exportProposalPdf } from "@/lbs/proposals/proposalPdfExport";
 import { ProposalSendActions } from "@/lbs/proposals/ProposalSendActions";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 export const ProposalViewPage = () => {
   const { id } = useParams();
   const { identity, isPending: isIdentityLoading } = useGetIdentity();
   const queryClient = useQueryClient();
 
-  const proposalId = id ?? "";
+  const proposalId = isValidRecordId(id) ? id : "";
   const bundle = useProposalDocumentData(proposalId, {
-    enabled: Boolean(proposalId && identity),
+    enabled: isValidRecordId(id) && Boolean(identity),
   });
 
   const content = useMemo(
@@ -82,7 +83,7 @@ export const ProposalViewPage = () => {
     }
   };
 
-  if (!proposalId) return null;
+  if (!isValidRecordId(id)) return null;
 
   if (isIdentityLoading || !identity || bundle.isLoading) {
     return (

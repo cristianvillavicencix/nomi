@@ -42,6 +42,7 @@ import {
 import { ProposalVariablesHelp } from "@/lbs/proposals/document/ProposalVariablesHelp";
 import { ProposalSendActions } from "@/lbs/proposals/ProposalSendActions";
 import type { ServicePackage } from "@/lbs/types";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 const proposalGetOneQueryKey = (proposalId: string | number) =>
   ["proposals", "getOne", { id: String(proposalId) }] as const;
@@ -55,7 +56,7 @@ export const ProposalPreviewPage = () => {
   const [createTemplate] = useCreate();
   const [updateProposal] = useUpdate();
 
-  const proposalId = id!;
+  const proposalId = isValidRecordId(id) ? id : "";
   const {
     proposal,
     isLoading,
@@ -65,7 +66,9 @@ export const ProposalPreviewPage = () => {
     member,
     lines,
     paymentInstallments,
-  } = useProposalDocumentData(proposalId);
+  } = useProposalDocumentData(proposalId, {
+    enabled: isValidRecordId(id),
+  });
 
   const { data: templates = [], isPending: isTemplatesPending } =
     useGetList<ProposalTemplate>("proposal_templates", {
@@ -302,7 +305,7 @@ export const ProposalPreviewPage = () => {
     [],
   );
 
-  if (!id) return null;
+  if (!isValidRecordId(id)) return null;
 
   if (isLoading || isTemplatesPending) {
     return (

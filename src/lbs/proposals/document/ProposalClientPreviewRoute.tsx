@@ -19,15 +19,17 @@ import {
 import { resolveProposalDocumentContent } from "@/lbs/proposals/document/proposalLocalizedContent";
 import { useProposalLocaleOptional } from "@/lbs/proposals/document/ProposalLocaleContext";
 import { exportProposalPdf } from "@/lbs/proposals/proposalPdfExport";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 const ProposalClientPreviewBody = () => {
   const { id } = useParams();
-  const proposalId = id ?? "";
+  const proposalId = isValidRecordId(id) ? id : "";
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const localeContext = useProposalLocaleOptional();
   const locale = localeContext?.locale ?? "en";
 
   const bundle = useProposalDocumentData(proposalId, {
+    enabled: isValidRecordId(id),
     fetchLinkedContract: true,
     fetchContractTerms: true,
   });
@@ -49,7 +51,7 @@ const ProposalClientPreviewBody = () => {
     });
   }, [bundle]);
 
-  if (!proposalId) return null;
+  if (!isValidRecordId(id)) return null;
 
   if (bundle.isError) {
     return (
