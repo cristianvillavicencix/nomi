@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { useGetIdentity, useListContext } from "ra-core";
 import { useNavigate } from "react-router";
 import { DataTable } from "@/components/admin/data-table";
