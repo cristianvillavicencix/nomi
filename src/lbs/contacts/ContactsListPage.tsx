@@ -31,6 +31,7 @@ export const ContactsListPage = () => {
   return (
     <List
       resource="contacts"
+      storeKey="contacts.listParams"
       title={false}
       disableBreadcrumb
       perPage={25}

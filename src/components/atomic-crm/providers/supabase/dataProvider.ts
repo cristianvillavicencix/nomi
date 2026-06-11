@@ -3401,6 +3401,8 @@ export const dataProvider = wrapDataProviderWithQueryInvalidation(
 );
 
 const CONTACT_SEARCH_COLUMNS = [
+  "name",
+  "full_name",
   "first_name",
   "last_name",
   "company_name",

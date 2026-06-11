@@ -71,6 +71,7 @@ export const LeadsListPage = () => {
     <>
       <List
         resource="contacts"
+        storeKey="leads.listParams"
         title={false}
         disableBreadcrumb
         perPage={view === "kanban" ? 200 : 25}
