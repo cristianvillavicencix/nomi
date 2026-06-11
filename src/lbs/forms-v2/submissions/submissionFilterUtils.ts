@@ -58,7 +58,7 @@ export const buildSubmissionListFilter = (
   }
 
   if (filters.sourceSearch.trim()) {
-    filter["utm_source@ilike"] = `%${filters.sourceSearch.trim()}%`;
+    filter["utm_source@ilike"] = filters.sourceSearch.trim();
   }
 
   return filter;

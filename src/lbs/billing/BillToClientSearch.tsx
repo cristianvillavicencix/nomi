@@ -48,7 +48,7 @@ export const BillToClientSearch = ({
 
   const companyFilter = useMemo(() => {
     const q = query.trim();
-    return q ? { "name@ilike": `%${q}%` } : {};
+    return q ? { "name@ilike": q } : {};
   }, [query]);
 
   const contactFilter = useMemo(() => {
@@ -56,8 +56,8 @@ export const BillToClientSearch = ({
     if (!q) return {};
     return {
       "@or": {
-        "first_name@ilike": `%${q}%`,
-        "last_name@ilike": `%${q}%`,
+        "first_name@ilike": q,
+        "last_name@ilike": q,
       },
     };
   }, [query]);
