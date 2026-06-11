@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import {
+  Briefcase,
   Calendar,
   ListTodo,
   Mail,
@@ -25,6 +26,7 @@ import {
 import { AddTask } from "@/components/atomic-crm/tasks/AddTask";
 import { NoteCreateSheet } from "@/components/atomic-crm/notes/NoteCreateSheet";
 import { CalendarReminderDialog } from "@/lbs/calendar/CalendarReminderDialog";
+import { NewDealDialog } from "@/lbs/deals/NewDealDialog";
 import type { Contact } from "@/components/atomic-crm/types";
 import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
 import { contactHasSmsPhone } from "@/lbs/messages/messageContactUtils";
@@ -109,6 +111,7 @@ export const ClientQuickActions = ({
   const [noteOpen, setNoteOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [meetingOpen, setMeetingOpen] = useState(false);
+  const [newDealOpen, setNewDealOpen] = useState(false);
   const { smsEnabled } = useMessagingEnabled();
   const messagesQuickAccess = useMessagesQuickAccessOptional();
 
@@ -198,6 +201,10 @@ export const ClientQuickActions = ({
               <TooltipContent>More</TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="center">
+              <DropdownMenuItem onClick={() => setNewDealOpen(true)}>
+                <Briefcase className="size-4" />
+                New deal
+              </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!primaryContactId}
                 onClick={() => setTaskOpen(true)}
@@ -236,6 +243,13 @@ export const ClientQuickActions = ({
         initialRecord={{
           contact_id: primaryContactId ?? null,
         }}
+      />
+
+      <NewDealDialog
+        open={newDealOpen}
+        onOpenChange={setNewDealOpen}
+        companyId={record.id}
+        defaultContactId={primaryContactId}
       />
     </TooltipProvider>
   );

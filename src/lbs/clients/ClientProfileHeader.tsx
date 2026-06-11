@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   ChevronLeft,
   ExternalLink,
+  Handshake,
   MoreHorizontal,
   Plus,
   Trash,
@@ -47,8 +48,8 @@ import { ClientNewMenu } from "@/lbs/clients/ClientNewMenu";
 import { ClientSocialLinksDisplay } from "@/lbs/clients/ClientSocialLinksDisplay";
 import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
 import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
+import { NewDealDialog } from "@/lbs/deals/NewDealDialog";
 import {
-  getClientDealCreatePath,
   getClientEditPath,
   getCompaniesListPath,
 } from "@/lbs/routing";
@@ -67,6 +68,7 @@ export const ClientProfileHeader = ({
   const location = useLocation();
   const notify = useNotify();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [newDealOpen, setNewDealOpen] = useState(false);
   const [deleteOne, { isPending: isDeleting }] = useDelete();
 
   const { data: primaryContact } = useGetOne<Contact>(
@@ -238,16 +240,9 @@ export const ClientProfileHeader = ({
             <Button asChild variant="outline" size="sm">
               <Link to={getClientEditPath(record.id)}>Edit</Link>
             </Button>
-            <Button asChild size="sm">
-              <Link
-                to={getClientDealCreatePath(
-                  record.id,
-                  record.primary_contact_id,
-                )}
-              >
-                <Plus className="size-4" />
-                New deal
-              </Link>
+            <Button size="sm" onClick={() => setNewDealOpen(true)}>
+              <Plus className="size-4" />
+              New deal
             </Button>
             <ClientNewMenu
               companyId={record.id}
@@ -264,6 +259,10 @@ export const ClientProfileHeader = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setNewDealOpen(true)}>
+                    <Handshake className="size-4" />
+                    New deal
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={() => setDeleteOpen(true)}
@@ -287,6 +286,13 @@ export const ClientProfileHeader = ({
         onConfirm={handleDelete}
         onClose={() => setDeleteOpen(false)}
         loading={isDeleting}
+      />
+
+      <NewDealDialog
+        open={newDealOpen}
+        onOpenChange={setNewDealOpen}
+        companyId={record.id}
+        defaultContactId={record.primary_contact_id}
       />
     </>
   );

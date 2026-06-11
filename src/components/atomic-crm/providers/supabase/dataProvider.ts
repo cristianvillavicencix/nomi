@@ -58,6 +58,11 @@ import {
   type LbsClientUpsertInput,
   type LbsClientUpsertResult,
 } from "@/lbs/clients/lbsClientUpsert";
+import {
+  buildDealInsertRecord,
+  buildNormalizedDealInsertRecord,
+  type CreateDealPayload,
+} from "@/lbs/deals/createDeal";
 import { lbsProjectTypeChoices } from "@/lbs/deals/lbsProjectConstants";
 import { normalizePostgrestIlikeQuery } from "../commons/postgrestSearchQuery";
 
@@ -1442,6 +1447,39 @@ const dataProviderWithCustomMethods = {
 
     return { company_id: companyId, contact_id: contactId, created };
   },
+  async createDeal(payload: CreateDealPayload) {
+    let orgId = payload.orgId ?? null;
+
+    if (orgId == null) {
+      const { data: company, error: companyError } = await supabase
+        .from("companies")
+        .select("org_id")
+        .eq("id", payload.companyId)
+        .single();
+
+      if (companyError || !company?.org_id) {
+        throw new Error("Company not found");
+      }
+      orgId = company.org_id;
+    }
+
+    const insertData = buildNormalizedDealInsertRecord({
+      ...payload,
+      orgId,
+    });
+
+    const { data, error } = await supabase
+      .from("deals")
+      .insert(insertData)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message ?? "Failed to create deal");
+    }
+
+    return { data: data as Deal };
+  },
   async convertLeadToClient({
     contactId,
     companyName,
@@ -1568,20 +1606,21 @@ const dataProviderWithCustomMethods = {
 
       const { data: newDeal, error: dealError } = await supabase
         .from("deals")
-        .insert({
-          name: dealName,
-          stage: "closed_won",
-          lifecycle_phase: "closed",
-          amount: effectiveAmount ?? 0,
-          estimated_value: effectiveAmount ?? 0,
-          company_id: companyId,
-          contact_id: contactId,
-          contact_ids: [String(contactId)],
-          project_type: effectiveProjectType,
-          organization_member_id: contact.organization_member_id,
-          org_id: contact.org_id,
-          converted_from_contact_id: contactId,
-        })
+        .insert(
+          buildDealInsertRecord({
+            name: dealName,
+            companyId,
+            contactId,
+            organizationMemberId: contact.organization_member_id,
+            orgId: contact.org_id,
+            stage: "closed_won",
+            lifecyclePhase: "closed",
+            amount: effectiveAmount ?? 0,
+            estimatedValue: effectiveAmount ?? 0,
+            projectType: effectiveProjectType,
+            convertedFromContactId: contactId,
+          }),
+        )
         .select("id")
         .single();
 

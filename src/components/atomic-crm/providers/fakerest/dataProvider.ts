@@ -60,6 +60,7 @@ import {
 import { authProvider, USER_STORAGE_KEY } from "./authProvider";
 import generateData from "./dataGenerator";
 import { enrichCompanySummary } from "@/lbs/clients/clientProfile";
+import { buildNormalizedDealInsertRecord } from "@/lbs/deals/createDeal";
 import {
   buildCompanyPayloadFromUpsert,
   buildContactPayloadFromUpsert,
@@ -951,6 +952,26 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       contact_id: contact?.id ?? null,
       created,
     };
+  },
+  createDeal: async (
+    payload: import("@/lbs/deals/createDeal").CreateDealPayload,
+  ) => {
+    const { data: company } = await baseDataProvider.getOne<Company>(
+      "companies",
+      { id: payload.companyId },
+    );
+    if (!company) {
+      throw new Error("Company not found");
+    }
+
+    const { data } = await baseDataProvider.create<Deal>("deals", {
+      data: buildNormalizedDealInsertRecord({
+        ...payload,
+        orgId: payload.orgId ?? company.org_id ?? null,
+      }) as Deal,
+    });
+
+    return { data };
   },
   convertLeadToClient: async ({
     contactId,
