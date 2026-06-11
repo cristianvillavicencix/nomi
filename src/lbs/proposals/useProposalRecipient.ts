@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useGetOne } from "ra-core";
 import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
 import type { Proposal } from "@/lbs/types";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 const readContactEmail = (contact?: Contact | null) =>
   contact?.email_jsonb?.find((entry) => entry.email?.trim())?.email?.trim() ??
@@ -20,29 +21,35 @@ export const useProposalRecipient = (proposal: Proposal) => {
   const { data: contact } = useGetOne<Contact>(
     "contacts",
     { id: proposal.contact_id! },
-    { enabled: proposal.contact_id != null },
+    { enabled: isValidRecordId(proposal.contact_id) },
   );
 
   const { data: company } = useGetOne<Company>(
     "companies",
     { id: proposal.company_id! },
-    { enabled: proposal.company_id != null && proposal.contact_id == null },
+    {
+      enabled:
+        isValidRecordId(proposal.company_id) &&
+        !isValidRecordId(proposal.contact_id),
+    },
   );
 
   const primaryContactId = company?.primary_contact_id;
 
   const { data: primaryContact } = useGetOne<Contact>(
     "contacts",
-    { id: primaryContactId ?? "" },
+    { id: primaryContactId! },
     {
-      enabled: primaryContactId != null && proposal.contact_id == null,
+      enabled:
+        isValidRecordId(primaryContactId) &&
+        !isValidRecordId(proposal.contact_id),
     },
   );
 
   const { data: deal } = useGetOne<Deal>(
     "deals",
     { id: proposal.deal_id! },
-    { enabled: proposal.deal_id != null },
+    { enabled: isValidRecordId(proposal.deal_id) },
   );
 
   const dealContactId =
@@ -51,12 +58,12 @@ export const useProposalRecipient = (proposal: Proposal) => {
 
   const { data: dealContact } = useGetOne<Contact>(
     "contacts",
-    { id: dealContactId ?? "" },
+    { id: dealContactId! },
     {
       enabled:
-        dealContactId != null &&
-        proposal.contact_id == null &&
-        primaryContactId == null,
+        isValidRecordId(dealContactId) &&
+        !isValidRecordId(proposal.contact_id) &&
+        !isValidRecordId(primaryContactId),
     },
   );
 

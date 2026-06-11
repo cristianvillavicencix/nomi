@@ -40,6 +40,7 @@ import {
   type ProposalLineDraft,
 } from "@/lbs/proposals/proposalCommercialUtils";
 import { saveProposalCommercial } from "@/lbs/proposals/saveProposalCommercial";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 export const PROPOSAL_BUILDER_FORM_ID = "proposal-builder-form";
 
@@ -82,7 +83,7 @@ const ProposalBuilderFields = ({
   const { data: company } = useGetOne<Company>(
     "companies",
     { id: companyId! },
-    { enabled: companyId != null && companyId !== "" },
+    { enabled: isValidRecordId(companyId) },
   );
 
   useEffect(() => {
@@ -188,7 +189,7 @@ export const ProposalBuilderForm = ({
   const { data: proposal, isPending: isProposalPending } = useGetOne<Proposal>(
     "proposals",
     { id: proposalId! },
-    { enabled: proposalId != null },
+    { enabled: isValidRecordId(proposalId) },
   );
 
   const { data: existingLines = [], isPending: isLinesPending } =
@@ -199,7 +200,7 @@ export const ProposalBuilderForm = ({
         pagination: { page: 1, perPage: 500 },
         sort: { field: "sort_order", order: "ASC" },
       },
-      { enabled: proposalId != null },
+      { enabled: isValidRecordId(proposalId) },
     );
 
   const { data: schedules = [], isPending: isSchedulesPending } =
@@ -210,11 +211,11 @@ export const ProposalBuilderForm = ({
         pagination: { page: 1, perPage: 10 },
         sort: { field: "id", order: "ASC" },
       },
-      { enabled: proposalId != null },
+      { enabled: isValidRecordId(proposalId) },
     );
 
   useEffect(() => {
-    if (proposalId == null) return;
+    if (!isValidRecordId(proposalId)) return;
     if (isProposalPending || isLinesPending || isSchedulesPending) return;
 
     if (existingLines.length > 0) {
@@ -264,7 +265,7 @@ export const ProposalBuilderForm = ({
   const dealIdFromUrl = searchParams.get("deal_id");
 
   if (
-    proposalId != null &&
+    isValidRecordId(proposalId) &&
     (isProposalPending || isLinesPending || isSchedulesPending)
   ) {
     return (

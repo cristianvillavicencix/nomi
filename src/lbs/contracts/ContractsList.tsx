@@ -12,6 +12,7 @@ import {
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { LBS_PLACEHOLDER_MODULES } from "@/lbs/navigation";
 import type { Contract } from "@/lbs/types";
+import { Badge } from "@/components/ui/badge";
 import { getClientShowPath } from "@/lbs/routing";
 
 const formatDate = (value?: string | null) => {

@@ -7,6 +7,8 @@ import {
   CONTACT_STATUS_FILTER,
   LEAD_STATUS_FILTER,
 } from "@/lbs/shared/relatedFilters";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { buildOpenDealsFilter } from "@/lbs/deals/openDealFilters";
 
 const countQuery = (resource: string, filter: Record<string, unknown>) => ({
   filter,
@@ -15,6 +17,7 @@ const countQuery = (resource: string, filter: Record<string, unknown>) => ({
 });
 
 export const useClientTabCounts = (companyId: Company["id"] | "") => {
+  const { dealPipelineStatuses, dealStages } = useConfigurationContext();
   const enabled = companyId !== "" && companyId != null;
   const staleTime = 30_000;
 
@@ -37,6 +40,16 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
   const { total: projects = 0 } = useGetList<Deal>(
     "deals",
     countQuery("deals", { "company_id@eq": companyId }),
+    { staleTime, enabled },
+  );
+  const { total: deals = 0 } = useGetList<Deal>(
+    "deals",
+    countQuery(
+      "deals",
+      buildOpenDealsFilter(dealPipelineStatuses, dealStages, {
+        "company_id@eq": companyId,
+      }),
+    ),
     { staleTime, enabled },
   );
   const { total: proposals = 0 } = useGetList<Proposal>(
@@ -116,6 +129,7 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
 
   return {
     contacts,
+    deals,
     leads,
     projects,
     proposals,

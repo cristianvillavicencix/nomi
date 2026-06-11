@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { getClientShowPath } from "@/lbs/routing";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,

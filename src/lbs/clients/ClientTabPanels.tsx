@@ -33,6 +33,7 @@ import { clientTableWrapperClassName } from "@/lbs/clients/ClientTabSectionCard"
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { isPipelineTransitionNote } from "@/lbs/leads/leadFollowUpUtils";
 import { PipelineUpdateBadge } from "@/lbs/shared/ContactActivityFeed";
+import { buildOpenDealsFilter } from "@/lbs/deals/openDealFilters";
 
 const TabLoading = () => (
   <div className="space-y-2">
@@ -84,6 +85,86 @@ export const ClientProjectsTab = ({
         <TableHeader>
           <TableRow>
             <TableHead>Project</TableHead>
+            <TableHead>Stage</TableHead>
+            <TableHead className="hidden md:table-cell">Amount</TableHead>
+            <TableHead className="hidden lg:table-cell">Updated</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {deals.map((deal) => (
+            <TableRow key={deal.id}>
+              <TableCell>
+                <Link
+                  to={`/deals/${deal.id}/show`}
+                  className="link-action font-medium"
+                >
+                  {deal.name}
+                </Link>
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {findDealLabel(dealStages, deal.stage)}
+              </TableCell>
+              <TableCell className="hidden md:table-cell text-muted-foreground">
+                <MoneyText value={deal.amount} />
+              </TableCell>
+              <TableCell className="hidden lg:table-cell text-muted-foreground">
+                {formatDateTime(deal.updated_at)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+export const ClientOpenDealsTab = ({
+  companyId,
+  contactId,
+}: {
+  companyId?: Company["id"];
+  contactId?: Company["id"];
+}) => {
+  const { dealStages, dealPipelineStatuses } = useConfigurationContext();
+  const baseFilter = contactId
+    ? { "contact_ids@cs": `{${contactId}}` }
+    : { "company_id@eq": companyId };
+  const filter = buildOpenDealsFilter(
+    dealPipelineStatuses,
+    dealStages,
+    baseFilter,
+  );
+
+  const { data: deals = [], isPending } = useGetList<Deal>(
+    "deals",
+    {
+      filter,
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "updated_at", order: "DESC" },
+    },
+    { staleTime: 30_000, enabled: !!(contactId ?? companyId) },
+  );
+
+  if (isPending) return <TabLoading />;
+
+  if (deals.length === 0) {
+    return (
+      <ClientTabEmpty
+        message={
+          contactId
+            ? "No open deals linked to this contact yet."
+            : "No open deals for this company yet."
+        }
+      />
+    );
+  }
+
+  return (
+    <div className={clientTableWrapperClassName}>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Deal</TableHead>
             <TableHead>Stage</TableHead>
             <TableHead className="hidden md:table-cell">Amount</TableHead>
             <TableHead className="hidden lg:table-cell">Updated</TableHead>

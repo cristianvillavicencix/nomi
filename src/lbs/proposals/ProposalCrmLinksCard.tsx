@@ -4,7 +4,7 @@ import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { ProposalCrmLinkedMeta } from "@/lbs/proposals/ProposalCrmLinkedMeta";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 import {
   proposalContactOptionText,
   useProposalCrmLinks,
@@ -22,13 +22,13 @@ export const ProposalCrmLinksCard = () => {
   const { data: company } = useGetOne<Company>(
     "companies",
     { id: companyId as Company["id"] },
-    { enabled: companyId != null && companyId !== "" },
+    { enabled: isValidRecordId(companyId) },
   );
 
   const { data: contact } = useGetOne<Contact>(
     "contacts",
     { id: contactId as Contact["id"] },
-    { enabled: contactId != null && contactId !== "" },
+    { enabled: isValidRecordId(contactId) },
   );
 
   return (

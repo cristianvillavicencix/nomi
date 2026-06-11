@@ -27,6 +27,7 @@ import {
   taskAssignmentFieldsChanged,
 } from "../../tasks/persistTaskAssignmentSideEffects";
 import { invalidateResourceQueries } from "../queryInvalidation";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 import { prepareCalendarEventWriteData } from "@/lbs/calendar/calendarEventWriteData";
 import type { GetScopedTasksParams } from "../../tasks/scopedTasks";
 import {
@@ -468,7 +469,7 @@ const dataProviderWithCustomMethods = {
     return baseDataProvider.getList(resource, request);
   },
   async getOne(resource: string, params: any) {
-    if (params?.id == null) {
+    if (!isValidRecordId(params?.id)) {
       throw new Error(`Missing id for getOne(${resource})`);
     }
 
@@ -490,7 +491,14 @@ const dataProviderWithCustomMethods = {
       if (summaryRecord) {
         return { data: summaryRecord };
       }
-      return baseDataProvider.getOne("contacts", params);
+      const contactRecord = await getOneFromResourceMaybeSingle(
+        "contacts",
+        params.id,
+      );
+      if (contactRecord) {
+        return { data: contactRecord };
+      }
+      throw new Error("Contact not found or access denied");
     }
     if (resource === "monitored_websites") {
       const summaryRecord = await getOneFromResourceMaybeSingle(

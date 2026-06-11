@@ -14,8 +14,14 @@ import { findDealLabel } from "@/components/atomic-crm/deals/deal";
 import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/lbs/types";
 import { ClientContactsTab } from "@/lbs/clients/ClientContactsTab";
-import { ClientProjectsTab, ClientTicketsTab } from "@/lbs/clients/ClientTabPanels";
+import {
+  ClientOpenDealsTab,
+  ClientProjectsTab,
+  ClientTicketsTab,
+} from "@/lbs/clients/ClientTabPanels";
 import { ReferralsTab } from "@/lbs/leads/ReferralsTab";
+import { NewDealDialog } from "@/lbs/deals/NewDealDialog";
+import { buildOpenDealsFilter } from "@/lbs/deals/openDealFilters";
 import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
 import { WebsiteMonitorStatusWidget } from "@/lbs/website-monitor/WebsiteMonitorStatusWidget";
 import { WebsiteMonitorAuditWidget } from "@/lbs/website-monitor/WebsiteMonitorAuditWidget";
@@ -42,6 +48,7 @@ import { MoneyText } from "@/lib/permissions/MoneyText";
 
 type SidebarPanel =
   | "contacts"
+  | "deals"
   | "leads"
   | "projects"
   | "tickets"
@@ -53,6 +60,7 @@ type ClientRelatedSidebarProps = {
   primaryContactId?: Identifier | null;
   counts: {
     contacts: number;
+    deals: number;
     leads: number;
     projects: number;
     tickets: number;
@@ -70,7 +78,8 @@ export const ClientRelatedSidebar = ({
   onOpenContact,
 }: ClientRelatedSidebarProps) => {
   const [panel, setPanel] = useState<SidebarPanel>(null);
-  const { dealStages } = useConfigurationContext();
+  const [newDealOpen, setNewDealOpen] = useState(false);
+  const { dealStages, dealPipelineStatuses } = useConfigurationContext();
   const { enabled: webMonitorEnabled } = useWebsiteMonitorEnabled();
 
   const { data: contacts = [] } = useGetList<Contact>(
@@ -95,6 +104,18 @@ export const ClientRelatedSidebar = ({
       },
       pagination: { page: 1, perPage: 3 },
       sort: { field: "last_seen", order: "DESC" },
+    },
+    { staleTime: 30_000 },
+  );
+
+  const { data: openDeals = [] } = useGetList<Deal>(
+    "deals",
+    {
+      filter: buildOpenDealsFilter(dealPipelineStatuses, dealStages, {
+        "company_id@eq": companyId,
+      }),
+      pagination: { page: 1, perPage: 3 },
+      sort: { field: "updated_at", order: "DESC" },
     },
     { staleTime: 30_000 },
   );
@@ -139,6 +160,8 @@ export const ClientRelatedSidebar = ({
   const panelTitle =
     panel === "contacts"
       ? "Contacts"
+      : panel === "deals"
+        ? "Deals"
       : panel === "leads"
         ? "Leads"
         : panel === "projects"
@@ -204,6 +227,34 @@ export const ClientRelatedSidebar = ({
                 </button>
               );
             })}
+          </div>
+        </RelatedSection>
+
+        <RelatedSection
+          title="Deals"
+          count={counts.deals}
+          onAdd={() => setNewDealOpen(true)}
+          onViewAll={() => setPanel("deals")}
+          empty={
+            <RelatedEmptyState message="No open deals for this company yet." />
+          }
+        >
+          <div className="space-y-2">
+            {openDeals.map((deal) => (
+              <Link
+                key={deal.id}
+                to={`/deals/${deal.id}/show`}
+                className={relatedPreviewItemClassName}
+              >
+                <p className="font-medium">{deal.name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <Badge variant="outline" className="text-[10px] capitalize">
+                    {findDealLabel(dealStages, deal.stage)}
+                  </Badge>
+                  <MoneyText value={deal.amount} />
+                </div>
+              </Link>
+            ))}
           </div>
         </RelatedSection>
 
@@ -346,6 +397,9 @@ export const ClientRelatedSidebar = ({
                 primaryContactId={primaryContactId}
               />
             ) : null}
+            {panel === "deals" ? (
+              <ClientOpenDealsTab companyId={companyId} />
+            ) : null}
             {panel === "leads" ? (
               <ClientContactsTab
                 companyId={companyId}
@@ -365,6 +419,13 @@ export const ClientRelatedSidebar = ({
           </div>
         </SheetContent>
       </Sheet>
+
+      <NewDealDialog
+        open={newDealOpen}
+        onOpenChange={setNewDealOpen}
+        companyId={companyId}
+        defaultContactId={primaryContactId}
+      />
     </>
   );
 };

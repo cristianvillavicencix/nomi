@@ -2,6 +2,12 @@ import { useGetList, type Identifier } from "ra-core";
 import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 import type { Contact, Deal } from "@/components/atomic-crm/types";
 import type { Contract, Proposal, Ticket } from "@/lbs/types";
+import {
+  CONTACT_STATUS_FILTER,
+  LEAD_STATUS_FILTER,
+} from "@/lbs/shared/relatedFilters";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
+import { buildOpenDealsFilter } from "@/lbs/deals/openDealFilters";
 
 const countQuery = (resource: string, filter: Record<string, unknown>) => ({
   filter,
@@ -10,6 +16,7 @@ const countQuery = (resource: string, filter: Record<string, unknown>) => ({
 });
 
 export const useContactTabCounts = (contact: Contact | null | undefined) => {
+  const { dealPipelineStatuses, dealStages } = useConfigurationContext();
   const contactId = contact?.id ?? "";
   const companyId = contact?.company_id ?? "";
   const enabled = contactId !== "" && contactId != null;
@@ -19,6 +26,17 @@ export const useContactTabCounts = (contact: Contact | null | undefined) => {
   const { total: projects = 0 } = useGetList<Deal>(
     "deals",
     countQuery("deals", { "contact_ids@cs": `{${contactId}}` }),
+    { staleTime, enabled },
+  );
+
+  const { total: deals = 0 } = useGetList<Deal>(
+    "deals",
+    countQuery(
+      "deals",
+      buildOpenDealsFilter(dealPipelineStatuses, dealStages, {
+        "contact_ids@cs": `{${contactId}}`,
+      }),
+    ),
     { staleTime, enabled },
   );
 
@@ -83,6 +101,7 @@ export const useContactTabCounts = (contact: Contact | null | undefined) => {
   );
 
   return {
+    deals,
     projects,
     proposals,
     contracts,
