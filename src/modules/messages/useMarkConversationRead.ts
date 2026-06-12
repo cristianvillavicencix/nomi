@@ -1,0 +1,118 @@
+import { useEffect, useRef } from "react";
+import {
+  useDataProvider,
+  useGetIdentity,
+  useGetList,
+  type Identifier,
+} from "ra-core";
+import { useQueryClient } from "@tanstack/react-query";
+import type { ConversationParticipant, ConversationType } from "@/modules/types";
+import {
+  isReadThrough,
+  persistConversationRead,
+} from "@/modules/messages/persistConversationRead";
+
+const isDuplicateParticipantError = (error: unknown) => {
+  if (!error || typeof error !== "object") return false;
+  const status = (error as { status?: number }).status;
+  if (status === 409) return true;
+  const message = String((error as Error).message ?? "");
+  return message.includes("duplicate key");
+};
+
+const isPermissionDeniedError = (error: unknown) =>
+  error instanceof Error &&
+  error.message.includes("No tienes permiso para esta acción");
+
+export const useMarkConversationRead = (
+  conversationId: Identifier | null | undefined,
+  _conversationType?: ConversationType | null,
+  readAt?: string | null,
+) => {
+  const queryClient = useQueryClient();
+  const dataProvider = useDataProvider();
+  const { identity } = useGetIdentity();
+  const memberId = identity?.id;
+  const inFlightRef = useRef<string | null>(null);
+  const persistBlockedRef = useRef<Identifier | null>(null);
+  const fallbackReadAtRef = useRef<{
+    conversationId: Identifier;
+    readAt: string;
+  } | null>(null);
+
+  const { data: participants = [] } = useGetList<ConversationParticipant>(
+    "conversation_participants",
+    {
+      filter:
+        conversationId && memberId
+          ? {
+              "conversation_id@eq": conversationId,
+              "member_id@eq": memberId,
+            }
+          : {},
+      pagination: { page: 1, perPage: 1 },
+    },
+    {
+      enabled: conversationId != null && memberId != null,
+      staleTime: 15_000,
+    },
+  );
+
+  const participant = participants[0];
+  const lastReadAt = participant?.last_read_at;
+
+  useEffect(() => {
+    if (!conversationId || !memberId) {
+      inFlightRef.current = null;
+      return;
+    }
+
+    if (persistBlockedRef.current === conversationId) {
+      return;
+    }
+
+    let effectiveReadAt = readAt ?? undefined;
+    if (!effectiveReadAt) {
+      if (
+        fallbackReadAtRef.current?.conversationId === conversationId
+      ) {
+        effectiveReadAt = fallbackReadAtRef.current.readAt;
+      } else {
+        effectiveReadAt = new Date().toISOString();
+        fallbackReadAtRef.current = { conversationId, readAt: effectiveReadAt };
+      }
+    }
+
+    if (isReadThrough(lastReadAt, effectiveReadAt)) {
+      return;
+    }
+
+    const inFlightKey = `${conversationId}:${effectiveReadAt}`;
+    if (inFlightRef.current === inFlightKey) {
+      return;
+    }
+    inFlightRef.current = inFlightKey;
+
+    void persistConversationRead({
+      dataProvider,
+      queryClient,
+      conversationId,
+      memberId,
+      readAt: effectiveReadAt,
+    })
+      .catch((error) => {
+        if (isPermissionDeniedError(error)) {
+          persistBlockedRef.current = conversationId;
+          return;
+        }
+        if (isDuplicateParticipantError(error)) {
+          return;
+        }
+      })
+      .finally(() => {
+        if (inFlightRef.current === inFlightKey) {
+          inFlightRef.current = null;
+        }
+      });
+  }, [conversationId, dataProvider, lastReadAt, memberId, queryClient, readAt]);
+};

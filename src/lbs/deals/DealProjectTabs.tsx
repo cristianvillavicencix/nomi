@@ -1,4 +1,1 @@
-export {
-  ProjectWorkspaceTabs,
-  DealProjectTabs,
-} from "@/lbs/projects/ProjectWorkspaceTabs";
+export * from "@/modules/deals/DealProjectTabs";

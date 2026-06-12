@@ -1,0 +1,584 @@
+/* Formal LBS proposal — shared tokens for sidebar + document (vars inherit to children) */
+.proposal-formal-shell {
+  --pf-brand: #1e5fa8;
+  --pf-brand-dark: #0d3b6e;
+  --pf-brand-light: #3b82d4;
+  --pf-gold: var(--chart-4, #f59e0b);
+  --pf-ink: var(--foreground);
+  --pf-ink-soft: var(--muted-foreground);
+  --pf-ink-faint: color-mix(in oklch, var(--muted-foreground) 85%, transparent);
+  --pf-line: var(--border);
+  --pf-surface-2: var(--muted);
+}
+
+.proposal-formal {
+  font-family: inherit;
+  color: var(--pf-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.proposal-formal .pf-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.proposal-formal .pf-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pf-brand);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 14px;
+}
+
+.proposal-formal .pf-kicker::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--pf-brand);
+  border-radius: 2px;
+}
+
+.proposal-formal .pf-h2 {
+  font-size: clamp(1.65rem, 4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin-bottom: 18px;
+  color: var(--pf-ink);
+}
+
+.proposal-formal .pf-lead {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--pf-ink-soft);
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+}
+
+/* Structured body copy (paragraphs, bullets, numbered steps) */
+.proposal-formal .pf-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.proposal-formal .pf-body-paragraphs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.proposal-formal .pf-body-p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.8;
+  color: var(--pf-ink-soft);
+}
+
+.proposal-formal .pf-body-ul,
+.proposal-formal .pf-body-ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.proposal-formal .pf-body-ol {
+  counter-reset: pf-body-step;
+}
+
+.proposal-formal .pf-body-li {
+  position: relative;
+  margin: 0;
+  padding-left: 1.35rem;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--pf-ink-soft);
+}
+
+.proposal-formal .pf-body-ul .pf-body-li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pf-brand);
+}
+
+.proposal-formal .pf-body-ol .pf-body-li {
+  counter-increment: pf-body-step;
+  padding-left: 2rem;
+}
+
+.proposal-formal .pf-body-ol .pf-body-li::before {
+  content: counter(pf-body-step);
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  width: 1.35rem;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--pf-brand);
+}
+
+.proposal-formal .pf-body-li-title {
+  display: block;
+  font-weight: 700;
+  color: var(--pf-ink);
+}
+
+.proposal-formal .pf-body-li-detail {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--pf-ink-soft);
+}
+
+.proposal-formal .pf-cms-panel .pf-body-p,
+.proposal-formal .pf-cms-panel .pf-body-li {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.proposal-formal .pf-cms-panel .pf-body-li-title {
+  color: #ffffff;
+}
+
+.proposal-formal .pf-cms-panel .pf-body-ul .pf-body-li::before {
+  background: #f59e0b;
+}
+
+.proposal-formal section.pf-section {
+  scroll-margin-top: 24px;
+  padding-top: 3.5rem;
+}
+
+.proposal-formal section.pf-section:first-of-type {
+  padding-top: 0;
+}
+
+/* Hero */
+.proposal-formal .pf-hero {
+  margin-left: -2.5rem;
+  margin-right: -2.5rem;
+  border-radius: 0 0 28px 28px;
+  background: linear-gradient(
+    140deg,
+    #0a2d56 0%,
+    var(--pf-brand-dark) 45%,
+    var(--pf-brand) 100%
+  );
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.proposal-formal .pf-hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+.proposal-formal .pf-hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.proposal-formal .pf-hero h1 {
+  font-size: clamp(2rem, 5vw, 2.875rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 22px 0 18px;
+  max-width: 560px;
+}
+
+.proposal-formal .pf-letter {
+  padding: 8px 0 0 26px;
+  border-left: 3px solid var(--pf-brand);
+}
+
+.proposal-formal .pf-letter p {
+  font-size: 15.5px;
+  line-height: 1.8;
+  color: var(--pf-ink-soft);
+  margin-bottom: 15px;
+}
+
+/* Stats */
+.proposal-formal .pf-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--pf-line);
+  border-bottom: 1px solid var(--pf-line);
+  margin-top: 30px;
+}
+
+.proposal-formal .pf-stat {
+  text-align: center;
+  padding: 24px 14px;
+  border-right: 1px solid var(--pf-line);
+}
+
+.proposal-formal .pf-stat:last-child {
+  border-right: none;
+}
+
+.proposal-formal .pf-stat-n {
+  font-size: 32px;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--pf-brand), var(--pf-brand-light));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Image drop zone */
+.proposal-formal .pf-drop {
+  border: 2px dashed var(--pf-line);
+  border-radius: 14px;
+  background: var(--pf-surface-2);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  overflow: hidden;
+  position: relative;
+}
+
+.proposal-formal .pf-drop:hover {
+  border-color: var(--pf-brand-light);
+  background: color-mix(in oklch, var(--pf-brand) 6%, var(--background));
+}
+
+.proposal-formal .pf-drop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Round profile photos (intro signatory + team) */
+.proposal-formal .pf-avatar.pf-drop,
+.proposal-formal .pf-avatar {
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 0 1px var(--pf-line), 0 4px 14px rgba(13, 59, 110, 0.12);
+}
+
+.proposal-formal .pf-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(140deg, var(--pf-brand-dark), var(--pf-brand));
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.proposal-formal .pf-team-card {
+  text-align: center;
+}
+
+.proposal-formal .pf-team-card .pf-avatar {
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 0.75rem;
+}
+
+/* Client logos (work-reviews) */
+.proposal-formal .pf-client-logos {
+  margin: 1.75rem 0 2rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  border: 1px solid var(--pf-line);
+  background: var(--pf-surface-2);
+}
+
+.proposal-formal .pf-client-logos-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pf-ink-soft);
+  margin-bottom: 1rem;
+}
+
+.proposal-formal .pf-client-logos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem 1.75rem;
+}
+
+.proposal-formal .pf-client-logo-slot {
+  flex: 0 1 auto;
+  min-width: 88px;
+  max-width: 140px;
+}
+
+.proposal-formal .pf-client-logo-slot .pf-drop {
+  min-height: 52px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.proposal-formal .pf-client-logo-slot .pf-drop img {
+  object-fit: contain;
+  padding: 8px;
+}
+
+/* Work grid */
+.proposal-formal .pf-work-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.proposal-formal .pf-work {
+  border-radius: 13px;
+  overflow: hidden;
+  border: 1px solid var(--pf-line);
+  background: var(--background);
+}
+
+/* Reviews */
+.proposal-formal .pf-reviews {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.proposal-formal .pf-review {
+  background: var(--pf-surface-2);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.proposal-formal .pf-stars {
+  color: var(--pf-gold);
+  letter-spacing: 3px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+/* Investment */
+.proposal-formal .pf-invest {
+  border: 1px solid var(--pf-line);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 41, 0.03), 0 8px 24px rgba(13, 59, 110, 0.05);
+}
+
+.proposal-formal .pf-inv-grand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 26px;
+  background: var(--pf-brand-dark);
+  color: #fff;
+}
+
+/* Gantt timeline */
+.proposal-formal .pf-gantt {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.proposal-formal .pf-gbar {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.proposal-formal .pf-gbar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pf-ink-soft);
+}
+
+.proposal-formal .pf-gbar-editable {
+  grid-template-columns: minmax(150px, 220px) 1fr;
+  align-items: start;
+}
+
+.proposal-formal .pf-gtrack {
+  height: 34px;
+  background: var(--pf-surface-2);
+  border-radius: 9px;
+  position: relative;
+  overflow: hidden;
+}
+
+.proposal-formal .pf-gfill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  padding-left: 13px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 2.5rem;
+}
+
+.proposal-formal .pf-gfill-tone-light {
+  background: var(--pf-brand-light);
+}
+
+.proposal-formal .pf-gfill-tone-brand {
+  background: var(--pf-brand);
+}
+
+.proposal-formal .pf-gfill-tone-dark {
+  background: var(--pf-brand-dark);
+}
+
+.proposal-formal .pf-gfill-tone-gold {
+  background: var(--pf-gold);
+  color: #3a2800;
+}
+
+.proposal-formal .pf-gfill-draggable {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.proposal-formal .pf-gfill-draggable:active {
+  cursor: grabbing;
+}
+
+.proposal-formal .pf-gfill-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+/* Sidebar */
+.proposal-formal-sidebar {
+  font-family: inherit;
+  background: var(--background);
+}
+
+.proposal-formal-sidebar .pf-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--pf-ink-soft);
+  transition: all 0.14s;
+  width: 100%;
+  text-align: left;
+}
+
+.proposal-formal-sidebar .pf-nav-link:hover {
+  background: var(--pf-surface-2);
+  color: var(--pf-ink);
+}
+
+.proposal-formal-sidebar .pf-nav-link[data-active="true"] {
+  background: color-mix(in oklch, var(--pf-brand) 10%, transparent);
+  color: var(--pf-brand);
+  font-weight: 600;
+}
+
+.proposal-formal-sidebar .pf-nav-num {
+  flex-shrink: 0;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--muted);
+  display: grid;
+  place-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--muted-foreground);
+}
+
+.proposal-formal-sidebar .pf-nav-label {
+  min-width: 0;
+  flex: 1;
+  line-height: 1.35;
+}
+
+.proposal-formal-sidebar .pf-nav-link[data-active="true"] .pf-nav-num {
+  background: var(--pf-brand, #1e5fa8);
+  color: #fff;
+}
+
+.proposal-formal-sidebar .pf-nav-link[data-active="true"] .pf-nav-label {
+  color: var(--pf-brand);
+}
+
+@media (max-width: 880px) {
+  .proposal-formal .pf-stats,
+  .proposal-formal .pf-work-grid,
+  .proposal-formal .pf-reviews {
+    grid-template-columns: 1fr;
+  }
+
+  .proposal-formal .pf-hero {
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+  }
+
+  .proposal-formal .pf-gbar {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+@media print {
+  .proposal-formal-sidebar,
+  [data-pdf-hide] {
+    display: none !important;
+  }
+
+  [data-pdf-only] {
+    display: block !important;
+  }
+
+  #proposal-pdf-root {
+    max-width: none;
+    padding: 0;
+  }
+
+  .proposal-pdf-page {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

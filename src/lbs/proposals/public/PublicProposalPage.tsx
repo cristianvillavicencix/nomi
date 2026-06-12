@@ -1,1 +1,1 @@
-export { PublicProposalPage } from "@/lbs/proposals/public/PublicProposalDocumentPage";
+export * from "@/modules/proposals/public/PublicProposalPage";
