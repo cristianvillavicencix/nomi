@@ -3,9 +3,9 @@ import {
   LBS_DEFAULT_LIFECYCLE_PHASE,
   LBS_DEFAULT_PROJECT_PRIORITY,
   normalizeAgencyProjectType,
-} from "@/lbs/deals/lbsAgencyProjectModel";
-import { normalizeGithubRepoInput } from "@/lbs/deals/githubRepo";
-import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
+} from "@/modules/deals/lbsAgencyProjectModel";
+import { normalizeGithubRepoInput } from "@/modules/deals/githubRepo";
+import { normalizeLbsProjectStage } from "@/modules/deals/lbsProjectConstants";
 
 type GenericRecord = Record<string, unknown>;
 

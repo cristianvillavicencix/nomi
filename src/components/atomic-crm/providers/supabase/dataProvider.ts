@@ -24,7 +24,7 @@ import {
 } from "../../tasks/persistTaskAssignmentSideEffects";
 import { invalidateResourceQueries } from "../queryInvalidation";
 import { isValidRecordId } from "@/lib/isValidRecordId";
-import { prepareCalendarEventWriteData } from "@/lbs/calendar/calendarEventWriteData";
+import { prepareCalendarEventWriteData } from "@/modules/calendar/calendarEventWriteData";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { supabase } from "./supabase";
@@ -32,8 +32,8 @@ import { canMutateCrmResource } from "../commons/crmPermissions";
 import {
   persistContactWithCompany,
   resolveContactCompanyFromPayload,
-} from "@/lbs/contacts/lbsContactUpsert";
-import { shouldClearPrimaryOnCompany } from "@/lbs/clients/primaryContactRelink";
+} from "@/modules/contacts/lbsContactUpsert";
+import { shouldClearPrimaryOnCompany } from "@/modules/clients/primaryContactRelink";
 import { normalizePostgrestIlikeQuery } from "../commons/postgrestSearchQuery";
 import { billingProvider } from "./modules/billingProvider";
 import { proposalsProvider } from "./modules/proposalsProvider";

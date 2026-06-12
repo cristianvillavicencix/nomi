@@ -27,11 +27,11 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { CRMUserMenuItems } from "./UserMenuItems";
 import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
-import { LbsSidebarNav } from "@/lbs/LbsSidebarNav";
-import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
+import { LbsSidebarNav } from "@/app/LbsSidebarNav";
+import { useWebsiteMonitorEnabled } from "@/modules/settings/useWebsiteMonitorSettings";
 import { GlobalMessagesBadge } from "@/components/atomic-crm/layout/GlobalMessagesBadge";
-import { WebsiteAuditBackgroundWatcher } from "@/lbs/website-monitor/audit/WebsiteAuditBackgroundWatcher";
-import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
+import { WebsiteAuditBackgroundWatcher } from "@/modules/web-monitor/audit/WebsiteAuditBackgroundWatcher";
+import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCounts";
 import {
   PageActionsProvider,
   PageActionsSlot,
@@ -41,7 +41,7 @@ import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightS
 import {
   isProposalFocusModePath,
   isProposalPreviewPath,
-} from "@/lbs/proposals/proposalFocusMode";
+} from "@/modules/proposals/proposalFocusMode";
 
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();

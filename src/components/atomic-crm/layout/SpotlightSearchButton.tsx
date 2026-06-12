@@ -15,12 +15,12 @@ import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { resolveEffectiveModules } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { cn } from "@/lib/utils";
-import { LBS_CONTACT_STATUSES, LBS_LEAD_STATUSES } from "@/lbs/navigation";
+import { LBS_CONTACT_STATUSES, LBS_LEAD_STATUSES } from "@/app/navigation";
 import {
   getClientShowPath,
   getContactShowPath,
   getLeadShowPath,
-} from "@/lbs/routing";
+} from "@/app/routing";
 
 /**
  * Global Spotlight search. One button — searches across every module

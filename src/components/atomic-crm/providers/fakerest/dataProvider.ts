@@ -59,8 +59,8 @@ import {
 } from "@/lib/forms-v2/customFormSchemaLegacy";
 import { authProvider, USER_STORAGE_KEY } from "./authProvider";
 import generateData from "./dataGenerator";
-import { enrichCompanySummary } from "@/lbs/clients/clientProfile";
-import { buildNormalizedDealInsertRecord } from "@/lbs/deals/createDeal";
+import { enrichCompanySummary } from "@/modules/clients/clientProfile";
+import { buildNormalizedDealInsertRecord } from "@/modules/deals/createDeal";
 import {
   buildCompanyPayloadFromUpsert,
   buildContactPayloadFromUpsert,
@@ -68,11 +68,11 @@ import {
   splitClientFullName,
   type LbsClientUpsertInput,
   type LbsClientUpsertResult,
-} from "@/lbs/clients/lbsClientUpsert";
+} from "@/modules/clients/lbsClientUpsert";
 import {
   contactNeedsCompanyMove,
   shouldClearPrimaryOnCompany,
-} from "@/lbs/clients/primaryContactRelink";
+} from "@/modules/clients/primaryContactRelink";
 
 const baseDataProvider = fakeRestDataProvider(generateData(), true, 300);
 
@@ -954,7 +954,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     };
   },
   createDeal: async (
-    payload: import("@/lbs/deals/createDeal").CreateDealPayload,
+    payload: import("@/modules/deals/createDeal").CreateDealPayload,
   ) => {
     const { data: company } = await baseDataProvider.getOne<Company>(
       "companies",
@@ -1049,7 +1049,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     data: Record<string, unknown>;
   }) => {
     const { data: forms } = await baseDataProvider.getList<
-      import("@/lbs/types").Form
+      import("@/modules/types").Form
     >("forms", {
       pagination: { page: 1, perPage: 100 },
       sort: { field: "id", order: "ASC" },
@@ -1186,7 +1186,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
   getPublicForm: async (payload: { slug: string }) => {
     const { data: forms } = await baseDataProvider.getList<
-      import("@/lbs/types").Form
+      import("@/modules/types").Form
     >("forms", {
       pagination: { page: 1, perPage: 100 },
       sort: { field: "id", order: "ASC" },
@@ -1387,10 +1387,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     body,
     mediaUrls,
   }) => {
-    let conversation: import("@/lbs/types").Conversation;
+    let conversation: import("@/modules/types").Conversation;
     if (conversationId) {
       const { data } = await baseDataProvider.getOne<
-        import("@/lbs/types").Conversation
+        import("@/modules/types").Conversation
       >("conversations", { id: conversationId });
       conversation = data;
     } else if (contactId) {
@@ -1405,7 +1405,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     }
 
     const message = await baseDataProvider.create<
-      import("@/lbs/types").ConversationMessage
+      import("@/modules/types").ConversationMessage
     >("conversation_messages", {
       data: {
         conversation_id: conversation.id,
@@ -1420,12 +1420,12 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
   findClientConversationForContact: async (contactId) => {
     const { data: contact } = await baseDataProvider.getOne<
-      import("@/lbs/types").Contact
+      import("@/modules/types").Contact
     >("contacts", { id: contactId });
     const phone =
       contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ?? null;
     const { data: existing = [] } = await baseDataProvider.getList<
-      import("@/lbs/types").Conversation
+      import("@/modules/types").Conversation
     >("conversations", {
       filter: phone
         ? { "type@eq": "client", "external_phone@eq": phone }
@@ -1437,12 +1437,12 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
   ensureClientConversation: async ({ contactId, authorMemberId, dealId }) => {
     const { data: contact } = await baseDataProvider.getOne<
-      import("@/lbs/types").Contact
+      import("@/modules/types").Contact
     >("contacts", { id: contactId });
     const phone =
       contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ?? null;
     const { data: existing = [] } = await baseDataProvider.getList<
-      import("@/lbs/types").Conversation
+      import("@/modules/types").Conversation
     >("conversations", {
       filter: phone
         ? { "type@eq": "client", "external_phone@eq": phone }
@@ -1458,7 +1458,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       phone ||
       "Client SMS";
     const { data: created } = await baseDataProvider.create<
-      import("@/lbs/types").Conversation
+      import("@/modules/types").Conversation
     >("conversations", {
       data: {
         type: "client",

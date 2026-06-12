@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarEventChip } from "@/lbs/calendar/CalendarEventChip";
+import { CalendarEventChip } from "@/modules/calendar/CalendarEventChip";
 import {
   addMonths,
   buildTaskCalendarEvent,
@@ -15,7 +15,7 @@ import {
   isSameMonth,
   toDateKey,
   type CalendarEvent,
-} from "@/lbs/calendar/calendarUtils";
+} from "@/modules/calendar/calendarUtils";
 import {
   getTaskPriorityClassName,
   getTaskPriorityLabel,

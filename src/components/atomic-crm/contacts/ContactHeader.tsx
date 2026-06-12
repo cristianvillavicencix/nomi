@@ -11,10 +11,10 @@ import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { AddTask } from "../tasks/AddTask";
 import { TagsListEdit } from "./TagsListEdit";
 import { Avatar } from "./Avatar";
-import { ConvertLeadButton } from "@/lbs/leads/ConvertLeadButton";
-import { getClientShowPath, getPersonShowPath } from "@/lbs/routing";
-import { OpenClientSmsButton } from "@/lbs/messages/OpenClientSmsButton";
-import { SendFormButton } from "@/lbs/forms-v2/share/SendFormButton";
+import { ConvertLeadButton } from "@/modules/leads/ConvertLeadButton";
+import { getClientShowPath, getPersonShowPath } from "@/app/routing";
+import { OpenClientSmsButton } from "@/modules/messages/OpenClientSmsButton";
+import { SendFormButton } from "@/modules/forms/share/SendFormButton";
 
 export const ContactHeader = ({
   record,

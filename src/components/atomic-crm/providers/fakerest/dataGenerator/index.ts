@@ -10,8 +10,8 @@ import { generateTasks } from "./tasks";
 import {
   LBS_SERVICE_ADDONS,
   LBS_SERVICE_PACKAGES,
-} from "@/lbs/catalog/serviceCatalogSeed";
-import { DEFAULT_PROPOSAL_TEMPLATES } from "@/lbs/proposals/document/proposalTemplateDefaults";
+} from "@/modules/catalog/serviceCatalogSeed";
+import { DEFAULT_PROPOSAL_TEMPLATES } from "@/modules/proposals/document/proposalTemplateDefaults";
 import type { Db } from "./types";
 
 export default (): Db => {

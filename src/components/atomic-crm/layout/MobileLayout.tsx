@@ -6,7 +6,7 @@ import { ErrorBoundary } from "react-error-boundary";
 
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { MobileNavigation } from "./MobileNavigation";
-import { WebsiteAuditBackgroundWatcher } from "@/lbs/website-monitor/audit/WebsiteAuditBackgroundWatcher";
+import { WebsiteAuditBackgroundWatcher } from "@/modules/web-monitor/audit/WebsiteAuditBackgroundWatcher";
 
 export const MobileLayout = ({ children }: { children: ReactNode }) => {
   useConfigurationLoader();

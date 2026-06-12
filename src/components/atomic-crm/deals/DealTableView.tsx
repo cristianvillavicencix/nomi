@@ -33,7 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { ProjectDeliveryCountdownText } from "@/lbs/deals/ProjectDeliveryCountdownText";
+import { ProjectDeliveryCountdownText } from "@/modules/deals/ProjectDeliveryCountdownText";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type {
   Company,
@@ -41,7 +41,7 @@ import type {
   Deal,
   OrganizationMember,
 } from "../types";
-import { ProjectAssignedAvatars } from "@/lbs/deals/ProjectAssignedAvatars";
+import { ProjectAssignedAvatars } from "@/modules/deals/ProjectAssignedAvatars";
 import { getStageColor, getStageLabel } from "./pipelines";
 
 type SortField = "stage" | "amount" | "updated_at" | "created_at";

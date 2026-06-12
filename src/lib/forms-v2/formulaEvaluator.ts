@@ -1,5 +1,5 @@
 import { evaluate } from "mathjs";
-import type { FormulaFormat } from "@/lbs/forms-v2/types";
+import type { FormulaFormat } from "@/modules/forms/types";
 
 export const evaluateFormula = (
   formula: string | undefined,

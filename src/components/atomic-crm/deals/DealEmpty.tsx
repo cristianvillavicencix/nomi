@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 
 import useAppBarHeight from "../misc/useAppBarHeight";
 import type { Contact } from "../types";
-import { ProjectCreateFlow } from "@/lbs/deals/ProjectCreateFlow";
+import { ProjectCreateFlow } from "@/modules/deals/ProjectCreateFlow";
 
 export const DealEmpty = ({ children }: { children?: ReactNode }) => {
   const appbarHeight = useAppBarHeight();

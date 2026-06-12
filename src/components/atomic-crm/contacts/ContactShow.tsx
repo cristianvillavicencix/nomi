@@ -24,9 +24,9 @@ import { RelativeDate } from "../misc/RelativeDate";
 import type { Contact, Deal } from "../types";
 import { ContactEditModal } from "./ContactEditModal";
 import { ContactHeader } from "./ContactHeader";
-import { getPersonListPath } from "@/lbs/routing";
-import { ReferralsTab } from "@/lbs/leads/ReferralsTab";
-import { ContactActivityFeed } from "@/lbs/shared/ContactActivityFeed";
+import { getPersonListPath } from "@/app/routing";
+import { ReferralsTab } from "@/modules/leads/ReferralsTab";
+import { ContactActivityFeed } from "@/modules/shared/ContactActivityFeed";
 
 const CONTACT_TABS = ["activities", "projects", "referrals"] as const;
 type ContactTab = (typeof CONTACT_TABS)[number];

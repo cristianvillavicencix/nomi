@@ -584,10 +584,6 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/misc/ImportPage.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/misc/ImportFromJsonButton.tsx",
           "type": "registry:component"
         },
@@ -893,10 +889,6 @@
         },
         {
           "path": "src/components/atomic-crm/contacts/ContactShow.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "src/components/atomic-crm/contacts/ContactQuickViewPage.tsx",
           "type": "registry:component"
         },
         {

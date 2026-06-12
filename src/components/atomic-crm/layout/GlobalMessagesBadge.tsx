@@ -1,7 +1,7 @@
 import { MessageSquare } from "lucide-react";
 import { Link, useLocation } from "react-router";
-import { useMessagesUnreadCounts } from "@/lbs/messages/useMessagesUnreadCounts";
-import { formatUnreadBadgeCount } from "@/lbs/messages/messagesUnreadUtils";
+import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCounts";
+import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 import { cn } from "@/lib/utils";
 
 export const GlobalMessagesBadge = ({ className }: { className?: string }) => {

@@ -34,7 +34,7 @@ const resolveOrganizationMemberId = async (
 
 export const messagingProvider = {
   async getMessagingSettings() {
-    const disabledSettings: import("@/lbs/types").MessagingSettingsPublic = {
+    const disabledSettings: import("@/modules/types").MessagingSettingsPublic = {
       org_id: 0,
       twilio_account_sid: null,
       twilio_phone_number: null,
@@ -44,7 +44,7 @@ export const messagingProvider = {
     };
 
     const { data, error } = await invokeEdgeFunction<
-      import("@/lbs/types").MessagingSettingsPublic
+      import("@/modules/types").MessagingSettingsPublic
     >("messaging_settings", {
       method: "POST",
       body: { action: "get" },
@@ -60,13 +60,13 @@ export const messagingProvider = {
     twilio_auth_token?: string | null;
     twilio_phone_number?: string | null;
     sms_enabled?: boolean;
-    business_hours?: import("@/lbs/types").BusinessHoursConfig | null;
+    business_hours?: import("@/modules/types").BusinessHoursConfig | null;
     out_of_hours_message?: string | null;
     auto_acknowledge_enabled?: boolean;
     auto_acknowledge_message?: string | null;
   }) {
     const { data, error } = await invokeEdgeFunction<
-      import("@/lbs/types").MessagingSettingsPublic
+      import("@/modules/types").MessagingSettingsPublic
     >("messaging_settings", {
       method: "POST",
       body: {
@@ -86,7 +86,7 @@ export const messagingProvider = {
     return data;
   },
   async getEmailDeliverySettings() {
-    const fallback: import("@/lbs/settings/EmailDeliverySettingsSection").EmailDeliverySettings =
+    const fallback: import("@/modules/settings/EmailDeliverySettingsSection").EmailDeliverySettings =
       {
         configured: false,
         provider: null,
@@ -96,7 +96,7 @@ export const messagingProvider = {
       };
 
     const { data, error } = await invokeEdgeFunction<
-      import("@/lbs/settings/EmailDeliverySettingsSection").EmailDeliverySettings
+      import("@/modules/settings/EmailDeliverySettingsSection").EmailDeliverySettings
     >("email_settings", {
       method: "POST",
       body: { action: "get" },
@@ -109,7 +109,7 @@ export const messagingProvider = {
   },
   async updateEmailDeliverySettings(params: { reply_to?: string | null }) {
     const { data, error } = await invokeEdgeFunction<
-      import("@/lbs/settings/EmailDeliverySettingsSection").EmailDeliverySettings
+      import("@/modules/settings/EmailDeliverySettingsSection").EmailDeliverySettings
     >("email_settings", {
       method: "POST",
       body: { action: "update", ...params },
@@ -223,8 +223,8 @@ export const messagingProvider = {
     replyToMessageId?: Identifier | null;
   }) {
     const { data, error } = await invokeEdgeFunction<{
-      message?: import("@/lbs/types").ConversationMessage;
-      conversation?: import("@/lbs/types").Conversation;
+      message?: import("@/modules/types").ConversationMessage;
+      conversation?: import("@/modules/types").Conversation;
     }>("send_client_sms", {
       method: "POST",
       body: {
@@ -316,7 +316,7 @@ export const messagingProvider = {
       throw new Error(error.message ?? "Failed to load client conversation");
     }
 
-    return (data as import("@/lbs/types").Conversation | null) ?? null;
+    return (data as import("@/modules/types").Conversation | null) ?? null;
   },
   async ensureClientConversation(params: {
     contactId: Identifier;
@@ -371,7 +371,7 @@ export const messagingProvider = {
 
     const existing = await findExisting();
     if (existing) {
-      return existing as import("@/lbs/types").Conversation;
+      return existing as import("@/modules/types").Conversation;
     }
 
     const title =
@@ -407,7 +407,7 @@ export const messagingProvider = {
       if (createError.code === "23505") {
         const retry = await findExisting();
         if (retry) {
-          return retry as import("@/lbs/types").Conversation;
+          return retry as import("@/modules/types").Conversation;
         }
       }
       throw new Error(
@@ -415,7 +415,7 @@ export const messagingProvider = {
       );
     }
 
-    return created as import("@/lbs/types").Conversation;
+    return created as import("@/modules/types").Conversation;
   },
   async notifyFollowUp(params: {
     calendarEventId: Identifier;

@@ -13,7 +13,7 @@ import {
   groupTaskParticipantsByTaskId,
   scopeUsesUserCompletionFilter,
 } from "../../../tasks/taskUserCompletion";
-import { contactNeedsCompanyMove } from "@/lbs/clients/primaryContactRelink";
+import { contactNeedsCompanyMove } from "@/modules/clients/primaryContactRelink";
 import {
   buildCompanyPayloadFromUpsert,
   buildContactPayloadFromUpsert,
@@ -21,13 +21,13 @@ import {
   splitClientFullName,
   type LbsClientUpsertInput,
   type LbsClientUpsertResult,
-} from "@/lbs/clients/lbsClientUpsert";
+} from "@/modules/clients/lbsClientUpsert";
 import {
   buildDealInsertRecord,
   buildNormalizedDealInsertRecord,
   type CreateDealPayload,
-} from "@/lbs/deals/createDeal";
-import { lbsProjectTypeChoices } from "@/lbs/deals/lbsProjectConstants";
+} from "@/modules/deals/createDeal";
+import { lbsProjectTypeChoices } from "@/modules/deals/lbsProjectConstants";
 import { getIsInitialized } from "../authProvider";
 import { supabase } from "../supabase";
 import { invokeEdgeFunction } from "../invokeEdgeFunction";

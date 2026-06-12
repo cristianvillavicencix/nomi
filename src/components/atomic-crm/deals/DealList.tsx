@@ -25,8 +25,8 @@ import { DealArchivedList } from "./DealArchivedList";
 import { DealEdit } from "./DealEdit";
 import { DealTableView } from "./DealTableView";
 import { DealShow } from "./DealShow";
-import { ProjectCreateFlow } from "@/lbs/deals/ProjectCreateFlow";
-import { LbsDealBoardContent } from "@/lbs/deals/LbsDealBoardContent";
+import { ProjectCreateFlow } from "@/modules/deals/ProjectCreateFlow";
+import { LbsDealBoardContent } from "@/modules/deals/LbsDealBoardContent";
 import { getDefaultPipeline } from "./pipelines";
 import { useDealsViewPreference } from "./useDealsViewPreference";
 

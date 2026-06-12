@@ -26,7 +26,7 @@ import { MobileDashboard } from "../dashboard/MobileDashboard";
 import deals from "../deals";
 import { DesktopLayout } from "../layout/DesktopLayout";
 import { MobileLayout } from "../layout/MobileLayout";
-import { withLbsMessagesProvider } from "@/lbs/messages/withLbsMessagesProvider";
+import { withLbsMessagesProvider } from "@/modules/messages/withLbsMessagesProvider";
 import {
   authProvider as defaultAuthProvider,
   dataProvider as defaultDataProvider,
@@ -62,10 +62,10 @@ import {
   renderLbsProposalClientPreviewRoute,
   renderLbsPublicFormRoute,
   renderLbsPublicPortalRoutes,
-} from "@/lbs/LbsCustomRoutes";
-import proposals from "@/lbs/proposals";
-import contracts from "@/lbs/contracts";
-import tickets from "@/lbs/tickets";
+} from "@/app/LbsCustomRoutes";
+import proposals from "@/modules/proposals";
+import contracts from "@/modules/contracts";
+import tickets from "@/modules/tickets";
 import { ContactListMobile } from "../contacts/ContactList.tsx";
 import { ContactShow } from "../contacts/ContactShow.tsx";
 import { CompanyShow } from "../companies/CompanyShow.tsx";

@@ -1,5 +1,5 @@
 import type { DealStage } from "../types";
-import { getLbsProjectStageLabel } from "@/lbs/deals/lbsProjectConstants";
+import { getLbsProjectStageLabel } from "@/modules/deals/lbsProjectConstants";
 
 export const findDealLabel = (dealStages: DealStage[], dealValue: string) => {
   const fromConfig = dealStages.find(

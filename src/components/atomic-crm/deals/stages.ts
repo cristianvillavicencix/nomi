@@ -1,6 +1,6 @@
 import type { DealPipelineStage } from "../types";
 import type { Deal } from "../types";
-import { normalizeLbsProjectStage } from "@/lbs/deals/lbsProjectConstants";
+import { normalizeLbsProjectStage } from "@/modules/deals/lbsProjectConstants";
 
 export type DealsByStage = Record<Deal["stage"], Deal[]>;
 

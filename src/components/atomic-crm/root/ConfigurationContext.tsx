@@ -12,7 +12,7 @@ import {
   defaultConfiguration,
   withCurrentProductName,
 } from "./defaultConfiguration";
-import { hasLegacyProjectPipeline } from "@/lbs/deals/lbsProjectConstants";
+import { hasLegacyProjectPipeline } from "@/modules/deals/lbsProjectConstants";
 
 export const CONFIGURATION_STORE_KEY = "app.configuration";
 

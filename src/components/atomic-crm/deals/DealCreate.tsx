@@ -24,9 +24,9 @@ import {
   LBS_DEFAULT_DELIVERY_STATUS,
   LBS_DEFAULT_LIFECYCLE_PHASE,
   LBS_DEFAULT_PROJECT_PRIORITY,
-} from "@/lbs/deals/lbsAgencyProjectModel";
-import { LBS_DEFAULT_PROJECT_CATEGORY } from "@/lbs/deals/lbsProjectConstants";
-import { emptyWebsiteBriefValues } from "@/lbs/deals/websiteBriefSchema";
+} from "@/modules/deals/lbsAgencyProjectModel";
+import { LBS_DEFAULT_PROJECT_CATEGORY } from "@/modules/deals/lbsProjectConstants";
+import { emptyWebsiteBriefValues } from "@/modules/deals/websiteBriefSchema";
 
 import type { Deal } from "../types";
 import { DealInputs } from "./DealInputs";

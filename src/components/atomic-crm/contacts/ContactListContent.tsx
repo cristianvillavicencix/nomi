@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 
 import type { Contact } from "../types";
-import { getClientShowPath, getPersonShowPath } from "@/lbs/routing";
+import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { Avatar } from "./Avatar";
 import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
 

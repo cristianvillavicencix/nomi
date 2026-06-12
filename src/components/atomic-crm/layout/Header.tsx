@@ -8,8 +8,8 @@ import { canAccess } from "../providers/commons/canAccess";
 import { hasMemberCapability } from "../providers/commons/memberModuleAccess";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CRMUserMenuItems } from "./UserMenuItems";
-import { LBS_NAV_ITEMS, filterLbsNavItems } from "@/lbs/navigation";
-import { useWebsiteMonitorEnabled } from "@/lbs/settings/useWebsiteMonitorSettings";
+import { LBS_NAV_ITEMS, filterLbsNavItems } from "@/app/navigation";
+import { useWebsiteMonitorEnabled } from "@/modules/settings/useWebsiteMonitorSettings";
 
 const Header = () => {
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();

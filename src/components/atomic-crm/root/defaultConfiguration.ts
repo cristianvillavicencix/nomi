@@ -3,7 +3,7 @@ import {
   buildLbsDealPipelines,
   lbsProjectStages,
   LBS_WON_PIPELINE_STATUSES,
-} from "@/lbs/deals/lbsProjectConstants";
+} from "@/modules/deals/lbsProjectConstants";
 
 /** Logo paths must be root-absolute; `./logos/...` breaks on nested routes like `/contacts/1/show`. */
 export const normalizeLogoUrl = (url?: string | null): string => {
@@ -60,7 +60,7 @@ export const primaryBusinessSectorUnsetToken = "__unset__";
  * GICS-style sector list — used by atomic-crm CompanyInputs and Settings only.
  *
  * @deprecated Use {@link LBS_COMPANY_INDUSTRY_CHOICES} from
- *   `@/lbs/leads/leadFormConstants` for LBS client company industry.
+ *   `@/modules/leads/leadFormConstants` for LBS client company industry.
  */
 export const defaultCompanySectors = [
   { value: "communication-services", label: "Communication Services" },

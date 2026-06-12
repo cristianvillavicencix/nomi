@@ -4,7 +4,7 @@ import type {
   Proposal,
   ProposalLineItem,
   ProposalPaymentInstallment,
-} from "@/lbs/types";
+} from "@/modules/types";
 
 type PublicProposalToken = {
   id: number;

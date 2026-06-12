@@ -21,8 +21,8 @@ import { getDealsByStage } from "./stages";
 import {
   createStageTasksForDeal,
   getStageTasksCreatedMessage,
-} from "@/lbs/deals/dealStageTaskTemplates";
-import type { LbsDeal } from "@/lbs/types";
+} from "@/modules/deals/dealStageTaskTemplates";
+import type { LbsDeal } from "@/modules/types";
 
 export const DealListContent = ({ pipelineId }: { pipelineId: string }) => {
   const config = useConfigurationContext();

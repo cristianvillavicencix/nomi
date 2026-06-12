@@ -26,12 +26,12 @@ import {
 import type { DealPipeline, DealPipelineStage } from "../types";
 import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import { UsersSettingsSection } from "./UsersSettingsSection";
-import { MessagingSettingsSection } from "@/lbs/settings/MessagingSettingsSection";
-import { DataImportSection } from "@/lbs/settings/DataImportSection";
-import { WebsiteMonitorSettingsSection } from "@/lbs/settings/WebsiteMonitorSettingsSection";
-import { CommercialSettingsSection } from "@/lbs/settings/CommercialSettingsSection";
-import { FormsSettingsSection } from "@/lbs/settings/FormsSettingsSection";
-import { useLbsPipelineConfig } from "@/lbs/deals/useLbsPipelineConfig";
+import { MessagingSettingsSection } from "@/modules/settings/MessagingSettingsSection";
+import { DataImportSection } from "@/modules/settings/DataImportSection";
+import { WebsiteMonitorSettingsSection } from "@/modules/settings/WebsiteMonitorSettingsSection";
+import { CommercialSettingsSection } from "@/modules/settings/CommercialSettingsSection";
+import { FormsSettingsSection } from "@/modules/settings/FormsSettingsSection";
+import { useLbsPipelineConfig } from "@/modules/deals/useLbsPipelineConfig";
 
 const LBS_SETTINGS_TAB_IDS = [
   "general",

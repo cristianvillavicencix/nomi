@@ -7,7 +7,7 @@ import { FormToolbar } from "../layout/FormToolbar";
 import {
   LBS_LEAD_SOURCE_OTHER,
   LBS_LEAD_SOURCE_REFERRAL,
-} from "@/lbs/leads/leadFormConstants";
+} from "@/modules/leads/leadFormConstants";
 
 export const ContactEdit = () => (
   <EditBase

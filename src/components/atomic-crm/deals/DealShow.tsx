@@ -5,7 +5,7 @@ import { isValidRecordId } from "@/lib/isValidRecordId";
 const ShowFallback = () => <Skeleton className="h-96 w-full rounded-xl" />;
 
 const LbsProjectShowPage = lazy(() =>
-  import("@/lbs/projects/ProjectShowPage").then((m) => ({
+  import("@/modules/deals/projects/ProjectShowPage").then((m) => ({
     default: m.ProjectShowPage,
   })),
 );

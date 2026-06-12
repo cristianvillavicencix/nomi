@@ -6,7 +6,7 @@ import { DashboardStepper } from "./DashboardStepper";
 import { DealsChart } from "./DealsChart";
 import { HotContacts } from "./HotContacts";
 import { Welcome } from "./Welcome";
-import { LbsDashboardTasks } from "@/lbs/dashboard/LbsDashboardTasks";
+import { LbsDashboardTasks } from "@/modules/dashboard/LbsDashboardTasks";
 
 export const Dashboard = () => {
   const {
