@@ -441,6 +441,9 @@ const MobileAdmin = (props: CoreAdminProps) => {
             {renderLbsPublicPortalRoutes()}
           </>
         </CustomRoutes>
+        <CustomRoutes>
+          {renderLbsCustomRoutes({ ProtectedRoute })}
+        </CustomRoutes>
         <Resource
           name="contacts"
           list={ContactListMobile}
@@ -451,6 +454,18 @@ const MobileAdmin = (props: CoreAdminProps) => {
         </Resource>
         <Resource name="companies" show={CompanyShow} />
         <Resource name="tasks" list={MobileTasksList} />
+        <Resource name="deals" />
+        <Resource name="proposals" />
+        <Resource name="contracts" />
+        <Resource name="tickets" />
+        <Resource name="conversations" />
+        <Resource name="calendar_events" />
+        <Resource name="monitored_websites" />
+        <Resource name="proposal_payment_installments" />
+        <Resource name="client_invoices" />
+        <Resource name="forms" />
+        <Resource name="form_submissions_v2" />
+        <Resource name="report_web_agency_metrics" />
       </Admin>
     </PersistQueryClientProvider>
   );
