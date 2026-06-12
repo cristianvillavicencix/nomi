@@ -158,6 +158,7 @@ const TasksDayListItem = ({
                   text={task.text}
                   isDone={isDoneForUser}
                   useMentions
+                  enablePreview={false}
                 />
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">

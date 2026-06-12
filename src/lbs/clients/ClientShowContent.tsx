@@ -154,6 +154,7 @@ export const ClientShowContent = () => {
     primaryContactId: record.primary_contact_id,
     counts: {
       contacts: counts.contacts,
+      deals: counts.deals,
       leads: counts.leads,
       projects: counts.projects,
       tickets: counts.tickets,

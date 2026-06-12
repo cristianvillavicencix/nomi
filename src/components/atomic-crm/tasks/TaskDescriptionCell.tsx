@@ -14,12 +14,15 @@ export const TaskDescriptionCell = ({
   useMentions = true,
   footer,
   fadeSurface = "background",
+  enablePreview = true,
 }: {
   text?: string | null;
   isDone?: boolean;
   useMentions?: boolean;
   footer?: ReactNode;
   fadeSurface?: "background" | "card";
+  /** When false, renders plain text (for use inside another clickable row). */
+  enablePreview?: boolean;
 }) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -45,26 +48,41 @@ export const TaskDescriptionCell = ({
 
   const renderedText = useMentions ? <TaskMentionText text={text} /> : text;
 
+  const descriptionBody = (
+    <div
+      ref={contentRef}
+      className={cn("truncate pr-8", isDone && "line-through")}
+    >
+      {renderedText}
+    </div>
+  );
+
   return (
     <>
       <div className="min-w-0 max-w-full">
         <div className="relative min-w-0">
-          <button
-            type="button"
-            className={cn(
-              "block w-full min-w-0 rounded-sm text-left text-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-              isDone && "text-muted-foreground",
-            )}
-            onClick={() => setPreviewOpen(true)}
-            aria-label="View full task description"
-          >
-            <div
-              ref={contentRef}
-              className={cn("truncate pr-8", isDone && "line-through")}
+          {enablePreview ? (
+            <button
+              type="button"
+              className={cn(
+                "block w-full min-w-0 rounded-sm text-left text-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                isDone && "text-muted-foreground",
+              )}
+              onClick={() => setPreviewOpen(true)}
+              aria-label="View full task description"
             >
-              {renderedText}
+              {descriptionBody}
+            </button>
+          ) : (
+            <div
+              className={cn(
+                "block w-full min-w-0 text-left text-sm",
+                isDone && "text-muted-foreground",
+              )}
+            >
+              {descriptionBody}
             </div>
-          </button>
+          )}
           {isOverflowing ? (
             <div
               aria-hidden
@@ -80,7 +98,7 @@ export const TaskDescriptionCell = ({
         {footer ? <div className="mt-1">{footer}</div> : null}
       </div>
 
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+      <Dialog open={previewOpen && enablePreview} onOpenChange={setPreviewOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Task description</DialogTitle>

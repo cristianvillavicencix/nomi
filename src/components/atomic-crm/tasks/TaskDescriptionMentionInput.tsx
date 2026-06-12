@@ -1,11 +1,13 @@
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ClipboardEvent,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   useGetList,
   useGetOne,
@@ -58,6 +60,11 @@ export const TaskDescriptionMentionInput = ({
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionRange, setMentionRange] = useState<Range | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [mentionDropdownRect, setMentionDropdownRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const { id, field, isRequired } = useInput({
     source,
@@ -106,6 +113,39 @@ export const TaskDescriptionMentionInput = ({
       return getMemberName(left).localeCompare(getMemberName(right));
     });
   }, [members, teamIdSet]);
+
+  const updateMentionDropdownRect = () => {
+    const editor = editorRef.current;
+    if (!editor || mentionRange == null) {
+      setMentionDropdownRect(null);
+      return;
+    }
+
+    const rect = editor.getBoundingClientRect();
+    setMentionDropdownRect({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!mentionOpen) {
+      setMentionDropdownRect(null);
+      return;
+    }
+
+    updateMentionDropdownRect();
+
+    const handleReposition = () => updateMentionDropdownRect();
+    window.addEventListener("scroll", handleReposition, true);
+    window.addEventListener("resize", handleReposition);
+
+    return () => {
+      window.removeEventListener("scroll", handleReposition, true);
+      window.removeEventListener("resize", handleReposition);
+    };
+  }, [mentionOpen, mentionQuery, candidates.length]);
 
   const syncEditorFromValue = (value?: string | null) => {
     const editor = editorRef.current;
@@ -195,6 +235,55 @@ export const TaskDescriptionMentionInput = ({
   const minHeightClass =
     rows <= 2 ? "min-h-16" : rows <= 4 ? "min-h-24" : "min-h-32";
 
+  const mentionDropdown =
+    mentionOpen && mentionDropdownRect
+      ? createPortal(
+          <div
+            className="overflow-hidden rounded-md border bg-popover shadow-md"
+            style={{
+              position: "fixed",
+              top: mentionDropdownRect.top,
+              left: mentionDropdownRect.left,
+              width: mentionDropdownRect.width,
+              zIndex: 100,
+            }}
+          >
+            {isPending ? (
+              <div className="px-3 py-2 text-sm text-muted-foreground">
+                Loading team members…
+              </div>
+            ) : candidates.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-muted-foreground">
+                No matches for “{mentionQuery || "@"}”
+              </div>
+            ) : (
+              <ul className="max-h-48 overflow-y-auto py-1">
+                {candidates.map((member, index) => (
+                  <li key={`member:${member.id}`}>
+                    <button
+                      type="button"
+                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted ${
+                        index === highlightedIndex ? "bg-muted" : ""
+                      }`}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => selectCandidate(member)}
+                    >
+                      <span>{getMemberOptionText(member)}</span>
+                      <span className="ml-2 text-[10px] uppercase text-muted-foreground">
+                        {teamIdSet.has(String(member.id))
+                          ? "Project"
+                          : "Team member"}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <FormField id={id} className={className} name={field.name}>
       {label !== false ? (
@@ -229,44 +318,9 @@ export const TaskDescriptionMentionInput = ({
             onPaste={handlePaste}
             onBlur={field.onBlur}
           />
-
-          {mentionOpen ? (
-            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
-              {isPending ? (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  Loading team members…
-                </div>
-              ) : candidates.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  No matches for “{mentionQuery || "@"}”
-                </div>
-              ) : (
-                <ul className="max-h-48 overflow-y-auto py-1">
-                  {candidates.map((member, index) => (
-                    <li key={`member:${member.id}`}>
-                      <button
-                        type="button"
-                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted ${
-                          index === highlightedIndex ? "bg-muted" : ""
-                        }`}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => selectCandidate(member)}
-                      >
-                        <span>{getMemberOptionText(member)}</span>
-                        <span className="ml-2 text-[10px] uppercase text-muted-foreground">
-                          {teamIdSet.has(String(member.id))
-                            ? "Project"
-                            : "Team member"}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : null}
         </div>
       </FormControl>
+      {mentionDropdown}
       <InputHelperText helperText="Use @ to tag team members directly in the description." />
       <FormError />
     </FormField>

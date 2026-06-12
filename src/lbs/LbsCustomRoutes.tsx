@@ -44,8 +44,7 @@ import { ContractsList } from "@/lbs/contracts/ContractsList";
 import { ContractShow } from "@/lbs/contracts/ContractShow";
 import { ClientBillingPage } from "@/lbs/billing/ClientBillingPage";
 import { StandaloneInvoiceCreatePage } from "@/lbs/billing/StandaloneInvoiceCreatePage";
-import { StandaloneInvoiceShowPage } from "@/lbs/billing/StandaloneInvoiceShowPage";
-import { StandaloneInvoiceEditPage } from "@/lbs/billing/StandaloneInvoiceEditPage";
+import { InvoiceWorkspaceRedirect } from "@/lbs/billing/InvoiceRouteRedirects";
 import { TicketsList } from "@/lbs/tickets/TicketsList";
 import { TicketShow } from "@/lbs/tickets/TicketShow";
 import { lazy, Suspense } from "react";
@@ -337,7 +336,7 @@ export const renderLbsCustomRoutes = ({
         path="/billing/invoices/:id/show"
         element={
           <ProtectedRoute resource="client_invoices" action="show">
-            <StandaloneInvoiceShowPage />
+            <InvoiceWorkspaceRedirect />
           </ProtectedRoute>
         }
       />
@@ -345,7 +344,7 @@ export const renderLbsCustomRoutes = ({
         path="/billing/invoices/:id/edit"
         element={
           <ProtectedRoute resource="client_invoices" action="edit">
-            <StandaloneInvoiceEditPage />
+            <InvoiceWorkspaceRedirect />
           </ProtectedRoute>
         }
       />

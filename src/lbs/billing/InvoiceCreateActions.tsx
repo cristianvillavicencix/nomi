@@ -21,6 +21,8 @@ type InvoiceCreateActionsProps = {
   onAction: (action: InvoiceCreateAction) => void;
   /** Cancel link target (defaults to Billing list). */
   cancelTo?: string;
+  /** When false, hides the Cancel button (e.g. embedded invoice workspace). */
+  showCancel?: boolean;
   onConfigurePayment?: () => void;
   showCharge?: boolean;
   onCharge?: () => void;
@@ -32,6 +34,7 @@ export const InvoiceCreateActions = ({
   pendingAction,
   onAction,
   cancelTo = "/billing",
+  showCancel = true,
   onConfigurePayment,
   showCharge = false,
   onCharge,
@@ -129,15 +132,17 @@ export const InvoiceCreateActions = ({
         </DropdownMenu>
       </div>
 
-      <Button type="button" variant="outline" asChild>
-        <Link
-          to={cancelTo}
-          aria-disabled={isPending}
-          tabIndex={isPending ? -1 : 0}
-        >
-          Cancel
-        </Link>
-      </Button>
+      {showCancel ? (
+        <Button type="button" variant="outline" asChild>
+          <Link
+            to={cancelTo}
+            aria-disabled={isPending}
+            tabIndex={isPending ? -1 : 0}
+          >
+            Cancel
+          </Link>
+        </Button>
+      ) : null}
     </div>
   );
 };

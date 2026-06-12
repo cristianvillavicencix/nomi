@@ -248,7 +248,7 @@ export const StandaloneInvoiceCreatePage = () => {
     onSuccess: ({ action, invoice, shareUrl: link }) => {
       if (action === "draft") {
         notify("Invoice saved", { type: "success" });
-        navigate(`/billing/invoices/${invoice.id}/edit`);
+        navigate(`/billing?invoice=${invoice.id}`);
         return;
       }
 
@@ -276,7 +276,7 @@ export const StandaloneInvoiceCreatePage = () => {
 
       if (action === "print") {
         notify("Invoice saved and PDF downloaded", { type: "success" });
-        navigate(`/billing/invoices/${invoice.id}/edit`);
+        navigate(`/billing?invoice=${invoice.id}`);
       }
     },
     onError: (error: Error) => {
@@ -290,7 +290,7 @@ export const StandaloneInvoiceCreatePage = () => {
   const handleSendComplete = () => {
     setSendDialogOpen(false);
     if (createdInvoice?.id) {
-      navigate(`/billing/invoices/${createdInvoice.id}/edit`);
+      navigate(`/billing?invoice=${createdInvoice.id}`);
     } else {
       navigate("/billing", { state: { tab: "invoices" } });
     }
@@ -299,7 +299,7 @@ export const StandaloneInvoiceCreatePage = () => {
   const handleShareClose = (open: boolean) => {
     setShareDialogOpen(open);
     if (!open && createdInvoice?.id) {
-      navigate(`/billing/invoices/${createdInvoice.id}/edit`);
+      navigate(`/billing?invoice=${createdInvoice.id}`);
     }
   };
 
@@ -312,7 +312,7 @@ export const StandaloneInvoiceCreatePage = () => {
   const handleScheduleClose = (open: boolean) => {
     setScheduleDialogOpen(open);
     if (!open && createdInvoice?.id) {
-      navigate(`/billing/invoices/${createdInvoice.id}/edit`);
+      navigate(`/billing?invoice=${createdInvoice.id}`);
     }
   };
 
@@ -384,7 +384,7 @@ export const StandaloneInvoiceCreatePage = () => {
         onOpenChange={(open) => {
           setSendDialogOpen(open);
           if (!open && createdInvoice?.id) {
-            navigate(`/billing/invoices/${createdInvoice.id}/edit`);
+            navigate(`/billing?invoice=${createdInvoice.id}`);
           }
         }}
         invoice={createdInvoice}
@@ -411,7 +411,7 @@ export const StandaloneInvoiceCreatePage = () => {
         lineItems={scheduleLineItems}
         onScheduled={() => {
           if (createdInvoice?.id) {
-            navigate(`/billing/invoices/${createdInvoice.id}/edit`);
+            navigate(`/billing?invoice=${createdInvoice.id}`);
           }
         }}
       />

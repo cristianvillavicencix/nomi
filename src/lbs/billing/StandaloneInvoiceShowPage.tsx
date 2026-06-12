@@ -97,7 +97,10 @@ export const StandaloneInvoiceShowPage = () => {
 
   if (canEditClientInvoice(invoice)) {
     return (
-      <Navigate to={`/billing/invoices/${invoice.id}/edit`} replace />
+      <Navigate
+        to={`/billing?invoice=${encodeURIComponent(String(invoice.id))}`}
+        replace
+      />
     );
   }
 

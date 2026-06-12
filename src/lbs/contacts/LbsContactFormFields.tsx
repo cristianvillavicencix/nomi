@@ -149,8 +149,10 @@ const ContactPersonalInformationInputs = () => {
         source="email_jsonb"
         label="Email addresses"
         helperText={false}
+        resource="contacts"
       >
         <SimpleFormIterator
+          resource="contacts"
           inline
           disableReordering
           disableClear
@@ -177,8 +179,14 @@ const ContactPersonalInformationInputs = () => {
           />
         </SimpleFormIterator>
       </ArrayInput>
-      <ArrayInput source="phone_jsonb" label="Phone numbers" helperText={false}>
+      <ArrayInput
+        source="phone_jsonb"
+        label="Phone numbers"
+        helperText={false}
+        resource="contacts"
+      >
         <SimpleFormIterator
+          resource="contacts"
           inline
           disableReordering
           disableClear

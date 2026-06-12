@@ -20,13 +20,15 @@ export const FaviconAvatarImage = ({
     setSourceIndex(0);
   }, [stableSources.join("|")]);
 
-  const src = stableSources[sourceIndex];
-  if (!src) return null;
+  const exhausted = sourceIndex >= stableSources.length;
+  const src = exhausted ? undefined : stableSources[sourceIndex];
+
+  if (!stableSources.length || exhausted || !src) {
+    return null;
+  }
 
   const handleError = () => {
-    setSourceIndex((current) =>
-      current + 1 < stableSources.length ? current + 1 : current,
-    );
+    setSourceIndex((current) => current + 1);
   };
 
   return (

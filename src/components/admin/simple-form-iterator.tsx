@@ -10,6 +10,7 @@ import type {
 } from "ra-core";
 import {
   RecordContextProvider,
+  ResourceContextProvider,
   SimpleFormIteratorBase,
   SimpleFormIteratorItemBase,
   useArrayInput,
@@ -87,6 +88,9 @@ export const SimpleFormIterator = (props: SimpleFormIteratorProps) => {
     );
   }
 
+  const resourceFromContext = useResourceContext({ resource });
+  const resolvedResource = resource ?? resourceFromContext ?? "configuration";
+
   const { fields } = useArrayInput(props);
   const record = useRecordContext(props);
 
@@ -99,41 +103,43 @@ export const SimpleFormIterator = (props: SimpleFormIteratorProps) => {
   });
 
   return fields ? (
-    <SimpleFormIteratorBase getItemDefaults={getItemDefaults} {...props}>
-      <div className={cn("w-full", disabled && "disabled", className)}>
-        <ul className="p-0 m-0 flex flex-col gap-2">
-          {fields.map((member, index) => (
-            <RecordContextProvider
-              key={member.id}
-              value={(records && records[index]) || {}}
-            >
-              <SimpleFormIteratorItem
-                disabled={disabled}
-                disableRemove={disableRemove}
-                disableReordering={disableReordering}
-                fields={fields}
-                getItemLabel={getItemLabel}
-                index={index}
-                removeButton={removeButton}
-                reOrderButtons={reOrderButtons}
-                resource={resource}
-                inline={inline}
+    <ResourceContextProvider value={resolvedResource}>
+      <SimpleFormIteratorBase getItemDefaults={getItemDefaults} {...props}>
+        <div className={cn("w-full", disabled && "disabled", className)}>
+          <ul className="p-0 m-0 flex flex-col gap-2">
+            {fields.map((member, index) => (
+              <RecordContextProvider
+                key={member.id}
+                value={(records && records[index]) || {}}
               >
-                {children}
-              </SimpleFormIteratorItem>
-            </RecordContextProvider>
-          ))}
-        </ul>
-        {!disabled && !(disableAdd && (disableClear || disableRemove)) && (
-          <div className="flex flex-row items-center gap-2">
-            {!disableAdd && addButton}
-            {fields.length > 0 && !disableClear && !disableRemove && (
-              <SimpleFormIteratorClearButton />
-            )}
-          </div>
-        )}
-      </div>
-    </SimpleFormIteratorBase>
+                <SimpleFormIteratorItem
+                  disabled={disabled}
+                  disableRemove={disableRemove}
+                  disableReordering={disableReordering}
+                  fields={fields}
+                  getItemLabel={getItemLabel}
+                  index={index}
+                  removeButton={removeButton}
+                  reOrderButtons={reOrderButtons}
+                  resource={resolvedResource}
+                  inline={inline}
+                >
+                  {children}
+                </SimpleFormIteratorItem>
+              </RecordContextProvider>
+            ))}
+          </ul>
+          {!disabled && !(disableAdd && (disableClear || disableRemove)) && (
+            <div className="flex flex-row items-center gap-2">
+              {!disableAdd && addButton}
+              {fields.length > 0 && !disableClear && !disableRemove && (
+                <SimpleFormIteratorClearButton />
+              )}
+            </div>
+          )}
+        </div>
+      </SimpleFormIteratorBase>
+    </ResourceContextProvider>
   ) : null;
 };
 
@@ -189,12 +195,6 @@ export const SimpleFormIteratorItem = React.forwardRef(
       removeButton = defaultRemoveItemButton,
       reOrderButtons = defaultReOrderButtons,
     } = props;
-    const resource = useResourceContext(props);
-    if (!resource) {
-      throw new Error(
-        "SimpleFormIteratorItem must be used in a ResourceContextProvider or be passed a resource prop.",
-      );
-    }
     const record = useRecordContext(props);
     if (!record) {
       throw new Error(

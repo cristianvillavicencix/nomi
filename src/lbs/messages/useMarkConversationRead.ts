@@ -12,6 +12,14 @@ import {
   persistConversationRead,
 } from "@/lbs/messages/persistConversationRead";
 
+const isDuplicateParticipantError = (error: unknown) => {
+  if (!error || typeof error !== "object") return false;
+  const status = (error as { status?: number }).status;
+  if (status === 409) return true;
+  const message = String((error as Error).message ?? "");
+  return message.includes("duplicate key");
+};
+
 const isPermissionDeniedError = (error: unknown) =>
   error instanceof Error &&
   error.message.includes("No tienes permiso para esta acción");
@@ -95,6 +103,10 @@ export const useMarkConversationRead = (
       .catch((error) => {
         if (isPermissionDeniedError(error)) {
           persistBlockedRef.current = conversationId;
+          return;
+        }
+        if (isDuplicateParticipantError(error)) {
+          return;
         }
       })
       .finally(() => {

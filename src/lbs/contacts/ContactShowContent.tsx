@@ -161,6 +161,7 @@ export const ContactShowContent = ({
   const sidebarProps = {
     contact: record,
     counts: {
+      deals: counts.deals,
       projects: counts.projects,
       tickets: counts.tickets,
       referrals: counts.referrals,

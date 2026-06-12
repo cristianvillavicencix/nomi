@@ -1,32 +1,16 @@
 import { useMemo, useState } from "react";
-import {
-  useGetList,
-  useGetMany,
-  useListContext,
-  useRefresh,
-} from "ra-core";
-import { Link, useNavigate } from "react-router";
-import type { Company, Contact } from "@/components/atomic-crm/types";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import { resolveInvoiceOrganizationName } from "@/lbs/billing/invoiceEmailTemplate";
-import { DataTable } from "@/components/admin/data-table";
+import { useRefresh } from "ra-core";
+import { Link } from "react-router";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
-import { InvoiceRowActions } from "@/lbs/billing/SendInvoiceDialog";
 import { CreateClientInvoiceButton } from "@/lbs/billing/CreateClientInvoiceDialog";
+import { InvoiceBillingWorkspace } from "@/lbs/billing/InvoiceBillingWorkspace";
 import { Plus } from "lucide-react";
 import {
-  formatBillingDate,
   INVOICE_FILTER_OPTIONS,
-  invoiceStatusLabel,
-  invoiceStatusVariant,
   type InvoiceStatusFilter,
 } from "@/lbs/billing/billingDisplayUtils";
-import { computeInvoiceBalanceDue } from "@/lbs/billing/invoicePaymentUtils";
-import type { ClientInvoice, Proposal } from "@/lbs/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoneyText } from "@/lib/permissions/MoneyText";
 
 const buildInvoiceFilter = (statusFilter: InvoiceStatusFilter) => {
   if (statusFilter === "all") return {};
@@ -48,17 +32,17 @@ export const ClientInvoicesTab = () => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
-        {INVOICE_FILTER_OPTIONS.map((option) => (
-          <Button
-            key={option.value}
-            type="button"
-            size="sm"
-            variant={statusFilter === option.value ? "default" : "outline"}
-            onClick={() => setStatusFilter(option.value)}
-          >
-            {option.label}
-          </Button>
-        ))}
+          {INVOICE_FILTER_OPTIONS.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={statusFilter === option.value ? "default" : "outline"}
+              onClick={() => setStatusFilter(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" asChild>
@@ -81,204 +65,8 @@ export const ClientInvoicesTab = () => {
         actions={false}
         pagination={<ListPagination rowsPerPageOptions={[25, 50, 100]} />}
       >
-        <ClientInvoicesTable />
+        <InvoiceBillingWorkspace />
       </List>
     </div>
-  );
-};
-
-const ClientInvoicesTable = () => {
-  const navigate = useNavigate();
-  const refresh = useRefresh();
-  const { title, companyLegalName } = useConfigurationContext();
-  const organizationName = useMemo(
-    () => resolveInvoiceOrganizationName({ title, companyLegalName }),
-    [title, companyLegalName],
-  );
-  const { data: invoices = [], isPending } = useListContext<ClientInvoice>();
-
-  const companyIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          invoices
-            .map((row) => row.company_id)
-            .filter((id): id is NonNullable<ClientInvoice["company_id"]> => id != null),
-        ),
-      ],
-    [invoices],
-  );
-  const contactIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          invoices
-            .map((row) => row.contact_id)
-            .filter((id): id is NonNullable<ClientInvoice["contact_id"]> => id != null),
-        ),
-      ],
-    [invoices],
-  );
-  const proposalIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          invoices
-            .map((row) => row.proposal_id)
-            .filter((id): id is NonNullable<ClientInvoice["proposal_id"]> => id != null),
-        ),
-      ],
-    [invoices],
-  );
-
-  const { data: companies = [] } = useGetMany<Company>(
-    "companies",
-    { ids: companyIds },
-    { enabled: companyIds.length > 0 },
-  );
-  const { data: contacts = [] } = useGetMany<Contact>(
-    "contacts",
-    { ids: contactIds },
-    { enabled: contactIds.length > 0 },
-  );
-  const { data: proposals = [] } = useGetMany<Proposal>(
-    "proposals",
-    { ids: proposalIds },
-    { enabled: proposalIds.length > 0 },
-  );
-
-  const companyById = useMemo(
-    () => new Map(companies.map((c) => [String(c.id), c])),
-    [companies],
-  );
-  const contactById = useMemo(
-    () => new Map(contacts.map((c) => [String(c.id), c])),
-    [contacts],
-  );
-  const proposalById = useMemo(
-    () => new Map(proposals.map((p) => [String(p.id), p])),
-    [proposals],
-  );
-
-  if (isPending) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>;
-  }
-
-  if (!invoices.length) {
-    return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        No invoices yet. Save a proposal with a payment plan or create a standalone invoice.
-      </p>
-    );
-  }
-
-  return (
-    <DataTable
-      rowClick={(rowId) => {
-        navigate(`/billing/invoices/${rowId}/edit`);
-      }}
-      rowClassName={() => "[&_td]:py-2.5"}
-    >
-      <DataTable.Col
-        source="invoice_number"
-        label="Invoice #"
-        render={(record: ClientInvoice) => (
-          <span className="font-medium text-blue-700">{record.invoice_number}</span>
-        )}
-      />
-      <DataTable.Col
-        source="issue_date"
-        label="Issued"
-        render={(record: ClientInvoice) => formatBillingDate(record.issue_date)}
-      />
-      <DataTable.Col
-        source="due_date"
-        label="Due"
-        render={(record: ClientInvoice) => formatBillingDate(record.due_date)}
-      />
-      <DataTable.Col
-        label="Client"
-        render={(record: ClientInvoice) => {
-          const company = record.company_id
-            ? companyById.get(String(record.company_id))
-            : null;
-          return company?.name ?? "—";
-        }}
-      />
-      <DataTable.Col
-        label="Proposal"
-        render={(record: ClientInvoice) => {
-          const proposal = record.proposal_id
-            ? proposalById.get(String(record.proposal_id))
-            : null;
-          if (!proposal) return "—";
-          return proposal.proposal_number
-            ? `#${proposal.proposal_number}`
-            : proposal.title;
-        }}
-      />
-      <DataTable.Col source="description" label="Description" />
-      <DataTable.Col
-        source="amount"
-        label="Balance"
-        render={(record: ClientInvoice) => {
-          const balanceDue = computeInvoiceBalanceDue(
-            Number(record.amount) || 0,
-            Number(record.amount_paid) || 0,
-          );
-          const amountPaid = Number(record.amount_paid) || 0;
-          return (
-            <div className="text-right">
-              <MoneyText value={balanceDue} />
-              {amountPaid > 0.01 && record.status !== "paid" ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {amountPaid.toLocaleString("en-US", {
-                    style: "currency",
-                    currency: record.currency ?? "USD",
-                  })}{" "}
-                  paid
-                </p>
-              ) : null}
-            </div>
-          );
-        }}
-      />
-      <DataTable.Col
-        source="status"
-        label="Status"
-        render={(record: ClientInvoice) => (
-          <div className="flex flex-col items-start gap-1">
-            <Badge
-              variant={invoiceStatusVariant(record.status, record.due_date)}
-              className="capitalize"
-            >
-              {invoiceStatusLabel(record.status, record.due_date)}
-            </Badge>
-          </div>
-        )}
-      />
-      <DataTable.Col
-        label=""
-        render={(record: ClientInvoice) => {
-          const company = record.company_id
-            ? companyById.get(String(record.company_id))
-            : null;
-          const contact = record.contact_id
-            ? contactById.get(String(record.contact_id))
-            : null;
-          return (
-            <div onClick={(event) => event.stopPropagation()} role="presentation">
-              <InvoiceRowActions
-                invoice={record}
-                organizationName={organizationName}
-                company={company}
-                contact={contact}
-                onRefresh={refresh}
-              />
-            </div>
-          );
-        }}
-      />
-    </DataTable>
   );
 };

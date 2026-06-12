@@ -1,4 +1,7 @@
-import { getFaviconSourcesForEmail } from "@/lib/faviconSources";
+import {
+  expandFaviconSources,
+  getFaviconSourcesForEmail,
+} from "@/lib/faviconSources";
 import { fetchWithTimeout } from "../../misc/fetchWithTimeout";
 import { DOMAINS_NOT_SUPPORTING_FAVICON } from "../../misc/unsupportedDomains.const";
 import type { Contact } from "../../types";
@@ -47,12 +50,15 @@ async function getFaviconUrl(domain: string): Promise<string | null> {
 export const getContactAvatarSources = (
   record: Partial<Contact>,
 ): string[] => {
-  if (record.avatar?.src?.trim()) {
-    return [record.avatar.src.trim()];
-  }
+  const avatarSrc = record.avatar?.src?.trim();
   const firstEmail = record.email_jsonb?.find(
     (entry) => typeof entry?.email === "string" && entry.email.trim().length > 0,
   )?.email;
+
+  if (avatarSrc) {
+    const fromAvatar = expandFaviconSources([avatarSrc]);
+    if (fromAvatar.length) return fromAvatar;
+  }
   return firstEmail ? getFaviconSourcesForEmail(firstEmail) : [];
 };
 

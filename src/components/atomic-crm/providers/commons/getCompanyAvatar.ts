@@ -1,8 +1,10 @@
 import type { Company } from "../../types";
 import {
+  expandFaviconSources,
   extractDomainFromUrl,
   getFaviconSourcesForWebsite,
   getPrimaryFaviconSrc,
+  isLegacyStoredFaviconUrl,
 } from "@/lib/faviconSources";
 
 // Main function to get the avatar URL
@@ -23,10 +25,23 @@ export async function getCompanyAvatar(record: Partial<Company>): Promise<{
 export const getCompanyFaviconSources = (
   record: Partial<Company>,
 ): string[] => {
-  if (record.logo?.src?.trim()) {
-    return [record.logo.src.trim()];
+  const logoSrc = record.logo?.src?.trim();
+  const websiteSources = getFaviconSourcesForWebsite(record.website);
+
+  if (!logoSrc) {
+    return websiteSources;
   }
-  return getFaviconSourcesForWebsite(record.website);
+
+  if (isLegacyStoredFaviconUrl(logoSrc)) {
+    const legacySources = expandFaviconSources([logoSrc], record.website);
+    const merged = [...websiteSources];
+    for (const url of legacySources) {
+      if (!merged.includes(url)) merged.push(url);
+    }
+    return merged.length ? merged : websiteSources;
+  }
+
+  return expandFaviconSources([logoSrc], record.website);
 };
 
 export const getCompanyFaviconSrc = (

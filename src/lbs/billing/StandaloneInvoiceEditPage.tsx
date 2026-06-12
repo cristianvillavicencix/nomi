@@ -48,6 +48,7 @@ import {
   type InvoiceLineDraft,
 } from "@/lbs/billing/invoiceLineUtils";
 import {
+  computeInvoiceBalanceDue,
   invoicePaymentModeFromRecord,
   upfrontPercentFromMode,
   canChargeClientInvoice,
@@ -58,14 +59,30 @@ import {
   parseInvoiceRemainderSchedule,
   type InvoiceRemainderScheduleConfig,
 } from "@/lbs/billing/invoiceRemainderSchedule";
-import { invoiceStatusLabel } from "@/lbs/billing/billingDisplayUtils";
+import {
+  invoiceStatusLabel,
+  invoiceStatusVariant,
+} from "@/lbs/billing/billingDisplayUtils";
+import { InvoiceDocumentPreview } from "@/lbs/billing/InvoiceDocumentPreview";
 import { resolveInvoiceOrganizationName } from "@/lbs/billing/invoiceEmailTemplate";
 import { getInvoiceOrganizationBranding } from "@/lbs/billing/invoiceOrganizationInfo";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/lbs/types";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-export const StandaloneInvoiceEditPage = () => {
-  const { id = "" } = useParams();
+type StandaloneInvoiceEditPageProps = {
+  /** Render inside the billing invoice sidebar workspace. */
+  embedded?: boolean;
+  /** When embedded, pass the invoice id directly instead of reading from the URL. */
+  invoiceId?: string;
+};
+
+export const StandaloneInvoiceEditPage = ({
+  embedded = false,
+  invoiceId: invoiceIdProp,
+}: StandaloneInvoiceEditPageProps = {}) => {
+  const { id: routeId = "" } = useParams();
+  const id = invoiceIdProp ?? routeId;
   const navigate = useNavigate();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -390,8 +407,8 @@ export const StandaloneInvoiceEditPage = () => {
     );
   }
 
-  if (!editable) {
-    return <Navigate to={`/billing/invoices/${id}/show`} replace />;
+  if (!editable && !embedded) {
+    return <Navigate to={`/billing?invoice=${encodeURIComponent(id)}`} replace />;
   }
 
   const statusRibbon =
@@ -399,9 +416,57 @@ export const StandaloneInvoiceEditPage = () => {
       ? "Draft"
       : invoiceStatusLabel(invoice.status, invoice.due_date);
 
+  const shellClass = embedded
+    ? "flex min-h-0 flex-1 flex-col"
+    : "flex min-h-0 flex-1 flex-col bg-slate-100/80";
+
+  const previewTotals = calculateInvoiceTotals(lines, discountPercent);
+
+  if (embedded && !editable) {
+    return (
+      <div className={shellClass}>
+        <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
+          <PageActions>
+            <PageTitle label={invoice.invoice_number} />
+            <Badge
+              variant={invoiceStatusVariant(invoice.status, invoice.due_date)}
+              className="ml-auto capitalize"
+            >
+              {invoiceStatusLabel(invoice.status, invoice.due_date)}
+            </Badge>
+          </PageActions>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-4">
+          <InvoiceDocumentPreview
+            organizationName={organizationName}
+            organizationWebsite={companyWebsite}
+            organizationAddress={organizationAddress}
+            invoiceNumber={invoice.invoice_number}
+            status={invoice.status}
+            issueDate={issueDate}
+            dueDate={dueDate}
+            terms={terms}
+            company={company}
+            contact={contact}
+            lines={lines}
+            termsAndConditions={termsAndConditions}
+            subtotal={previewTotals.subtotal}
+            discountAmount={previewTotals.discountAmount}
+            feeAmount={previewTotals.feeAmount}
+            total={previewTotals.total}
+            balanceDue={computeInvoiceBalanceDue(
+              previewTotals.total,
+              Number(invoice.amount_paid) || 0,
+            )}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-slate-100/80">
-      <div className="border-b bg-background px-4 py-3 md:px-6">
+    <div className={shellClass}>
+      <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
         <PageActions>
           <PageTitle label={invoice.invoice_number} />
           <InvoiceCreateActions
@@ -409,6 +474,7 @@ export const StandaloneInvoiceEditPage = () => {
             pendingAction={pendingAction}
             onAction={(action) => saveMutation.mutate(action)}
             cancelTo="/billing"
+            showCancel={!embedded}
             onConfigurePayment={() => setPaymentSetupOpen(true)}
             showCharge={invoice ? canChargeClientInvoice(invoice) : false}
             onCharge={() => setChargeDialogOpen(true)}
@@ -432,7 +498,13 @@ export const StandaloneInvoiceEditPage = () => {
         }}
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
+      <div
+        className={
+          embedded
+            ? "min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-4"
+            : "min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+        }
+      >
         <InlineInvoiceEditor
           organizationName={organizationName}
           organizationWebsite={companyWebsite}

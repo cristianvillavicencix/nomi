@@ -72,6 +72,8 @@ export const MessagesQuickAccessProvider = ({
         conversationId,
         memberId: identity.id,
         readAt: timestamp,
+      }).catch(() => {
+        // Swallow — hook callers handle permission errors; duplicate reads are retried safely.
       });
     },
     [dataProvider, identity?.id, queryClient],
