@@ -1,7 +1,7 @@
 # Restructure Proposal (STEP 3)
 
 **Date:** 2026-06-02  
-**Status:** Proposal only — **no moves during audit**. Execute after P0–P3 fix phase stabilizes runtime.
+**Status:** Phases B, C, E largely complete (2026-06). Phase D **cancelled**. Phase A optional docs remain.
 
 ---
 
@@ -112,9 +112,13 @@ Keep single exported `dataProvider` that spreads `baseDataProvider` + module ext
 2. Remaining `src/lbs/*` → matching `src/modules/*`
 3. Update imports; leave re-export shims in `src/lbs/` for one release if needed.
 
-### Phase D — Consolidate atomic-crm (higher risk)
+### Phase D — Consolidate atomic-crm (higher risk) — **CANCELLED**
 
-Move `atomic-crm/contacts`, `companies`, `deals`, `tasks` into `modules/clients` and `modules/deals`. Keep `platform/layout`, `platform/login`, providers.
+**Status (2026-06): cancelled — not deferred.**
+
+Phase D cancelled (2026-06): cosmetic only, no runtime impact, and `src/modules/` already contains the merged LBS domains — merging atomic-crm directories on top would risk regressions for zero user benefit. `atomic-crm/` paths are stable and permanent.
+
+Originally: move `atomic-crm/contacts`, `companies`, `deals`, `tasks` into `modules/clients` and `modules/deals`. Keep `platform/layout`, `platform/login`, providers. **Do not execute** — future agents should not attempt this phase without explicit product approval.
 
 ### Phase E — Router & mobile parity
 
@@ -152,10 +156,10 @@ Move `atomic-crm/contacts`, `companies`, `deals`, `tasks` into `modules/clients`
 
 ## 7. Success metrics
 
-- `dataProvider.ts` under **800 LOC** (facade + lifecycle only).
-- Zero imports from `src/lbs/` after Phase C (or shims only).
-- All product modules discoverable from sidebar (including Reports under Tools).
-- Mobile admin reaches messages + calendar OR explicit “desktop only” banner.
+- `dataProvider.ts` under **800 LOC** (facade + lifecycle only). ✅ Achieved 2026-06 — helpers extracted to `dataProviderWriteHelpers.ts` and `dataProviderSearch.ts`.
+- Zero imports from `src/lbs/` after Phase C (or shims only). ✅
+- All product modules discoverable from sidebar (including Reports under Tools). ✅
+- Mobile admin reaches messages + calendar OR explicit “desktop only” banner. ✅
 
 ---
 
