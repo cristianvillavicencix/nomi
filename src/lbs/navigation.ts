@@ -245,6 +245,39 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
   },
 ];
 
+export const LBS_PLACEHOLDER_MODULES = {
+  proposals: {
+    title: "Proposals",
+    description:
+      "Create and send proposals, track views, and convert accepted quotes into projects.",
+    phase: 4,
+  },
+  contracts: {
+    title: "Contracts",
+    description:
+      "Manage contract drafts, signatures, and active agreements linked to clients and projects.",
+    phase: 4,
+  },
+  billing: {
+    title: "Billing",
+    description:
+      "Track invoices (INV-YYYY-####), email PDFs, collect payments, and view monthly revenue.",
+    phase: 4,
+  },
+  webForms: {
+    title: "Web Forms",
+    description:
+      "Build intake forms that feed clients, projects, files, tasks, and notes.",
+    phase: 5,
+  },
+  tickets: {
+    title: "Tickets",
+    description:
+      "Simple helpdesk for client support linked to clients, projects, and team members.",
+    phase: 6,
+  },
+} as const;
+
 /** Flat list for top navigation and legacy callers. */
 export const LBS_NAV_ITEMS: LbsNavItem[] = [
   ...LBS_NAV_STANDALONE,
