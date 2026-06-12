@@ -521,7 +521,7 @@ const dataProviderWithCustomMethods = {
 
   async signUp(_data: SignUpData) {
     throw new Error(
-      "El registro público está deshabilitado. Pide a tu administrador una invitación desde Configuración → Usuarios.",
+      "Public registration is disabled. Ask your administrator to invite you from Settings → Users.",
     );
   },
   async organizationMemberCreate(body: OrganizationMemberFormData) {

@@ -185,7 +185,7 @@ export const authProvider: AuthProvider = {
       await supabase.auth.signOut();
       throw {
         redirectTo: "/login",
-        message: "Tu cuenta ya no tiene acceso a este CRM.",
+        message: "Your account no longer has access to this CRM.",
       };
     }
 

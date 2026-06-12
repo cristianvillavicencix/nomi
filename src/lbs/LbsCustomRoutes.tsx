@@ -29,11 +29,6 @@ import { FormBuilderPage } from "@/lbs/forms-v2/builder/FormBuilderPage";
 import { SubmissionsListPage } from "@/lbs/forms-v2/submissions/SubmissionsListPage";
 import { SubmissionDetailPage } from "@/lbs/forms-v2/submissions/SubmissionDetailPage";
 import { FormAnalyticsPage } from "@/lbs/forms-v2/analytics/FormAnalyticsPage";
-import {
-  ContractsPlaceholderPage,
-  ProposalsPlaceholderPage,
-  TicketsPlaceholderPage,
-} from "@/lbs/placeholders";
 import { ProposalsList } from "@/lbs/proposals/ProposalsList";
 import { ProposalCreate } from "@/lbs/proposals/ProposalCreate";
 import { ProposalEdit } from "@/lbs/proposals/ProposalEdit";
@@ -163,7 +158,7 @@ export const renderLbsCustomRoutes = ({
       <Route
         path="/calendar"
         element={
-          <ProtectedRoute resource="tasks" action="list">
+          <ProtectedRoute resource="calendar_events" action="list">
             <CalendarPage />
           </ProtectedRoute>
         }
@@ -422,16 +417,6 @@ export const renderLbsCustomRoutes = ({
           </ProtectedRoute>
         }
       />
-      {/* Legacy placeholder routes kept for direct links during rollout */}
-      <Route
-        path="/proposals-placeholder"
-        element={<ProposalsPlaceholderPage />}
-      />
-      <Route
-        path="/contracts-placeholder"
-        element={<ContractsPlaceholderPage />}
-      />
-      <Route path="/tickets-placeholder" element={<TicketsPlaceholderPage />} />
     </>
   );
 };

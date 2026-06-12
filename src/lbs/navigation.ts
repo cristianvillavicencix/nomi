@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart2,
   BookUser,
   Briefcase,
   Building2,
@@ -231,6 +232,15 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
         resource: "monitored_websites",
         action: "list",
       },
+      {
+        to: "/reports",
+        label: "Reports",
+        icon: BarChart2,
+        activePattern: "/reports/*",
+        capability: "reports.view",
+        resource: "reports",
+        action: "list",
+      },
     ],
   },
 ];
@@ -241,39 +251,6 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
   ...LBS_CLIENTS_NAV_COLLAPSIBLE.children,
   ...LBS_NAV_GROUPS.flatMap((group) => group.items),
 ];
-
-export const LBS_PLACEHOLDER_MODULES = {
-  proposals: {
-    title: "Proposals",
-    description:
-      "Create and send proposals, track views, and convert accepted quotes into projects.",
-    phase: 4,
-  },
-  contracts: {
-    title: "Contracts",
-    description:
-      "Manage contract drafts, signatures, and active agreements linked to clients and projects.",
-    phase: 4,
-  },
-  billing: {
-    title: "Billing",
-    description:
-      "Track invoices (INV-YYYY-####), email PDFs, collect payments, and view monthly revenue.",
-    phase: 4,
-  },
-  webForms: {
-    title: "Web Forms",
-    description:
-      "Build intake forms that feed clients, projects, files, tasks, and notes.",
-    phase: 5,
-  },
-  tickets: {
-    title: "Tickets",
-    description:
-      "Simple helpdesk for client support linked to clients, projects, and team members.",
-    phase: 6,
-  },
-} as const;
 
 /**
  * Contact status filters — canonical choices live in `@/lbs/constants/contactStatus`.

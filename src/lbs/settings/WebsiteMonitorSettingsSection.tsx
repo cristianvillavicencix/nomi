@@ -234,8 +234,8 @@ export const WebsiteMonitorSettingsSection = () => {
         <CardContent className="space-y-4">
           <SettingRow
             id="wm-sms-enabled"
-            label="Alertas SMS activas"
-            description="Interruptor global. Si está off, no se envían SMS aunque un sitio tenga alertas on."
+            label="SMS alerts enabled"
+            description="Global toggle. When off, no SMS alerts are sent even if a site has alerts enabled."
             checked={settings.sms_alerts_enabled}
             disabled={!settings.enabled}
             onCheckedChange={(checked) =>

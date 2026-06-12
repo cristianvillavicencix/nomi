@@ -296,7 +296,6 @@ const DesktopAdmin = (props: CoreAdminProps) => {
             </ProtectedRoute>
           }
         />
-        <Route path="/import" element={<Navigate to="/" replace />} />
         <Route
           path="/reports"
           element={

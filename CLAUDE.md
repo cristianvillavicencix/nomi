@@ -10,3 +10,7 @@ Full CRM audit completed. Before large changes or deletions, read:
 - **Restructure proposal:** [`docs/audit/RESTRUCTURE-PROPOSAL.md`](docs/audit/RESTRUCTURE-PROPOSAL.md)
 
 Fix phase is separate from audit — do not delete orphaned routes until approved (`docs/audit/19-orphaned-routes.md`).
+
+## Language
+
+Chat with the user in Spanish (explanations, plans, results). Code, commits, UI copy and docs stay in English per AGENT-RULES.md.
