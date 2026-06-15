@@ -12,6 +12,7 @@ import { ReferenceInput } from "@/components/admin/reference-input";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { TextInput } from "@/components/admin/text-input";
 import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
+import type { GooglePlaceDetails } from "@/lib/googlePlaces";
 import { SelectInput } from "@/components/admin/select-input";
 import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
@@ -53,17 +54,15 @@ export const LbsContactFormFields = ({
   }
 
   return (
-    <div className="flex flex-col gap-6 p-1">
+    <div className="flex flex-col gap-4 p-1">
       <ContactBasicsSection lockCompanyId={lockCompanyId} />
-      <Separator />
       <div className={`flex gap-6 ${isMobile ? "flex-col" : "flex-row"}`}>
-        <div className="flex flex-col gap-6 flex-1">
-          <ContactPersonalInformationInputs />
+        <div className="flex flex-col gap-8 flex-1">
+          <ContactInfoInputs />
         </div>
-        {isMobile ? null : (
-          <Separator orientation="vertical" className="flex-shrink-0" />
-        )}
-        <div className="flex flex-col gap-6 flex-1">
+        <Separator orientation={isMobile ? "horizontal" : "vertical"} />
+        <div className="flex flex-col gap-8 flex-1">
+          <ContactAddressInputs />
           <ContactManagementInputs />
         </div>
       </div>
@@ -114,7 +113,7 @@ const ContactBasicsSection = ({
   </div>
 );
 
-const ContactPersonalInformationInputs = () => {
+const ContactInfoInputs = () => {
   const { getValues, setValue } = useFormContext();
 
   const handleEmailChange = (emailAddress: string) => {
@@ -210,22 +209,56 @@ const ContactPersonalInformationInputs = () => {
           />
         </SimpleFormIterator>
       </ArrayInput>
-      {isGooglePlacesEnabled() ? (
-        <GooglePlacesAutocompleteInput
-          source="address"
-          label="Address"
-          mode="address"
-          multiline
-          helperText={false}
-        />
-      ) : (
-        <TextInput source="address" helperText={false} />
-      )}
     </div>
   );
 };
 
 const personalInfoTypes = [{ id: "Work" }, { id: "Home" }, { id: "Other" }];
+
+const ContactAddressInputs = () => {
+  const { setValue } = useFormContext();
+  const placesEnabled = isGooglePlacesEnabled();
+
+  const handlePlaceDetails = (details: GooglePlaceDetails) => {
+    if (details.formattedAddress) {
+      setValue("address", details.formattedAddress, { shouldDirty: true });
+    }
+    if (details.city) {
+      setValue("city", details.city, { shouldDirty: true });
+    }
+    if (details.stateAbbr) {
+      setValue("state_abbr", details.stateAbbr, { shouldDirty: true });
+    }
+    if (details.zipcode) {
+      setValue("zipcode", details.zipcode, { shouldDirty: true });
+    }
+    if (details.country) {
+      setValue("country", details.country, { shouldDirty: true });
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h6 className="text-lg font-semibold">Address</h6>
+      {placesEnabled ? (
+        <GooglePlacesAutocompleteInput
+          source="address"
+          label="Street"
+          mode="address"
+          multiline
+          helperText={false}
+          onPlaceDetails={handlePlaceDetails}
+        />
+      ) : (
+        <TextInput source="address" label="Street" helperText={false} />
+      )}
+      <TextInput source="city" helperText={false} />
+      <TextInput source="zipcode" helperText={false} />
+      <TextInput source="state_abbr" label="State" helperText={false} />
+      <TextInput source="country" helperText={false} />
+    </div>
+  );
+};
 
 const ContactManagementInputs = () => (
   <div className="flex flex-col gap-4">
