@@ -426,15 +426,17 @@ export const StandaloneInvoiceEditPage = ({
     return (
       <div className={shellClass}>
         <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
-          <PageActions>
-            <PageTitle label={invoice.invoice_number} />
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-base font-semibold">
+              {invoice.invoice_number}
+            </h2>
             <Badge
               variant={invoiceStatusVariant(invoice.status, invoice.due_date)}
               className="ml-auto capitalize"
             >
               {invoiceStatusLabel(invoice.status, invoice.due_date)}
             </Badge>
-          </PageActions>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-4">
           <InvoiceDocumentPreview
@@ -464,23 +466,35 @@ export const StandaloneInvoiceEditPage = ({
     );
   }
 
+  const headerInner = (
+    <>
+      {embedded ? (
+        <h2 className="text-base font-semibold">{invoice.invoice_number}</h2>
+      ) : (
+        <PageTitle label={invoice.invoice_number} />
+      )}
+      <InvoiceCreateActions
+        isPending={saveMutation.isPending}
+        pendingAction={pendingAction}
+        onAction={(action) => saveMutation.mutate(action)}
+        cancelTo="/billing"
+        showCancel={!embedded}
+        onConfigurePayment={() => setPaymentSetupOpen(true)}
+        showCharge={invoice ? canChargeClientInvoice(invoice) : false}
+        onCharge={() => setChargeDialogOpen(true)}
+        chargeDisabled={saveMutation.isPending}
+      />
+    </>
+  );
+
   return (
     <div className={shellClass}>
       <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
-        <PageActions>
-          <PageTitle label={invoice.invoice_number} />
-          <InvoiceCreateActions
-            isPending={saveMutation.isPending}
-            pendingAction={pendingAction}
-            onAction={(action) => saveMutation.mutate(action)}
-            cancelTo="/billing"
-            showCancel={!embedded}
-            onConfigurePayment={() => setPaymentSetupOpen(true)}
-            showCharge={invoice ? canChargeClientInvoice(invoice) : false}
-            onCharge={() => setChargeDialogOpen(true)}
-            chargeDisabled={saveMutation.isPending}
-          />
-        </PageActions>
+        {embedded ? (
+          <div className="flex flex-wrap items-center gap-3">{headerInner}</div>
+        ) : (
+          <PageActions>{headerInner}</PageActions>
+        )}
       </div>
 
       <InvoiceOnlinePaymentSetupDialog
