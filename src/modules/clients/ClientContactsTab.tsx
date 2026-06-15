@@ -37,7 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { Status } from "@/components/atomic-crm/misc/Status";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { ContactEditModal } from "@/components/atomic-crm/contacts/ContactEditModal";
+import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { ContactShowSheet } from "@/modules/clients/ContactShowSheet";
 import type { CompanyWithPrimaryContact } from "@/modules/clients/clientProfile";
 import {
@@ -280,7 +280,7 @@ export const ClientContactsTab = ({
         onOpenChange={setSheetOpen}
       />
       {editContactId ? (
-        <ContactEditModal
+        <ContactFormDialog
           contactId={editContactId}
           open={editOpen}
           onOpenChange={(open) => {

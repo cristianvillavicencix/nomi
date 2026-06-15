@@ -25,7 +25,7 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { ContactEditModal } from "@/components/atomic-crm/contacts/ContactEditModal";
+import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import type { Contact } from "@/components/atomic-crm/types";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
@@ -228,7 +228,7 @@ const ContactsLayout = () => {
       </DataTable>
 
       {editContactId != null ? (
-        <ContactEditModal
+        <ContactFormDialog
           contactId={editContactId}
           open={editOpen}
           onOpenChange={(open) => {

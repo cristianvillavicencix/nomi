@@ -1,10 +1,13 @@
 import type { Identifier } from "ra-core";
 import {
   CreateBase,
+  EditBase,
   Form,
+  useEditContext,
   useGetIdentity,
   useNotify,
   useRefresh,
+  useTranslate,
 } from "ra-core";
 import { Loader2, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -36,6 +39,10 @@ import {
   compactContactFieldsToPayload,
   LbsContactFormFields,
 } from "@/modules/contacts/LbsContactFormFields";
+import {
+  LBS_LEAD_SOURCE_OTHER,
+  LBS_LEAD_SOURCE_REFERRAL,
+} from "@/modules/leads/leadFormConstants";
 
 /** Hide company field in LbsContactFormFields while company is not created yet. */
 export const PENDING_COMPANY_LOCK = "__pending_company__" as Identifier;
@@ -43,6 +50,8 @@ export const PENDING_COMPANY_LOCK = "__pending_company__" as Identifier;
 type ContactFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When provided, the dialog opens in edit mode for that contact id. */
+  contactId?: Identifier;
   lockCompanyId?: Identifier;
   /**
    * When true, do not insert into the DB — return compact field values to the
@@ -57,6 +66,22 @@ type ContactFormDialogProps = {
   navigateOnCreate?: boolean;
   onCreated?: (contact: Contact) => void;
   onDraftSubmit?: (draft: PrimaryContactDraft) => void;
+};
+
+/** Strip referral/other fields that don't apply to the chosen lead source. */
+const editTransform = (data: Contact): Partial<Contact> => {
+  const isReferral = data.lead_source === LBS_LEAD_SOURCE_REFERRAL;
+  const isOther = data.lead_source === LBS_LEAD_SOURCE_OTHER;
+  return {
+    ...data,
+    referred_by_contact_id: isReferral
+      ? (data.referred_by_contact_id ?? null)
+      : null,
+    referred_by_company_id: isReferral
+      ? (data.referred_by_company_id ?? null)
+      : null,
+    lead_source_other: isOther ? (data.lead_source_other ?? null) : null,
+  };
 };
 
 const defaultCreateValues = (lockCompanyId?: Identifier) => ({
@@ -153,12 +178,13 @@ const ContactFormDialogChrome = ({
 export const ContactFormDialog = ({
   open,
   onOpenChange,
+  contactId,
   lockCompanyId,
   deferCreate = false,
   allowOrphanContact = false,
-  title = "New contact",
+  title,
   description = "Person linked to a client company. Company is required.",
-  submitLabel = "Create contact",
+  submitLabel,
   navigateOnCreate = true,
   onCreated,
   onDraftSubmit,
@@ -169,6 +195,11 @@ export const ContactFormDialog = ({
   const refresh = useRefresh();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
+
+  const isEdit = contactId != null;
+  const resolvedTitle = title ?? (isEdit ? "Edit contact" : "New contact");
+  const resolvedSubmitLabel =
+    submitLabel ?? (isEdit ? "Save changes" : "Create contact");
 
   const handleClose = () => onOpenChange(false);
 
@@ -186,6 +217,41 @@ export const ContactFormDialog = ({
     isMobile &&
       "top-auto bottom-0 left-1/2 max-h-[92vh] translate-x-[-50%] translate-y-0 rounded-b-none rounded-t-2xl",
   );
+
+  if (isEdit) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent showCloseButton={false} className={dialogShellClass}>
+          <EditBase
+            resource="contacts"
+            id={contactId}
+            redirect={false}
+            transform={editTransform}
+            mutationOptions={{
+              onMutate: () => setIsSaving(true),
+              onSuccess: () => {
+                notify("Contact updated", { type: "info" });
+                refresh();
+                handleClose();
+              },
+              onError: () =>
+                notify("Failed to update contact", { type: "error" }),
+              onSettled: () => setIsSaving(false),
+            }}
+          >
+            <ContactFormDialogEditBody
+              title={resolvedTitle}
+              description={description}
+              submitLabel={resolvedSubmitLabel}
+              isSaving={isSaving}
+              isMobile={isMobile}
+              onClose={handleClose}
+            />
+          </EditBase>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (deferCreate) {
     return (
@@ -211,7 +277,7 @@ export const ContactFormDialog = ({
             }}
           >
             <ContactFormDialogChrome
-              title={title}
+              title={resolvedTitle}
               description={
                 description ||
                 "Contact details are saved with the company — nothing is written until you create the company."
@@ -219,7 +285,7 @@ export const ContactFormDialog = ({
               isSaving={false}
               isMobile={isMobile}
               onClose={handleClose}
-              submitLabel={submitLabel}
+              submitLabel={resolvedSubmitLabel}
             >
               <LbsContactFormFields
                 variant="compact"
@@ -307,7 +373,7 @@ export const ContactFormDialog = ({
             defaultValues={defaultCreateValues(formLockCompanyId)}
           >
             <ContactFormDialogChrome
-              title={title}
+              title={resolvedTitle}
               description={
                 allowOrphanContact
                   ? "Creates a contact without a company. The new company form will link them on save."
@@ -316,7 +382,7 @@ export const ContactFormDialog = ({
               isSaving={isSaving}
               isMobile={isMobile}
               onClose={handleClose}
-              submitLabel={submitLabel}
+              submitLabel={resolvedSubmitLabel}
             >
               <LbsContactFormFields
                 variant="compact"
@@ -327,5 +393,55 @@ export const ContactFormDialog = ({
         </CreateBase>
       </DialogContent>
     </Dialog>
+  );
+};
+
+const ContactFormDialogEditBody = ({
+  title,
+  description,
+  submitLabel,
+  isSaving,
+  isMobile,
+  onClose,
+}: {
+  title: string;
+  description: string;
+  submitLabel: string;
+  isSaving: boolean;
+  isMobile: boolean;
+  onClose: () => void;
+}) => {
+  const { isPending, record } = useEditContext<Contact>();
+  const translate = useTranslate();
+  if (isPending || !record) {
+    return (
+      <ContactFormDialogChrome
+        title={title}
+        description={description}
+        isSaving={false}
+        isMobile={isMobile}
+        onClose={onClose}
+        submitLabel={submitLabel}
+      >
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          {translate("ra.page.loading", { _: "Loading…" })}
+        </p>
+      </ContactFormDialogChrome>
+    );
+  }
+
+  return (
+    <Form id="lbs-contact-form-edit" className="flex min-h-0 flex-1 flex-col">
+      <ContactFormDialogChrome
+        title={title}
+        description={description}
+        isSaving={isSaving}
+        isMobile={isMobile}
+        onClose={onClose}
+        submitLabel={submitLabel}
+      >
+        <LbsContactFormFields variant="full" />
+      </ContactFormDialogChrome>
+    </Form>
   );
 };
