@@ -4,21 +4,46 @@ import { DollarSign } from "lucide-react";
 import { useGetList } from "ra-core";
 import { memo, useMemo } from "react";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 import type { Deal } from "../types";
 
-const multiplier = {
-  opportunity: 0.2,
-  "proposal-sent": 0.5,
-  "in-negociation": 0.8,
-  delayed: 0.3,
+// Probability weights for non-terminal LBS pipeline stages.
+// Sales funnel stages get fractional weights; delivery stages (post-payment) count fully
+// since the money is committed. Stages absent here weight 0 (no pending contribution).
+const STAGE_PIPELINE_WEIGHT: Record<string, number> = {
+  lead: 0.1,
+  discovery: 0.25,
+  proposal_sent: 0.5,
+  pending_payment: 0.85,
+  design: 1,
+  development: 1,
+  review: 1,
+  launch: 1,
+  maintenance: 1,
 };
 
-const threeMonthsAgo = new Date(
-  new Date().setMonth(new Date().getMonth() - 6),
+const WON_STAGES = new Set(["won", "closed_won"]);
+const LOST_STAGES = new Set(["lost", "closed_lost"]);
+
+const MONTHS_WINDOW = 6;
+const sixMonthsAgo = new Date(
+  new Date().setMonth(new Date().getMonth() - MONTHS_WINDOW),
 ).toISOString();
 
 const DEFAULT_LOCALE = "en-US";
 const CURRENCY = "USD";
+
+const ChartHeader = () => (
+  <div className="mb-4 flex items-center">
+    <div className="mr-3 flex">
+      <DollarSign className="h-6 w-6 text-muted-foreground" />
+    </div>
+    <h2 className="text-xl font-semibold text-muted-foreground">
+      Upcoming Project Revenue
+    </h2>
+  </div>
+);
 
 export const DealsChart = memo(() => {
   const acceptedLanguages = navigator
@@ -32,60 +57,54 @@ export const DealsChart = memo(() => {
       order: "ASC",
     },
     filter: {
-      "created_at@gte": threeMonthsAgo,
+      "created_at@gte": sixMonthsAgo,
     },
   });
+
   const months = useMemo(() => {
     if (!data) return [];
-    const dealsByMonth = data.reduce((acc, deal) => {
+    const dealsByMonth = data.reduce<Record<string, Deal[]>>((acc, deal) => {
       const month = startOfMonth(deal.created_at ?? new Date()).toISOString();
-      if (!acc[month]) {
-        acc[month] = [];
-      }
+      if (!acc[month]) acc[month] = [];
       acc[month].push(deal);
       return acc;
-    }, {} as any);
+    }, {});
 
-    const amountByMonth = Object.keys(dealsByMonth).map((month) => {
-      return {
-        date: format(parseISO(month), "MMM"),
-        won: dealsByMonth[month]
-          .filter((deal: Deal) => deal.stage === "won")
-          .reduce((acc: number, deal: Deal) => {
-            return acc + (Number(deal.amount) || 0);
-          }, 0),
-        pending: dealsByMonth[month]
-          .filter((deal: Deal) => !["won", "lost"].includes(deal.stage))
-          .reduce((acc: number, deal: Deal) => {
-            const m = multiplier[deal.stage as keyof typeof multiplier] ?? 0;
-            return acc + (Number(deal.amount) || 0) * m;
-          }, 0),
-        lost: dealsByMonth[month]
-          .filter((deal: Deal) => deal.stage === "lost")
-          .reduce((acc: number, deal: Deal) => {
-            return acc - (Number(deal.amount) || 0);
-          }, 0),
-      };
-    });
-
-    return amountByMonth;
+    return Object.keys(dealsByMonth).map((month) => ({
+      date: format(parseISO(month), "MMM"),
+      won: dealsByMonth[month]
+        .filter((deal) => WON_STAGES.has(deal.stage))
+        .reduce((acc, deal) => acc + (Number(deal.amount) || 0), 0),
+      pending: dealsByMonth[month]
+        .filter(
+          (deal) =>
+            !WON_STAGES.has(deal.stage) && !LOST_STAGES.has(deal.stage),
+        )
+        .reduce((acc, deal) => {
+          const weight = STAGE_PIPELINE_WEIGHT[deal.stage] ?? 0;
+          return acc + (Number(deal.amount) || 0) * weight;
+        }, 0),
+      lost: dealsByMonth[month]
+        .filter((deal) => LOST_STAGES.has(deal.stage))
+        .reduce((acc, deal) => acc - (Number(deal.amount) || 0), 0),
+    }));
   }, [data]);
 
-  if (isPending) return null; // FIXME return skeleton instead
+  if (isPending) {
+    return (
+      <div className="flex flex-col">
+        <ChartHeader />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    );
+  }
 
   if (months.length === 0) {
     return (
       <div className="flex flex-col">
-        <div className="mb-4 flex items-center">
-          <div className="mr-3 flex">
-            <DollarSign className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h2 className="text-xl font-semibold text-muted-foreground">
-            Upcoming Project Revenue
-          </h2>
-        </div>
+        <ChartHeader />
         <p className="text-sm text-muted-foreground">
-          No deals in the last 6 months.
+          No deals in the last {MONTHS_WINDOW} months.
         </p>
       </div>
     );
@@ -109,14 +128,7 @@ export const DealsChart = memo(() => {
   if (!Number.isFinite(scaleMin) || !Number.isFinite(scaleMax)) {
     return (
       <div className="flex flex-col">
-        <div className="mb-4 flex items-center">
-          <div className="mr-3 flex">
-            <DollarSign className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h2 className="text-xl font-semibold text-muted-foreground">
-            Upcoming Project Revenue
-          </h2>
-        </div>
+        <ChartHeader />
         <p className="text-sm text-muted-foreground">No data to display.</p>
       </div>
     );
@@ -125,22 +137,24 @@ export const DealsChart = memo(() => {
     scaleMax = scaleMin + 1;
   }
 
+  const axisTextStyle = {
+    ticks: { text: { fill: "var(--color-muted-foreground)" } },
+    legend: { text: { fill: "var(--color-muted-foreground)" } },
+  };
+
   return (
     <div className="flex flex-col">
-      <div className="mb-4 flex items-center">
-        <div className="mr-3 flex">
-          <DollarSign className="text-muted-foreground w-6 h-6" />
-        </div>
-        <h2 className="text-xl font-semibold text-muted-foreground">
-          Upcoming Project Revenue
-        </h2>
-      </div>
+      <ChartHeader />
       <div className="h-[400px]">
         <ResponsiveBar
           data={months}
           indexBy="date"
           keys={["won", "pending", "lost"]}
-          colors={["#61cdbb", "#97e3d5", "#e25c3b"]}
+          colors={[
+            "var(--color-chart-2)",
+            "var(--color-chart-1)",
+            "var(--destructive)",
+          ]}
           margin={{ top: 30, right: 50, bottom: 30, left: 0 }}
           padding={0.3}
           valueScale={{
@@ -164,53 +178,20 @@ export const DealsChart = memo(() => {
           axisTop={{
             tickSize: 0,
             tickPadding: 12,
-            style: {
-              ticks: {
-                text: {
-                  fill: "var(--color-muted-foreground)",
-                },
-              },
-              legend: {
-                text: {
-                  fill: "var(--color-muted-foreground)",
-                },
-              },
-            },
+            style: axisTextStyle,
           }}
           axisBottom={{
             legendPosition: "middle",
             legendOffset: 50,
             tickSize: 0,
             tickPadding: 12,
-            style: {
-              ticks: {
-                text: {
-                  fill: "var(--color-muted-foreground)",
-                },
-              },
-              legend: {
-                text: {
-                  fill: "var(--color-muted-foreground)",
-                },
-              },
-            },
+            style: axisTextStyle,
           }}
           axisLeft={null}
           axisRight={{
-            format: (v: any) => `${Math.abs(v / 1000)}k`,
+            format: (v: number) => `${Math.abs(v / 1000)}k`,
             tickValues: 8,
-            style: {
-              ticks: {
-                text: {
-                  fill: "var(--color-muted-foreground)",
-                },
-              },
-              legend: {
-                text: {
-                  fill: "var(--color-muted-foreground)",
-                },
-              },
-            },
+            style: axisTextStyle,
           }}
           markers={
             [
@@ -218,7 +199,7 @@ export const DealsChart = memo(() => {
                 axis: "y",
                 value: 0,
                 lineStyle: { strokeOpacity: 0 },
-                textStyle: { fill: "#2ebca6" },
+                textStyle: { fill: "var(--color-chart-2)" },
                 legend: "Won",
                 legendPosition: "top-left",
                 legendOrientation: "vertical",
@@ -227,15 +208,15 @@ export const DealsChart = memo(() => {
                 axis: "y",
                 value: 0,
                 lineStyle: {
-                  stroke: "#f47560",
+                  stroke: "var(--destructive)",
                   strokeWidth: 1,
                 },
-                textStyle: { fill: "#e25c3b" },
+                textStyle: { fill: "var(--destructive)" },
                 legend: "Lost",
                 legendPosition: "bottom-left",
                 legendOrientation: "vertical",
               },
-            ] as any
+            ] as never
           }
         />
       </div>
