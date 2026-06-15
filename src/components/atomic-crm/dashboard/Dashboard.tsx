@@ -1,35 +1,14 @@
-import { useGetList } from "ra-core";
-
-import type { Contact, ContactNote } from "../types";
 import { DashboardActivityLog } from "./DashboardActivityLog";
 import { DashboardStepper } from "./DashboardStepper";
 import { DealsChart } from "./DealsChart";
 import { HotContacts } from "./HotContacts";
 import { Welcome } from "./Welcome";
+import { useOnboardingState } from "./useOnboardingState";
 import { LbsDashboardTasks } from "@/modules/dashboard/LbsDashboardTasks";
 
 export const Dashboard = () => {
-  const {
-    data: dataContact,
-    total: totalContact,
-    isPending: isPendingContact,
-  } = useGetList<Contact>("contacts", {
-    pagination: { page: 1, perPage: 1 },
-  });
-
-  const { total: totalContactNotes, isPending: isPendingContactNotes } =
-    useGetList<ContactNote>("contact_notes", {
-      pagination: { page: 1, perPage: 1 },
-    });
-
-  const { total: totalDeal, isPending: isPendingDeal } = useGetList<Contact>(
-    "deals",
-    {
-      pagination: { page: 1, perPage: 1 },
-    },
-  );
-
-  const isPending = isPendingContact || isPendingContactNotes || isPendingDeal;
+  const { totalContact, totalContactNotes, firstContactId, isPending } =
+    useOnboardingState();
 
   if (isPending) {
     return null;
@@ -40,7 +19,7 @@ export const Dashboard = () => {
   }
 
   if (!totalContactNotes) {
-    return <DashboardStepper step={2} contactId={dataContact?.[0]?.id} />;
+    return <DashboardStepper step={2} contactId={firstContactId} />;
   }
 
   return (
@@ -53,7 +32,7 @@ export const Dashboard = () => {
       </div>
       <div className="md:col-span-6">
         <div className="flex flex-col gap-6">
-          {totalDeal ? <DealsChart /> : null}
+          <DealsChart />
           <DashboardActivityLog />
         </div>
       </div>
