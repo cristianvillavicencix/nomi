@@ -4,6 +4,7 @@ import { useListContext } from "ra-core";
 import { useSearchParams } from "react-router";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InvoiceListSidebar } from "@/modules/billing/InvoiceListSidebar";
+import { InvoiceListTable } from "@/modules/billing/InvoiceListTable";
 import { StandaloneInvoiceEditPage } from "@/modules/billing/StandaloneInvoiceEditPage";
 import {
   INVOICE_FILTER_OPTIONS,
@@ -134,10 +135,17 @@ export const InvoiceBillingWorkspace = ({
           )}
         >
           {sidebarHeader}
-          <InvoiceListSidebar
-            selectedInvoiceId={selectedInvoiceId}
-            onSelectInvoice={handleSelectInvoice}
-          />
+          {hasSelection || isMobile ? (
+            <InvoiceListSidebar
+              selectedInvoiceId={selectedInvoiceId}
+              onSelectInvoice={handleSelectInvoice}
+            />
+          ) : (
+            <InvoiceListTable
+              selectedInvoiceId={selectedInvoiceId}
+              onSelectInvoice={handleSelectInvoice}
+            />
+          )}
         </aside>
       ) : null}
 
