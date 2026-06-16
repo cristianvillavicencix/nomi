@@ -45,9 +45,7 @@ import { TicketShow } from "@/modules/tickets/TicketShow";
 import { lazy, Suspense } from "react";
 import { CalendarPage } from "@/modules/calendar/CalendarPage";
 import { MeetingsPage } from "@/modules/meetings/MeetingsPage";
-import { WebsiteMonitorListPage } from "@/modules/web-monitor/WebsiteMonitorListPage";
-import { WebsiteMonitorShowPage } from "@/modules/web-monitor/WebsiteMonitorShowPage";
-import { WebsiteAuditReportPage } from "@/modules/web-monitor/audit/WebsiteAuditReportPage";
+import { WebsiteMonitorQuickCheckPage } from "@/modules/web-monitor/WebsiteMonitorQuickCheckPage";
 const MessagesPage = lazy(() =>
   import("@/modules/messages/MessagesPage").then((module) => ({
     default: module.MessagesPage,
@@ -223,23 +221,7 @@ export const renderLbsCustomRoutes = ({
         path="/web-monitor"
         element={
           <ProtectedRoute resource="monitored_websites" action="list">
-            <WebsiteMonitorListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/web-monitor/:id/show"
-        element={
-          <ProtectedRoute resource="monitored_websites" action="show">
-            <WebsiteMonitorShowPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/web-monitor/:siteId/audit/:auditId"
-        element={
-          <ProtectedRoute resource="monitored_websites" action="show">
-            <WebsiteAuditReportPage />
+            <WebsiteMonitorQuickCheckPage />
           </ProtectedRoute>
         }
       />

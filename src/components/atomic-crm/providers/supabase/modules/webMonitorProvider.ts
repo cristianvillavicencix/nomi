@@ -4,6 +4,26 @@ import {
   readEdgeFunctionErrorMessage,
 } from "../invokeEdgeFunction";
 
+export type WebsiteMonitorCheckResult = {
+  ok?: boolean;
+  ad_hoc?: boolean;
+  url?: string;
+  status?: "up" | "slow" | "down";
+  responseMs?: number | null;
+  httpStatus?: number | null;
+  errorMessage?: string | null;
+  sslExpiresAt?: string | null;
+  sslDaysRemaining?: number | null;
+  dnsIp?: string | null;
+  dnsNameservers?: string[];
+  dnsMx?: string[];
+  hostingProvider?: string | null;
+  hostingConfidence?: "low" | "medium" | "high" | null;
+  techStack?: string[];
+  pageTitle?: string | null;
+  domainName?: string | null;
+};
+
 export const webMonitorProvider = {
   async websiteMonitorSync() {
     const { data, error } = await invokeEdgeFunction<{ synced?: number }>(
@@ -21,51 +41,43 @@ export const webMonitorProvider = {
     monitoredWebsiteId: Identifier;
     includeDeepMetadata?: boolean;
   }) {
-    const { data, error } = await invokeEdgeFunction<{
-      ok?: boolean;
-      status?: string;
-      responseMs?: number | null;
-      httpStatus?: number | null;
-      errorMessage?: string | null;
-    }>("website_monitor_check", {
-      method: "POST",
-      body: {
-        monitored_website_id: Number(params.monitoredWebsiteId),
-        include_deep_metadata: params.includeDeepMetadata ?? true,
+    const { data, error } = await invokeEdgeFunction<WebsiteMonitorCheckResult>(
+      "website_monitor_check",
+      {
+        method: "POST",
+        body: {
+          monitored_website_id: Number(params.monitoredWebsiteId),
+          include_deep_metadata: params.includeDeepMetadata ?? true,
+        },
       },
-    });
+    );
     if (error) {
       throw new Error(
         await readEdgeFunctionErrorMessage(error, "Failed to check website"),
       );
     }
-    return data ?? { ok: true };
+    return data ?? ({ ok: true } as WebsiteMonitorCheckResult);
   },
-  async websiteMonitorRunOrg(params?: {
-    forceAll?: boolean;
-    maxBatch?: number;
+  async websiteMonitorCheckAdHoc(params: {
+    url: string;
+    includeDeepMetadata?: boolean;
   }) {
-    const { data, error } = await invokeEdgeFunction<{
-      ok?: boolean;
-      checked?: number;
-      failures?: number;
-      due?: number;
-    }>("website_monitor_run_org", {
-      method: "POST",
-      body: {
-        force_all: params?.forceAll ?? false,
-        max_batch: params?.maxBatch ?? 3,
+    const { data, error } = await invokeEdgeFunction<WebsiteMonitorCheckResult>(
+      "website_monitor_check",
+      {
+        method: "POST",
+        body: {
+          url: params.url,
+          include_deep_metadata: params.includeDeepMetadata ?? true,
+        },
       },
-    });
+    );
     if (error) {
       throw new Error(
-        await readEdgeFunctionErrorMessage(
-          error,
-          "Failed to run website checks",
-        ),
+        await readEdgeFunctionErrorMessage(error, "Failed to check website"),
       );
     }
-    return data ?? { ok: true, checked: 0, failures: 0, due: 0 };
+    return data ?? ({ ok: true } as WebsiteMonitorCheckResult);
   },
   async websiteMonitorCreate(params: {
     url: string;
@@ -95,99 +107,6 @@ export const webMonitorProvider = {
       );
     }
     return data ?? { ok: true };
-  },
-  async websiteAuditEnqueue(params: {
-    monitoredWebsiteId: Identifier;
-    strategy?: "mobile" | "desktop";
-  }) {
-    const { data, error } = await invokeEdgeFunction<{
-      ok?: boolean;
-      reused?: boolean;
-      audit?: Record<string, unknown>;
-      worker?: { pushed?: boolean; error?: string };
-    }>("website_audit_enqueue", {
-      method: "POST",
-      body: {
-        monitored_website_id: Number(params.monitoredWebsiteId),
-        strategy: params.strategy ?? "mobile",
-      },
-    });
-    if (error) {
-      throw new Error(
-        await readEdgeFunctionErrorMessage(
-          error,
-          "Failed to enqueue website audit",
-        ),
-      );
-    }
-    if (!data?.audit) {
-      throw new Error("Invalid audit enqueue response");
-    }
-    return {
-      ok: Boolean(data.ok),
-      reused: Boolean(data.reused),
-      audit: data.audit,
-      worker: data.worker,
-    };
-  },
-  async websiteAuditSend(params: {
-    auditId: number;
-    to: string;
-    subject: string;
-    message: string;
-    pdfBase64: string;
-    filename?: string;
-  }) {
-    const { data, error } = await invokeEdgeFunction<{ ok?: boolean }>(
-      "website_audit_send",
-      {
-        method: "POST",
-        body: {
-          audit_id: params.auditId,
-          to: params.to,
-          subject: params.subject,
-          message: params.message,
-          pdf_base64: params.pdfBase64,
-          filename: params.filename,
-        },
-      },
-    );
-    if (error) {
-      throw new Error(
-        await readEdgeFunctionErrorMessage(
-          error,
-          "Failed to send website audit report",
-        ),
-      );
-    }
-    return { ok: Boolean(data?.ok) };
-  },
-  async websiteAuditSummarize(params: { auditId: number; force?: boolean }) {
-    const { data, error } = await invokeEdgeFunction<{
-      ok?: boolean;
-      audit_id?: number;
-      ai_summary_status?: string;
-      ai_summary_generated_at?: string;
-    }>("website_audit_summarize", {
-      method: "POST",
-      body: {
-        audit_id: params.auditId,
-        force: params.force ?? false,
-      },
-    });
-    if (error) {
-      throw new Error(
-        await readEdgeFunctionErrorMessage(
-          error,
-          "Failed to generate AI audit summary",
-        ),
-      );
-    }
-    return {
-      ok: Boolean(data?.ok),
-      aiSummaryStatus: data?.ai_summary_status,
-      aiSummaryGeneratedAt: data?.ai_summary_generated_at,
-    };
   },
   async googleGscStatus() {
     const { data, error } = await invokeEdgeFunction<{

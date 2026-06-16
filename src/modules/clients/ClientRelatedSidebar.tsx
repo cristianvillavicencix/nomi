@@ -22,9 +22,6 @@ import {
 import { ReferralsTab } from "@/modules/leads/ReferralsTab";
 import { NewDealDialog } from "@/modules/deals/NewDealDialog";
 import { buildOpenDealsFilter } from "@/modules/deals/openDealFilters";
-import { useWebsiteMonitorEnabled } from "@/modules/settings/useWebsiteMonitorSettings";
-import { WebsiteMonitorStatusWidget } from "@/modules/web-monitor/WebsiteMonitorStatusWidget";
-import { WebsiteMonitorAuditWidget } from "@/modules/web-monitor/WebsiteMonitorAuditWidget";
 import {
   getContactEmail,
   getContactFullName,
@@ -80,8 +77,6 @@ export const ClientRelatedSidebar = ({
   const [panel, setPanel] = useState<SidebarPanel>(null);
   const [newDealOpen, setNewDealOpen] = useState(false);
   const { dealStages, dealPipelineStatuses } = useConfigurationContext();
-  const { enabled: webMonitorEnabled } = useWebsiteMonitorEnabled();
-
   const { data: contacts = [] } = useGetList<Contact>(
     "contacts",
     {
@@ -173,17 +168,6 @@ export const ClientRelatedSidebar = ({
   return (
     <>
       <div className="space-y-6">
-        {webMonitorEnabled ? (
-          <>
-            <RelatedSection title="Estado web" count={0} forceShow>
-              <WebsiteMonitorStatusWidget companyId={companyId} variant="plain" />
-            </RelatedSection>
-            <RelatedSection title="Web Report" count={0} forceShow>
-              <WebsiteMonitorAuditWidget companyId={companyId} variant="plain" />
-            </RelatedSection>
-          </>
-        ) : null}
-
         <RelatedSection
           title="Contacts"
           count={counts.contacts}

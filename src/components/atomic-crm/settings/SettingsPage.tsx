@@ -28,7 +28,6 @@ import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import { UsersSettingsSection } from "./UsersSettingsSection";
 import { MessagingSettingsSection } from "@/modules/settings/MessagingSettingsSection";
 import { DataImportSection } from "@/modules/settings/DataImportSection";
-import { WebsiteMonitorSettingsSection } from "@/modules/settings/WebsiteMonitorSettingsSection";
 import { CommercialSettingsSection } from "@/modules/settings/CommercialSettingsSection";
 import { FormsSettingsSection } from "@/modules/settings/FormsSettingsSection";
 import { useLbsPipelineConfig } from "@/modules/deals/useLbsPipelineConfig";
@@ -38,7 +37,6 @@ const LBS_SETTINGS_TAB_IDS = [
   "users",
   "forms",
   "messaging",
-  "web-monitor",
   "commercial",
   "projects",
   "notes",
@@ -54,7 +52,6 @@ const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = [
   { id: "users", label: "Users" },
   { id: "forms", label: "Forms" },
   { id: "messaging", label: "Communications" },
-  { id: "web-monitor", label: "Web Monitor" },
   { id: "commercial", label: "Proposals & contracts" },
   { id: "projects", label: "Project Stages" },
   { id: "notes", label: "Lead Statuses" },
@@ -402,7 +399,6 @@ const SettingsFormFields = () => {
       {activeTab === "users" ? <UsersSettingsSection /> : null}
       {activeTab === "forms" ? <FormsSettingsSection /> : null}
       {activeTab === "messaging" ? <MessagingSettingsSection /> : null}
-      {activeTab === "web-monitor" ? <WebsiteMonitorSettingsSection /> : null}
       {activeTab === "commercial" ? <CommercialSettingsSection /> : null}
       {activeTab === "data" ? <DataImportSection /> : null}
       {activeTab === "projects" ? (
@@ -457,8 +453,7 @@ const SettingsFormFields = () => {
       {activeTab !== "users" &&
       activeTab !== "forms" &&
       activeTab !== "messaging" &&
-      activeTab !== "data" &&
-      activeTab !== "web-monitor" ? (
+      activeTab !== "data" ? (
         <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <div className="flex w-full min-w-0 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <Button

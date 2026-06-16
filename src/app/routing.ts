@@ -32,9 +32,6 @@ export const isLeadStatus = (status?: string | null) =>
 
 export const getWebMonitorPath = () => "/web-monitor";
 
-export const getWebMonitorShowPath = (siteId: string | number) =>
-  `/web-monitor/${siteId}/show`;
-
 export const getClientProposalCreatePath = (
   companyId?: string | number | null,
   contactId?: string | number | null,

@@ -19,8 +19,6 @@ import {
 } from "@/modules/deals/projectDeliveryDate";
 import { ProjectCalendarEventsList } from "@/modules/calendar/ProjectCalendarEventsList";
 import { ProjectActivityTab } from "@/modules/deals/projects/tabs/ProjectActivityTab";
-import { WebsiteMonitorStatusWidget } from "@/modules/web-monitor/WebsiteMonitorStatusWidget";
-import { WebsiteMonitorAuditWidget } from "@/modules/web-monitor/WebsiteMonitorAuditWidget";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import type { LbsDeal } from "@/modules/types";
 
@@ -117,18 +115,6 @@ export const LbsProjectOverviewTab = ({ record }: { record: LbsDeal }) => {
             </OverviewField>
           ) : null}
 
-          {record.company_id ? (
-            <>
-              <WebsiteMonitorStatusWidget
-                companyId={record.company_id}
-                title="Estado del sitio web del cliente"
-              />
-              <WebsiteMonitorAuditWidget
-                companyId={record.company_id}
-                title="Último Web Report"
-              />
-            </>
-          ) : null}
         </div>
 
         <div className="rounded-lg border p-4 lg:sticky lg:top-4 space-y-6">

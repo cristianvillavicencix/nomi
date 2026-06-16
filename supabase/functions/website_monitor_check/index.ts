@@ -5,11 +5,17 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { isAuthorizedFollowUpCron } from "../_shared/notifyFollowUp.ts";
-import { runWebsiteMonitorCheck } from "../_shared/websiteMonitor.ts";
+import {
+  normalizeMonitorUrl,
+  runWebsiteMonitorCheck,
+  type WebsiteMonitorSiteRow,
+} from "../_shared/websiteMonitor.ts";
 import {
   fetchWebsiteMonitorSite,
   persistWebsiteCheckResult,
 } from "../_shared/persistWebsiteCheck.ts";
+
+const AD_HOC_SLOW_THRESHOLD_MS = 3000;
 
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {
@@ -24,6 +30,7 @@ Deno.serve((req: Request) =>
     ) => {
       let payload: {
         monitored_website_id?: number;
+        url?: string;
         include_deep_metadata?: boolean;
         app_base_url?: string | null;
       };
@@ -33,9 +40,46 @@ Deno.serve((req: Request) =>
         return createErrorResponse(400, "Invalid JSON body");
       }
 
+      // Ad-hoc mode: { url } provided without monitored_website_id.
+      // Runs the check against the URL and returns the result WITHOUT persisting
+      // anything. Used by the manual Quick Check UI.
+      if (
+        payload.url &&
+        (!payload.monitored_website_id ||
+          Number(payload.monitored_website_id) <= 0)
+      ) {
+        const normalized = normalizeMonitorUrl(payload.url);
+        if (!normalized) {
+          return createErrorResponse(400, "Invalid url");
+        }
+
+        const mockSite: WebsiteMonitorSiteRow = {
+          id: 0,
+          org_id: orgId ?? 0,
+          url: normalized,
+          slow_threshold_ms: AD_HOC_SLOW_THRESHOLD_MS,
+          is_enabled: true,
+          check_interval_minutes: 60,
+          last_checked_at: null,
+          check_paths: ["/"],
+        };
+
+        const result = await runWebsiteMonitorCheck(mockSite, {
+          includeDeepMetadata: payload.include_deep_metadata ?? true,
+        });
+
+        return new Response(
+          JSON.stringify({ ok: true, ad_hoc: true, url: normalized, ...result }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       const siteId = Number(payload.monitored_website_id);
       if (!Number.isFinite(siteId) || siteId <= 0) {
-        return createErrorResponse(400, "monitored_website_id is required");
+        return createErrorResponse(
+          400,
+          "monitored_website_id or url is required",
+        );
       }
 
       const site = await fetchWebsiteMonitorSite(supabaseAdmin, siteId, orgId);
