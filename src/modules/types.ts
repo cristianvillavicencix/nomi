@@ -354,6 +354,15 @@ export type ProjectDelivery = {
   maintenance_plan?: Record<string, unknown>;
   enabled_sections?: string[];
   revoked_at?: string | null;
+  manual_override?: {
+    reason: string;
+    force_approved_items: Array<{
+      id?: number;
+      label: string;
+      category?: string | null;
+    }>;
+    approved_at: string;
+  } | null;
 } & Pick<RaRecord, "id">;
 
 export type DealActivityUnified = {

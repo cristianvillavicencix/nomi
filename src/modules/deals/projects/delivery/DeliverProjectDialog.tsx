@@ -24,6 +24,14 @@ type DeliverProjectDialogProps = {
   onClose: () => void;
   record: LbsDeal;
   onDelivered?: () => void;
+  manualOverride?: {
+    reason: string;
+    force_approved_items: Array<{
+      id?: number;
+      label: string;
+      category?: string | null;
+    }>;
+  };
 };
 
 export const DeliverProjectDialog = ({
@@ -31,6 +39,7 @@ export const DeliverProjectDialog = ({
   onClose,
   record,
   onDelivered,
+  manualOverride,
 }: DeliverProjectDialogProps) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -137,6 +146,7 @@ export const DeliverProjectDialog = ({
           backup_uploaded: false,
           tutorial_ready: false,
         },
+        manual_override: manualOverride,
       });
     },
     onSuccess: () => {
@@ -182,6 +192,22 @@ export const DeliverProjectDialog = ({
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
             This project was already delivered. Revoke the current delivery before
             sending again.
+          </div>
+        ) : null}
+
+        {manualOverride ? (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            <p className="font-medium text-amber-700 dark:text-amber-400">
+              Manual override active
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {manualOverride.force_approved_items.length} required item
+              {manualOverride.force_approved_items.length === 1 ? "" : "s"}{" "}
+              force-approved.
+            </p>
+            <p className="text-muted-foreground mt-1 line-clamp-3 text-xs italic">
+              "{manualOverride.reason}"
+            </p>
           </div>
         ) : null}
 

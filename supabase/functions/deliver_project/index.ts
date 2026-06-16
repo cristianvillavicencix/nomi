@@ -36,7 +36,17 @@ type DeliverProjectBody = {
     email?: string;
     config_notes?: string | null;
   }>;
+  manual_override?: {
+    reason?: string;
+    force_approved_items?: Array<{
+      id?: number | string;
+      label?: string;
+      category?: string | null;
+    }>;
+  };
 };
+
+const MIN_OVERRIDE_REASON_LENGTH = 10;
 
 const DEFAULT_WEBSITE_SECTIONS = [
   "general",
@@ -127,6 +137,32 @@ Deno.serve((req: Request) =>
         const deliveryDate =
           body.delivery_date?.trim() || new Date().toISOString().slice(0, 10);
 
+        let manualOverridePayload: Record<string, unknown> | null = null;
+        if (body.manual_override) {
+          const reason = body.manual_override.reason?.trim() ?? "";
+          if (reason.length < MIN_OVERRIDE_REASON_LENGTH) {
+            return createErrorResponse(
+              400,
+              `Manual override reason must be at least ${MIN_OVERRIDE_REASON_LENGTH} characters`,
+            );
+          }
+          const items = (body.manual_override.force_approved_items ?? [])
+            .map((entry) => ({
+              id:
+                entry?.id != null && Number.isFinite(Number(entry.id))
+                  ? Number(entry.id)
+                  : null,
+              label: entry?.label?.trim() ?? null,
+              category: entry?.category?.trim() ?? null,
+            }))
+            .filter((entry) => entry.id != null || entry.label);
+          manualOverridePayload = {
+            reason,
+            force_approved_items: items,
+            approved_at: new Date().toISOString(),
+          };
+        }
+
         const deliveryRow = {
           org_id: member.org_id,
           deal_id: dealId,
@@ -154,6 +190,7 @@ Deno.serve((req: Request) =>
           notify_email: body.notify_email ?? true,
           notify_whatsapp: body.notify_whatsapp ?? false,
           notify_portal: body.notify_portal ?? true,
+          manual_override: manualOverridePayload,
         };
 
         const { data: delivery, error: deliveryError } = await supabaseAdmin

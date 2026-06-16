@@ -921,6 +921,14 @@ export const dealsProvider = {
       email?: string;
       config_notes?: string | null;
     }>;
+    manual_override?: {
+      reason: string;
+      force_approved_items: Array<{
+        id?: number;
+        label: string;
+        category?: string | null;
+      }>;
+    };
   }) {
     const { data, error } = await invokeEdgeFunction<{
       ok?: boolean;
