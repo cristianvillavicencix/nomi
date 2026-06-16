@@ -11,6 +11,11 @@ import {
 import { TaskTable } from "@/components/atomic-crm/tasks/TaskTable";
 import { computeTaskStats } from "@/components/atomic-crm/tasks/taskStats";
 import { ProjectTaskStats } from "@/modules/deals/ProjectTaskStats";
+import {
+  ProjectTasksCalendar,
+  toDateKey,
+  type CalendarFilterValue,
+} from "@/modules/deals/projects/ProjectTasksCalendar";
 import type { LbsDeal, Task as TaskRecord } from "@/modules/types";
 
 export const ProjectTasksPanel = ({
@@ -21,6 +26,7 @@ export const ProjectTasksPanel = ({
   contactIds: LbsDeal["contact_ids"];
 }) => {
   const [status, setStatus] = useState<TaskStatusFilter>("open");
+  const [dayFilter, setDayFilter] = useState<CalendarFilterValue>(null);
   const taskContactId =
     record.contact_id ??
     (Array.isArray(record.contact_ids) ? record.contact_ids[0] : null) ??
@@ -54,10 +60,28 @@ export const ProjectTasksPanel = ({
     { staleTime: 30_000 },
   );
 
+  const filteredTasks = useMemo(() => {
+    if (!dayFilter) return tasks;
+    return tasks.filter((task) => {
+      const raw =
+        (task as { due_date?: string | null; done_date?: string | null })
+          .due_date ??
+        (task as { done_date?: string | null }).done_date ??
+        null;
+      if (!raw) return false;
+      return toDateKey(raw) === dayFilter.dateKey;
+    });
+  }, [tasks, dayFilter]);
+
   if (isPending) return <Skeleton className="h-40 w-full rounded-lg" />;
 
   return (
     <div className="space-y-3">
+      <ProjectTasksCalendar
+        tasks={tasks}
+        value={dayFilter}
+        onChange={setDayFilter}
+      />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <Tabs
@@ -92,9 +116,13 @@ export const ProjectTasksPanel = ({
         )}
       </div>
       <TaskTable
-        tasks={tasks}
+        tasks={filteredTasks}
         emptyMessage={
-          status === "done" ? "No completed tasks." : "No open tasks."
+          dayFilter
+            ? "No tasks on this day."
+            : status === "done"
+              ? "No completed tasks."
+              : "No open tasks."
         }
       />
     </div>
