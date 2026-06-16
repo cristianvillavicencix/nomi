@@ -14,7 +14,7 @@ import {
   PageActionsTrailing,
 } from "@/components/atomic-crm/layout/PageActions";
 import type { Contact } from "@/components/atomic-crm/types";
-import { ContactEditModal } from "@/components/atomic-crm/contacts/ContactEditModal";
+import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { getContactsListPath } from "@/app/routing";
 
 type ContactShowActionsProps = {
@@ -29,7 +29,7 @@ export const ContactShowActions = ({ record }: ContactShowActionsProps) => {
 
   return (
     <>
-      <ContactEditModal
+      <ContactFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
         contactId={record.id}

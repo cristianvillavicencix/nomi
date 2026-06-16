@@ -4,10 +4,8 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { BillingRevenueChart } from "@/modules/billing/BillingRevenueChart";
 import { ClientInvoicesTab } from "@/modules/billing/ClientInvoicesTab";
 import { LBS_PLACEHOLDER_MODULES } from "@/app/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const ClientBillingPage = () => {
   const { identity } = useGetIdentity();
@@ -25,20 +23,7 @@ export const ClientBillingPage = () => {
         </div>
       </PageActions>
 
-      <Tabs defaultValue="invoices" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-          <TabsTrigger value="revenue">Revenue</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="invoices">
-          <ClientInvoicesTab />
-        </TabsContent>
-
-        <TabsContent value="revenue">
-          <BillingRevenueChart />
-        </TabsContent>
-      </Tabs>
+      <ClientInvoicesTab />
     </div>
   );
 };

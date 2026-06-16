@@ -46,8 +46,8 @@ export const DashboardStepper = ({
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-lg font-bold">What's next?</h3>
               <div className="w-[150px]">
-                <Progress value={(step / 3) * 100} className="mb-2" />
-                <div className="text-right text-sm">{step}/3 done</div>
+                <Progress value={((step - 1) / 2) * 100} className="mb-2" />
+                <div className="text-right text-sm">{step - 1}/2 done</div>
               </div>
             </div>
             <div className="flex flex-col gap-12">

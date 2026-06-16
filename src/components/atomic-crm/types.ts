@@ -150,6 +150,10 @@ export type Contact = {
   last_name: string;
   title?: string | null;
   address?: string | null;
+  city?: string | null;
+  state_abbr?: string | null;
+  zipcode?: string | null;
+  country?: string | null;
   company_id?: Identifier | null;
   email_jsonb: EmailAndType[];
   avatar?: Partial<RAFile>;

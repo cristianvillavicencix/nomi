@@ -22,7 +22,7 @@ import { MobileContent } from "../layout/MobileContent";
 import { MobileBackButton } from "../misc/MobileBackButton";
 import { RelativeDate } from "../misc/RelativeDate";
 import type { Contact, Deal } from "../types";
-import { ContactEditModal } from "./ContactEditModal";
+import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { ContactHeader } from "./ContactHeader";
 import { getPersonListPath } from "@/app/routing";
 import { ReferralsTab } from "@/modules/leads/ReferralsTab";
@@ -58,7 +58,7 @@ const ContactShowContentMobile = () => {
 
   return (
     <>
-      <ContactEditModal
+      <ContactFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
         contactId={record.id}
@@ -108,7 +108,7 @@ export const ContactShowContent = ({
 
   return (
     <div className={embedded ? "mb-0" : "mt-2 mb-2"}>
-      <ContactEditModal
+      <ContactFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
         contactId={record.id}

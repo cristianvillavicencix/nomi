@@ -14,7 +14,7 @@ import {
   PageActionsTrailing,
 } from "@/components/atomic-crm/layout/PageActions";
 import type { Contact } from "@/components/atomic-crm/types";
-import { ContactEditModal } from "@/components/atomic-crm/contacts/ContactEditModal";
+import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { ConvertLeadButton } from "@/modules/leads/ConvertLeadButton";
 import { CreateProposalButton } from "@/modules/proposals/CreateProposalButton";
 import { getLeadsListPath } from "@/app/routing";
@@ -27,7 +27,7 @@ export const LeadShowActions = ({ record }: { record: Contact }) => {
 
   return (
     <>
-      <ContactEditModal
+      <ContactFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
         contactId={record.id}
