@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProjectGithubLink } from "@/modules/deals/ProjectGithubLink";
-import { ClientPortalSection } from "@/modules/portal/ClientPortalSection";
 import { ProjectDeploymentCard } from "@/modules/deals/projects/ProjectDeploymentCard";
 import { DeliverProjectDialog } from "@/modules/deals/projects/delivery/DeliverProjectDialog";
 import { ManualDeliveryOverrideDialog } from "@/modules/deals/projects/delivery/ManualDeliveryOverrideDialog";
@@ -101,8 +100,6 @@ export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => {
 
   return (
   <div className="space-y-6">
-    <ClientPortalSection record={record} />
-
     <div className="flex flex-col gap-3 rounded-lg border border-[#1E5FA8]/20 bg-[#1E5FA8]/5 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h3 className="text-base font-semibold">Client handoff</h3>

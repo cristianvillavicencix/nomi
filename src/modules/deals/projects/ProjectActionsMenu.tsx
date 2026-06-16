@@ -12,6 +12,7 @@ import {
   Archive,
   ArchiveRestore,
   ChevronDown,
+  ExternalLink,
   FileText,
   HandMetal,
   ListChecks,
@@ -54,9 +55,11 @@ const getMainContactId = (record: LbsDeal) => {
 export const ProjectActionsMenu = ({
   record,
   onOpenTasks,
+  onOpenPortal,
 }: {
   record: LbsDeal;
   onOpenTasks?: () => void;
+  onOpenPortal?: () => void;
 }) => {
   const { data: identity } = useGetIdentity();
   const notify = useNotify();
@@ -160,6 +163,17 @@ export const ProjectActionsMenu = ({
             >
               <ListChecks className="size-4" />
               Open tasks
+            </DropdownMenuItem>
+          ) : null}
+          {onOpenPortal ? (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                onOpenPortal();
+              }}
+            >
+              <ExternalLink className="size-4" />
+              Client portal
             </DropdownMenuItem>
           ) : null}
           <SendFormButton

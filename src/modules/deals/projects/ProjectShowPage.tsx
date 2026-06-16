@@ -39,6 +39,7 @@ import {
   ProjectTasksDialog,
   ProjectTasksRail,
 } from "@/modules/deals/projects/ProjectTasksRail";
+import { ClientPortalDialog } from "@/modules/portal/ClientPortalDialog";
 import type { LbsDeal } from "@/modules/types";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 
@@ -63,6 +64,7 @@ const ProjectShowContent = () => {
     readTasksRailCollapsed,
   );
   const [tasksDialogOpen, setTasksDialogOpen] = useState(false);
+  const [portalDialogOpen, setPortalDialogOpen] = useState(false);
 
   const handleToggleRail = () => {
     setTasksRailCollapsed((prev) => {
@@ -216,6 +218,7 @@ const ProjectShowContent = () => {
           <ProjectActionsMenu
             record={record}
             onOpenTasks={() => setTasksDialogOpen(true)}
+            onOpenPortal={() => setPortalDialogOpen(true)}
           />
         </div>
       </div>
@@ -244,6 +247,11 @@ const ProjectShowContent = () => {
         record={record}
         open={tasksDialogOpen}
         onOpenChange={setTasksDialogOpen}
+      />
+      <ClientPortalDialog
+        record={record}
+        open={portalDialogOpen}
+        onOpenChange={setPortalDialogOpen}
       />
     </div>
   );
