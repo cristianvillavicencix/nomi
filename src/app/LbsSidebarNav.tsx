@@ -34,6 +34,11 @@ import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 
 const LBS_NAV_ACCENT = "#378ADD";
 
+// Stable refs to avoid creating new objects on every render, which makes
+// Radix Slot (used by TooltipTrigger asChild) treat the Link as changed props
+// and re-run composeRefs in a loop. See React.Slot internals.
+const LINK_STATE = { _scrollToTop: true } as const;
+
 const matchesNavPattern = (pattern: string, pathname: string) => {
   if (pattern === "/") return pathname === "/";
   if (pattern.endsWith("/*")) {
@@ -114,28 +119,38 @@ export const LbsSidebarNav = ({
   return (
     <SidebarGroup className="gap-0 p-2">
       {standaloneItems.length > 0 ? (
-        <SidebarMenu>
+        <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
           {standaloneItems.map((item) => (
             <SidebarNavLink
               key={item.to}
               item={item}
               active={isActive(item.activePattern)}
+              collapsed={sidebarState === "collapsed"}
             />
           ))}
         </SidebarMenu>
       ) : null}
 
-      {navGroups.map((group, index) => (
-        <div key={group.id}>
+      {navGroups.map((group, index) => {
+        const hasItemsAbove = standaloneItems.length > 0 || index > 0;
+        return (
+        <div
+          key={group.id}
+          className={cn(
+            hasItemsAbove &&
+              "group-data-[collapsible=icon]:mt-2 group-data-[collapsible=icon]:border-t group-data-[collapsible=icon]:border-sidebar-border/60 group-data-[collapsible=icon]:pt-2",
+          )}
+        >
           <SidebarGroupLabel
             className={cn(
               "h-auto px-0.5 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
+              "group-data-[collapsible=icon]:pointer-events-none",
               index === 0 && standaloneItems.length === 0 ? "mt-0" : "mt-2",
             )}
           >
             {group.label}
           </SidebarGroupLabel>
-          <SidebarMenu>
+          <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
             {group.id === "pipeline" && clientsNavChildren.length > 0 ? (
               <ClientsCollapsibleNav
                 group={LBS_CLIENTS_NAV_COLLAPSIBLE}
@@ -151,11 +166,13 @@ export const LbsSidebarNav = ({
                 item={item}
                 active={isActive(item.activePattern)}
                 badgeCount={item.to === "/messages" ? messagesUnreadCount : 0}
+                collapsed={sidebarState === "collapsed"}
               />
             ))}
           </SidebarMenu>
         </div>
-      ))}
+        );
+      })}
     </SidebarGroup>
   );
 };
@@ -196,17 +213,15 @@ const ClientsCollapsibleNav = ({
     return (
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "flex size-8 w-full items-center justify-center rounded-lg transition-colors",
-                "hover:bg-sidebar-accent/70 text-sidebar-foreground",
-              )}
-              aria-label={group.label}
-            >
-              <ParentIcon className="size-4 shrink-0 text-muted-foreground" />
-            </button>
+          <DropdownMenuTrigger
+            aria-label={group.label}
+            title={group.label}
+            className={cn(
+              "flex size-9 w-full items-center justify-center rounded-lg transition-colors",
+              "hover:bg-sidebar-accent/70 text-sidebar-foreground",
+            )}
+          >
+            <ParentIcon className="size-4 shrink-0 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="start" className="min-w-40">
             {childrenItems.map((item) => {
@@ -216,7 +231,7 @@ const ClientsCollapsibleNav = ({
                 <DropdownMenuItem key={item.to} asChild>
                   <Link
                     to={item.to}
-                    state={{ _scrollToTop: true }}
+                    state={LINK_STATE}
                     className={cn(active && "font-medium text-[#378ADD]")}
                   >
                     <Icon className="size-4" />
@@ -263,7 +278,7 @@ const ClientsCollapsibleNav = ({
                 <SidebarMenuSubButton asChild isActive={active}>
                   <Link
                     to={item.to}
-                    state={{ _scrollToTop: true }}
+                    state={LINK_STATE}
                     className={cn(
                       active &&
                         "bg-[#378ADD]/10 font-medium dark:bg-[#378ADD]/15",
@@ -296,18 +311,58 @@ const SidebarNavLink = ({
   item,
   active,
   badgeCount = 0,
+  collapsed = false,
 }: {
   item: LbsNavItem;
   active: boolean;
   badgeCount?: number;
+  collapsed?: boolean;
 }) => {
   const Icon = item.icon;
+
+  if (collapsed) {
+    return (
+      <SidebarMenuItem>
+        <Link
+          to={item.to}
+          state={LINK_STATE}
+          aria-label={item.label}
+          title={item.label}
+          className={cn(
+            "relative flex size-9 w-full items-center justify-center rounded-lg transition-colors",
+            "hover:bg-sidebar-accent/70",
+            active
+              ? "bg-[#378ADD]/10 text-sidebar-foreground dark:bg-[#378ADD]/15"
+              : "text-sidebar-foreground",
+          )}
+          style={
+            active
+              ? { boxShadow: `inset 2px 0 0 0 ${LBS_NAV_ACCENT}` }
+              : undefined
+          }
+        >
+          <Icon
+            className={cn(
+              "size-4 shrink-0",
+              active ? "text-[#378ADD]" : "text-muted-foreground",
+            )}
+          />
+          {badgeCount > 0 ? (
+            <NavBadge
+              count={badgeCount}
+              className="absolute -top-0.5 -right-0.5"
+            />
+          ) : null}
+        </Link>
+      </SidebarMenuItem>
+    );
+  }
 
   return (
     <SidebarMenuItem>
       <Link
         to={item.to}
-        state={{ _scrollToTop: true }}
+        state={LINK_STATE}
         className={cn(
           "relative flex w-full items-center gap-2 rounded-lg py-1.5 px-2.5 text-sm transition-colors",
           "hover:bg-sidebar-accent/70",
