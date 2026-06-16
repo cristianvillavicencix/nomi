@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ShowBase,
   useDataProvider,
@@ -35,6 +35,10 @@ import {
   resolveProjectDisplayStageChange,
 } from "@/modules/deals/projects/projectDisplayPipeline";
 import { ProjectWorkspaceTabs } from "@/modules/deals/projects/ProjectWorkspaceTabs";
+import {
+  ProjectTasksDialog,
+  ProjectTasksRail,
+} from "@/modules/deals/projects/ProjectTasksRail";
 import type { LbsDeal } from "@/modules/types";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 
@@ -44,10 +48,31 @@ const ArchivedTitle = () => (
   </div>
 );
 
+const TASKS_RAIL_STORAGE_KEY = "nomi.project.tasksRail.collapsed";
+
+const readTasksRailCollapsed = () => {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(TASKS_RAIL_STORAGE_KEY) === "true";
+};
+
 const ProjectShowContent = () => {
   const record = useRecordContext<LbsDeal>();
   const { data: identity } = useGetIdentity();
   const dataProvider = useDataProvider();
+  const [tasksRailCollapsed, setTasksRailCollapsed] = useState(
+    readTasksRailCollapsed,
+  );
+  const [tasksDialogOpen, setTasksDialogOpen] = useState(false);
+
+  const handleToggleRail = () => {
+    setTasksRailCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(TASKS_RAIL_STORAGE_KEY, String(next));
+      }
+      return next;
+    });
+  };
   const notify = useNotify();
   const refresh = useRefresh();
   const [update, { isPending: isUpdatingStage }] = useUpdate();
@@ -188,7 +213,10 @@ const ProjectShowContent = () => {
           )}
         >
           <LbsProjectDeliveryUrgency record={record} />
-          <ProjectActionsMenu record={record} />
+          <ProjectActionsMenu
+            record={record}
+            onOpenTasks={() => setTasksDialogOpen(true)}
+          />
         </div>
       </div>
 
@@ -199,7 +227,24 @@ const ProjectShowContent = () => {
         className="mb-1.5 rounded-b-none pb-2"
       />
 
-      <ProjectWorkspaceTabs record={record} />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1">
+          <ProjectWorkspaceTabs record={record} />
+        </div>
+        <div className="hidden lg:block">
+          <ProjectTasksRail
+            record={record}
+            collapsed={tasksRailCollapsed}
+            onToggleCollapsed={handleToggleRail}
+          />
+        </div>
+      </div>
+
+      <ProjectTasksDialog
+        record={record}
+        open={tasksDialogOpen}
+        onOpenChange={setTasksDialogOpen}
+      />
     </div>
   );
 };

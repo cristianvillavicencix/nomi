@@ -14,6 +14,7 @@ import {
   ChevronDown,
   FileText,
   HandMetal,
+  ListChecks,
   MessageSquare,
   Pencil,
   RotateCcw,
@@ -50,7 +51,13 @@ const getMainContactId = (record: LbsDeal) => {
   return null;
 };
 
-export const ProjectActionsMenu = ({ record }: { record: LbsDeal }) => {
+export const ProjectActionsMenu = ({
+  record,
+  onOpenTasks,
+}: {
+  record: LbsDeal;
+  onOpenTasks?: () => void;
+}) => {
   const { data: identity } = useGetIdentity();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -144,6 +151,17 @@ export const ProjectActionsMenu = ({ record }: { record: LbsDeal }) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
+          {onOpenTasks ? (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                onOpenTasks();
+              }}
+            >
+              <ListChecks className="size-4" />
+              Open tasks
+            </DropdownMenuItem>
+          ) : null}
           <SendFormButton
             context={sendFormContext}
             variant="menu-item"
