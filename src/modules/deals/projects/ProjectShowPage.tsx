@@ -230,8 +230,8 @@ const ProjectShowContent = () => {
         className="mb-1.5 rounded-b-none pb-2"
       />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+        <div className="flex min-w-0 flex-1 flex-col">
           <ProjectWorkspaceTabs record={record} />
         </div>
         <div className="hidden lg:block">

@@ -102,7 +102,7 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   const showTab = (tab: string) => visited.has(tab) || currentTab === tab;
 
   return (
-    <Card className="gap-0 rounded-t-none border-t-0 pt-0 -mt-px min-w-0">
+    <Card className="flex h-full flex-1 flex-col gap-0 rounded-t-none border-t-0 pt-0 -mt-px min-w-0">
         <CardContent className="px-4 pt-1 sm:px-6">
           <Tabs value={currentTab} onValueChange={handleTabChange}>
             <StickyTabsBar className="pb-1">
