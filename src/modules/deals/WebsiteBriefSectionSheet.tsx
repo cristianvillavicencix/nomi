@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Form, useGetIdentity, useNotify, useUpdate } from "ra-core";
+import { useEffect, useMemo, useState } from "react";
+import { Form, useGetIdentity, useGetOne, useNotify, useUpdate } from "ra-core";
 import { DialogSaveButton } from "@/components/admin/form-guard";
 import { DateInput } from "@/components/admin/date-input";
 import { SelectInput } from "@/components/admin/select-input";
@@ -18,6 +18,12 @@ import {
   syncBriefApprovalsForCompleteSections,
   type WebsiteBriefWithApprovals,
 } from "@/modules/deals/websiteBriefSchema";
+import {
+  getContactEmail,
+  getContactFullName,
+  getContactPhone,
+} from "@/modules/clients/clientShowUtils";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { LbsDeal } from "@/modules/types";
 
 const optionalUrl = (url?: string) => {
@@ -52,6 +58,62 @@ export const WebsiteBriefSectionSheet = ({
   const notify = useNotify();
   const { data: identity } = useGetIdentity();
   const open = target != null;
+
+  const contactId =
+    record.contact_id ??
+    (Array.isArray(record.contact_ids) ? record.contact_ids[0] : null);
+  const { data: contact } = useGetOne<Contact>(
+    "contacts",
+    { id: contactId as number },
+    { enabled: open && contactId != null },
+  );
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: record.company_id as number },
+    { enabled: open && record.company_id != null },
+  );
+
+  // Build a brief with sensible defaults pulled from the linked contact and
+  // company. Existing values in record.website_brief always win — we only
+  // fill in keys the user has not touched yet.
+  const prefilledRecord = useMemo(() => {
+    if (!open) return record;
+    const currentBrief =
+      (record.website_brief as Record<string, unknown> | undefined) ?? {};
+    const fillIfEmpty = (key: string, value: string | undefined | null) => {
+      if (value == null || value === "") return;
+      if (
+        currentBrief[key] != null &&
+        String(currentBrief[key]).trim().length > 0
+      ) {
+        return;
+      }
+      currentBrief[key] = value;
+    };
+    if (contact) {
+      fillIfEmpty("contact_name", getContactFullName(contact));
+      fillIfEmpty("contact_email", getContactEmail(contact));
+      fillIfEmpty("contact_phone", getContactPhone(contact));
+    }
+    if (company) {
+      fillIfEmpty("company_name", company.name);
+      fillIfEmpty("existing_website", company.website);
+      const fullAddress = [
+        company.address,
+        company.city,
+        company.state_abbr,
+        company.zipcode,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      fillIfEmpty("full_address", fullAddress);
+      fillIfEmpty("full_address_street", company.address ?? "");
+      fillIfEmpty("full_address_city", company.city ?? "");
+      fillIfEmpty("full_address_state", company.state_abbr ?? "");
+      fillIfEmpty("full_address_zip", company.zipcode ?? "");
+    }
+    return { ...record, website_brief: currentBrief };
+  }, [open, record, contact, company]);
 
   useEffect(() => {
     if (target) setMode(initialMode);
@@ -105,7 +167,7 @@ export const WebsiteBriefSectionSheet = ({
 
         {mode === "edit" && target ? (
           <Form
-            record={record}
+            record={prefilledRecord}
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
             onSubmit={async (data: LbsDeal) => {
               const rawBrief = (data.website_brief ??
