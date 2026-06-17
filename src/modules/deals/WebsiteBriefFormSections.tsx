@@ -1,10 +1,23 @@
 import type { ReactNode } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import {
+  Facebook,
+  Globe,
+  Instagram,
+  Linkedin,
+  Music2,
+  Plus,
+  Twitter,
+  Youtube,
+  X as XIcon,
+} from "lucide-react";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { NumberInput } from "@/components/admin/number-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getLbsProjectScopeMode } from "@/modules/deals/lbsProjectConstants";
 import { ProjectScopeChecklist } from "@/modules/deals/ProjectScopeChecklist";
 import {
@@ -125,6 +138,89 @@ const BriefAddressFields = ({ field }: { field: WebsiteBriefFieldDef }) => {
   );
 };
 
+const detectSocialIcon = (value: string) => {
+  const v = value.toLowerCase();
+  if (v.includes("facebook.com") || v.startsWith("facebook"))
+    return Facebook;
+  if (v.includes("instagram.com") || v.startsWith("instagram"))
+    return Instagram;
+  if (
+    v.includes("twitter.com") ||
+    v.includes("x.com") ||
+    v.startsWith("twitter") ||
+    v.startsWith("x")
+  )
+    return Twitter;
+  if (v.includes("linkedin.com") || v.startsWith("linkedin")) return Linkedin;
+  if (v.includes("youtube.com") || v.includes("youtu.be")) return Youtube;
+  if (v.includes("tiktok.com") || v.startsWith("tiktok")) return Music2;
+  return Globe;
+};
+
+const BriefDynamicListInput = ({ field }: { field: WebsiteBriefFieldDef }) => {
+  const { control, register } = useFormContext();
+  const source = `website_brief.${field.key}`;
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: source,
+  });
+  const values = useWatch({ name: source }) as Array<string> | undefined;
+
+  const placeholder =
+    field.placeholder ?? "Type or paste here…";
+  const addLabel = "Add entry";
+
+  return (
+    <div className="md:col-span-2 space-y-2">
+      <div className="text-sm font-medium">{field.label}</div>
+      {field.helperText ? (
+        <p className="text-muted-foreground text-xs">{field.helperText}</p>
+      ) : null}
+      <ul className="space-y-2">
+        {fields.length === 0 ? (
+          <li className="text-muted-foreground rounded-md border border-dashed px-3 py-4 text-center text-xs">
+            No entries yet. Click "+" below to add one.
+          </li>
+        ) : null}
+        {fields.map((entry, index) => {
+          const currentValue = String(values?.[index] ?? "");
+          const Icon = detectSocialIcon(currentValue);
+          return (
+            <li key={entry.id} className="flex items-center gap-2">
+              <Icon className="text-muted-foreground size-4 shrink-0" />
+              <Input
+                {...register(`${source}.${index}`)}
+                defaultValue={currentValue}
+                placeholder={placeholder}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Remove entry"
+                onClick={() => remove(index)}
+                className="size-8 shrink-0"
+              >
+                <XIcon className="size-4" />
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => append("")}
+      >
+        <Plus className="size-4" />
+        {addLabel}
+      </Button>
+    </div>
+  );
+};
+
 const BriefFieldInput = ({
   field,
   gridClass,
@@ -145,6 +241,11 @@ const BriefFieldInput = ({
   // Address: split into autocompleted fields.
   if (field.key === "full_address" || field.key === "business_address") {
     return <BriefAddressFields field={field} />;
+  }
+
+  // Dynamic list (e.g. social_links, warranties, differentiators).
+  if (field.fieldType === "dynamic_list") {
+    return <BriefDynamicListInput field={field} />;
   }
 
   // Checkbox / toggle.

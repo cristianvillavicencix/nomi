@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Form, useGetIdentity, useGetOne, useNotify, useUpdate } from "ra-core";
-import { DialogSaveButton } from "@/components/admin/form-guard";
+import { Loader2, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/admin/date-input";
 import { SelectInput } from "@/components/admin/select-input";
 import {
@@ -75,19 +76,17 @@ export const WebsiteBriefSectionSheet = ({
 
   // Build a brief with sensible defaults pulled from the linked contact and
   // company. Existing values in record.website_brief always win — we only
-  // fill in keys the user has not touched yet.
+  // fill in keys the user has not touched yet. We clone before writing so we
+  // never mutate the original record handed in from react-admin.
   const prefilledRecord = useMemo(() => {
     if (!open) return record;
-    const currentBrief =
-      (record.website_brief as Record<string, unknown> | undefined) ?? {};
+    const currentBrief: Record<string, unknown> = {
+      ...((record.website_brief as Record<string, unknown> | undefined) ?? {}),
+    };
     const fillIfEmpty = (key: string, value: string | undefined | null) => {
       if (value == null || value === "") return;
-      if (
-        currentBrief[key] != null &&
-        String(currentBrief[key]).trim().length > 0
-      ) {
-        return;
-      }
+      const existing = currentBrief[key];
+      if (existing != null && String(existing).trim().length > 0) return;
       currentBrief[key] = value;
     };
     if (contact) {
@@ -229,7 +228,14 @@ export const WebsiteBriefSectionSheet = ({
             </div>
 
             <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
-              <DialogSaveButton disabled={isPending} label="Save" />
+              <Button type="submit" disabled={isPending}>
+                {isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Save className="size-4" />
+                )}
+                Save
+              </Button>
             </div>
           </Form>
         ) : null}
