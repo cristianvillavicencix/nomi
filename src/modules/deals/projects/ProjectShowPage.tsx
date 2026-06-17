@@ -23,7 +23,6 @@ import {
   createStageTasksForDeal,
   getStageTasksCreatedMessage,
 } from "@/modules/deals/dealStageTaskTemplates";
-import { ManualHandoffBanner } from "@/modules/deals/ManualHandoffControl";
 import { normalizeLbsProjectStage } from "@/modules/deals/lbsProjectConstants";
 import { getBriefStageAdvanceCheck } from "@/modules/deals/projectBriefProgress";
 import { getLaunchStageAdvanceCheck } from "@/modules/deals/projects/launch/launchChecklistGate";
@@ -194,7 +193,6 @@ const ProjectShowContent = () => {
   return (
     <div className="space-y-2">
       {record.archived_at ? <ArchivedTitle /> : null}
-      <ManualHandoffBanner record={record} />
       <div className="mb-3">
         <Button asChild variant="ghost" size="sm" className="gap-2">
           <Link to="/deals">

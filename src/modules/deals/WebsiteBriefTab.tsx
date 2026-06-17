@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useGetList, useGetOne } from "ra-core";
-import { ChevronRight, Link2, Mail, Pencil } from "lucide-react";
+import { ChevronRight, HandMetal, Link2, Mail, Pencil } from "lucide-react";
 import type { Contact } from "@/components/atomic-crm/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,8 @@ import {
   getContactEmail,
   getContactFullName,
 } from "@/modules/clients/clientShowUtils";
-import { ManualHandoffControl } from "@/modules/deals/ManualHandoffControl";
+import { ManualHandoffDialog } from "@/modules/deals/ManualHandoffDialog";
+import { isBriefRequirementsWaived } from "@/modules/deals/projectManualHandoff";
 import { BriefProgressBar } from "@/modules/deals/BriefProgressBar";
 import { BriefSectionApprovalActions } from "@/modules/deals/BriefSectionApprovalActions";
 import { SendProjectWebFormDialog } from "@/modules/deals/SendProjectWebFormDialog";
@@ -69,6 +70,8 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
   const [sheetTarget, setSheetTarget] =
     useState<WebsiteBriefSheetTarget | null>(null);
   const [sheetMode, setSheetMode] = useState<"view" | "edit">("view");
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const handoffActive = isBriefRequirementsWaived(record);
 
   const openRequestDialog = (scope?: BriefRequestScope) => {
     setSendScope(scope);
@@ -139,16 +142,22 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
 
   return (
     <div className="space-y-4">
-      <ManualHandoffControl record={record} />
-
       <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          type="button"
+          variant={handoffActive ? "secondary" : "ghost"}
+          onClick={() => setHandoffOpen(true)}
+        >
+          <HandMetal className="size-4" />
+          {handoffActive ? "Manual handoff: on" : "Manual handoff"}
+        </Button>
         <Button
           type="button"
           variant="outline"
           onClick={() => openRequestDialog()}
         >
           <Link2 className="size-4" />
-          Send to client
+          Request
         </Button>
         <Button
           type="button"
@@ -288,6 +297,12 @@ export const WebsiteBriefTab = ({ record }: { record: LbsDeal }) => {
           </TableBody>
         </Table>
       </div>
+
+      <ManualHandoffDialog
+        record={record}
+        open={handoffOpen}
+        onOpenChange={setHandoffOpen}
+      />
 
       <WebsiteBriefSectionSheet
         record={record}
