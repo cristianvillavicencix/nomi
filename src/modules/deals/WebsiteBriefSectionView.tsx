@@ -13,7 +13,6 @@ import {
 import { BriefSectionApprovalActions } from "@/modules/deals/BriefSectionApprovalActions";
 import {
   getContactEmail,
-  getContactFullName,
   getContactPhone,
 } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
@@ -97,7 +96,16 @@ export const WebsiteBriefSectionView = ({
       merged[key] = value;
     };
     if (contact) {
-      fillIfEmpty("contact_name", getContactFullName(contact));
+      fillIfEmpty("contact_first_name", contact.first_name);
+      fillIfEmpty("contact_last_name", contact.last_name);
+      if (!contact.first_name && !contact.last_name) {
+        const legacy = String(merged.contact_name ?? "").trim();
+        if (legacy) {
+          const [first, ...rest] = legacy.split(/\s+/);
+          fillIfEmpty("contact_first_name", first);
+          fillIfEmpty("contact_last_name", rest.join(" "));
+        }
+      }
       fillIfEmpty("contact_email", getContactEmail(contact));
       fillIfEmpty("contact_phone", getContactPhone(contact));
     }

@@ -73,7 +73,9 @@ export const enrichBriefAnswers = (
 
 export const CONTRACTOR_BRIEF_ANSWER_KEYS = new Set([
   "project_type",
-  "contact_name",
+  "contact_first_name",
+  "contact_last_name",
+  "contact_name", // backwards compat with old submissions
   "contact_email",
   "contact_phone",
   "company_name",

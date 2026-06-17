@@ -74,7 +74,8 @@ export const stripContactCompanyFormMeta = (
     [COMPANY_DRAFT_NAME_FIELD]: _draftName,
     [COMPANY_DRAFT_SECTOR_FIELD]: _draftSector,
     [PRIMARY_MOVE_CONFIRMED_FIELD]: _confirmed,
-    _compact_full_name,
+    _compact_first_name,
+    _compact_last_name,
     _compact_email,
     _compact_phone,
     ...rest

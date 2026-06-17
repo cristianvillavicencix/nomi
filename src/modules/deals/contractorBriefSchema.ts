@@ -31,10 +31,18 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
       "Review what we already have on file and fill in anything that's missing.",
     fields: [
       field({
-        key: "contact_name",
+        key: "contact_first_name",
         type: "text",
-        label: "Contact name",
+        label: "First name",
         required: true,
+        half_width: true,
+      }),
+      field({
+        key: "contact_last_name",
+        type: "text",
+        label: "Last name",
+        required: true,
+        half_width: true,
       }),
       field({
         key: "contact_email",

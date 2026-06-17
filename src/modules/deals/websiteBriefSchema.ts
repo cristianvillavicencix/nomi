@@ -474,7 +474,7 @@ export const getVisibleBriefSections = (projectType?: string | null) => {
         helperText: entry.help_text,
         multiline: entry.type === "textarea",
         rows: entry.type === "textarea" ? 3 : undefined,
-        fullWidth: true,
+        fullWidth: entry.half_width !== true,
         fieldType: entry.type,
         required: entry.required,
         options: entry.options,

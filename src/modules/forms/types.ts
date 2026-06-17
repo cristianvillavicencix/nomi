@@ -53,6 +53,8 @@ export type FormFieldDef = {
   skip_button_label?: string;
   formula?: string;
   format?: FormulaFormat;
+  /** Render at half width so two fields sit side by side (e.g. first/last name). */
+  half_width?: boolean;
   visible_when?: VisibleWhen;
 };
 

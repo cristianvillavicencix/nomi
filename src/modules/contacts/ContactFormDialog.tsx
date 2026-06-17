@@ -37,6 +37,8 @@ import {
 } from "@/modules/contacts/companyDraft";
 import {
   compactContactFieldsToPayload,
+  compactContactFullName,
+  hasCompactContactName,
   LbsContactFormFields,
 } from "@/modules/contacts/LbsContactFormFields";
 import {
@@ -96,7 +98,8 @@ const defaultCreateValues = (lockCompanyId?: Identifier) => ({
   status: LBS_CLIENT_STATUS,
   background: "",
   organization_member_id: undefined as Identifier | undefined,
-  _compact_full_name: "",
+  _compact_first_name: "",
+  _compact_last_name: "",
   _compact_email: "",
   _compact_phone: "",
   [COMPANY_DRAFT_NAME_FIELD]: "",
@@ -262,12 +265,11 @@ export const ContactFormDialog = ({
             className="flex min-h-0 flex-1 flex-col"
             defaultValues={defaultCreateValues(formLockCompanyId)}
             onSubmit={(values: Record<string, unknown>) => {
-              const fullName = String(values._compact_full_name ?? "").trim();
-              if (!fullName) {
-                notify("Full name is required", { type: "warning" });
+              const fullName = compactContactFullName(values);
+              if (!hasCompactContactName(values)) {
+                notify("First name is required", { type: "warning" });
                 return;
               }
-              compactContactFieldsToPayload(values);
               onDraftSubmit?.({
                 fullName,
                 email: String(values._compact_email ?? "").trim(),
@@ -306,8 +308,7 @@ export const ContactFormDialog = ({
           redirect={false}
           transform={(values: Record<string, unknown>): Partial<Contact> => {
             const compact = compactContactFieldsToPayload(values);
-            const useCompact =
-              String(values._compact_full_name ?? "").trim().length > 0;
+            const useCompact = hasCompactContactName(values);
             const now = new Date().toISOString();
             const effectiveLock =
               allowOrphanContact || deferCreate

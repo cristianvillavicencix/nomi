@@ -68,12 +68,20 @@ const CompactContactFields = ({
   lockCompanyId?: Identifier;
 }) => (
   <div className="space-y-4">
-    <TextInput
-      source="_compact_full_name"
-      label="Full name"
-      validate={required()}
-      helperText={false}
-    />
+    <div className="grid gap-4 md:grid-cols-2">
+      <TextInput
+        source="_compact_first_name"
+        label="First name"
+        validate={required()}
+        helperText={false}
+      />
+      <TextInput
+        source="_compact_last_name"
+        label="Last name"
+        validate={required()}
+        helperText={false}
+      />
+    </div>
     <EmailInput source="_compact_email" label="Email" helperText={false} />
     <PhoneInput source="_compact_phone" label="Phone" helperText={false} />
     {lockCompanyId != null ? null : <ContactCompanyPickerField />}
@@ -300,12 +308,24 @@ const ContactManagementInputs = () => (
 const saleOptionRenderer = (choice: OrganizationMember) =>
   `${choice.first_name} ${choice.last_name}`;
 
+/** Combine the compact first/last name inputs into a single display name. */
+export const compactContactFullName = (values: Record<string, unknown>) =>
+  [
+    String(values._compact_first_name ?? "").trim(),
+    String(values._compact_last_name ?? "").trim(),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+/** True when the compact form has at least a first name entered. */
+export const hasCompactContactName = (values: Record<string, unknown>) =>
+  String(values._compact_first_name ?? "").trim().length > 0;
+
 /** Map compact dialog fields to a Contact create/update payload fragment. */
 export const compactContactFieldsToPayload = (values: Record<string, unknown>) => {
-  const fullName = String(values._compact_full_name ?? "").trim();
-  const parts = fullName.split(/\s+/).filter(Boolean);
-  const firstName = parts[0] ?? "";
-  const lastName = parts.slice(1).join(" ") || firstName;
+  const firstName = String(values._compact_first_name ?? "").trim();
+  const lastName = String(values._compact_last_name ?? "").trim() || firstName;
   const emailValue = String(values._compact_email ?? "").trim();
   const phoneValue = String(values._compact_phone ?? "").trim();
 
