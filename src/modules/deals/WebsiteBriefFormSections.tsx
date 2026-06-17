@@ -157,18 +157,22 @@ const detectSocialIcon = (value: string) => {
   return Globe;
 };
 
-const BriefDynamicListInput = ({ field }: { field: WebsiteBriefFieldDef }) => {
+const BriefDynamicListInput = ({
+  field,
+  detectIcon = detectSocialIcon,
+}: {
+  field: WebsiteBriefFieldDef;
+  detectIcon?: (value: string) => typeof Globe;
+}) => {
   const { control, register } = useFormContext();
   const source = `website_brief.${field.key}`;
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, insert } = useFieldArray({
     control,
     name: source,
   });
   const values = useWatch({ name: source }) as Array<string> | undefined;
 
-  const placeholder =
-    field.placeholder ?? "Type or paste here…";
-  const addLabel = "Add entry";
+  const placeholder = field.placeholder ?? "Type or paste here…";
 
   return (
     <div className="md:col-span-2 space-y-2">
@@ -178,13 +182,29 @@ const BriefDynamicListInput = ({ field }: { field: WebsiteBriefFieldDef }) => {
       ) : null}
       <ul className="space-y-2">
         {fields.length === 0 ? (
-          <li className="text-muted-foreground rounded-md border border-dashed px-3 py-4 text-center text-xs">
-            No entries yet. Click "+" below to add one.
+          <li className="flex items-center gap-2">
+            <Globe className="text-muted-foreground size-4 shrink-0" />
+            <Input
+              placeholder={placeholder}
+              className="flex-1"
+              onFocus={() => append("")}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Add entry"
+              onClick={() => append("")}
+              className="size-8 shrink-0"
+            >
+              <Plus className="size-4" />
+            </Button>
           </li>
         ) : null}
         {fields.map((entry, index) => {
           const currentValue = String(values?.[index] ?? "");
-          const Icon = detectSocialIcon(currentValue);
+          const Icon = detectIcon(currentValue);
+          const isLast = index === fields.length - 1;
           return (
             <li key={entry.id} className="flex items-center gap-2">
               <Icon className="text-muted-foreground size-4 shrink-0" />
@@ -194,6 +214,29 @@ const BriefDynamicListInput = ({ field }: { field: WebsiteBriefFieldDef }) => {
                 placeholder={placeholder}
                 className="flex-1"
               />
+              {isLast ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Add entry"
+                  onClick={() => append("")}
+                  className="size-8 shrink-0"
+                >
+                  <Plus className="size-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Insert below"
+                  onClick={() => insert(index + 1, "")}
+                  className="size-8 shrink-0"
+                >
+                  <Plus className="size-4" />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -208,15 +251,6 @@ const BriefDynamicListInput = ({ field }: { field: WebsiteBriefFieldDef }) => {
           );
         })}
       </ul>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => append("")}
-      >
-        <Plus className="size-4" />
-        {addLabel}
-      </Button>
     </div>
   );
 };
@@ -246,6 +280,27 @@ const BriefFieldInput = ({
   // Dynamic list (e.g. social_links, warranties, differentiators).
   if (field.fieldType === "dynamic_list") {
     return <BriefDynamicListInput field={field} />;
+  }
+
+  // Special case: current_website is a single text field in the schema but
+  // clients often have multiple URLs. Render it as a dynamic list of URLs
+  // with a globe icon. The first entry will still be saved as `existing_website`
+  // for backwards compatibility through a useEffect, see below.
+  if (field.key === "existing_website") {
+    return (
+      <BriefDynamicListInput
+        field={{
+          ...field,
+          key: "existing_websites",
+          label: field.label,
+          placeholder: field.placeholder ?? "https://example.com",
+          helperText:
+            field.helperText ??
+            "Add every URL the client owns — site, landing pages, microsites.",
+        }}
+        detectIcon={() => Globe}
+      />
+    );
   }
 
   // Checkbox / toggle.

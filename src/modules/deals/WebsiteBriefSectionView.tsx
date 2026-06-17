@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useGetOne } from "ra-core";
 import { Button } from "@/components/ui/button";
 import {
   formatProjectDeliveryDate,
@@ -9,6 +11,12 @@ import {
   type WebsiteBriefSectionDef,
 } from "@/modules/deals/websiteBriefSchema";
 import { BriefSectionApprovalActions } from "@/modules/deals/BriefSectionApprovalActions";
+import {
+  getContactEmail,
+  getContactFullName,
+  getContactPhone,
+} from "@/modules/clients/clientShowUtils";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { LbsDeal } from "@/modules/types";
 import type { WebsiteBriefSheetTarget } from "@/modules/deals/WebsiteBriefSectionSheet";
 
@@ -61,7 +69,53 @@ export const WebsiteBriefSectionView = ({
   target,
   onEdit,
 }: WebsiteBriefSectionViewProps) => {
-  const brief = record.website_brief ?? {};
+  const contactId =
+    record.contact_id ??
+    (Array.isArray(record.contact_ids) ? record.contact_ids[0] : null);
+  const { data: contact } = useGetOne<Contact>(
+    "contacts",
+    { id: contactId as number },
+    { enabled: contactId != null },
+  );
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: record.company_id as number },
+    { enabled: record.company_id != null },
+  );
+
+  // Merge saved brief values with sensible defaults from the linked contact
+  // and company. Saved values always win; we only fill keys the user hasn't
+  // touched yet so the view shows the data immediately without going to edit.
+  const brief = useMemo(() => {
+    const merged: Record<string, unknown> = {
+      ...(record.website_brief as Record<string, unknown> | undefined),
+    };
+    const fillIfEmpty = (key: string, value: string | undefined | null) => {
+      if (value == null || value === "") return;
+      const existing = merged[key];
+      if (existing != null && String(existing).trim().length > 0) return;
+      merged[key] = value;
+    };
+    if (contact) {
+      fillIfEmpty("contact_name", getContactFullName(contact));
+      fillIfEmpty("contact_email", getContactEmail(contact));
+      fillIfEmpty("contact_phone", getContactPhone(contact));
+    }
+    if (company) {
+      fillIfEmpty("company_name", company.name);
+      fillIfEmpty("existing_website", company.website);
+      const fullAddress = [
+        company.address,
+        company.city,
+        company.state_abbr,
+        company.zipcode,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      fillIfEmpty("full_address", fullAddress);
+    }
+    return merged as Record<string, string | null | undefined>;
+  }, [record.website_brief, contact, company]);
 
   if (target.kind === "setup") {
     return (
