@@ -1,10 +1,4 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { DealPipelineStage } from "../types";
 import { cn } from "@/lib/utils";
 
@@ -125,89 +119,73 @@ const ProjectStageFlowInner = ({
       }
     >
       <div className="flex w-full min-w-0 items-stretch">
-        <TooltipProvider>
-          {stages.map((stage, index) => {
-              const state = getStageVisualState(index, activeIndex);
-              const background = getProgressColor(index, stages.length, state);
-              const textColor = getTextColor(state);
-              const isCurrent = stage.id === stages[activeIndex]?.id;
-              const canChangeToStage = interactive && !isCurrent;
-              const clipPath = getSegmentClipPath(index, stages.length);
-              const statusLabel =
-                state === "completed"
-                  ? "Completed"
-                  : state === "active"
-                    ? "Current"
-                    : "Pending";
-              const isAnimating = animatedStageId === stage.id;
+        {stages.map((stage, index) => {
+          const state = getStageVisualState(index, activeIndex);
+          const background = getProgressColor(index, stages.length, state);
+          const textColor = getTextColor(state);
+          const isCurrent = stage.id === stages[activeIndex]?.id;
+          const canChangeToStage = interactive && !isCurrent;
+          const clipPath = getSegmentClipPath(index, stages.length);
+          const statusLabel =
+            state === "completed"
+              ? "Completed"
+              : state === "active"
+                ? "Current"
+                : "Pending";
+          const isAnimating = animatedStageId === stage.id;
+          const tooltipLines = [
+            `${stage.label} — Stage ${index + 1} of ${stages.length}`,
+            `Status: ${statusLabel}`,
+          ];
+          if (interactive && canChangeToStage) {
+            tooltipLines.push("Click to move project here");
+          }
 
-              return (
-                <Tooltip key={stage.id}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        canChangeToStage && onStageChange?.(stage.id)
-                      }
-                      disabled={!canChangeToStage}
-                      className={cn(
-                        "relative flex h-9 min-w-0 flex-1 items-center justify-center px-1 text-[10px] font-medium transition-all duration-300 sm:h-11 sm:px-1.5 sm:text-xs md:h-12 md:text-sm",
-                        getSegmentTextPaddingClass(index, stages.length),
-                        canChangeToStage
-                          ? "cursor-pointer hover:brightness-95"
-                          : "cursor-default",
-                      )}
-                      style={{
-                        clipPath,
-                        marginLeft:
-                          index === 0
-                            ? 0
-                            : "calc(var(--stage-chevron-depth) * -0.56)",
-                        zIndex: stages.length - index,
-                        background,
-                        color: textColor,
-                        transform:
-                          isCurrent && isAnimating
-                            ? "translateY(-1px) scale(1.01)"
-                            : "none",
-                        boxShadow:
-                          state === "active"
-                            ? isAnimating
-                              ? "inset 0 0 0 2px rgba(255,255,255,0.72), 0 8px 18px rgba(10,20,40,0.20)"
-                              : "inset 0 0 0 2px rgba(255,255,255,0.65), 0 3px 8px rgba(10,20,40,0.16)"
-                            : "inset 0 0 0 1px rgba(255,255,255,0.35)",
-                      }}
-                      aria-current={isCurrent ? "step" : undefined}
-                      title={stage.label}
-                    >
-                      <span className="w-full truncate text-center leading-tight">
-                        {stage.label}
-                      </span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    align="center"
-                    className="space-y-1"
-                  >
-                    <div className="font-medium">{stage.label}</div>
-                    <div>
-                      Stage {index + 1} of {stages.length}
-                    </div>
-                    <div>Status: {statusLabel}</div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: background }}
-                      />
-                      <span>Flow color</span>
-                    </div>
-                    {interactive ? <div>Click to move project here</div> : null}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-        </TooltipProvider>
+          return (
+            <button
+              key={stage.id}
+              type="button"
+              onClick={() =>
+                canChangeToStage && onStageChange?.(stage.id)
+              }
+              disabled={!canChangeToStage}
+              className={cn(
+                "relative flex h-9 min-w-0 flex-1 items-center justify-center px-1 text-[10px] font-medium transition-all duration-300 sm:h-11 sm:px-1.5 sm:text-xs md:h-12 md:text-sm",
+                getSegmentTextPaddingClass(index, stages.length),
+                canChangeToStage
+                  ? "cursor-pointer hover:brightness-95"
+                  : "cursor-default",
+              )}
+              style={{
+                clipPath,
+                marginLeft:
+                  index === 0
+                    ? 0
+                    : "calc(var(--stage-chevron-depth) * -0.56)",
+                zIndex: stages.length - index,
+                background,
+                color: textColor,
+                transform:
+                  isCurrent && isAnimating
+                    ? "translateY(-1px) scale(1.01)"
+                    : "none",
+                boxShadow:
+                  state === "active"
+                    ? isAnimating
+                      ? "inset 0 0 0 2px rgba(255,255,255,0.72), 0 8px 18px rgba(10,20,40,0.20)"
+                      : "inset 0 0 0 2px rgba(255,255,255,0.65), 0 3px 8px rgba(10,20,40,0.16)"
+                    : "inset 0 0 0 1px rgba(255,255,255,0.35)",
+              }}
+              aria-current={isCurrent ? "step" : undefined}
+              aria-label={tooltipLines.join(". ")}
+              title={tooltipLines.join("\n")}
+            >
+              <span className="w-full truncate text-center leading-tight">
+                {stage.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
