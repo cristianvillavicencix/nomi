@@ -290,20 +290,28 @@ Deno.serve(
         }
 
         if (smsTo) {
-          const smsOutcome = await sendInvoiceSms({
-            orgId: member.org_id,
-            memberId: Number(member.id),
-            phoneRaw: smsTo,
-            body: smsBody,
-            contactId: contactId ?? invoice.contact_id ?? null,
-          });
-          smsSent = smsOutcome.sent;
-          smsSkipped = smsOutcome.skipped;
-          if (smsOutcome.skipped) {
-            console.warn(
-              "send_client_invoice.sms_skipped",
-              smsOutcome.reason,
-            );
+          try {
+            const smsOutcome = await sendInvoiceSms({
+              orgId: member.org_id,
+              memberId: Number(member.id),
+              phoneRaw: smsTo,
+              body: smsBody,
+              contactId: contactId ?? invoice.contact_id ?? null,
+            });
+            smsSent = smsOutcome.sent;
+            smsSkipped = smsOutcome.skipped;
+            if (smsOutcome.skipped) {
+              console.warn(
+                "send_client_invoice.sms_skipped",
+                smsOutcome.reason,
+              );
+            }
+          } catch (smsError) {
+            console.warn("send_client_invoice.sms_error", smsError);
+            smsSkipped = true;
+            if (!emailSent) {
+              throw smsError;
+            }
           }
         }
 

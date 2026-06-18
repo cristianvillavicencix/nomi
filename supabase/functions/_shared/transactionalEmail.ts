@@ -230,6 +230,8 @@ export async function sendTransactionalEmail(params: {
   htmlBody?: string | null;
   replyTo?: string | null;
   attachments?: EmailAttachment[];
+  fromEmail?: string | null;
+  fromName?: string | null;
 }) {
   if (isTransactionalEmailSkipped()) {
     console.warn(
@@ -246,7 +248,12 @@ export async function sendTransactionalEmail(params: {
     );
   }
 
-  const from = await resolveFromAddress(params.orgId, params.orgName);
+  const from = params.fromEmail?.trim()
+    ? {
+        email: params.fromEmail.trim(),
+        name: params.fromName?.trim() || DEFAULT_ORGANIZATION_NAME,
+      }
+    : await resolveFromAddress(params.orgId, params.orgName);
   const htmlBody = params.htmlBody?.trim() || textToHtml(params.textBody);
   const result = await sendViaTwilioEmail({
     accountSid: twilio.accountSid,

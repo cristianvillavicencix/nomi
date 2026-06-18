@@ -273,6 +273,12 @@ export type Ticket = {
   subject: string;
   status: string;
   priority: string;
+  inbox_address?: string | null;
+  requester_email?: string | null;
+  requester_name?: string | null;
+  external_thread_id?: string | null;
+  merged_into_ticket_id?: Identifier | null;
+  merge_note?: string | null;
   created_at?: string;
   updated_at?: string;
 } & Pick<RaRecord, "id">;
@@ -281,7 +287,22 @@ export type TicketMessage = {
   ticket_id: Identifier;
   author_member_id?: Identifier | null;
   body: string;
+  direction?: "inbound" | "outbound" | string;
+  from_email?: string | null;
+  from_name?: string | null;
+  to_emails?: string[] | null;
+  external_message_id?: string | null;
+  html_body?: string | null;
   attachments?: unknown[];
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type TicketInbox = {
+  org_id?: number;
+  email: string;
+  display_name?: string | null;
+  from_name?: string | null;
+  is_active?: boolean;
   created_at?: string;
 } & Pick<RaRecord, "id">;
 

@@ -1,15 +1,14 @@
-import { TicketsList } from "./TicketsList";
+import { TicketsInbox } from "./TicketsInbox";
 import { TicketShow } from "./TicketShow";
 
 export default {
-  list: TicketsList,
+  list: TicketsInbox,
   show: TicketShow,
 };
 
-export {
-  TicketsList,
-  TicketShow,
-  TicketCreate,
-  TicketReplyForm,
-  CreateTicketButton,
-};
+export { TicketsInbox } from "./TicketsInbox";
+export { TicketsList } from "./TicketsList";
+export { TicketShow } from "./TicketShow";
+export { TicketCreate } from "./TicketCreate";
+export { TicketReplyForm } from "./TicketReplyForm";
+export { CreateTicketButton } from "./CreateTicketButton";

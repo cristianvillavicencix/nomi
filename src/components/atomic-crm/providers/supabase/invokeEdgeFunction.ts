@@ -52,8 +52,24 @@ export const readEdgeFunctionErrorMessage = async (
         return payload.message;
       }
     } catch {
-      // Fall through to generic message below.
+      try {
+        const text = (await response.clone().text()).trim();
+        if (text) {
+          const parsed = JSON.parse(text) as { message?: string };
+          if (parsed?.message) return parsed.message;
+        }
+      } catch {
+        // Fall through to generic message below.
+      }
     }
   }
-  return error.message || fallback;
+
+  if (
+    error.message &&
+    !error.message.includes("Edge Function returned a non-2xx status code")
+  ) {
+    return error.message;
+  }
+
+  return fallback;
 };

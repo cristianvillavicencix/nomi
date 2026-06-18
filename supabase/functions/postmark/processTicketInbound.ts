@@ -1,0 +1,227 @@
+import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import type { Attachment } from "./extractAndUploadAttachments.ts";
+
+type PostmarkAddress = {
+  Email?: string;
+  Name?: string;
+};
+
+type PostmarkHeader = {
+  Name?: string;
+  Value?: string;
+};
+
+export type PostmarkInboundPayload = {
+  MessageID?: string;
+  Subject?: string;
+  TextBody?: string;
+  HtmlBody?: string;
+  FromFull?: PostmarkAddress;
+  ToFull?: PostmarkAddress[];
+  CcFull?: PostmarkAddress[];
+  OriginalRecipient?: string;
+  Headers?: PostmarkHeader[];
+};
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const collectRecipientEmails = (payload: PostmarkInboundPayload) => {
+  const emails = new Set<string>();
+  for (const row of payload.ToFull ?? []) {
+    if (row.Email?.trim()) emails.add(normalizeEmail(row.Email));
+  }
+  for (const row of payload.CcFull ?? []) {
+    if (row.Email?.trim()) emails.add(normalizeEmail(row.Email));
+  }
+  if (payload.OriginalRecipient?.trim()) {
+    emails.add(normalizeEmail(payload.OriginalRecipient));
+  }
+  return emails;
+};
+
+const headerValue = (headers: PostmarkHeader[] | undefined, name: string) =>
+  headers
+    ?.find((entry) => entry.Name?.toLowerCase() === name.toLowerCase())
+    ?.Value?.trim() ?? null;
+
+const findInbox = async (recipientEmails: Set<string>) => {
+  const { data: inboxes, error } = await supabaseAdmin
+    .from("ticket_inboxes")
+    .select("id, org_id, email, display_name, from_name")
+    .eq("is_active", true);
+
+  if (error) throw new Error(error.message);
+
+  return (inboxes ?? []).find((inbox) =>
+    recipientEmails.has(normalizeEmail(inbox.email))
+  ) ?? null;
+};
+
+const findContactByEmail = async (orgId: number, email: string) => {
+  const { data: contacts, error } = await supabaseAdmin
+    .from("contacts")
+    .select("id, company_id, first_name, last_name, email_jsonb")
+    .eq("org_id", orgId);
+
+  if (error) throw new Error(error.message);
+
+  const normalized = normalizeEmail(email);
+  return (contacts ?? []).find((contact) =>
+    (contact.email_jsonb as Array<{ email?: string }> | null)?.some(
+      (row) => normalizeEmail(row.email ?? "") === normalized,
+    )
+  ) ?? null;
+};
+
+const findTicketForThread = async (
+  orgId: number,
+  inReplyTo: string | null,
+  references: string | null,
+) => {
+  const ids = new Set<string>();
+  if (inReplyTo) ids.add(inReplyTo);
+  if (references) {
+    for (const token of references.split(/\s+/)) {
+      if (token.trim()) ids.add(token.trim());
+    }
+  }
+
+  if (!ids.size) return null;
+
+  const idList = Array.from(ids);
+
+  const { data: messages, error } = await supabaseAdmin
+    .from("ticket_messages")
+    .select("ticket_id, external_message_id")
+    .in("external_message_id", idList);
+
+  if (error) throw new Error(error.message);
+
+  for (const message of messages ?? []) {
+    if (!message.ticket_id) continue;
+    const { data: ticket } = await supabaseAdmin
+      .from("tickets")
+      .select("id, merged_into_ticket_id")
+      .eq("id", message.ticket_id)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (ticket) return ticket.merged_into_ticket_id ?? ticket.id;
+  }
+
+  const { data: threadTicket, error: ticketError } = await supabaseAdmin
+    .from("tickets")
+    .select("id, merged_into_ticket_id")
+    .eq("org_id", orgId)
+    .in("external_thread_id", idList)
+    .limit(1)
+    .maybeSingle();
+
+  if (ticketError) throw new Error(ticketError.message);
+  return threadTicket?.merged_into_ticket_id ?? threadTicket?.id ?? null;
+};
+
+export const matchesTicketInbox = async (payload: PostmarkInboundPayload) => {
+  const recipients = collectRecipientEmails(payload);
+  if (!recipients.size) return null;
+  return findInbox(recipients);
+};
+
+export const processTicketInbound = async ({
+  payload,
+  attachments,
+}: {
+  payload: PostmarkInboundPayload;
+  attachments: Attachment[];
+}) => {
+  const recipients = collectRecipientEmails(payload);
+  const inbox = await findInbox(recipients);
+  if (!inbox) {
+    return new Response("No matching ticket inbox", { status: 403 });
+  }
+
+  const fromEmail = payload.FromFull?.Email?.trim();
+  if (!fromEmail) {
+    return new Response("Missing From email", { status: 403 });
+  }
+
+  const fromName = payload.FromFull?.Name?.trim() || null;
+  const subject = payload.Subject?.trim() || "(No subject)";
+  const textBody = payload.TextBody?.trim() || "";
+  const htmlBody = payload.HtmlBody?.trim() || null;
+  const messageId = payload.MessageID?.trim() || null;
+  const inReplyTo = headerValue(payload.Headers, "In-Reply-To");
+  const references = headerValue(payload.Headers, "References");
+
+  if (!textBody && !htmlBody) {
+    return new Response("Missing email body", { status: 403 });
+  }
+
+  const contact = await findContactByEmail(inbox.org_id, fromEmail);
+  const existingTicketId = await findTicketForThread(
+    inbox.org_id,
+    inReplyTo,
+    references,
+  );
+
+  const now = new Date().toISOString();
+  let ticketId = existingTicketId;
+
+  if (!ticketId) {
+    const { data: ticket, error: ticketError } = await supabaseAdmin
+      .from("tickets")
+      .insert({
+        org_id: inbox.org_id,
+        company_id: contact?.company_id ?? null,
+        contact_id: contact?.id ?? null,
+        subject,
+        status: "new",
+        priority: "normal",
+        inbox_address: inbox.email,
+        requester_email: normalizeEmail(fromEmail),
+        requester_name: fromName,
+        external_thread_id: messageId,
+        created_at: now,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (ticketError || !ticket) {
+      throw new Error(ticketError?.message ?? "Could not create ticket");
+    }
+    ticketId = ticket.id;
+  } else {
+    await supabaseAdmin
+      .from("tickets")
+      .update({
+        status: "open",
+        updated_at: now,
+      })
+      .eq("id", ticketId)
+      .eq("org_id", inbox.org_id);
+  }
+
+  const { error: messageError } = await supabaseAdmin
+    .from("ticket_messages")
+    .insert({
+      ticket_id: ticketId,
+      body: textBody || htmlBody?.replace(/<[^>]+>/g, " ") || "",
+      html_body: htmlBody,
+      direction: "inbound",
+      from_email: normalizeEmail(fromEmail),
+      from_name: fromName,
+      to_emails: [normalizeEmail(inbox.email)],
+      external_message_id: messageId,
+      attachments,
+      created_at: now,
+    });
+
+  if (messageError) {
+    throw new Error(messageError.message);
+  }
+
+  return new Response(JSON.stringify({ ok: true, ticket_id: ticketId }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+};

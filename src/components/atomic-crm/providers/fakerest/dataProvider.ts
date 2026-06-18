@@ -786,6 +786,17 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
     invoice_id: Number(invoiceId),
   }),
+  replyTicket: async ({ ticketId, body }) => ({
+    message: {
+      id: `demo-ticket-message-${Date.now()}`,
+      ticket_id: ticketId,
+      body,
+      direction: "outbound",
+      created_at: new Date().toISOString(),
+    },
+    email_sent: true,
+    email_skipped: false,
+  }),
   upsertLbsClient: async (
     input: LbsClientUpsertInput,
   ): Promise<LbsClientUpsertResult> => {

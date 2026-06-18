@@ -30,6 +30,7 @@ import {
 } from "@/modules/contacts/lbsContactUpsert";
 import { shouldClearPrimaryOnCompany } from "@/modules/clients/primaryContactRelink";
 import { billingProvider } from "./modules/billingProvider";
+import { ticketsProvider } from "./modules/ticketsProvider";
 import { proposalsProvider } from "./modules/proposalsProvider";
 import { messagingProvider } from "./modules/messagingProvider";
 import { webMonitorProvider } from "./modules/webMonitorProvider";
@@ -291,6 +292,7 @@ const dataProviderWithCustomMethods = {
   },
 
   ...billingProvider,
+  ...ticketsProvider,
   ...proposalsProvider,
   ...messagingProvider,
   ...webMonitorProvider,

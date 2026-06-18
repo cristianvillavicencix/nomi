@@ -9,6 +9,10 @@ import { extractMailContactData } from "./extractMailContactData.ts";
 import { getExpectedAuthorization } from "./getExpectedAuthorization.ts";
 import { getNoteContent } from "./getNoteContent.ts";
 import { extractAndUploadAttachments } from "./extractAndUploadAttachments.ts";
+import {
+  matchesTicketInbox,
+  processTicketInbound,
+} from "./processTicketInbound.ts";
 
 const webhookUser = Deno.env.get("POSTMARK_WEBHOOK_USER");
 const webhookPassword = Deno.env.get("POSTMARK_WEBHOOK_PASSWORD");
@@ -33,7 +37,22 @@ Deno.serve(async (req) => {
   response = checkBody(json);
   if (response) return response;
 
-  const { ToFull, FromFull, Subject, TextBody, Attachments } = json;
+  const attachments = await extractAndUploadAttachments(json.Attachments);
+
+  const ticketInbox = await matchesTicketInbox(json);
+  if (ticketInbox) {
+    try {
+      return await processTicketInbound({ payload: json, attachments });
+    } catch (error) {
+      console.error("postmark.ticket_inbound.error", error);
+      return new Response(
+        error instanceof Error ? error.message : "Ticket inbound failed",
+        { status: 500 },
+      );
+    }
+  }
+
+  const { ToFull, FromFull, Subject, TextBody } = json;
 
   const noteContent = getNoteContent(Subject, TextBody);
 
@@ -48,8 +67,6 @@ Deno.serve(async (req) => {
   }
 
   const contacts = extractMailContactData(ToFull);
-
-  const attachments = await extractAndUploadAttachments(Attachments);
 
   for (const { firstName, lastName, email, domain } of contacts) {
     if (!email) {
@@ -117,8 +134,8 @@ const checkBody = (json: any) => {
     return new Response("Missing parameter: FromFull", { status: 403 });
   if (!Subject)
     return new Response("Missing parameter: Subject", { status: 403 });
-  if (!TextBody)
-    return new Response("Missing parameter: TextBody", {
+  if (!TextBody && !json.HtmlBody)
+    return new Response("Missing parameter: TextBody or HtmlBody", {
       status: 403,
     });
 };
