@@ -25,6 +25,23 @@ export type PostmarkInboundPayload = {
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
+const extractEmailsFromHeaderValue = (value: string) => {
+  const emails: string[] = [];
+  const angleMatches = value.matchAll(/<([^>]+@[^>]+)>/g);
+  for (const match of angleMatches) {
+    if (match[1]?.trim()) emails.push(normalizeEmail(match[1]));
+  }
+  if (!emails.length) {
+    const bareMatches = value.matchAll(
+      /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+    );
+    for (const match of bareMatches) {
+      if (match[0]?.trim()) emails.push(normalizeEmail(match[0]));
+    }
+  }
+  return emails;
+};
+
 const collectRecipientEmails = (payload: PostmarkInboundPayload) => {
   const emails = new Set<string>();
   for (const row of payload.ToFull ?? []) {
@@ -35,6 +52,21 @@ const collectRecipientEmails = (payload: PostmarkInboundPayload) => {
   }
   if (payload.OriginalRecipient?.trim()) {
     emails.add(normalizeEmail(payload.OriginalRecipient));
+  }
+  const forwardedHeaderNames = new Set([
+    "to",
+    "delivered-to",
+    "x-original-to",
+    "x-forwarded-to",
+    "envelope-to",
+  ]);
+  for (const header of payload.Headers ?? []) {
+    const name = header.Name?.trim().toLowerCase();
+    const value = header.Value?.trim();
+    if (!name || !value || !forwardedHeaderNames.has(name)) continue;
+    for (const email of extractEmailsFromHeaderValue(value)) {
+      emails.add(email);
+    }
   }
   return emails;
 };
@@ -47,14 +79,16 @@ const headerValue = (headers: PostmarkHeader[] | undefined, name: string) =>
 const findInbox = async (recipientEmails: Set<string>) => {
   const { data: inboxes, error } = await supabaseAdmin
     .from("ticket_inboxes")
-    .select("id, org_id, email, display_name, from_name")
+    .select("id, org_id, email, display_name, from_name, postmark_inbound_address")
     .eq("is_active", true);
 
   if (error) throw new Error(error.message);
 
-  return (inboxes ?? []).find((inbox) =>
-    recipientEmails.has(normalizeEmail(inbox.email))
-  ) ?? null;
+  return (inboxes ?? []).find((inbox) => {
+    if (recipientEmails.has(normalizeEmail(inbox.email))) return true;
+    const inbound = inbox.postmark_inbound_address?.trim();
+    return Boolean(inbound && recipientEmails.has(normalizeEmail(inbound)));
+  }) ?? null;
 };
 
 const findContactByEmail = async (orgId: number, email: string) => {

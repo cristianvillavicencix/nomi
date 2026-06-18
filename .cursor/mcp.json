@@ -2,6 +2,9 @@
   "mcpServers": {
     "supabase": {
       "url": "https://mcp.supabase.com/mcp?project_ref=qjglkywmqwqdoaboakao"
+    },
+    "twilio-docs": {
+      "url": "https://mcp.twilio.com/docs"
     }
   }
 }
