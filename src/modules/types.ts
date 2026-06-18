@@ -192,6 +192,8 @@ export type ClientInvoice = {
   scheduled_send_at?: string | null;
   scheduled_send_message?: string | null;
   scheduled_send_storage_path?: string | null;
+  scheduled_send_sms_to?: string | null;
+  scheduled_send_sms_body?: string | null;
   created_at?: string;
   updated_at?: string;
 } & Pick<RaRecord, "id">;

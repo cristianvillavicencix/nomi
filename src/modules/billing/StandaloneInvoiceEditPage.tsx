@@ -589,13 +589,26 @@ export const StandaloneInvoiceEditPage = ({
         company={activeCompany}
         contact={activeContact}
         onSent={handleSendComplete}
+        onScheduleSend={() => {
+          setScheduleDialogOpen(true);
+          refresh();
+        }}
+        onShareLink={(url) => {
+          setShareUrl(url);
+          setShareDialogOpen(true);
+          refresh();
+        }}
       />
 
       <InvoiceShareLinkDialog
         open={shareDialogOpen}
         onOpenChange={handleShareClose}
         shareUrl={shareUrl}
+        invoice={dialogInvoice}
         invoiceNumber={dialogInvoice.invoice_number}
+        organizationName={organizationName}
+        company={activeCompany}
+        contact={activeContact}
       />
 
       <ScheduleInvoiceSendDialog

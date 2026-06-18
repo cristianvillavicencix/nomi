@@ -392,13 +392,24 @@ export const StandaloneInvoiceCreatePage = () => {
         company={company}
         contact={contact}
         onSent={handleSendComplete}
+        onScheduleSend={() => {
+          setScheduleDialogOpen(true);
+        }}
+        onShareLink={(url) => {
+          setShareUrl(url);
+          setShareDialogOpen(true);
+        }}
       />
 
       <InvoiceShareLinkDialog
         open={shareDialogOpen}
         onOpenChange={handleShareClose}
         shareUrl={shareUrl}
+        invoice={createdInvoice}
         invoiceNumber={createdInvoice?.invoice_number}
+        organizationName={organizationName}
+        company={company}
+        contact={contact}
       />
 
       <ScheduleInvoiceSendDialog

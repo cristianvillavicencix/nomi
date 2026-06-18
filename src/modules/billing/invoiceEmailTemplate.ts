@@ -131,10 +131,14 @@ export const buildInvoiceSmsText = ({
   organizationName,
   paymentUrl,
   contact,
-}: Pick<
-  InvoiceEmailTemplateContext,
-  "invoice" | "organizationName" | "paymentUrl" | "contact"
->) => {
+  senderFirstName,
+}: {
+  invoice: ClientInvoice;
+  organizationName: string;
+  paymentUrl: string;
+  contact?: Contact | null;
+  senderFirstName?: string | null;
+}) => {
   const recipientName = formatContactName(contact);
   const greetingName = recipientName ? recipientName.split(" ")[0] : null;
   const balanceDue = computeInvoiceBalanceDue(
@@ -143,12 +147,18 @@ export const buildInvoiceSmsText = ({
   );
   const amount = formatInvoiceMoney(balanceDue, invoice.currency);
   const dueDate = formatInvoiceDueDate(invoice.due_date);
+  const sender = senderFirstName?.trim().split(/\s+/)[0] ?? null;
+  const intro = sender
+    ? `This is ${sender} from ${organizationName}:`
+    : `${organizationName} here:`;
 
   return [
     greetingName ? `Hi ${greetingName},` : "Hi,",
-    `${organizationName}: Invoice ${invoice.invoice_number}.`,
-    `${amount} due ${dueDate}.`,
+    intro,
+    `Your invoice ${invoice.invoice_number} is ready — ${amount} due ${dueDate}.`,
     `Pay: ${paymentUrl}`,
+    "",
+    "Thank you for your trust.",
   ].join("\n");
 };
 
@@ -204,15 +214,15 @@ export const buildInvoiceEmailHtml = ({
       const { title, detail } = splitLineDescription(line.description);
       return `
         <tr>
-          <td style="padding:14px 0;border-bottom:1px solid #eef2f6;vertical-align:top;">
-            <div style="font-size:15px;color:#1e293b;">${escapeHtml(title)}</div>
+          <td style="padding:12px 0;border-bottom:1px solid #e5e5e5;vertical-align:top;">
+            <div style="font-size:14px;color:#111111;line-height:1.45;">${escapeHtml(title)}</div>
             ${
               detail
-                ? `<div style="font-size:13px;color:#94a3b8;margin-top:2px;">${escapeHtml(detail)}</div>`
+                ? `<div style="font-size:12px;color:#737373;margin-top:3px;line-height:1.45;">${escapeHtml(detail)}</div>`
                 : ""
             }
           </td>
-          <td style="padding:14px 0;border-bottom:1px solid #eef2f6;text-align:right;vertical-align:top;font-size:15px;color:#1e293b;white-space:nowrap;">
+          <td style="padding:12px 0;border-bottom:1px solid #e5e5e5;text-align:right;vertical-align:top;font-size:14px;color:#111111;white-space:nowrap;">
             ${escapeHtml(formatInvoiceMoney(line.line_total, currency))}
           </td>
         </tr>`;
@@ -221,13 +231,13 @@ export const buildInvoiceEmailHtml = ({
 
   const totalsHtml = [
     discountAmount > 0
-      ? `<tr><td style="padding:4px 0;font-size:14px;color:#64748b;">Discount</td><td style="padding:4px 0;text-align:right;font-size:14px;color:#1e293b;">-${escapeHtml(formatInvoiceMoney(discountAmount, currency))}</td></tr>`
+      ? `<tr><td style="padding:4px 0;font-size:13px;color:#737373;">Discount</td><td style="padding:4px 0;text-align:right;font-size:13px;color:#111111;">-${escapeHtml(formatInvoiceMoney(discountAmount, currency))}</td></tr>`
       : "",
-    `<tr><td style="padding:4px 0;font-size:14px;color:#64748b;">Subtotal</td><td style="padding:4px 0;text-align:right;font-size:14px;color:#1e293b;">${escapeHtml(formatInvoiceMoney(subtotal, currency))}</td></tr>`,
+    `<tr><td style="padding:4px 0;font-size:13px;color:#737373;">Subtotal</td><td style="padding:4px 0;text-align:right;font-size:13px;color:#111111;">${escapeHtml(formatInvoiceMoney(subtotal, currency))}</td></tr>`,
     feeAmount > 0
-      ? `<tr><td style="padding:4px 0;font-size:14px;color:#64748b;">Processing fee</td><td style="padding:4px 0;text-align:right;font-size:14px;color:#1e293b;">${escapeHtml(formatInvoiceMoney(feeAmount, currency))}</td></tr>`
+      ? `<tr><td style="padding:4px 0;font-size:13px;color:#737373;">Processing fee</td><td style="padding:4px 0;text-align:right;font-size:13px;color:#111111;">${escapeHtml(formatInvoiceMoney(feeAmount, currency))}</td></tr>`
       : "",
-    `<tr><td style="padding:10px 0 0;border-top:2px solid #0D3B6E;font-size:15px;font-weight:600;color:#0D3B6E;">Total</td><td style="padding:10px 0 0;border-top:2px solid #0D3B6E;text-align:right;font-size:15px;font-weight:600;color:#0D3B6E;">${escapeHtml(formatInvoiceMoney(total, currency))}</td></tr>`,
+    `<tr><td style="padding:10px 0 0;border-top:1px solid #111111;font-size:14px;font-weight:600;color:#111111;">Total</td><td style="padding:10px 0 0;border-top:1px solid #111111;text-align:right;font-size:14px;font-weight:600;color:#111111;">${escapeHtml(formatInvoiceMoney(total, currency))}</td></tr>`,
   ].join("");
 
   const showSchedule =
@@ -241,25 +251,29 @@ export const buildInvoiceEmailHtml = ({
 
   const scheduleHtml = showSchedule
     ? `
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px;border:1px solid #e5e5e5;">
         <tr>
-          <td style="background:#fff8ec;border:1px solid #f6e0b3;border-radius:10px;padding:16px 20px;">
-            <div style="font-size:12px;font-weight:600;color:#92600a;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">Payment schedule</div>
+          <td style="padding:14px 18px;border-bottom:1px solid #e5e5e5;">
+            <div style="font-size:11px;font-weight:600;color:#111111;text-transform:uppercase;letter-spacing:0.08em;">Payment schedule</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 18px 14px;">
             ${scheduleRows
               .filter((row) => row.timing !== "paid")
               .map(
                 (row) => `
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:5px 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:4px 0;">
                 <tr>
-                  <td style="font-size:14px;color:#475569;">${escapeHtml(formatScheduleLabel(row, upfrontPercent))}</td>
-                  <td style="font-size:14px;font-weight:500;color:#1e293b;text-align:right;">${escapeHtml(formatInvoiceMoney(row.amount, currency))}</td>
+                  <td style="font-size:13px;color:#404040;line-height:1.5;">${escapeHtml(formatScheduleLabel(row, upfrontPercent))}</td>
+                  <td style="font-size:13px;font-weight:500;color:#111111;text-align:right;white-space:nowrap;">${escapeHtml(formatInvoiceMoney(row.amount, currency))}</td>
                 </tr>
               </table>`,
               )
               .join("")}
             ${
               invoice.auto_charge_remainder
-                ? `<div style="padding-top:8px;font-size:12px;color:#92600a;line-height:1.5;">Auto-debited on your installment schedule after the deposit.</div>`
+                ? `<div style="padding-top:10px;margin-top:8px;border-top:1px solid #e5e5e5;font-size:12px;color:#737373;line-height:1.5;">Remaining balance is charged automatically on the dates above.</div>`
                 : ""
             }
           </td>
@@ -272,45 +286,45 @@ export const buildInvoiceEmailHtml = ({
 
   return `<!DOCTYPE html>
 <html lang="en">
-<body style="margin:0;padding:0;background:#f1f6fb;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f6fb;padding:24px 12px;">
+<body style="margin:0;padding:0;background:#fafafa;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fafafa;padding:32px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(13,59,110,0.12);font-family:Arial,Helvetica,sans-serif;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e5e5e5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
           <tr>
-            <td style="background:#0D3B6E;padding:24px 32px;">
-              <span style="font-size:20px;font-weight:600;color:#ffffff;letter-spacing:0.3px;">${escapeHtml(organizationName)}</span>
-            </td>
-          </tr>
-          <tr><td style="height:4px;background:#F59E0B;font-size:0;line-height:0;">&nbsp;</td></tr>
-          <tr>
-            <td style="padding:28px 32px 4px;">
-              <div style="font-size:22px;font-weight:600;color:#0D3B6E;margin-bottom:8px;">Invoice ${escapeHtml(invoice.invoice_number)}</div>
-              <div style="font-size:15px;line-height:1.6;color:#475569;">Hi ${escapeHtml(greetingName)}, thank you for your business. Your invoice is ready — a PDF copy is attached for your records.</div>
+            <td style="padding:28px 32px 24px;border-bottom:1px solid #111111;">
+              <div style="font-size:11px;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Invoice</div>
+              <div style="font-size:22px;font-weight:600;color:#111111;letter-spacing:-0.02em;">${escapeHtml(organizationName)}</div>
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 32px 0;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f6fb;border:1px solid #dbe7f3;border-radius:10px;">
+            <td style="padding:28px 32px 0;">
+              <div style="font-size:18px;font-weight:600;color:#111111;margin-bottom:10px;">${escapeHtml(invoice.invoice_number)}</div>
+              <div style="font-size:14px;line-height:1.65;color:#404040;">Hi ${escapeHtml(greetingName)}, thank you for your business. Your invoice is ready — a PDF copy is attached for your records.</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e5e5;">
                 <tr>
-                  <td style="padding:16px 20px;width:50%;vertical-align:top;">
-                    <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;">Amount due</div>
-                    <div style="font-size:28px;font-weight:600;color:#1E5FA8;">${escapeHtml(formatInvoiceMoney(balanceDue, currency))}</div>
+                  <td style="padding:18px 20px;width:50%;vertical-align:top;border-right:1px solid #e5e5e5;">
+                    <div style="font-size:11px;color:#737373;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Amount due</div>
+                    <div style="font-size:26px;font-weight:600;color:#111111;letter-spacing:-0.02em;">${escapeHtml(formatInvoiceMoney(balanceDue, currency))}</div>
                   </td>
-                  <td style="padding:16px 20px;width:50%;vertical-align:top;text-align:right;">
-                    <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;">Due date</div>
-                    <div style="font-size:17px;font-weight:600;color:#0D3B6E;">${escapeHtml(formatInvoiceDueDate(invoice.due_date))}</div>
+                  <td style="padding:18px 20px;width:50%;vertical-align:top;">
+                    <div style="font-size:11px;color:#737373;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Due date</div>
+                    <div style="font-size:16px;font-weight:600;color:#111111;">${escapeHtml(formatInvoiceDueDate(invoice.due_date))}</div>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:24px 32px 0;">
+            <td style="padding:28px 32px 0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="border-bottom:2px solid #0D3B6E;padding-bottom:8px;font-size:12px;font-weight:600;color:#0D3B6E;text-transform:uppercase;letter-spacing:0.6px;">Description</td>
-                  <td style="border-bottom:2px solid #0D3B6E;padding-bottom:8px;font-size:12px;font-weight:600;color:#0D3B6E;text-transform:uppercase;letter-spacing:0.6px;text-align:right;">Amount</td>
+                  <td style="border-bottom:1px solid #111111;padding-bottom:8px;font-size:11px;font-weight:600;color:#111111;text-transform:uppercase;letter-spacing:0.08em;">Description</td>
+                  <td style="border-bottom:1px solid #111111;padding-bottom:8px;font-size:11px;font-weight:600;color:#111111;text-transform:uppercase;letter-spacing:0.08em;text-align:right;">Amount</td>
                 </tr>
                 ${lineRowsHtml}
               </table>
@@ -329,31 +343,30 @@ export const buildInvoiceEmailHtml = ({
               : ""
           }
           <tr>
-            <td style="padding:28px 32px 8px;text-align:center;">
-              <a href="${escapeHtml(paymentUrl)}" style="display:inline-block;padding:15px 44px;font-size:16px;font-weight:600;color:#0D3B6E;background:#F59E0B;border-radius:8px;text-decoration:none;">Pay ${escapeHtml(payLabel)}</a>
+            <td style="padding:32px 32px 12px;text-align:center;">
+              <a href="${escapeHtml(paymentUrl)}" style="display:inline-block;padding:14px 36px;font-size:14px;font-weight:600;color:#ffffff;background:#111111;border:1px solid #111111;text-decoration:none;letter-spacing:0.02em;">Pay ${escapeHtml(payLabel)}</a>
             </td>
           </tr>
           <tr>
-            <td style="padding:0 32px 6px;text-align:center;font-size:12px;color:#94a3b8;line-height:1.5;">
-              Secure card payment · A receipt is emailed automatically once payment clears.
+            <td style="padding:0 32px 8px;text-align:center;font-size:12px;color:#737373;line-height:1.55;">
+              Secure card payment · Receipt emailed when payment clears
             </td>
           </tr>
           <tr>
-            <td style="padding:6px 32px 24px;text-align:center;font-size:12px;color:#94a3b8;line-height:1.6;">
+            <td style="padding:0 32px 28px;text-align:center;font-size:12px;color:#a3a3a3;line-height:1.6;">
               Button not working? Copy this link:<br>
-              <a href="${escapeHtml(paymentUrl)}" style="color:#1E5FA8;text-decoration:none;">${escapeHtml(paymentUrl)}</a>
-            </td>
-          </tr>
-          <tr><td style="border-top:1px solid #eef2f6;margin:0 32px;"></td></tr>
-          <tr>
-            <td style="padding:20px 32px;font-size:14px;line-height:1.6;color:#475569;">
-              Questions about this invoice? Just reply to this email and we'll be happy to help.
+              <a href="${escapeHtml(paymentUrl)}" style="color:#111111;text-decoration:underline;">${escapeHtml(paymentUrl)}</a>
             </td>
           </tr>
           <tr>
-            <td style="background:#0D3B6E;padding:20px 32px;text-align:center;">
-              <div style="font-size:14px;font-weight:600;color:#ffffff;margin-bottom:4px;">${escapeHtml(organizationName)}</div>
-              <div style="font-size:12px;color:#9cb6d6;">${escapeHtml(tagline)}</div>
+            <td style="padding:20px 32px;border-top:1px solid #e5e5e5;font-size:13px;line-height:1.65;color:#404040;">
+              Questions about this invoice? Reply to this email and we will be happy to help.
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 32px 24px;background:#fafafa;border-top:1px solid #e5e5e5;text-align:center;">
+              <div style="font-size:13px;font-weight:600;color:#111111;margin-bottom:4px;">${escapeHtml(organizationName)}</div>
+              <div style="font-size:12px;color:#737373;">${escapeHtml(tagline)}</div>
             </td>
           </tr>
         </table>

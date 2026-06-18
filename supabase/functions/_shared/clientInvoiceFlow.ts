@@ -573,6 +573,8 @@ export async function markClientInvoiceSent(
       scheduled_send_at: null,
       scheduled_send_message: null,
       scheduled_send_storage_path: null,
+      scheduled_send_sms_to: null,
+      scheduled_send_sms_body: null,
       updated_at: now,
     })
     .eq("id", invoiceId)
@@ -620,6 +622,8 @@ export async function markClientInvoiceSentManual(
       scheduled_send_at: null,
       scheduled_send_message: null,
       scheduled_send_storage_path: null,
+      scheduled_send_sms_to: null,
+      scheduled_send_sms_body: null,
       updated_at: now,
     })
     .eq("id", invoiceId)
@@ -671,6 +675,8 @@ export async function voidClientInvoice(
       scheduled_send_at: null,
       scheduled_send_message: null,
       scheduled_send_storage_path: null,
+      scheduled_send_sms_to: null,
+      scheduled_send_sms_body: null,
       updated_at: now,
     })
     .eq("id", invoiceId)

@@ -11,9 +11,14 @@ import {
   MoreHorizontal,
   FileDown,
   CreditCard,
+  Eye,
+  FileText,
+  X,
+  ChevronDown,
+  Clock,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useDataProvider, useGetList, useNotify } from "ra-core";
+import { useDataProvider, useGetIdentity, useGetList, useNotify } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
@@ -31,10 +36,15 @@ import {
   buildInvoiceEmailPlainText,
   buildInvoiceSmsText,
   buildOrganizationEmailTagline,
+  formatInvoiceDueDate,
+  formatInvoiceMoney,
   resolveClientInvoiceShareUrl,
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
-import { InvoiceSendDeliveryPreview } from "@/modules/billing/InvoiceSendDeliveryPreview";
+import {
+  buildInvoiceSendFooterSummary,
+  InvoiceSendDeliveryPreview,
+} from "@/modules/billing/InvoiceSendDeliveryPreview";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
 import {
   canDeleteClientInvoice,
@@ -43,11 +53,17 @@ import {
   canVoidClientInvoice,
   resolveInvoiceRecipientEmail,
   resolveInvoiceRecipientPhone,
+  formatOrganizationMemberName,
+  parseInvoiceEmailList,
 } from "@/modules/billing/billingUtils";
-import { canChargeClientInvoice } from "@/modules/billing/invoicePaymentUtils";
+import {
+  canChargeClientInvoice,
+  computeInvoiceBalanceDue,
+} from "@/modules/billing/invoicePaymentUtils";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +83,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
 
+const formatPdfSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  return `${Math.round(bytes / 1024)} KB`;
+};
+
 const buildInvoicePdfContext = buildClientInvoicePdfContext;
 
 export const SendInvoiceDialog = ({
@@ -77,6 +98,8 @@ export const SendInvoiceDialog = ({
   company,
   contact,
   onSent,
+  onScheduleSend,
+  onShareLink,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -85,9 +108,22 @@ export const SendInvoiceDialog = ({
   company?: Company | null;
   contact?: Contact | null;
   onSent?: () => void;
+  onScheduleSend?: () => void;
+  onShareLink?: (shareUrl: string) => void;
 }) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const { identity } = useGetIdentity();
+  const senderFirstName = useMemo(() => {
+    const name = formatOrganizationMemberName(
+      identity as {
+        first_name?: string | null;
+        last_name?: string | null;
+        fullName?: string | null;
+      } | null,
+    );
+    return name?.split(/\s+/)[0] ?? null;
+  }, [identity]);
   const { title, companyLegalName } = useConfigurationContext();
   const organizationName = useMemo(
     () =>
@@ -102,9 +138,15 @@ export const SendInvoiceDialog = ({
   const companyWebsite = invoiceBranding.website;
   const organizationTagline = useMemo(() => buildOrganizationEmailTagline(), []);
   const [to, setTo] = useState("");
+  const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
+  const [showCc, setShowCc] = useState(false);
+  const [showBcc, setShowBcc] = useState(false);
+  const [editingTo, setEditingTo] = useState(false);
   const [phone, setPhone] = useState("");
   const [sendSms, setSendSms] = useState(true);
   const [subject, setSubject] = useState("");
+  const [pdfPreviewPending, setPdfPreviewPending] = useState(false);
 
   const { data: lineItems = [] } = useGetList<ClientInvoiceLineItem>(
     "client_invoice_line_items",
@@ -175,13 +217,77 @@ export const SendInvoiceDialog = ({
       organizationName,
       paymentUrl: smsPaymentUrl,
       contact,
+      senderFirstName,
     });
-  }, [invoice, smsPaymentUrl, organizationName, contact]);
+  }, [invoice, smsPaymentUrl, organizationName, contact, senderFirstName]);
 
   const emailHtml = useMemo(
     () => (emailTemplateContext ? buildInvoiceEmailHtml(emailTemplateContext) : ""),
     [emailTemplateContext],
   );
+
+  const balanceDue = useMemo(() => {
+    if (!invoice) return 0;
+    return computeInvoiceBalanceDue(
+      Number(invoice.amount) || 0,
+      Number(invoice.amount_paid) || 0,
+    );
+  }, [invoice]);
+
+  const invoicePdfContext = useMemo(() => {
+    if (!invoice) return null;
+    return buildInvoicePdfContext({
+      invoice,
+      organizationName,
+      organizationAddress,
+      organizationWebsite: companyWebsite,
+      company,
+      contact,
+      lineItems,
+      billToEmail: to,
+    });
+  }, [
+    invoice,
+    organizationName,
+    organizationAddress,
+    companyWebsite,
+    company,
+    contact,
+    lineItems,
+    to,
+  ]);
+
+  const { data: pdfMeta } = useQuery({
+    queryKey: ["invoice-send-pdf-meta", invoice?.id, to],
+    queryFn: async () => {
+      const blob = await generateClientInvoicePdfBlob(invoicePdfContext!);
+      return { sizeLabel: formatPdfSize(blob.size) };
+    },
+    enabled: open && Boolean(invoicePdfContext),
+    staleTime: 60_000,
+  });
+
+  const footerSummary = useMemo(() => {
+    if (!emailTemplateContext) return "";
+    return buildInvoiceSendFooterSummary({
+      templateContext: emailTemplateContext,
+    });
+  }, [emailTemplateContext]);
+
+  const previewInvoicePdf = async () => {
+    if (!invoicePdfContext) return;
+    setPdfPreviewPending(true);
+    try {
+      const blob = await generateClientInvoicePdfBlob(invoicePdfContext);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      notify("Could not open PDF preview", { type: "error" });
+    } finally {
+      setPdfPreviewPending(false);
+    }
+  };
 
   useEffect(() => {
     if (!open || !invoice) return;
@@ -196,6 +302,11 @@ export const SendInvoiceDialog = ({
     );
     setPhone(defaultPhone);
     setSendSms(Boolean(defaultPhone.trim()));
+    setCc("");
+    setBcc("");
+    setShowCc(false);
+    setShowBcc(false);
+    setEditingTo(false);
     setSubject(buildDefaultInvoiceEmailSubject(invoice, organizationName));
   }, [open, invoice, company, contact, organizationName]);
 
@@ -226,6 +337,8 @@ export const SendInvoiceDialog = ({
         htmlMessage: buildInvoiceEmailHtml(emailTemplateContext),
         pdfBase64,
         filename: `${invoice.invoice_number}.pdf`,
+        cc: parseInvoiceEmailList(cc),
+        bcc: parseInvoiceEmailList(bcc),
         ...(sendSms && phone.trim()
           ? {
               smsTo: phone.trim(),
@@ -275,29 +388,195 @@ export const SendInvoiceDialog = ({
     Boolean(emailTemplateContext) &&
     (!sendSms || Boolean(phone.trim()));
 
+  const showSendMenu = Boolean(onScheduleSend || onShareLink);
+
+  const handleShareLink = () => {
+    if (!paymentUrl) return;
+    onOpenChange(false);
+    onShareLink?.(paymentUrl);
+  };
+
+  const handleScheduleSend = () => {
+    onOpenChange(false);
+    onScheduleSend?.();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Send invoice {invoice.invoice_number}</DialogTitle>
+          <DialogTitle className="flex flex-wrap items-center gap-2">
+            Send invoice
+            <Badge variant="outline" className="font-mono text-xs font-normal">
+              {invoice.invoice_number}
+            </Badge>
+          </DialogTitle>
           <DialogDescription>
-            Email with PDF attachment and optional text message. Preview both
-            before sending.
+            Configure delivery on the left · preview on the right.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Amount due</p>
+                <p className="text-lg font-semibold tabular-nums">
+                  {formatInvoiceMoney(balanceDue, invoice.currency)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Due date</p>
+                <p className="text-sm font-semibold leading-tight">
+                  {formatInvoiceDueDate(invoice.due_date)}
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="invoice-send-to">Recipient email</Label>
+              <Label htmlFor="invoice-send-to">To</Label>
+              <div className="rounded-md border px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                {to.trim() && !editingTo ? (
+                  <div className="flex min-h-8 items-center gap-1">
+                    <Badge
+                      variant="secondary"
+                      className="max-w-full gap-1 bg-primary/10 font-normal text-primary hover:bg-primary/15"
+                    >
+                      <span className="truncate">{to}</span>
+                      <button
+                        type="button"
+                        className="rounded-sm opacity-70 hover:opacity-100"
+                        aria-label="Clear recipient email"
+                        onClick={() => {
+                          setTo("");
+                          setEditingTo(true);
+                        }}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                    <button
+                      type="button"
+                      className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setEditingTo(true)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                ) : (
+                  <Input
+                    id="invoice-send-to"
+                    type="email"
+                    value={to}
+                    onChange={(event) => setTo(event.target.value)}
+                    onBlur={() => setEditingTo(false)}
+                    className="h-8 border-0 px-1 shadow-none focus-visible:ring-0"
+                    placeholder="Recipient email"
+                    autoFocus={editingTo}
+                  />
+                )}
+              </div>
+              {!showCc || !showBcc ? (
+                <div className="flex gap-3">
+                  {!showCc ? (
+                    <button
+                      type="button"
+                      className="text-sm text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowCc(true)}
+                    >
+                      + Cc
+                    </button>
+                  ) : null}
+                  {!showBcc ? (
+                    <button
+                      type="button"
+                      className="text-sm text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowBcc(true)}
+                    >
+                      + Bcc
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
+            {showCc ? (
+              <div className="space-y-2">
+                <Label htmlFor="invoice-send-cc">Cc</Label>
+                <Input
+                  id="invoice-send-cc"
+                  type="text"
+                  inputMode="email"
+                  placeholder="Separate with commas"
+                  value={cc}
+                  onChange={(event) => setCc(event.target.value)}
+                />
+              </div>
+            ) : null}
+
+            {showBcc ? (
+              <div className="space-y-2">
+                <Label htmlFor="invoice-send-bcc">Bcc</Label>
+                <Input
+                  id="invoice-send-bcc"
+                  type="text"
+                  inputMode="email"
+                  placeholder="Separate with commas"
+                  value={bcc}
+                  onChange={(event) => setBcc(event.target.value)}
+                />
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <Label htmlFor="invoice-send-subject">Subject</Label>
               <Input
-                id="invoice-send-to"
-                type="email"
-                value={to}
-                onChange={(event) => setTo(event.target.value)}
+                id="invoice-send-subject"
+                value={subject}
+                onChange={(event) => setSubject(event.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="invoice-send-phone">Recipient mobile</Label>
+
+            <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-red-50">
+                <FileText className="size-4 text-red-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">
+                  {invoice.invoice_number}.pdf
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {pdfMeta?.sizeLabel ?? "PDF attachment"}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                disabled={pdfPreviewPending || !invoicePdfContext}
+                onClick={() => void previewInvoicePdf()}
+                aria-label="Preview PDF attachment"
+              >
+                {pdfPreviewPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="invoice-send-sms" className="cursor-pointer">
+                  Also send text message
+                </Label>
+                <Switch
+                  id="invoice-send-sms"
+                  checked={sendSms}
+                  onCheckedChange={setSendSms}
+                  disabled={!phone.trim()}
+                />
+              </div>
               <Input
                 id="invoice-send-phone"
                 type="tel"
@@ -311,64 +590,113 @@ export const SendInvoiceDialog = ({
                   if (formatted !== "—") setPhone(formatted);
                 }}
               />
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Checkbox
-                  checked={sendSms}
-                  onCheckedChange={(checked) => setSendSms(checked === true)}
-                  disabled={!phone.trim()}
-                />
-                Also send text message
-              </label>
             </div>
+
+            {shareLinkPending ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Generating payment link…
+              </p>
+            ) : null}
+            {shareLinkError ? (
+              <p className="text-sm text-destructive">
+                Could not generate payment link. Try again or use Share.
+              </p>
+            ) : null}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="invoice-send-subject">Email subject</Label>
-            <Input
-              id="invoice-send-subject"
-              value={subject}
-              onChange={(event) => setSubject(event.target.value)}
-            />
-          </div>
-          {shareLinkPending ? (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              Generating payment link…
-            </p>
-          ) : null}
-          {shareLinkError ? (
-            <p className="text-sm text-destructive">
-              Could not generate payment link. Try again or use Share.
-            </p>
-          ) : null}
-          {emailTemplateContext ? (
-            <InvoiceSendDeliveryPreview
-              subject={subject}
-              emailHtml={emailHtml}
-              smsText={smsText}
-              emailTo={to}
-              smsTo={phone}
-              sendSms={sendSms}
-              templateContext={emailTemplateContext}
-            />
-          ) : null}
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            disabled={!canSend || sendMutation.isPending}
-            onClick={() => sendMutation.mutate()}
-          >
-            {sendMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
+
+          <div className="min-w-0">
+            {emailTemplateContext ? (
+              <InvoiceSendDeliveryPreview
+                subject={subject}
+                emailHtml={emailHtml}
+                smsText={smsText}
+                emailTo={to}
+                smsTo={phone}
+                sendSms={sendSms}
+              />
             ) : (
-              <Send className="size-4" />
+              <p className="text-sm text-muted-foreground">
+                Payment link is loading…
+              </p>
             )}
-            Send invoice
-            {sendSms && phone.trim() ? " + text" : ""}
-          </Button>
+          </div>
+        </div>
+        <DialogFooter className="gap-3 sm:items-center sm:justify-between">
+          <p className="text-left text-sm text-muted-foreground">
+            {footerSummary || "Loading delivery summary…"}
+          </p>
+          <div className="flex shrink-0 justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            {showSendMenu ? (
+              <div className="flex">
+                <Button
+                  type="button"
+                  disabled={!canSend || sendMutation.isPending}
+                  className="rounded-r-none"
+                  onClick={() => sendMutation.mutate()}
+                >
+                  {sendMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Send className="size-4" />
+                  )}
+                  Save and Send
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      disabled={sendMutation.isPending}
+                      className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                      aria-label="More send options"
+                    >
+                      <ChevronDown className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {onScheduleSend ? (
+                      <DropdownMenuItem
+                        disabled={shareLinkPending || !paymentUrl}
+                        onClick={handleScheduleSend}
+                      >
+                        <Clock className="size-4" />
+                        Save &amp; Send Later
+                      </DropdownMenuItem>
+                    ) : null}
+                    {onShareLink ? (
+                      <DropdownMenuItem
+                        disabled={shareLinkPending || !paymentUrl}
+                        onClick={handleShareLink}
+                      >
+                        <ExternalLink className="size-4" />
+                        Save &amp; Share link
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                disabled={!canSend || sendMutation.isPending}
+                onClick={() => sendMutation.mutate()}
+              >
+                {sendMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Send className="size-4" />
+                )}
+                Save and Send
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -653,7 +981,11 @@ export const InvoiceRowActions = ({
         open={shareOpen}
         onOpenChange={setShareOpen}
         shareUrl={shareUrl}
+        invoice={invoice}
         invoiceNumber={invoice.invoice_number}
+        organizationName={organizationName}
+        company={company}
+        contact={contact}
       />
       {showCharge ? (
         <InvoiceStaffChargeDialog

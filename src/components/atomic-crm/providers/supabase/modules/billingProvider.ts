@@ -123,17 +123,23 @@ export const billingProvider = {
     smsTo,
     smsBody,
     contactId,
+    cc,
+    bcc,
+    linkOnly,
   }: {
     invoiceId: Identifier;
     to: string;
     message?: string;
     htmlMessage?: string;
-    pdfBase64: string;
+    pdfBase64?: string;
     filename?: string;
     subject?: string;
     smsTo?: string;
     smsBody?: string;
     contactId?: Identifier;
+    cc?: string[];
+    bcc?: string[];
+    linkOnly?: boolean;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       invoice: Record<string, unknown>;
@@ -153,6 +159,9 @@ export const billingProvider = {
           pdf_base64: pdfBase64,
           filename,
           subject,
+          link_only: linkOnly === true,
+          ...(cc?.length ? { cc } : {}),
+          ...(bcc?.length ? { bcc } : {}),
           ...(smsTo?.trim() ? { sms_to: smsTo.trim() } : {}),
           ...(smsBody?.trim() ? { sms_body: smsBody.trim() } : {}),
           ...(contactId != null ? { contact_id: Number(contactId) } : {}),
@@ -321,6 +330,8 @@ export const billingProvider = {
     scheduledSendAt,
     pdfBase64,
     filename,
+    smsTo,
+    smsBody,
   }: {
     invoiceId: Identifier;
     to: string;
@@ -328,6 +339,8 @@ export const billingProvider = {
     scheduledSendAt: string;
     pdfBase64: string;
     filename?: string;
+    smsTo?: string;
+    smsBody?: string;
   }) {
     const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
       "schedule_client_invoice",
@@ -340,6 +353,8 @@ export const billingProvider = {
           scheduled_send_at: scheduledSendAt,
           pdf_base64: pdfBase64,
           filename,
+          ...(smsTo?.trim() ? { sms_to: smsTo.trim() } : {}),
+          ...(smsBody?.trim() ? { sms_body: smsBody.trim() } : {}),
         },
       },
     );

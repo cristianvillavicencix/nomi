@@ -1,12 +1,6 @@
-import { Loader2, ChevronDown, Clock, CreditCard, ExternalLink, Printer, Send, Settings2 } from "lucide-react";
+import { Loader2, Send, Settings2, CreditCard } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export type InvoiceCreateAction =
   | "draft"
@@ -71,66 +65,16 @@ export const InvoiceCreateActions = ({
 
       <Button
         type="button"
-        variant="outline"
         disabled={isPending}
-        onClick={() => onAction("draft")}
+        onClick={() => onAction("send")}
       >
-        {isActionPending("draft") ? (
+        {isActionPending("send") ? (
           <Loader2 className="size-4 animate-spin" />
-        ) : null}
-        Save
+        ) : (
+          <Send className="size-4" />
+        )}
+        Send
       </Button>
-
-      <div className="flex">
-        <Button
-          type="button"
-          disabled={isPending}
-          className="rounded-r-none"
-          onClick={() => onAction("send")}
-        >
-          {isActionPending("send") ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Send className="size-4" />
-          )}
-          Save and Send
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              disabled={isPending}
-              className="rounded-l-none border-l border-primary-foreground/20 px-2"
-              aria-label="More save options"
-            >
-              <ChevronDown className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              disabled={isPending}
-              onClick={() => onAction("print")}
-            >
-              <Printer className="size-4" />
-              Save and Print
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={isPending}
-              onClick={() => onAction("share")}
-            >
-              <ExternalLink className="size-4" />
-              Save and Share
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={isPending}
-              onClick={() => onAction("send_later")}
-            >
-              <Clock className="size-4" />
-              Save and Send Later
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
 
       {showCancel ? (
         <Button type="button" variant="outline" asChild>

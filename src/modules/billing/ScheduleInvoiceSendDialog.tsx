@@ -1,8 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, Pencil } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { useDataProvider, useGetList, useNotify } from "ra-core";
+import { useDataProvider, useGetIdentity, useGetList, useNotify } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
@@ -11,7 +11,15 @@ import {
   buildClientInvoicePdfContext,
   generateClientInvoicePdfBlob,
 } from "@/modules/billing/clientInvoicePdf";
-import { resolveInvoiceRecipientEmail } from "@/modules/billing/billingUtils";
+import {
+  formatOrganizationMemberName,
+  resolveInvoiceRecipientEmail,
+  resolveInvoiceRecipientPhone,
+} from "@/modules/billing/billingUtils";
+import {
+  buildInvoiceSmsText,
+  resolveClientInvoiceShareUrl,
+} from "@/modules/billing/invoiceEmailTemplate";
 import {
   combineDateAndSendTime,
   DEFAULT_INVOICE_SEND_TIME,
@@ -31,8 +39,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { getClientShowPath } from "@/app/routing";
+import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 
 const getContactEmail = (contact: Contact) =>
   contact.email_jsonb?.find((row) => row.isPrimary)?.email?.trim() ??
@@ -67,6 +77,17 @@ export const ScheduleInvoiceSendDialog = ({
 }: ScheduleInvoiceSendDialogProps) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const { identity } = useGetIdentity();
+  const senderFirstName = useMemo(() => {
+    const name = formatOrganizationMemberName(
+      identity as {
+        first_name?: string | null;
+        last_name?: string | null;
+        fullName?: string | null;
+      } | null,
+    );
+    return name?.split(/\s+/)[0] ?? null;
+  }, [identity]);
   const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
   const organizationAddress = invoiceBranding.address;
   const companyWebsite = invoiceBranding.website;
@@ -99,12 +120,50 @@ export const ScheduleInvoiceSendDialog = ({
 
   const [selectedContactId, setSelectedContactId] = useState<string>("");
   const [manualEmail, setManualEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [sendSms, setSendSms] = useState(false);
   const [preset, setPreset] = useState<InvoiceSendSchedulePreset>("tomorrow");
   const [customDate, setCustomDate] = useState("");
   const [sendTime, setSendTime] = useState(DEFAULT_INVOICE_SEND_TIME);
   const [editingTime, setEditingTime] = useState(false);
 
   const tomorrowDate = useMemo(() => scheduleDateForPreset("tomorrow"), []);
+
+  const { data: shareLink } = useQuery({
+    queryKey: ["invoice-schedule-share-link", invoice?.id],
+    queryFn: () =>
+      dataProvider.shareClientInvoice({
+        invoiceId: invoice!.id,
+        baseUrl: window.location.origin,
+      }),
+    enabled: open && Boolean(invoice?.id),
+    staleTime: 0,
+  });
+
+  const smsPaymentUrl = useMemo(() => {
+    if (!shareLink) return "";
+    if (shareLink.short_url?.trim()) {
+      return resolveClientInvoiceShareUrl(
+        { url: shareLink.short_url, short_url: shareLink.short_url },
+        window.location.origin,
+      );
+    }
+    if (shareLink.short_code?.trim()) {
+      return `${window.location.origin.replace(/\/$/, "")}/iv/${shareLink.short_code}`;
+    }
+    return resolveClientInvoiceShareUrl(shareLink, window.location.origin);
+  }, [shareLink]);
+
+  const smsText = useMemo(() => {
+    if (!invoice || !smsPaymentUrl) return "";
+    return buildInvoiceSmsText({
+      invoice,
+      organizationName,
+      paymentUrl: smsPaymentUrl,
+      contact,
+      senderFirstName,
+    });
+  }, [invoice, smsPaymentUrl, organizationName, contact, senderFirstName]);
 
   useEffect(() => {
     if (!open || !invoice) return;
@@ -118,6 +177,9 @@ export const ScheduleInvoiceSendDialog = ({
     const matched = contactOptions.find((row) => row.email === defaultEmail);
     setSelectedContactId(matched ? String(matched.id) : "");
     setManualEmail(matched ? matched.email : defaultEmail);
+    const defaultPhone = resolveInvoiceRecipientPhone({ company, contact });
+    setPhone(defaultPhone);
+    setSendSms(Boolean(defaultPhone.trim()));
     setPreset("tomorrow");
     setCustomDate(formatScheduleDateLabel(tomorrowDate));
     setSendTime(DEFAULT_INVOICE_SEND_TIME);
@@ -169,6 +231,9 @@ export const ScheduleInvoiceSendDialog = ({
         scheduledSendAt: scheduledSendAt.toISOString(),
         pdfBase64,
         filename: `${invoice.invoice_number}.pdf`,
+        ...(sendSms && phone.trim()
+          ? { smsTo: phone.trim(), smsBody: smsText }
+          : {}),
       });
     },
     onSuccess: () => {
@@ -206,61 +271,66 @@ export const ScheduleInvoiceSendDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Email To</DialogTitle>
+          <DialogTitle>Schedule send</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
-          {contactOptions.length ? (
-            <div className="space-y-2">
-              {contactOptions.map((row) => (
-                <label
-                  key={String(row.id)}
-                  className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2",
-                    selectedContactId === String(row.id) && "border-primary bg-muted/30",
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="invoice-recipient"
-                    className="mt-1"
-                    checked={selectedContactId === String(row.id)}
-                    onChange={() => {
-                      setSelectedContactId(String(row.id));
-                      setManualEmail(row.email);
-                    }}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium">{row.label}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {row.email}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <span>
-                No contact persons found.{" "}
-                {companyId ? (
-                  <Link
-                    to={getClientShowPath(companyId)}
-                    className="font-medium text-blue-700 hover:underline"
+          <div className="space-y-2">
+            <Label>Email</Label>
+            {contactOptions.length ? (
+              <div className="space-y-2">
+                {contactOptions.map((row) => (
+                  <label
+                    key={String(row.id)}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2",
+                      selectedContactId === String(row.id) &&
+                        "border-primary bg-muted/30",
+                    )}
                   >
-                    + Add New
-                  </Link>
-                ) : (
-                  <span className="text-muted-foreground">Select a client first.</span>
-                )}
-              </span>
-            </div>
-          )}
+                    <input
+                      type="radio"
+                      name="invoice-recipient"
+                      className="mt-1"
+                      checked={selectedContactId === String(row.id)}
+                      onChange={() => {
+                        setSelectedContactId(String(row.id));
+                        setManualEmail(row.email);
+                      }}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium">
+                        {row.label}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {row.email}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  No contact persons found.{" "}
+                  {companyId ? (
+                    <Link
+                      to={getClientShowPath(companyId)}
+                      className="font-medium text-blue-700 hover:underline"
+                    >
+                      + Add New
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      Select a client first.
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
 
-          {!contactOptions.length || !selectedContactId ? (
-            <div className="space-y-2">
-              <Label htmlFor="invoice-schedule-email">Recipient email</Label>
+            {!contactOptions.length || !selectedContactId ? (
               <Input
                 id="invoice-schedule-email"
                 type="email"
@@ -268,8 +338,33 @@ export const ScheduleInvoiceSendDialog = ({
                 onChange={(event) => setManualEmail(event.target.value)}
                 placeholder="client@example.com"
               />
+            ) : null}
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="invoice-schedule-sms">Also send text message</Label>
+              <Switch
+                id="invoice-schedule-sms"
+                checked={sendSms}
+                onCheckedChange={setSendSms}
+                disabled={!phone.trim()}
+              />
             </div>
-          ) : null}
+            <Input
+              id="invoice-schedule-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="(203) 555-0100"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              onBlur={() => {
+                const formatted = formatUsPhoneDisplayFromAny(phone);
+                if (formatted !== "—") setPhone(formatted);
+              }}
+            />
+          </div>
 
           <div className="space-y-3">
             <p className="text-sm font-medium">

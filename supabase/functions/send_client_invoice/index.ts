@@ -23,6 +23,8 @@ import { sanitizeMessageBody } from "../_shared/messagingUtils.ts";
 type SendBody = {
   invoice_id?: number;
   to?: string;
+  cc?: string[];
+  bcc?: string[];
   subject?: string;
   message?: string;
   html_message?: string;
@@ -31,9 +33,15 @@ type SendBody = {
   sms_to?: string;
   sms_body?: string;
   contact_id?: number;
+  link_only?: boolean;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeEmailList = (values?: string[]) =>
+  (values ?? [])
+    .map((entry) => String(entry ?? "").trim().toLowerCase())
+    .filter((entry) => entry.length > 0 && emailRegex.test(entry));
 
 async function sendInvoiceSms(params: {
   orgId: number;
@@ -139,6 +147,7 @@ Deno.serve(
 
         const body = (await req.json()) as SendBody;
         const invoiceId = Number(body.invoice_id);
+        const linkOnly = body.link_only === true;
         const to = String(body.to ?? "").trim().toLowerCase();
         const pdfBase64 = String(body.pdf_base64 ?? "").trim();
         const smsTo = String(body.sms_to ?? "").trim();
@@ -147,8 +156,61 @@ Deno.serve(
           body.contact_id != null && Number.isFinite(Number(body.contact_id))
             ? Number(body.contact_id)
             : null;
+        const cc = normalizeEmailList(body.cc);
+        const bcc = normalizeEmailList(body.bcc);
 
-        if (!Number.isFinite(invoiceId) || !to || !emailRegex.test(to)) {
+        if (!Number.isFinite(invoiceId)) {
+          return createErrorResponse(400, "Invalid invoice_id");
+        }
+
+        if (linkOnly) {
+          if (!smsTo || !smsBody) {
+            return createErrorResponse(
+              400,
+              "sms_to and sms_body are required for link-only sends",
+            );
+          }
+
+          const { data: invoice } = await supabaseAdmin
+            .from("client_invoices")
+            .select("id, org_id, status, contact_id")
+            .eq("id", invoiceId)
+            .eq("org_id", member.org_id)
+            .maybeSingle();
+
+          if (!invoice) {
+            return createErrorResponse(404, "Invoice not found");
+          }
+
+          if (invoice.status === "void") {
+            return createErrorResponse(400, "Void invoices cannot be shared");
+          }
+
+          const smsOutcome = await sendInvoiceSms({
+            orgId: member.org_id,
+            memberId: Number(member.id),
+            phoneRaw: smsTo,
+            body: smsBody,
+            contactId: contactId ?? invoice.contact_id ?? null,
+          });
+
+          return new Response(
+            JSON.stringify({
+              invoice,
+              sent: true,
+              email_sent: false,
+              email_skipped: true,
+              sms_sent: smsOutcome.sent,
+              sms_skipped: smsOutcome.skipped,
+              link_only: true,
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (!to || !emailRegex.test(to)) {
           return createErrorResponse(400, "Invalid invoice_id or recipient email");
         }
 
@@ -204,6 +266,8 @@ Deno.serve(
             orgId: member.org_id,
             orgName: org?.name ?? null,
             to,
+            cc: cc.length ? cc : undefined,
+            bcc: bcc.length ? bcc : undefined,
             subject,
             textBody: message,
             htmlBody: body.html_message?.trim() || null,

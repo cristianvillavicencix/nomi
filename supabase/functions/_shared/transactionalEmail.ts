@@ -157,6 +157,8 @@ async function sendViaTwilioEmail(params: {
   authToken: string;
   from: { email: string; name: string };
   to: string;
+  cc?: string[];
+  bcc?: string[];
   subject: string;
   textBody: string;
   htmlBody: string;
@@ -186,6 +188,13 @@ async function sendViaTwilioEmail(params: {
     content,
   };
 
+  if (params.cc?.length) {
+    body.cc = params.cc.map((address) => ({ address }));
+  }
+  if (params.bcc?.length) {
+    body.bcc = params.bcc.map((address) => ({ address }));
+  }
+
   // Twilio Email API (comms.twilio.com/v1/Emails) rejects replyTo — contact info stays in the body.
 
   const credentials = btoa(`${params.accountSid}:${params.authToken}`);
@@ -214,6 +223,8 @@ export async function sendTransactionalEmail(params: {
   orgId: number;
   orgName?: string | null;
   to: string;
+  cc?: string[];
+  bcc?: string[];
   subject: string;
   textBody: string;
   htmlBody?: string | null;
@@ -242,6 +253,8 @@ export async function sendTransactionalEmail(params: {
     authToken: twilio.authToken,
     from,
     to: params.to,
+    cc: params.cc,
+    bcc: params.bcc,
     subject: params.subject,
     textBody: params.textBody,
     htmlBody,

@@ -13,6 +13,8 @@ type ScheduleBody = {
   scheduled_send_at?: string;
   pdf_base64?: string;
   filename?: string;
+  sms_to?: string;
+  sms_body?: string;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,6 +58,12 @@ Deno.serve(
         const pdfBase64 = String(body.pdf_base64 ?? "").trim();
         const scheduledSendAt = String(body.scheduled_send_at ?? "").trim();
         const message = body.message?.trim() || null;
+        const smsTo = String(body.sms_to ?? "").trim();
+        const smsBody = body.sms_body?.trim() || null;
+
+        if (smsTo && !smsBody) {
+          return createErrorResponse(400, "sms_body is required when sms_to is set");
+        }
 
         if (!Number.isFinite(invoiceId) || !to || !emailRegex.test(to)) {
           return createErrorResponse(400, "Invalid invoice_id or recipient email");
@@ -117,6 +125,8 @@ Deno.serve(
             scheduled_send_at: sendAt.toISOString(),
             scheduled_send_message: message,
             scheduled_send_storage_path: storagePath,
+            scheduled_send_sms_to: smsTo || null,
+            scheduled_send_sms_body: smsBody,
             updated_at: now,
           })
           .eq("id", invoiceId)

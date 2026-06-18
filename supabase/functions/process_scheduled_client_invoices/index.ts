@@ -8,6 +8,10 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
+import { getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
+import { sendTwilioSms } from "../_shared/twilio.ts";
+import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
+import { sanitizeMessageBody } from "../_shared/messagingUtils.ts";
 
 const bytesToBase64 = (bytes: Uint8Array) => {
   let binary = "";
@@ -32,7 +36,7 @@ Deno.serve(
       const { data: dueRows, error: listError } = await supabaseAdmin
         .from("client_invoices")
         .select(
-          "id, org_id, invoice_number, amount, currency, description, recipient_email, scheduled_send_at, scheduled_send_message, scheduled_send_storage_path",
+          "id, org_id, invoice_number, amount, currency, description, recipient_email, scheduled_send_at, scheduled_send_message, scheduled_send_storage_path, scheduled_send_sms_to, scheduled_send_sms_body, contact_id",
         )
         .eq("status", "draft")
         .not("scheduled_send_at", "is", null)
@@ -112,12 +116,36 @@ Deno.serve(
 
           await markClientInvoiceSent(supabaseAdmin, row.id, row.org_id, to);
 
+          const scheduledSmsTo = row.scheduled_send_sms_to?.trim();
+          const scheduledSmsBody = row.scheduled_send_sms_body?.trim();
+          if (scheduledSmsTo && scheduledSmsBody) {
+            const normalizedPhone = normalizeUsPhoneToE164(scheduledSmsTo);
+            const settings = await getMessagingSettingsSecrets(row.org_id);
+            if (
+              normalizedPhone &&
+              settings?.sms_enabled &&
+              settings.twilio_account_sid?.trim() &&
+              settings.twilio_auth_token?.trim() &&
+              settings.twilio_phone_number?.trim()
+            ) {
+              await sendTwilioSms({
+                accountSid: settings.twilio_account_sid.trim(),
+                authToken: settings.twilio_auth_token.trim(),
+                from: settings.twilio_phone_number.trim(),
+                to: normalizedPhone,
+                body: sanitizeMessageBody(scheduledSmsBody),
+              });
+            }
+          }
+
           await supabaseAdmin
             .from("client_invoices")
             .update({
               scheduled_send_at: null,
               scheduled_send_message: null,
               scheduled_send_storage_path: null,
+              scheduled_send_sms_to: null,
+              scheduled_send_sms_body: null,
               updated_at: new Date().toISOString(),
             })
             .eq("id", row.id)

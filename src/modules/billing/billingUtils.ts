@@ -211,6 +211,14 @@ export const resolveInvoiceRecipientPhone = ({
   return display.phone?.trim() ?? "";
 };
 
+const invoiceEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const parseInvoiceEmailList = (value: string) =>
+  value
+    .split(/[,;]/)
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry.length > 0 && invoiceEmailPattern.test(entry));
+
 export const billToSelectionFromClient = ({
   company,
   contact,
