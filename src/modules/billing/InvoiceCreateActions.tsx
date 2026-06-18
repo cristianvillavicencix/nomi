@@ -53,7 +53,7 @@ export const InvoiceCreateActions = ({
           onClick={onConfigurePayment}
         >
           <Settings2 className="size-4" />
-          Configure payment
+          Payments
         </Button>
       ) : null}
 

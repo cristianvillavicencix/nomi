@@ -120,6 +120,9 @@ export const billingProvider = {
     pdfBase64,
     filename,
     subject,
+    smsTo,
+    smsBody,
+    contactId,
   }: {
     invoiceId: Identifier;
     to: string;
@@ -128,11 +131,16 @@ export const billingProvider = {
     pdfBase64: string;
     filename?: string;
     subject?: string;
+    smsTo?: string;
+    smsBody?: string;
+    contactId?: Identifier;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       invoice: Record<string, unknown>;
       email_sent?: boolean;
       email_skipped?: boolean;
+      sms_sent?: boolean;
+      sms_skipped?: boolean;
     }>(
       "send_client_invoice",
       {
@@ -145,6 +153,9 @@ export const billingProvider = {
           pdf_base64: pdfBase64,
           filename,
           subject,
+          ...(smsTo?.trim() ? { sms_to: smsTo.trim() } : {}),
+          ...(smsBody?.trim() ? { sms_body: smsBody.trim() } : {}),
+          ...(contactId != null ? { contact_id: Number(contactId) } : {}),
         },
       },
     );

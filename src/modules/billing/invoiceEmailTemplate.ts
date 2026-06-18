@@ -126,6 +126,32 @@ export const buildInvoiceEmailPlainText = ({
   return lines.join("\n");
 };
 
+export const buildInvoiceSmsText = ({
+  invoice,
+  organizationName,
+  paymentUrl,
+  contact,
+}: Pick<
+  InvoiceEmailTemplateContext,
+  "invoice" | "organizationName" | "paymentUrl" | "contact"
+>) => {
+  const recipientName = formatContactName(contact);
+  const greetingName = recipientName ? recipientName.split(" ")[0] : null;
+  const balanceDue = computeInvoiceBalanceDue(
+    Number(invoice.amount) || 0,
+    Number(invoice.amount_paid) || 0,
+  );
+  const amount = formatInvoiceMoney(balanceDue, invoice.currency);
+  const dueDate = formatInvoiceDueDate(invoice.due_date);
+
+  return [
+    greetingName ? `Hi ${greetingName},` : "Hi,",
+    `${organizationName}: Invoice ${invoice.invoice_number}.`,
+    `${amount} due ${dueDate}.`,
+    `Pay: ${paymentUrl}`,
+  ].join("\n");
+};
+
 const formatScheduleLabel = (
   row: { key: string; label: string; timing: string },
   upfrontPercent: number,

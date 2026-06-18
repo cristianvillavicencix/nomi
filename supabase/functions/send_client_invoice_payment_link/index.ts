@@ -13,6 +13,7 @@ import {
 } from "../_shared/transactionalEmail.ts";
 import { resolveContactEmail } from "../_shared/clientProposalBilling.ts";
 import { INVOICE_ORGANIZATION_NAME } from "../_shared/invoiceOrganizationInfo.ts";
+import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
 
 type SendLinkBody = {
   invoice_id?: number;
@@ -26,10 +27,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const resolveBaseUrl = (requested?: string) => {
   const trimmed = requested?.trim();
   if (trimmed) return trimmed.replace(/\/$/, "");
-  const envUrl =
-    Deno.env.get("PUBLIC_APP_URL")?.trim() ||
-    Deno.env.get("VITE_PUBLIC_APP_URL")?.trim();
-  return envUrl?.replace(/\/$/, "") ?? "https://lbs.bz";
+  return resolvePublicAppBaseUrl();
 };
 
 const ensureShareLink = async (

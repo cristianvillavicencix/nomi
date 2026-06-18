@@ -29,10 +29,12 @@ import {
   buildDefaultInvoiceEmailSubject,
   buildInvoiceEmailHtml,
   buildInvoiceEmailPlainText,
+  buildInvoiceSmsText,
   buildOrganizationEmailTagline,
   resolveClientInvoiceShareUrl,
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
+import { InvoiceSendDeliveryPreview } from "@/modules/billing/InvoiceSendDeliveryPreview";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
 import {
   canDeleteClientInvoice,
@@ -40,9 +42,12 @@ import {
   canSendClientInvoice,
   canVoidClientInvoice,
   resolveInvoiceRecipientEmail,
+  resolveInvoiceRecipientPhone,
 } from "@/modules/billing/billingUtils";
 import { canChargeClientInvoice } from "@/modules/billing/invoicePaymentUtils";
+import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,6 +102,8 @@ export const SendInvoiceDialog = ({
   const companyWebsite = invoiceBranding.website;
   const organizationTagline = useMemo(() => buildOrganizationEmailTagline(), []);
   const [to, setTo] = useState("");
+  const [phone, setPhone] = useState("");
+  const [sendSms, setSendSms] = useState(true);
   const [subject, setSubject] = useState("");
 
   const { data: lineItems = [] } = useGetList<ClientInvoiceLineItem>(
@@ -128,6 +135,20 @@ export const SendInvoiceDialog = ({
     ? resolveClientInvoiceShareUrl(shareLink, window.location.origin)
     : "";
 
+  const smsPaymentUrl = useMemo(() => {
+    if (!shareLink) return paymentUrl;
+    if (shareLink.short_url?.trim()) {
+      return resolveClientInvoiceShareUrl(
+        { url: shareLink.short_url, short_url: shareLink.short_url },
+        window.location.origin,
+      );
+    }
+    if (shareLink.short_code?.trim()) {
+      return `${window.location.origin.replace(/\/$/, "")}/iv/${shareLink.short_code}`;
+    }
+    return paymentUrl;
+  }, [paymentUrl, shareLink]);
+
   const emailTemplateContext = useMemo(() => {
     if (!invoice || !paymentUrl) return null;
     return {
@@ -147,9 +168,25 @@ export const SendInvoiceDialog = ({
     organizationTagline,
   ]);
 
+  const smsText = useMemo(() => {
+    if (!invoice || !smsPaymentUrl) return "";
+    return buildInvoiceSmsText({
+      invoice,
+      organizationName,
+      paymentUrl: smsPaymentUrl,
+      contact,
+    });
+  }, [invoice, smsPaymentUrl, organizationName, contact]);
+
+  const emailHtml = useMemo(
+    () => (emailTemplateContext ? buildInvoiceEmailHtml(emailTemplateContext) : ""),
+    [emailTemplateContext],
+  );
+
   useEffect(() => {
     if (!open || !invoice) return;
 
+    const defaultPhone = resolveInvoiceRecipientPhone({ company, contact });
     setTo(
       resolveInvoiceRecipientEmail({
         company,
@@ -157,6 +194,8 @@ export const SendInvoiceDialog = ({
         fallbackEmail: invoice.recipient_email,
       }),
     );
+    setPhone(defaultPhone);
+    setSendSms(Boolean(defaultPhone.trim()));
     setSubject(buildDefaultInvoiceEmailSubject(invoice, organizationName));
   }, [open, invoice, company, contact, organizationName]);
 
@@ -187,14 +226,34 @@ export const SendInvoiceDialog = ({
         htmlMessage: buildInvoiceEmailHtml(emailTemplateContext),
         pdfBase64,
         filename: `${invoice.invoice_number}.pdf`,
+        ...(sendSms && phone.trim()
+          ? {
+              smsTo: phone.trim(),
+              smsBody: smsText,
+              contactId: contact?.id ?? invoice.contact_id ?? undefined,
+            }
+          : {}),
       });
     },
     onSuccess: (result) => {
-      if (result.email_skipped) {
+      if (result.email_skipped && !result.sms_sent) {
         notify(
-          "Invoice marked as sent. Email is not configured — use Share to send the portal link.",
+          "Invoice marked as sent. Email and SMS are not configured — use Share to send the portal link.",
           { type: "warning" },
         );
+      } else if (result.email_skipped && result.sms_sent) {
+        notify("Invoice marked as sent. Text message delivered.", {
+          type: "success",
+        });
+      } else if (result.sms_skipped && sendSms && phone.trim()) {
+        notify(
+          result.email_sent
+            ? "Invoice emailed. SMS was not sent — check Communications settings."
+            : "Invoice sent.",
+          { type: "warning" },
+        );
+      } else if (result.email_sent && result.sms_sent) {
+        notify("Invoice sent by email and text", { type: "success" });
       } else {
         notify("Invoice sent", { type: "success" });
       }
@@ -213,40 +272,62 @@ export const SendInvoiceDialog = ({
     Boolean(subject.trim()) &&
     !shareLinkPending &&
     Boolean(paymentUrl) &&
-    Boolean(emailTemplateContext);
+    Boolean(emailTemplateContext) &&
+    (!sendSms || Boolean(phone.trim()));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Send invoice {invoice.invoice_number}</DialogTitle>
           <DialogDescription>
-            Branded email with line items, payment schedule, and pay button.
-            The PDF invoice is attached automatically.
+            Email with PDF attachment and optional text message. Preview both
+            before sending.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="invoice-send-to">Recipient email</Label>
-            <Input
-              id="invoice-send-to"
-              type="email"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="invoice-send-to">Recipient email</Label>
+              <Input
+                id="invoice-send-to"
+                type="email"
+                value={to}
+                onChange={(event) => setTo(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invoice-send-phone">Recipient mobile</Label>
+              <Input
+                id="invoice-send-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="(203) 555-0100"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                onBlur={() => {
+                  const formatted = formatUsPhoneDisplayFromAny(phone);
+                  if (formatted !== "—") setPhone(formatted);
+                }}
+              />
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Checkbox
+                  checked={sendSms}
+                  onCheckedChange={(checked) => setSendSms(checked === true)}
+                  disabled={!phone.trim()}
+                />
+                Also send text message
+              </label>
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="invoice-send-subject">Subject</Label>
+            <Label htmlFor="invoice-send-subject">Email subject</Label>
             <Input
               id="invoice-send-subject"
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
             />
-          </div>
-          <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-            Email includes Latino Business Support branding, amount due, line
-            items, optional payment schedule, and a{" "}
-            <span className="font-medium text-foreground">Pay</span> button.
           </div>
           {shareLinkPending ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -258,11 +339,17 @@ export const SendInvoiceDialog = ({
             <p className="text-sm text-destructive">
               Could not generate payment link. Try again or use Share.
             </p>
-          ) : paymentUrl ? (
-            <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Pay link:</span>{" "}
-              {paymentUrl}
-            </div>
+          ) : null}
+          {emailTemplateContext ? (
+            <InvoiceSendDeliveryPreview
+              subject={subject}
+              emailHtml={emailHtml}
+              smsText={smsText}
+              emailTo={to}
+              smsTo={phone}
+              sendSms={sendSms}
+              templateContext={emailTemplateContext}
+            />
           ) : null}
         </div>
         <DialogFooter>
@@ -280,6 +367,7 @@ export const SendInvoiceDialog = ({
               <Send className="size-4" />
             )}
             Send invoice
+            {sendSms && phone.trim() ? " + text" : ""}
           </Button>
         </DialogFooter>
       </DialogContent>

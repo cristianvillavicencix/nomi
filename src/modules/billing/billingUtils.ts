@@ -71,7 +71,7 @@ const addressLineLooksComplete = (
   return false;
 };
 
-/** Multi-line bill-to address without repeating city/state/country already in line 1. */
+/** Invoice bill-to: at most two lines — street, then city/state/zip/country. */
 export const buildBillToAddressLines = (parts: AddressParts): string[] => {
   const street = parts.address?.trim();
   if (!street) return [];
@@ -81,17 +81,27 @@ export const buildBillToAddressLines = (parts: AddressParts): string[] => {
   const zip = parts.zipcode?.trim();
   const country = parts.country?.trim();
 
+  const countryAlreadyShown = (text: string) =>
+    Boolean(country && text.toLowerCase().includes(country.toLowerCase()));
+
   if (addressLineLooksComplete(street, city, state, zip)) {
+    if (country && !countryAlreadyShown(street)) {
+      return [street, country];
+    }
     return [street];
   }
 
-  const lines = [street];
-  const cityLine = [city, state, zip].filter(Boolean).join(", ");
-  if (cityLine) lines.push(cityLine);
-  if (country && !street.toLowerCase().includes(country.toLowerCase())) {
-    lines.push(country);
-  }
-  return lines;
+  const locality = [city, state, zip].filter(Boolean).join(", ");
+  const secondLine = [
+    locality || null,
+    country && !countryAlreadyShown(street) && !countryAlreadyShown(locality)
+      ? country
+      : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return secondLine ? [street, secondLine] : [street];
 };
 
 export const resolveBillToDisplay = (
@@ -159,6 +169,22 @@ export const resolveBillToDisplay = (
   };
 };
 
+/** Invoice bill-to heading: `Contact | Company` when both differ. */
+export const formatBillToNameLine = (
+  company?: Company | null,
+  contact?: Contact | null,
+): string | null => {
+  const { contactName, companyName } = resolveBillToDisplay(company, contact);
+  const contactLabel = contactName?.trim() || null;
+  const companyLabel = companyName?.trim() || null;
+
+  if (contactLabel && companyLabel && contactLabel !== companyLabel) {
+    return `${contactLabel} | ${companyLabel}`;
+  }
+
+  return contactLabel || companyLabel;
+};
+
 export const resolveInvoiceRecipientEmail = ({
   company,
   contact,
@@ -172,6 +198,17 @@ export const resolveInvoiceRecipientEmail = ({
   if (display.email) return display.email;
   if (fallbackEmail?.trim()) return fallbackEmail.trim();
   return "";
+};
+
+export const resolveInvoiceRecipientPhone = ({
+  company,
+  contact,
+}: {
+  company?: Company | null;
+  contact?: Contact | null;
+}) => {
+  const display = resolveBillToDisplay(company, contact);
+  return display.phone?.trim() ?? "";
 };
 
 export const billToSelectionFromClient = ({

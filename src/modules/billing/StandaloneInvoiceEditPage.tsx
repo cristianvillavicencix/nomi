@@ -156,6 +156,23 @@ export const StandaloneInvoiceEditPage = ({
     { enabled: Boolean(invoice?.contact_id) },
   );
 
+  const billToCompanyId = billTo?.companyId ?? billTo?.contact?.company_id ?? null;
+  const { data: billToCompany } = useGetOne<Company>(
+    "companies",
+    { id: billToCompanyId ?? "" },
+    { enabled: Boolean(billToCompanyId) && !billTo?.company },
+  );
+  const activeCompany = billTo?.company ?? billToCompany ?? company ?? null;
+
+  const billToContactId =
+    billTo?.contactId ?? activeCompany?.primary_contact_id ?? null;
+  const { data: billToContact } = useGetOne<Contact>(
+    "contacts",
+    { id: billToContactId ?? "" },
+    { enabled: Boolean(billToContactId) && !billTo?.contact },
+  );
+  const activeContact = billTo?.contact ?? billToContact ?? contact ?? null;
+
   const editable = invoice ? canEditClientInvoice(invoice) : false;
 
   useEffect(() => {
@@ -262,8 +279,8 @@ export const StandaloneInvoiceEditPage = ({
       const updated = (await dataProvider.updateStandaloneClientInvoice(
         invoice.id,
         {
-          company_id: billTo.companyId ?? contact?.company_id ?? null,
-          contact_id: billTo.contactId ?? contact?.id ?? null,
+          company_id: billTo.companyId ?? activeContact?.company_id ?? null,
+          contact_id: billTo.contactId ?? activeContact?.id ?? null,
           issue_date: issueDate,
           due_date: dueDate,
           terms,
@@ -298,10 +315,13 @@ export const StandaloneInvoiceEditPage = ({
         organizationName,
         organizationAddress,
         organizationWebsite: companyWebsite,
-        company,
-        contact,
+        company: activeCompany,
+        contact: activeContact,
         lineItems: lineItemsForPdf,
-        billToEmail: resolveInvoiceRecipientEmail({ company, contact }),
+        billToEmail: resolveInvoiceRecipientEmail({
+          company: activeCompany,
+          contact: activeContact,
+        }),
       });
 
       if (action === "share") {
@@ -547,8 +567,8 @@ export const StandaloneInvoiceEditPage = ({
           onRemainderScheduleChange={setRemainderSchedule}
           termsAndConditions={termsAndConditions}
           onTermsAndConditionsChange={setTermsAndConditions}
-          company={company}
-          contact={contact}
+          company={activeCompany}
+          contact={activeContact}
           invoiceNumber={invoice.invoice_number}
           amountPaid={Number(invoice.amount_paid) || 0}
           documentRibbon={statusRibbon}
@@ -566,8 +586,8 @@ export const StandaloneInvoiceEditPage = ({
         }}
         invoice={dialogInvoice}
         organizationName={organizationName}
-        company={company}
-        contact={contact}
+        company={activeCompany}
+        contact={activeContact}
         onSent={handleSendComplete}
       />
 
@@ -583,8 +603,8 @@ export const StandaloneInvoiceEditPage = ({
         onOpenChange={handleScheduleClose}
         invoice={dialogInvoice}
         organizationName={organizationName}
-        company={company}
-        contact={contact}
+        company={activeCompany}
+        contact={activeContact}
         lineItems={scheduleLineItems}
         onScheduled={() => refresh()}
       />
@@ -592,8 +612,8 @@ export const StandaloneInvoiceEditPage = ({
       {invoice && canChargeClientInvoice(invoice) ? (
         <InvoiceStaffChargeDialog
           invoice={invoice}
-          company={company}
-          contact={contact}
+          company={activeCompany}
+          contact={activeContact}
           open={chargeDialogOpen}
           onOpenChange={setChargeDialogOpen}
           onSuccess={() => refresh()}

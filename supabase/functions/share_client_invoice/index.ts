@@ -7,6 +7,7 @@ import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { generateSecureToken } from "../_shared/formV2Schema.ts";
 import { generateUniqueShortCode } from "../_shared/formTokenUtils.ts";
+import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
 
 type ShareBody = {
   invoice_id?: number;
@@ -17,10 +18,7 @@ type ShareBody = {
 const resolveBaseUrl = (requested?: string) => {
   const trimmed = requested?.trim();
   if (trimmed) return trimmed.replace(/\/$/, "");
-  const envUrl =
-    Deno.env.get("PUBLIC_APP_URL")?.trim() ||
-    Deno.env.get("VITE_PUBLIC_APP_URL")?.trim();
-  return envUrl?.replace(/\/$/, "") ?? "";
+  return resolvePublicAppBaseUrl();
 };
 
 Deno.serve(

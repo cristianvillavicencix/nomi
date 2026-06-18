@@ -1,6 +1,9 @@
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
-import { formatContactName } from "@/modules/billing/billingUtils";
+import {
+  formatBillToNameLine,
+  resolveBillToDisplay,
+} from "@/modules/billing/billingUtils";
 import {
   calculateInvoiceTotals,
   STRIPE_TRANSFER_FEE_LABEL,
@@ -71,15 +74,8 @@ export const InvoiceDocumentPreview = ({
   const feeAmount = feeOverride ?? calculated.feeAmount;
   const total = totalOverride ?? calculated.total;
   const balanceDue = balanceDueOverride ?? total;
-  const contactName = formatContactName(contact);
-  const contactEmail =
-    contact?.email_jsonb?.find((row) => row.isPrimary)?.email?.trim() ??
-    contact?.email_jsonb?.find((row) => row.email?.trim())?.email?.trim() ??
-    contact?.email_jsonb?.[0]?.email?.trim();
-  const contactPhone =
-    contact?.phone_jsonb?.find((row) => row.isPrimary)?.number?.trim() ??
-    contact?.phone_jsonb?.find((row) => row.number?.trim())?.number?.trim() ??
-    contact?.phone_jsonb?.[0]?.number?.trim();
+  const billToDisplay = resolveBillToDisplay(company, contact);
+  const billToNameLine = formatBillToNameLine(company, contact);
 
   const statusLabel =
     status === "sent"
@@ -152,17 +148,21 @@ export const InvoiceDocumentPreview = ({
           </div>
           <div className="text-sm">
             <p className="mb-2 font-semibold">Bill To</p>
-            {company?.name ? (
-              <p className="font-medium text-blue-700">{company.name}</p>
+            {billToNameLine ? (
+              <p className="font-medium text-blue-700">{billToNameLine}</p>
             ) : null}
-            {contactName ? <p>{contactName}</p> : null}
-            {contactEmail ? (
-              <p className="text-slate-600">{contactEmail}</p>
+            {billToDisplay.addressLines.map((line) => (
+              <p key={line} className="text-slate-600">
+                {line}
+              </p>
+            ))}
+            {billToDisplay.email ? (
+              <p className="text-slate-600">{billToDisplay.email}</p>
             ) : null}
-            {contactPhone ? (
-              <p className="text-slate-600">{contactPhone}</p>
+            {billToDisplay.phone ? (
+              <p className="text-slate-600">{billToDisplay.phone}</p>
             ) : null}
-            {!company?.name && !contactName ? (
+            {!billToNameLine ? (
               <p className="text-slate-400">Select a client</p>
             ) : null}
           </div>

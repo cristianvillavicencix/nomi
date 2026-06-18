@@ -1,5 +1,10 @@
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
 import { pdfMake } from "@/modules/proposals/pdf/initPdfMake";
+import type { Company, Contact } from "@/components/atomic-crm/types";
+import {
+  formatBillToNameLine,
+  resolveBillToDisplay,
+} from "@/modules/billing/billingUtils";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
 
 export type ClientInvoicePdfContext = {
@@ -7,8 +12,8 @@ export type ClientInvoicePdfContext = {
   organizationName: string;
   organizationWebsite?: string | null;
   organizationAddress?: string | null;
-  companyName?: string | null;
-  contactName?: string | null;
+  billToNameLine?: string | null;
+  billToAddressLines?: string[];
   billToEmail?: string | null;
   billToPhone?: string | null;
   lineItems?: ClientInvoiceLineItem[];
@@ -28,30 +33,25 @@ export const buildClientInvoicePdfContext = ({
   organizationName: string;
   organizationAddress?: string | null;
   organizationWebsite?: string | null;
-  company?: { name?: string | null } | null;
-  contact?: {
-    first_name?: string | null;
-    last_name?: string | null;
-    email_jsonb?: Array<{ email?: string; isPrimary?: boolean }>;
-    phone_jsonb?: Array<{ number?: string; isPrimary?: boolean }>;
-  } | null;
+  company?: Company | null;
+  contact?: Contact | null;
   lineItems?: ClientInvoiceLineItem[];
   billToEmail?: string;
-}): ClientInvoicePdfContext => ({
-  invoice,
-  organizationName,
-  organizationAddress,
-  organizationWebsite,
-  companyName: company?.name,
-  contactName: contact
-    ? [contact.first_name, contact.last_name].filter(Boolean).join(" ")
-    : null,
-  billToEmail,
-  billToPhone:
-    contact?.phone_jsonb?.find((row) => row.isPrimary)?.number ??
-    contact?.phone_jsonb?.[0]?.number,
-  lineItems,
-});
+}): ClientInvoicePdfContext => {
+  const billTo = resolveBillToDisplay(company, contact);
+
+  return {
+    invoice,
+    organizationName,
+    organizationAddress,
+    organizationWebsite,
+    billToNameLine: formatBillToNameLine(company, contact),
+    billToAddressLines: billTo.addressLines,
+    billToEmail: billToEmail ?? billTo.email,
+    billToPhone: billTo.phone,
+    lineItems,
+  };
+};
 
 const formatMoney = (amount: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
@@ -162,14 +162,14 @@ const buildDocDefinition = (
     organizationName,
     organizationWebsite,
     organizationAddress,
-    companyName,
-    contactName,
+    billToNameLine,
+    billToAddressLines = [],
     billToEmail,
     billToPhone,
     lineItems = [],
   } = ctx;
   const currency = invoice.currency ?? "USD";
-  const billTo = companyName ?? contactName ?? "Client";
+  const billToHeading = billToNameLine ?? "Client";
   const lineSubtotal = lineItems.reduce(
     (sum, line) => sum + Number(line.line_total || 0),
     0,
@@ -293,10 +293,11 @@ const buildDocDefinition = (
             width: "*",
             stack: [
               { text: "Bill To", style: "billToLabel" },
-              { text: billTo, style: "billToName" },
-              ...(contactName && companyName
-                ? [{ text: contactName, style: "muted" }]
-                : []),
+              { text: billToHeading, style: "billToName" },
+              ...billToAddressLines.map((line) => ({
+                text: line,
+                style: "muted",
+              })),
               ...(billToEmail ? [{ text: billToEmail, style: "muted" }] : []),
               ...(billToPhone ? [{ text: billToPhone, style: "muted" }] : []),
             ],

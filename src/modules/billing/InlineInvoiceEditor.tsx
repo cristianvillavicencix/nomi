@@ -7,6 +7,7 @@ import {
 import { CatalogLineItemField } from "@/modules/billing/CatalogLineItemField";
 import {
   formatOrganizationMemberName,
+  formatBillToNameLine,
   resolveBillToDisplay,
 } from "@/modules/billing/billingUtils";
 import type { InvoicePaymentCollectionMode } from "@/modules/billing/invoicePaymentUtils";
@@ -159,7 +160,14 @@ export const InlineInvoiceEditor = ({
     payment_method_brand: paymentMethodBrand,
     payment_method_last4: paymentMethodLast4,
   });
-  const billToDisplay = resolveBillToDisplay(company, contact);
+  const billToDisplay = resolveBillToDisplay(
+    billTo?.company ?? company,
+    billTo?.contact ?? contact,
+  );
+  const billToNameLine = formatBillToNameLine(
+    billTo?.company ?? company,
+    billTo?.contact ?? contact,
+  );
 
   const { data: salesPeople = [] } = useGetList<OrganizationMember>(
     "organization_members",
@@ -310,14 +318,10 @@ export const InlineInvoiceEditor = ({
                 value={billTo}
                 onChange={onBillToChange}
                 variant="inline"
+                formattedLabel={billToNameLine}
               />
               {billTo ? (
                 <div className="mt-1 space-y-1">
-                  {billToDisplay.contactName &&
-                  billToDisplay.companyName &&
-                  billToDisplay.contactName !== billToDisplay.companyName ? (
-                    <p className="text-slate-800">{billToDisplay.contactName}</p>
-                  ) : null}
                   {billToDisplay.addressLines.map((line) => (
                     <p key={line} className="text-slate-600">
                       {line}

@@ -21,6 +21,7 @@ import {
   generatePaymentReceiptPdfBase64,
 } from "./invoicePaymentReceiptPdf.ts";
 import { getStripe } from "./stripeClient.ts";
+import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 
 const formatMoney = (amount: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", {
@@ -40,14 +41,6 @@ const formatDate = (dateKey: string) => {
 
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-const resolvePublicAppBaseUrl = () => {
-  const envUrl =
-    Deno.env.get("PUBLIC_APP_URL")?.trim() ||
-    Deno.env.get("VITE_PUBLIC_APP_URL")?.trim() ||
-    Deno.env.get("BILLING_PUBLIC_SITE_URL")?.trim();
-  return envUrl?.replace(/\/$/, "") || "https://lbs.bz";
-};
 
 export async function resolveInvoicePortalUrl(
   supabase: SupabaseClient,

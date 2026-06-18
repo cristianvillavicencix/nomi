@@ -31,6 +31,8 @@ type BillToClientSearchProps = {
   value: BillToSelection | null;
   onChange: (value: BillToSelection | null) => void;
   variant?: "default" | "inline";
+  /** When set, shown in the trigger instead of `value.label` (e.g. `Contact | Company`). */
+  formattedLabel?: string | null;
 };
 
 const contactDisplayName = (contact: Contact) =>
@@ -42,6 +44,7 @@ export const BillToClientSearch = ({
   value,
   onChange,
   variant = "default",
+  formattedLabel,
 }: BillToClientSearchProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -99,6 +102,9 @@ export const BillToClientSearch = ({
     setOpen(false);
   };
 
+  const triggerLabel =
+    formattedLabel?.trim() || value?.label || "Search company or client name…";
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -117,7 +123,7 @@ export const BillToClientSearch = ({
                   : "text-slate-400",
               )}
             >
-              {value?.label ?? "Search company or client name…"}
+              {triggerLabel}
             </span>
             {!value ? (
               <ChevronsUpDown className="size-3.5 shrink-0 text-slate-400" />
@@ -131,9 +137,7 @@ export const BillToClientSearch = ({
             aria-expanded={open}
             className="h-auto min-h-10 w-full justify-between py-2 font-normal"
           >
-            <span className="truncate text-left">
-              {value?.label ?? "Search company or client name…"}
-            </span>
+            <span className="truncate text-left">{triggerLabel}</span>
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         )}
