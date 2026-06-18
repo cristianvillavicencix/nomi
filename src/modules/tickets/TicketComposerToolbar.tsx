@@ -9,6 +9,7 @@ import {
   Paperclip,
   Send,
 } from "lucide-react";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { TicketReplyTemplatePicker } from "@/modules/tickets/TicketReplyTemplatePicker";
 import {
@@ -24,6 +25,8 @@ type TicketComposerToolbarProps = {
   onChange: (next: string) => void;
   disabled?: boolean;
   ticket: Ticket;
+  contact?: Contact | null;
+  company?: Company | null;
   onInsertTemplate: (text: string) => void;
   onAttachClick: () => void;
   onSendInternal: () => void;
@@ -38,6 +41,8 @@ export const TicketComposerToolbar = ({
   onChange,
   disabled = false,
   ticket,
+  contact,
+  company,
   onInsertTemplate,
   onAttachClick,
   onSendInternal,
@@ -119,6 +124,8 @@ export const TicketComposerToolbar = ({
         {toolButton("Attach files", <Paperclip className="size-4" />, onAttachClick)}
         <TicketReplyTemplatePicker
           ticket={ticket}
+          contact={contact}
+          company={company}
           disabled={disabled}
           onInsert={onInsertTemplate}
         />

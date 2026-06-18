@@ -1,4 +1,5 @@
 import { LayoutTemplate } from "lucide-react";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import {
   TICKET_REPLY_TEMPLATES,
@@ -14,17 +15,21 @@ import {
 
 type TicketReplyTemplatePickerProps = {
   ticket: Ticket;
+  contact?: Contact | null;
+  company?: Company | null;
   disabled?: boolean;
   onInsert: (text: string) => void;
 };
 
 export const TicketReplyTemplatePicker = ({
   ticket,
+  contact,
+  company,
   disabled = false,
   onInsert,
 }: TicketReplyTemplatePickerProps) => {
   const handleSelect = (templateId: TicketReplyTemplateId) => {
-    onInsert(renderTicketReplyTemplate(templateId, ticket));
+    onInsert(renderTicketReplyTemplate(templateId, ticket, contact, company));
   };
 
   return (

@@ -38,7 +38,7 @@ export const ticketsProvider = {
         is_internal_note: isInternalNote,
         attachments,
         to_emails: toEmails,
-        cc_emails: ccEmails,
+        ...(ccEmails?.length ? { cc_emails: ccEmails } : {}),
       },
     });
 

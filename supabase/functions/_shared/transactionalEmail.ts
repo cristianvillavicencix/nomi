@@ -43,20 +43,33 @@ const linkifyLine = (line: string) =>
     '<a href="$1" style="color:#2563eb;text-decoration:underline;">$1</a>',
   );
 
-const textToHtml = (textBody: string) =>
-  textBody
-    .split("\n")
-    .map((line) => {
-      if (!line.trim()) return "<p>&nbsp;</p>";
-      if (line.trim().startsWith("Pay here:")) {
-        const url = line.replace(/^Pay here:\s*/i, "").trim();
+const textToHtml = (textBody: string) => {
+  const normalized = textBody.trim().replace(/\n{3,}/g, "\n\n");
+  if (!normalized) return "";
+
+  const paragraphs = normalized.split(/\n{2,}/).filter((paragraph) => paragraph.trim());
+
+  return paragraphs
+    .map((paragraph, index) => {
+      const lines = paragraph
+        .split("\n")
+        .map((line) => line.trimEnd())
+        .filter((line) => line.length > 0)
+        .map(linkifyLine)
+        .join("<br/>");
+      if (!lines) return "";
+      if (lines.trim().startsWith("Pay here:")) {
+        const url = lines.replace(/^Pay here:\s*/i, "").trim();
         if (/^https?:\/\//i.test(url)) {
           return `<p style="margin:20px 0;"><a href="${escapeHtml(url)}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:600;">Pay here</a></p>`;
         }
       }
-      return `<p>${linkifyLine(line)}</p>`;
+      const marginBottom = index < paragraphs.length - 1 ? "12px" : "0";
+      return `<p style="margin:0 0 ${marginBottom};">${lines}</p>`;
     })
+    .filter(Boolean)
     .join("");
+};
 
 const formatEmailSendFailure = (message: string) => {
   const lower = message.toLowerCase();
@@ -179,21 +192,32 @@ async function sendViaTwilioEmail(params: {
     }));
   }
 
+  const dedupeAddresses = (addresses: string[]) => {
+    const seen = new Set<string>();
+    return addresses
+      .map((address) => address.trim().toLowerCase())
+      .filter((address) => {
+        if (!address || seen.has(address)) return false;
+        seen.add(address);
+        return true;
+      });
+  };
+
+  // Twilio Email API (comms.twilio.com/v1/Emails) only supports `to`, not cc/bcc.
+  const recipients = dedupeAddresses([
+    ...params.to,
+    ...(params.cc ?? []),
+    ...(params.bcc ?? []),
+  ]);
+
   const body: Record<string, unknown> = {
     from: {
       address: params.from.email,
       name: params.from.name,
     },
-    to: params.to.map((address) => ({ address })),
+    to: recipients.map((address) => ({ address })),
     content,
   };
-
-  if (params.cc?.length) {
-    body.cc = params.cc.map((address) => ({ address }));
-  }
-  if (params.bcc?.length) {
-    body.bcc = params.bcc.map((address) => ({ address }));
-  }
 
   // Twilio Email API (comms.twilio.com/v1/Emails) rejects replyTo — contact info stays in the body.
 

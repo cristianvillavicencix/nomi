@@ -4,10 +4,10 @@ import {
   useDelete,
   useNotify,
   useRefresh,
-  useUpdate,
 } from "ra-core";
 import type { Ticket } from "@/modules/types";
 import { TicketBulkMergeDialog } from "@/modules/tickets/TicketBulkMergeDialog";
+import { TicketBulkResolveDialog } from "@/modules/tickets/TicketBulkResolveDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -30,11 +30,11 @@ export const TicketInboxBulkBar = ({
   onMerged,
 }: TicketInboxBulkBarProps) => {
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [resolveOpen, setResolveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const notify = useNotify();
   const refresh = useRefresh();
-  const [update] = useUpdate();
   const [deleteOne] = useDelete();
 
   if (!selectedTickets.length) return null;
@@ -61,29 +61,7 @@ export const TicketInboxBulkBar = ({
     }
   };
 
-  const runResolve = async () => {
-    setPending(true);
-    try {
-      for (const ticket of selectedTickets) {
-        await update(
-          "tickets",
-          {
-            id: ticket.id,
-            data: { status: "resolved" },
-            previousData: ticket,
-          },
-          { mutationMode: "optimistic" },
-        );
-      }
-      notify(`Marked ${count} ticket(s) as resolved`, { type: "success" });
-      onClear();
-      refresh();
-    } catch {
-      notify("Could not update selected tickets", { type: "error" });
-    } finally {
-      setPending(false);
-    }
-  };
+  const runResolve = () => setResolveOpen(true);
 
   return (
     <>
@@ -147,6 +125,13 @@ export const TicketInboxBulkBar = ({
           onClear();
           onMerged(primaryTicketId);
         }}
+      />
+
+      <TicketBulkResolveDialog
+        open={resolveOpen}
+        tickets={selectedTickets}
+        onOpenChange={setResolveOpen}
+        onResolved={onClear}
       />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

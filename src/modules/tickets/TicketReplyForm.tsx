@@ -1,12 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { ChevronUp, Forward, Paperclip, Reply, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useDataProvider,
   useGetList,
+  useGetOne,
   useNotify,
   useRefresh,
 } from "ra-core";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Ticket, TicketMessage } from "@/modules/types";
 import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
@@ -14,6 +16,7 @@ import { TicketComposerToolbar } from "@/modules/tickets/TicketComposerToolbar";
 import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
 import {
   buildForwardOutboundBodies,
+  buildReplyOutboundBodies,
   createDefaultReplyBody,
   hasReplyContent,
   insertAboveSignature,
@@ -30,6 +33,7 @@ import {
 } from "@/modules/tickets/uploadTicketAttachment";
 import { Button } from "@/components/ui/button";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
+import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +68,22 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
 
+  const { data: contact } = useGetOne<Contact>(
+    "contacts",
+    { id: ticket.contact_id ?? "" },
+    { enabled: Boolean(ticket.contact_id) },
+  );
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: ticket.company_id ?? "" },
+    { enabled: Boolean(ticket.company_id) },
+  );
+
+  const defaultRecipientEmail = useMemo(
+    () => resolveTicketRequesterEmail(ticket, company, contact) ?? "",
+    [ticket, company, contact],
+  );
+
   const { data: recentMessages = [] } = useGetList<TicketMessage>(
     "ticket_messages",
     {
@@ -87,7 +107,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
   const resetDraft = () => {
     setBody(createDefaultReplyBody());
     setForwardContext(null);
-    setToRecipients(ticket.requester_email?.trim() ?? "");
+    setToRecipients(defaultRecipientEmail);
     setCcRecipients("");
     setPendingFiles((current) => {
       current.forEach((entry) => {
@@ -115,7 +135,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
 
     if (mode === "reply") {
       setForwardContext(null);
-      setToRecipients(ticket.requester_email?.trim() ?? "");
+      setToRecipients(defaultRecipientEmail);
       setBody(createDefaultReplyBody());
     } else {
       setForwardContext(
@@ -131,10 +151,15 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
   };
 
   useEffect(() => {
+    if (!defaultRecipientEmail) return;
+    setToRecipients((current) => current.trim() || defaultRecipientEmail);
+  }, [defaultRecipientEmail]);
+
+  useEffect(() => {
     setIsExpanded(false);
     setComposeMode("reply");
     resetDraft();
-  }, [ticket.id, ticket.requester_email]);
+  }, [ticket.id, defaultRecipientEmail]);
 
   const addPendingFile = (file: File) => {
     if (pendingFiles.length >= MAX_TICKET_ATTACHMENTS) {
@@ -289,11 +314,14 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
       return;
     }
 
-    const messageBody = body.trim();
+    const { textBody, htmlBody } = buildReplyOutboundBodies(
+      body.trim() || "(See attachments)",
+    );
     setSubmittingAs("reply");
     submitMutation.mutate({
       isInternalNote: false,
-      messageBody: messageBody || "(See attachments)",
+      messageBody: textBody,
+      htmlBody,
       toEmails,
       ccEmails: ccEmails.length ? ccEmails : undefined,
     });
@@ -354,17 +382,29 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
         <p className="text-sm font-medium text-foreground">
           {composeMode === "forward" ? "Forward" : "Reply"}
         </p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 px-2 text-muted-foreground"
-          disabled={isPending}
-          onClick={collapseComposer}
-        >
-          <ChevronUp className="size-4" />
-          Minimize
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-3"
+            disabled={isPending}
+            onClick={collapseComposer}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 px-2 text-muted-foreground"
+            disabled={isPending}
+            onClick={collapseComposer}
+          >
+            <ChevronUp className="size-4" />
+            Minimize
+          </Button>
+        </div>
       </div>
 
       <div
@@ -460,6 +500,8 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
           onChange={setBody}
           disabled={isPending}
           ticket={ticket}
+          contact={contact}
+          company={company}
           onInsertTemplate={handleInsertTemplate}
           onAttachClick={() => fileInputRef.current?.click()}
           onSendInternal={() => handleSend(true)}

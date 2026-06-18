@@ -28,6 +28,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { PageActions, PageTitle } from "@/components/atomic-crm/layout/PageActions";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { CreateTicketButton } from "@/modules/tickets/CreateTicketButton";
+import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
 import { TicketDetailPanel } from "@/modules/tickets/TicketDetailPanel";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { TicketListItem } from "@/modules/tickets/TicketListItem";
@@ -36,6 +37,10 @@ import {
   TICKET_STATUS_FILTERS,
   type TicketStatusFilterId,
 } from "@/modules/tickets/ticketInboxConfig";
+import {
+  buildTicketInboxStatusFilter,
+  countTicketsByInboxFilter,
+} from "@/modules/tickets/ticketStatusWorkflow";
 import { useTicketListAttachments } from "@/modules/tickets/useTicketListAttachments";
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
 import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
@@ -68,7 +73,12 @@ export const TicketsInbox = () => {
       pagination={false}
       perPage={50}
       sort={{ field: "updated_at", order: "DESC" }}
-      filter={{ "merged_into_ticket_id@is": null }}
+      filter={{
+        "merged_into_ticket_id@is": null,
+      }}
+      filterDefaultValues={{
+        "status@neq": "resolved",
+      }}
       queryOptions={{ refetchInterval: 30_000 }}
       actions={
         <PageActions>
@@ -98,6 +108,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const [statusFilter, setStatusFilter] = useState<TicketStatusFilterId>("all");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
+  const [ticketToEdit, setTicketToEdit] = useState<Ticket | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const { filterValues, setFilters } = useListFilterContext();
   const { data: tickets = [] } = useListContext<Ticket>();
@@ -105,20 +116,14 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const { data: allTickets = [] } = useGetList<Ticket>("tickets", {
     pagination: { page: 1, perPage: 200 },
     sort: { field: "updated_at", order: "DESC" },
+    filter: { "merged_into_ticket_id@is": null },
     queryOptions: { refetchInterval: 30_000 },
   });
 
-  const counts = useMemo(() => {
-    const base = { all: 0, new: 0, open: 0, waiting: 0, resolved: 0 };
-    for (const ticket of allTickets) {
-      base.all += 1;
-      const status = ticket.status as keyof typeof base;
-      if (status in base && status !== "all") {
-        base[status] += 1;
-      }
-    }
-    return base;
-  }, [allTickets]);
+  const counts = useMemo(
+    () => countTicketsByInboxFilter(allTickets),
+    [allTickets],
+  );
 
   const ticketIds = useMemo(() => tickets.map((ticket) => ticket.id), [tickets]);
   const ticketIdStrings = useMemo(
@@ -244,11 +249,9 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const handleStatusFilter = (status: TicketStatusFilterId) => {
     setStatusFilter(status);
     const next = { ...filterValues };
-    if (status === "all") {
-      delete next["status@eq"];
-    } else {
-      next["status@eq"] = status;
-    }
+    delete next["status@eq"];
+    delete next["status@neq"];
+    Object.assign(next, buildTicketInboxStatusFilter(status));
     setFilters(next, {});
   };
 
@@ -374,6 +377,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
                           toggleTicketSelection(ticketId, checked)
                         }
                         onDelete={setTicketToDelete}
+                        onEdit={setTicketToEdit}
                         onUpdated={refresh}
                         lastReadAt={readMap.get(ticketId) ?? null}
                       />
@@ -410,6 +414,15 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
           onMerged={handleBulkMerged}
         />
       ) : null}
+
+      <EditTicketDialog
+        ticket={ticketToEdit}
+        open={ticketToEdit != null}
+        onOpenChange={(open) => {
+          if (!open) setTicketToEdit(null);
+        }}
+        onSaved={refresh}
+      />
 
       <Dialog
         open={ticketToDelete != null}

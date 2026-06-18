@@ -5,6 +5,12 @@
     },
     "twilio-docs": {
       "url": "https://mcp.twilio.com/docs"
+    },
+    "hostinger-email": {
+      "url": "https://mcp.mail.hostinger.com/mcp",
+      "headers": {
+        "Authorization": "Bearer 67dcb7f72348361f732be5f3bee74b64c6fab25de285b9b79681f81f396f645a"
+      }
     }
   }
 }

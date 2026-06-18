@@ -4,6 +4,7 @@ import { useNotify, useUpdate, type Identifier } from "ra-core";
 import type { OrganizationMember, Ticket } from "@/modules/types";
 import { ticketStatusLabel } from "@/modules/tickets/ticketInboxConfig";
 import { memberDisplayName } from "@/modules/tickets/ticketInboxUi";
+import { useTicketStatusChange } from "@/modules/tickets/useTicketStatusChange";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Popover,
@@ -35,22 +36,12 @@ export const TicketListStatusControl = ({
   canManage: boolean;
   onUpdated?: () => void;
 }) => {
-  const notify = useNotify();
-  const [update] = useUpdate();
+  const { applyStatusChange, statusChangeDialog } =
+    useTicketStatusChange(onUpdated);
 
   const handleChange = (status: string) => {
-    if (!canManage || status === ticket.status) return;
-    update(
-      "tickets",
-      { id: ticket.id, data: { status }, previousData: ticket },
-      {
-        onSuccess: () => {
-          notify("Status updated", { type: "info" });
-          onUpdated?.();
-        },
-        onError: () => notify("Could not update status", { type: "error" }),
-      },
-    );
+    if (!canManage) return;
+    applyStatusChange(ticket, status);
   };
 
   const trigger = (
@@ -73,29 +64,32 @@ export const TicketListStatusControl = ({
   if (!canManage) return trigger;
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-40 p-1"
-        onClick={(event) => event.stopPropagation()}
-      >
-        {STATUS_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            className={cn(
-              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
-              ticket.status === option.id && "bg-muted/60",
-            )}
-            onClick={() => handleChange(option.id)}
-          >
-            <span className={cn("size-2.5 rounded-full", option.color)} />
-            <span className="capitalize">{ticketStatusLabel(option.id)}</span>
-          </button>
-        ))}
-      </PopoverContent>
-    </Popover>
+    <>
+      {statusChangeDialog}
+      <Popover>
+        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="w-40 p-1"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {STATUS_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={cn(
+                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
+                ticket.status === option.id && "bg-muted/60",
+              )}
+              onClick={() => handleChange(option.id)}
+            >
+              <span className={cn("size-2.5 rounded-full", option.color)} />
+              <span className="capitalize">{ticketStatusLabel(option.id)}</span>
+            </button>
+          ))}
+        </PopoverContent>
+      </Popover>
+    </>
   );
 };
 

@@ -9,6 +9,17 @@ import {
 const readsQueryKey = (memberId?: string | number | null) =>
   ["ticket_member_reads", memberId] as const;
 
+const isMissingReadsTableError = (error: { code?: string; message?: string }) => {
+  const code = error.code ?? "";
+  const message = error.message?.toLowerCase() ?? "";
+  return (
+    code === "PGRST205" ||
+    code === "42P01" ||
+    message.includes("ticket_member_reads") ||
+    message.includes("does not exist")
+  );
+};
+
 export const useTicketInboxReads = (ticketIds: string[]) => {
   const { identity } = useGetIdentity();
   const memberId = identity?.id;
@@ -28,7 +39,10 @@ export const useTicketInboxReads = (ticketIds: string[]) => {
         .eq("member_id", Number(memberId))
         .in("ticket_id", numericIds);
 
-      if (error) throw error;
+      if (error) {
+        if (isMissingReadsTableError(error)) return new Map<string, string>();
+        throw error;
+      }
       return buildTicketReadMap((data ?? []) as TicketMemberRead[]);
     },
     staleTime: 10_000,
@@ -53,7 +67,10 @@ export const useTicketMemberRead = (ticketId: string | null) => {
         .eq("ticket_id", Number(ticketId))
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        if (isMissingReadsTableError(error)) return null;
+        throw error;
+      }
       return data?.last_read_at ?? null;
     },
     staleTime: 5_000,
@@ -71,7 +88,10 @@ export const useTicketMemberRead = (ticketId: string | null) => {
         },
         { onConflict: "ticket_id,member_id" },
       );
-      if (error) throw error;
+      if (error) {
+        if (isMissingReadsTableError(error)) return now;
+        throw error;
+      }
       return now;
     },
     onSuccess: () => {

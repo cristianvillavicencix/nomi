@@ -1,4 +1,6 @@
 import type { Ticket } from "@/modules/types";
+import type { Company, Contact } from "@/components/atomic-crm/types";
+import { getTicketClientFirstName } from "@/modules/tickets/ticketRequester";
 
 export type TicketReplyTemplateId = "updated_estimate_es";
 
@@ -10,7 +12,7 @@ export type TicketReplyTemplate = {
 };
 
 const LBS_SUPPORT_SIGNATURE = `Latinos Business Support | Marketing Digital, Páginas Web, Xactimate
-(203) 303-9148 | ✉️ info@lbs.bz | www.lbs.bz
+(203) 303-9148 | info@lbs.bz | www.lbs.bz
 1200 Summer St, Stamford, 06902 CT`;
 
 export { LBS_SUPPORT_SIGNATURE };
@@ -32,23 +34,22 @@ Saludos cordiales,`,
   },
 ];
 
-export const getTicketClientFirstName = (ticket: Ticket) => {
-  const name = ticket.requester_name?.trim();
-  if (!name) return "there";
-  const [firstName] = name.split(/\s+/);
-  return firstName || name;
-};
-
-export const buildTicketReplyTemplateContext = (ticket: Ticket) => ({
-  clientName: getTicketClientFirstName(ticket),
+export const buildTicketReplyTemplateContext = (
+  ticket: Ticket,
+  contact?: Contact | null,
+  company?: Company | null,
+) => ({
+  clientName: getTicketClientFirstName(ticket, contact, company),
   subject: ticket.subject?.trim() || "su caso",
 });
 
 export const expandTicketReplyTemplate = (
   template: string,
   ticket: Ticket,
+  contact?: Contact | null,
+  company?: Company | null,
 ) => {
-  const context = buildTicketReplyTemplateContext(ticket);
+  const context = buildTicketReplyTemplateContext(ticket, contact, company);
   return template
     .replace(/\{\{clientName\}\}/g, context.clientName)
     .replace(/\{\{subject\}\}/g, context.subject);
@@ -57,8 +58,10 @@ export const expandTicketReplyTemplate = (
 export const renderTicketReplyTemplate = (
   templateId: TicketReplyTemplateId,
   ticket: Ticket,
+  contact?: Contact | null,
+  company?: Company | null,
 ) => {
   const template = TICKET_REPLY_TEMPLATES.find((row) => row.id === templateId);
   if (!template) return "";
-  return expandTicketReplyTemplate(template.body, ticket);
+  return expandTicketReplyTemplate(template.body, ticket, contact, company);
 };

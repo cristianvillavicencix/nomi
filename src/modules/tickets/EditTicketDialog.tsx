@@ -1,22 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Form,
-  useCreate,
   useDataProvider,
-  useGetIdentity,
   useGetList,
   useGetOne,
   useNotify,
   useRefresh,
+  useUpdate,
   type Identifier,
 } from "ra-core";
-import { Link, useNavigate } from "react-router";
 import { Loader2, X } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { SelectInput } from "@/components/admin/select-input";
+import { TextInput } from "@/components/admin/text-input";
 import {
   FormGuardProvider,
   useGuardedDialogClose,
@@ -34,28 +33,17 @@ import {
 } from "@/components/ui/dialog";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import {
-  getContactEmail,
-  getContactFullName,
-} from "@/modules/clients/clientShowUtils";
-import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
+import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import {
   contactMatchesId,
   resolveRequesterFromContactAndCompany,
 } from "@/modules/tickets/ticketRequester";
-import { TicketDescriptionComposer } from "@/modules/tickets/TicketDescriptionComposer";
 import { CONTACT_STATUS_FILTER } from "@/modules/shared/relatedFilters";
+import type { Ticket } from "@/modules/types";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const NEW_TICKET_FORM_ID = "lbs-new-ticket-form";
-
-const statusChoices = [
-  { id: "new", name: "New" },
-  { id: "open", name: "Open" },
-  { id: "waiting", name: "Waiting" },
-  { id: "resolved", name: "Resolved" },
-];
+const EDIT_TICKET_FORM_ID = "lbs-edit-ticket-form";
 
 const priorityChoices = [
   { id: "low", name: "Low" },
@@ -64,52 +52,50 @@ const priorityChoices = [
   { id: "urgent", name: "Urgent" },
 ];
 
-type NewTicketFormValues = {
+type EditTicketFormValues = {
   subject: string;
-  status: string;
   priority: string;
   company_id: Identifier | null;
   contact_id: Identifier | null;
-  description: string;
+  requester_email: string;
+  requester_name: string;
 };
 
-type NewTicketDialogProps = {
+type EditTicketDialogProps = {
+  ticket: Ticket | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultCompanyId?: Identifier | null;
-  defaultContactId?: Identifier | null;
-  onCreated?: (ticketId: Identifier) => void;
+  onSaved?: () => void;
 };
 
-export const NewTicketDialog = ({
+export const EditTicketDialog = ({
+  ticket,
   open,
   onOpenChange,
-  defaultCompanyId = null,
-  defaultContactId = null,
-  onCreated,
-}: NewTicketDialogProps) => {
+  onSaved,
+}: EditTicketDialogProps) => {
   const isMobile = useIsMobile();
   const [isSaving, setIsSaving] = useState(false);
-  const { identity } = useGetIdentity();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
   const refresh = useRefresh();
-  const navigate = useNavigate();
-  const [create] = useCreate();
+  const [update] = useUpdate();
 
   const defaultValues = useMemo(
-    (): NewTicketFormValues => ({
-      subject: "",
-      status: "new",
-      priority: "normal",
-      company_id: defaultCompanyId ?? null,
-      contact_id: defaultContactId ?? null,
-      description: "",
+    (): EditTicketFormValues => ({
+      subject: ticket?.subject?.trim() ?? "",
+      priority: ticket?.priority?.trim() || "normal",
+      company_id: ticket?.company_id ?? null,
+      contact_id: ticket?.contact_id ?? null,
+      requester_email: ticket?.requester_email?.trim() ?? "",
+      requester_name: ticket?.requester_name?.trim() ?? "",
     }),
-    [defaultCompanyId, defaultContactId, open],
+    [ticket, open],
   );
 
-  const handleSubmit = async (values: NewTicketFormValues) => {
+  const handleSubmit = async (values: EditTicketFormValues) => {
+    if (!ticket) return;
+
     const subject = values.subject.trim();
     if (!subject) {
       notify("Subject is required", { type: "warning" });
@@ -135,58 +121,36 @@ export const NewTicketDialog = ({
         company = data;
       }
 
-      const { email: requesterEmail, name: requesterName } =
-        resolveRequesterFromContactAndCompany(contact, company);
+      const resolved = resolveRequesterFromContactAndCompany(contact, company);
+      const requesterEmail =
+        values.requester_email.trim() || resolved.email || null;
+      const requesterName =
+        values.requester_name.trim() || resolved.name || null;
 
-      const ticket = (await create(
+      await update(
         "tickets",
         {
+          id: ticket.id,
           data: {
             subject,
-            status: values.status || "new",
             priority: values.priority || "normal",
             company_id: values.company_id,
             contact_id: values.contact_id,
-            organization_member_id: identity?.id,
-            inbox_address: DEFAULT_TICKET_INBOX_EMAIL,
             requester_email: requesterEmail,
             requester_name: requesterName,
           },
+          previousData: ticket,
         },
         { returnPromise: true },
-      )) as { id: Identifier };
-
-      const description = values.description.trim();
-      if (description && ticket?.id != null) {
-        await dataProvider.replyTicket({
-          ticketId: ticket.id,
-          body: description,
-          isInternalNote: true,
-        });
-      }
+      );
 
       refresh();
       onOpenChange(false);
-      onCreated?.(ticket.id);
-
-      notify(
-        <span>
-          Ticket created.{" "}
-          <Link
-            to={`/tickets/${ticket.id}/show`}
-            className="font-medium underline underline-offset-2"
-          >
-            Open ticket
-          </Link>
-        </span>,
-        { type: "info", autoHideDuration: 8000 },
-      );
-
-      navigate(`/tickets/${ticket.id}/show`);
+      onSaved?.();
+      notify("Ticket updated", { type: "success" });
     } catch (error) {
-      console.error("[NewTicketDialog] create failed", error);
       notify(
-        error instanceof Error ? error.message : "Failed to create ticket",
+        error instanceof Error ? error.message : "Failed to update ticket",
         { type: "error" },
       );
     } finally {
@@ -194,7 +158,7 @@ export const NewTicketDialog = ({
     }
   };
 
-  if (!open) return null;
+  if (!open || !ticket) return null;
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -208,13 +172,15 @@ export const NewTicketDialog = ({
         )}
       >
         <Form
-          id={NEW_TICKET_FORM_ID}
+          id={EDIT_TICKET_FORM_ID}
+          key={ticket.id}
           className="flex min-h-0 flex-1 flex-col"
           defaultValues={defaultValues}
           onSubmit={handleSubmit}
         >
           <FormGuardProvider enabled={false}>
-            <NewTicketDialogBody
+            <EditTicketDialogBody
+              ticket={ticket}
               isMobile={isMobile}
               isSaving={isSaving}
               onOpenChange={onOpenChange}
@@ -226,20 +192,23 @@ export const NewTicketDialog = ({
   );
 };
 
-const NewTicketDialogBody = ({
+const EditTicketDialogBody = ({
+  ticket,
   isMobile,
   isSaving,
   onOpenChange,
 }: {
+  ticket: Ticket;
   isMobile: boolean;
   isSaving: boolean;
   onOpenChange: (open: boolean) => void;
 }) => {
   const guardedClose = useGuardedDialogClose(onOpenChange);
-  const { setValue } = useFormContext<NewTicketFormValues>();
+  const { setValue } = useFormContext<EditTicketFormValues>();
   const companyId = useWatch({ name: "company_id" });
   const contactId = useWatch({ name: "contact_id" });
-  const subject = useWatch({ name: "subject" });
+  const requesterEmail = useWatch({ name: "requester_email" });
+  const requesterName = useWatch({ name: "requester_name" });
 
   const { data: companyContacts = [] } = useGetList<Contact>(
     "contacts",
@@ -275,22 +244,16 @@ const NewTicketDialogBody = ({
     [companyContacts, contactId],
   );
 
+  const recipientFromClient = useMemo(
+    () => resolveRequesterFromContactAndCompany(selectedContact ?? null, company),
+    [selectedContact, company],
+  );
+
   const contactEmptyText = !companyId
     ? "Select a company first"
     : contactChoices.length === 0
       ? "No contacts for this company"
       : "Select contact";
-
-  const templateContext = useMemo(
-    () => ({
-      clientName:
-        selectedContact != null
-          ? getContactFullName(selectedContact).split(/\s+/)[0] || "there"
-          : "there",
-      subject: String(subject ?? "").trim() || "your case",
-    }),
-    [selectedContact, subject],
-  );
 
   useEffect(() => {
     if (!companyId) {
@@ -317,22 +280,44 @@ const NewTicketDialogBody = ({
       );
       if (primaryContact) {
         setValue("contact_id", primaryContact.id);
-        return;
       }
     }
-
-    if (contactId != null) {
-      setValue("contact_id", null);
-    }
   }, [companyId, contactId, companyContacts, company, setValue]);
+
+  useEffect(() => {
+    if (contactId && !selectedContact) return;
+
+    const resolved = resolveRequesterFromContactAndCompany(
+      selectedContact ?? null,
+      company,
+    );
+
+    if (resolved.email) {
+      setValue("requester_email", resolved.email, { shouldDirty: true });
+    }
+    if (resolved.name) {
+      setValue("requester_name", resolved.name, { shouldDirty: true });
+    }
+  }, [contactId, selectedContact, company, setValue]);
+
+  const showManualRecipient = !(
+    contactId &&
+    selectedContact &&
+    (recipientFromClient.email || requesterEmail?.trim())
+  );
+
+  const displayName =
+    requesterName?.trim() || recipientFromClient.name || "Contact";
+  const displayEmail =
+    requesterEmail?.trim() || recipientFromClient.email || null;
 
   return (
     <>
       <DialogHeader className="relative shrink-0 space-y-1 border-b bg-background px-5 py-4 pr-12 text-left sm:px-6 sm:pr-14">
-        <DialogTitle>New ticket</DialogTitle>
+        <DialogTitle>Edit ticket #{ticket.id}</DialogTitle>
         <DialogDescription>
-          Create a support ticket. Subject is usually the job site address — search
-          Google or type any subject.
+          Update the subject, client, or contact. Replies are sent to the
+          selected contact&apos;s email automatically.
         </DialogDescription>
         <DialogClose
           className="absolute top-3.5 right-3.5 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
@@ -369,20 +354,12 @@ const NewTicketDialogBody = ({
             }}
           />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectInput
-              source="status"
-              label="Status"
-              choices={statusChoices}
-              helperText={false}
-            />
-            <SelectInput
-              source="priority"
-              label="Priority"
-              choices={priorityChoices}
-              helperText={false}
-            />
-          </div>
+          <SelectInput
+            source="priority"
+            label="Priority"
+            choices={priorityChoices}
+            helperText={false}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <ReferenceInput source="company_id" reference="companies">
@@ -394,20 +371,47 @@ const NewTicketDialogBody = ({
               choices={contactChoices}
               optionText="name"
               optionValue="id"
-              helperText={
-                companyId
-                  ? false
-                  : "Select a company to see its contacts"
-              }
+              helperText={false}
               disabled={!companyId}
               emptyText={contactEmptyText}
             />
           </div>
 
-          <TicketDescriptionComposer
-            templateContext={templateContext}
-            disabled={isSaving}
-          />
+          {contactId && selectedContact && displayEmail && !showManualRecipient ? (
+            <div className="rounded-lg border bg-muted/25 px-3 py-2.5">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Reply recipient
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {displayName}
+              </p>
+              <p className="text-sm text-muted-foreground">{displayEmail}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                When you send a reply on this ticket, it goes to this contact.
+                Pick a different contact above to change it.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 rounded-lg border border-dashed px-3 py-3">
+              <p className="text-xs text-muted-foreground">
+                {contactId
+                  ? "This contact has no email on file. Enter who should receive replies."
+                  : "Select a contact, or enter who should receive replies manually."}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextInput
+                  source="requester_name"
+                  label="Recipient name"
+                  helperText={false}
+                />
+                <TextInput
+                  source="requester_email"
+                  label="Recipient email"
+                  helperText={false}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -427,17 +431,17 @@ const NewTicketDialogBody = ({
           Cancel
         </Button>
         <DialogFormSubmitButton
-          form={NEW_TICKET_FORM_ID}
+          form={EDIT_TICKET_FORM_ID}
           disabled={isSaving}
           className={cn("rounded-full px-5", isMobile && "w-full")}
         >
           {isSaving ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              Creating…
+              Saving…
             </>
           ) : (
-            "Create ticket"
+            "Save changes"
           )}
         </DialogFormSubmitButton>
       </DialogFooter>

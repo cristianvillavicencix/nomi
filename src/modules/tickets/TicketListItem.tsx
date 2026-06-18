@@ -1,4 +1,4 @@
-import { Clock, Globe, Mail, Paperclip, Phone, Trash2 } from "lucide-react";
+import { Mail, Paperclip, Pencil, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -6,20 +6,17 @@ import {
   TicketListAssigneeControl,
   TicketListStatusControl,
 } from "@/modules/tickets/TicketListCardControls";
-import {
-  formatTicketListMetaLine,
-  getTicketListMeta,
-} from "@/modules/tickets/ticketListMeta";
+import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
 import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
-import { getTicketClaimLabel } from "@/modules/tickets/ticketInboxUi";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
+import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { OrganizationMember, Ticket } from "@/modules/types";
 import { isTicketUnread } from "@/modules/tickets/ticketReadState";
 
-const MetaDot = () => (
-  <span className="px-0.5 text-muted-foreground/60" aria-hidden>
-    ·
+const MetaSep = () => (
+  <span className="px-1 text-muted-foreground/50" aria-hidden>
+    |
   </span>
 );
 
@@ -37,6 +34,7 @@ type TicketListItemProps = {
   onSelect: () => void;
   onToggleBulkSelect: (checked: boolean) => void;
   onDelete?: (ticket: Ticket) => void;
+  onEdit?: (ticket: Ticket) => void;
   onUpdated?: () => void;
   lastReadAt?: string | null;
 };
@@ -55,6 +53,7 @@ export const TicketListItem = ({
   onSelect,
   onToggleBulkSelect,
   onDelete,
+  onEdit,
   onUpdated,
   lastReadAt,
 }: TicketListItemProps) => {
@@ -62,13 +61,21 @@ export const TicketListItem = ({
   const meta = getTicketListMeta(ticket, company, contact);
   const isUnread = !selected && isTicketUnread(ticket, lastReadAt);
 
-  const rowTwoParts = formatTicketListMetaLine([
+  const contactName = (() => {
+    if (contact) {
+      const full = getContactFullName(contact);
+      if (full !== "—") return full;
+    }
+    return ticket.requester_name?.trim() || null;
+  })();
+
+  const identityParts = [
+    `#${ticket.id}`,
     companyName,
-    getTicketClaimLabel(ticket),
-    meta.email,
-    meta.phone,
-    meta.website,
-  ]);
+    contactName,
+  ].filter(Boolean);
+
+  const emailPreview = meta.email ?? meta.phone ?? meta.website ?? null;
 
   return (
     <li className="group">
@@ -107,91 +114,102 @@ export const TicketListItem = ({
               onSelect();
             }
           }}
-          className="min-w-0 flex-1 cursor-pointer py-3 pr-2"
+          className="min-w-0 flex-1 cursor-pointer py-3 pr-3"
         >
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start gap-1.5">
-                <TicketSubjectField
-                  ticket={ticket}
-                  className="min-w-0 flex-1 text-sm font-semibold leading-snug"
-                  inputClassName="text-sm"
-                />
-                {hasAttachments ? (
-                  <Paperclip
-                    className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-                    aria-label="Has attachments"
+          <div className="flex min-w-0 flex-col gap-1">
+            {/* Row 1: subject + time */}
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start gap-1.5">
+                  <TicketSubjectField
+                    ticket={ticket}
+                    className="min-w-0 flex-1 text-sm font-semibold leading-snug"
+                    inputClassName="text-sm"
                   />
-                ) : null}
+                  {hasAttachments ? (
+                    <Paperclip
+                      className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+                      aria-label="Has attachments"
+                    />
+                  ) : null}
+                </div>
               </div>
+              <span className="shrink-0 pt-0.5 text-xs tabular-nums text-muted-foreground">
+                {formatTicketListTime(ticket.updated_at)}
+              </span>
+            </div>
 
-              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                {rowTwoParts.map((part, index) => (
+            {/* Row 2: #ticket | company | contact */}
+            {identityParts.length > 0 ? (
+              <p className="truncate text-xs text-muted-foreground">
+                {identityParts.map((part, index) => (
                   <span key={`${part}-${index}`}>
-                    {index > 0 ? <MetaDot /> : null}
-                    <span
-                      className={cn(
-                        index === 1 && "font-mono text-foreground/80",
-                        part === meta.email && "text-foreground/90",
-                      )}
-                    >
-                      {part === meta.email ? (
-                        <span className="inline-flex items-center gap-0.5">
-                          <Mail className="size-3 shrink-0 opacity-70" />
-                          {part}
-                        </span>
-                      ) : part === meta.phone ? (
-                        <span className="inline-flex items-center gap-0.5">
-                          <Phone className="size-3 shrink-0 opacity-70" />
-                          {part}
-                        </span>
-                      ) : part === meta.website ? (
-                        <span className="inline-flex items-center gap-0.5">
-                          <Globe className="size-3 shrink-0 opacity-70" />
-                          <span className="truncate">{part}</span>
-                        </span>
-                      ) : (
-                        part
-                      )}
+                    {index > 0 ? <MetaSep /> : null}
+                    <span className={index === 0 ? "font-mono text-foreground/80" : undefined}>
+                      {part}
                     </span>
                   </span>
                 ))}
               </p>
+            ) : null}
 
-              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="size-3 shrink-0 opacity-70" />
-                {formatTicketListTime(ticket.updated_at)}
+            {/* Row 3: email preview + action icons */}
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                {emailPreview ? (
+                  <span className="inline-flex max-w-full items-center gap-1">
+                    <Mail className="size-3 shrink-0 opacity-70" />
+                    <span className="truncate">{emailPreview}</span>
+                  </span>
+                ) : (
+                  <span className="italic opacity-70">No contact email</span>
+                )}
               </p>
-            </div>
 
-            <div
-              className="flex shrink-0 items-center gap-1 pt-0.5"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <TicketListStatusControl
-                ticket={ticket}
-                canManage={canManage}
-                onUpdated={onUpdated}
-              />
-              <TicketListAssigneeControl
-                ticket={ticket}
-                assignee={assignee}
-                members={members}
-                canManage={canManage}
-                onUpdated={onUpdated}
-              />
-              {canManage && onDelete ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-7 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
-                  aria-label={`Delete ticket #${ticket.id}`}
-                  onClick={() => onDelete(ticket)}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              ) : null}
+              <div
+                className={cn(
+                  "flex shrink-0 items-center gap-0.5 transition-opacity",
+                  canManage && "opacity-0 group-hover:opacity-100",
+                )}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <TicketListStatusControl
+                  ticket={ticket}
+                  canManage={canManage}
+                  onUpdated={onUpdated}
+                />
+                <TicketListAssigneeControl
+                  ticket={ticket}
+                  assignee={assignee}
+                  members={members}
+                  canManage={canManage}
+                  onUpdated={onUpdated}
+                />
+                {canManage && onEdit ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground hover:text-foreground"
+                    aria-label={`Edit ticket #${ticket.id}`}
+                    onClick={() => onEdit(ticket)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                ) : null}
+                {canManage && onDelete ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground hover:text-destructive"
+                    aria-label={`Delete ticket #${ticket.id}`}
+                    onClick={() => onDelete(ticket)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>

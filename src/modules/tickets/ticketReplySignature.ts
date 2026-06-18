@@ -51,14 +51,30 @@ const linkifyLine = (line: string) =>
     '<a href="$1" style="color:#2563eb;text-decoration:underline;">$1</a>',
   );
 
-export const plainTextToHtml = (textBody: string) =>
-  textBody
-    .split("\n")
-    .map((line) => {
-      if (!line.trim()) return "<p>&nbsp;</p>";
-      return `<p style="margin:0 0 8px;">${linkifyLine(line)}</p>`;
+export const normalizeOutboundPlainText = (text: string) =>
+  text.replace(/\n{3,}/g, "\n\n").trim();
+
+export const plainTextToHtml = (textBody: string) => {
+  const normalized = normalizeOutboundPlainText(textBody);
+  if (!normalized) return "";
+
+  const paragraphs = normalized.split(/\n{2,}/).filter((paragraph) => paragraph.trim());
+
+  return paragraphs
+    .map((paragraph, index) => {
+      const lines = paragraph
+        .split("\n")
+        .map((line) => line.trimEnd())
+        .filter((line) => line.length > 0)
+        .map(linkifyLine)
+        .join("<br/>");
+      if (!lines) return "";
+      const marginBottom = index < paragraphs.length - 1 ? "12px" : "0";
+      return `<p style="margin:0 0 ${marginBottom};">${lines}</p>`;
     })
+    .filter(Boolean)
     .join("");
+};
 
 export type ForwardMessage = {
   body?: string | null;
@@ -158,7 +174,9 @@ export const buildOutboundEmailHtml = ({
   const parts: string[] = [];
 
   if (userNote?.trim()) {
-    parts.push(plainTextToHtml(userNote.trim()));
+    parts.push(
+      `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#111827;">${plainTextToHtml(userNote.trim())}</div>`,
+    );
   }
 
   if (forwardHtml?.trim()) {
@@ -166,10 +184,30 @@ export const buildOutboundEmailHtml = ({
   }
 
   if (includeSignature) {
-    parts.push(plainTextToHtml(TICKET_REPLY_SIGNATURE));
+    parts.push(buildSignatureHtml());
   }
 
   return parts.join("");
+};
+
+export const buildSignatureHtml = () =>
+  `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#374151;">
+    <p style="margin:0 0 6px;font-weight:600;color:#111827;">Latinos Business Support | Marketing Digital, Páginas Web, Xactimate</p>
+    <p style="margin:0;">(203) 303-9148 | <a href="mailto:info@lbs.bz" style="color:#2563eb;text-decoration:underline;">info@lbs.bz</a> | <a href="https://www.lbs.bz" style="color:#2563eb;text-decoration:underline;">www.lbs.bz</a></p>
+    <p style="margin:6px 0 0;">1200 Summer St, Stamford, 06902 CT</p>
+  </div>`;
+
+export const buildReplyOutboundBodies = (body: string) => {
+  const textBody = normalizeOutboundPlainText(body.trim() || "(See attachments)");
+  const userNote = normalizeOutboundPlainText(stripReplySignature(textBody));
+  const includeSignature = textBody.includes(TICKET_REPLY_SIGNATURE);
+
+  const htmlBody = buildOutboundEmailHtml({
+    userNote,
+    includeSignature,
+  });
+
+  return { textBody, htmlBody };
 };
 
 export const buildForwardOutboundBodies = ({
@@ -185,12 +223,14 @@ export const buildForwardOutboundBodies = ({
   const forwardHtml = buildForwardHtmlBlock(ticket, message);
   const trimmedNote = userNote.trim();
 
-  const textBody = trimmedNote
-    ? `${trimmedNote}\n\n${forwardPlain}\n\n${TICKET_REPLY_SIGNATURE}`
-    : `${forwardPlain}\n\n${TICKET_REPLY_SIGNATURE}`;
+  const textBody = normalizeOutboundPlainText(
+    trimmedNote
+      ? `${trimmedNote}\n\n${forwardPlain}\n\n${TICKET_REPLY_SIGNATURE}`
+      : `${forwardPlain}\n\n${TICKET_REPLY_SIGNATURE}`,
+  );
 
   const htmlBody = buildOutboundEmailHtml({
-    userNote: trimmedNote,
+    userNote: normalizeOutboundPlainText(trimmedNote),
     forwardHtml,
     includeSignature: true,
   });
