@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useDataProvider } from "ra-core";
+import { TicketEmailInboundSetupCard } from "@/modules/settings/TicketEmailInboundSetupCard";
 
 export type EmailDeliverySettings = {
   configured: boolean;
@@ -24,6 +25,17 @@ export type EmailDeliverySettings = {
   reply_to: string | null;
   org_name: string | null;
   uses_messaging_credentials?: boolean;
+  ticket_inbound?: TicketInboundSetup | null;
+};
+
+export type TicketInboundSetup = {
+  support_email: string;
+  sendgrid_hostname: string | null;
+  sendgrid_forward_address: string | null;
+  hostinger_forward_to: string | null;
+  mx_record: string;
+  webhook_url: string | null;
+  webhook_configured: boolean;
 };
 
 export const EmailDeliverySettingsSection = () => {
@@ -211,6 +223,8 @@ export const EmailDeliverySettingsSection = () => {
             Save reply-to
           </Button>
         </div>
+
+        <TicketEmailInboundSetupCard setup={data?.ticket_inbound ?? null} />
       </CardContent>
     </Card>
   );

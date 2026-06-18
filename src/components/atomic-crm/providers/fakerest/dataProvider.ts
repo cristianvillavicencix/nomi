@@ -786,16 +786,27 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
     invoice_id: Number(invoiceId),
   }),
-  replyTicket: async ({ ticketId, body }) => ({
+  replyTicket: async ({
+    ticketId,
+    body,
+    isInternalNote = false,
+    attachments = [],
+  }) => ({
     message: {
       id: `demo-ticket-message-${Date.now()}`,
       ticket_id: ticketId,
-      body,
-      direction: "outbound",
+      body: body || "(See attachments)",
+      direction: isInternalNote ? "internal" : "outbound",
+      attachments,
       created_at: new Date().toISOString(),
     },
-    email_sent: true,
-    email_skipped: false,
+    email_sent: !isInternalNote,
+    email_skipped: isInternalNote,
+    is_internal_note: isInternalNote,
+  }),
+  mergeTickets: async ({ primaryTicketId, mergeTicketIds }) => ({
+    primary_ticket_id: Number(primaryTicketId),
+    merged_ticket_ids: mergeTicketIds.map((id) => Number(id)),
   }),
   upsertLbsClient: async (
     input: LbsClientUpsertInput,

@@ -4,6 +4,7 @@
 .idea/
 *.iml
 .vscode/
+.cursor/mcp.json
 
 # dependencies
 /node_modules

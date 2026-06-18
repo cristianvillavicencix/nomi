@@ -9,6 +9,7 @@ import {
   getOrgTransactionalEmailStatus,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
+import { getTicketInboundSetup } from "../_shared/ticketInboundSetup.ts";
 
 type EmailSettingsBody = {
   action?: "get" | "update" | "test";
@@ -58,7 +59,12 @@ Deno.serve((req: Request) =>
         };
 
         if (action === "get") {
-          return new Response(JSON.stringify(await buildStatus()), {
+          const status = await buildStatus();
+          const isAdmin = member?.administrator === true;
+          const ticket_inbound = isAdmin
+            ? await getTicketInboundSetup(orgId)
+            : null;
+          return new Response(JSON.stringify({ ...status, ticket_inbound }), {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });
         }

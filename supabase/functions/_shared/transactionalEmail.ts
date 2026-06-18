@@ -156,7 +156,7 @@ async function sendViaTwilioEmail(params: {
   accountSid: string;
   authToken: string;
   from: { email: string; name: string };
-  to: string;
+  to: string[];
   cc?: string[];
   bcc?: string[];
   subject: string;
@@ -184,7 +184,7 @@ async function sendViaTwilioEmail(params: {
       address: params.from.email,
       name: params.from.name,
     },
-    to: [{ address: params.to }],
+    to: params.to.map((address) => ({ address })),
     content,
   };
 
@@ -222,7 +222,7 @@ async function sendViaTwilioEmail(params: {
 export async function sendTransactionalEmail(params: {
   orgId: number;
   orgName?: string | null;
-  to: string;
+  to: string | string[];
   cc?: string[];
   bcc?: string[];
   subject: string;
@@ -255,11 +255,17 @@ export async function sendTransactionalEmail(params: {
       }
     : await resolveFromAddress(params.orgId, params.orgName);
   const htmlBody = params.htmlBody?.trim() || textToHtml(params.textBody);
+  const toAddresses = (Array.isArray(params.to) ? params.to : [params.to])
+    .map((address) => address.trim().toLowerCase())
+    .filter(Boolean);
+  if (!toAddresses.length) {
+    throw new Error("At least one recipient email is required");
+  }
   const result = await sendViaTwilioEmail({
     accountSid: twilio.accountSid,
     authToken: twilio.authToken,
     from,
-    to: params.to,
+    to: toAddresses,
     cc: params.cc,
     bcc: params.bcc,
     subject: params.subject,

@@ -62,29 +62,67 @@ const fixPublicUrl = (url: string) => {
 const uploadSendGridAttachments = async (form: FormData) => {
   const attachments: Attachment[] = [];
   const infoRaw = form.get("attachment-info")?.toString();
-  if (!infoRaw) return attachments;
 
-  let infoList: Array<{
-    filename?: string;
-    name?: string;
-    type?: string;
-    "content-id"?: string;
-  }> = [];
-
-  try {
-    infoList = JSON.parse(infoRaw);
-  } catch {
-    console.warn("email_inbound.attachment_info_parse_failed");
-    return attachments;
+  const attachmentKeys = new Set<string>();
+  if (infoRaw) {
+    try {
+      const parsed = JSON.parse(infoRaw) as Record<string, unknown>;
+      if (Array.isArray(parsed)) {
+        for (let index = 0; index < parsed.length; index += 1) {
+          attachmentKeys.add(`attachment${index + 1}`);
+        }
+      } else {
+        for (const key of Object.keys(parsed)) {
+          if (/^attachment\d+$/i.test(key)) attachmentKeys.add(key);
+        }
+      }
+    } catch {
+      console.warn("email_inbound.attachment_info_parse_failed");
+    }
   }
 
-  for (let index = 0; index < infoList.length; index += 1) {
-    const meta = infoList[index];
-    const fieldName = `attachment${index + 1}`;
+  if (!attachmentKeys.size) {
+    for (const key of form.keys()) {
+      if (/^attachment\d+$/i.test(key)) attachmentKeys.add(key);
+    }
+  }
+
+  const sortedKeys = Array.from(attachmentKeys).sort((a, b) => {
+    const aNum = Number(a.replace(/\D/g, ""));
+    const bNum = Number(b.replace(/\D/g, ""));
+    return aNum - bNum;
+  });
+
+  let metaByKey: Record<string, { filename?: string; name?: string; type?: string }> =
+    {};
+  if (infoRaw) {
+    try {
+      const parsed = JSON.parse(infoRaw) as Record<
+        string,
+        { filename?: string; name?: string; type?: string }
+      >;
+      if (Array.isArray(parsed)) {
+        parsed.forEach((meta, index) => {
+          metaByKey[`attachment${index + 1}`] = meta;
+        });
+      } else {
+        metaByKey = parsed;
+      }
+    } catch {
+      metaByKey = {};
+    }
+  }
+
+  for (const fieldName of sortedKeys) {
     const file = form.get(fieldName);
     if (!(file instanceof File)) continue;
 
-    const title = meta.filename?.trim() || meta.name?.trim() || file.name || fieldName;
+    const meta = metaByKey[fieldName] ?? {};
+    const title =
+      meta.filename?.trim() ||
+      meta.name?.trim() ||
+      file.name ||
+      fieldName;
     const type = meta.type?.trim() || file.type || "application/octet-stream";
     const fileParts = title.split(".");
     const fileExt = fileParts.length > 1 ? `.${fileParts.pop()}` : "";

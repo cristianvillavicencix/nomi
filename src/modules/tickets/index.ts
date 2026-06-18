@@ -12,3 +12,4 @@ export { TicketShow } from "./TicketShow";
 export { TicketCreate } from "./TicketCreate";
 export { TicketReplyForm } from "./TicketReplyForm";
 export { CreateTicketButton } from "./CreateTicketButton";
+export { NewTicketDialog } from "./NewTicketDialog";

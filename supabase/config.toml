@@ -175,6 +175,8 @@ verify_jwt = false
 verify_jwt = false
 [functions.reply_ticket]
 verify_jwt = false
+[functions.merge_tickets]
+verify_jwt = false
 [functions.update_password]
 verify_jwt = false
 [functions.users]

@@ -1,17 +1,20 @@
-import { Paperclip } from "lucide-react";
 import { useListContext } from "ra-core";
+import {
+  FileAttachmentPillList,
+  getFileKind,
+  type FileAttachment,
+} from "@/lib/fileAttachments";
 import type { TicketMessage } from "@/modules/types";
+import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
+import { useTicketReadCutoff } from "@/modules/tickets/TicketReadCutoffContext";
+import { isInboundMessageUnread } from "@/modules/tickets/ticketReadState";
+import { formatTicketMessageTime } from "@/modules/tickets/ticketInboxUi";
 import { cn } from "@/lib/utils";
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-};
+import { Lock } from "lucide-react";
 
 export const TicketThread = () => {
   const { data = [], isPending } = useListContext<TicketMessage>();
+  const readCutoff = useTicketReadCutoff();
 
   if (isPending) return null;
 
@@ -27,48 +30,91 @@ export const TicketThread = () => {
     <div className="space-y-4">
       {data.map((message) => {
         const inbound = message.direction === "inbound";
-        const sender =
-          message.from_name?.trim() ||
-          message.from_email?.trim() ||
-          (inbound ? "Customer" : "Team");
+        const isInternal = message.direction === "internal";
+        const senderEmail = message.from_email?.trim();
+        const senderName = message.from_name?.trim();
+        const senderLabel =
+          senderEmail && senderName
+            ? `${senderEmail} · ${senderName}`
+            : senderEmail || senderName || (inbound ? "Customer" : "Team");
+
+        const attachments = Array.isArray(message.attachments)
+          ? (message.attachments as FileAttachment[])
+          : [];
+        const imageAttachments = attachments.filter(
+          (file) => getFileKind(file) === "image" && file.src,
+        );
+        const fileAttachments = attachments.filter(
+          (file) => getFileKind(file) !== "image" || !file.src,
+        );
+
+        if (isInternal) {
+          const author = senderName || "Team";
+          return (
+            <div key={message.id} className="flex justify-center">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-950">
+                <Lock className="size-3.5 shrink-0" />
+                <span className="font-medium">Internal note</span>
+                <span>·</span>
+                <span className="font-medium">{author}:</span>
+                <span className="truncate">{message.body}</span>
+              </div>
+            </div>
+          );
+        }
+
+        const unreadInbound = isInboundMessageUnread(message, readCutoff);
 
         return (
           <div
             key={message.id}
             className={cn(
-              "rounded-xl border px-4 py-3 text-sm",
-              inbound ? "bg-background" : "border-sky-200 bg-sky-50/80",
+              "rounded-2xl border px-4 py-3 text-sm transition-colors",
+              inbound
+                ? unreadInbound
+                  ? "border-sky-200/90 bg-sky-50/90"
+                  : "border-border/70 bg-muted/30"
+                : "border-sky-200 bg-sky-50/70",
             )}
           >
-            <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">{sender}</span>
-              {message.from_email ? <span>{message.from_email}</span> : null}
-              <span>·</span>
-              <span>{formatDateTime(message.created_at)}</span>
+            <div className="mb-2 flex items-start justify-between gap-3 text-xs">
+              <span
+                className={cn(
+                  "min-w-0 truncate font-semibold",
+                  inbound ? "text-foreground" : "text-sky-800",
+                )}
+              >
+                {senderLabel}
+              </span>
+              <span className="shrink-0 text-muted-foreground">
+                {formatTicketMessageTime(message.created_at)}
+              </span>
             </div>
-            <div className="whitespace-pre-wrap leading-relaxed">{message.body}</div>
-            {Array.isArray(message.attachments) && message.attachments.length > 0 ? (
-              <ul className="mt-3 space-y-1">
-                {message.attachments.map((attachment, index) => {
-                  const file = attachment as {
-                    title?: string;
-                    src?: string;
-                  };
-                  return (
-                    <li key={`${message.id}-attachment-${index}`}>
-                      <a
-                        href={file.src}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                      >
-                        <Paperclip className="size-3.5" />
-                        {file.title || "Attachment"}
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
+            <div className={cn(!inbound && "text-sky-950")}>
+              <TicketMessageBody body={message.body} htmlBody={message.html_body} />
+            </div>
+            {imageAttachments.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {imageAttachments.map((file, index) => (
+                  <a
+                    key={`${message.id}-image-${index}`}
+                    href={file.src}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={file.title || "Image attachment"}
+                    className="block overflow-hidden rounded-lg border"
+                  >
+                    <img
+                      src={file.src}
+                      alt={file.title || "Attachment"}
+                      className="max-h-48 max-w-full object-contain"
+                    />
+                  </a>
+                ))}
+              </div>
+            ) : null}
+            {fileAttachments.length > 0 ? (
+              <FileAttachmentPillList attachments={fileAttachments} />
             ) : null}
           </div>
         );

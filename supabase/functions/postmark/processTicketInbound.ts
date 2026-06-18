@@ -79,7 +79,7 @@ const headerValue = (headers: PostmarkHeader[] | undefined, name: string) =>
 const findInbox = async (recipientEmails: Set<string>) => {
   const { data: inboxes, error } = await supabaseAdmin
     .from("ticket_inboxes")
-    .select("id, org_id, email, display_name, from_name, postmark_inbound_address")
+    .select("id, org_id, email, display_name, from_name, postmark_inbound_address, sendgrid_hostname, sendgrid_forward_address")
     .eq("is_active", true);
 
   if (error) throw new Error(error.message);
@@ -87,7 +87,21 @@ const findInbox = async (recipientEmails: Set<string>) => {
   return (inboxes ?? []).find((inbox) => {
     if (recipientEmails.has(normalizeEmail(inbox.email))) return true;
     const inbound = inbox.postmark_inbound_address?.trim();
-    return Boolean(inbound && recipientEmails.has(normalizeEmail(inbound)));
+    if (inbound && recipientEmails.has(normalizeEmail(inbound))) return true;
+    const forward = (
+      inbox as { sendgrid_forward_address?: string | null }
+    ).sendgrid_forward_address?.trim();
+    if (forward && recipientEmails.has(normalizeEmail(forward))) return true;
+    const hostname = (
+      inbox as { sendgrid_hostname?: string | null }
+    ).sendgrid_hostname?.trim();
+    if (hostname) {
+      const suffix = `@${normalizeEmail(hostname)}`;
+      if ([...recipientEmails].some((email) => email.endsWith(suffix))) {
+        return true;
+      }
+    }
+    return false;
   }) ?? null;
 };
 

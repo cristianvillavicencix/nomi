@@ -1,104 +1,507 @@
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, Paperclip, Send } from "lucide-react";
-import { useState } from "react";
+import { ChevronUp, Forward, Paperclip, Reply, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import {
   useDataProvider,
-  useGetIdentity,
+  useGetList,
   useNotify,
   useRefresh,
 } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { Ticket } from "@/modules/types";
+import type { Ticket, TicketMessage } from "@/modules/types";
 import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
+import { TicketComposerToolbar } from "@/modules/tickets/TicketComposerToolbar";
+import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
+import {
+  buildForwardOutboundBodies,
+  createDefaultReplyBody,
+  hasReplyContent,
+  insertAboveSignature,
+  isValidEmailList,
+  parseEmailList,
+  stripReplySignature,
+  type ForwardMessage,
+} from "@/modules/tickets/ticketReplySignature";
+import {
+  MAX_TICKET_ATTACHMENTS,
+  MAX_TICKET_ATTACHMENT_BYTES,
+  uploadTicketAttachment,
+  type TicketReplyAttachment,
+} from "@/modules/tickets/uploadTicketAttachment";
 import { Button } from "@/components/ui/button";
+import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
+type PendingAttachment = {
+  id: string;
+  file: File;
+  previewUrl?: string;
+};
+
+type ComposeMode = "reply" | "forward";
+
+type ForwardContext = {
+  message: ForwardMessage;
+};
 
 export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
-  const [body, setBody] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [composeMode, setComposeMode] = useState<ComposeMode>("reply");
+  const [forwardContext, setForwardContext] = useState<ForwardContext | null>(
+    null,
+  );
+  const [body, setBody] = useState(createDefaultReplyBody);
+  const [toRecipients, setToRecipients] = useState("");
+  const [ccRecipients, setCcRecipients] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
+  const [submittingAs, setSubmittingAs] = useState<"reply" | "internal" | null>(
+    null,
+  );
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const { identity } = useGetIdentity();
+
+  const { data: recentMessages = [] } = useGetList<TicketMessage>(
+    "ticket_messages",
+    {
+      filter: { "ticket_id@eq": ticket.id },
+      sort: { field: "created_at", order: "DESC" },
+      pagination: { page: 1, perPage: 20 },
+    },
+    { enabled: Boolean(ticket.id) },
+  );
+
+  const forwardSourceMessage =
+    recentMessages.find((message) => message.direction === "inbound") ??
+    recentMessages[0];
 
   const fromAddress = ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
-  const toAddress = ticket.requester_email?.trim() || "—";
+  const hasContent =
+    (composeMode === "forward" && forwardContext != null) ||
+    hasReplyContent(body) ||
+    pendingFiles.length > 0;
 
-  const replyMutation = useMutation({
-    mutationFn: () =>
-      dataProvider.replyTicket({
+  const resetDraft = () => {
+    setBody(createDefaultReplyBody());
+    setForwardContext(null);
+    setToRecipients(ticket.requester_email?.trim() ?? "");
+    setCcRecipients("");
+    setPendingFiles((current) => {
+      current.forEach((entry) => {
+        if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+      });
+      return [];
+    });
+  };
+
+  const collapseComposer = () => {
+    setIsExpanded(false);
+    resetDraft();
+  };
+
+  const openComposer = (mode: ComposeMode) => {
+    setComposeMode(mode);
+    setIsExpanded(true);
+    setCcRecipients("");
+    setPendingFiles((current) => {
+      current.forEach((entry) => {
+        if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+      });
+      return [];
+    });
+
+    if (mode === "reply") {
+      setForwardContext(null);
+      setToRecipients(ticket.requester_email?.trim() ?? "");
+      setBody(createDefaultReplyBody());
+    } else {
+      setForwardContext(
+        forwardSourceMessage
+          ? { message: forwardSourceMessage }
+          : null,
+      );
+      setToRecipients("");
+      setBody(createDefaultReplyBody());
+    }
+
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  useEffect(() => {
+    setIsExpanded(false);
+    setComposeMode("reply");
+    resetDraft();
+  }, [ticket.id, ticket.requester_email]);
+
+  const addPendingFile = (file: File) => {
+    if (pendingFiles.length >= MAX_TICKET_ATTACHMENTS) {
+      notify(`You can attach up to ${MAX_TICKET_ATTACHMENTS} files`, {
+        type: "warning",
+      });
+      return;
+    }
+    if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
+      notify(`"${file.name}" exceeds the 10 MB limit`, { type: "warning" });
+      return;
+    }
+
+    const id = crypto.randomUUID();
+    const previewUrl = file.type.startsWith("image/")
+      ? URL.createObjectURL(file)
+      : undefined;
+    setPendingFiles((current) => [...current, { id, file, previewUrl }]);
+  };
+
+  const removePendingFile = (id: string) => {
+    setPendingFiles((current) => {
+      const target = current.find((entry) => entry.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return current.filter((entry) => entry.id !== id);
+    });
+  };
+
+  const clearPendingFiles = () => {
+    setPendingFiles((current) => {
+      current.forEach((entry) => {
+        if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+      });
+      return [];
+    });
+  };
+
+  const submitMutation = useMutation({
+    mutationFn: async ({
+      isInternalNote,
+      messageBody,
+      htmlBody,
+      toEmails,
+      ccEmails,
+    }: {
+      isInternalNote: boolean;
+      messageBody: string;
+      htmlBody?: string;
+      toEmails?: string[];
+      ccEmails?: string[];
+    }) => {
+      const uploadedAttachments: TicketReplyAttachment[] = [];
+      for (const pending of pendingFiles) {
+        uploadedAttachments.push(await uploadTicketAttachment(pending.file));
+      }
+
+      return dataProvider.replyTicket({
         ticketId: ticket.id,
-        body: body.trim(),
-      }),
+        body: messageBody,
+        htmlBody,
+        isInternalNote,
+        attachments: uploadedAttachments,
+        toEmails,
+        ccEmails,
+      });
+    },
     onSuccess: (result) => {
-      setBody("");
+      setIsExpanded(false);
+      resetDraft();
       refresh();
+      if (result.is_internal_note) {
+        notify("Internal note added", { type: "success" });
+        return;
+      }
       if (result.email_sent) {
-        notify("Reply sent", { type: "success" });
+        notify(
+          composeMode === "forward" ? "Message forwarded" : "Reply sent",
+          { type: "success" },
+        );
       } else if (result.email_skipped) {
         notify(
           "Reply saved. Email was not sent — check Communications settings.",
           { type: "warning" },
         );
       } else {
-        notify("Reply sent", { type: "success" });
+        notify(
+          composeMode === "forward" ? "Message forwarded" : "Reply sent",
+          { type: "success" },
+        );
       }
     },
-    onError: (error: Error) => {
-      notify(error.message || "Failed to send reply", { type: "error" });
+    onError: (error: Error, variables) => {
+      notify(
+        error.message ||
+          (variables.isInternalNote
+            ? "Failed to add internal note"
+            : "Failed to send message"),
+        { type: "error" },
+      );
     },
+    onSettled: () => setSubmittingAs(null),
   });
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const trimmed = body.trim();
-    if (!trimmed) {
-      notify("Message cannot be empty", { type: "warning" });
+  const handleSend = (isInternalNote: boolean) => {
+    if (!hasContent) {
+      notify("Add a message or attach a file", { type: "warning" });
       return;
     }
-    if (!ticket.requester_email?.trim()) {
-      notify("This ticket has no requester email", { type: "warning" });
+
+    if (isInternalNote) {
+      const noteBody = stripReplySignature(body).trim() || body.trim();
+      if (!noteBody && pendingFiles.length === 0) {
+        notify("Add a message or attach a file", { type: "warning" });
+        return;
+      }
+      setSubmittingAs("internal");
+      submitMutation.mutate({
+        isInternalNote: true,
+        messageBody: noteBody || "(Attachment)",
+      });
       return;
     }
-    replyMutation.mutate();
+
+    const toEmails = parseEmailList(toRecipients);
+    const ccEmails = parseEmailList(ccRecipients);
+
+    if (!isValidEmailList(toEmails)) {
+      notify("Enter at least one valid To email (comma-separated)", {
+        type: "warning",
+      });
+      return;
+    }
+    if (ccRecipients.trim() && !isValidEmailList(ccEmails)) {
+      notify("Cc contains an invalid email address", { type: "warning" });
+      return;
+    }
+
+    if (composeMode === "forward" && forwardContext) {
+      const { textBody, htmlBody } = buildForwardOutboundBodies({
+        ticket,
+        message: forwardContext.message,
+        userNote: stripReplySignature(body),
+      });
+      setSubmittingAs("reply");
+      submitMutation.mutate({
+        isInternalNote: false,
+        messageBody: textBody || "(See attachments)",
+        htmlBody,
+        toEmails,
+        ccEmails: ccEmails.length ? ccEmails : undefined,
+      });
+      return;
+    }
+
+    const messageBody = body.trim();
+    setSubmittingAs("reply");
+    submitMutation.mutate({
+      isInternalNote: false,
+      messageBody: messageBody || "(See attachments)",
+      toEmails,
+      ccEmails: ccEmails.length ? ccEmails : undefined,
+    });
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-3 border-t pt-4">
-      <p className="text-xs text-muted-foreground">
-        From <span className="font-medium text-foreground">{fromAddress}</span>
-        {" · "}
-        To <span className="font-medium text-foreground">{toAddress}</span>
-        {identity?.fullName ? (
-          <>
-            {" · "}
-            <span className="text-foreground">{identity.fullName}</span>
-          </>
-        ) : null}
-      </p>
-      <Textarea
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        placeholder="Write your reply..."
-        rows={4}
-        className="min-h-[120px] resize-y"
-      />
-      <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" disabled>
-          <Paperclip className="size-4" />
-          Attach file
+  const handleInsertTemplate = (text: string) => {
+    setBody((current) => insertAboveSignature(current, text));
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    const imageFiles: File[] = [];
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+
+    if (imageFiles.length === 0) return;
+    event.preventDefault();
+    imageFiles.forEach(addPendingFile);
+  };
+
+  const isPending = submitMutation.isPending;
+
+  if (!isExpanded) {
+    return (
+      <div className="flex items-center justify-end gap-2 border-b bg-background px-5 py-2.5">
+        <Button
+          type="button"
+          size="sm"
+          className="h-9 rounded-md px-5"
+          onClick={() => openComposer("reply")}
+        >
+          <Reply className="size-4" />
+          Reply
         </Button>
         <Button
-          type="submit"
-          disabled={replyMutation.isPending || !body.trim()}
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 rounded-md px-5"
+          onClick={() => openComposer("forward")}
         >
-          {replyMutation.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Send className="size-4" />
-          )}
-          Send reply
+          <Forward className="size-4" />
+          Forward
         </Button>
       </div>
-    </form>
+    );
+  }
+
+  return (
+    <div className="shrink-0 border-b bg-background">
+      <div className="flex items-center justify-between border-b bg-muted/20 px-5 py-2">
+        <p className="text-sm font-medium text-foreground">
+          {composeMode === "forward" ? "Forward" : "Reply"}
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 px-2 text-muted-foreground"
+          disabled={isPending}
+          onClick={collapseComposer}
+        >
+          <ChevronUp className="size-4" />
+          Minimize
+        </Button>
+      </div>
+
+      <div
+        className={cn(
+          "overflow-hidden bg-background",
+          "animate-in slide-in-from-top-2 duration-200",
+        )}
+      >
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b bg-muted/20 px-5 py-2 text-xs">
+          <span className="shrink-0 text-muted-foreground">From</span>
+          <span className="shrink-0 font-medium text-foreground">{fromAddress}</span>
+          <span className="hidden text-muted-foreground sm:inline">·</span>
+          <label
+            htmlFor={`ticket-reply-to-${ticket.id}`}
+            className="shrink-0 text-muted-foreground"
+          >
+            To
+          </label>
+          <TicketRecipientInput
+            id={`ticket-reply-to-${ticket.id}`}
+            value={toRecipients}
+            onChange={setToRecipients}
+            placeholder={
+              composeMode === "forward"
+                ? "Search contact or type email…"
+                : "Search contact or type email…"
+            }
+            disabled={isPending}
+          />
+          <span className="hidden text-muted-foreground sm:inline">·</span>
+          <label
+            htmlFor={`ticket-reply-cc-${ticket.id}`}
+            className="shrink-0 text-muted-foreground"
+          >
+            Cc
+          </label>
+          <TicketRecipientInput
+            id={`ticket-reply-cc-${ticket.id}`}
+            value={ccRecipients}
+            onChange={setCcRecipients}
+            placeholder="Optional"
+            disabled={isPending}
+            className="min-w-[8rem]"
+          />
+        </div>
+
+        {pendingFiles.length > 0 ? (
+          <div className="flex flex-wrap gap-2 border-b px-5 py-2">
+            {pendingFiles.map((pending) => (
+              <div
+                key={pending.id}
+                className="relative flex items-center gap-2 border bg-muted/30 px-2.5 py-1.5 text-xs"
+              >
+                {pending.previewUrl ? (
+                  <img
+                    src={pending.previewUrl}
+                    alt=""
+                    className="size-8 object-cover"
+                  />
+                ) : (
+                  <Paperclip className="size-3.5 text-muted-foreground" />
+                )}
+                <span className="max-w-[160px] truncate">{pending.file.name}</span>
+                <button
+                  type="button"
+                  className="p-0.5 hover:bg-muted"
+                  onClick={() => removePendingFile(pending.id)}
+                  aria-label="Remove attachment"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          onChange={(event) => {
+            const files = event.target.files;
+            if (!files) return;
+            Array.from(files).forEach(addPendingFile);
+            event.target.value = "";
+          }}
+        />
+
+        <TicketComposerToolbar
+          textareaRef={textareaRef}
+          value={body}
+          onChange={setBody}
+          disabled={isPending}
+          ticket={ticket}
+          onInsertTemplate={handleInsertTemplate}
+          onAttachClick={() => fileInputRef.current?.click()}
+          onSendInternal={() => handleSend(true)}
+          onSendReply={() => handleSend(false)}
+          canSend={hasContent}
+          submittingAs={submittingAs}
+        />
+
+        <Textarea
+          ref={textareaRef}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          onPaste={handlePaste}
+          placeholder={
+            composeMode === "forward"
+              ? "Add a note above the forwarded message..."
+              : "Write your reply..."
+          }
+          rows={composeMode === "forward" ? 4 : 8}
+          disabled={isPending}
+          className={cn(
+            "resize-y rounded-none border-0 px-5 py-3.5 text-sm shadow-none focus-visible:ring-0",
+            composeMode === "forward"
+              ? "max-h-[min(24vh,160px)] min-h-[96px]"
+              : "max-h-[min(40vh,280px)] min-h-[160px]",
+          )}
+        />
+
+        {composeMode === "forward" && forwardContext ? (
+          <div className="border-t bg-muted/10 px-5 py-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              Forwarded message
+            </p>
+            <div className="max-h-[min(40vh,320px)] overflow-y-auto rounded-md border bg-background p-4 text-sm">
+              <TicketMessageBody
+                body={forwardContext.message.body}
+                htmlBody={forwardContext.message.html_body}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 };

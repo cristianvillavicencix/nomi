@@ -10,6 +10,8 @@ const RESOURCE_INVALIDATION_MAP: Record<string, string[]> = {
   organization_members: ["organization_members"],
   conversations: ["conversations"],
   conversation_messages: ["conversations", "conversation_messages"],
+  tickets: ["tickets"],
+  ticket_messages: ["ticket_messages", "tickets"],
 };
 
 export const createCrmQueryClient = () =>
