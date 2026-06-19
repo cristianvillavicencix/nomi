@@ -14,6 +14,9 @@ const BLOCKED_STYLE_PROPS = new Set([
   "margin-top",
   "margin-left",
   "margin-right",
+  "color",
+  "background",
+  "background-color",
 ]);
 
 const cleanInlineStyle = (raw: string) =>
@@ -90,6 +93,9 @@ const installEmailSanitizeHooks = () => {
       node.setAttribute("rel", "noopener noreferrer");
     }
 
+    node.removeAttribute("bgcolor");
+    node.removeAttribute("color");
+
     if (node.hasAttribute("style")) {
       const cleaned = cleanInlineStyle(node.getAttribute("style") ?? "");
       if (cleaned) {
@@ -117,7 +123,7 @@ export const sanitizeTicketEmailHtml = (
   installEmailSanitizeHooks();
 
   const sanitized = DOMPurify.sanitize(html, {
-    ADD_ATTR: ["target", "style", "bgcolor", "align", "valign", "width", "height"],
+    ADD_ATTR: ["target", "style", "align", "valign", "width", "height"],
     FORBID_TAGS: ["form", "iframe", "object", "embed"],
   });
 

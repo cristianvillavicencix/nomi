@@ -1,4 +1,9 @@
+import { useMemo, useState } from "react";
 import { ExternalLink, FileText, Film } from "lucide-react";
+import {
+  ImageLightbox,
+  type LightboxImage,
+} from "@/components/ui/image-lightbox";
 import { FileAttachmentPill } from "@/lib/fileAttachments";
 import type { MessageAsset } from "@/modules/tickets/ticketMessageAssets";
 import { cn } from "@/lib/utils";
@@ -58,31 +63,56 @@ const DocumentRow = ({ assets }: { assets: MessageAsset[] }) => (
   </div>
 );
 
-const PhotoGrid = ({ assets }: { assets: MessageAsset[] }) => (
-  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-    {assets.map((asset) => (
-      <a
-        key={asset.href}
-        href={asset.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        title={asset.label}
-        className="group block overflow-hidden rounded-md border bg-background"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <img
-          src={asset.previewSrc ?? asset.href}
-          alt={asset.label}
-          className="aspect-[4/3] w-full object-cover transition-opacity group-hover:opacity-90"
-          loading="lazy"
-        />
-        <p className="truncate px-2 py-1.5 text-[11px] text-muted-foreground">
-          {asset.label}
-        </p>
-      </a>
-    ))}
-  </div>
-);
+const PhotoGrid = ({ assets }: { assets: MessageAsset[] }) => {
+  const lightboxImages = useMemo<LightboxImage[]>(
+    () =>
+      assets.map((asset) => ({
+        src: asset.previewSrc ?? asset.href,
+        alt: asset.label,
+        title: asset.label,
+      })),
+    [assets],
+  );
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+        {assets.map((asset, index) => (
+          <button
+            key={asset.href}
+            type="button"
+            title={asset.label}
+            className="group block overflow-hidden rounded-md border bg-background text-left"
+            onClick={(event) => {
+              event.stopPropagation();
+              setLightboxIndex(index);
+              setLightboxOpen(true);
+            }}
+          >
+            <img
+              src={asset.previewSrc ?? asset.href}
+              alt={asset.label}
+              className="aspect-[4/3] w-full object-cover transition-opacity group-hover:opacity-90"
+              loading="lazy"
+            />
+            <p className="truncate px-2 py-1.5 text-[11px] text-muted-foreground">
+              {asset.label}
+            </p>
+          </button>
+        ))}
+      </div>
+      <ImageLightbox
+        images={lightboxImages}
+        open={lightboxOpen}
+        index={lightboxIndex}
+        onOpenChange={setLightboxOpen}
+        onIndexChange={setLightboxIndex}
+      />
+    </>
+  );
+};
 
 export const TicketMessageAttachments = ({
   documents,

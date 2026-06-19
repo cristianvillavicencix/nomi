@@ -81,14 +81,14 @@ export const TicketListItem = ({
         className={cn(
           "flex w-full border-b text-left transition-colors hover:bg-muted/30",
           selected
-            ? "border-l-[3px] border-l-blue-600 bg-[#faf8f4]"
+            ? "border-l-[3px] border-l-blue-600 bg-accent dark:border-l-blue-400 dark:bg-accent/80"
             : bulkSelected
-              ? "border-l-[3px] border-l-primary/50 bg-primary/5"
+              ? "border-l-[3px] border-l-primary/50 bg-primary/5 dark:bg-primary/10"
               : awaitingPayment
                 ? "border-l-[3px] border-l-amber-500 bg-amber-50/85 dark:bg-amber-950/25"
                 : isUnread
-                  ? "border-l-[3px] border-l-sky-500 bg-sky-50/75"
-                  : "border-l-[3px] border-l-transparent bg-muted/20",
+                  ? "border-l-[3px] border-l-sky-500 bg-sky-50/75 dark:border-l-sky-400 dark:bg-sky-950/35"
+                  : "border-l-[3px] border-l-transparent bg-muted/20 dark:bg-muted/30",
         )}
       >
         <div

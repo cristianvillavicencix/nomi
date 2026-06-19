@@ -119,7 +119,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
     : null;
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden bg-[#fcfcfb]">
+    <div className="flex h-full min-h-0 overflow-hidden bg-background">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b bg-background px-5 py-3.5">
           <div className="min-w-0 space-y-1.5">
@@ -208,7 +208,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
             ) : null}
 
             {mergedChildren.length > 0 ? (
-              <p className="border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+              <p className="border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-800/60 dark:bg-sky-950/35 dark:text-sky-100">
                 Includes merged tickets:{" "}
                 {mergedChildren
                   .map((child) => `#${child.id} (${child.subject})`)
