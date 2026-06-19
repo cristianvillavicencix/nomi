@@ -244,12 +244,29 @@ export const processTicketInbound = async ({
     }
     ticketId = ticket.id;
   } else {
+    const { data: existingTicket } = await supabaseAdmin
+      .from("tickets")
+      .select("contact_id, company_id")
+      .eq("id", ticketId)
+      .eq("org_id", inbox.org_id)
+      .maybeSingle();
+
+    const ticketUpdate: Record<string, unknown> = {
+      status: "open",
+      updated_at: now,
+    };
+
+    if (contact && !existingTicket?.contact_id) {
+      ticketUpdate.contact_id = contact.id;
+      ticketUpdate.company_id = contact.company_id ?? null;
+      if (fromName) {
+        ticketUpdate.requester_name = fromName;
+      }
+    }
+
     await supabaseAdmin
       .from("tickets")
-      .update({
-        status: "open",
-        updated_at: now,
-      })
+      .update(ticketUpdate)
       .eq("id", ticketId)
       .eq("org_id", inbox.org_id);
   }

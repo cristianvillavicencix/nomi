@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Form,
   useDataProvider,
@@ -39,6 +39,16 @@ import {
   contactMatchesId,
   resolveRequesterFromContactAndCompany,
 } from "@/modules/tickets/ticketRequester";
+import {
+  findContactsByExactEmail,
+  normalizeTicketEmail,
+} from "@/modules/tickets/ticketContactMatch";
+import { TicketClientSummaryCard } from "@/modules/tickets/TicketClientSummaryCard";
+import {
+  TicketStatusChangeDialog,
+  type TicketStatusChangeRequest,
+} from "@/modules/tickets/TicketStatusChangeDialog";
+import { requiresTicketStatusNote } from "@/modules/tickets/ticketStatusWorkflow";
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { CONTACT_STATUS_FILTER } from "@/modules/shared/relatedFilters";
 import type { Ticket } from "@/modules/types";
@@ -54,9 +64,17 @@ const priorityChoices = [
   { id: "urgent", name: "Urgent" },
 ];
 
+const statusChoices = [
+  { id: "new", name: "New" },
+  { id: "open", name: "Open" },
+  { id: "waiting", name: "Waiting" },
+  { id: "resolved", name: "Resolved" },
+];
+
 type EditTicketFormValues = {
   subject: string;
   priority: string;
+  status: string;
   company_id: Identifier | null;
   contact_id: Identifier | null;
   requester_email: string;
@@ -82,11 +100,15 @@ export const EditTicketDialog = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const [update] = useUpdate();
+  const [statusChangeRequest, setStatusChangeRequest] =
+    useState<TicketStatusChangeRequest | null>(null);
+  const pendingFormSaveRef = useRef<EditTicketFormValues | null>(null);
 
   const defaultValues = useMemo(
     (): EditTicketFormValues => ({
       subject: ticket?.subject?.trim() ?? "",
       priority: ticket?.priority?.trim() || "normal",
+      status: ticket?.status?.trim() || "open",
       company_id: ticket?.company_id ?? null,
       contact_id: ticket?.contact_id ?? null,
       requester_email: ticket?.requester_email?.trim() ?? "",
@@ -94,6 +116,56 @@ export const EditTicketDialog = ({
     }),
     [ticket, open],
   );
+
+  const saveTicketFields = async (values: EditTicketFormValues) => {
+    if (!ticket) return;
+
+    let contact: Contact | null = null;
+    let company: Company | null = null;
+
+    if (values.contact_id != null) {
+      const { data } = await dataProvider.getOne<Contact>("contacts", {
+        id: values.contact_id,
+      });
+      contact = data;
+    }
+
+    if (values.company_id != null) {
+      const { data } = await dataProvider.getOne<Company>("companies", {
+        id: values.company_id,
+      });
+      company = data;
+    }
+
+    const resolved = resolveRequesterFromContactAndCompany(contact, company);
+    const requesterEmail =
+      values.requester_email.trim() || resolved.email || null;
+    const requesterName =
+      values.requester_name.trim() || resolved.name || null;
+
+    await update(
+      "tickets",
+      {
+        id: ticket.id,
+        data: {
+          subject: values.subject.trim(),
+          priority: values.priority || "normal",
+          status: values.status || "open",
+          company_id: values.company_id,
+          contact_id: values.contact_id,
+          requester_email: requesterEmail,
+          requester_name: requesterName,
+        },
+        previousData: ticket,
+      },
+      { returnPromise: true },
+    );
+
+    refresh();
+    onOpenChange(false);
+    onSaved?.();
+    notify("Ticket updated", { type: "success" });
+  };
 
   const handleSubmit = async (values: EditTicketFormValues) => {
     if (!ticket) return;
@@ -104,52 +176,21 @@ export const EditTicketDialog = ({
       return;
     }
 
+    const previousStatus = ticket.status?.trim() || "open";
+    const nextStatus = values.status?.trim() || "open";
+
+    if (
+      nextStatus !== previousStatus &&
+      requiresTicketStatusNote(previousStatus, nextStatus)
+    ) {
+      pendingFormSaveRef.current = { ...values, subject };
+      setStatusChangeRequest({ ticket, nextStatus });
+      return;
+    }
+
     setIsSaving(true);
     try {
-      let contact: Contact | null = null;
-      let company: Company | null = null;
-
-      if (values.contact_id != null) {
-        const { data } = await dataProvider.getOne<Contact>("contacts", {
-          id: values.contact_id,
-        });
-        contact = data;
-      }
-
-      if (values.company_id != null) {
-        const { data } = await dataProvider.getOne<Company>("companies", {
-          id: values.company_id,
-        });
-        company = data;
-      }
-
-      const resolved = resolveRequesterFromContactAndCompany(contact, company);
-      const requesterEmail =
-        values.requester_email.trim() || resolved.email || null;
-      const requesterName =
-        values.requester_name.trim() || resolved.name || null;
-
-      await update(
-        "tickets",
-        {
-          id: ticket.id,
-          data: {
-            subject,
-            priority: values.priority || "normal",
-            company_id: values.company_id,
-            contact_id: values.contact_id,
-            requester_email: requesterEmail,
-            requester_name: requesterName,
-          },
-          previousData: ticket,
-        },
-        { returnPromise: true },
-      );
-
-      refresh();
-      onOpenChange(false);
-      onSaved?.();
-      notify("Ticket updated", { type: "success" });
+      await saveTicketFields({ ...values, subject });
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "Failed to update ticket",
@@ -163,6 +204,7 @@ export const EditTicketDialog = ({
   if (!open || !ticket) return null;
 
   return (
+    <>
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
@@ -191,6 +233,35 @@ export const EditTicketDialog = ({
         </Form>
       </DialogContent>
     </Dialog>
+
+    <TicketStatusChangeDialog
+      request={statusChangeRequest}
+      onClose={() => {
+        setStatusChangeRequest(null);
+        pendingFormSaveRef.current = null;
+      }}
+      onSuccess={() => {
+        void (async () => {
+          const pending = pendingFormSaveRef.current;
+          pendingFormSaveRef.current = null;
+          if (!pending) return;
+          setIsSaving(true);
+          try {
+            await saveTicketFields(pending);
+          } catch (error) {
+            notify(
+              error instanceof Error
+                ? error.message
+                : "Failed to update ticket",
+              { type: "error" },
+            );
+          } finally {
+            setIsSaving(false);
+          }
+        })();
+      }}
+    />
+    </>
   );
 };
 
@@ -215,6 +286,59 @@ const EditTicketDialogBody = ({
   const contactId = useWatch({ name: "contact_id" });
   const requesterEmail = useWatch({ name: "requester_email" });
   const requesterName = useWatch({ name: "requester_name" });
+
+  const normalizedRequesterEmail = normalizeTicketEmail(
+    requesterEmail || ticket.requester_email,
+  );
+
+  const { data: linkedContact } = useGetOne<Contact>(
+    "contacts",
+    { id: ticket.contact_id ?? "" },
+    { enabled: Boolean(ticket.contact_id) },
+  );
+
+  const shouldSearchContactByEmail =
+    !ticket.contact_id && normalizedRequesterEmail.length > 0;
+
+  const { data: emailSearchResults = [] } = useGetList<Contact>(
+    "contacts",
+    {
+      filter: { q: normalizedRequesterEmail },
+      pagination: { page: 1, perPage: 25 },
+      sort: { field: "last_name", order: "ASC" },
+    },
+    { enabled: shouldSearchContactByEmail, staleTime: 30_000 },
+  );
+
+  const emailMatchedContacts = useMemo(
+    () => findContactsByExactEmail(emailSearchResults, normalizedRequesterEmail),
+    [emailSearchResults, normalizedRequesterEmail],
+  );
+
+  const autoMatchedContact =
+    linkedContact ??
+    (emailMatchedContacts.length === 1 ? emailMatchedContacts[0] : null);
+
+  const autoLinkedRef = useRef(false);
+
+  useEffect(() => {
+    if (!autoMatchedContact || autoLinkedRef.current) return;
+
+    if (autoMatchedContact.company_id != null) {
+      setValue("company_id", autoMatchedContact.company_id, { shouldDirty: false });
+    }
+    setValue("contact_id", autoMatchedContact.id, { shouldDirty: false });
+
+    const resolved = resolveRequesterFromContactAndCompany(autoMatchedContact, null);
+    if (resolved.email) {
+      setValue("requester_email", resolved.email, { shouldDirty: false });
+    }
+    if (resolved.name) {
+      setValue("requester_name", resolved.name, { shouldDirty: false });
+    }
+
+    autoLinkedRef.current = true;
+  }, [autoMatchedContact, setValue]);
 
   const { data: companyContacts = [] } = useGetList<Contact>(
     "contacts",
@@ -250,9 +374,12 @@ const EditTicketDialogBody = ({
     [companyContacts, contactId],
   );
 
+  const activeContact =
+    selectedContact ?? autoMatchedContact ?? linkedContact ?? null;
+
   const recipientFromClient = useMemo(
-    () => resolveRequesterFromContactAndCompany(selectedContact ?? null, company),
-    [selectedContact, company],
+    () => resolveRequesterFromContactAndCompany(activeContact, company),
+    [activeContact, company],
   );
 
   const contactEmptyText = !companyId
@@ -306,19 +433,10 @@ const EditTicketDialogBody = ({
     }
   }, [contactId, selectedContact, company, setValue]);
 
-  const showManualRecipient = !(
-    contactId &&
-    selectedContact &&
-    (recipientFromClient.email || requesterEmail?.trim())
-  );
-
-  const displayName =
-    requesterName?.trim() || recipientFromClient.name || "Contact";
-  const displayEmail =
-    requesterEmail?.trim() || recipientFromClient.email || null;
-
   const canCreateContactFromTicket =
     !selectedContact &&
+    !autoMatchedContact &&
+    emailMatchedContacts.length === 0 &&
     Boolean(requesterEmail?.trim() || requesterName?.trim());
 
   const contactCreateDefaults = useMemo(
@@ -406,12 +524,20 @@ const EditTicketDialogBody = ({
             }}
           />
 
-          <SelectInput
-            source="priority"
-            label="Priority"
-            choices={priorityChoices}
-            helperText={false}
-          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectInput
+              source="priority"
+              label="Priority"
+              choices={priorityChoices}
+              helperText={false}
+            />
+            <SelectInput
+              source="status"
+              label="Status"
+              choices={statusChoices}
+              helperText={false}
+            />
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <ReferenceInput source="company_id" reference="companies">
@@ -429,22 +555,25 @@ const EditTicketDialogBody = ({
             />
           </div>
 
-          {contactId && selectedContact && displayEmail && !showManualRecipient ? (
-            <div className="rounded-lg border bg-muted/25 px-3 py-2.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Reply recipient
-              </p>
-              <p className="mt-1 text-sm font-medium text-foreground">
-                {displayName}
-              </p>
-              <p className="text-sm text-muted-foreground">{displayEmail}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                When you send a reply on this ticket, it goes to this contact.
-                Pick a different contact above to change it.
-              </p>
-            </div>
-          ) : (
+          {activeContact || company ? (
+            <TicketClientSummaryCard
+              ticket={ticket}
+              company={company}
+              contact={activeContact}
+              matchedFromEmail={!ticket.contact_id && Boolean(autoMatchedContact)}
+            />
+          ) : null}
+
+          {!activeContact && !company ? (
             <div className="space-y-3 rounded-lg border border-dashed px-3 py-3">
+              {emailMatchedContacts.length > 1 ? (
+                <div className="rounded-md border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 dark:border-amber-900/50 dark:bg-amber-950/30">
+                  <p className="text-sm text-foreground">
+                    Multiple contacts use {normalizedRequesterEmail}. Pick the
+                    right one in Contact above.
+                  </p>
+                </div>
+              ) : null}
               {canCreateContactFromTicket ? (
                 <div className="rounded-none border border-border bg-muted/30 px-3 py-2.5">
                   <p className="text-sm text-foreground">
@@ -484,7 +613,7 @@ const EditTicketDialogBody = ({
                 />
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 

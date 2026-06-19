@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Contact } from "@/components/atomic-crm/types";
 import { shouldClearPrimaryOnCompany } from "@/modules/clients/primaryContactRelink";
 import type { CompanyDraft } from "@/modules/contacts/companyDraft";
-import { prepareContactWriteData } from "@/components/atomic-crm/providers/supabase/dataProviderWriteHelpers";
+import { prepareContactWriteData, stripContactFormMetaFields } from "@/components/atomic-crm/providers/supabase/dataProviderWriteHelpers";
 
 type OrgMember = {
   id: Identifier;
@@ -116,6 +116,7 @@ export const persistContactWithCompany = async ({
     ...contactData,
     company_id: companyId,
   });
+  stripContactFormMetaFields(payload);
 
   if (isCreate) {
     const { data: contact, error } = await supabase

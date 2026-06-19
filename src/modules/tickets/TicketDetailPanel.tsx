@@ -12,6 +12,7 @@ import { TicketBillingSidePanel } from "@/modules/tickets/TicketBillingSidePanel
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
 import { TicketThread } from "@/modules/tickets/TicketThread";
 import { TicketReadCutoffContext } from "@/modules/tickets/TicketReadCutoffContext";
+import { useAutoLinkTicketRequester } from "@/modules/tickets/useAutoLinkTicketRequester";
 import { useTicketMemberRead } from "@/modules/tickets/useTicketInboxReads";
 import { getClientShowPath } from "@/app/routing";
 
@@ -38,6 +39,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
   const { data: ticket, isPending } = useGetOne<Ticket>("tickets", {
     id: ticketId,
   });
+  useAutoLinkTicketRequester(ticket);
   const { data: deal } = useGetOne<Deal>(
     "deals",
     { id: ticket?.deal_id ?? "" },

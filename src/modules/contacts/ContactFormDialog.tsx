@@ -52,6 +52,11 @@ import { normalizeUsPhoneToE164 } from "@/utils/phone";
 /** Hide company field in LbsContactFormFields while company is not created yet. */
 export const PENDING_COMPANY_LOCK = "__pending_company__" as Identifier;
 
+/** Avoid Radix aria-hidden warnings when focus returns to the ticket reply field. */
+const contactDialogContentProps = {
+  onCloseAutoFocus: (event: Event) => event.preventDefault(),
+} as const;
+
 type ContactFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -231,7 +236,15 @@ export const ContactFormDialog = ({
   const resolvedSubmitLabel =
     submitLabel ?? (isEdit ? "Save changes" : "Create contact");
 
-  const handleClose = () => onOpenChange(false);
+  const handleClose = () => {
+    if (typeof document !== "undefined") {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) {
+        active.blur();
+      }
+    }
+    onOpenChange(false);
+  };
 
   const formLockCompanyId = deferCreate
     ? PENDING_COMPANY_LOCK
@@ -251,7 +264,11 @@ export const ContactFormDialog = ({
   if (isEdit) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent showCloseButton={false} className={dialogShellClass}>
+        <DialogContent
+          showCloseButton={false}
+          className={dialogShellClass}
+          {...contactDialogContentProps}
+        >
           <EditBase
             resource="contacts"
             id={contactId}
@@ -294,7 +311,11 @@ export const ContactFormDialog = ({
   if (deferCreate) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent showCloseButton={false} className={dialogShellClass}>
+        <DialogContent
+          showCloseButton={false}
+          className={dialogShellClass}
+          {...contactDialogContentProps}
+        >
           <Form
             id="lbs-contact-form-deferred"
             className="flex min-h-0 flex-1 flex-col"
@@ -337,7 +358,11 @@ export const ContactFormDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={dialogShellClass}>
+      <DialogContent
+        showCloseButton={false}
+        className={dialogShellClass}
+        {...contactDialogContentProps}
+      >
         <CreateBase
           resource="contacts"
           redirect={false}

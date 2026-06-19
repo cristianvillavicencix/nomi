@@ -209,9 +209,6 @@ export const prepareContactWriteData = <
   data: T,
 ): T => {
   const {
-    _company_draft_name: _draftName,
-    _company_draft_sector: _draftSector,
-    _primary_move_confirmed: _confirmed,
     _compact_first_name: _compactFirst,
     _compact_last_name: _compactLast,
     _compact_email: _compactEmail,
@@ -227,6 +224,19 @@ export const prepareContactWriteData = <
     email_jsonb?: EmailAndType[];
     phone_jsonb?: PhoneNumberAndType[];
   });
+};
+
+/** Form-only fields — never PATCH/INSERT on contacts. */
+const CONTACT_FORM_META_FIELDS = [
+  "_primary_move_confirmed",
+  "_company_draft_name",
+  "_company_draft_sector",
+] as const;
+
+export const stripContactFormMetaFields = (payload: Record<string, unknown>) => {
+  for (const field of CONTACT_FORM_META_FIELDS) {
+    delete payload[field];
+  }
 };
 
 const CONTACT_UPDATE_OMIT_FIELDS = [
@@ -265,6 +275,7 @@ export const patchContactRow = async ({
   for (const field of CONTACT_UPDATE_OMIT_FIELDS) {
     delete payload[field];
   }
+  stripContactFormMetaFields(payload);
   stripContactSummaryComputedFields(payload);
 
   const { data: row, error } = await supabase
@@ -308,6 +319,58 @@ export const getOneFromResourceMaybeSingle = async (
  * PostgREST returns 406 (object+json coercion) when an update matches 0 rows under RLS.
  * Use `.maybeSingle()` plus a clear server message instead of relying on react-admin PATCH.
  */
+const TICKET_UPDATE_OMIT_FIELDS = [
+  "id",
+  "org_id",
+  "created_at",
+  "billing_item_count",
+  "billing_has_roof",
+  "billing_has_siding",
+  "billing_has_esx",
+  "billing_has_pdf_analysis",
+] as const;
+
+export const prepareTicketWriteData = <T extends Record<string, unknown>>(
+  data: T,
+): T => {
+  const rest = { ...data };
+  for (const field of TICKET_UPDATE_OMIT_FIELDS) {
+    delete rest[field];
+  }
+  return rest as T;
+};
+
+export const patchTicketRow = async ({
+  ticketId,
+  orgId,
+  data,
+}: {
+  ticketId: Identifier;
+  orgId: Identifier;
+  data: Record<string, unknown>;
+}) => {
+  const payload = prepareTicketWriteData(data);
+
+  const { data: row, error } = await supabase
+    .from("tickets")
+    .update(payload)
+    .eq("id", ticketId)
+    .eq("org_id", orgId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "Failed to update ticket");
+  }
+  if (row == null) {
+    throw new Error(
+      "Ticket not found or you do not have permission to update it.",
+    );
+  }
+
+  return row;
+};
+
 export const patchSingletonConfigurationRow = async (
   config: ConfigurationContextValue,
 ) => {

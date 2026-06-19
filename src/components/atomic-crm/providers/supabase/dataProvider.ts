@@ -47,12 +47,14 @@ import {
   getOneFromResourceMaybeSingle,
   fetchContactSummaryById,
   patchContactRow,
+  patchTicketRow,
   normalizeMemberEmail,
   patchSingletonConfigurationRow,
   prepareCompanyWriteData,
   prepareContactWriteData,
   processCompanyLogo,
   resolveOrganizationMemberId,
+  stripContactFormMetaFields,
 } from "./dataProviderWriteHelpers";
 
 if (import.meta.env.VITE_SUPABASE_URL === undefined) {
@@ -77,13 +79,12 @@ const dataProviderWithCustomMethods = {
     await assertMutationAllowed(resource, "create", params);
 
     if (resource === "contacts") {
-      const { companyDraft } = resolveContactCompanyFromPayload(
-        params.data as Record<string, unknown>,
-      );
-      if (companyDraft) {
+      const data = params.data as Record<string, unknown>;
+      const { companyId, companyDraft } = resolveContactCompanyFromPayload(data);
+
+      if (companyDraft || (companyId != null && companyId !== "")) {
         const memberId = await resolveOrganizationMemberId(
-          (params.data as Record<string, unknown>)
-            .organization_member_id as Identifier,
+          data.organization_member_id as Identifier,
         );
         const { data: member, error: memberError } = await supabase
           .from("organization_members")
@@ -98,11 +99,13 @@ const dataProviderWithCustomMethods = {
         const contact = await persistContactWithCompany({
           supabase,
           member: member as { id: Identifier; org_id: Identifier },
-          contactData: params.data as Record<string, unknown>,
+          contactData: data,
+          companyId,
           companyDraft,
           isCreate: true,
         });
-        return { data: contact };
+        const summary = await fetchContactSummaryById(contact.id);
+        return { data: summary ?? contact };
       }
     }
 
@@ -113,11 +116,12 @@ const dataProviderWithCustomMethods = {
 
     if (resource === "contacts") {
       const previous = (params.previousData ?? {}) as Record<string, unknown>;
-      const data = prepareContactWriteData({
+      const merged = {
         ...previous,
         ...(params.data as Record<string, unknown>),
-      });
-      const { companyId, companyDraft } = resolveContactCompanyFromPayload(data);
+      };
+      const { companyId, companyDraft } = resolveContactCompanyFromPayload(merged);
+      const data = prepareContactWriteData(merged);
       const previousCompanyId = previous.company_id as
         | Identifier
         | null
@@ -147,9 +151,9 @@ const dataProviderWithCustomMethods = {
             contactId,
           );
 
-          if (mustConfirmMove && data._primary_move_confirmed !== true) {
+          if (mustConfirmMove && merged._primary_move_confirmed !== true) {
             throw new Error(
-              "Confirm primary contact move before saving this contact",
+              "This contact is the primary contact of their current company. Scroll to Company, click “I understand, continue”, then save again.",
             );
           }
         }
@@ -216,6 +220,31 @@ const dataProviderWithCustomMethods = {
           : (params?.data as ConfigurationContextValue);
       const data = await patchSingletonConfigurationRow(nextConfig);
       return { data };
+    }
+
+    if (resource === "tickets") {
+      const previous = (params.previousData ?? {}) as Record<string, unknown>;
+      const merged = {
+        ...previous,
+        ...(params.data as Record<string, unknown>),
+      };
+      let orgId = merged.org_id as Identifier | undefined;
+      if (orgId == null) {
+        const existing = await getOneFromResourceMaybeSingle(
+          "tickets",
+          params.id as Identifier,
+        );
+        orgId = existing?.org_id as Identifier | undefined;
+      }
+      if (orgId == null) {
+        throw new Error("Ticket organization is missing");
+      }
+      const row = await patchTicketRow({
+        ticketId: params.id as Identifier,
+        orgId,
+        data: merged,
+      });
+      return { data: row };
     }
 
     return baseDataProvider.update(resource, params);
@@ -449,10 +478,11 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   {
     resource: "contacts",
     beforeGetList: async (params) => applyContactListSearch(params),
-    beforeCreate: async (params) => ({
-      ...params,
-      data: prepareContactWriteData(params.data as Record<string, unknown>),
-    }),
+    beforeCreate: async (params) => {
+      const data = prepareContactWriteData(params.data as Record<string, unknown>);
+      stripContactFormMetaFields(data);
+      return { ...params, data };
+    },
     beforeUpdate: async (params) => ({
       ...params,
       data: prepareContactWriteData({
