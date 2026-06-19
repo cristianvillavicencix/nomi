@@ -159,6 +159,8 @@ const CONTACT_READ_ONLY_WRITE_FIELDS = [
   "full_name",
   "name",
   "is_primary_contact",
+  "email_fts",
+  "phone_fts",
 ] as const;
 
 /** Fields from companies_summary that must not be PATCHed to companies. */
@@ -235,7 +237,17 @@ const CONTACT_UPDATE_OMIT_FIELDS = [
   "full_name",
   "name",
   "is_primary_contact",
+  "email_fts",
+  "phone_fts",
 ] as const;
+
+const stripContactSummaryComputedFields = (payload: Record<string, unknown>) => {
+  for (const key of Object.keys(payload)) {
+    if (key.endsWith("_fts")) {
+      delete payload[key];
+    }
+  }
+};
 
 export const fetchContactSummaryById = async (contactId: Identifier) =>
   getOneFromResourceMaybeSingle("contacts_summary", contactId);
@@ -253,6 +265,7 @@ export const patchContactRow = async ({
   for (const field of CONTACT_UPDATE_OMIT_FIELDS) {
     delete payload[field];
   }
+  stripContactSummaryComputedFields(payload);
 
   const { data: row, error } = await supabase
     .from("contacts")

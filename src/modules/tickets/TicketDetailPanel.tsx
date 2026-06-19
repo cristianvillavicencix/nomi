@@ -80,7 +80,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
     update(
       "tickets",
       { id: ticket.id, data: { status: "open" }, previousData: ticket },
-      { mutationMode: "optimistic" },
+      { mutationMode: "pessimistic" },
     );
   }, [ticket, update]);
 
