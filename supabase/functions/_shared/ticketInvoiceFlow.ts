@@ -26,6 +26,11 @@ import {
   calculateTicketPricing,
   type SupplementPricingInput,
 } from "./supplementPricing.ts";
+import {
+  buildTicketInvoiceSentInternalNoteBody,
+  loadTicketInvoiceSentNoteContext,
+} from "./ticketInvoiceInternalNoteSummary.ts";
+import { getTransactionalFromEmail } from "./transactionalEmail.ts";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -69,41 +74,7 @@ const formatTicketInternalSmsNote = (params: {
   return "Not sent";
 };
 
-export const buildTicketInvoiceSentInternalNoteBody = (params: {
-  invoiceNumber: string;
-  amountFormatted: string;
-  dueDate?: string | null;
-  recipientEmail: string;
-  propertyAddress?: string | null;
-  deliverableCount: number;
-  smsTo?: string | null;
-  smsSent?: boolean;
-  smsSkipped?: boolean;
-}) => {
-  const dueDate = formatTicketInternalNoteDate(params.dueDate);
-  const fileLabel =
-    params.deliverableCount === 1 ? "1 file" : `${params.deliverableCount} files`;
-
-  return [
-    "**Invoice sent for payment**",
-    "",
-    `- **Invoice:** ${params.invoiceNumber}`,
-    `- **Amount due:** ${params.amountFormatted}`,
-    ...(dueDate ? [`- **Due date:** ${dueDate}`] : []),
-    ...(params.propertyAddress?.trim()
-      ? [`- **Property:** ${params.propertyAddress.trim()}`]
-      : []),
-    `- **Email:** ${params.recipientEmail}`,
-    `- **Text:** ${formatTicketInternalSmsNote({
-      smsTo: params.smsTo,
-      smsSent: params.smsSent,
-      smsSkipped: params.smsSkipped,
-      attempted: Boolean(params.smsTo?.trim()),
-    })}`,
-    "",
-    `Delivery package (${fileLabel}) will be sent automatically after payment.`,
-  ].join("\n");
-};
+export { buildTicketInvoiceSentInternalNoteBody } from "./ticketInvoiceInternalNoteSummary.ts";
 
 export const buildTicketPaymentReminderInternalNoteBody = (params: {
   invoiceNumber: string;
@@ -400,10 +371,13 @@ async function loadTicketForInvoice(
     .from("ticket_deliverables")
     .select("id", { count: "exact", head: true })
     .eq("ticket_id", ticket.id)
-    .eq("org_id", orgId);
+    .eq("org_id", orgId)
+    .is("invoiced_invoice_id", null);
 
   if (!deliverableCount) {
-    throw new Error("Upload at least one delivery file before sending an invoice");
+    throw new Error(
+      "Upload at least one new delivery file before sending an invoice",
+    );
   }
 
   if (!ticket.company_id && !ticket.contact_id) {
@@ -429,13 +403,19 @@ async function loadTicketDeliverablesForBilling(
   supabase: SupabaseClient,
   orgId: number,
   ticketId: number,
+  options?: { onlyUninvoiced?: boolean },
 ) {
-  const { data } = await supabase
+  let query = supabase
     .from("ticket_deliverables")
     .select("billing_kind, billing_line_count, title")
     .eq("ticket_id", ticketId)
-    .eq("org_id", orgId)
-    .order("sort_order", { ascending: true });
+    .eq("org_id", orgId);
+
+  if (options?.onlyUninvoiced !== false) {
+    query = query.is("invoiced_invoice_id", null);
+  }
+
+  const { data } = await query.order("sort_order", { ascending: true });
 
   return data ?? [];
 }
@@ -800,7 +780,7 @@ export async function sendTicketInvoicePaymentLink(
     sendSms?: boolean;
   },
 ) {
-  const { ticket, recipientEmail, deliverableCount } = await loadTicketForInvoice(
+  const { ticket, recipientEmail } = await loadTicketForInvoice(
     supabase,
     params.orgId,
     params.ticketId,
@@ -908,6 +888,168 @@ export async function sendTicketInvoicePaymentLink(
     .eq("id", ticket.id)
     .eq("org_id", params.orgId);
 
+  await supabase
+    .from("ticket_deliverables")
+    .update({ invoiced_invoice_id: invoice.id })
+    .eq("ticket_id", ticket.id)
+    .eq("org_id", params.orgId)
+    .is("invoiced_invoice_id", null);
+
+  const { data: member } = await supabase
+    .from("organization_members")
+    .select("first_name, last_name, email")
+    .eq("id", params.memberId)
+    .maybeSingle();
+  const memberName =
+    [member?.first_name, member?.last_name].filter(Boolean).join(" ").trim() ||
+    member?.email?.trim() ||
+    "Team";
+
+  const fromEmail =
+    (await getTransactionalFromEmail(params.orgId)) ??
+    INVOICE_ORGANIZATION_NAME;
+
+  const noteContext = await loadTicketInvoiceSentNoteContext(supabase, {
+    orgId: params.orgId,
+    ticketId: ticket.id,
+    invoiceNumber: invoice.invoice_number,
+    amountFormatted: balanceFormatted,
+    dueDate: invoice.due_date,
+    recipientEmail,
+    propertyAddress: ticket.subject,
+    senderName: memberName,
+    fromEmail,
+    sentAt: now,
+    smsTo: params.sendSms ? params.smsTo : null,
+    smsSent: smsOutcome?.sent ?? false,
+    smsSkipped: smsOutcome?.skipped ?? false,
+  });
+
+  await supabase.from("ticket_messages").insert({
+    ticket_id: ticket.id,
+    author_member_id: params.memberId,
+    body: buildTicketInvoiceSentInternalNoteBody(noteContext),
+    direction: "internal",
+    from_name: memberName,
+    created_at: now,
+  });
+
+  return {
+    invoice: { ...invoice, status: "sent", sent_at: now },
+    payment_url: url,
+    to: recipientEmail,
+    sms_sent: smsOutcome?.sent ?? false,
+    sms_skipped: smsOutcome?.skipped ?? !params.sendSms,
+  };
+}
+
+export async function startNewTicketInvoiceCycle(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    memberId: number;
+    ticketId: number;
+  },
+) {
+  const { data: ticket } = await supabase
+    .from("tickets")
+    .select("id, invoice_id, delivery_status")
+    .eq("id", params.ticketId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!ticket?.id) {
+    throw new Error("Ticket not found");
+  }
+
+  let invoiceId = ticket.invoice_id ? Number(ticket.invoice_id) : null;
+
+  if (!invoiceId) {
+    const { data: linkedInvoice } = await supabase
+      .from("client_invoices")
+      .select("id, invoice_number, status")
+      .eq("ticket_id", ticket.id)
+      .eq("org_id", params.orgId)
+      .in("status", ["sent", "paid"])
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (linkedInvoice?.id) {
+      invoiceId = linkedInvoice.id;
+    }
+  }
+
+  if (!invoiceId) {
+    const { data: draft } = await supabase
+      .from("client_invoices")
+      .select("id")
+      .eq("ticket_id", ticket.id)
+      .eq("org_id", params.orgId)
+      .eq("status", "draft")
+      .maybeSingle();
+
+    if (draft?.id) {
+      throw new Error(
+        "Finish or cancel the current invoice before starting a new one",
+      );
+    }
+
+    const { count: unbilledCount } = await supabase
+      .from("ticket_deliverables")
+      .select("id", { count: "exact", head: true })
+      .eq("ticket_id", ticket.id)
+      .eq("org_id", params.orgId)
+      .is("invoiced_invoice_id", null);
+
+    return {
+      previous_invoice_number: null,
+      unbilled_deliverable_count: unbilledCount ?? 0,
+      already_in_new_cycle: true,
+    };
+  }
+
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select("id, invoice_number, status")
+    .eq("id", invoiceId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!invoice?.id) {
+    throw new Error("Invoice not found");
+  }
+  if (invoice.status !== "sent" && invoice.status !== "paid") {
+    throw new Error(
+      "Finish or cancel the current invoice before starting a new one",
+    );
+  }
+
+  const { count: unbilledCount } = await supabase
+    .from("ticket_deliverables")
+    .select("id", { count: "exact", head: true })
+    .eq("ticket_id", ticket.id)
+    .eq("org_id", params.orgId)
+    .is("invoiced_invoice_id", null);
+
+  const now = new Date().toISOString();
+
+  await supabase
+    .from("client_invoices")
+    .update({ ticket_id: null, updated_at: now })
+    .eq("id", invoice.id)
+    .eq("org_id", params.orgId);
+
+  await supabase
+    .from("tickets")
+    .update({
+      invoice_id: null,
+      delivery_status: (unbilledCount ?? 0) > 0 ? "ready" : "none",
+      updated_at: now,
+    })
+    .eq("id", ticket.id)
+    .eq("org_id", params.orgId);
+
   const { data: member } = await supabase
     .from("organization_members")
     .select("first_name, last_name, email")
@@ -921,28 +1063,24 @@ export async function sendTicketInvoicePaymentLink(
   await supabase.from("ticket_messages").insert({
     ticket_id: ticket.id,
     author_member_id: params.memberId,
-    body: buildTicketInvoiceSentInternalNoteBody({
-      invoiceNumber: invoice.invoice_number,
-      amountFormatted: balanceFormatted,
-      dueDate: invoice.due_date,
-      recipientEmail,
-      propertyAddress: ticket.subject,
-      deliverableCount,
-      smsTo: params.sendSms ? params.smsTo : null,
-      smsSent: smsOutcome?.sent ?? false,
-      smsSkipped: smsOutcome?.skipped ?? false,
-    }),
+    body: [
+      "**New invoice cycle started**",
+      "",
+      `- **Previous invoice:** ${invoice.invoice_number} (${invoice.status})`,
+      `- **Unbilled files:** ${unbilledCount ?? 0}`,
+      "",
+      unbilledCount
+        ? "Add or review delivery files, then create and send the new invoice. The client will receive a new payment link."
+        : "Upload new delivery files, then create and send a new invoice.",
+    ].join("\n"),
     direction: "internal",
     from_name: memberName,
     created_at: now,
   });
 
   return {
-    invoice: { ...invoice, status: "sent", sent_at: now },
-    payment_url: url,
-    to: recipientEmail,
-    sms_sent: smsOutcome?.sent ?? false,
-    sms_skipped: smsOutcome?.skipped ?? !params.sendSms,
+    previous_invoice_number: invoice.invoice_number,
+    unbilled_deliverable_count: unbilledCount ?? 0,
   };
 }
 

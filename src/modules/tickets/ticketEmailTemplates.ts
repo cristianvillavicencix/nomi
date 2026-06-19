@@ -139,3 +139,43 @@ export const buildTicketDeliveryPreviewText = (params: {
 
   return `Hi ${firstName},\n\nThank you for your payment (${params.invoiceNumber}). Your supplement files for ${propertyAddress} are attached: ${fileList}.`;
 };
+
+export const buildTicketDeliverySmsText = (params: {
+  orgName: string;
+  ticket: Ticket;
+  contact?: Contact | null;
+  invoiceNumber: string;
+  fileNames: string[];
+}) => {
+  const firstName = getTicketClientFirstName(params.ticket, params.contact);
+  const propertyAddress = resolveTicketPropertyAddress(params.ticket);
+  const fileList =
+    params.fileNames.length > 0
+      ? params.fileNames.join(", ")
+      : "your supplement files";
+
+  return [
+    `${params.orgName} here:`,
+    firstName ? `Hi ${firstName},` : "Hi,",
+    `Thank you for your payment (${params.invoiceNumber}).`,
+    `Your supplement files for ${propertyAddress} are ready: ${fileList}.`,
+  ].join("\n");
+};
+
+export const buildTicketPaymentThankYouSmsText = (params: {
+  orgName: string;
+  ticket: Ticket;
+  contact?: Contact | null;
+  invoiceNumber: string;
+  amountFormatted: string;
+}) => {
+  const firstName = getTicketClientFirstName(params.ticket, params.contact);
+  const propertyAddress = resolveTicketPropertyAddress(params.ticket);
+
+  return [
+    `${params.orgName} here:`,
+    firstName ? `Hi ${firstName},` : "Hi,",
+    `We received your payment of ${params.amountFormatted} for invoice ${params.invoiceNumber}.`,
+    `Your supplement files for ${propertyAddress} will follow shortly.`,
+  ].join("\n");
+};

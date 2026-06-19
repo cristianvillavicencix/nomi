@@ -9,11 +9,13 @@ export {
   buildTicketDeliveryEmailHtml,
   buildTicketDeliveryEmailSubject,
   buildTicketDeliveryPreviewText,
+  buildTicketDeliverySmsText,
   buildTicketPaymentEmailHtml,
   buildTicketPaymentEmailSubject,
   buildTicketPaymentReminderSubject,
   buildTicketPaymentReminderSmsText,
   buildTicketPaymentSmsText,
+  buildTicketPaymentThankYouSmsText,
   resolveTicketPropertyAddress,
 } from "@/modules/tickets/ticketEmailTemplates";
 

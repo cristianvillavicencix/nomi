@@ -302,6 +302,8 @@ export type TicketDeliverable = {
   sort_order?: number;
   billing_kind?: "supplement" | "roof" | "siding" | "esx" | "pdf_analysis" | null;
   billing_line_count?: number | null;
+  invoiced_invoice_id?: Identifier | null;
+  delivered_at?: string | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
 

@@ -67,7 +67,7 @@ export const TicketStatusChangeDialog = ({
     try {
       await dataProvider.replyTicket({
         ticketId: request.ticket.id,
-        body: trimmed,
+        body: `**Status:** ${fromStatus} → ${toStatus}\n\n${trimmed}`,
         isInternalNote: true,
       });
       await update(

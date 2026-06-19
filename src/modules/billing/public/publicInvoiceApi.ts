@@ -77,6 +77,16 @@ export type PublicInvoicePayload = {
     email?: string | null;
     phone?: string | null;
   };
+  /** Ticket invoice delivery package shown on the public pay page. */
+  delivery?: {
+    file_count: number;
+    property_address?: string | null;
+    items?: Array<{
+      kind?: string | null;
+      line_count?: number | null;
+      label?: string | null;
+    }>;
+  } | null;
 };
 
 export const fetchPublicInvoice = (token: string) =>

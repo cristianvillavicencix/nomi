@@ -126,7 +126,7 @@ Deno.serve(
 
       const { data: invoiceRow } = await supabaseAdmin
         .from("client_invoices")
-        .select("company_id, contact_id, recipient_email")
+        .select("company_id, contact_id, recipient_email, ticket_id")
         .eq("id", invoice.id)
         .maybeSingle();
 
@@ -165,6 +165,43 @@ Deno.serve(
 
       const orgAddress = defaultOrganization.address;
 
+      let delivery: {
+        file_count: number;
+        property_address?: string | null;
+        items?: Array<{
+          kind?: string | null;
+          line_count?: number | null;
+          label?: string | null;
+        }>;
+      } | null = null;
+
+      if (invoiceRow?.ticket_id) {
+        const { data: ticket } = await supabaseAdmin
+          .from("tickets")
+          .select("subject")
+          .eq("id", invoiceRow.ticket_id)
+          .maybeSingle();
+
+        const { data: deliverables } = await supabaseAdmin
+          .from("ticket_deliverables")
+          .select("billing_kind, billing_line_count, title")
+          .eq("ticket_id", invoiceRow.ticket_id)
+          .order("sort_order", { ascending: true });
+
+        const fileCount = deliverables?.length ?? 0;
+        if (fileCount > 0) {
+          delivery = {
+            file_count: fileCount,
+            property_address: ticket?.subject?.trim() || null,
+            items: (deliverables ?? []).map((row) => ({
+              kind: row.billing_kind,
+              line_count: row.billing_line_count,
+              label: row.title,
+            })),
+          };
+        }
+      }
+
       let portalToken: string | null = null;
       if (invoiceRow?.contact_id) {
         const { data: portalAccount } = await supabaseAdmin
@@ -199,6 +236,7 @@ Deno.serve(
             phone: billToPhone,
           },
           portal_token: portalToken,
+          delivery,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

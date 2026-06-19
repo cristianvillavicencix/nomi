@@ -150,7 +150,7 @@ export const ClientPortalInvoicePage = () => {
 
   if (!loading && !error && payModeActive && payload) {
     return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center overflow-x-hidden bg-background px-3 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-4 sm:py-10">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center overflow-x-hidden bg-slate-50 px-3 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-4 sm:py-10">
         <PublicInvoicePaymentFlow
           token={payload.token}
           payload={payload}

@@ -44,6 +44,7 @@ import {
   publicInvoicePaymentSectionPadding,
   publicInvoicePaymentShellClass,
 } from "@/modules/billing/public/payInvoiceDialogLayout";
+import { PublicInvoicePaymentSummary } from "@/modules/billing/public/PublicInvoicePaymentSummary";
 import { cn } from "@/lib/utils";
 
 const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
@@ -704,10 +705,18 @@ const InvoiceStripePaymentFormInner = ({
 
   return (
     <>
+      {focusPaymentEntry ? (
+        <PublicInvoicePaymentSummary
+          payload={payload}
+          balanceDue={summary.balanceDue}
+          balanceDueFormatted={summary.balanceDueFormatted}
+        />
+      ) : null}
+
       <div
         className={cn(
           focusPaymentEntry
-            ? "px-4 pb-1 pt-5 sm:px-6"
+            ? "px-4 pb-1 pt-0 sm:px-6"
             : `${publicInvoicePaymentSectionPadding} pb-1 pt-4`,
           sheetLayout && "pb-4",
         )}
@@ -805,7 +814,7 @@ const InvoiceStripeCheckout = ({
   const shellClass = sheetLayout
     ? "w-full"
     : focusPaymentEntry
-      ? "mx-auto w-full max-w-[420px]"
+      ? "mx-auto w-full max-w-[440px] overflow-hidden rounded-2xl border border-border/50 bg-background shadow-sm"
       : publicInvoicePaymentShellClass;
 
   return (
@@ -953,7 +962,12 @@ const InvoiceMockPaymentForm = ({
 
   if (focusPaymentEntry) {
     return (
-      <div className="mx-auto w-full max-w-[420px]">
+      <div className="mx-auto w-full max-w-[440px] overflow-hidden rounded-2xl border border-border/50 bg-background shadow-sm">
+        <PublicInvoicePaymentSummary
+          payload={payload}
+          balanceDue={summary.balanceDue}
+          balanceDueFormatted={summary.balanceDueFormatted}
+        />
         <InvoicePaymentReviewActions
           summary={summary}
           paymentAmountState={paymentAmountState}
@@ -967,7 +981,7 @@ const InvoiceMockPaymentForm = ({
           onPay={() => payMutation.mutate()}
           focusPaymentEntry
         />
-        <p className="pb-2 text-center text-xs text-muted-foreground">
+        <p className="pb-4 text-center text-xs text-muted-foreground">
           Demo mode · No card required
         </p>
       </div>

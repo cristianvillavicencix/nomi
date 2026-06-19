@@ -32,6 +32,9 @@ export const ClientSmsComposer = ({
   replyToMessageId,
   onSent,
   disabled,
+  prefillRequest,
+  composerShape = "default",
+  compact = false,
 }: {
   contact?: Contact | null;
   dealId?: Identifier | null;
@@ -42,6 +45,9 @@ export const ClientSmsComposer = ({
     message: ConversationMessage;
   }) => void;
   disabled?: boolean;
+  prefillRequest?: { key: number; text: string } | null;
+  composerShape?: "default" | "square";
+  compact?: boolean;
 }) => {
   const notify = useNotify();
   const { identity } = useGetIdentity();
@@ -67,6 +73,18 @@ export const ClientSmsComposer = ({
       setIncludeSignature(orgSignatureSettings.sms_signature_enabled);
     }
   }, [orgSignatureSettings?.sms_signature_enabled]);
+
+  useEffect(() => {
+    if (!prefillRequest?.text) return;
+    setBody(prefillRequest.text);
+    window.requestAnimationFrame(() => {
+      const node = textareaRef.current;
+      if (!node) return;
+      node.focus();
+      const length = prefillRequest.text.length;
+      node.setSelectionRange(length, length);
+    });
+  }, [prefillRequest?.key, prefillRequest?.text]);
 
   const canSend =
     !disabled &&
@@ -192,7 +210,10 @@ export const ClientSmsComposer = ({
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "space-y-2 border-t border-border/40 px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] bg-background",
+        "space-y-2 border-t border-border/40 bg-background",
+        compact
+          ? "px-3 pt-2.5 pb-2.5"
+          : "px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]",
         isInternalNote && "bg-amber-50/40 dark:bg-amber-500/5",
       )}
     >
@@ -204,7 +225,12 @@ export const ClientSmsComposer = ({
         />
       ) : null}
       {!isInternalNote && signature ? (
-        <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+        <div
+          className={cn(
+            "flex items-center gap-2 px-1 text-muted-foreground",
+            compact ? "text-[10px]" : "text-xs",
+          )}
+        >
           <Switch
             id="signature-toggle"
             checked={includeSignature}
@@ -248,7 +274,13 @@ export const ClientSmsComposer = ({
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2 rounded-[1.35rem] border border-border/60 bg-muted/25 px-2 py-2 pr-3 dark:bg-muted/20">
+      <div
+        className={cn(
+          "flex items-end gap-1.5 border border-border/60 bg-muted/25 dark:bg-muted/20",
+          compact ? "px-1.5 py-1.5 pr-2" : "gap-2 px-2 py-2 pr-3",
+          composerShape === "square" ? "rounded-none" : "rounded-[1.35rem]",
+        )}
+      >
         <input
           ref={fileInputRef}
           type="file"
@@ -267,12 +299,15 @@ export const ClientSmsComposer = ({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-11 shrink-0 rounded-full"
+          className={cn(
+            "shrink-0 rounded-full",
+            compact ? "size-8" : "size-11",
+          )}
           disabled={disabled || isSending}
           aria-label="Attach file or photo"
           onClick={() => fileInputRef.current?.click()}
         >
-          <Paperclip className="size-4" />
+          <Paperclip className={compact ? "size-3.5" : "size-4"} />
         </Button>
 
         <SmsWebFormPicker
@@ -296,7 +331,12 @@ export const ClientSmsComposer = ({
           }}
           onPaste={handlePaste}
           placeholder="Write an SMS… paste text, photos, or form links"
-          className="min-h-[44px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none field-sizing-fixed focus-visible:ring-0"
+          className={cn(
+            "flex-1 resize-none border-0 bg-transparent px-2 py-1.5 shadow-none field-sizing-fixed focus-visible:ring-0",
+            compact
+              ? "min-h-[2.25rem] max-h-24 text-xs"
+              : "min-h-[44px] max-h-32 text-sm",
+          )}
           rows={1}
           disabled={disabled || isSending}
           onKeyDown={(event) => {
@@ -310,11 +350,15 @@ export const ClientSmsComposer = ({
         <Button
           type="submit"
           size="icon"
-          className="size-11 shrink-0 rounded-full"
+          className={cn(
+            "shrink-0",
+            compact ? "size-8" : "size-11",
+            composerShape === "square" ? "rounded-none" : "rounded-full",
+          )}
           disabled={!canSend}
           aria-label={isInternalNote ? "Add internal note" : "Send SMS"}
         >
-          <Send className="size-4" />
+          <Send className={compact ? "size-3.5" : "size-4"} />
         </Button>
       </div>
     </form>

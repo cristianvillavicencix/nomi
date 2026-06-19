@@ -1,6 +1,7 @@
 import { Mail, Paperclip, Pencil, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   TicketListAssigneeControl,
@@ -10,6 +11,7 @@ import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
 import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
 import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
+import { isTicketAwaitingPayment } from "@/modules/tickets/ticketOutboundAttachments";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { OrganizationMember, Ticket } from "@/modules/types";
@@ -55,6 +57,7 @@ export const TicketListItem = ({
   const companyName = company?.name?.trim() || null;
   const meta = getTicketListMeta(ticket, company, contact);
   const isUnread = !selected && isTicketUnread(ticket, lastReadAt);
+  const awaitingPayment = isTicketAwaitingPayment(ticket);
 
   const contactName = (() => {
     if (contact) {
@@ -81,9 +84,11 @@ export const TicketListItem = ({
             ? "border-l-[3px] border-l-blue-600 bg-[#faf8f4]"
             : bulkSelected
               ? "border-l-[3px] border-l-primary/50 bg-primary/5"
-              : isUnread
-                ? "border-l-[3px] border-l-sky-500 bg-sky-50/75"
-                : "border-l-[3px] border-l-transparent bg-muted/20",
+              : awaitingPayment
+                ? "border-l-[3px] border-l-amber-500 bg-amber-50/85 dark:bg-amber-950/25"
+                : isUnread
+                  ? "border-l-[3px] border-l-sky-500 bg-sky-50/75"
+                  : "border-l-[3px] border-l-transparent bg-muted/20",
         )}
       >
         <div
@@ -121,6 +126,14 @@ export const TicketListItem = ({
                     editable={false}
                     className="min-w-0 flex-1 text-sm font-semibold leading-snug"
                   />
+                  {awaitingPayment ? (
+                    <Badge
+                      variant="outline"
+                      className="mt-0.5 shrink-0 rounded-none border-amber-300 bg-amber-100 px-1.5 py-0 text-[10px] font-medium text-amber-900 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-100"
+                    >
+                      Awaiting payment
+                    </Badge>
+                  ) : null}
                   {hasAttachments ? (
                     <Paperclip
                       className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"

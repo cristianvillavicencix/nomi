@@ -217,6 +217,30 @@ export const ticketsProvider = {
     return data;
   },
 
+  async startNewTicketInvoice({ ticketId }: { ticketId: Identifier }) {
+    const { data, error } = await invokeEdgeFunction<{
+      previous_invoice_number: string | null;
+      unbilled_deliverable_count: number;
+      already_in_new_cycle?: boolean;
+    }>("start_new_ticket_invoice", {
+      method: "POST",
+      body: { ticket_id: Number(ticketId) },
+    });
+
+    if (error || !data) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Could not start a new invoice",
+            )
+          : "Could not start a new invoice",
+      );
+    }
+
+    return data;
+  },
+
   async deliverTicket({ ticketId }: { ticketId: Identifier }) {
     const { data, error } = await invokeEdgeFunction<{
       delivered: boolean;

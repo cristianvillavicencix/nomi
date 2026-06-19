@@ -66,6 +66,8 @@ type ContactFormDialogProps = {
   description?: string;
   submitLabel?: string;
   navigateOnCreate?: boolean;
+  /** Merged into create form defaultValues (e.g. ticket sender prefill). */
+  createDefaults?: Record<string, unknown>;
   onCreated?: (contact: Contact) => void;
   onDraftSubmit?: (draft: PrimaryContactDraft) => void;
 };
@@ -189,6 +191,7 @@ export const ContactFormDialog = ({
   description = "Person linked to a client company. Company is required.",
   submitLabel,
   navigateOnCreate = true,
+  createDefaults,
   onCreated,
   onDraftSubmit,
 }: ContactFormDialogProps) => {
@@ -370,8 +373,12 @@ export const ContactFormDialog = ({
         >
           <Form
             id="lbs-contact-form"
+            key={createDefaults ? JSON.stringify(createDefaults) : "lbs-contact-form"}
             className="flex min-h-0 flex-1 flex-col"
-            defaultValues={defaultCreateValues(formLockCompanyId)}
+            defaultValues={{
+              ...defaultCreateValues(formLockCompanyId),
+              ...createDefaults,
+            }}
           >
             <ContactFormDialogChrome
               title={resolvedTitle}

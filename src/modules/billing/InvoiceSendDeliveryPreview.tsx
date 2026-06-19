@@ -85,7 +85,7 @@ const SmsPreviewPanel = ({
     ) : null}
     {sendSms && smsTo.trim() ? (
       <div className="flex justify-end">
-        <div className="max-w-[92%] rounded-2xl rounded-br-md bg-[#007AFF] px-3 py-2.5 text-[12px] leading-relaxed text-white shadow-sm">
+        <div className="max-w-[92%] rounded-none rounded-br-md border border-border bg-muted/50 px-3 py-2.5 text-[12px] leading-relaxed text-foreground dark:bg-muted/30">
           <p className="whitespace-pre-wrap">{smsText}</p>
         </div>
       </div>

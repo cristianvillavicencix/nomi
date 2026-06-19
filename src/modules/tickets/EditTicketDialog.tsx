@@ -9,7 +9,7 @@ import {
   useUpdate,
   type Identifier,
 } from "ra-core";
-import { Loader2, X } from "lucide-react";
+import { Loader2, UserPlus, X } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
@@ -33,11 +33,13 @@ import {
 } from "@/components/ui/dialog";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { getContactFullName } from "@/modules/clients/clientShowUtils";
+import { getContactEmail, getContactFullName } from "@/modules/clients/clientShowUtils";
 import {
+  buildContactCreateDefaultsFromTicket,
   contactMatchesId,
   resolveRequesterFromContactAndCompany,
 } from "@/modules/tickets/ticketRequester";
+import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import { CONTACT_STATUS_FILTER } from "@/modules/shared/relatedFilters";
 import type { Ticket } from "@/modules/types";
 import { cn } from "@/lib/utils";
@@ -204,7 +206,11 @@ const EditTicketDialogBody = ({
   onOpenChange: (open: boolean) => void;
 }) => {
   const guardedClose = useGuardedDialogClose(onOpenChange);
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [update] = useUpdate();
   const { setValue } = useFormContext<EditTicketFormValues>();
+  const [createContactOpen, setCreateContactOpen] = useState(false);
   const companyId = useWatch({ name: "company_id" });
   const contactId = useWatch({ name: "contact_id" });
   const requesterEmail = useWatch({ name: "requester_email" });
@@ -311,6 +317,52 @@ const EditTicketDialogBody = ({
   const displayEmail =
     requesterEmail?.trim() || recipientFromClient.email || null;
 
+  const canCreateContactFromTicket =
+    !selectedContact &&
+    Boolean(requesterEmail?.trim() || requesterName?.trim());
+
+  const contactCreateDefaults = useMemo(
+    () => buildContactCreateDefaultsFromTicket(ticket, companyId ?? ticket.company_id),
+    [ticket, companyId],
+  );
+
+  const linkContactToTicket = async (contact: Contact) => {
+    const resolved = resolveRequesterFromContactAndCompany(contact, company);
+    setValue("contact_id", contact.id, { shouldDirty: true });
+    if (contact.company_id != null) {
+      setValue("company_id", contact.company_id, { shouldDirty: true });
+    }
+    if (resolved.email) {
+      setValue("requester_email", resolved.email, { shouldDirty: true });
+    }
+    if (resolved.name) {
+      setValue("requester_name", resolved.name, { shouldDirty: true });
+    }
+
+    await update(
+      "tickets",
+      {
+        id: ticket.id,
+        data: {
+          contact_id: contact.id,
+          company_id: contact.company_id ?? companyId ?? ticket.company_id ?? null,
+          requester_email:
+            resolved.email ||
+            getContactEmail(contact) ||
+            ticket.requester_email,
+          requester_name:
+            resolved.name ||
+            getContactFullName(contact) ||
+            ticket.requester_name,
+        },
+        previousData: ticket,
+      },
+      { returnPromise: true },
+    );
+    refresh();
+    notify("Contact created and linked to this ticket", { type: "success" });
+  };
+
   return (
     <>
       <DialogHeader className="relative shrink-0 space-y-1 border-b bg-background px-5 py-4 pr-12 text-left sm:px-6 sm:pr-14">
@@ -393,10 +445,31 @@ const EditTicketDialogBody = ({
             </div>
           ) : (
             <div className="space-y-3 rounded-lg border border-dashed px-3 py-3">
+              {canCreateContactFromTicket ? (
+                <div className="rounded-none border border-border bg-muted/30 px-3 py-2.5">
+                  <p className="text-sm text-foreground">
+                    This sender is not saved as a contact yet.
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Create a contact from the name and email on this ticket. You
+                    can finish company details in the same form.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 rounded-none"
+                    onClick={() => setCreateContactOpen(true)}
+                  >
+                    <UserPlus className="size-4" />
+                    Create contact from sender
+                  </Button>
+                </div>
+              ) : null}
               <p className="text-xs text-muted-foreground">
                 {contactId
                   ? "This contact has no email on file. Enter who should receive replies."
-                  : "Select a contact, or enter who should receive replies manually."}
+                  : "Select a contact above, or enter who should receive replies manually."}
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <TextInput
@@ -445,6 +518,20 @@ const EditTicketDialogBody = ({
           )}
         </DialogFormSubmitButton>
       </DialogFooter>
+
+      <ContactFormDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+        lockCompanyId={companyId ?? ticket.company_id ?? undefined}
+        navigateOnCreate={false}
+        createDefaults={contactCreateDefaults}
+        title="Create contact from ticket"
+        description="We filled in what we already know from this ticket. Pick or add a company, then save."
+        submitLabel="Create and link contact"
+        onCreated={(contact) => {
+          void linkContactToTicket(contact);
+        }}
+      />
     </>
   );
 };

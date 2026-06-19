@@ -74,6 +74,7 @@ type TicketInvoicePreviewDialogProps = {
   ticket: Ticket;
   company?: Company | null;
   contact?: Contact | null;
+  onInvoiceSent?: () => void;
 };
 
 const StepIndicator = ({ step }: { step: PreviewStep }) => (
@@ -104,6 +105,7 @@ export const TicketInvoicePreviewDialog = ({
   ticket,
   company,
   contact,
+  onInvoiceSent,
 }: TicketInvoicePreviewDialogProps) => {
   const notify = useNotify();
   const refresh = useRefresh();
@@ -188,6 +190,7 @@ export const TicketInvoicePreviewDialog = ({
       notify("Invoice sent — files will deliver after payment", {
         type: "success",
       });
+      onInvoiceSent?.();
       onOpenChange(false);
       refresh();
     },

@@ -75,11 +75,14 @@ type StandaloneInvoiceEditPageProps = {
   embedded?: boolean;
   /** When embedded, pass the invoice id directly instead of reading from the URL. */
   invoiceId?: string;
+  /** Called after a successful save when embedded (e.g. ticket invoice edit). */
+  onSaved?: (invoice: ClientInvoice) => void | Promise<void>;
 };
 
 export const StandaloneInvoiceEditPage = ({
   embedded = false,
   invoiceId: invoiceIdProp,
+  onSaved,
 }: StandaloneInvoiceEditPageProps = {}) => {
   const { id: routeId = "" } = useParams();
   const id = invoiceIdProp ?? routeId;
@@ -343,12 +346,15 @@ export const StandaloneInvoiceEditPage = ({
 
       return { action, invoice: updated };
     },
-    onSuccess: ({ action, invoice: updated, shareUrl: link }) => {
+    onSuccess: async ({ action, invoice: updated, shareUrl: link }) => {
       setSavedInvoice(updated);
 
       if (action === "draft") {
         notify("Invoice saved", { type: "success" });
         refresh();
+        if (embedded && onSaved) {
+          await onSaved(updated);
+        }
         return;
       }
 

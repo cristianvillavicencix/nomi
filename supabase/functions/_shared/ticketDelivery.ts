@@ -43,14 +43,26 @@ export async function deliverTicketAfterInvoicePayment(
   }
 
   if (ticket.delivery_status === "delivered") {
-    return { delivered: true, skipped: true, duplicate: true };
+    const { count: pendingForInvoice } = await supabase
+      .from("ticket_deliverables")
+      .select("id", { count: "exact", head: true })
+      .eq("ticket_id", ticket.id)
+      .eq("org_id", params.orgId)
+      .eq("invoiced_invoice_id", invoice.id)
+      .is("delivered_at", null);
+
+    if (!pendingForInvoice) {
+      return { delivered: true, skipped: true, duplicate: true };
+    }
   }
 
   const { data: deliverables } = await supabase
     .from("ticket_deliverables")
-    .select("title, type, path, src, sort_order")
+    .select("id, title, type, path, src, sort_order")
     .eq("ticket_id", ticket.id)
     .eq("org_id", params.orgId)
+    .eq("invoiced_invoice_id", invoice.id)
+    .is("delivered_at", null)
     .order("sort_order", { ascending: true });
 
   if (!deliverables?.length) {
@@ -142,6 +154,14 @@ export async function deliverTicketAfterInvoicePayment(
   if (messageError) {
     throw new Error(messageError.message ?? "Could not save delivery message");
   }
+
+  await supabase
+    .from("ticket_deliverables")
+    .update({ delivered_at: now })
+    .eq("ticket_id", ticket.id)
+    .eq("org_id", params.orgId)
+    .eq("invoiced_invoice_id", invoice.id)
+    .is("delivered_at", null);
 
   await supabase
     .from("tickets")

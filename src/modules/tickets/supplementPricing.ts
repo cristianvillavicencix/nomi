@@ -262,3 +262,27 @@ export const deliverableBillingSummary = (
   }
   return `${line.description} · ${formatSupplementMoney(line.lineTotal)}`;
 };
+
+export const deliverableBillingShortLabel = (
+  deliverable: DeliverableBillingInput,
+) => {
+  if (!deliverable.billing_kind) return "Billing not set";
+  if (deliverable.billing_kind === "supplement") {
+    return `Supplement · ${deliverable.billing_line_count ?? 0} lines`;
+  }
+  return deliverableBillingKindLabel(
+    deliverable.billing_kind as DeliverableBillingKind,
+  );
+};
+
+export const deliverableBillingLineTotal = (
+  deliverable: DeliverableBillingInput,
+  propertyAddress: string,
+) => {
+  if (!deliverable.billing_kind) return null;
+  return buildDeliverablePricingLine(
+    deliverable.billing_kind as DeliverableBillingKind,
+    propertyAddress,
+    deliverable.billing_line_count,
+  ).lineTotal;
+};
