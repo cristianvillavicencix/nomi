@@ -15,12 +15,14 @@ export type ClientChannelFormValue = {
 
 export const CHANNEL_TYPE_CHOICES = [
   { id: "Work", name: "Work" },
+  { id: "Mobile", name: "Mobile" },
   { id: "Home", name: "Home" },
   { id: "Other", name: "Other" },
 ] as const;
 
 export const COMPANY_CHANNEL_TYPE_CHOICES = [
   { id: "Work", name: "Work" },
+  { id: "Mobile", name: "Mobile" },
   { id: "Billing", name: "Billing" },
   { id: "Other", name: "Other" },
 ] as const;

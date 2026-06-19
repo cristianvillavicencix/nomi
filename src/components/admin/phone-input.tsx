@@ -81,12 +81,15 @@ export const PhoneInput = (props: PhoneInputProps) => {
       <FormControl>
         <Input
           {...rest}
-          {...field}
+          id={id}
+          name={field.name}
+          ref={field.ref}
           autoComplete="tel-national"
           value={displayValue}
           onChange={(event) => {
-            setDisplayValue(event.target.value);
-            field.onChange(event);
+            const rawValue = event.target.value;
+            setDisplayValue(rawValue);
+            field.onChange(rawValue);
             onChange?.(event);
           }}
           onBlur={(event) => {
@@ -97,6 +100,7 @@ export const PhoneInput = (props: PhoneInputProps) => {
               setDisplayValue(formatUsPhoneDisplayFromAny(normalized));
             } else {
               field.onChange(rawValue);
+              setDisplayValue(rawValue);
             }
             field.onBlur();
             onBlur?.(event);

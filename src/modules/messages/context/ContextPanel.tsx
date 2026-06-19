@@ -1,24 +1,47 @@
 import { Link } from "react-router";
-import { ExternalLink, Phone, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { ExternalLink, Mail, Phone, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Contact, Conversation, LbsDeal } from "@/modules/types";
-import { getContactDisplayName } from "@/modules/messages/messageContactUtils";
+import {
+  getContactDisplayName,
+  getContactPhoneEntries,
+} from "@/modules/messages/messageContactUtils";
 import { StatusBadge } from "@/modules/messages/status/StatusBadge";
 import { useMaskedAmount } from "@/lib/permissions/useMaskedAmount";
+import { getPersonShowPath } from "@/app/routing";
+import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { cn } from "@/lib/utils";
+
+const DetailSection = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) => (
+  <div>
+    <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      {label}
+    </div>
+    <div className="mt-1.5 space-y-1">{children}</div>
+  </div>
+);
 
 export const ContextPanelContent = ({
   conversation,
   contact,
   deal,
+  activeSmsPhone,
 }: {
   conversation: Conversation | null;
   contact?: Contact;
   deal?: LbsDeal;
+  activeSmsPhone?: string | null;
 }) => {
   const maskedAmount = useMaskedAmount(deal?.amount ?? null);
 
-  if (!conversation) {
+  if (!conversation && !contact) {
     return (
       <div className="flex h-full min-h-[200px] items-center justify-center p-6 text-center text-sm text-muted-foreground">
         Select a conversation to see contact and project context.
@@ -26,33 +49,121 @@ export const ContextPanelContent = ({
     );
   }
 
+  const phoneEntries = contact ? getContactPhoneEntries(contact) : [];
+  const emailEntries =
+    contact?.email_jsonb?.filter((entry) => entry.email?.trim()) ?? [];
+
   return (
     <div className="space-y-5 p-5">
-      <div>
-        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          Conversation
-        </div>
-        <div className="mt-1 text-base font-semibold">
-          {conversation.title ?? "Untitled"}
-        </div>
-        <div className="mt-2">
-          <StatusBadge status={conversation.status} />
-        </div>
-      </div>
-
-      {contact ? (
+      {conversation ? (
         <div>
           <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Contact
+            Conversation
           </div>
-          <div className="mt-1 font-medium">
-            {getContactDisplayName(contact)}
+          <div className="mt-1 text-base font-semibold">
+            {conversation.title ?? "Untitled"}
           </div>
-          {contact.company_name ? (
-            <div className="text-sm text-muted-foreground">
-              {contact.company_name}
-            </div>
+          <div className="mt-2">
+            <StatusBadge status={conversation.status} />
+          </div>
+          {conversation.type === "client" &&
+          (activeSmsPhone ?? conversation.external_phone) ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              SMS to{" "}
+              <span className="font-medium text-foreground">
+                {formatUsPhoneDisplayFromAny(
+                  activeSmsPhone ?? conversation.external_phone ?? "",
+                )}
+              </span>
+            </p>
           ) : null}
+        </div>
+      ) : null}
+
+      {contact ? (
+        <div className="space-y-4">
+          <DetailSection label="Contact">
+            <p className="font-medium">{getContactDisplayName(contact)}</p>
+            {contact.title?.trim() ? (
+              <p className="text-sm text-muted-foreground">{contact.title}</p>
+            ) : null}
+            {contact.company_name ? (
+              <p className="text-sm text-muted-foreground">
+                {contact.company_name}
+              </p>
+            ) : null}
+          </DetailSection>
+
+          {phoneEntries.length > 0 ? (
+            <DetailSection label="Phone numbers">
+              <ul className="space-y-1.5 text-sm">
+                {phoneEntries.map((entry) => {
+                  const isActive =
+                    activeSmsPhone != null && entry.e164 === activeSmsPhone;
+                  return (
+                    <li
+                      key={entry.e164}
+                      className={cn(
+                        "flex items-start gap-2",
+                        isActive && "font-medium text-foreground",
+                      )}
+                    >
+                      <Phone className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                      <span>
+                        {entry.display}
+                        {entry.label !== "Phone" ? (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {entry.label}
+                          </span>
+                        ) : null}
+                        {isActive ? (
+                          <span className="ml-1 text-[11px] text-muted-foreground">
+                            (SMS)
+                          </span>
+                        ) : null}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </DetailSection>
+          ) : null}
+
+          {emailEntries.length > 0 ? (
+            <DetailSection label="Email">
+              <ul className="space-y-1.5 text-sm">
+                {emailEntries.map((entry, index) => (
+                  <li key={`${entry.email}-${index}`} className="flex gap-2">
+                    <Mail className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                    <a
+                      href={`mailto:${entry.email}`}
+                      className="break-all text-foreground hover:underline"
+                    >
+                      {entry.email}
+                    </a>
+                    {entry.type?.trim() ? (
+                      <span className="shrink-0 text-muted-foreground">
+                        · {entry.type}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </DetailSection>
+          ) : null}
+
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+          >
+            <Link to={getPersonShowPath(contact)}>
+              <UserRound className="mr-2 size-4" />
+              Open contact
+            </Link>
+          </Button>
         </div>
       ) : null}
 
@@ -104,12 +215,14 @@ export const ContextPanel = ({
   conversation,
   contact,
   deal,
+  activeSmsPhone,
   open,
   onClose,
 }: {
   conversation: Conversation | null;
   contact?: Contact;
   deal?: LbsDeal;
+  activeSmsPhone?: string | null;
   open: boolean;
   onClose?: () => void;
 }) => (
@@ -145,6 +258,7 @@ export const ContextPanel = ({
         conversation={conversation}
         contact={contact}
         deal={deal}
+        activeSmsPhone={activeSmsPhone}
       />
     </div>
   </aside>

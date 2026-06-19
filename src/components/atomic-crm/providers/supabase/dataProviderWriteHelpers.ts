@@ -152,6 +152,128 @@ export const normalizeContactData = <
   phone_jsonb: normalizePhoneEntries(data.phone_jsonb),
 });
 
+/** Fields from contacts_summary / form UI that must not be PATCHed to contacts. */
+const CONTACT_READ_ONLY_WRITE_FIELDS = [
+  "company_name",
+  "nb_tasks",
+  "full_name",
+  "name",
+  "is_primary_contact",
+] as const;
+
+/** Fields from companies_summary that must not be PATCHed to companies. */
+const COMPANY_READ_ONLY_WRITE_FIELDS = [
+  "nb_deals",
+  "nb_contacts",
+  "primary_contact_first_name",
+  "primary_contact_last_name",
+  "primary_contact_status",
+  "primary_contact_email_jsonb",
+  "primary_contact_phone_jsonb",
+  "primary_contact_lead_source",
+  "primary_contact_interested_service",
+] as const;
+
+export const prepareCompanyWriteData = <
+  T extends Record<string, unknown>,
+>(
+  data: T,
+): T => {
+  const rest = { ...data };
+
+  for (const field of COMPANY_READ_ONLY_WRITE_FIELDS) {
+    delete rest[field];
+  }
+
+  if ("phone_number" in rest) {
+    const raw = rest.phone_number;
+    if (raw == null || String(raw).trim() === "") {
+      rest.phone_number = null;
+    } else {
+      const normalized = normalizeUsPhoneToE164(String(raw).trim());
+      if (!normalized) {
+        throw new Error("Invalid phone. Use 10 digits");
+      }
+      rest.phone_number = normalized;
+    }
+  }
+
+  return rest as T;
+};
+
+export const prepareContactWriteData = <
+  T extends Record<string, unknown>,
+>(
+  data: T,
+): T => {
+  const {
+    _company_draft_name: _draftName,
+    _company_draft_sector: _draftSector,
+    _primary_move_confirmed: _confirmed,
+    _compact_first_name: _compactFirst,
+    _compact_last_name: _compactLast,
+    _compact_email: _compactEmail,
+    _compact_phone: _compactPhone,
+    ...rest
+  } = data;
+
+  for (const field of CONTACT_READ_ONLY_WRITE_FIELDS) {
+    delete rest[field];
+  }
+
+  return normalizeContactData(rest as T & {
+    email_jsonb?: EmailAndType[];
+    phone_jsonb?: PhoneNumberAndType[];
+  });
+};
+
+const CONTACT_UPDATE_OMIT_FIELDS = [
+  "id",
+  "org_id",
+  "company_name",
+  "nb_tasks",
+  "full_name",
+  "name",
+  "is_primary_contact",
+] as const;
+
+export const fetchContactSummaryById = async (contactId: Identifier) =>
+  getOneFromResourceMaybeSingle("contacts_summary", contactId);
+
+export const patchContactRow = async ({
+  contactId,
+  orgId,
+  data,
+}: {
+  contactId: Identifier;
+  orgId: Identifier;
+  data: Record<string, unknown>;
+}) => {
+  const payload = prepareContactWriteData({ ...data });
+  for (const field of CONTACT_UPDATE_OMIT_FIELDS) {
+    delete payload[field];
+  }
+
+  const { data: row, error } = await supabase
+    .from("contacts")
+    .update(payload)
+    .eq("id", contactId)
+    .eq("org_id", orgId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "Failed to update contact");
+  }
+  if (row == null) {
+    throw new Error(
+      "Contact not found or you do not have permission to update it.",
+    );
+  }
+
+  return row;
+};
+
 export const getOneFromResourceMaybeSingle = async (
   resource: string,
   id: Identifier,

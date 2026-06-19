@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
-import { useGetIdentity } from "ra-core";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useDataProvider, useGetIdentity } from "ra-core";
 import { PageLayout } from "@/components/atomic-crm/layout/page-shell";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Conversation } from "@/modules/types";
 import { MessagesWorkspace } from "@/modules/messages/MessagesWorkspace";
 import { INBOX_PAGE_SIZE } from "@/modules/messages/inbox/MessagesInbox";
@@ -11,6 +12,7 @@ import { requestMessagingDesktopNotifications } from "@/modules/messages/messagi
 
 export const MessagesPage = () => {
   const isMobile = useIsMobile();
+  const dataProvider = useDataProvider<CrmDataProvider>();
   const { identity } = useGetIdentity();
   const [inboxPageSize, setInboxPageSize] = useState(INBOX_PAGE_SIZE);
   const [loadingMoreInbox, setLoadingMoreInbox] = useState(false);
@@ -19,6 +21,7 @@ export const MessagesPage = () => {
     clearFocusedConversation,
     draftSms,
     clearDraftSms,
+    setDraftSms,
     focusConversation,
     setActiveConversationId,
     viewConversation,
@@ -82,6 +85,53 @@ export const MessagesPage = () => {
     if (isMobile) setMobileShowChat(true);
   };
 
+  const handleClientSmsPhoneChange = useCallback(
+    async (phone: string) => {
+      const contact =
+        draftSms?.contact ??
+        (selectedConversation?.contact_id != null
+          ? contacts.find(
+              (entry) =>
+                String(entry.id) === String(selectedConversation.contact_id),
+            )
+          : undefined);
+      if (!contact) return;
+
+      if (
+        selectedConversation?.type === "client" &&
+        selectedConversation.external_phone === phone
+      ) {
+        return;
+      }
+
+      const existing = await dataProvider.findClientConversationForContact(
+        contact.id,
+        phone,
+      );
+      if (existing?.last_message_at) {
+        handleSelectConversation(existing);
+        return;
+      }
+
+      setDraftSms({
+        contact,
+        dealId:
+          selectedConversation?.deal_id ?? draftSms?.dealId ?? null,
+        externalPhone: phone,
+      });
+      setSelectedConversation(null);
+      setActiveConversationId(null);
+    },
+    [
+      contacts,
+      dataProvider,
+      draftSms,
+      selectedConversation,
+      setActiveConversationId,
+      setDraftSms,
+    ],
+  );
+
   return (
     <PageLayout className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border/40 bg-background shadow-sm">
       <MessagesWorkspace
@@ -95,6 +145,7 @@ export const MessagesPage = () => {
         clientSmsDraft={draftSms}
         onSelectConversation={handleSelectConversation}
         onClientSmsSent={handleClientSmsSent}
+        onClientSmsPhoneChange={(phone) => void handleClientSmsPhoneChange(phone)}
         isPending={isPending}
         isMobile={isMobile}
         showMobileChat={mobileShowChat}

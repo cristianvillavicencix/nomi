@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useListContext } from "ra-core";
-import {
-  FileAttachmentPillList,
-  getFileKind,
-  type FileAttachment,
-} from "@/lib/fileAttachments";
+import type { FileAttachment } from "@/lib/fileAttachments";
 import type { TicketMessage } from "@/modules/types";
-import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
+import { TicketMessageContent } from "@/modules/tickets/TicketMessageContent";
 import { useTicketReadCutoff } from "@/modules/tickets/TicketReadCutoffContext";
 import { isInboundMessageUnread } from "@/modules/tickets/ticketReadState";
 import { formatTicketMessageTime } from "@/modules/tickets/ticketInboxUi";
@@ -48,12 +44,6 @@ const TicketThreadMessage = ({
   const attachments = Array.isArray(message.attachments)
     ? (message.attachments as FileAttachment[])
     : [];
-  const imageAttachments = attachments.filter(
-    (file) => getFileKind(file) === "image" && file.src,
-  );
-  const fileAttachments = attachments.filter(
-    (file) => getFileKind(file) !== "image" || !file.src,
-  );
   const preview = useMemo(() => getMessagePreview(message), [message]);
 
   if (isInternal) {
@@ -91,9 +81,12 @@ const TicketThreadMessage = ({
           />
         </button>
         {!collapsed ? (
-          <div className="mt-2 text-amber-950 [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5">
-            <TicketMessageBody body={message.body} htmlBody={message.html_body} />
-          </div>
+          <TicketMessageContent
+            body={message.body}
+            htmlBody={message.html_body}
+            attachments={attachments}
+            className="mt-2 text-amber-950 [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+          />
         ) : null}
       </article>
     );
@@ -144,34 +137,12 @@ const TicketThreadMessage = ({
       </button>
 
       {!collapsed ? (
-        <>
-          <div className={cn("mt-2", !inbound && "text-sky-950")}>
-            <TicketMessageBody body={message.body} htmlBody={message.html_body} />
-          </div>
-          {imageAttachments.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {imageAttachments.map((file, index) => (
-                <a
-                  key={`${message.id}-image-${index}`}
-                  href={file.src}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={file.title || "Image attachment"}
-                  className="block overflow-hidden border"
-                >
-                  <img
-                    src={file.src}
-                    alt={file.title || "Attachment"}
-                    className="max-h-48 max-w-full object-contain"
-                  />
-                </a>
-              ))}
-            </div>
-          ) : null}
-          {fileAttachments.length > 0 ? (
-            <FileAttachmentPillList attachments={fileAttachments} />
-          ) : null}
-        </>
+        <TicketMessageContent
+          body={message.body}
+          htmlBody={message.html_body}
+          attachments={attachments}
+          className={cn("mt-2", !inbound && "text-sky-950")}
+        />
       ) : null}
     </article>
   );

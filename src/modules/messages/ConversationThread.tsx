@@ -35,12 +35,16 @@ export const ConversationThread = ({
   clientSmsDraft,
   composerContact,
   onClientSmsSent,
+  clientSmsExternalPhone,
+  onClientSmsPhoneChange,
   emptyLabel = "No messages yet. Say hello to the team.",
 }: {
   conversation: Conversation | null;
   clientSmsDraft?: ClientSmsDraft | null;
   composerContact?: Contact | null;
   onClientSmsSent?: (conversation: Conversation) => void;
+  clientSmsExternalPhone?: string | null;
+  onClientSmsPhoneChange?: (phone: string) => void;
   emptyLabel?: string;
 }) => {
   const { identity } = useGetIdentity();
@@ -226,6 +230,8 @@ export const ConversationThread = ({
             conversationId={conversation?.id}
             replyToMessageId={replyToMessageId}
             disabled={!canSendMessages}
+            externalPhone={clientSmsExternalPhone}
+            onExternalPhoneChange={onClientSmsPhoneChange}
             onSent={({ conversation: nextConversation, message }) => {
               onClientSmsSent?.(nextConversation);
               if (message?.created_at && nextConversation?.id != null) {

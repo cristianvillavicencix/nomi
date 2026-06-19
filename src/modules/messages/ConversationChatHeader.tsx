@@ -18,6 +18,7 @@ import { ChangeStatusDropdown } from "@/modules/messages/status/ChangeStatusDrop
 import { SendFormButton } from "@/modules/forms/share/SendFormButton";
 import { useOrgPresence } from "@/modules/messages/useOrgPresence";
 import { getOtherDmMemberId } from "@/modules/messages/useDirectMessage";
+import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { cn } from "@/lib/utils";
 
 const AssigneeChip = ({
@@ -177,6 +178,16 @@ export const ConversationChatHeader = ({
                   : "Offline"
                 : display.typeLabel}
             </span>
+            {conversation.type === "client" && conversation.external_phone ? (
+              <>
+                <span aria-hidden className="opacity-50">
+                  ·
+                </span>
+                <span className="truncate font-medium text-foreground/80">
+                  {formatUsPhoneDisplayFromAny(conversation.external_phone)}
+                </span>
+              </>
+            ) : null}
             {assignee ? (
               <>
                 <span aria-hidden className="opacity-50">

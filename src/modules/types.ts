@@ -525,6 +525,8 @@ export type VoiceCall = {
 export type ClientSmsDraft = {
   contact: Contact;
   dealId?: Identifier | null;
+  /** E.164 number to use when the contact has multiple phones. */
+  externalPhone?: string | null;
 };
 
 export type BusinessHoursDay = {

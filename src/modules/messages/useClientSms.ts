@@ -13,11 +13,17 @@ export const useOpenClientSms = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
 
   const findClientConversation = useCallback(
-    async (contact: Contact): Promise<Conversation | null> => {
+    async (
+      contact: Contact,
+      externalPhone?: string | null,
+    ): Promise<Conversation | null> => {
       if (!contactHasSmsPhone(contact)) {
         throw new Error("This contact has no valid phone number");
       }
-      return dataProvider.findClientConversationForContact(contact.id);
+      return dataProvider.findClientConversationForContact(
+        contact.id,
+        externalPhone,
+      );
     },
     [dataProvider],
   );
@@ -39,6 +45,7 @@ export const useSendClientSms = () => {
       isInternalNote?: boolean;
       templateId?: Identifier;
       replyToMessageId?: Identifier | null;
+      externalPhone?: string | null;
     }) => {
       const result = await dataProvider.sendClientSms({
         conversationId: params.conversationId,
@@ -49,6 +56,7 @@ export const useSendClientSms = () => {
         isInternalNote: params.isInternalNote,
         templateId: params.templateId,
         replyToMessageId: params.replyToMessageId,
+        externalPhone: params.externalPhone,
       });
 
       const message = result.message as ConversationMessage | null;

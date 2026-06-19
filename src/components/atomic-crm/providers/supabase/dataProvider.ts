@@ -45,9 +45,12 @@ import {
 import {
   assertMutationAllowed,
   getOneFromResourceMaybeSingle,
-  normalizeContactData,
+  fetchContactSummaryById,
+  patchContactRow,
   normalizeMemberEmail,
   patchSingletonConfigurationRow,
+  prepareCompanyWriteData,
+  prepareContactWriteData,
   processCompanyLogo,
   resolveOrganizationMemberId,
 } from "./dataProviderWriteHelpers";
@@ -109,8 +112,11 @@ const dataProviderWithCustomMethods = {
     await assertMutationAllowed(resource, "update", params);
 
     if (resource === "contacts") {
-      const data = params.data as Record<string, unknown>;
       const previous = (params.previousData ?? {}) as Record<string, unknown>;
+      const data = prepareContactWriteData({
+        ...previous,
+        ...(params.data as Record<string, unknown>),
+      });
       const { companyId, companyDraft } = resolveContactCompanyFromPayload(data);
       const previousCompanyId = previous.company_id as
         | Identifier
@@ -172,8 +178,34 @@ const dataProviderWithCustomMethods = {
           previousCompanyId: previousCompanyId ?? null,
           isCreate: false,
         });
-        return { data: contact };
+        const summary = await fetchContactSummaryById(contactId);
+        return { data: summary ?? contact };
       }
+
+      const memberId = await resolveOrganizationMemberId(
+        (data.organization_member_id ??
+          previous.organization_member_id) as Identifier,
+      );
+      const { data: member, error: memberError } = await supabase
+        .from("organization_members")
+        .select("id, org_id")
+        .eq("id", memberId)
+        .single();
+
+      if (memberError || !member?.org_id) {
+        throw new Error("Organization member not found");
+      }
+
+      await patchContactRow({
+        contactId,
+        orgId: member.org_id,
+        data,
+      });
+      const summary = await fetchContactSummaryById(contactId);
+      if (!summary) {
+        throw new Error("Contact updated but could not reload profile");
+      }
+      return { data: summary };
     }
 
     if (resource === "configuration") {
@@ -417,6 +449,17 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   {
     resource: "contacts",
     beforeGetList: async (params) => applyContactListSearch(params),
+    beforeCreate: async (params) => ({
+      ...params,
+      data: prepareContactWriteData(params.data as Record<string, unknown>),
+    }),
+    beforeUpdate: async (params) => ({
+      ...params,
+      data: prepareContactWriteData({
+        ...(params.previousData as Record<string, unknown>),
+        ...(params.data as Record<string, unknown>),
+      }),
+    }),
   },
   {
     resource: "companies",
@@ -433,8 +476,10 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       ])(params);
     },
     beforeCreate: async (params) => {
-      params.data = normalizeContactData(params.data);
-      const createParams = await processCompanyLogo(params);
+      const createParams = await processCompanyLogo({
+        ...params,
+        data: prepareCompanyWriteData(params.data as Record<string, unknown>),
+      });
 
       return {
         ...createParams,
@@ -445,8 +490,13 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       };
     },
     beforeUpdate: async (params) => {
-      params.data = normalizeContactData(params.data);
-      return await processCompanyLogo(params);
+      return await processCompanyLogo({
+        ...params,
+        data: prepareCompanyWriteData({
+          ...(params.previousData as Record<string, unknown>),
+          ...(params.data as Record<string, unknown>),
+        }),
+      });
     },
   },
   {

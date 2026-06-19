@@ -11,6 +11,7 @@ import {
 } from "ra-core";
 import { Loader2, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,8 @@ import {
   LBS_LEAD_SOURCE_OTHER,
   LBS_LEAD_SOURCE_REFERRAL,
 } from "@/modules/leads/leadFormConstants";
+import { prepareContactWriteData } from "@/components/atomic-crm/providers/supabase/dataProviderWriteHelpers";
+import { normalizeUsPhoneToE164 } from "@/utils/phone";
 
 /** Hide company field in LbsContactFormFields while company is not created yet. */
 export const PENDING_COMPANY_LOCK = "__pending_company__" as Identifier;
@@ -70,21 +73,40 @@ type ContactFormDialogProps = {
   createDefaults?: Record<string, unknown>;
   onCreated?: (contact: Contact) => void;
   onDraftSubmit?: (draft: PrimaryContactDraft) => void;
+  /** Called after a successful edit save (pessimistic — server confirmed). */
+  onUpdated?: (contact: Contact) => void;
 };
+
+/** Normalize phone rows on submit so Save works even if the field was not blurred. */
+const withSubmitNormalizedPhones = (data: Contact): Contact => ({
+  ...data,
+  phone_jsonb: data.phone_jsonb?.map((entry) => {
+    const raw = String(entry.number ?? "").trim();
+    if (!raw) {
+      return entry;
+    }
+    const normalized = normalizeUsPhoneToE164(raw);
+    return normalized ? { ...entry, number: normalized } : entry;
+  }),
+});
 
 /** Strip referral/other fields that don't apply to the chosen lead source. */
 const editTransform = (data: Contact): Partial<Contact> => {
-  const isReferral = data.lead_source === LBS_LEAD_SOURCE_REFERRAL;
-  const isOther = data.lead_source === LBS_LEAD_SOURCE_OTHER;
+  const normalized = withSubmitNormalizedPhones(data);
+  const isReferral = normalized.lead_source === LBS_LEAD_SOURCE_REFERRAL;
+  const isOther = normalized.lead_source === LBS_LEAD_SOURCE_OTHER;
+  const prepared = prepareContactWriteData(
+    normalized as unknown as Record<string, unknown>,
+  ) as Partial<Contact>;
   return {
-    ...data,
+    ...prepared,
     referred_by_contact_id: isReferral
-      ? (data.referred_by_contact_id ?? null)
+      ? (normalized.referred_by_contact_id ?? null)
       : null,
     referred_by_company_id: isReferral
-      ? (data.referred_by_company_id ?? null)
+      ? (normalized.referred_by_company_id ?? null)
       : null,
-    lead_source_other: isOther ? (data.lead_source_other ?? null) : null,
+    lead_source_other: isOther ? (normalized.lead_source_other ?? null) : null,
   };
 };
 
@@ -194,11 +216,13 @@ export const ContactFormDialog = ({
   createDefaults,
   onCreated,
   onDraftSubmit,
+  onUpdated,
 }: ContactFormDialogProps) => {
   const isMobile = useIsMobile();
   const { identity } = useGetIdentity();
   const notify = useNotify();
   const refresh = useRefresh();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -232,16 +256,24 @@ export const ContactFormDialog = ({
             resource="contacts"
             id={contactId}
             redirect={false}
+            mutationMode="pessimistic"
             transform={editTransform}
             mutationOptions={{
               onMutate: () => setIsSaving(true),
-              onSuccess: () => {
+              onSuccess: async (saved) => {
                 notify("Contact updated", { type: "info" });
+                await queryClient.invalidateQueries({ queryKey: ["contacts"] });
                 refresh();
+                onUpdated?.(saved as Contact);
                 handleClose();
               },
-              onError: () =>
-                notify("Failed to update contact", { type: "error" }),
+              onError: (error) =>
+                notify(
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to update contact",
+                  { type: "error" },
+                ),
               onSettled: () => setIsSaving(false),
             }}
           >

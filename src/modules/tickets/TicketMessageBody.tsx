@@ -1,43 +1,42 @@
-import DOMPurify from "dompurify";
 import { Markdown } from "@/components/atomic-crm/misc/Markdown";
 import { cn } from "@/lib/utils";
-
-let emailHtmlHookInstalled = false;
-
-const sanitizeEmailHtml = (html: string) => {
-  if (!emailHtmlHookInstalled) {
-    DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-      if (node.tagName === "A") {
-        node.setAttribute("target", "_blank");
-        node.setAttribute("rel", "noopener noreferrer");
-      }
-    });
-    emailHtmlHookInstalled = true;
-  }
-
-  return DOMPurify.sanitize(html, {
-    ADD_ATTR: ["target", "style", "bgcolor", "align", "valign", "width", "height"],
-  });
-};
+import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
 
 export const TicketMessageBody = ({
   body,
   htmlBody,
+  stripHrefs,
+  attachmentSrcs,
+  attachmentTitles,
 }: {
   body?: string | null;
   htmlBody?: string | null;
+  /** Hrefs shown in the attachments panel — stripped from inline HTML. */
+  stripHrefs?: string[];
+  attachmentSrcs?: string[];
+  attachmentTitles?: string[];
 }) => {
   const html = htmlBody?.trim();
   if (html) {
     return (
       <div
         className={cn(
-          "ticket-email-html leading-relaxed",
+          "ticket-email-html isolate overflow-x-auto leading-relaxed break-words",
           "[&_a]:font-medium [&_a]:text-primary [&_a]:underline",
-          "[&_img]:max-w-full [&_table]:max-w-full",
-          "[&_.button]:inline-block",
+          "[&_img]:my-2 [&_img]:block [&_img]:h-auto [&_img]:max-w-full",
+          "[&_table]:my-2 [&_table]:max-w-full [&_table]:table-fixed",
+          "[&_td]:break-words [&_th]:break-words",
+          "[&_*]:!float-none [&_*]:!clear-both [&_*]:max-w-full",
+          "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
+          "[&_div]:relative [&_span]:relative",
         )}
-        dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(html) }}
+        dangerouslySetInnerHTML={{
+          __html: sanitizeTicketEmailHtml(html, {
+            stripHrefs,
+            attachmentSrcs,
+            attachmentTitles,
+          }),
+        }}
       />
     );
   }

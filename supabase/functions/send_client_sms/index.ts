@@ -19,7 +19,7 @@ import {
 import { sendTwilioSms } from "../_shared/twilio.ts";
 import { resolveTwilioMediaUrls } from "../_shared/twilioMedia.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
-import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
+import { normalizeUsPhoneToE164, contactHasPhone } from "../_shared/phone.ts";
 
 type SendBody = {
   conversation_id?: number;
@@ -30,6 +30,7 @@ type SendBody = {
   is_internal_note?: boolean;
   template_id?: number;
   reply_to_message_id?: number | null;
+  external_phone?: string;
 };
 
 Deno.serve((req: Request) =>
@@ -133,16 +134,57 @@ Deno.serve((req: Request) =>
               "Client phone number is missing on this conversation",
             );
           }
-          externalPhone = phoneRow.external_phone;
+
+          const requestedPhoneRaw = payload.external_phone?.trim();
+          const requestedPhone = requestedPhoneRaw
+            ? normalizeUsPhoneToE164(requestedPhoneRaw)
+            : null;
 
           if (phoneRow.contact_id) {
-            const { data: contact } = await supabaseAdmin
+            const { data: contact, error: contactError } = await supabaseAdmin
               .from("contacts")
-              .select("first_name, last_name")
+              .select("id, first_name, last_name, phone_jsonb")
               .eq("id", phoneRow.contact_id)
+              .eq("org_id", orgId)
               .maybeSingle();
+
+            if (contactError || !contact) {
+              throw new Error("Contact not found");
+            }
             contactRecord = contact;
+
+            if (
+              requestedPhone &&
+              !contactHasPhone(contact.phone_jsonb, requestedPhone)
+            ) {
+              throw new Error(
+                "Selected phone is not registered on this contact",
+              );
+            }
+
+            externalPhone = requestedPhone ?? phoneRow.external_phone;
+
+            if (
+              requestedPhone &&
+              requestedPhone !== phoneRow.external_phone
+            ) {
+              const { error: updateError } = await supabaseAdmin
+                .from("conversations")
+                .update({ external_phone: requestedPhone })
+                .eq("id", conversationId)
+                .eq("org_id", orgId);
+
+              if (updateError) {
+                throw new Error(
+                  updateError.message ??
+                    "Failed to update conversation phone number",
+                );
+              }
+            }
+          } else {
+            externalPhone = requestedPhone ?? phoneRow.external_phone;
           }
+
           if (phoneRow.deal_id) {
             const { data: deal } = await supabaseAdmin
               .from("deals")
@@ -170,15 +212,29 @@ Deno.serve((req: Request) =>
           contactRecord = contact;
 
           let normalizedPhone: string | null = null;
-          for (const entry of contact.phone_jsonb ?? []) {
-            const number =
-              typeof entry === "object" && entry && "number" in entry
-                ? String((entry as { number?: string }).number ?? "")
-                : "";
-            const normalized = normalizeUsPhoneToE164(number);
-            if (normalized) {
-              normalizedPhone = normalized;
-              break;
+          const requestedPhone = payload.external_phone?.trim();
+          if (requestedPhone) {
+            const normalized = normalizeUsPhoneToE164(requestedPhone);
+            if (
+              !normalized ||
+              !contactHasPhone(contact.phone_jsonb, normalized)
+            ) {
+              throw new Error(
+                "Selected phone is not registered on this contact",
+              );
+            }
+            normalizedPhone = normalized;
+          } else {
+            for (const entry of contact.phone_jsonb ?? []) {
+              const number =
+                typeof entry === "object" && entry && "number" in entry
+                  ? String((entry as { number?: string }).number ?? "")
+                  : "";
+              const normalized = normalizeUsPhoneToE164(number);
+              if (normalized) {
+                normalizedPhone = normalized;
+                break;
+              }
             }
           }
 

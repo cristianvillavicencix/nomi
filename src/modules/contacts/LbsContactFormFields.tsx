@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import { email, required } from "ra-core";
 import type { ClipboardEventHandler, FocusEvent } from "react";
 import { useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmailInput } from "@/components/admin/email-input";
@@ -16,6 +17,7 @@ import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { CONTACT_STATUS_CHOICES } from "@/modules/constants/contactStatus";
 import { ContactCompanyPickerField } from "@/modules/contacts/ContactCompanyPickerField";
+import { buildContactChannelTypeChoices } from "@/modules/contacts/contactChannelTypeChoices";
 import type { Identifier } from "ra-core";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 
@@ -122,7 +124,22 @@ const ContactCompanySection = () => (
 );
 
 const ContactInfoInputs = () => {
-  const { getValues, setValue } = useFormContext();
+  const { getValues, setValue, control } = useFormContext();
+  const phoneEntries = useWatch({ control, name: "phone_jsonb" }) as
+    | Array<{ type?: string | null }>
+    | undefined;
+  const emailEntries = useWatch({ control, name: "email_jsonb" }) as
+    | Array<{ type?: string | null }>
+    | undefined;
+
+  const phoneTypeChoices = useMemo(
+    () => buildContactChannelTypeChoices(phoneEntries),
+    [phoneEntries],
+  );
+  const emailTypeChoices = useMemo(
+    () => buildContactChannelTypeChoices(emailEntries),
+    [emailEntries],
+  );
 
   const handleEmailChange = (emailAddress: string) => {
     const { first_name, last_name } = getValues();
@@ -180,7 +197,7 @@ const ContactInfoInputs = () => {
             helperText={false}
             label={false}
             optionText="id"
-            choices={personalInfoTypes}
+            choices={emailTypeChoices}
             defaultValue="Work"
             className="w-24 min-w-24"
           />
@@ -211,7 +228,7 @@ const ContactInfoInputs = () => {
             helperText={false}
             label={false}
             optionText="id"
-            choices={personalInfoTypes}
+            choices={phoneTypeChoices}
             defaultValue="Work"
             className="w-24 min-w-24"
           />
@@ -220,8 +237,6 @@ const ContactInfoInputs = () => {
     </div>
   );
 };
-
-const personalInfoTypes = [{ id: "Work" }, { id: "Home" }, { id: "Other" }];
 
 const ContactAddressInputs = () => {
   const { setValue } = useFormContext();

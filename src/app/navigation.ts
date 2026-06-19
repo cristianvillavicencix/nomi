@@ -9,6 +9,7 @@ import {
   FileText,
   Globe,
   Home,
+  LayoutGrid,
   ListChecks,
   Receipt,
   Ticket,
@@ -43,6 +44,35 @@ export type LbsNavGroup = {
   items: LbsNavItem[];
 };
 
+export type LbsNavCollapsibleSection = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  storageKey: string;
+};
+
+export const LBS_NAV_SECONDARY_GROUP_IDS = [
+  "close-billing",
+  "daily-work",
+  "tools",
+] as const;
+
+/** Collapsed by default — Close & bill, Daily work, Tools. */
+export const LBS_MORE_NAV_COLLAPSIBLE: LbsNavCollapsibleSection = {
+  id: "more",
+  label: "More",
+  icon: LayoutGrid,
+  storageKey: "sidebar_more_open",
+};
+
+export const splitLbsNavGroups = (groups: LbsNavGroup[]) => {
+  const secondaryIds = new Set<string>(LBS_NAV_SECONDARY_GROUP_IDS);
+  return {
+    primary: groups.filter((group) => !secondaryIds.has(group.id)),
+    secondary: groups.filter((group) => secondaryIds.has(group.id)),
+  };
+};
+
 export const filterLbsNavItems = (
   items: LbsNavItem[],
   options?: { websiteMonitorEnabled?: boolean },
@@ -66,7 +96,7 @@ export const filterLbsNavGroups = (
     }))
     .filter((group) => group.items.length > 0);
 
-/** Top-level links rendered outside group headers. */
+/** Top-level links rendered outside group headers (most-used first). */
 export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   {
     to: "/",
@@ -84,6 +114,51 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
     activePattern: "/leads/*",
     capability: "crm.contacts.view",
     resource: "contacts",
+    action: "list",
+  },
+  {
+    to: "/tickets",
+    label: "Tickets",
+    icon: Ticket,
+    activePattern: "/tickets/*",
+    capability: "support.tickets.view",
+    resource: "tickets",
+    action: "list",
+  },
+  {
+    to: "/billing",
+    label: "Billing",
+    icon: Receipt,
+    activePattern: "/billing/*",
+    capability: "proposals.view",
+    resource: "proposal_payment_installments",
+    action: "list",
+  },
+  {
+    to: "/calendar",
+    label: "Calendar",
+    icon: CalendarDays,
+    activePattern: "/calendar/*",
+    capability: "calendar.view",
+    resource: "calendar_events",
+    action: "list",
+  },
+  {
+    to: "/meetings",
+    label: "Meetings",
+    icon: Video,
+    activePattern: "/meetings/*",
+    capability: "meetings.view",
+    resource: "tasks",
+    action: "list",
+  },
+  {
+    to: "/messages",
+    label: "Messages",
+    icon: MessageSquare,
+    activePattern: "/messages/*",
+    capability: "messaging.conversations.view",
+    resource: "conversations",
     action: "list",
   },
 ];
@@ -155,15 +230,6 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
         resource: "contracts",
         action: "list",
       },
-      {
-        to: "/billing",
-        label: "Billing",
-        icon: Receipt,
-        activePattern: "/billing/*",
-        capability: "proposals.view",
-        resource: "proposal_payment_installments",
-        action: "list",
-      },
     ],
   },
   {
@@ -178,42 +244,6 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
         activePattern: "/tasks/*",
         capability: "crm.tasks.view",
         resource: "tasks",
-        action: "list",
-      },
-      {
-        to: "/calendar",
-        label: "Calendar",
-        icon: CalendarDays,
-        activePattern: "/calendar/*",
-        capability: "calendar.view",
-        resource: "calendar_events",
-        action: "list",
-      },
-      {
-        to: "/meetings",
-        label: "Meetings",
-        icon: Video,
-        activePattern: "/meetings/*",
-        capability: "meetings.view",
-        resource: "tasks",
-        action: "list",
-      },
-      {
-        to: "/messages",
-        label: "Messages",
-        icon: MessageSquare,
-        activePattern: "/messages/*",
-        capability: "messaging.conversations.view",
-        resource: "conversations",
-        action: "list",
-      },
-      {
-        to: "/tickets",
-        label: "Tickets",
-        icon: Ticket,
-        activePattern: "/tickets/*",
-        capability: "support.tickets.view",
-        resource: "tickets",
         action: "list",
       },
     ],

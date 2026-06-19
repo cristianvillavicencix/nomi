@@ -25,9 +25,13 @@ import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/m
 import {
   filterLbsNavGroups,
   LBS_CLIENTS_NAV_COLLAPSIBLE,
+  LBS_MORE_NAV_COLLAPSIBLE,
   LBS_NAV_GROUPS,
   LBS_NAV_STANDALONE,
+  splitLbsNavGroups,
   type LbsNavCollapsibleGroup,
+  type LbsNavCollapsibleSection,
+  type LbsNavGroup,
   type LbsNavItem,
 } from "@/app/navigation";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
@@ -109,6 +113,19 @@ export const LbsSidebarNav = ({
       .filter((group) => group.items.length > 0);
   }, [identity, websiteMonitorEnabled]);
 
+  const { primary: primaryNavGroups, secondary: secondaryNavGroups } = useMemo(
+    () => splitLbsNavGroups(navGroups),
+    [navGroups],
+  );
+
+  const secondarySectionActive = useMemo(
+    () =>
+      secondaryNavGroups.some((group) =>
+        group.items.some((item) => isActive(item.activePattern)),
+      ),
+    [secondaryNavGroups, isActive],
+  );
+
   const clientsSectionActive = useMemo(
     () =>
       clientsNavChildren.some((item) => isActive(item.activePattern)) ||
@@ -125,13 +142,14 @@ export const LbsSidebarNav = ({
               key={item.to}
               item={item}
               active={isActive(item.activePattern)}
+              badgeCount={item.to === "/messages" ? messagesUnreadCount : 0}
               collapsed={sidebarState === "collapsed"}
             />
           ))}
         </SidebarMenu>
       ) : null}
 
-      {navGroups.map((group, index) => {
+      {primaryNavGroups.map((group, index) => {
         const hasItemsAbove = standaloneItems.length > 0 || index > 0;
         return (
         <div
@@ -165,7 +183,6 @@ export const LbsSidebarNav = ({
                 key={item.to}
                 item={item}
                 active={isActive(item.activePattern)}
-                badgeCount={item.to === "/messages" ? messagesUnreadCount : 0}
                 collapsed={sidebarState === "collapsed"}
               />
             ))}
@@ -173,7 +190,192 @@ export const LbsSidebarNav = ({
         </div>
         );
       })}
+
+      {secondaryNavGroups.length > 0 ? (
+        <div
+          className={cn(
+            (standaloneItems.length > 0 || primaryNavGroups.length > 0) &&
+              "group-data-[collapsible=icon]:mt-2 group-data-[collapsible=icon]:border-t group-data-[collapsible=icon]:border-sidebar-border/60 group-data-[collapsible=icon]:pt-2",
+          )}
+        >
+          <MoreCollapsibleNav
+            section={LBS_MORE_NAV_COLLAPSIBLE}
+            groups={secondaryNavGroups}
+            isActive={isActive}
+            sectionActive={secondarySectionActive}
+            collapsed={sidebarState === "collapsed"}
+          />
+        </div>
+      ) : null}
     </SidebarGroup>
+  );
+};
+
+const MoreCollapsibleNav = ({
+  section,
+  groups,
+  isActive,
+  sectionActive,
+  collapsed,
+}: {
+  section: LbsNavCollapsibleSection;
+  groups: LbsNavGroup[];
+  isActive: (pattern: string) => boolean;
+  sectionActive: boolean;
+  collapsed: boolean;
+}) => {
+  const [open, setOpen] = useState(() =>
+    readStoredOpen(section.storageKey, sectionActive),
+  );
+
+  useEffect(() => {
+    if (sectionActive) {
+      setOpen(true);
+    }
+  }, [sectionActive]);
+
+  const toggleOpen = () => {
+    const next = !open;
+    setOpen(next);
+    window.localStorage.setItem(section.storageKey, String(next));
+  };
+
+  const ParentIcon = section.icon;
+
+  if (collapsed) {
+    return (
+      <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={section.label}
+              title={section.label}
+              className={cn(
+                "flex size-9 w-full items-center justify-center rounded-lg transition-colors",
+                "hover:bg-sidebar-accent/70 text-sidebar-foreground",
+                sectionActive &&
+                  "bg-[#378ADD]/10 dark:bg-[#378ADD]/15",
+              )}
+              style={
+                sectionActive
+                  ? { boxShadow: `inset 2px 0 0 0 ${LBS_NAV_ACCENT}` }
+                  : undefined
+              }
+            >
+              <ParentIcon
+                className={cn(
+                  "size-4 shrink-0",
+                  sectionActive ? "text-[#378ADD]" : "text-muted-foreground",
+                )}
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" className="min-w-44">
+              {groups.map((group, groupIndex) => (
+                <div key={group.id}>
+                  {groupIndex > 0 ? (
+                    <div className="my-1 border-t border-border/60" />
+                  ) : null}
+                  <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {group.label}
+                  </div>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item.activePattern);
+                    return (
+                      <DropdownMenuItem key={item.to} asChild>
+                        <Link
+                          to={item.to}
+                          state={LINK_STATE}
+                          className={cn(active && "font-medium text-[#378ADD]")}
+                        >
+                          <Icon className="size-4" />
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  return (
+    <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
+      <SidebarMenuItem>
+        <button
+          type="button"
+          onClick={toggleOpen}
+          className={cn(
+            "relative flex w-full items-center gap-2 rounded-lg py-1.5 px-2.5 text-sm transition-colors",
+            "hover:bg-sidebar-accent/70 text-sidebar-foreground",
+            sectionActive && !open && "font-medium",
+          )}
+          aria-expanded={open}
+        >
+          <ParentIcon
+            className={cn(
+              "size-4 shrink-0",
+              sectionActive ? "text-[#378ADD]" : "text-muted-foreground",
+            )}
+          />
+          <span className="truncate">{section.label}</span>
+          <ChevronDown
+            className={cn(
+              "ml-auto size-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </button>
+      </SidebarMenuItem>
+      {open ? (
+        <SidebarMenuSub className="mx-2.5 border-l border-sidebar-border/80 px-2">
+          {groups.map((group, groupIndex) => (
+            <div key={group.id} className={cn(groupIndex > 0 && "mt-2")}>
+              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.label}
+              </div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.activePattern);
+                return (
+                  <SidebarMenuSubItem key={item.to}>
+                    <SidebarMenuSubButton asChild isActive={active}>
+                      <Link
+                        to={item.to}
+                        state={LINK_STATE}
+                        className={cn(
+                          active &&
+                            "bg-[#378ADD]/10 font-medium dark:bg-[#378ADD]/15",
+                        )}
+                        style={
+                          active
+                            ? {
+                                boxShadow: `inset 2px 0 0 0 ${LBS_NAV_ACCENT}`,
+                              }
+                            : undefined
+                        }
+                      >
+                        <Icon
+                          className={cn(
+                            "size-4 shrink-0",
+                            active ? "text-[#378ADD]" : "text-muted-foreground",
+                          )}
+                        />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                );
+              })}
+            </div>
+          ))}
+        </SidebarMenuSub>
+      ) : null}
+    </SidebarMenu>
   );
 };
 

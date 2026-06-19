@@ -17,6 +17,8 @@ import { useResolvedMediaUrl } from "@/modules/messages/useResolvedMediaUrl";
 import { InternalNoteToggle } from "@/modules/messages/composer/InternalNoteToggle";
 import { useSendClientSms } from "@/modules/messages/useClientSms";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { ClientSmsPhoneField } from "@/modules/messages/ClientSmsPhoneField";
+import { resolveClientSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
 
 type PendingAttachment = {
@@ -35,6 +37,8 @@ export const ClientSmsComposer = ({
   prefillRequest,
   composerShape = "default",
   compact = false,
+  externalPhone,
+  onExternalPhoneChange,
 }: {
   contact?: Contact | null;
   dealId?: Identifier | null;
@@ -48,6 +52,8 @@ export const ClientSmsComposer = ({
   prefillRequest?: { key: number; text: string } | null;
   composerShape?: "default" | "square";
   compact?: boolean;
+  externalPhone?: string | null;
+  onExternalPhoneChange?: (e164: string) => void;
 }) => {
   const notify = useNotify();
   const { identity } = useGetIdentity();
@@ -90,7 +96,12 @@ export const ClientSmsComposer = ({
     !disabled &&
     !isSending &&
     (body.trim().length > 0 || pendingFiles.length > 0) &&
-    (conversationId != null || contact?.id != null);
+    (conversationId != null ||
+      (contact?.id != null && resolveClientSmsPhone(contact, externalPhone) != null));
+
+  const resolvedExternalPhone = contact
+    ? resolveClientSmsPhone(contact, externalPhone)
+    : null;
 
   if (disabled) {
     return (
@@ -174,6 +185,7 @@ export const ClientSmsComposer = ({
         mediaUrls: uploadedUrls,
         isInternalNote,
         replyToMessageId,
+        externalPhone: resolvedExternalPhone ?? undefined,
       });
 
       if (!result.conversation || !result.message) {
@@ -222,6 +234,15 @@ export const ClientSmsComposer = ({
           checked={isInternalNote}
           onCheckedChange={setIsInternalNote}
           disabled={disabled || isSending}
+        />
+      ) : null}
+      {contact ? (
+        <ClientSmsPhoneField
+          contact={contact}
+          value={externalPhone ?? resolvedExternalPhone}
+          onChange={(next) => onExternalPhoneChange?.(next)}
+          disabled={disabled || isSending}
+          className={compact ? "px-0.5" : "px-1"}
         />
       ) : null}
       {!isInternalNote && signature ? (

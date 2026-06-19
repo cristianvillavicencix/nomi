@@ -18,7 +18,11 @@ const isDuplicateParticipantError = (error: unknown) => {
   const status = (error as { status?: number }).status;
   if (status === 409) return true;
   const message = String((error as Error).message ?? "");
-  return message.includes("duplicate key");
+  if (message.includes("duplicate key")) return true;
+  const body = (error as { body?: { message?: string; code?: string } }).body;
+  if (body?.code === "23505") return true;
+  if (body?.message?.includes("duplicate key")) return true;
+  return false;
 };
 
 const fetchParticipant = async (

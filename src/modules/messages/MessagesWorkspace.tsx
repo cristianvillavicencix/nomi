@@ -16,7 +16,7 @@ import type {
   LbsDeal,
   OrganizationMember,
 } from "@/modules/types";
-import { getContactDisplayName } from "@/modules/messages/messageContactUtils";
+import { getContactDisplayName, resolveClientSmsPhone } from "@/modules/messages/messageContactUtils";
 import { ConversationThread } from "@/modules/messages/ConversationThread";
 import { ConversationChatHeader } from "@/modules/messages/ConversationChatHeader";
 import { MessagesInbox } from "@/modules/messages/inbox/MessagesInbox";
@@ -37,6 +37,7 @@ export const MessagesWorkspace = ({
   clientSmsDraft,
   onSelectConversation,
   onClientSmsSent,
+  onClientSmsPhoneChange,
   isPending,
   compact = false,
   showMobileChat,
@@ -57,6 +58,7 @@ export const MessagesWorkspace = ({
   clientSmsDraft?: ClientSmsDraft | null;
   onSelectConversation: (conversation: Conversation) => void;
   onClientSmsSent?: (conversation: Conversation) => void;
+  onClientSmsPhoneChange?: (phone: string) => void;
   isPending: boolean;
   compact?: boolean;
   showMobileChat?: boolean;
@@ -91,6 +93,12 @@ export const MessagesWorkspace = ({
           (entry) => String(entry.id) === String(activeConversation.deal_id),
         )
       : undefined;
+
+  const activeSmsPhone =
+    clientSmsDraft?.externalPhone ??
+    (activeContact
+      ? resolveClientSmsPhone(activeContact, activeConversation?.external_phone)
+      : (activeConversation?.external_phone ?? null));
 
   const handleToggleContext = () => {
     if (isMobile) {
@@ -176,6 +184,8 @@ export const MessagesWorkspace = ({
                 conversation={activeConversation}
                 clientSmsDraft={clientSmsDraft}
                 composerContact={activeContact}
+                clientSmsExternalPhone={activeSmsPhone}
+                onClientSmsPhoneChange={onClientSmsPhoneChange}
                 onClientSmsSent={onClientSmsSent}
               />
             </div>
@@ -195,6 +205,7 @@ export const MessagesWorkspace = ({
         conversation={activeConversation}
         contact={activeContact}
         deal={activeDeal}
+        activeSmsPhone={activeSmsPhone}
         open={contextOpen}
         onClose={closeContext}
       />
@@ -209,6 +220,7 @@ export const MessagesWorkspace = ({
               conversation={activeConversation}
               contact={activeContact}
               deal={activeDeal}
+              activeSmsPhone={activeSmsPhone}
             />
           </div>
         </SheetContent>

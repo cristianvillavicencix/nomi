@@ -127,8 +127,10 @@ export const FileAttachmentPill = ({ file }: { file: FileAttachment }) => {
 
 export const FileAttachmentPillList = ({
   attachments,
+  className,
 }: {
   attachments: unknown[];
+  className?: string;
 }) => {
   const files = attachments
     .map((item) => item as FileAttachment)
@@ -137,7 +139,7 @@ export const FileAttachmentPillList = ({
   if (!files.length) return null;
 
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
+    <div className={cn("mt-3 flex flex-wrap gap-2", className)}>
       {files.map((file, index) => (
         <FileAttachmentPill key={`${file.src}-${index}`} file={file} />
       ))}

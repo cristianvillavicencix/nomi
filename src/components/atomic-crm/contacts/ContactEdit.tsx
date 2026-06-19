@@ -8,6 +8,7 @@ import {
   LBS_LEAD_SOURCE_OTHER,
   LBS_LEAD_SOURCE_REFERRAL,
 } from "@/modules/leads/leadFormConstants";
+import { prepareContactWriteData } from "@/components/atomic-crm/providers/supabase/dataProviderWriteHelpers";
 
 export const ContactEdit = () => (
   <EditBase
@@ -15,8 +16,11 @@ export const ContactEdit = () => (
     transform={(data: Contact) => {
       const isReferral = data.lead_source === LBS_LEAD_SOURCE_REFERRAL;
       const isOther = data.lead_source === LBS_LEAD_SOURCE_OTHER;
+      const prepared = prepareContactWriteData(
+        data as unknown as Record<string, unknown>,
+      ) as Contact;
       return {
-        ...data,
+        ...prepared,
         referred_by_contact_id: isReferral
           ? (data.referred_by_contact_id ?? null)
           : null,

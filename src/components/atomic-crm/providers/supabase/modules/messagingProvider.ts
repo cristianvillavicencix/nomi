@@ -221,6 +221,7 @@ export const messagingProvider = {
     isInternalNote?: boolean;
     templateId?: Identifier;
     replyToMessageId?: Identifier | null;
+    externalPhone?: string | null;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       message?: import("@/modules/types").ConversationMessage;
@@ -246,6 +247,10 @@ export const messagingProvider = {
         reply_to_message_id:
           params.replyToMessageId != null
             ? Number(params.replyToMessageId)
+            : undefined,
+        external_phone:
+          params.externalPhone != null && params.externalPhone !== ""
+            ? params.externalPhone
             : undefined,
       },
     });
@@ -277,7 +282,10 @@ export const messagingProvider = {
       conversation: data?.conversation ?? null,
     };
   },
-  async findClientConversationForContact(contactId: Identifier) {
+  async findClientConversationForContact(
+    contactId: Identifier,
+    externalPhone?: string | null,
+  ) {
     const { data: contact, error: contactError } = await supabase
       .from("contacts")
       .select("id, phone_jsonb")
@@ -292,16 +300,20 @@ export const messagingProvider = {
       | PhoneNumberAndType[]
       | null
       | undefined;
-    let externalPhone: string | null = null;
-    for (const entry of phoneJsonb ?? []) {
-      const normalized = normalizeUsPhoneToE164(entry.number ?? "");
-      if (normalized) {
-        externalPhone = normalized;
-        break;
+    let resolvedPhone: string | null = null;
+    if (externalPhone != null && externalPhone !== "") {
+      resolvedPhone = normalizeUsPhoneToE164(externalPhone);
+    } else {
+      for (const entry of phoneJsonb ?? []) {
+        const normalized = normalizeUsPhoneToE164(entry.number ?? "");
+        if (normalized) {
+          resolvedPhone = normalized;
+          break;
+        }
       }
     }
 
-    if (!externalPhone) {
+    if (!resolvedPhone) {
       return null;
     }
 
@@ -309,7 +321,7 @@ export const messagingProvider = {
       .from("conversations")
       .select("*")
       .eq("type", "client")
-      .eq("external_phone", externalPhone)
+      .eq("external_phone", resolvedPhone)
       .maybeSingle();
 
     if (error) {

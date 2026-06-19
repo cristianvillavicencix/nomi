@@ -1410,6 +1410,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     dealId,
     body,
     mediaUrls,
+    externalPhone,
   }) => {
     let conversation: import("@/modules/types").Conversation;
     if (conversationId) {
@@ -1423,6 +1424,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
           contactId,
           authorMemberId: 1,
           dealId,
+          externalPhone,
         });
     } else {
       throw new Error("conversation_id or contact_id is required");
@@ -1442,12 +1444,17 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     });
     return { message: message.data, conversation };
   },
-  findClientConversationForContact: async (contactId) => {
+  findClientConversationForContact: async (contactId, externalPhone) => {
     const { data: contact } = await baseDataProvider.getOne<
       import("@/modules/types").Contact
     >("contacts", { id: contactId });
     const phone =
-      contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ?? null;
+      externalPhone != null && externalPhone !== ""
+        ? normalizeUsPhoneToE164(externalPhone)
+        : normalizeUsPhoneToE164(
+            contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ??
+              "",
+          );
     const { data: existing = [] } = await baseDataProvider.getList<
       import("@/modules/types").Conversation
     >("conversations", {
@@ -1459,12 +1466,22 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     });
     return existing[0] ?? null;
   },
-  ensureClientConversation: async ({ contactId, authorMemberId, dealId }) => {
+  ensureClientConversation: async ({
+    contactId,
+    authorMemberId,
+    dealId,
+    externalPhone,
+  }) => {
     const { data: contact } = await baseDataProvider.getOne<
       import("@/modules/types").Contact
     >("contacts", { id: contactId });
     const phone =
-      contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ?? null;
+      externalPhone != null && externalPhone !== ""
+        ? normalizeUsPhoneToE164(externalPhone)
+        : normalizeUsPhoneToE164(
+            contact.phone_jsonb?.map((entry) => entry.number).find(Boolean) ??
+              "",
+          );
     const { data: existing = [] } = await baseDataProvider.getList<
       import("@/modules/types").Conversation
     >("conversations", {

@@ -19,9 +19,13 @@ import { getContactsListPath } from "@/app/routing";
 
 type ContactShowActionsProps = {
   record: Contact;
+  onContactUpdated?: () => void;
 };
 
-export const ContactShowActions = ({ record }: ContactShowActionsProps) => {
+export const ContactShowActions = ({
+  record,
+  onContactUpdated,
+}: ContactShowActionsProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [editOpen, setEditOpen] = useState(false);
@@ -33,6 +37,7 @@ export const ContactShowActions = ({ record }: ContactShowActionsProps) => {
         open={editOpen}
         onOpenChange={setEditOpen}
         contactId={record.id}
+        onUpdated={() => onContactUpdated?.()}
       />
 
       <PageActions>

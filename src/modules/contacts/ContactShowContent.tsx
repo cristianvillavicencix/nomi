@@ -29,7 +29,7 @@ export const ContactShowContent = ({
 }: {
   embedded?: boolean;
 } = {}) => {
-  const { record, isPending } = useShowContext<Contact>();
+  const { record, isPending, refetch } = useShowContext<Contact>();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const [embeddedTab, setEmbeddedTab] = useState<ClientTab>(DEFAULT_CLIENT_TAB);
@@ -176,7 +176,7 @@ export const ContactShowContent = ({
 
   return (
     <div className="mt-2 pb-4">
-      <ContactShowActions record={record} />
+      <ContactShowActions record={record} onContactUpdated={() => void refetch()} />
 
       {isMobile ? (
         <div className="space-y-4">

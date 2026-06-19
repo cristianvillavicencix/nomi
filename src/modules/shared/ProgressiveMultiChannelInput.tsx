@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { ClipboardEventHandler, FocusEvent } from "react";
 import { X } from "lucide-react";
 import { useInput } from "ra-core";
@@ -83,10 +83,29 @@ const ChannelTypeSelect = ({
   choices: readonly ProgressiveChannelTypeChoice[];
 }) => {
   const { field } = useInput({ source });
-  const value = field.value?.toString() || defaultType(choices);
+  const mergedChoices = useMemo(() => {
+    const seen = new Set<string>();
+    const result: ProgressiveChannelTypeChoice[] = [];
+    const add = (id: string, name?: string) => {
+      const trimmed = id.trim();
+      if (!trimmed || seen.has(trimmed)) return;
+      seen.add(trimmed);
+      result.push({ id: trimmed, name: name ?? trimmed });
+    };
+
+    for (const choice of choices) {
+      add(choice.id, choice.name);
+    }
+    add(field.value?.toString() ?? "");
+
+    return result;
+  }, [choices, field.value]);
+
+  const value = field.value?.toString() || defaultType(mergedChoices);
 
   return (
     <Select
+      key={`channel-type:${value}`}
       value={value}
       onValueChange={field.onChange}
       disabled={field.disabled}
@@ -102,7 +121,7 @@ const ChannelTypeSelect = ({
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">
-        {choices.map((choice) => (
+        {mergedChoices.map((choice) => (
           <SelectItem key={choice.id} value={choice.id} className="text-sm">
             {choice.name}
           </SelectItem>

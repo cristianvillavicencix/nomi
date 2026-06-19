@@ -10,6 +10,7 @@ export type MessagesQuickAccessContextValue = {
   draftSms: ClientSmsDraft | null;
   activeConversationId: Identifier | null;
   clearFocusedConversation: () => void;
+  setDraftSms: (draft: ClientSmsDraft | null) => void;
   clearDraftSms: () => void;
   focusConversation: (conversation: Conversation) => void;
   setActiveConversationId: (conversationId: Identifier | null) => void;
