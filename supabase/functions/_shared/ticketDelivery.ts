@@ -1,12 +1,10 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { sendTransactionalEmail } from "./transactionalEmail.ts";
 import { loadStorageAttachmentsForEmail } from "./storageAttachmentsForEmail.ts";
-
-const replySubject = (subject: string) => {
-  const trimmed = subject.trim();
-  if (/^re:/i.test(trimmed)) return trimmed;
-  return `Re: ${trimmed}`;
-};
+import {
+  buildTicketDeliveredInternalNoteBody,
+  buildTicketDeliveryEmailSubject,
+} from "./ticketInvoiceFlow.ts";
 
 const buildMessageId = (ticketId: number) =>
   `<ticket-${ticketId}-${crypto.randomUUID()}@nomicrm.com>`;
@@ -94,13 +92,21 @@ export async function deliverTicketAfterInvoicePayment(
   }
 
   const now = new Date().toISOString();
-  const subject = replySubject(ticket.subject);
+  const propertyAddress = ticket.subject?.trim() || "Your property";
+  const subject = buildTicketDeliveryEmailSubject(propertyAddress);
+  const fileList = deliverables.map((file) => file.title).join(", ");
   const textBody =
     `Thank you for your payment (${invoice.invoice_number}). ` +
-    "Your supplement files are attached to this email.";
+    `Your supplement files for ${propertyAddress} are attached` +
+    (fileList ? `: ${fileList}.` : " to this email.");
   const htmlBody =
     `<p>Thank you for your payment (<strong>${invoice.invoice_number}</strong>).</p>` +
-    "<p>Your supplement files are attached to this email.</p>";
+    `<p>Your supplement files for <strong>${propertyAddress}</strong> are attached to this email:</p>` +
+    (deliverables.length
+      ? `<ul>${deliverables
+          .map((file) => `<li>${file.title}</li>`)
+          .join("")}</ul>`
+      : "<p>Your supplement files are attached to this email.</p>");
   const outboundMessageId = buildMessageId(ticket.id);
   const emailAttachments = await loadStorageAttachmentsForEmail(deliverables);
 
@@ -150,8 +156,12 @@ export async function deliverTicketAfterInvoicePayment(
 
   await supabase.from("ticket_messages").insert({
     ticket_id: ticket.id,
-    body:
-      `Delivered ${deliverables.length} file(s) after payment on ${invoice.invoice_number}.`,
+    body: buildTicketDeliveredInternalNoteBody({
+      invoiceNumber: invoice.invoice_number,
+      propertyAddress: ticket.subject,
+      fileCount: deliverables.length,
+      recipientEmail: recipient,
+    }),
     direction: "internal",
     from_name: "System",
     created_at: now,

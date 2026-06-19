@@ -32,9 +32,9 @@ import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
 import { TicketDetailPanel } from "@/modules/tickets/TicketDetailPanel";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { TicketListItem } from "@/modules/tickets/TicketListItem";
+import { TicketStatusBreadcrumb } from "@/modules/tickets/TicketStatusBreadcrumb";
 import {
   DEFAULT_TICKET_INBOX_EMAIL,
-  TICKET_STATUS_FILTERS,
   type TicketStatusFilterId,
 } from "@/modules/tickets/ticketInboxConfig";
 import {
@@ -298,24 +298,11 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
                 onChange={(event) => handleSearch(event.target.value)}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              {TICKET_STATUS_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  type="button"
-                  onClick={() => handleStatusFilter(filter.id)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                    statusFilter === filter.id
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "bg-background text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {filter.label}
-                  <span className="ml-1 opacity-80">{counts[filter.id]}</span>
-                </button>
-              ))}
-            </div>
+            <TicketStatusBreadcrumb
+              active={statusFilter}
+              counts={counts}
+              onSelect={(status) => handleStatusFilter(status)}
+            />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">

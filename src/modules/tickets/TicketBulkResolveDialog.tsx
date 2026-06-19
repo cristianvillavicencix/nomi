@@ -86,7 +86,7 @@ export const TicketBulkResolveDialog = ({
         if (!pending) onOpenChange(next);
       }}
     >
-      <DialogContent>
+      <DialogContent onKeyDown={(event) => event.stopPropagation()}>
         <DialogHeader>
           <DialogTitle>Resolve {tickets.length} ticket(s)?</DialogTitle>
           <DialogDescription>
@@ -99,8 +99,10 @@ export const TicketBulkResolveDialog = ({
             id="bulk-resolve-note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
+            onKeyDown={(event) => event.stopPropagation()}
             placeholder="What was done or why are these closed?"
-            rows={4}
+            rows={5}
+            className="min-h-[120px] resize-y"
             disabled={pending}
             autoFocus
           />

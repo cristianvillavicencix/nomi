@@ -123,7 +123,7 @@ export const useConversationMessages = (
 
   return {
     messages,
-    isPending,
+    isPending: conversationId != null && isPending,
     refetch,
     loadOlder,
     hasMoreOlder,

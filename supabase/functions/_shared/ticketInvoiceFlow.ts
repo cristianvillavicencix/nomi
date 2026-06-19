@@ -5,21 +5,319 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "./transactionalEmail.ts";
+import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
+import { sendTwilioSms } from "./twilio.ts";
+import { normalizeUsPhoneToE164 } from "./phone.ts";
+import {
+  ensureClientConversation,
+  insertSmsMessage,
+  touchConversationFirstResponse,
+} from "./messagingConversations.ts";
+import { sanitizeMessageBody } from "./messagingUtils.ts";
 import { resolveContactEmail } from "./clientProposalBilling.ts";
 import { INVOICE_ORGANIZATION_NAME } from "./invoiceOrganizationInfo.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
-import { createStandaloneClientInvoice } from "./clientInvoiceFlow.ts";
 import {
-  calculateSupplementPricing,
+  createStandaloneClientInvoice,
+  deleteStandaloneClientInvoice,
+} from "./clientInvoiceFlow.ts";
+import {
+  calculatePricingFromTicketLegacy,
+  calculateTicketPricing,
   type SupplementPricingInput,
 } from "./supplementPricing.ts";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export const DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE =
+  "Your Xactimate supplement is ready.\n\nPlease pay using the secure link below. Your files will be delivered automatically by email after payment.";
+
+export const DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE =
+  "This is a friendly reminder that your supplement invoice is still unpaid.\n\nPlease use the secure link below to complete payment. Your files will be delivered automatically after payment.";
+
+export const buildTicketPaymentEmailSubject = (propertyAddress: string) =>
+  `Invoice and Supplements Ready (${propertyAddress.trim()})`;
+
+export const buildTicketPaymentReminderSubject = (propertyAddress: string) =>
+  `Reminder: Invoice and Supplements Ready (${propertyAddress.trim()})`;
+
+export const buildTicketDeliveryEmailSubject = (propertyAddress: string) =>
+  `Your Supplement Files Are Ready (${propertyAddress.trim()})`;
+
+const formatTicketInternalNoteDate = (iso?: string | null) => {
+  if (!iso?.trim()) return null;
+  try {
+    return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(
+      new Date(`${iso}T12:00:00`),
+    );
+  } catch {
+    return iso;
+  }
+};
+
+const formatTicketInternalSmsNote = (params: {
+  smsTo?: string | null;
+  smsSent?: boolean;
+  smsSkipped?: boolean;
+  attempted?: boolean;
+}) => {
+  const phone = params.smsTo?.trim();
+  if (!phone) return "Not sent";
+  if (params.smsSent) return `Sent to ${phone}`;
+  if (params.smsSkipped) return `Not sent — SMS not configured (${phone})`;
+  if (params.attempted) return `Failed — ${phone}`;
+  return "Not sent";
+};
+
+export const buildTicketInvoiceSentInternalNoteBody = (params: {
+  invoiceNumber: string;
+  amountFormatted: string;
+  dueDate?: string | null;
+  recipientEmail: string;
+  propertyAddress?: string | null;
+  deliverableCount: number;
+  smsTo?: string | null;
+  smsSent?: boolean;
+  smsSkipped?: boolean;
+}) => {
+  const dueDate = formatTicketInternalNoteDate(params.dueDate);
+  const fileLabel =
+    params.deliverableCount === 1 ? "1 file" : `${params.deliverableCount} files`;
+
+  return [
+    "**Invoice sent for payment**",
+    "",
+    `- **Invoice:** ${params.invoiceNumber}`,
+    `- **Amount due:** ${params.amountFormatted}`,
+    ...(dueDate ? [`- **Due date:** ${dueDate}`] : []),
+    ...(params.propertyAddress?.trim()
+      ? [`- **Property:** ${params.propertyAddress.trim()}`]
+      : []),
+    `- **Email:** ${params.recipientEmail}`,
+    `- **Text:** ${formatTicketInternalSmsNote({
+      smsTo: params.smsTo,
+      smsSent: params.smsSent,
+      smsSkipped: params.smsSkipped,
+      attempted: Boolean(params.smsTo?.trim()),
+    })}`,
+    "",
+    `Delivery package (${fileLabel}) will be sent automatically after payment.`,
+  ].join("\n");
+};
+
+export const buildTicketPaymentReminderInternalNoteBody = (params: {
+  invoiceNumber: string;
+  amountFormatted: string;
+  dueDate?: string | null;
+  recipientEmail: string;
+  propertyAddress?: string | null;
+  smsTo?: string | null;
+  smsSent?: boolean;
+  smsSkipped?: boolean;
+}) => {
+  const dueDate = formatTicketInternalNoteDate(params.dueDate);
+
+  return [
+    "**Payment reminder sent**",
+    "",
+    `- **Invoice:** ${params.invoiceNumber}`,
+    `- **Amount due:** ${params.amountFormatted}`,
+    ...(dueDate ? [`- **Due date:** ${dueDate}`] : []),
+    ...(params.propertyAddress?.trim()
+      ? [`- **Property:** ${params.propertyAddress.trim()}`]
+      : []),
+    `- **Email:** ${params.recipientEmail}`,
+    `- **Text:** ${formatTicketInternalSmsNote({
+      smsTo: params.smsTo,
+      smsSent: params.smsSent,
+      smsSkipped: params.smsSkipped,
+      attempted: Boolean(params.smsTo?.trim()),
+    })}`,
+  ].join("\n");
+};
+
+export const buildTicketDeliveredInternalNoteBody = (params: {
+  invoiceNumber: string;
+  propertyAddress?: string | null;
+  fileCount: number;
+  recipientEmail: string;
+}) => {
+  const fileLabel = params.fileCount === 1 ? "1 file" : `${params.fileCount} files`;
+
+  return [
+    "**Supplement files delivered**",
+    "",
+    `- **Invoice:** ${params.invoiceNumber}`,
+    ...(params.propertyAddress?.trim()
+      ? [`- **Property:** ${params.propertyAddress.trim()}`]
+      : []),
+    `- **Delivered:** ${fileLabel} emailed to ${params.recipientEmail}`,
+    "",
+    "Ticket marked resolved.",
+  ].join("\n");
+};
+
 const addDays = (isoDate: string, days: number) => {
   const date = new Date(`${isoDate}T12:00:00`);
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+export const buildTicketPaymentEmailBodies = (params: {
+  orgName: string;
+  invoiceNumber: string;
+  amountFormatted: string;
+  paymentUrl: string;
+  customMessage?: string;
+  subject?: string;
+  propertyAddress?: string;
+}) => {
+  const intro =
+    params.customMessage?.trim() || DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE;
+  const introHtml = intro
+    .split(/\n\n+/)
+    .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+
+  const subject =
+    params.subject?.trim() ||
+    (params.propertyAddress
+      ? buildTicketPaymentEmailSubject(params.propertyAddress)
+      : `${params.orgName}: Pay invoice ${params.invoiceNumber}`);
+  const textBody = [
+    intro,
+    "",
+    `Invoice: ${params.invoiceNumber}`,
+    `Amount due: ${params.amountFormatted}`,
+    "",
+    `Pay securely: ${params.paymentUrl}`,
+    "",
+    params.orgName,
+  ].join("\n");
+
+  const htmlBody = `
+    <div style="font-family:system-ui,sans-serif;color:#0f172a;line-height:1.5;max-width:560px;">
+      ${introHtml}
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <tr><td style="padding:4px 0;color:#64748b;">Invoice</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(params.invoiceNumber)}</td></tr>
+        <tr><td style="padding:4px 0;color:#64748b;">Amount due</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(params.amountFormatted)}</td></tr>
+      </table>
+      <p style="margin:20px 0;"><a href="${escapeHtml(params.paymentUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Pay securely</a></p>
+      <p style="color:#64748b;font-size:13px;">${escapeHtml(params.orgName)}</p>
+    </div>`;
+
+  return { subject, textBody, htmlBody };
+};
+
+const buildTicketPaymentSmsBody = (params: {
+  orgName: string;
+  invoiceNumber: string;
+  amountFormatted: string;
+  paymentUrl: string;
+}) =>
+  [
+    `${params.orgName} here:`,
+    `Invoice ${params.invoiceNumber} for ${params.amountFormatted} is ready.`,
+    `Pay securely: ${params.paymentUrl}`,
+  ].join("\n");
+
+export const buildTicketPaymentReminderSmsBody = (params: {
+  orgName: string;
+  invoiceNumber: string;
+  amountFormatted: string;
+  paymentUrl: string;
+}) =>
+  [
+    `${params.orgName} here:`,
+    `Reminder: invoice ${params.invoiceNumber} for ${params.amountFormatted} is still due.`,
+    `Pay securely: ${params.paymentUrl}`,
+  ].join("\n");
+
+export async function sendTicketInvoiceSms(
+  supabase: SupabaseClient,
+  params: {
+  orgId: number;
+  memberId: number;
+  phoneRaw: string;
+  body: string;
+  contactId?: number | null;
+}) {
+  const normalizedPhone = normalizeUsPhoneToE164(params.phoneRaw);
+  if (!normalizedPhone) {
+    throw new Error("Enter a valid US mobile number for text delivery");
+  }
+
+  const settings = await getMessagingSettingsSecrets(params.orgId);
+  if (!settings?.sms_enabled) {
+    return { sent: false, skipped: true, reason: "sms_disabled" as const };
+  }
+
+  const accountSid = settings.twilio_account_sid?.trim();
+  const authToken = settings.twilio_auth_token?.trim();
+  const fromNumber = settings.twilio_phone_number?.trim();
+  if (!accountSid || !authToken || !fromNumber) {
+    return { sent: false, skipped: true, reason: "sms_not_configured" as const };
+  }
+
+  const body = sanitizeMessageBody(params.body.trim());
+  if (!body) {
+    throw new Error("Text message body is empty");
+  }
+
+  const twilioResponse = await sendTwilioSms({
+    accountSid,
+    authToken,
+    from: fromNumber,
+    to: normalizedPhone,
+    body,
+  });
+
+  if (params.contactId) {
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name")
+      .eq("id", params.contactId)
+      .eq("org_id", params.orgId)
+      .maybeSingle();
+
+    if (contact?.id) {
+      const conversation = await ensureClientConversation({
+        orgId: params.orgId,
+        externalPhone: normalizedPhone,
+        contactId: contact.id,
+        dealId: null,
+        createdByMemberId: params.memberId,
+        title:
+          `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+          normalizedPhone,
+      });
+
+      const message = await insertSmsMessage({
+        conversationId: Number(conversation.id),
+        body,
+        direction: "outbound",
+        authorMemberId: params.memberId,
+        externalId: twilioResponse.sid ?? null,
+        mediaUrl: null,
+        isInternalNote: false,
+        replyToMessageId: null,
+      });
+
+      await touchConversationFirstResponse(
+        Number(conversation.id),
+        message.created_at ?? new Date().toISOString(),
+      );
+    }
+  }
+
+  return { sent: true, skipped: false, reason: null };
 };
 
 const ensureShareLink = async (
@@ -77,23 +375,18 @@ const ensureShareLink = async (
   };
 };
 
-export async function createTicketInvoiceAndSendPaymentLink(
+async function loadTicketForInvoice(
   supabase: SupabaseClient,
-  params: {
-    orgId: number;
-    memberId: number;
-    ticketId: number;
-    baseUrl?: string;
-    pricingOverride?: Partial<SupplementPricingInput>;
-  },
+  orgId: number,
+  ticketId: number,
 ) {
   const { data: ticket } = await supabase
     .from("tickets")
     .select(
       "id, org_id, subject, status, company_id, contact_id, deal_id, requester_email, invoice_id, merged_into_ticket_id, billing_item_count, billing_has_roof, billing_has_siding, billing_has_esx, billing_has_pdf_analysis, delivery_status",
     )
-    .eq("id", params.ticketId)
-    .eq("org_id", params.orgId)
+    .eq("id", ticketId)
+    .eq("org_id", orgId)
     .maybeSingle();
 
   if (!ticket?.id) {
@@ -102,15 +395,12 @@ export async function createTicketInvoiceAndSendPaymentLink(
   if (ticket.merged_into_ticket_id) {
     throw new Error("Cannot invoice a merged ticket");
   }
-  if (ticket.invoice_id) {
-    throw new Error("This ticket already has an invoice");
-  }
 
   const { count: deliverableCount } = await supabase
     .from("ticket_deliverables")
     .select("id", { count: "exact", head: true })
     .eq("ticket_id", ticket.id)
-    .eq("org_id", params.orgId);
+    .eq("org_id", orgId);
 
   if (!deliverableCount) {
     throw new Error("Upload at least one delivery file before sending an invoice");
@@ -132,63 +422,285 @@ export async function createTicketInvoiceAndSendPaymentLink(
     throw new Error("Add a valid recipient email before sending an invoice");
   }
 
-  if (!(await isOrgTransactionalEmailConfigured(params.orgId))) {
-    throw new Error("Email is not configured for your organization");
+  return { ticket, recipientEmail, deliverableCount: deliverableCount ?? 0 };
+}
+
+async function loadTicketDeliverablesForBilling(
+  supabase: SupabaseClient,
+  orgId: number,
+  ticketId: number,
+) {
+  const { data } = await supabase
+    .from("ticket_deliverables")
+    .select("billing_kind, billing_line_count, title")
+    .eq("ticket_id", ticketId)
+    .eq("org_id", orgId)
+    .order("sort_order", { ascending: true });
+
+  return data ?? [];
+}
+
+async function buildPricingForTicket(
+  supabase: SupabaseClient,
+  orgId: number,
+  ticket: {
+    id: number;
+    subject: string;
+    billing_item_count?: number | null;
+    billing_has_roof?: boolean | null;
+    billing_has_siding?: boolean | null;
+    billing_has_esx?: boolean | null;
+    billing_has_pdf_analysis?: boolean | null;
+  },
+  pricingOverride?: Partial<SupplementPricingInput>,
+) {
+  const deliverables = await loadTicketDeliverablesForBilling(
+    supabase,
+    orgId,
+    ticket.id,
+  );
+
+  if (pricingOverride) {
+    return calculatePricingFromTicketLegacy(
+      {
+        itemCount:
+          pricingOverride.itemCount ?? ticket.billing_item_count ?? 0,
+        hasRoof:
+          pricingOverride.hasRoof ?? Boolean(ticket.billing_has_roof),
+        hasSiding:
+          pricingOverride.hasSiding ?? Boolean(ticket.billing_has_siding),
+        hasEsx: pricingOverride.hasEsx ?? Boolean(ticket.billing_has_esx),
+        hasPdfAnalysis:
+          pricingOverride.hasPdfAnalysis ??
+          Boolean(ticket.billing_has_pdf_analysis),
+      },
+      ticket.subject,
+    );
   }
 
-  const pricing = calculateSupplementPricing({
-    itemCount:
-      params.pricingOverride?.itemCount ?? ticket.billing_item_count ?? 0,
-    hasRoof:
-      params.pricingOverride?.hasRoof ?? Boolean(ticket.billing_has_roof),
-    hasSiding:
-      params.pricingOverride?.hasSiding ?? Boolean(ticket.billing_has_siding),
-    hasEsx: params.pricingOverride?.hasEsx ?? Boolean(ticket.billing_has_esx),
-    hasPdfAnalysis:
-      params.pricingOverride?.hasPdfAnalysis ??
-      Boolean(ticket.billing_has_pdf_analysis),
+  return calculateTicketPricing(deliverables, ticket, ticket.subject);
+}
+
+async function syncDraftInvoiceFromDeliverables(
+  supabase: SupabaseClient,
+  orgId: number,
+  invoiceId: number,
+  ticket: {
+    id: number;
+    subject: string;
+    billing_item_count?: number | null;
+    billing_has_roof?: boolean | null;
+    billing_has_siding?: boolean | null;
+    billing_has_esx?: boolean | null;
+    billing_has_pdf_analysis?: boolean | null;
+  },
+) {
+  const pricing = await buildPricingForTicket(supabase, orgId, ticket);
+  if (!pricing.lines.length) {
+    throw new Error("Configure billing on each delivery file before sending");
+  }
+
+  await removeTicketInvoiceTransferFeeLines(supabase, invoiceId, orgId);
+
+  await supabase
+    .from("client_invoice_line_items")
+    .delete()
+    .eq("invoice_id", invoiceId)
+    .eq("org_id", orgId);
+
+  const lineRows = pricing.lines.map((line, index) => {
+    const quantity = Number(line.quantity) || 1;
+    const unitPrice = Number(line.unitPrice) || 0;
+    return {
+      org_id: orgId,
+      invoice_id: invoiceId,
+      description: line.description,
+      quantity,
+      unit: line.unit ?? "ea",
+      unit_price: unitPrice,
+      line_total: Math.round(quantity * unitPrice * 100) / 100,
+      sort_order: index,
+    };
   });
 
-  const today = new Date().toISOString().slice(0, 10);
-  const dueDate = addDays(today, 7);
-  const lineItems = [
-    ...pricing.lines.map((line, index) => ({
-      description: line.description,
-      quantity: line.quantity,
-      unit: line.unit,
-      unit_price: line.unitPrice,
-      sort_order: index,
-    })),
-  ];
+  const { error: linesError } = await supabase
+    .from("client_invoice_line_items")
+    .insert(lineRows);
 
-  if (pricing.transferFee > 0) {
-    lineItems.push({
-      description: "Transfer fee",
-      quantity: 1,
-      unit: "ea",
-      unit_price: pricing.transferFee,
-      sort_order: lineItems.length,
-    });
+  if (linesError) {
+    throw new Error(linesError.message ?? "Could not update invoice lines");
   }
 
+  const now = new Date().toISOString();
+  const { error: invoiceError } = await supabase
+    .from("client_invoices")
+    .update({
+      subtotal: pricing.subtotal,
+      fee_amount: pricing.transferFee,
+      amount: pricing.total,
+      updated_at: now,
+    })
+    .eq("id", invoiceId)
+    .eq("org_id", orgId);
+
+  if (invoiceError) {
+    throw new Error(invoiceError.message ?? "Could not update invoice totals");
+  }
+
+  return pricing;
+}
+
+async function createDraftInvoiceForTicket(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    ticket: {
+      id: number;
+      subject: string;
+      company_id?: number | null;
+      contact_id?: number | null;
+      deal_id?: number | null;
+      billing_item_count?: number | null;
+      billing_has_roof?: boolean | null;
+      billing_has_siding?: boolean | null;
+      billing_has_esx?: boolean | null;
+      billing_has_pdf_analysis?: boolean | null;
+    };
+    recipientEmail: string;
+    pricingOverride?: Partial<SupplementPricingInput>;
+  },
+) {
+  const pricing = await buildPricingForTicket(
+    supabase,
+    params.orgId,
+    params.ticket,
+    params.pricingOverride,
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  const dueDate = addDays(today, 7);
+  const lineItems = pricing.lines.map((line, index) => ({
+    description: line.description,
+    quantity: line.quantity,
+    unit: line.unit,
+    unit_price: line.unitPrice,
+    sort_order: index,
+  }));
+
   const invoice = await createStandaloneClientInvoice(supabase, params.orgId, {
-    company_id: ticket.company_id ?? null,
-    contact_id: ticket.contact_id ?? null,
-    deal_id: ticket.deal_id ?? null,
-    ticket_id: ticket.id,
+    company_id: params.ticket.company_id ?? null,
+    contact_id: params.ticket.contact_id ?? null,
+    deal_id: params.ticket.deal_id ?? null,
+    ticket_id: params.ticket.id,
     issue_date: today,
     due_date: dueDate,
     terms: "Due on receipt",
     subtotal: pricing.subtotal,
     fee_amount: pricing.transferFee,
     amount: pricing.total,
-    description: `Xactimate supplement · Ticket #${ticket.id}`,
-    reference: `Ticket #${ticket.id} · ${ticket.subject}`,
-    recipient_email: recipientEmail,
+    description: `Xactimate supplement · Ticket #${params.ticket.id}`,
+    reference: `Ticket #${params.ticket.id} · ${params.ticket.subject}`,
+    recipient_email: params.recipientEmail,
     save_card_for_future_charges: false,
     upfront_percent: 100,
     auto_charge_remainder: false,
     line_items: lineItems,
+  });
+
+  return { invoice, pricing };
+}
+
+async function removeTicketInvoiceTransferFeeLines(
+  supabase: SupabaseClient,
+  invoiceId: number,
+  orgId: number,
+) {
+  await supabase
+    .from("client_invoice_line_items")
+    .delete()
+    .eq("invoice_id", invoiceId)
+    .eq("org_id", orgId)
+    .ilike("description", "transfer fee");
+}
+
+export async function prepareTicketInvoiceDraft(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    ticketId: number;
+    baseUrl?: string;
+    pricingOverride?: Partial<SupplementPricingInput>;
+  },
+) {
+  const { ticket, recipientEmail } = await loadTicketForInvoice(
+    supabase,
+    params.orgId,
+    params.ticketId,
+  );
+
+  if (ticket.invoice_id) {
+    const { data: existing } = await supabase
+      .from("client_invoices")
+      .select("*")
+      .eq("id", ticket.invoice_id)
+      .eq("org_id", params.orgId)
+      .maybeSingle();
+
+    if (existing?.status === "draft") {
+      await removeTicketInvoiceTransferFeeLines(
+        supabase,
+        Number(existing.id),
+        params.orgId,
+      );
+
+      const pricing = await syncDraftInvoiceFromDeliverables(
+        supabase,
+        params.orgId,
+        Number(existing.id),
+        ticket,
+      );
+
+      const { data: lineItems } = await supabase
+        .from("client_invoice_line_items")
+        .select("*")
+        .eq("invoice_id", existing.id)
+        .eq("org_id", params.orgId)
+        .order("sort_order", { ascending: true });
+
+      const { data: refreshedInvoice } = await supabase
+        .from("client_invoices")
+        .select("*")
+        .eq("id", existing.id)
+        .eq("org_id", params.orgId)
+        .maybeSingle();
+
+      const baseUrl = (params.baseUrl?.trim() || resolvePublicAppBaseUrl())
+        .replace(/\/$/, "");
+      const { url } = await ensureShareLink(
+        supabase,
+        Number(existing.id),
+        params.orgId,
+        baseUrl,
+      );
+
+      return {
+        invoice: refreshedInvoice ?? existing,
+        line_items: lineItems ?? [],
+        payment_url: url,
+        to: recipientEmail,
+        pricing,
+      };
+    }
+
+    if (existing && existing.status !== "void") {
+      throw new Error("This ticket already has an invoice");
+    }
+  }
+
+  const { invoice, pricing } = await createDraftInvoiceForTicket(supabase, {
+    orgId: params.orgId,
+    ticket,
+    recipientEmail,
+    pricingOverride: params.pricingOverride,
   });
 
   const now = new Date().toISOString();
@@ -196,21 +708,125 @@ export async function createTicketInvoiceAndSendPaymentLink(
     .from("tickets")
     .update({
       invoice_id: invoice.id,
-      status: "waiting",
-      delivery_status: "invoice_sent",
       updated_at: now,
     })
     .eq("id", ticket.id)
     .eq("org_id", params.orgId);
 
-  await supabase.from("ticket_messages").insert({
-    ticket_id: ticket.id,
-    author_member_id: params.memberId,
-    body: `Invoice ${invoice.invoice_number} sent for payment. Files will be delivered automatically after payment.`,
-    direction: "internal",
-    from_name: "System",
-    created_at: now,
-  });
+  const { data: lineItems } = await supabase
+    .from("client_invoice_line_items")
+    .select("*")
+    .eq("invoice_id", invoice.id)
+    .eq("org_id", params.orgId)
+    .order("sort_order", { ascending: true });
+
+  const baseUrl = (params.baseUrl?.trim() || resolvePublicAppBaseUrl()).replace(
+    /\/$/,
+    "",
+  );
+  const { url } = await ensureShareLink(
+    supabase,
+    Number(invoice.id),
+    params.orgId,
+    baseUrl,
+  );
+
+  return {
+    invoice,
+    line_items: lineItems ?? [],
+    payment_url: url,
+    to: recipientEmail,
+    pricing,
+  };
+}
+
+export async function cancelTicketInvoiceDraft(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    ticketId: number;
+  },
+) {
+  const { data: ticket } = await supabase
+    .from("tickets")
+    .select("id, invoice_id, delivery_status")
+    .eq("id", params.ticketId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!ticket?.invoice_id) {
+    return { cancelled: false, skipped: true };
+  }
+
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select("id, status")
+    .eq("id", ticket.invoice_id)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!invoice?.id || invoice.status !== "draft") {
+    return { cancelled: false, skipped: true };
+  }
+
+  await deleteStandaloneClientInvoice(supabase, Number(invoice.id), params.orgId);
+
+  const nextDeliveryStatus =
+    ticket.delivery_status === "invoice_sent" ? "ready" : ticket.delivery_status;
+
+  await supabase
+    .from("tickets")
+    .update({
+      invoice_id: null,
+      delivery_status: nextDeliveryStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", ticket.id)
+    .eq("org_id", params.orgId);
+
+  return { cancelled: true, invoice_id: invoice.id };
+}
+
+export async function sendTicketInvoicePaymentLink(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    memberId: number;
+    ticketId: number;
+    baseUrl?: string;
+    message?: string;
+    subject?: string;
+    smsTo?: string;
+    sendSms?: boolean;
+  },
+) {
+  const { ticket, recipientEmail, deliverableCount } = await loadTicketForInvoice(
+    supabase,
+    params.orgId,
+    params.ticketId,
+  );
+
+  if (!ticket.invoice_id) {
+    throw new Error("Prepare the invoice before sending");
+  }
+
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select("*")
+    .eq("id", ticket.invoice_id)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!invoice?.id) {
+    throw new Error("Invoice not found");
+  }
+  if (invoice.status !== "draft") {
+    throw new Error("This invoice was already sent");
+  }
+
+  if (!(await isOrgTransactionalEmailConfigured(params.orgId))) {
+    throw new Error("Email is not configured for your organization");
+  }
 
   const baseUrl = (params.baseUrl?.trim() || resolvePublicAppBaseUrl()).replace(
     /\/$/,
@@ -233,32 +849,19 @@ export async function createTicketInvoiceAndSendPaymentLink(
   const balanceFormatted = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-  }).format(pricing.total);
+  }).format(Number(invoice.amount) || 0);
 
-  const subject = `${orgName}: Pay invoice ${invoice.invoice_number}`;
-  const textBody = [
-    "Your Xactimate supplement is ready.",
-    "Please pay using the secure link below. Your files will be delivered automatically by email after payment.",
-    "",
-    `Invoice: ${invoice.invoice_number}`,
-    `Amount due: ${balanceFormatted}`,
-    "",
-    `Pay securely: ${url}`,
-    "",
+  const { subject, textBody, htmlBody } = buildTicketPaymentEmailBodies({
     orgName,
-  ].join("\n");
+    invoiceNumber: invoice.invoice_number,
+    amountFormatted: balanceFormatted,
+    paymentUrl: url,
+    customMessage: params.message,
+    subject: params.subject,
+    propertyAddress: ticket.subject,
+  });
 
-  const htmlBody = `
-    <div style="font-family:system-ui,sans-serif;color:#0f172a;line-height:1.5;max-width:560px;">
-      <p>Your Xactimate supplement is ready.</p>
-      <p>Please pay using the button below. <strong>Your files will be delivered automatically by email after payment.</strong></p>
-      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-        <tr><td style="padding:4px 0;color:#64748b;">Invoice</td><td style="padding:4px 0;text-align:right;font-weight:600;">${invoice.invoice_number}</td></tr>
-        <tr><td style="padding:4px 0;color:#64748b;">Amount due</td><td style="padding:4px 0;text-align:right;font-weight:600;">${balanceFormatted}</td></tr>
-      </table>
-      <p style="margin:20px 0;"><a href="${url}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Pay securely</a></p>
-      <p style="color:#64748b;font-size:13px;">${orgName}</p>
-    </div>`;
+  const now = new Date().toISOString();
 
   await sendTransactionalEmail({
     orgId: params.orgId,
@@ -268,6 +871,22 @@ export async function createTicketInvoiceAndSendPaymentLink(
     textBody,
     htmlBody,
   });
+
+  let smsOutcome: { sent: boolean; skipped: boolean } | null = null;
+  if (params.sendSms && params.smsTo?.trim()) {
+    smsOutcome = await sendTicketInvoiceSms(supabase, {
+      orgId: params.orgId,
+      memberId: params.memberId,
+      phoneRaw: params.smsTo.trim(),
+      body: buildTicketPaymentSmsBody({
+        orgName,
+        invoiceNumber: invoice.invoice_number,
+        amountFormatted: balanceFormatted,
+        paymentUrl: url,
+      }),
+      contactId: ticket.contact_id ?? null,
+    });
+  }
 
   await supabase
     .from("client_invoices")
@@ -279,10 +898,77 @@ export async function createTicketInvoiceAndSendPaymentLink(
     .eq("id", invoice.id)
     .eq("org_id", params.orgId);
 
+  await supabase
+    .from("tickets")
+    .update({
+      status: "waiting",
+      delivery_status: "invoice_sent",
+      updated_at: now,
+    })
+    .eq("id", ticket.id)
+    .eq("org_id", params.orgId);
+
+  const { data: member } = await supabase
+    .from("organization_members")
+    .select("first_name, last_name, email")
+    .eq("id", params.memberId)
+    .maybeSingle();
+  const memberName =
+    [member?.first_name, member?.last_name].filter(Boolean).join(" ").trim() ||
+    member?.email?.trim() ||
+    "Team";
+
+  await supabase.from("ticket_messages").insert({
+    ticket_id: ticket.id,
+    author_member_id: params.memberId,
+    body: buildTicketInvoiceSentInternalNoteBody({
+      invoiceNumber: invoice.invoice_number,
+      amountFormatted: balanceFormatted,
+      dueDate: invoice.due_date,
+      recipientEmail,
+      propertyAddress: ticket.subject,
+      deliverableCount,
+      smsTo: params.sendSms ? params.smsTo : null,
+      smsSent: smsOutcome?.sent ?? false,
+      smsSkipped: smsOutcome?.skipped ?? false,
+    }),
+    direction: "internal",
+    from_name: memberName,
+    created_at: now,
+  });
+
   return {
     invoice: { ...invoice, status: "sent", sent_at: now },
     payment_url: url,
     to: recipientEmail,
-    pricing,
+    sms_sent: smsOutcome?.sent ?? false,
+    sms_skipped: smsOutcome?.skipped ?? !params.sendSms,
   };
+}
+
+export async function createTicketInvoiceAndSendPaymentLink(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    memberId: number;
+    ticketId: number;
+    baseUrl?: string;
+    pricingOverride?: Partial<SupplementPricingInput>;
+    message?: string;
+  },
+) {
+  await prepareTicketInvoiceDraft(supabase, {
+    orgId: params.orgId,
+    ticketId: params.ticketId,
+    baseUrl: params.baseUrl,
+    pricingOverride: params.pricingOverride,
+  });
+
+  return sendTicketInvoicePaymentLink(supabase, {
+    orgId: params.orgId,
+    memberId: params.memberId,
+    ticketId: params.ticketId,
+    baseUrl: params.baseUrl,
+    message: params.message,
+  });
 }

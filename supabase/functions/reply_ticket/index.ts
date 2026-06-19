@@ -10,6 +10,10 @@ import {
   loadStorageAttachmentsForEmail,
   type StoredAttachment,
 } from "../_shared/storageAttachmentsForEmail.ts";
+import {
+  isTicketAwaitingPaidDelivery,
+  TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE,
+} from "../_shared/ticketOutboundAttachments.ts";
 
 type ReplyBody = {
   ticket_id?: number;
@@ -77,7 +81,7 @@ Deno.serve(
         const { data: ticket, error: ticketError } = await supabaseAdmin
           .from("tickets")
           .select(
-            "id, org_id, subject, inbox_address, requester_email, requester_name, external_thread_id, merged_into_ticket_id, status",
+            "id, org_id, subject, inbox_address, requester_email, requester_name, external_thread_id, merged_into_ticket_id, status, invoice_id, delivery_status",
           )
           .eq("id", ticketId)
           .eq("org_id", member.org_id)
@@ -147,17 +151,27 @@ Deno.serve(
         }
 
         if (attachments.length > 0) {
-          const { data: ticketDelivery } = await supabaseAdmin
-            .from("tickets")
-            .select("delivery_status")
-            .eq("id", ticket.id)
-            .eq("org_id", member.org_id)
-            .maybeSingle();
+          let invoiceStatus: string | null = null;
+          if (ticket.invoice_id) {
+            const { data: invoice } = await supabaseAdmin
+              .from("client_invoices")
+              .select("status")
+              .eq("id", ticket.invoice_id)
+              .eq("org_id", member.org_id)
+              .maybeSingle();
+            invoiceStatus = invoice?.status ?? null;
+          }
 
-          if (ticketDelivery?.delivery_status !== "delivered") {
+          if (
+            isTicketAwaitingPaidDelivery({
+              invoiceId: ticket.invoice_id,
+              deliveryStatus: ticket.delivery_status,
+              invoiceStatus,
+            })
+          ) {
             return createErrorResponse(
               400,
-              "Outbound attachments are blocked until payment delivery completes. Use the delivery package instead.",
+              TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE,
             );
           }
         }

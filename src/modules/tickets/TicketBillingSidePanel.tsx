@@ -1,9 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import {
+  Pencil,
   CreditCard,
   FileText,
   Loader2,
-  Lock,
+  MessageSquare,
   Package,
   PanelLeftOpen,
   PanelRightClose,
@@ -22,31 +23,40 @@ import {
   useRefresh,
   useUpdate,
 } from "ra-core";
-import { Link } from "react-router";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type {
   ClientInvoice,
   Ticket,
   TicketDeliverable,
-  TicketInternalFile,
 } from "@/modules/types";
 import {
-  calculateSupplementPricing,
+  allDeliverablesHaveBilling,
+  calculateTicketPricing,
+  deliverableBillingSummary,
   formatSupplementMoney,
-  supplementPricingFromTicket,
 } from "@/modules/tickets/supplementPricing";
+import {
+  TicketDeliverableBillingDialog,
+  type DeliverableBillingSelection,
+} from "@/modules/tickets/TicketDeliverableBillingDialog";
+import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import {
   MAX_TICKET_ATTACHMENTS,
   MAX_TICKET_ATTACHMENT_BYTES,
   uploadTicketAttachment,
 } from "@/modules/tickets/uploadTicketAttachment";
-import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
+import { TicketToolsClientSms } from "@/modules/tickets/TicketToolsClientSms";
+import { TicketToolsInvoiceSection } from "@/modules/tickets/TicketToolsInvoiceSection";
+import { TicketInvoicePreviewDialog } from "@/modules/tickets/TicketInvoicePreviewDialog";
+import { TicketInvoiceReminderDialog } from "@/modules/tickets/TicketInvoiceReminderDialog";
+import {
+  TicketInvoiceViewDialog,
+  type TicketInvoiceViewMode,
+} from "@/modules/tickets/TicketInvoiceViewDialog";
 import type { Company, Contact } from "@/components/atomic-crm/types";
+import { canEditClientInvoice } from "@/modules/billing/billingUtils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Tooltip,
   TooltipContent,
@@ -54,7 +64,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const STORAGE_KEY = "tickets-billing-side-collapsed";
+const STORAGE_KEY = "tickets-tools-side-collapsed";
 
 const SideSection = ({
   icon: Icon,
@@ -71,7 +81,7 @@ const SideSection = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <section className={cn("space-y-3 rounded-lg border bg-background p-3", className)}>
+  <section className={cn("space-y-3 px-4 py-4", className)}>
     <div className="flex items-center gap-2">
       <Icon className="size-4 text-muted-foreground" />
       <h3 className="text-sm font-medium">{title}</h3>
@@ -89,39 +99,58 @@ const FileRow = ({
   name,
   meta,
   onRemove,
+  onEdit,
   canRemove,
-  accent,
+  canEdit,
 }: {
   name: string;
   meta?: string;
   onRemove?: () => void;
+  onEdit?: () => void;
   canRemove?: boolean;
-  accent?: "default" | "delivery";
+  canEdit?: boolean;
 }) => (
-  <div
-    className={cn(
-      "flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-sm",
-      accent === "delivery" && "border-sky-200/80 bg-sky-50/50 dark:border-sky-900/50 dark:bg-sky-950/20",
-    )}
-  >
-    <span className="inline-flex min-w-0 items-center gap-2">
-      <FileText className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 truncate">{name}</span>
+  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 py-2.5">
+    <div className="min-w-0">
+      <div className="flex min-w-0 items-start gap-2">
+        <FileText className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+        <p className="min-w-0 truncate text-sm leading-snug" title={name}>
+          {name}
+        </p>
+      </div>
       {meta ? (
-        <span className="shrink-0 text-xs text-muted-foreground">{meta}</span>
+        <p
+          className="mt-1 truncate pl-5 text-xs leading-snug text-muted-foreground"
+          title={meta}
+        >
+          {meta}
+        </p>
       ) : null}
-    </span>
-    {canRemove && onRemove ? (
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-7 shrink-0"
-        onClick={onRemove}
-      >
-        <Trash2 className="size-3.5" />
-      </Button>
-    ) : null}
+    </div>
+    <div className="flex shrink-0 items-start gap-0.5">
+      {canEdit && onEdit ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          onClick={onEdit}
+        >
+          <Pencil className="size-3.5" />
+        </Button>
+      ) : null}
+      {canRemove && onRemove ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          onClick={onRemove}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      ) : null}
+    </div>
   </div>
 );
 
@@ -166,27 +195,33 @@ export const TicketBillingSidePanel = ({
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const deliverableInputRef = useRef<HTMLInputElement | null>(null);
-  const internalInputRef = useRef<HTMLInputElement | null>(null);
   const [update] = useUpdate();
   const [createDeliverable] = useCreate();
-  const [createInternalFile] = useCreate();
   const [deleteDeliverable] = useDelete();
-  const [deleteInternalFile] = useDelete();
 
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof sessionStorage === "undefined") return false;
     return sessionStorage.getItem(STORAGE_KEY) === "true";
   });
 
-  const [itemCount, setItemCount] = useState(String(ticket.billing_item_count ?? 0));
-  const [hasRoof, setHasRoof] = useState(Boolean(ticket.billing_has_roof));
-  const [hasSiding, setHasSiding] = useState(Boolean(ticket.billing_has_siding));
-  const [hasEsx, setHasEsx] = useState(Boolean(ticket.billing_has_esx));
-  const [hasPdfAnalysis, setHasPdfAnalysis] = useState(
-    Boolean(ticket.billing_has_pdf_analysis),
-  );
+  const [pendingUploads, setPendingUploads] = useState<File[]>([]);
+  const [billingDialogOpen, setBillingDialogOpen] = useState(false);
+  const [billingFileName, setBillingFileName] = useState<string | null>(null);
+  const [billingInitial, setBillingInitial] =
+    useState<DeliverableBillingSelection | null>(null);
+  const [editingDeliverable, setEditingDeliverable] =
+    useState<TicketDeliverable | null>(null);
   const [uploadingDeliverables, setUploadingDeliverables] = useState(false);
-  const [uploadingInternal, setUploadingInternal] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceDialogMode, setInvoiceDialogMode] =
+    useState<TicketInvoiceViewMode>("view");
+
+  const openInvoiceDialog = (mode: TicketInvoiceViewMode) => {
+    setInvoiceDialogMode(mode);
+    setInvoiceDialogOpen(true);
+  };
 
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, String(collapsed));
@@ -202,50 +237,24 @@ export const TicketBillingSidePanel = ({
     { enabled: Boolean(ticket.id) },
   );
 
-  const { data: internalFiles = [] } = useGetList<TicketInternalFile>(
-    "ticket_internal_files",
-    {
-      filter: { "ticket_id@eq": ticket.id },
-      sort: { field: "sort_order", order: "ASC" },
-      pagination: { page: 1, perPage: 20 },
-    },
-    { enabled: Boolean(ticket.id) },
-  );
-
   const { data: invoice } = useGetOne<ClientInvoice>(
     "client_invoices",
     { id: ticket.invoice_id ?? "" },
-    { enabled: Boolean(ticket.invoice_id) },
+    { enabled: Boolean(ticket.invoice_id), retry: false },
   );
+
+  const propertyAddress = ticket.subject ?? "Property";
 
   const pricing = useMemo(
-    () =>
-      calculateSupplementPricing({
-        itemCount: Number(itemCount) || 0,
-        hasRoof,
-        hasSiding,
-        hasEsx,
-        hasPdfAnalysis,
-      }),
-    [itemCount, hasRoof, hasSiding, hasEsx, hasPdfAnalysis],
+    () => calculateTicketPricing(deliverables, ticket, propertyAddress),
+    [deliverables, ticket, propertyAddress],
   );
 
-  const baselinePricing = useMemo(
-    () => supplementPricingFromTicket(ticket),
-    [ticket],
-  );
-
-  const billingDirty =
-    Number(itemCount) !== (ticket.billing_item_count ?? 0) ||
-    hasRoof !== Boolean(ticket.billing_has_roof) ||
-    hasSiding !== Boolean(ticket.billing_has_siding) ||
-    hasEsx !== Boolean(ticket.billing_has_esx) ||
-    hasPdfAnalysis !== Boolean(ticket.billing_has_pdf_analysis);
-
-  const displayPricing = billingDirty ? pricing : baselinePricing;
   const displayTotal = invoice
-    ? Number(invoice.amount) || displayPricing.total
-    : displayPricing.total;
+    ? Number(invoice.amount) || pricing.total
+    : pricing.subtotal;
+
+  const deliverablesReadyForInvoice = allDeliverablesHaveBilling(deliverables);
 
   const paymentBadge = invoice
     ? invoice.status === "paid"
@@ -253,63 +262,36 @@ export const TicketBillingSidePanel = ({
       : { label: "Unpaid", className: "border-amber-200 text-amber-700" }
     : { label: "Draft", className: "border-border text-muted-foreground" };
 
-  const saveBillingMutation = useMutation({
-    mutationFn: async () => {
-      await update(
-        "tickets",
-        {
-          id: ticket.id,
-          data: {
-            billing_item_count: Math.max(0, Math.floor(Number(itemCount) || 0)),
-            billing_has_roof: hasRoof,
-            billing_has_siding: hasSiding,
-            billing_has_esx: hasEsx,
-            billing_has_pdf_analysis: hasPdfAnalysis,
-            ...(deliverables.length > 0 && ticket.delivery_status === "none"
-              ? { delivery_status: "ready" }
-              : {}),
-          },
-          previousData: ticket,
-        },
-        { mutationMode: "optimistic" },
-      );
-    },
-    onSuccess: () => refresh(),
-    onError: () => notify("Could not save pricing", { type: "error" }),
-  });
+  const openInvoicePreview = async () => {
+    if (!deliverables.length) {
+      notify("Upload at least one delivery file before sending an invoice", {
+        type: "warning",
+      });
+      return;
+    }
+    if (!deliverablesReadyForInvoice) {
+      notify("Set billing type for each delivery file before sending", {
+        type: "warning",
+      });
+      return;
+    }
+    if (!ticket.company_id && !ticket.contact_id) {
+      notify("Link a company or contact before sending an invoice", {
+        type: "warning",
+      });
+      return;
+    }
+    const email = resolveTicketRequesterEmail(ticket, company, contact);
+    if (!email) {
+      notify("Add a valid recipient email before sending an invoice", {
+        type: "warning",
+      });
+      return;
+    }
+    setPreviewOpen(true);
+  };
 
-  const invoiceMutation = useMutation({
-    mutationFn: async () => {
-      if (billingDirty) await saveBillingMutation.mutateAsync();
-      return dataProvider.createTicketInvoice({
-        ticketId: ticket.id,
-        baseUrl: window.location.origin,
-      });
-    },
-    onSuccess: () => {
-      notify("Invoice sent — files will deliver after payment", {
-        type: "success",
-      });
-      refresh();
-    },
-    onError: (error: Error) =>
-      notify(error.message || "Could not send invoice", { type: "error" }),
-  });
-
-  const remindMutation = useMutation({
-    mutationFn: async () => {
-      if (!invoice?.id) throw new Error("No invoice on this ticket");
-      const to = resolveTicketRequesterEmail(ticket, company, contact);
-      if (!to) throw new Error("No recipient email on file");
-      return dataProvider.sendClientInvoicePaymentLink({
-        invoiceId: invoice.id,
-        to,
-      });
-    },
-    onSuccess: () => notify("Payment reminder sent", { type: "success" }),
-    onError: (error: Error) =>
-      notify(error.message || "Could not send reminder", { type: "error" }),
-  });
+  const canEditInvoice = invoice ? canEditClientInvoice(invoice) : false;
 
   const deliverMutation = useMutation({
     mutationFn: () => dataProvider.deliverTicket({ ticketId: ticket.id }),
@@ -321,81 +303,151 @@ export const TicketBillingSidePanel = ({
       notify(error.message || "Could not deliver files", { type: "error" }),
   });
 
-  const uploadFiles = async (
-    files: FileList | null,
-    kind: "deliverable" | "internal",
-  ) => {
-    if (!files?.length) return;
-    const existing =
-      kind === "deliverable" ? deliverables.length : internalFiles.length;
-    if (existing + files.length > MAX_TICKET_ATTACHMENTS) {
-      notify(`Maximum ${MAX_TICKET_ATTACHMENTS} files`, { type: "warning" });
-      return;
+  const markDeliveryReady = async () => {
+    if (ticket.delivery_status !== "none") return;
+    await update(
+      "tickets",
+      {
+        id: ticket.id,
+        data: { delivery_status: "ready" },
+        previousData: ticket,
+      },
+      { mutationMode: "optimistic" },
+    );
+  };
+
+  const openBillingDialogForUpload = (files: File[]) => {
+    setEditingDeliverable(null);
+    setPendingUploads(files);
+    setBillingFileName(files[0]?.name ?? null);
+    setBillingInitial(null);
+    setBillingDialogOpen(true);
+  };
+
+  const openBillingDialogForEdit = (deliverable: TicketDeliverable) => {
+    setPendingUploads([]);
+    setEditingDeliverable(deliverable);
+    setBillingFileName(deliverable.title);
+    setBillingInitial(
+      deliverable.billing_kind
+        ? {
+            billing_kind: deliverable.billing_kind,
+            billing_line_count: deliverable.billing_line_count ?? null,
+          }
+        : null,
+    );
+    setBillingDialogOpen(true);
+  };
+
+  const handleBillingDialogOpenChange = (open: boolean) => {
+    setBillingDialogOpen(open);
+    if (!open) {
+      setPendingUploads([]);
+      setEditingDeliverable(null);
+      setBillingFileName(null);
+      setBillingInitial(null);
+      if (deliverableInputRef.current) {
+        deliverableInputRef.current.value = "";
+      }
     }
+  };
 
-    const setLoading =
-      kind === "deliverable" ? setUploadingDeliverables : setUploadingInternal;
-    const resource =
-      kind === "deliverable" ? "ticket_deliverables" : "ticket_internal_files";
-    const create = kind === "deliverable" ? createDeliverable : createInternalFile;
-
-    setLoading(true);
-    try {
-      for (const file of Array.from(files)) {
-        if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-          throw new Error(`"${file.name}" exceeds the 10 MB limit`);
-        }
-        const uploaded = await uploadTicketAttachment(file);
-        await create(
-          resource,
+  const handleBillingConfirm = async (selection: DeliverableBillingSelection) => {
+    if (editingDeliverable) {
+      try {
+        await update(
+          "ticket_deliverables",
           {
+            id: editingDeliverable.id,
             data: {
-              ticket_id: ticket.id,
-              title: uploaded.title,
-              type: uploaded.type,
-              path: uploaded.path,
-              src: uploaded.src,
-              sort_order: existing,
+              billing_kind: selection.billing_kind,
+              billing_line_count: selection.billing_line_count,
             },
+            previousData: editingDeliverable,
           },
           { returnPromise: true },
         );
+        notify("Billing updated", { type: "info" });
+        handleBillingDialogOpenChange(false);
+        refresh();
+      } catch (error) {
+        notify(error instanceof Error ? error.message : "Could not save billing", {
+          type: "error",
+        });
+      }
+      return;
+    }
+
+    const file = pendingUploads[0];
+    if (!file) return;
+
+    setUploadingDeliverables(true);
+    try {
+      if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
+        throw new Error(`"${file.name}" exceeds the 10 MB limit`);
       }
 
-      if (kind === "deliverable" && ticket.delivery_status === "none") {
-        await update(
-          "tickets",
-          {
-            id: ticket.id,
-            data: { delivery_status: "ready" },
-            previousData: ticket,
+      const uploaded = await uploadTicketAttachment(file);
+      await createDeliverable(
+        "ticket_deliverables",
+        {
+          data: {
+            ticket_id: ticket.id,
+            title: uploaded.title,
+            type: uploaded.type,
+            path: uploaded.path,
+            src: uploaded.src,
+            sort_order: deliverables.length,
+            billing_kind: selection.billing_kind,
+            billing_line_count: selection.billing_line_count,
           },
-          { mutationMode: "optimistic" },
-        );
-      }
+        },
+        { returnPromise: true },
+      );
 
-      notify(kind === "deliverable" ? "Deliverable added" : "Internal file added", {
-        type: "info",
-      });
-      refresh();
+      await markDeliveryReady();
+
+      const remaining = pendingUploads.slice(1);
+      if (remaining.length > 0) {
+        setPendingUploads(remaining);
+        setBillingFileName(remaining[0].name);
+        setBillingInitial(null);
+        notify("Deliverable added", { type: "info" });
+        refresh();
+      } else {
+        notify("Deliverable added", { type: "info" });
+        handleBillingDialogOpenChange(false);
+        refresh();
+      }
     } catch (error) {
       notify(error instanceof Error ? error.message : "Upload failed", {
         type: "error",
       });
     } finally {
-      setLoading(false);
-      if (kind === "deliverable" && deliverableInputRef.current) {
-        deliverableInputRef.current.value = "";
-      }
-      if (kind === "internal" && internalInputRef.current) {
-        internalInputRef.current.value = "";
+      setUploadingDeliverables(false);
+    }
+  };
+
+  const queueDeliverableUploads = (files: FileList | null) => {
+    if (!files?.length) return;
+    const fileArray = Array.from(files);
+    if (deliverables.length + fileArray.length > MAX_TICKET_ATTACHMENTS) {
+      notify(`Maximum ${MAX_TICKET_ATTACHMENTS} files`, { type: "warning" });
+      return;
+    }
+    for (const file of fileArray) {
+      if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
+        notify(`"${file.name}" exceeds the 10 MB limit`, { type: "warning" });
+        return;
       }
     }
+    openBillingDialogForUpload(fileArray);
   };
 
   const canSendInvoice =
     !ticket.invoice_id &&
     deliverables.length > 0 &&
+    deliverablesReadyForInvoice &&
     ticket.delivery_status !== "delivered";
 
   const canManualDeliver =
@@ -413,42 +465,16 @@ export const TicketBillingSidePanel = ({
               variant="ghost"
               size="icon"
               className="size-8"
-              aria-label="Show billing panel"
+              aria-label="Show tools panel"
               onClick={() => setCollapsed(false)}
             >
               <PanelLeftOpen className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left">Show billing & delivery</TooltipContent>
+          <TooltipContent side="left">Show tools</TooltipContent>
         </Tooltip>
 
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex flex-col items-center gap-0.5">
-                <CreditCard className="size-4" />
-                <span className="text-[10px] font-medium tabular-nums">
-                  {Math.round(displayTotal)}
-                </span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="left">Payment</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex flex-col items-center gap-0.5">
-                <Lock className="size-4" />
-                {internalFiles.length > 0 ? (
-                  <span className="text-[10px] font-medium tabular-nums">
-                    {internalFiles.length}
-                  </span>
-                ) : null}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              Internal files ({internalFiles.length})
-            </TooltipContent>
-          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="flex flex-col items-center gap-0.5">
@@ -464,21 +490,38 @@ export const TicketBillingSidePanel = ({
               Delivery package ({deliverables.length})
             </TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex flex-col items-center gap-0.5">
+                <CreditCard className="size-4" />
+                <span className="text-[10px] font-medium tabular-nums">
+                  {Math.round(displayTotal)}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="left">Payment</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex flex-col items-center gap-0.5">
+                <MessageSquare className="size-4" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="left">Text client</TooltipContent>
+          </Tooltip>
         </div>
 
         <span className="mt-auto rotate-180 text-[10px] uppercase tracking-wide text-muted-foreground [writing-mode:vertical-rl]">
-          Billing
+          Tools
         </span>
       </aside>
     );
   }
 
   return (
-    <aside className="flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch border-l bg-muted/15">
+    <aside className="flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch border-l bg-background">
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-        <p className="text-xs font-medium text-muted-foreground">
-          Billing & delivery
-        </p>
+        <p className="text-xs font-medium text-muted-foreground">Tools</p>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -486,7 +529,7 @@ export const TicketBillingSidePanel = ({
               variant="ghost"
               size="icon"
               className="size-8"
-              aria-label="Hide billing panel"
+              aria-label="Hide tools panel"
               onClick={() => setCollapsed(true)}
             >
               <PanelRightClose className="size-4" />
@@ -496,187 +539,38 @@ export const TicketBillingSidePanel = ({
         </Tooltip>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-        <SideSection icon={CreditCard} title="Payment">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-3xl font-semibold tabular-nums tracking-tight">
-              {formatSupplementMoney(displayTotal)}
-            </p>
-            <Badge variant="outline" className={paymentBadge.className}>
-              {paymentBadge.label}
-            </Badge>
-          </div>
-
-          {invoice ? (
-            <p className="text-xs text-muted-foreground">
-              {invoice.invoice_number} · {invoice.status ?? "draft"} · 100%
-              upfront
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Configure pricing below, then send the invoice.
-            </p>
-          )}
-
-          {!ticket.invoice_id ? (
-            <div className="space-y-3 border-t pt-3">
-              <div className="grid gap-2">
-                <Label htmlFor={`side-items-${ticket.id}`}>Line item count</Label>
-                <Input
-                  id={`side-items-${ticket.id}`}
-                  type="number"
-                  min={0}
-                  value={itemCount}
-                  onChange={(event) => setItemCount(event.target.value)}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                {[
-                  { label: "Roof (+$25)", checked: hasRoof, set: setHasRoof },
-                  {
-                    label: "Siding (+$50)",
-                    checked: hasSiding,
-                    set: setHasSiding,
-                  },
-                  { label: "ESX (+$40)", checked: hasEsx, set: setHasEsx },
-                  {
-                    label: "PDF (+$10)",
-                    checked: hasPdfAnalysis,
-                    set: setHasPdfAnalysis,
-                  },
-                ].map((option) => (
-                  <label
-                    key={option.label}
-                    className="flex items-center gap-2 text-xs"
-                  >
-                    <Checkbox
-                      checked={option.checked}
-                      onCheckedChange={(value) => option.set(value === true)}
-                    />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-              <div className="space-y-1 rounded-md border bg-muted/20 p-2 text-xs text-muted-foreground">
-                {displayPricing.lines.map((line) => (
-                  <div key={line.description} className="flex justify-between gap-2">
-                    <span className="truncate">{line.description}</span>
-                    <span className="tabular-nums">
-                      {formatSupplementMoney(line.lineTotal)}
-                    </span>
-                  </div>
-                ))}
-                <div className="flex justify-between gap-2 border-t pt-1 font-medium text-foreground">
-                  <span>Total</span>
-                  <span className="tabular-nums">
-                    {formatSupplementMoney(displayPricing.total)}
-                  </span>
-                </div>
-              </div>
-              {billingDirty ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  disabled={saveBillingMutation.isPending}
-                  onClick={() => saveBillingMutation.mutate()}
-                >
-                  Save pricing
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="flex gap-2">
-            {invoice ? (
-              <Button type="button" variant="outline" size="sm" className="flex-1" asChild>
-                <Link to={`/invoices/${invoice.id}/show`}>View invoice</Link>
-              </Button>
-            ) : null}
-            {invoice && invoice.status !== "paid" ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                disabled={remindMutation.isPending}
-                onClick={() => remindMutation.mutate()}
-              >
-                Remind
-              </Button>
-            ) : null}
-            {canSendInvoice ? (
-              <Button
-                type="button"
-                size="sm"
-                className="w-full"
-                disabled={invoiceMutation.isPending}
-                onClick={() => invoiceMutation.mutate()}
-              >
-                {invoiceMutation.isPending ? (
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                ) : null}
-                Send invoice
-              </Button>
-            ) : null}
-          </div>
-        </SideSection>
-
-        <SideSection icon={Lock} title="Internal files" hint="team only">
-          <div className="space-y-2">
-            {internalFiles.map((file) => (
-              <FileRow
-                key={file.id}
-                name={file.title}
-                canRemove
-                onRemove={() =>
-                  void deleteInternalFile(
-                    "ticket_internal_files",
-                    { id: file.id, previousData: file },
-                    { mutationMode: "optimistic" },
-                  ).then(refresh)
-                }
-              />
-            ))}
-          </div>
-          <input
-            ref={internalInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(event) => void uploadFiles(event.target.files, "internal")}
-          />
-          <DashedAddButton
-            label="Add internal file"
-            loading={uploadingInternal}
-            onClick={() => internalInputRef.current?.click()}
-          />
-        </SideSection>
-
+      <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
         <SideSection
           icon={Package}
           title="Delivery package"
           hint="sent on payment"
           hintClassName="text-primary"
         >
-          <div className="space-y-2">
-            {deliverables.map((file) => (
-              <FileRow
-                key={file.id}
-                name={file.title}
-                accent="delivery"
-                canRemove={!ticket.invoice_id}
-                onRemove={() =>
-                  void deleteDeliverable(
-                    "ticket_deliverables",
-                    { id: file.id, previousData: file },
-                    { mutationMode: "optimistic" },
-                  ).then(refresh)
-                }
-              />
-            ))}
-          </div>
+          {deliverables.length > 0 ? (
+            <div className="divide-y divide-border/70">
+              {deliverables.map((file) => (
+                <FileRow
+                  key={file.id}
+                  name={file.title}
+                  meta={deliverableBillingSummary(file, propertyAddress)}
+                  canRemove={!ticket.invoice_id}
+                  canEdit={!ticket.invoice_id}
+                  onEdit={() => openBillingDialogForEdit(file)}
+                  onRemove={() =>
+                    void deleteDeliverable(
+                      "ticket_deliverables",
+                      { id: file.id, previousData: file },
+                      { mutationMode: "optimistic" },
+                    ).then(refresh)
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Add files to deliver after payment.
+            </p>
+          )}
           {!ticket.invoice_id ? (
             <>
               <input
@@ -685,7 +579,7 @@ export const TicketBillingSidePanel = ({
                 multiple
                 className="hidden"
                 onChange={(event) =>
-                  void uploadFiles(event.target.files, "deliverable")
+                  void queueDeliverableUploads(event.target.files)
                 }
               />
               <DashedAddButton
@@ -718,7 +612,149 @@ export const TicketBillingSidePanel = ({
             </p>
           ) : null}
         </SideSection>
+
+        <SideSection icon={CreditCard} title="Payment">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-3xl font-semibold tabular-nums tracking-tight">
+              {formatSupplementMoney(displayTotal)}
+            </p>
+            <Badge variant="outline" className={paymentBadge.className}>
+              {paymentBadge.label}
+            </Badge>
+          </div>
+
+          {invoice ? (
+            <p className="text-xs text-muted-foreground">
+              Invoice sent · 100% upfront
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Add delivery files and set billing on each one, then send the invoice.
+            </p>
+          )}
+
+          {!ticket.invoice_id ? (
+            <div className="space-y-3 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                One invoice line per delivery file.
+              </p>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                {pricing.lines.length > 0 ? (
+                  pricing.lines.map((line) => (
+                    <div key={line.description} className="flex justify-between gap-3">
+                      <span className="min-w-0 truncate">{line.description}</span>
+                      <span className="shrink-0 tabular-nums">
+                        {formatSupplementMoney(line.lineTotal)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p>Add delivery files to see invoice lines.</p>
+                )}
+                <div className="flex justify-between gap-3 border-t border-border/70 pt-2 font-medium text-foreground">
+                  <span>Subtotal</span>
+                  <span className="tabular-nums">
+                    {formatSupplementMoney(pricing.subtotal)}
+                  </span>
+                </div>
+                <p className="pt-1 text-[11px] text-muted-foreground">
+                  Processing fee is added automatically on the invoice.
+                </p>
+              </div>
+              {!deliverablesReadyForInvoice && deliverables.length > 0 ? (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Set billing on every delivery file before sending.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            {invoice && canEditInvoice ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => openInvoiceDialog("edit")}
+              >
+                Edit invoice
+              </Button>
+            ) : null}
+            {invoice && invoice.status !== "paid" ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setReminderOpen(true)}
+              >
+                Remind
+              </Button>
+            ) : null}
+            {canSendInvoice ? (
+              <Button
+                type="button"
+                size="sm"
+                className="w-full"
+                onClick={() => void openInvoicePreview()}
+              >
+                Review & send
+              </Button>
+            ) : null}
+          </div>
+        </SideSection>
+
+        {invoice ? (
+          <SideSection icon={FileText} title="Invoice">
+            <TicketToolsInvoiceSection
+              invoice={invoice}
+              onView={() => openInvoiceDialog("view")}
+            />
+          </SideSection>
+        ) : null}
+
+        <SideSection icon={MessageSquare} title="Text client">
+          <TicketToolsClientSms ticket={ticket} contact={contact} />
+        </SideSection>
       </div>
+
+      <TicketDeliverableBillingDialog
+        open={billingDialogOpen}
+        fileName={billingFileName}
+        propertyAddress={propertyAddress}
+        initial={billingInitial}
+        confirmLabel={editingDeliverable ? "Save billing" : "Add to delivery package"}
+        onOpenChange={handleBillingDialogOpenChange}
+        onConfirm={(selection) => void handleBillingConfirm(selection)}
+      />
+      <TicketInvoicePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        ticket={ticket}
+        company={company}
+        contact={contact}
+      />
+      {invoice ? (
+        <TicketInvoiceReminderDialog
+          open={reminderOpen}
+          onOpenChange={setReminderOpen}
+          ticket={ticket}
+          invoice={invoice}
+          company={company}
+          contact={contact}
+        />
+      ) : null}
+      {invoice ? (
+        <TicketInvoiceViewDialog
+          open={invoiceDialogOpen}
+          onOpenChange={setInvoiceDialogOpen}
+          mode={invoiceDialogMode}
+          invoiceId={Number(invoice.id)}
+          company={company}
+          contact={contact}
+        />
+      ) : null}
     </aside>
   );
 };

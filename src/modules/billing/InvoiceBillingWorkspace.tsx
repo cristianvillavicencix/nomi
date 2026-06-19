@@ -1,6 +1,5 @@
 import { ChevronDown, FileText, Plus } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
-import { useListContext } from "ra-core";
+import { type ReactNode } from "react";
 import { useSearchParams } from "react-router";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InvoiceListSidebar } from "@/modules/billing/InvoiceListSidebar";
@@ -10,7 +9,6 @@ import {
   INVOICE_FILTER_OPTIONS,
   type InvoiceStatusFilter,
 } from "@/modules/billing/billingDisplayUtils";
-import type { ClientInvoice } from "@/modules/types";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -43,22 +41,6 @@ export const InvoiceBillingWorkspace = ({
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedInvoiceId = searchParams.get("invoice");
-  const { data: invoices = [] } = useListContext<ClientInvoice>();
-
-  // Clear stale ?invoice= if the selected row dropped out of the filter window.
-  useEffect(() => {
-    if (!selectedInvoiceId) return;
-    if (!invoices.length) {
-      setSearchParams({}, { replace: true });
-      return;
-    }
-    const stillVisible = invoices.some(
-      (row) => String(row.id) === selectedInvoiceId,
-    );
-    if (!stillVisible) {
-      setSearchParams({}, { replace: true });
-    }
-  }, [invoices, selectedInvoiceId, setSearchParams]);
 
   const handleSelectInvoice = (invoiceId: string) => {
     setSearchParams({ invoice: invoiceId });

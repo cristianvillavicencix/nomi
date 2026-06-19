@@ -12,17 +12,18 @@ import {
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { TicketReplyTemplatePicker } from "@/modules/tickets/TicketReplyTemplatePicker";
+import { TicketReplyVariablePicker } from "@/modules/tickets/TicketReplyVariablePicker";
 import {
-  applyTextareaLinePrefix,
-  applyTextareaLink,
-  applyTextareaWrap,
-} from "@/modules/tickets/ticketComposerFormatting";
+  execRichEditorCommand,
+  insertRichEditorLink,
+  insertRichEditorText,
+  sanitizeComposerHtml,
+} from "@/modules/tickets/ticketReplyRichText";
 import { Button } from "@/components/ui/button";
 
 type TicketComposerToolbarProps = {
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  value: string;
-  onChange: (next: string) => void;
+  editorRef: React.RefObject<HTMLDivElement | null>;
+  onEditorChange: (html: string) => void;
   disabled?: boolean;
   ticket: Ticket;
   contact?: Contact | null;
@@ -36,9 +37,8 @@ type TicketComposerToolbarProps = {
 };
 
 export const TicketComposerToolbar = ({
-  textareaRef,
-  value,
-  onChange,
+  editorRef,
+  onEditorChange,
   disabled = false,
   ticket,
   contact,
@@ -50,25 +50,14 @@ export const TicketComposerToolbar = ({
   canSend,
   submittingAs,
 }: TicketComposerToolbarProps) => {
-  const apply = (
-    transform: (
-      current: string,
-      start: number,
-      end: number,
-    ) => { next: string; selectionStart: number; selectionEnd: number },
-  ) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  const syncEditor = () => {
+    const html = sanitizeComposerHtml(editorRef.current?.innerHTML ?? "");
+    onEditorChange(html);
+  };
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const { next, selectionStart, selectionEnd } = transform(value, start, end);
-    onChange(next);
-
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(selectionStart, selectionEnd);
-    });
+  const runCommand = (command: string, value?: string) => {
+    execRichEditorCommand(editorRef.current, command, value);
+    syncEditor();
   };
 
   const toolButton = (
@@ -95,33 +84,34 @@ export const TicketComposerToolbar = ({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/15 px-2 py-1.5">
       <div className="flex flex-wrap items-center gap-0.5">
-        {toolButton("Bold", <Bold className="size-4" />, () =>
-          apply((current, start, end) =>
-            applyTextareaWrap(current, start, end, "**", "**"),
-          ),
-        )}
+        {toolButton("Bold", <Bold className="size-4" />, () => runCommand("bold"))}
         {toolButton("Italic", <Italic className="size-4" />, () =>
-          apply((current, start, end) =>
-            applyTextareaWrap(current, start, end, "_", "_"),
-          ),
+          runCommand("italic"),
         )}
-        {toolButton("Insert link", <Link2 className="size-4" />, () =>
-          apply((current, start, end) => applyTextareaLink(current, start, end)),
-        )}
+        {toolButton("Insert link", <Link2 className="size-4" />, () => {
+          insertRichEditorLink(editorRef.current);
+          syncEditor();
+        })}
         {toolButton("Bullet list", <List className="size-4" />, () =>
-          apply((current, start, end) =>
-            applyTextareaLinePrefix(current, start, end, "- "),
-          ),
+          runCommand("insertUnorderedList"),
         )}
         {toolButton("Numbered list", <ListOrdered className="size-4" />, () =>
-          apply((current, start, end) =>
-            applyTextareaLinePrefix(current, start, end, "1. "),
-          ),
+          runCommand("insertOrderedList"),
         )}
 
         <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
 
         {toolButton("Attach files", <Paperclip className="size-4" />, onAttachClick)}
+        <TicketReplyVariablePicker
+          ticket={ticket}
+          contact={contact}
+          company={company}
+          disabled={disabled}
+          onInsert={(token) => {
+            insertRichEditorText(editorRef.current, token);
+            syncEditor();
+          }}
+        />
         <TicketReplyTemplatePicker
           ticket={ticket}
           contact={contact}

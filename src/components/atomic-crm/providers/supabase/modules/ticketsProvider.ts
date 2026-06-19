@@ -85,15 +85,52 @@ export const ticketsProvider = {
   async createTicketInvoice({
     ticketId,
     baseUrl,
+    message,
   }: {
     ticketId: Identifier;
     baseUrl?: string;
+    message?: string;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       invoice: Record<string, unknown>;
       payment_url: string;
       to: string;
     }>("create_ticket_invoice", {
+      method: "POST",
+      body: {
+        ticket_id: Number(ticketId),
+        ...(baseUrl ? { base_url: baseUrl } : {}),
+        ...(message ? { message } : {}),
+      },
+    });
+
+    if (error || !data?.invoice) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to create ticket invoice",
+            )
+          : "Failed to create ticket invoice",
+      );
+    }
+
+    return data;
+  },
+
+  async prepareTicketInvoice({
+    ticketId,
+    baseUrl,
+  }: {
+    ticketId: Identifier;
+    baseUrl?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+      line_items: Record<string, unknown>[];
+      payment_url: string;
+      to: string;
+    }>("prepare_ticket_invoice", {
       method: "POST",
       body: {
         ticket_id: Number(ticketId),
@@ -106,9 +143,74 @@ export const ticketsProvider = {
         error
           ? await readEdgeFunctionErrorMessage(
               error,
-              "Failed to create ticket invoice",
+              "Failed to prepare invoice",
             )
-          : "Failed to create ticket invoice",
+          : "Failed to prepare invoice",
+      );
+    }
+
+    return data;
+  },
+
+  async sendTicketInvoice({
+    ticketId,
+    baseUrl,
+    message,
+    subject,
+    smsTo,
+    sendSms,
+  }: {
+    ticketId: Identifier;
+    baseUrl?: string;
+    message?: string;
+    subject?: string;
+    smsTo?: string;
+    sendSms?: boolean;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+      payment_url: string;
+      to: string;
+    }>("send_ticket_invoice", {
+      method: "POST",
+      body: {
+        ticket_id: Number(ticketId),
+        ...(baseUrl ? { base_url: baseUrl } : {}),
+        ...(message ? { message } : {}),
+        ...(subject ? { subject } : {}),
+        ...(smsTo ? { sms_to: smsTo } : {}),
+        ...(sendSms ? { send_sms: true } : {}),
+      },
+    });
+
+    if (error || !data?.invoice) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(error, "Failed to send invoice")
+          : "Failed to send invoice",
+      );
+    }
+
+    return data;
+  },
+
+  async cancelTicketInvoiceDraft({ ticketId }: { ticketId: Identifier }) {
+    const { data, error } = await invokeEdgeFunction<{
+      cancelled?: boolean;
+      skipped?: boolean;
+    }>("cancel_ticket_invoice", {
+      method: "POST",
+      body: { ticket_id: Number(ticketId) },
+    });
+
+    if (error) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Could not cancel invoice draft",
+            )
+          : "Could not cancel invoice draft",
       );
     }
 

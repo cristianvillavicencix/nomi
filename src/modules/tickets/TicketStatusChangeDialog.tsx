@@ -96,7 +96,7 @@ export const TicketStatusChangeDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent onKeyDown={(event) => event.stopPropagation()}>
         <DialogHeader>
           <DialogTitle>Status change note</DialogTitle>
           <DialogDescription>
@@ -115,8 +115,10 @@ export const TicketStatusChangeDialog = ({
             id="ticket-status-note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
+            onKeyDown={(event) => event.stopPropagation()}
             placeholder="Explain what happened or what we are waiting for…"
-            rows={4}
+            rows={5}
+            className="min-h-[120px] resize-y"
             disabled={pending}
             autoFocus
           />

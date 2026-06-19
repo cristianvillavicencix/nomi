@@ -289,16 +289,26 @@ export const billingProvider = {
     invoiceId,
     to,
     message,
+    subject,
+    smsTo,
+    smsBody,
+    sendSms,
   }: {
     invoiceId: Identifier;
     to?: string;
     message?: string;
+    subject?: string;
+    smsTo?: string;
+    smsBody?: string;
+    sendSms?: boolean;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       sent: boolean;
       to: string;
       payment_url: string;
       invoice_id: number;
+      sms_sent?: boolean;
+      sms_skipped?: boolean;
     }>("send_client_invoice_payment_link", {
       method: "POST",
       body: {
@@ -306,6 +316,10 @@ export const billingProvider = {
         base_url: window.location.origin,
         ...(to ? { to } : {}),
         ...(message ? { message } : {}),
+        ...(subject ? { subject } : {}),
+        ...(sendSms ? { send_sms: true } : {}),
+        ...(smsTo ? { sms_to: smsTo } : {}),
+        ...(smsBody ? { sms_body: smsBody } : {}),
       },
     });
 

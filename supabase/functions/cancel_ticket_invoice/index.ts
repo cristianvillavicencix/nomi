@@ -5,12 +5,10 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
-import { createTicketInvoiceAndSendPaymentLink } from "../_shared/ticketInvoiceFlow.ts";
+import { cancelTicketInvoiceDraft } from "../_shared/ticketInvoiceFlow.ts";
 
-type CreateTicketInvoiceBody = {
+type CancelBody = {
   ticket_id?: number;
-  base_url?: string;
-  message?: string;
 };
 
 Deno.serve(
@@ -34,35 +32,25 @@ Deno.serve(
           !member.administrator &&
           !hasMemberCapability(member, "support.tickets.manage")
         ) {
-          return createErrorResponse(403, "You cannot invoice tickets");
+          return createErrorResponse(403, "You cannot manage ticket invoices");
         }
 
-        if (
-          !member.administrator &&
-          !hasMemberCapability(member, "proposals.send")
-        ) {
-          return createErrorResponse(403, "You cannot send invoices");
-        }
-
-        const body = (await req.json()) as CreateTicketInvoiceBody;
+        const body = (await req.json()) as CancelBody;
         const ticketId = Number(body.ticket_id);
         if (!Number.isFinite(ticketId)) {
           return createErrorResponse(400, "Invalid ticket_id");
         }
 
-        const result = await createTicketInvoiceAndSendPaymentLink(supabaseAdmin, {
+        const result = await cancelTicketInvoiceDraft(supabaseAdmin, {
           orgId: member.org_id,
-          memberId: member.id,
           ticketId,
-          baseUrl: body.base_url,
-          message: body.message,
         });
 
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (error) {
-        console.error("create_ticket_invoice.error", error);
+        console.error("cancel_ticket_invoice.error", error);
         return createErrorResponse(
           500,
           error instanceof Error ? error.message : "Unexpected error",

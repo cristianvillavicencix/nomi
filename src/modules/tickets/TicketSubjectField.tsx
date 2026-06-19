@@ -6,12 +6,14 @@ import type { Ticket } from "@/modules/types";
 
 type TicketSubjectFieldProps = {
   ticket: Ticket;
+  editable?: boolean;
   className?: string;
   inputClassName?: string;
 };
 
 export const TicketSubjectField = ({
   ticket,
+  editable = true,
   className,
   inputClassName,
 }: TicketSubjectFieldProps) => {
@@ -64,6 +66,19 @@ export const TicketSubjectField = ({
     );
   };
 
+  if (!editable) {
+    return (
+      <span
+        className={cn(
+          "text-sm font-normal leading-snug text-foreground",
+          className,
+        )}
+      >
+        {ticket.subject || "Untitled ticket"}
+      </span>
+    );
+  }
+
   if (editing) {
     return (
       <Input
@@ -85,7 +100,7 @@ export const TicketSubjectField = ({
           }
         }}
         className={cn(
-          "h-auto border-primary/40 bg-background px-1 py-0.5 text-sm font-semibold shadow-none",
+          "inline h-auto min-w-[12rem] border-primary/40 bg-background px-1 py-0 text-sm font-normal leading-snug shadow-none",
           inputClassName,
         )}
       />
@@ -101,7 +116,7 @@ export const TicketSubjectField = ({
         setEditing(true);
       }}
       className={cn(
-        "block w-full truncate text-left font-semibold leading-snug text-foreground hover:underline",
+        "inline max-w-full truncate text-left text-lg font-semibold leading-snug tracking-tight text-foreground hover:underline",
         className,
       )}
     >

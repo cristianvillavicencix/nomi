@@ -1,9 +1,22 @@
+export type DeliverableBillingKind =
+  | "supplement"
+  | "roof"
+  | "siding"
+  | "esx"
+  | "pdf_analysis";
+
 export type SupplementPricingInput = {
   itemCount: number;
   hasRoof: boolean;
   hasSiding: boolean;
   hasEsx: boolean;
   hasPdfAnalysis: boolean;
+};
+
+export type DeliverableBillingInput = {
+  billing_kind?: DeliverableBillingKind | string | null;
+  billing_line_count?: number | null;
+  title?: string | null;
 };
 
 export type SupplementPricingLine = {
@@ -21,6 +34,29 @@ export type SupplementPricingBreakdown = {
   total: number;
 };
 
+export const DELIVERABLE_BILLING_OPTIONS: {
+  kind: DeliverableBillingKind;
+  label: string;
+  needsLineCount: boolean;
+  flatPrice?: number;
+}[] = [
+  { kind: "supplement", label: "Supplement", needsLineCount: true },
+  { kind: "roof", label: "Roof measurements", needsLineCount: false, flatPrice: 25 },
+  {
+    kind: "siding",
+    label: "Siding measurements",
+    needsLineCount: false,
+    flatPrice: 50,
+  },
+  { kind: "esx", label: "ESX creation", needsLineCount: false, flatPrice: 40 },
+  {
+    kind: "pdf_analysis",
+    label: "PDF analysis",
+    needsLineCount: false,
+    flatPrice: 10,
+  },
+];
+
 const BASE_PRICE = 150;
 const BASE_INCLUDED_ITEMS = 50;
 const EXTRA_ITEM_PRICE = 0.5;
@@ -33,78 +69,160 @@ const STRIPE_PERCENT_FEE = 0.029;
 
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
-export const calculateSupplementPricing = (
-  input: SupplementPricingInput,
-): SupplementPricingBreakdown => {
-  const itemCount = Math.max(0, Math.floor(Number(input.itemCount) || 0));
-  const extraItems = Math.max(0, itemCount - BASE_INCLUDED_ITEMS);
-  const lines: SupplementPricingLine[] = [
-    {
-      description: "Supplement base (includes up to 50 items)",
+export const normalizePropertyAddress = (subject?: string | null) =>
+  subject?.trim() || "Property";
+
+export const calculateSupplementTotalForLineCount = (lineCount: number) => {
+  const count = Math.max(0, Math.floor(Number(lineCount) || 0));
+  const extraItems = Math.max(0, count - BASE_INCLUDED_ITEMS);
+  return roundMoney(BASE_PRICE + extraItems * EXTRA_ITEM_PRICE);
+};
+
+const flatPriceForKind = (kind: DeliverableBillingKind) => {
+  switch (kind) {
+    case "roof":
+      return ROOF_PRICE;
+    case "siding":
+      return SIDING_PRICE;
+    case "esx":
+      return ESX_PRICE;
+    case "pdf_analysis":
+      return PDF_ANALYSIS_PRICE;
+    default:
+      return 0;
+  }
+};
+
+export const deliverableBillingKindLabel = (kind: DeliverableBillingKind) =>
+  DELIVERABLE_BILLING_OPTIONS.find((option) => option.kind === kind)?.label ??
+  kind;
+
+export const buildDeliverablePricingLine = (
+  kind: DeliverableBillingKind,
+  propertyAddress: string,
+  lineCount?: number | null,
+): SupplementPricingLine => {
+  const address = normalizePropertyAddress(propertyAddress);
+
+  if (kind === "supplement") {
+    const total = calculateSupplementTotalForLineCount(lineCount ?? 0);
+    return {
+      description: `Supplement of ${address}`,
       quantity: 1,
       unit: "ea",
-      unitPrice: BASE_PRICE,
-      lineTotal: BASE_PRICE,
-    },
-  ];
-
-  if (extraItems > 0) {
-    lines.push({
-      description: `Extra items (${BASE_INCLUDED_ITEMS + 1}+)`,
-      quantity: extraItems,
-      unit: "ea",
-      unitPrice: EXTRA_ITEM_PRICE,
-      lineTotal: roundMoney(extraItems * EXTRA_ITEM_PRICE),
-    });
+      unitPrice: total,
+      lineTotal: total,
+    };
   }
 
-  if (input.hasRoof) {
-    lines.push({
-      description: "Roof measurements",
-      quantity: 1,
-      unit: "ea",
-      unitPrice: ROOF_PRICE,
-      lineTotal: ROOF_PRICE,
-    });
-  }
+  const unitPrice = flatPriceForKind(kind);
+  const label =
+    kind === "roof"
+      ? "Roof"
+      : kind === "siding"
+        ? "Siding"
+        : kind === "esx"
+          ? "ESX"
+          : "PDF analysis";
 
-  if (input.hasSiding) {
-    lines.push({
-      description: "Siding / complete measurements",
-      quantity: 1,
-      unit: "ea",
-      unitPrice: SIDING_PRICE,
-      lineTotal: SIDING_PRICE,
-    });
-  }
+  return {
+    description: `${label} of ${address}`,
+    quantity: 1,
+    unit: "ea",
+    unitPrice,
+    lineTotal: unitPrice,
+  };
+};
 
-  if (input.hasEsx) {
-    lines.push({
-      description: "ESX creation",
-      quantity: 1,
-      unit: "ea",
-      unitPrice: ESX_PRICE,
-      lineTotal: ESX_PRICE,
-    });
-  }
-
-  if (input.hasPdfAnalysis) {
-    lines.push({
-      description: "PDF analysis",
-      quantity: 1,
-      unit: "ea",
-      unitPrice: PDF_ANALYSIS_PRICE,
-      lineTotal: PDF_ANALYSIS_PRICE,
-    });
-  }
-
+const finalizePricing = (lines: SupplementPricingLine[]): SupplementPricingBreakdown => {
   const subtotal = roundMoney(lines.reduce((sum, line) => sum + line.lineTotal, 0));
   const total = roundMoney((subtotal + STRIPE_FIXED_FEE) / (1 - STRIPE_PERCENT_FEE));
   const transferFee = roundMoney(total - subtotal);
-
   return { lines, subtotal, transferFee, total };
 };
 
+export const calculatePricingFromDeliverables = (
+  deliverables: DeliverableBillingInput[],
+  propertyAddress: string,
+): SupplementPricingBreakdown => {
+  const lines = deliverables
+    .filter((item) => item.billing_kind)
+    .map((item) =>
+      buildDeliverablePricingLine(
+        item.billing_kind as DeliverableBillingKind,
+        propertyAddress,
+        item.billing_line_count,
+      ),
+    );
+
+  return finalizePricing(lines);
+};
+
+export const calculatePricingFromTicketLegacy = (
+  input: SupplementPricingInput,
+  propertyAddress: string,
+): SupplementPricingBreakdown => {
+  const address = normalizePropertyAddress(propertyAddress);
+  const lines: SupplementPricingLine[] = [];
+  const itemCount = Math.max(0, Math.floor(Number(input.itemCount) || 0));
+
+  if (itemCount > 0) {
+    lines.push(buildDeliverablePricingLine("supplement", address, itemCount));
+  }
+  if (input.hasRoof) {
+    lines.push(buildDeliverablePricingLine("roof", address));
+  }
+  if (input.hasSiding) {
+    lines.push(buildDeliverablePricingLine("siding", address));
+  }
+  if (input.hasEsx) {
+    lines.push(buildDeliverablePricingLine("esx", address));
+  }
+  if (input.hasPdfAnalysis) {
+    lines.push(buildDeliverablePricingLine("pdf_analysis", address));
+  }
+
+  return finalizePricing(lines);
+};
+
+export const allDeliverablesHaveBilling = (deliverables: DeliverableBillingInput[]) =>
+  deliverables.length > 0 &&
+  deliverables.every((item) => Boolean(item.billing_kind));
+
+export const calculateTicketPricing = (
+  deliverables: DeliverableBillingInput[],
+  ticket: {
+    billing_item_count?: number | null;
+    billing_has_roof?: boolean | null;
+    billing_has_siding?: boolean | null;
+    billing_has_esx?: boolean | null;
+    billing_has_pdf_analysis?: boolean | null;
+  },
+  propertyAddress: string,
+): SupplementPricingBreakdown => {
+  if (allDeliverablesHaveBilling(deliverables)) {
+    return calculatePricingFromDeliverables(deliverables, propertyAddress);
+  }
+
+  return calculatePricingFromTicketLegacy(
+    {
+      itemCount: ticket.billing_item_count ?? 0,
+      hasRoof: Boolean(ticket.billing_has_roof),
+      hasSiding: Boolean(ticket.billing_has_siding),
+      hasEsx: Boolean(ticket.billing_has_esx),
+      hasPdfAnalysis: Boolean(ticket.billing_has_pdf_analysis),
+    },
+    propertyAddress,
+  );
+};
+
+/** @deprecated Use calculateTicketPricing */
+export const calculateSupplementPricing = (
+  input: SupplementPricingInput,
+): SupplementPricingBreakdown =>
+  calculatePricingFromTicketLegacy(input, "Property");
+
+/** @deprecated Use calculateTicketPricing */
 export const supplementPricingFromTicket = (ticket: {
   billing_item_count?: number | null;
   billing_has_roof?: boolean | null;
@@ -112,16 +230,35 @@ export const supplementPricingFromTicket = (ticket: {
   billing_has_esx?: boolean | null;
   billing_has_pdf_analysis?: boolean | null;
 }) =>
-  calculateSupplementPricing({
-    itemCount: ticket.billing_item_count ?? 0,
-    hasRoof: Boolean(ticket.billing_has_roof),
-    hasSiding: Boolean(ticket.billing_has_siding),
-    hasEsx: Boolean(ticket.billing_has_esx),
-    hasPdfAnalysis: Boolean(ticket.billing_has_pdf_analysis),
-  });
+  calculatePricingFromTicketLegacy(
+    {
+      itemCount: ticket.billing_item_count ?? 0,
+      hasRoof: Boolean(ticket.billing_has_roof),
+      hasSiding: Boolean(ticket.billing_has_siding),
+      hasEsx: Boolean(ticket.billing_has_esx),
+      hasPdfAnalysis: Boolean(ticket.billing_has_pdf_analysis),
+    },
+    "Property",
+  );
 
 export const formatSupplementMoney = (value: number) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
   }).format(value);
+
+export const deliverableBillingSummary = (
+  deliverable: DeliverableBillingInput,
+  propertyAddress: string,
+) => {
+  if (!deliverable.billing_kind) return "Billing not set";
+  const line = buildDeliverablePricingLine(
+    deliverable.billing_kind as DeliverableBillingKind,
+    propertyAddress,
+    deliverable.billing_line_count,
+  );
+  if (deliverable.billing_kind === "supplement") {
+    return `${line.description} · ${deliverable.billing_line_count ?? 0} lines · ${formatSupplementMoney(line.lineTotal)}`;
+  }
+  return `${line.description} · ${formatSupplementMoney(line.lineTotal)}`;
+};

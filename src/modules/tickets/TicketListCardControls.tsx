@@ -1,5 +1,5 @@
 import { UserRound } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNotify, useUpdate, type Identifier } from "ra-core";
 import type { OrganizationMember, Ticket } from "@/modules/types";
 import { ticketStatusLabel } from "@/modules/tickets/ticketInboxConfig";
@@ -36,11 +36,13 @@ export const TicketListStatusControl = ({
   canManage: boolean;
   onUpdated?: () => void;
 }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
   const { applyStatusChange, statusChangeDialog } =
     useTicketStatusChange(onUpdated);
 
   const handleChange = (status: string) => {
     if (!canManage) return;
+    setMenuOpen(false);
     applyStatusChange(ticket, status);
   };
 
@@ -66,7 +68,7 @@ export const TicketListStatusControl = ({
   return (
     <>
       {statusChangeDialog}
-      <Popover>
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
         <PopoverContent
           align="end"

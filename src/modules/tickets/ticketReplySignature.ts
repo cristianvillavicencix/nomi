@@ -1,4 +1,10 @@
 import { LBS_SUPPORT_SIGNATURE } from "@/modules/tickets/ticketReplyTemplates";
+import {
+  htmlToPlainText,
+  includesReplySignatureHtml,
+  sanitizeComposerHtml,
+  stripReplySignatureHtml,
+} from "@/modules/tickets/ticketReplyRichText";
 
 export const TICKET_REPLY_SIGNATURE = LBS_SUPPORT_SIGNATURE;
 
@@ -164,16 +170,22 @@ export const buildForwardHtmlBlock = (
 
 export const buildOutboundEmailHtml = ({
   userNote,
+  userNoteHtml,
   forwardHtml,
   includeSignature = true,
 }: {
   userNote?: string;
+  userNoteHtml?: string;
   forwardHtml?: string | null;
   includeSignature?: boolean;
 }) => {
   const parts: string[] = [];
 
-  if (userNote?.trim()) {
+  if (userNoteHtml?.trim()) {
+    parts.push(
+      `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#111827;">${userNoteHtml.trim()}</div>`,
+    );
+  } else if (userNote?.trim()) {
     parts.push(
       `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#111827;">${plainTextToHtml(userNote.trim())}</div>`,
     );
@@ -210,27 +222,48 @@ export const buildReplyOutboundBodies = (body: string) => {
   return { textBody, htmlBody };
 };
 
+export const buildReplyOutboundBodiesFromHtml = (composerHtml: string) => {
+  const sanitized = sanitizeComposerHtml(composerHtml);
+  const userNoteHtml = stripReplySignatureHtml(sanitized).trim();
+  const includeSignature = includesReplySignatureHtml(sanitized);
+  const textBody =
+    normalizeOutboundPlainText(htmlToPlainText(sanitized)) || "(See attachments)";
+
+  const htmlBody = buildOutboundEmailHtml({
+    userNoteHtml,
+    includeSignature,
+  });
+
+  return { textBody, htmlBody };
+};
+
 export const buildForwardOutboundBodies = ({
   ticket,
   message,
   userNote,
+  userNoteHtml,
 }: {
   ticket: { subject?: string };
   message?: ForwardMessage | null;
-  userNote: string;
+  userNote?: string;
+  userNoteHtml?: string;
 }) => {
   const forwardPlain = buildForwardPlainBlock(ticket, message);
   const forwardHtml = buildForwardHtmlBlock(ticket, message);
-  const trimmedNote = userNote.trim();
+  const trimmedNote = userNote?.trim() ?? "";
+  const trimmedNoteHtml = userNoteHtml?.trim() ?? "";
 
   const textBody = normalizeOutboundPlainText(
     trimmedNote
       ? `${trimmedNote}\n\n${forwardPlain}\n\n${TICKET_REPLY_SIGNATURE}`
-      : `${forwardPlain}\n\n${TICKET_REPLY_SIGNATURE}`,
+      : trimmedNoteHtml
+        ? `${htmlToPlainText(trimmedNoteHtml)}\n\n${forwardPlain}\n\n${TICKET_REPLY_SIGNATURE}`
+        : `${forwardPlain}\n\n${TICKET_REPLY_SIGNATURE}`,
   );
 
   const htmlBody = buildOutboundEmailHtml({
-    userNote: normalizeOutboundPlainText(trimmedNote),
+    userNote: trimmedNote || undefined,
+    userNoteHtml: trimmedNoteHtml || undefined,
     forwardHtml,
     includeSignature: true,
   });

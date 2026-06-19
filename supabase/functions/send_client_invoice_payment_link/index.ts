@@ -14,12 +14,24 @@ import {
 import { resolveContactEmail } from "../_shared/clientProposalBilling.ts";
 import { INVOICE_ORGANIZATION_NAME } from "../_shared/invoiceOrganizationInfo.ts";
 import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
+import {
+  buildTicketPaymentEmailBodies,
+  buildTicketPaymentReminderInternalNoteBody,
+  buildTicketPaymentReminderSubject,
+  buildTicketPaymentReminderSmsBody,
+  DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE,
+  sendTicketInvoiceSms,
+} from "../_shared/ticketInvoiceFlow.ts";
 
 type SendLinkBody = {
   invoice_id?: number;
   to?: string;
   base_url?: string;
   message?: string;
+  subject?: string;
+  sms_to?: string;
+  sms_body?: string;
+  send_sms?: boolean;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -117,7 +129,7 @@ Deno.serve(
         const { data: invoice } = await supabaseAdmin
           .from("client_invoices")
           .select(
-            "id, org_id, invoice_number, amount, amount_paid, currency, status, contact_id, recipient_email",
+            "id, org_id, invoice_number, amount, amount_paid, currency, status, contact_id, recipient_email, ticket_id, due_date",
           )
           .eq("id", invoiceId)
           .eq("org_id", member.org_id)
@@ -175,20 +187,120 @@ Deno.serve(
 
         const orgName = org?.name?.trim() || INVOICE_ORGANIZATION_NAME;
         const customMessage = body.message?.trim();
-        const subject = `${orgName}: Pay invoice ${invoice.invoice_number}`;
-        const textBody = [
-          customMessage ||
-            "Please use the secure link below to pay your invoice. Your card details are entered on a PCI-compliant page — we never see or store your full card number in email.",
-          "",
-          `Invoice: ${invoice.invoice_number}`,
-          `Balance due: ${balanceFormatted}`,
-          "",
-          `Pay securely: ${url}`,
-          "",
-          orgName,
-        ].join("\n");
 
-        const htmlBody = `
+        let propertyAddress: string | null = null;
+        if (invoice.ticket_id) {
+          const { data: ticket } = await supabaseAdmin
+            .from("tickets")
+            .select("subject")
+            .eq("id", invoice.ticket_id)
+            .eq("org_id", member.org_id)
+            .maybeSingle();
+          propertyAddress = ticket?.subject?.trim() || null;
+        }
+
+        if (propertyAddress) {
+          const { subject, textBody, htmlBody } = buildTicketPaymentEmailBodies({
+            orgName,
+            invoiceNumber: invoice.invoice_number,
+            amountFormatted: balanceFormatted,
+            paymentUrl: url,
+            customMessage:
+              customMessage || DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE,
+            subject:
+              body.subject?.trim() ||
+              buildTicketPaymentReminderSubject(propertyAddress),
+            propertyAddress,
+          });
+
+          await sendTransactionalEmail({
+            orgId: member.org_id,
+            orgName,
+            to,
+            subject,
+            textBody,
+            htmlBody,
+          });
+
+          let smsOutcome: { sent: boolean; skipped: boolean } | null = null;
+          const sendSms = body.send_sms === true;
+          const smsTo = String(body.sms_to ?? "").trim();
+          if (sendSms && smsTo) {
+            const smsBody =
+              body.sms_body?.trim() ||
+              buildTicketPaymentReminderSmsBody({
+                orgName,
+                invoiceNumber: invoice.invoice_number,
+                amountFormatted: balanceFormatted,
+                paymentUrl: url,
+              });
+            smsOutcome = await sendTicketInvoiceSms(supabaseAdmin, {
+              orgId: member.org_id,
+              memberId: member.id,
+              phoneRaw: smsTo,
+              body: smsBody,
+              contactId: invoice.contact_id ?? null,
+            });
+          }
+
+          const memberName =
+            [member.first_name, member.last_name].filter(Boolean).join(" ").trim() ||
+            member.email?.trim() ||
+            "Team";
+          const now = new Date().toISOString();
+
+          await supabaseAdmin.from("ticket_messages").insert({
+            ticket_id: invoice.ticket_id,
+            author_member_id: member.id,
+            body: buildTicketPaymentReminderInternalNoteBody({
+              invoiceNumber: invoice.invoice_number,
+              amountFormatted: balanceFormatted,
+              dueDate: invoice.due_date,
+              recipientEmail: to,
+              propertyAddress,
+              smsTo: sendSms ? smsTo : null,
+              smsSent: smsOutcome?.sent ?? false,
+              smsSkipped: smsOutcome?.skipped ?? false,
+            }),
+            direction: "internal",
+            from_name: memberName,
+            created_at: now,
+          });
+
+          await supabaseAdmin
+            .from("tickets")
+            .update({ updated_at: now })
+            .eq("id", invoice.ticket_id)
+            .eq("org_id", member.org_id);
+
+          return new Response(
+            JSON.stringify({
+              sent: true,
+              to,
+              payment_url: url,
+              invoice_id: invoice.id,
+              sms_sent: smsOutcome?.sent ?? false,
+              sms_skipped: smsOutcome?.skipped ?? !sendSms,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        } else {
+          const subject =
+            body.subject?.trim() ||
+            `${orgName}: Pay invoice ${invoice.invoice_number}`;
+          const textBody = [
+            customMessage ||
+              "Please use the secure link below to pay your invoice. Your card details are entered on a PCI-compliant page — we never see or store your full card number in email.",
+            "",
+            `Invoice: ${invoice.invoice_number}`,
+            `Balance due: ${balanceFormatted}`,
+            "",
+            `Pay securely: ${url}`,
+            "",
+            orgName,
+          ].join("\n");
+
+          const htmlBody = `
           <div style="font-family:system-ui,sans-serif;color:#0f172a;line-height:1.5;max-width:560px;">
             <p>${customMessage ? customMessage.replace(/\n/g, "<br>") : "Please use the button below to pay your invoice on our secure payment page. Card details are handled by Stripe — never shared over email."}</p>
             <table style="width:100%;border-collapse:collapse;margin:16px 0;">
@@ -199,14 +311,15 @@ Deno.serve(
             <p style="color:#64748b;font-size:13px;">${orgName}</p>
           </div>`;
 
-        await sendTransactionalEmail({
-          orgId: member.org_id,
-          orgName,
-          to,
-          subject,
-          textBody,
-          htmlBody,
-        });
+          await sendTransactionalEmail({
+            orgId: member.org_id,
+            orgName,
+            to,
+            subject,
+            textBody,
+            htmlBody,
+          });
+        }
 
         return new Response(
           JSON.stringify({

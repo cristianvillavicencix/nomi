@@ -7,18 +7,13 @@ import {
   TicketListStatusControl,
 } from "@/modules/tickets/TicketListCardControls";
 import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
+import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
 import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { OrganizationMember, Ticket } from "@/modules/types";
 import { isTicketUnread } from "@/modules/tickets/ticketReadState";
-
-const MetaSep = () => (
-  <span className="px-1 text-muted-foreground/50" aria-hidden>
-    |
-  </span>
-);
 
 type TicketListItemProps = {
   ticket: Ticket;
@@ -123,8 +118,8 @@ export const TicketListItem = ({
                 <div className="flex items-start gap-1.5">
                   <TicketSubjectField
                     ticket={ticket}
+                    editable={false}
                     className="min-w-0 flex-1 text-sm font-semibold leading-snug"
-                    inputClassName="text-sm"
                   />
                   {hasAttachments ? (
                     <Paperclip
@@ -144,7 +139,7 @@ export const TicketListItem = ({
               <p className="truncate text-xs text-muted-foreground">
                 {identityParts.map((part, index) => (
                   <span key={`${part}-${index}`}>
-                    {index > 0 ? <MetaSep /> : null}
+                    {index > 0 ? <TicketMetaSep /> : null}
                     <span className={index === 0 ? "font-mono text-foreground/80" : undefined}>
                       {part}
                     </span>

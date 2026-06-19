@@ -10,19 +10,31 @@ import {
 } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { Ticket, TicketMessage } from "@/modules/types";
+import { useAutoGrowTextarea } from "@/hooks/use-auto-grow-textarea";
+import type { ClientInvoice, Ticket, TicketMessage } from "@/modules/types";
 import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
+import {
+  canSendTicketOutboundAttachments,
+  isTicketAwaitingPaidDelivery,
+  TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT,
+  TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE,
+} from "@/modules/tickets/ticketOutboundAttachments";
 import { TicketComposerToolbar } from "@/modules/tickets/TicketComposerToolbar";
 import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
+import { TicketReplyRichComposer } from "@/modules/tickets/TicketReplyRichComposer";
+import { expandTicketReplyTemplate } from "@/modules/tickets/ticketReplyTemplates";
+import {
+  createDefaultReplyHtml,
+  hasReplyContentHtml,
+  htmlToPlainText,
+  insertAboveSignatureHtml,
+  stripReplySignatureHtml,
+} from "@/modules/tickets/ticketReplyRichText";
 import {
   buildForwardOutboundBodies,
-  buildReplyOutboundBodies,
-  createDefaultReplyBody,
-  hasReplyContent,
-  insertAboveSignature,
+  buildReplyOutboundBodiesFromHtml,
   isValidEmailList,
   parseEmailList,
-  stripReplySignature,
   type ForwardMessage,
 } from "@/modules/tickets/ticketReplySignature";
 import {
@@ -34,7 +46,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type PendingAttachment = {
@@ -55,7 +66,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
   const [forwardContext, setForwardContext] = useState<ForwardContext | null>(
     null,
   );
-  const [body, setBody] = useState(createDefaultReplyBody);
+  const [bodyHtml, setBodyHtml] = useState(createDefaultReplyHtml);
   const [toRecipients, setToRecipients] = useState("");
   const [ccRecipients, setCcRecipients] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
@@ -63,7 +74,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     null,
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -77,6 +88,18 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     "companies",
     { id: ticket.company_id ?? "" },
     { enabled: Boolean(ticket.company_id) },
+  );
+
+  const { data: invoice } = useGetOne<ClientInvoice>(
+    "client_invoices",
+    { id: ticket.invoice_id ?? "" },
+    { enabled: Boolean(ticket.invoice_id), retry: false },
+  );
+
+  const awaitingPaidDelivery = isTicketAwaitingPaidDelivery(ticket, invoice);
+  const outboundAttachmentsAllowed = canSendTicketOutboundAttachments(
+    ticket,
+    invoice,
   );
 
   const defaultRecipientEmail = useMemo(
@@ -98,14 +121,17 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     recentMessages.find((message) => message.direction === "inbound") ??
     recentMessages[0];
 
+  const replyMinHeight = composeMode === "forward" ? 96 : 200;
+  const replyMaxHeight = composeMode === "forward" ? 280 : 720;
+
   const fromAddress = ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
   const hasContent =
     (composeMode === "forward" && forwardContext != null) ||
-    hasReplyContent(body) ||
+    hasReplyContentHtml(bodyHtml) ||
     pendingFiles.length > 0;
 
   const resetDraft = () => {
-    setBody(createDefaultReplyBody());
+    setBodyHtml(createDefaultReplyHtml());
     setForwardContext(null);
     setToRecipients(defaultRecipientEmail);
     setCcRecipients("");
@@ -136,7 +162,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     if (mode === "reply") {
       setForwardContext(null);
       setToRecipients(defaultRecipientEmail);
-      setBody(createDefaultReplyBody());
+      setBodyHtml(createDefaultReplyHtml());
     } else {
       setForwardContext(
         forwardSourceMessage
@@ -144,10 +170,10 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
           : null,
       );
       setToRecipients("");
-      setBody(createDefaultReplyBody());
+      setBodyHtml(createDefaultReplyHtml());
     }
 
-    requestAnimationFrame(() => textareaRef.current?.focus());
+    requestAnimationFrame(() => editorRef.current?.focus());
   };
 
   useEffect(() => {
@@ -270,7 +296,9 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     }
 
     if (isInternalNote) {
-      const noteBody = stripReplySignature(body).trim() || body.trim();
+      const noteBody =
+        htmlToPlainText(stripReplySignatureHtml(bodyHtml)).trim() ||
+        htmlToPlainText(bodyHtml).trim();
       if (!noteBody && pendingFiles.length === 0) {
         notify("Add a message or attach a file", { type: "warning" });
         return;
@@ -282,6 +310,14 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
       });
       return;
     }
+
+    const expandedHtml = expandTicketReplyTemplate(
+      bodyHtml,
+      ticket,
+      contact,
+      company,
+    );
+    const userNoteHtml = stripReplySignatureHtml(expandedHtml);
 
     const toEmails = parseEmailList(toRecipients);
     const ccEmails = parseEmailList(ccRecipients);
@@ -299,12 +335,9 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
 
     if (
       pendingFiles.length > 0 &&
-      ticket.delivery_status !== "delivered"
+      !outboundAttachmentsAllowed
     ) {
-      notify(
-        "Add files to the delivery package instead. Client files are sent automatically after payment.",
-        { type: "warning" },
-      );
+      notify(TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE, { type: "warning" });
       return;
     }
 
@@ -312,7 +345,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
       const { textBody, htmlBody } = buildForwardOutboundBodies({
         ticket,
         message: forwardContext.message,
-        userNote: stripReplySignature(body),
+        userNoteHtml,
       });
       setSubmittingAs("reply");
       submitMutation.mutate({
@@ -325,9 +358,8 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
       return;
     }
 
-    const { textBody, htmlBody } = buildReplyOutboundBodies(
-      body.trim() || "(See attachments)",
-    );
+    const { textBody, htmlBody } =
+      buildReplyOutboundBodiesFromHtml(expandedHtml);
     setSubmittingAs("reply");
     submitMutation.mutate({
       isInternalNote: false,
@@ -339,10 +371,10 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
   };
 
   const handleInsertTemplate = (text: string) => {
-    setBody((current) => insertAboveSignature(current, text));
+    setBodyHtml((current) => insertAboveSignatureHtml(current, text));
   };
 
-  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     const items = event.clipboardData?.items;
     if (!items) return;
 
@@ -462,6 +494,12 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
           />
         </div>
 
+        {awaitingPaidDelivery ? (
+          <p className="border-b bg-amber-50/80 px-5 py-2 text-xs text-amber-950">
+            {TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT}
+          </p>
+        ) : null}
+
         {pendingFiles.length > 0 ? (
           <div className="flex flex-wrap gap-2 border-b px-5 py-2">
             {pendingFiles.map((pending) => (
@@ -506,9 +544,8 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
         />
 
         <TicketComposerToolbar
-          textareaRef={textareaRef}
-          value={body}
-          onChange={setBody}
+          editorRef={editorRef}
+          onEditorChange={setBodyHtml}
           disabled={isPending}
           ticket={ticket}
           contact={contact}
@@ -521,24 +558,21 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
           submittingAs={submittingAs}
         />
 
-        <Textarea
-          ref={textareaRef}
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
+        <TicketReplyRichComposer
+          editorRef={editorRef}
+          value={bodyHtml}
+          onChange={setBodyHtml}
           onPaste={handlePaste}
           placeholder={
             composeMode === "forward"
               ? "Add a note above the forwarded message..."
               : "Write your reply..."
           }
-          rows={composeMode === "forward" ? 4 : 8}
           disabled={isPending}
-          className={cn(
-            "resize-y rounded-none border-0 px-5 py-3.5 text-sm shadow-none focus-visible:ring-0",
-            composeMode === "forward"
-              ? "max-h-[min(24vh,160px)] min-h-[96px]"
-              : "max-h-[min(40vh,280px)] min-h-[160px]",
-          )}
+          minHeight={replyMinHeight}
+          maxHeight={replyMaxHeight}
+          resizeTrigger={isExpanded}
+          className={composeMode === "forward" ? "min-h-24" : "min-h-[12.5rem]"}
         />
 
         {composeMode === "forward" && forwardContext ? (
