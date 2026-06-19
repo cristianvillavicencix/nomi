@@ -81,4 +81,58 @@ export const ticketsProvider = {
 
     return data;
   },
+
+  async createTicketInvoice({
+    ticketId,
+    baseUrl,
+  }: {
+    ticketId: Identifier;
+    baseUrl?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+      payment_url: string;
+      to: string;
+    }>("create_ticket_invoice", {
+      method: "POST",
+      body: {
+        ticket_id: Number(ticketId),
+        ...(baseUrl ? { base_url: baseUrl } : {}),
+      },
+    });
+
+    if (error || !data?.invoice) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to create ticket invoice",
+            )
+          : "Failed to create ticket invoice",
+      );
+    }
+
+    return data;
+  },
+
+  async deliverTicket({ ticketId }: { ticketId: Identifier }) {
+    const { data, error } = await invokeEdgeFunction<{
+      delivered: boolean;
+      duplicate?: boolean;
+      ticket_id?: number;
+    }>("deliver_ticket", {
+      method: "POST",
+      body: { ticket_id: Number(ticketId) },
+    });
+
+    if (error || !data?.delivered) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(error, "Could not deliver files")
+          : "Could not deliver files",
+      );
+    }
+
+    return data;
+  },
 };

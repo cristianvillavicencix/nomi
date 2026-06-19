@@ -6,6 +6,7 @@ import {
   rescheduleRemainderAfterEarlyPayments,
 } from "./invoiceRemainderSchedule.ts";
 import { markInstallmentPaidFromStripe } from "./proposalFlow.ts";
+import { deliverTicketAfterInvoicePayment } from "./ticketDelivery.ts";
 
 const isDepositInstallment = (row: {
   installment_number?: number | null;
@@ -85,6 +86,7 @@ type InvoicePaymentRow = {
   id: number;
   org_id: number;
   proposal_id?: number | null;
+  ticket_id?: number | null;
   amount: number;
   amount_paid: number;
   status: string;
@@ -166,6 +168,19 @@ export async function applyClientInvoicePaymentUpdate(
           "applyClientInvoicePaymentUpdate.syncProposalInstallment.duplicate",
           error,
         );
+      }
+      if (invoice.ticket_id) {
+        try {
+          await deliverTicketAfterInvoicePayment(supabase, {
+            invoiceId: invoice.id,
+            orgId: invoice.org_id,
+          });
+        } catch (error) {
+          console.error(
+            "applyClientInvoicePaymentUpdate.deliverTicket.duplicate",
+            error,
+          );
+        }
       }
     }
     return {
@@ -267,6 +282,20 @@ export async function applyClientInvoicePaymentUpdate(
         "applyClientInvoicePaymentUpdate.syncProposalInstallment",
         error,
       );
+    }
+
+    if (updated?.ticket_id) {
+      try {
+        await deliverTicketAfterInvoicePayment(supabase, {
+          invoiceId: invoice.id,
+          orgId: invoice.org_id,
+        });
+      } catch (error) {
+        console.error(
+          "applyClientInvoicePaymentUpdate.deliverTicket",
+          error,
+        );
+      }
     }
   }
 

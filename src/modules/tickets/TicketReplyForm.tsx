@@ -297,6 +297,17 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
       return;
     }
 
+    if (
+      pendingFiles.length > 0 &&
+      ticket.delivery_status !== "delivered"
+    ) {
+      notify(
+        "Add files to the delivery package instead. Client files are sent automatically after payment.",
+        { type: "warning" },
+      );
+      return;
+    }
+
     if (composeMode === "forward" && forwardContext) {
       const { textBody, htmlBody } = buildForwardOutboundBodies({
         ticket,

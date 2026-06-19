@@ -4,11 +4,11 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import {
   amountToCents,
-  createInvoiceCheckoutPaymentIntent,
   isStripeMockMode,
+  persistInvoiceStripeCheckoutSession,
   resolveContactEmail,
+  resolveInvoiceCheckoutPaymentIntent,
   resolveOrCreateInvoiceStripeCustomer,
-  updateInvoiceCheckoutPaymentIntent,
 } from "../_shared/clientProposalBilling.ts";
 import {
   buildInvoicePaymentIntentMetadata,
@@ -88,7 +88,12 @@ Deno.serve(
         invoice,
         remainderInstallmentNumbers,
       );
-      const existingPaymentIntentId = String(body.payment_intent_id ?? "").trim();
+      const amountCents = amountToCents(chargeAmount);
+
+      const candidatePaymentIntentIds = [
+        String(body.payment_intent_id ?? "").trim(),
+        invoice.stripe_payment_intent_id?.trim() ?? "",
+      ];
 
       const customer = await resolveOrCreateInvoiceStripeCustomer(stripe, {
         email,
@@ -97,38 +102,31 @@ Deno.serve(
         contactId: invoice.contact_id,
         companyId: invoice.company_id,
         existingCustomerId: invoice.stripe_customer_id,
-        existingPaymentIntentId: invoice.stripe_payment_intent_id,
+        existingPaymentIntentId:
+          candidatePaymentIntentIds.find(Boolean) ?? undefined,
       });
 
-      const createCheckoutIntent = () =>
-        createInvoiceCheckoutPaymentIntent(stripe, {
-          amountCents: amountToCents(chargeAmount),
+      const intent = await resolveInvoiceCheckoutPaymentIntent(stripe, {
+        candidatePaymentIntentIds,
+        amountCents,
+        invoiceId: invoice.id,
+        orgId: invoice.org_id,
+        metadata,
+        createParams: {
+          amountCents,
           currency: invoice.currency ?? "usd",
           customerId: customer.id,
           saveForFutureUse: shouldSaveCard,
           metadata,
-        });
+        },
+      });
 
-      let intent;
-      if (existingPaymentIntentId) {
-        try {
-          intent = await updateInvoiceCheckoutPaymentIntent(stripe, {
-            paymentIntentId: existingPaymentIntentId,
-            amountCents: amountToCents(chargeAmount),
-            invoiceId: invoice.id,
-            orgId: invoice.org_id,
-            metadata,
-          });
-        } catch (updateError) {
-          console.warn(
-            "prepare_client_invoice_payment.update_failed",
-            updateError,
-          );
-          intent = await createCheckoutIntent();
-        }
-      } else {
-        intent = await createCheckoutIntent();
-      }
+      await persistInvoiceStripeCheckoutSession(supabaseAdmin, {
+        invoiceId: invoice.id,
+        orgId: invoice.org_id,
+        stripePaymentIntentId: intent.id,
+        stripeCustomerId: customer.id,
+      });
 
       return new Response(
         JSON.stringify({

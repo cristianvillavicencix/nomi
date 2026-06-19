@@ -8,6 +8,7 @@ import {
 import { applyClientInvoicePaymentUpdate } from "./clientInvoicePayment.ts";
 import { parseRemainderInstallmentNumbersFromMetadata } from "./publicClientInvoicePaymentContext.ts";
 import { notifyInvoicePaymentReceipt } from "./invoicePaymentEmails.ts";
+import { deliverTicketAfterInvoicePayment } from "./ticketDelivery.ts";
 
 export type ClientPaymentMetadataType =
   | "proposal_deposit"
@@ -191,14 +192,28 @@ export async function applyClientInvoicePaymentFromStripe(
   const { data: invoice } = await supabase
     .from("client_invoices")
     .select(
-      "id, org_id, amount, amount_paid, status, upfront_percent, auto_charge_remainder, save_card_for_future_charges, due_date, issue_date, remainder_schedule, stripe_payment_intent_id",
+      "id, org_id, amount, amount_paid, status, ticket_id, upfront_percent, auto_charge_remainder, save_card_for_future_charges, due_date, issue_date, remainder_schedule, stripe_payment_intent_id",
     )
     .eq("id", params.invoiceId)
     .eq("org_id", params.orgId)
     .maybeSingle();
 
-  if (!invoice?.id || invoice.status === "void" || invoice.status === "paid") {
+  if (!invoice?.id || invoice.status === "void") {
     return { handled: false, skipped: true };
+  }
+
+  if (invoice.status === "paid") {
+    if (invoice.ticket_id) {
+      try {
+        await deliverTicketAfterInvoicePayment(supabase, {
+          invoiceId: params.invoiceId,
+          orgId: params.orgId,
+        });
+      } catch (error) {
+        console.error("applyClientInvoicePaymentFromStripe.deliverTicket", error);
+      }
+    }
+    return { handled: true, skipped: true, already_paid: true };
   }
 
   if (invoice.stripe_payment_intent_id === params.stripePaymentIntentId) {
@@ -391,6 +406,129 @@ export async function updateInvoiceCheckoutPaymentIntent(
     amount: params.amountCents,
     metadata: params.metadata,
   });
+}
+
+const reusableCheckoutPaymentIntentStatuses = new Set([
+  "requires_payment_method",
+  "requires_confirmation",
+]);
+
+export async function tryReuseInvoiceCheckoutPaymentIntent(
+  stripe: Stripe,
+  params: {
+    paymentIntentId: string;
+    amountCents: number;
+    invoiceId: number;
+    orgId: number;
+    metadata: {
+      type: "client_invoice";
+      org_id: string;
+      invoice_id: string;
+      remainder_installment_numbers?: string;
+    };
+  },
+): Promise<Stripe.PaymentIntent | null> {
+  const paymentIntentId = params.paymentIntentId.trim();
+  if (!paymentIntentId) return null;
+
+  try {
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const metadata = intent.metadata ?? {};
+
+    if (
+      metadata.type !== "client_invoice" ||
+      Number(metadata.invoice_id) !== params.invoiceId ||
+      Number(metadata.org_id) !== params.orgId
+    ) {
+      return null;
+    }
+
+    if (!reusableCheckoutPaymentIntentStatuses.has(intent.status)) {
+      return null;
+    }
+
+    return updateInvoiceCheckoutPaymentIntent(stripe, {
+      paymentIntentId,
+      amountCents: params.amountCents,
+      invoiceId: params.invoiceId,
+      orgId: params.orgId,
+      metadata: params.metadata,
+    });
+  } catch (error) {
+    console.warn("tryReuseInvoiceCheckoutPaymentIntent.failed", paymentIntentId, error);
+    return null;
+  }
+}
+
+export async function resolveInvoiceCheckoutPaymentIntent(
+  stripe: Stripe,
+  params: {
+    candidatePaymentIntentIds: string[];
+    amountCents: number;
+    invoiceId: number;
+    orgId: number;
+    metadata: {
+      type: "client_invoice";
+      org_id: string;
+      invoice_id: string;
+      remainder_installment_numbers?: string;
+    };
+    createParams: {
+      amountCents: number;
+      currency: string;
+      customerId: string;
+      saveForFutureUse?: boolean;
+      metadata: {
+        type: "client_invoice";
+        org_id: string;
+        invoice_id: string;
+        remainder_installment_numbers?: string;
+      };
+    };
+  },
+) {
+  const seen = new Set<string>();
+  for (const candidate of params.candidatePaymentIntentIds) {
+    const paymentIntentId = candidate.trim();
+    if (!paymentIntentId || seen.has(paymentIntentId)) continue;
+    seen.add(paymentIntentId);
+
+    const reused = await tryReuseInvoiceCheckoutPaymentIntent(stripe, {
+      paymentIntentId,
+      amountCents: params.amountCents,
+      invoiceId: params.invoiceId,
+      orgId: params.orgId,
+      metadata: params.metadata,
+    });
+    if (reused) return reused;
+  }
+
+  return createInvoiceCheckoutPaymentIntent(stripe, params.createParams);
+}
+
+export async function persistInvoiceStripeCheckoutSession(
+  supabase: SupabaseClient,
+  params: {
+    invoiceId: number;
+    orgId: number;
+    stripePaymentIntentId: string;
+    stripeCustomerId?: string | null;
+  },
+) {
+  const update: Record<string, string> = {
+    stripe_payment_intent_id: params.stripePaymentIntentId,
+  };
+  if (params.stripeCustomerId?.trim()) {
+    update.stripe_customer_id = params.stripeCustomerId.trim();
+  }
+
+  await supabase
+    .from("client_invoices")
+    .update(update)
+    .eq("id", params.invoiceId)
+    .eq("org_id", params.orgId)
+    .neq("status", "paid")
+    .neq("status", "void");
 }
 
 export async function finalizeInvoicePaymentFromIntent(

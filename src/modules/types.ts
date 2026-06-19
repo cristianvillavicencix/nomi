@@ -162,6 +162,7 @@ export type ClientInvoice = {
   deal_id?: Identifier | null;
   company_id?: Identifier | null;
   contact_id?: Identifier | null;
+  ticket_id?: Identifier | null;
   issue_date: string;
   due_date: string;
   amount: number;
@@ -279,8 +280,38 @@ export type Ticket = {
   external_thread_id?: string | null;
   merged_into_ticket_id?: Identifier | null;
   merge_note?: string | null;
+  invoice_id?: Identifier | null;
+  billing_item_count?: number;
+  billing_has_roof?: boolean;
+  billing_has_siding?: boolean;
+  billing_has_esx?: boolean;
+  billing_has_pdf_analysis?: boolean;
+  delivery_status?: "none" | "ready" | "invoice_sent" | "delivered";
+  delivered_at?: string | null;
   created_at?: string;
   updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type TicketDeliverable = {
+  org_id?: number;
+  ticket_id: Identifier;
+  title: string;
+  type?: string;
+  path: string;
+  src?: string | null;
+  sort_order?: number;
+  created_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type TicketInternalFile = {
+  org_id?: number;
+  ticket_id: Identifier;
+  title: string;
+  type?: string;
+  path: string;
+  src?: string | null;
+  sort_order?: number;
+  created_at?: string;
 } & Pick<RaRecord, "id">;
 
 export type TicketMessage = {

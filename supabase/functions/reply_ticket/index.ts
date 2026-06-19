@@ -146,6 +146,22 @@ Deno.serve(
           return createErrorResponse(400, "Enter at least one valid recipient email");
         }
 
+        if (attachments.length > 0) {
+          const { data: ticketDelivery } = await supabaseAdmin
+            .from("tickets")
+            .select("delivery_status")
+            .eq("id", ticket.id)
+            .eq("org_id", member.org_id)
+            .maybeSingle();
+
+          if (ticketDelivery?.delivery_status !== "delivered") {
+            return createErrorResponse(
+              400,
+              "Outbound attachments are blocked until payment delivery completes. Use the delivery package instead.",
+            );
+          }
+        }
+
         let inboxAddress = ticket.inbox_address?.trim().toLowerCase() ?? "";
         let fromName = "LBS Supplements";
 

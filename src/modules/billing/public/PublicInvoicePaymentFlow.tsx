@@ -36,6 +36,11 @@ import {
   type PublicInvoicePayload,
 } from "@/modules/billing/public/publicInvoiceApi";
 import {
+  clearStoredInvoicePaymentIntentId,
+  readStoredInvoicePaymentIntentId,
+  writeStoredInvoicePaymentIntentId,
+} from "@/modules/billing/public/invoicePaymentIntentStorage";
+import {
   publicInvoicePaymentSectionPadding,
   publicInvoicePaymentShellClass,
 } from "@/modules/billing/public/payInvoiceDialogLayout";
@@ -355,15 +360,19 @@ const useStablePaymentCheckoutSession = (
 
   const runPrepare = useCallback(async (paymentIntentId?: string) => {
     const execute = async () => {
+      const storedPaymentIntentId =
+        paymentIntentId ?? readStoredInvoicePaymentIntentId(token) ?? undefined;
+
       const result = await preparePublicClientInvoicePayment({
         token,
         amount: paymentStateRef.current.selectedAmount,
         remainderInstallmentNumbers:
           paymentStateRef.current.remainderInstallmentNumbers,
-        paymentIntentId,
+        paymentIntentId: storedPaymentIntentId,
       });
 
       if (result.billing_mode === "mock") {
+        clearStoredInvoicePaymentIntentId(token);
         setSession({
           paymentIntentId: "",
           clientSecret: "",
@@ -373,6 +382,7 @@ const useStablePaymentCheckoutSession = (
       }
 
       if (result.payment_intent_id && result.client_secret) {
+        writeStoredInvoicePaymentIntentId(token, result.payment_intent_id);
         setSession({
           paymentIntentId: result.payment_intent_id,
           clientSecret: result.client_secret,
@@ -401,6 +411,12 @@ const useStablePaymentCheckoutSession = (
     lastSyncedRef.current = "";
     initialPreparedRef.current = false;
   }, [token]);
+
+  useEffect(() => {
+    if (summary.isPaid) {
+      clearStoredInvoicePaymentIntentId(token);
+    }
+  }, [summary.isPaid, token]);
 
   useEffect(() => {
     if (summary.isPaid || !paymentAmountState.amountValid) {

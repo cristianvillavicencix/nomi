@@ -1,5 +1,8 @@
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import type { Attachment } from "./extractAndUploadAttachments.ts";
+import { isOrgTransactionalEmailConfigured } from "../_shared/transactionalEmail.ts";
+import { sendNewTicketAutoReply } from "../_shared/ticketInboundAutoReply.ts";
+import { INVOICE_ORGANIZATION_NAME } from "../_shared/invoiceOrganizationInfo.ts";
 
 type PostmarkAddress = {
   Email?: string;
@@ -213,8 +216,10 @@ export const processTicketInbound = async ({
 
   const now = new Date().toISOString();
   let ticketId = existingTicketId;
+  let isNewTicket = false;
 
   if (!ticketId) {
+    isNewTicket = true;
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from("tickets")
       .insert({
@@ -266,6 +271,33 @@ export const processTicketInbound = async ({
 
   if (messageError) {
     throw new Error(messageError.message);
+  }
+
+  if (isNewTicket) {
+    try {
+      const configured = await isOrgTransactionalEmailConfigured(inbox.org_id);
+      if (configured) {
+        const fromName =
+          inbox.from_name?.trim() ||
+          inbox.display_name?.trim() ||
+          "LBS Supplements";
+        const { data: org } = await supabaseAdmin
+          .from("organizations")
+          .select("name")
+          .eq("id", inbox.org_id)
+          .maybeSingle();
+        await sendNewTicketAutoReply({
+          orgId: inbox.org_id,
+          orgName: org?.name?.trim() || INVOICE_ORGANIZATION_NAME,
+          ticketId: Number(ticketId),
+          toEmail: normalizeEmail(fromEmail),
+          fromEmail: normalizeEmail(inbox.email),
+          fromName,
+        });
+      }
+    } catch (error) {
+      console.error("processTicketInbound.auto_reply", error);
+    }
   }
 
   return new Response(JSON.stringify({ ok: true, ticket_id: ticketId }), {

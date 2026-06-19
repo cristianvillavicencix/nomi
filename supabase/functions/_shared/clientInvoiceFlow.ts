@@ -297,6 +297,7 @@ export type CreateStandaloneInvoiceInput = {
   company_id?: number | null;
   contact_id?: number | null;
   deal_id?: number | null;
+  ticket_id?: number | null;
   issue_date?: string;
   due_date: string;
   terms?: string;
@@ -353,6 +354,7 @@ export async function createStandaloneClientInvoice(
       company_id: input.company_id ?? null,
       contact_id: input.contact_id ?? null,
       deal_id: input.deal_id ?? null,
+      ticket_id: input.ticket_id ?? null,
       issue_date: issueDate,
       due_date: input.due_date,
       subtotal: input.subtotal,

@@ -332,6 +332,8 @@ const DesktopAdmin = (props: CoreAdminProps) => {
       <Resource name="form_templates" />
       <Resource name="tickets" {...tickets} />
       <Resource name="ticket_messages" />
+      <Resource name="ticket_deliverables" />
+      <Resource name="ticket_internal_files" />
       <Resource name="conversations" />
       <Resource name="conversation_participants" />
       <Resource name="conversation_messages" />
@@ -458,6 +460,8 @@ const MobileAdmin = (props: CoreAdminProps) => {
         <Resource name="proposals" />
         <Resource name="contracts" />
         <Resource name="tickets" />
+        <Resource name="ticket_deliverables" />
+        <Resource name="ticket_internal_files" />
         <Resource name="conversations" />
         <Resource name="calendar_events" />
         <Resource name="monitored_websites" />
