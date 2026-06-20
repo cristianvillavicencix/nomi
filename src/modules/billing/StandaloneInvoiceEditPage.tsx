@@ -444,7 +444,7 @@ export const StandaloneInvoiceEditPage = ({
 
   const shellClass = embedded
     ? "flex min-h-0 flex-1 flex-col"
-    : "flex min-h-0 flex-1 flex-col bg-slate-100/80";
+    : "flex min-h-0 flex-1 flex-col bg-muted/50";
 
   const previewTotals = calculateInvoiceTotals(lines, discountPercent);
 

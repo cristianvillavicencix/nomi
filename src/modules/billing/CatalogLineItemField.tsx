@@ -264,27 +264,27 @@ export const CatalogLineItemField = ({
     <li key={item.id}>
       <button
         type="button"
-        className="flex w-full items-start gap-4 px-4 py-2.5 text-left hover:bg-slate-50"
+        className="flex w-full items-start gap-4 px-4 py-2.5 text-left hover:bg-accent"
         onMouseDown={(event) => {
           event.preventDefault();
           pick(item);
         }}
       >
         <div className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-slate-900">
+          <span className="block text-sm font-medium text-foreground">
             {item.title}
           </span>
           {item.item_detail ? (
-            <span className="mt-0.5 block line-clamp-2 text-xs leading-snug text-slate-500">
+            <span className="mt-0.5 block line-clamp-2 text-xs leading-snug text-muted-foreground">
               {item.item_detail}
             </span>
           ) : null}
         </div>
         <div className="shrink-0 text-right">
-          <span className="block text-sm font-semibold tabular-nums text-slate-900">
+          <span className="block text-sm font-semibold tabular-nums text-foreground">
             {formatSuggestionPrice(item.unit_price)}
           </span>
-          <span className="mt-0.5 block text-[10px] uppercase tracking-wide text-slate-400">
+          <span className="mt-0.5 block text-[10px] uppercase tracking-wide text-muted-foreground">
             {item.kind === "package" ? "Package" : "Add-on"}
           </span>
         </div>
@@ -297,7 +297,7 @@ export const CatalogLineItemField = ({
       ? createPortal(
           <ul
             data-invoice-item-suggestions
-            className="fixed z-[100] max-h-80 overflow-y-auto rounded-md bg-white py-1 shadow-xl"
+            className="fixed z-[100] max-h-80 overflow-y-auto rounded-md border bg-popover py-1 text-popover-foreground shadow-xl"
             style={{
               top: position.top,
               left: position.left,
@@ -308,7 +308,7 @@ export const CatalogLineItemField = ({
               <>
                 {filteredPackages.length > 0 ? (
                   <>
-                    <li className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    <li className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Packages
                     </li>
                     {filteredPackages.map(renderSuggestion)}
@@ -316,7 +316,7 @@ export const CatalogLineItemField = ({
                 ) : null}
                 {filteredAddons.length > 0 ? (
                   <>
-                    <li className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    <li className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Add-ons
                     </li>
                     {filteredAddons.map(renderSuggestion)}
@@ -328,7 +328,7 @@ export const CatalogLineItemField = ({
               <li>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-blue-700 hover:bg-slate-50"
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-primary hover:bg-accent"
                   onMouseDown={(event) => {
                     event.preventDefault();
                     setOpen(false);
@@ -349,7 +349,7 @@ export const CatalogLineItemField = ({
               </li>
             ) : null}
             {!hasResults && !showCreateOption ? (
-              <li className="px-3 py-2 text-sm text-slate-400">
+              <li className="px-3 py-2 text-sm text-muted-foreground">
                 Type to search catalog items
               </li>
             ) : null}

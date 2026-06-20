@@ -132,7 +132,7 @@ export const InvoiceBillingWorkspace = ({
       ) : null}
 
       {showDetail && hasSelection ? (
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-slate-100/80 dark:bg-slate-900/40">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50">
           {isMobile ? (
             <div className="border-b bg-background px-3 py-2">
               <Button

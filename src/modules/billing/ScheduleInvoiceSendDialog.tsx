@@ -317,7 +317,7 @@ export const ScheduleInvoiceSendDialog = ({
                   {companyId ? (
                     <Link
                       to={getClientShowPath(companyId)}
-                      className="font-medium text-blue-700 hover:underline"
+                      className="font-medium text-primary hover:underline"
                     >
                       + Add New
                     </Link>

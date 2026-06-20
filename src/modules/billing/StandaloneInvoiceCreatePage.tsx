@@ -317,7 +317,7 @@ export const StandaloneInvoiceCreatePage = () => {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-slate-100/80">
+    <div className="flex min-h-0 flex-1 flex-col bg-muted/50">
       <div className="border-b bg-background px-4 py-3 md:px-6">
         <PageActions>
           <PageTitle label="New invoice" />

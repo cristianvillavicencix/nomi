@@ -119,14 +119,14 @@ export const BillToClientSearch = ({
               className={cn(
                 "min-w-0 truncate text-left",
                 value
-                  ? "font-medium text-blue-700 hover:underline"
-                  : "text-slate-400",
+                  ? "font-medium text-primary hover:underline"
+                  : "text-muted-foreground",
               )}
             >
               {triggerLabel}
             </span>
             {!value ? (
-              <ChevronsUpDown className="size-3.5 shrink-0 text-slate-400" />
+              <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
             ) : null}
           </button>
         ) : (

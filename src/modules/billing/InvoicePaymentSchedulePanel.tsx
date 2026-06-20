@@ -56,16 +56,16 @@ export const InvoicePaymentSchedulePanel = ({
           <li key={row.key} className="relative pl-4">
             {index > 0 ? (
               <div
-                className="absolute -top-3 left-1.5 h-3 w-px bg-slate-200"
+                className="absolute -top-3 left-1.5 h-3 w-px bg-border"
                 aria-hidden
               />
             ) : null}
             <div
               className={cn(
                 "relative py-0.5",
-                "before:absolute before:-left-4 before:top-2 before:size-1.5 before:rounded-full before:bg-slate-300",
-                row.timing === "paid" && "before:bg-emerald-500",
-                row.timing === "now" && "before:bg-amber-500",
+                "before:absolute before:-left-4 before:top-2 before:size-1.5 before:rounded-full before:bg-muted-foreground/40",
+                row.timing === "paid" && "before:bg-success",
+                row.timing === "now" && "before:bg-warning",
               )}
             >
               <div className="flex items-start justify-between gap-3">

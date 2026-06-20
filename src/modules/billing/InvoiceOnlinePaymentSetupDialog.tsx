@@ -122,7 +122,7 @@ export const InvoiceOnlinePaymentSetupDialog = ({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Wallet className="size-5 text-[#0D3B6E]" />
+            <Wallet className="size-5 text-info" />
             Online payment
           </DialogTitle>
           <DialogDescription>
@@ -142,7 +142,7 @@ export const InvoiceOnlinePaymentSetupDialog = ({
               <label
                 className={cn(
                   "flex cursor-pointer items-start gap-3 rounded-md px-2 py-2.5 transition-colors",
-                  draft.paymentMode === "full" && "bg-slate-50/80",
+                  draft.paymentMode === "full" && "bg-muted/50",
                 )}
               >
                 <input
@@ -167,7 +167,7 @@ export const InvoiceOnlinePaymentSetupDialog = ({
               <label
                 className={cn(
                   "flex cursor-pointer items-start gap-3 rounded-md px-2 py-2.5 transition-colors",
-                  depositAuto && "bg-slate-50/80",
+                  depositAuto && "bg-muted/50",
                 )}
               >
                 <input

@@ -39,7 +39,7 @@ const EmailPreviewPanel = ({
       </div>
     ) : null}
     <div className="overflow-hidden rounded-lg border bg-white">
-      <div className="border-b bg-slate-50 px-3 py-2 text-[11px] text-muted-foreground">
+      <div className="border-b bg-muted/50 px-3 py-2 text-[11px] text-muted-foreground">
         <span className="font-medium text-foreground">Subject:</span>{" "}
         {subject || "—"}
       </div>
@@ -51,7 +51,7 @@ const EmailPreviewPanel = ({
           className="h-[480px] w-[200%] origin-top-left scale-50 border-0 lg:h-[560px]"
         />
       </div>
-      <div className="border-t bg-slate-50 px-3 py-2 text-[10px] text-muted-foreground">
+      <div className="border-t bg-muted/50 px-3 py-2 text-[10px] text-muted-foreground">
         PDF invoice attached
       </div>
     </div>

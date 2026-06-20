@@ -537,8 +537,8 @@ export const SendInvoiceDialog = ({
             </div>
 
             <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-red-50">
-                <FileText className="size-4 text-red-600" />
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-destructive/10">
+                <FileText className="size-4 text-destructive" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
