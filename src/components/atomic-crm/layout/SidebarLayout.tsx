@@ -249,9 +249,9 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         ? (
       <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
         <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
-        <div className="flex shrink-0 items-center gap-1">
-          <SpotlightSearchButton />
+        <div className="flex shrink-0 items-center gap-2">
           <PageActionsTrailingSlot className="flex items-center" />
+          <SpotlightSearchButton />
         </div>
       </header>
         )

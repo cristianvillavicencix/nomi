@@ -156,7 +156,7 @@ export const renderLbsCustomRoutes = ({
       <Route
         path="/calendar"
         element={
-          <ProtectedRoute resource="calendar_events" action="list">
+          <ProtectedRoute resource="tasks" action="list">
             <CalendarPage />
           </ProtectedRoute>
         }

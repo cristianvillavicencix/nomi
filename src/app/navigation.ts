@@ -135,12 +135,12 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
     action: "list",
   },
   {
-    to: "/calendar",
+    to: "/tasks",
     label: "Calendar",
     icon: CalendarDays,
-    activePattern: "/calendar/*",
-    capability: "calendar.view",
-    resource: "calendar_events",
+    activePattern: "/tasks/*",
+    capability: "crm.tasks.view",
+    resource: "tasks",
     action: "list",
   },
   {
@@ -236,17 +236,7 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
     id: "daily-work",
     label: "Daily work",
     icon: ListChecks,
-    items: [
-      {
-        to: "/tasks",
-        label: "Tasks",
-        icon: ListChecks,
-        activePattern: "/tasks/*",
-        capability: "crm.tasks.view",
-        resource: "tasks",
-        action: "list",
-      },
-    ],
+    items: [],
   },
   {
     id: "tools",

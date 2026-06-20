@@ -108,7 +108,7 @@ export const TaskAssignedAvatars = ({
                 ? "bg-primary/10 text-primary"
                 : role === "Collaborator"
                   ? "bg-muted"
-                  : "bg-blue-50 text-blue-700",
+                  : "bg-muted text-foreground",
             )}
           >
             {getMemberInitials(member)}
@@ -139,7 +139,7 @@ export const TaskAssignedAvatars = ({
           renderMemberAvatar(
             member,
             "Mentioned",
-            "rounded-full ring-2 ring-blue-200 transition-transform hover:z-10 hover:scale-105",
+            "rounded-full ring-2 ring-border transition-transform hover:z-10 hover:scale-105",
           ),
         )}
       </div>

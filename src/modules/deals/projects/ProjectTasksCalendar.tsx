@@ -156,14 +156,15 @@ export const ProjectTasksCalendar = ({
               className={cn(
                 "relative flex h-7 flex-col items-center justify-center rounded text-[11px] transition-colors",
                 "hover:bg-sidebar-accent/70",
-                isSelected && "bg-[#378ADD] text-white hover:bg-[#378ADD]/90",
-                !isSelected && isToday && "ring-1 ring-[#378ADD]",
+                isSelected &&
+                  "bg-sidebar-accent font-medium text-sidebar-accent-foreground hover:bg-sidebar-accent",
+                !isSelected && isToday && "ring-1 ring-border",
                 !isSelected && hasTasks && "font-semibold",
               )}
             >
               <span>{cell.date.getDate()}</span>
               {hasTasks && !isSelected ? (
-                <span className="absolute bottom-0.5 size-1 rounded-full bg-[#378ADD]" />
+                <span className="absolute bottom-0.5 size-1 rounded-full bg-foreground/70" />
               ) : null}
             </button>
           );

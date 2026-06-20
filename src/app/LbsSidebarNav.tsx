@@ -36,7 +36,13 @@ import {
 } from "@/app/navigation";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 
-const LBS_NAV_ACCENT = "#378ADD";
+import {
+  sidebarNavDropdownItemClass,
+  sidebarNavIconClass,
+  sidebarNavLinkClass,
+  sidebarNavLinkCollapsedClass,
+  sidebarNavSubLinkClass,
+} from "@/app/lbsSidebarNavStyles";
 
 // Stable refs to avoid creating new objects on every render, which makes
 // Radix Slot (used by TooltipTrigger asChild) treat the Link as changed props
@@ -250,24 +256,9 @@ const MoreCollapsibleNav = ({
             <DropdownMenuTrigger
               aria-label={section.label}
               title={section.label}
-              className={cn(
-                "flex size-9 w-full items-center justify-center rounded-lg transition-colors",
-                "hover:bg-sidebar-accent/70 text-sidebar-foreground",
-                sectionActive &&
-                  "bg-[#378ADD]/10 dark:bg-[#378ADD]/15",
-              )}
-              style={
-                sectionActive
-                  ? { boxShadow: `inset 2px 0 0 0 ${LBS_NAV_ACCENT}` }
-                  : undefined
-              }
+              className={sidebarNavLinkCollapsedClass(sectionActive)}
             >
-              <ParentIcon
-                className={cn(
-                  "size-4 shrink-0",
-                  sectionActive ? "text-[#378ADD]" : "text-muted-foreground",
-                )}
-              />
+              <ParentIcon className={sidebarNavIconClass(sectionActive)} />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="min-w-44">
               {groups.map((group, groupIndex) => (
@@ -286,7 +277,7 @@ const MoreCollapsibleNav = ({
                         <Link
                           to={item.to}
                           state={LINK_STATE}
-                          className={cn(active && "font-medium text-[#378ADD]")}
+                          className={sidebarNavDropdownItemClass(active)}
                         >
                           <Icon className="size-4" />
                           {item.label}
@@ -310,18 +301,13 @@ const MoreCollapsibleNav = ({
           type="button"
           onClick={toggleOpen}
           className={cn(
-            "relative flex w-full items-center gap-2 rounded-lg py-1.5 px-2.5 text-sm transition-colors",
-            "hover:bg-sidebar-accent/70 text-sidebar-foreground",
+            "relative flex w-full items-center gap-2 rounded-sm py-1.5 px-2.5 text-sm transition-colors",
+            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground",
             sectionActive && !open && "font-medium",
           )}
           aria-expanded={open}
         >
-          <ParentIcon
-            className={cn(
-              "size-4 shrink-0",
-              sectionActive ? "text-[#378ADD]" : "text-muted-foreground",
-            )}
-          />
+          <ParentIcon className={sidebarNavIconClass(sectionActive)} />
           <span className="truncate">{section.label}</span>
           <ChevronDown
             className={cn(
@@ -347,24 +333,9 @@ const MoreCollapsibleNav = ({
                       <Link
                         to={item.to}
                         state={LINK_STATE}
-                        className={cn(
-                          active &&
-                            "bg-[#378ADD]/10 font-medium dark:bg-[#378ADD]/15",
-                        )}
-                        style={
-                          active
-                            ? {
-                                boxShadow: `inset 2px 0 0 0 ${LBS_NAV_ACCENT}`,
-                              }
-                            : undefined
-                        }
+                        className={sidebarNavSubLinkClass(active)}
                       >
-                        <Icon
-                          className={cn(
-                            "size-4 shrink-0",
-                            active ? "text-[#378ADD]" : "text-muted-foreground",
-                          )}
-                        />
+                        <Icon className={sidebarNavIconClass(active)} />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuSubButton>
@@ -418,12 +389,9 @@ const ClientsCollapsibleNav = ({
           <DropdownMenuTrigger
             aria-label={group.label}
             title={group.label}
-            className={cn(
-              "flex size-9 w-full items-center justify-center rounded-lg transition-colors",
-              "hover:bg-sidebar-accent/70 text-sidebar-foreground",
-            )}
+            className={sidebarNavLinkCollapsedClass(sectionActive)}
           >
-            <ParentIcon className="size-4 shrink-0 text-muted-foreground" />
+            <ParentIcon className={sidebarNavIconClass(sectionActive)} />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="start" className="min-w-40">
             {childrenItems.map((item) => {
@@ -434,7 +402,7 @@ const ClientsCollapsibleNav = ({
                   <Link
                     to={item.to}
                     state={LINK_STATE}
-                    className={cn(active && "font-medium text-[#378ADD]")}
+                    className={sidebarNavDropdownItemClass(active)}
                   >
                     <Icon className="size-4" />
                     {item.label}
@@ -455,8 +423,8 @@ const ClientsCollapsibleNav = ({
           type="button"
           onClick={toggleOpen}
           className={cn(
-            "relative flex w-full items-center gap-2 rounded-lg py-1.5 px-2.5 text-sm transition-colors",
-            "hover:bg-sidebar-accent/70 text-sidebar-foreground",
+            "relative flex w-full items-center gap-2 rounded-sm py-1.5 px-2.5 text-sm transition-colors",
+            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground",
           )}
           aria-expanded={open}
         >
@@ -481,22 +449,9 @@ const ClientsCollapsibleNav = ({
                   <Link
                     to={item.to}
                     state={LINK_STATE}
-                    className={cn(
-                      active &&
-                        "bg-[#378ADD]/10 font-medium dark:bg-[#378ADD]/15",
-                    )}
-                    style={
-                      active
-                        ? { boxShadow: `inset 2px 0 0 0 ${LBS_NAV_ACCENT}` }
-                        : undefined
-                    }
+                    className={sidebarNavSubLinkClass(active)}
                   >
-                    <Icon
-                      className={cn(
-                        "size-4 shrink-0",
-                        active ? "text-[#378ADD]" : "text-muted-foreground",
-                      )}
-                    />
+                    <Icon className={sidebarNavIconClass(active)} />
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuSubButton>
@@ -530,25 +485,9 @@ const SidebarNavLink = ({
           state={LINK_STATE}
           aria-label={item.label}
           title={item.label}
-          className={cn(
-            "relative flex size-9 w-full items-center justify-center rounded-lg transition-colors",
-            "hover:bg-sidebar-accent/70",
-            active
-              ? "bg-[#378ADD]/10 text-sidebar-foreground dark:bg-[#378ADD]/15"
-              : "text-sidebar-foreground",
-          )}
-          style={
-            active
-              ? { boxShadow: `inset 2px 0 0 0 ${LBS_NAV_ACCENT}` }
-              : undefined
-          }
+          className={sidebarNavLinkCollapsedClass(active)}
         >
-          <Icon
-            className={cn(
-              "size-4 shrink-0",
-              active ? "text-[#378ADD]" : "text-muted-foreground",
-            )}
-          />
+          <Icon className={sidebarNavIconClass(active)} />
           {badgeCount > 0 ? (
             <NavBadge
               count={badgeCount}
@@ -565,25 +504,9 @@ const SidebarNavLink = ({
       <Link
         to={item.to}
         state={LINK_STATE}
-        className={cn(
-          "relative flex w-full items-center gap-2 rounded-lg py-1.5 px-2.5 text-sm transition-colors",
-          "hover:bg-sidebar-accent/70",
-          active
-            ? "bg-[#378ADD]/10 font-medium text-sidebar-foreground dark:bg-[#378ADD]/15"
-            : "text-sidebar-foreground",
-        )}
-        style={
-          active
-            ? { boxShadow: `inset 2px 0 0 0 ${LBS_NAV_ACCENT}` }
-            : undefined
-        }
+        className={sidebarNavLinkClass(active)}
       >
-        <Icon
-          className={cn(
-            "size-4 shrink-0",
-            active ? "text-[#378ADD]" : "text-muted-foreground",
-          )}
-        />
+        <Icon className={sidebarNavIconClass(active)} />
         <span className="truncate">{item.label}</span>
         {badgeCount > 0 ? <NavBadge count={badgeCount} className="ml-auto" /> : null}
       </Link>
@@ -601,7 +524,7 @@ const NavBadge = ({
   <Badge
     variant="default"
     className={cn(
-      "rounded-full border-0 bg-[#378ADD] px-1.5 py-0 text-[10px] text-white",
+      "rounded-sm border-0 px-1.5 py-0 text-[10px]",
       className,
     )}
   >

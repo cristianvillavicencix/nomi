@@ -11,8 +11,8 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import {
+  CalendarDays,
   Home,
-  ListTodo,
   LogOut,
   Moon,
   Plus,
@@ -38,7 +38,10 @@ export const MobileNavigation = () => {
     currentPath = "/contacts";
   } else if (matchPath("/companies/*", location.pathname)) {
     currentPath = "/companies";
-  } else if (matchPath("/tasks/*", location.pathname)) {
+  } else if (
+    matchPath("/tasks/*", location.pathname) ||
+    matchPath("/calendar/*", location.pathname)
+  ) {
     currentPath = "/tasks";
   } else if (matchPath("/deals/*", location.pathname)) {
     currentPath = "/deals";
@@ -82,8 +85,8 @@ export const MobileNavigation = () => {
           <CreateButton />
           <NavigationButton
             href="/tasks"
-            Icon={ListTodo}
-            label="Tasks"
+            Icon={CalendarDays}
+            label="Calendar"
             isActive={currentPath === "/tasks"}
           />
           <SettingsButton />

@@ -161,7 +161,7 @@ export const LinkedCalendarEventsList = ({
 const CalendarEventsSection = ({
   title,
   subtitle,
-  viewAllHref = "/calendar",
+  viewAllHref = "/tasks?view=calendar",
   emptyMessage,
   showCompleted,
   ...listProps
