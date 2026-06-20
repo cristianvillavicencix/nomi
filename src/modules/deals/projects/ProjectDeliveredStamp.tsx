@@ -30,7 +30,7 @@ export const ProjectDeliveredStamp = ({
         className,
       )}
     >
-      <div className="flex items-center gap-2 rounded-l-md border border-r-0 border-emerald-600/40 bg-emerald-600 py-3 pr-1 pl-2 text-white shadow-md [writing-mode:vertical-rl]">
+      <div className="flex items-center gap-2 rounded-l-md border border-r-0 border-success/40 bg-success py-3 pr-1 pl-2 text-success-foreground shadow-md [writing-mode:vertical-rl]">
         <span className="rotate-180 text-[11px] font-bold uppercase tracking-[0.25em]">
           Delivered
         </span>
