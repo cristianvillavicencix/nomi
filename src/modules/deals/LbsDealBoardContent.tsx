@@ -6,9 +6,10 @@ import {
   useListFilterContext,
   useNotify,
 } from "ra-core";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DealColumn } from "@/components/atomic-crm/deals/DealColumn";
+import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import {
   updateDealStage,
   updateDealStageLocal,
@@ -76,6 +77,8 @@ export const LbsDealBoardContent = ({ pipelineId }: { pipelineId: string }) => {
   const { data: identity } = useGetIdentity();
   const notify = useNotify();
   const [isDragging, setIsDragging] = useState(false);
+  const boardRef = useRef<HTMLDivElement>(null);
+  useHorizontalWheelScroll(boardRef);
 
   useDealsRealtime();
 
@@ -213,7 +216,7 @@ export const LbsDealBoardContent = ({ pipelineId }: { pipelineId: string }) => {
       onDragStart={() => setIsDragging(true)}
       onDragEnd={onDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <div ref={boardRef} className="flex gap-4 overflow-x-auto pb-2">
         {stages.map((stage) => (
           <LbsDealStageColumn
             key={stage.id}
