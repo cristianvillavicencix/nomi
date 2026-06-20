@@ -315,7 +315,7 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
 
   if (isError && isSupabaseSchemaMissingError(error, "deal_resources")) {
     return (
-      <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 p-6">
+      <div className="rounded-lg border border-dashed border-warning/40 bg-warning/10 p-6">
         <h3 className="text-base font-semibold">Resources module not ready</h3>
         <p className="mt-2 text-sm text-muted-foreground">
           {getSupabaseSchemaMissingMessage("deal_resources")}

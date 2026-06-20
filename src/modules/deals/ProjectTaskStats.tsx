@@ -16,7 +16,7 @@ export const ProjectTaskStats = ({
         {stats.overdue > 0 ? (
           <>
             <span aria-hidden>·</span>
-            <span className="font-medium text-red-600">{stats.overdue}</span>
+            <span className="font-medium text-destructive">{stats.overdue}</span>
             <span>overdue</span>
           </>
         ) : null}
@@ -38,7 +38,7 @@ export const ProjectTaskStats = ({
         <span className="text-muted-foreground">open</span>
       </span>
       {stats.overdue > 0 ? (
-        <span className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-red-900 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-100">
+        <span className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-destructive">
           <span className="font-medium">{stats.overdue}</span> overdue
         </span>
       ) : null}

@@ -36,13 +36,13 @@ export const getBriefApprovalLabel = (status?: string | null) => {
 
 export const briefApprovalPillClass = (status?: string | null) => {
   if (status === "revision_requested") {
-    return "border-amber-400/60 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-100 dark:hover:bg-amber-950/60";
+    return "border-warning/50 bg-warning/15 text-warning-foreground hover:bg-warning/25";
   }
   if (status === "approved") {
-    return "border-emerald-400/60 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-600/50 dark:bg-emerald-950/40 dark:text-emerald-100";
+    return "border-success/50 bg-success/15 text-success hover:bg-success/25";
   }
   if (status === "client_review") {
-    return "border-sky-400/60 bg-sky-50 text-sky-900 hover:bg-sky-100 dark:border-sky-600/50 dark:bg-sky-950/40 dark:text-sky-100";
+    return "border-info/50 bg-info/15 text-info hover:bg-info/25";
   }
   return "border-transparent bg-muted/50 text-muted-foreground hover:bg-muted";
 };
@@ -172,7 +172,7 @@ export const BriefSectionApprovalActions = ({
           </Button>
           <Button
             type="button"
-            className="bg-amber-600 text-white hover:bg-amber-600/90"
+            className="bg-warning text-warning-foreground hover:bg-warning/90"
             disabled={isPending}
             onClick={() => void handleRequestRevision()}
           >
@@ -197,7 +197,7 @@ export const BriefSectionApprovalActions = ({
       </DropdownMenuItem>
       <DropdownMenuItem
         disabled={isPending}
-        className="text-amber-700 focus:text-amber-700 dark:text-amber-300"
+        className="text-warning focus:text-warning"
         onSelect={() => setRevisionOpen(true)}
       >
         Revision
@@ -296,7 +296,7 @@ export const BriefSectionApprovalActions = ({
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={isPending}
-              className="text-amber-700 focus:text-amber-700 dark:text-amber-300"
+              className="text-warning focus:text-warning"
               onSelect={() => setRevisionOpen(true)}
             >
               Revision
@@ -310,7 +310,7 @@ export const BriefSectionApprovalActions = ({
           </DropdownMenuContent>
         </DropdownMenu>
         {approval?.revision_notes ? (
-          <p className="text-xs text-amber-900/80 dark:text-amber-100/80">
+          <p className="text-xs text-muted-foreground">
             {approval.revision_notes}
           </p>
         ) : null}

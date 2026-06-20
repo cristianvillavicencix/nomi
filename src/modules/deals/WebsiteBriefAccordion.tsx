@@ -68,7 +68,7 @@ const BriefSectionStatusIcon = ({ percent }: { percent: number }) => {
   if (percent >= 100) {
     return (
       <div
-        className="mx-auto flex size-6 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+        className="mx-auto flex size-6 items-center justify-center rounded-full bg-success/15 text-success"
         aria-hidden
       >
         <Check className="size-3" strokeWidth={2.5} />
@@ -89,8 +89,8 @@ const BriefSectionStatusIcon = ({ percent }: { percent: number }) => {
 
   const ringClass =
     percent >= 70
-      ? "border-sky-500/60 text-sky-600 dark:border-sky-400/60 dark:text-sky-400"
-      : "border-orange-400/70 text-orange-500 dark:border-orange-400/70 dark:text-orange-400";
+      ? "border-info/60 text-info"
+      : "border-warning/70 text-warning";
 
   return (
     <div

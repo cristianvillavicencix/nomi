@@ -189,15 +189,15 @@ export const DeliverProjectDialog = ({
         </DialogHeader>
 
         {alreadyDelivered ? (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+          <div className="rounded-lg border border-warning/40 bg-warning/15 p-4 text-sm text-warning-foreground">
             This project was already delivered. Revoke the current delivery before
             sending again.
           </div>
         ) : null}
 
         {manualOverride ? (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-            <p className="font-medium text-amber-700 dark:text-amber-400">
+          <div className="rounded-lg border border-warning/40 bg-warning/15 p-3 text-sm">
+            <p className="font-medium text-warning-foreground">
               Manual override active
             </p>
             <p className="text-muted-foreground mt-1 text-xs">

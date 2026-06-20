@@ -118,7 +118,7 @@ export const ManualDeliveryOverrideDialog = ({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="text-amber-500 size-5" />
+            <AlertTriangle className="text-warning size-5" />
             Manual delivery override
           </DialogTitle>
           <DialogDescription>

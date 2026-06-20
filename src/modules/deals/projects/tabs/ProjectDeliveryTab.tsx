@@ -100,7 +100,7 @@ export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => {
 
   return (
   <div className="space-y-6">
-    <div className="flex flex-col gap-3 rounded-lg border border-[#1E5FA8]/20 bg-[#1E5FA8]/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h3 className="text-base font-semibold">Client handoff</h3>
         <p className="text-sm text-muted-foreground">
@@ -108,7 +108,7 @@ export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => {
           client portal with URLs, files, and credentials.
         </p>
         {hasPendingRequired ? (
-          <p className="text-amber-700 dark:text-amber-400 mt-1 text-xs">
+          <p className="text-warning-foreground bg-warning/15 mt-1.5 inline-block rounded px-1.5 py-0.5 text-xs font-medium">
             {pendingRequiredCount} required launch checklist item
             {pendingRequiredCount === 1 ? "" : "s"} still pending.
           </p>
@@ -123,7 +123,7 @@ export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => {
           <Button
             type="button"
             variant="outline"
-            className="border-amber-500/50 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+            className="border-warning/50 hover:bg-warning/10"
             onClick={() => setOverrideOpen(true)}
           >
             <AlertTriangle className="size-4" />

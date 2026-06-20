@@ -209,7 +209,7 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Collected</div>
-          <div className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">
+          <div className="text-lg font-semibold text-success">
             <MoneyText value={totalPaid} />
           </div>
         </div>

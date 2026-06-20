@@ -70,7 +70,7 @@ export const ProfitSummaryCard = ({ record }: { record: LbsDeal }) => {
         <SummaryRow
           label="Change orders"
           value={summary.changeOrdersTotal}
-          className="text-emerald-700 dark:text-emerald-400"
+          className="text-success"
         />
         <SummaryRow label="Current value" value={summary.currentValue} emphasize />
         <div className="my-2 border-t" />
