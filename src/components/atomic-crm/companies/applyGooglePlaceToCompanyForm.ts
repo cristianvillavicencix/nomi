@@ -1,5 +1,6 @@
 import type { UseFormSetValue } from "react-hook-form";
 import type { GooglePlaceDetails } from "@/lib/googlePlaces";
+import { resolveStreetLine } from "@/lib/googlePlaces/normalize";
 import type { Company } from "../types";
 
 export const applyGoogleBusinessToCompanyForm = (
@@ -22,8 +23,9 @@ export const applyGoogleAddressToCompanyForm = (
   setValue: UseFormSetValue<Company>,
   details: GooglePlaceDetails,
 ) => {
-  if (details.formattedAddress) {
-    setValue("address", details.formattedAddress, { shouldDirty: true });
+  const street = resolveStreetLine(details);
+  if (street) {
+    setValue("address", street, { shouldDirty: true });
   }
   if (details.city) {
     setValue("city", details.city, { shouldDirty: true });

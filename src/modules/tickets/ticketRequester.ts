@@ -93,9 +93,5 @@ export const buildContactCreateDefaultsFromTicket = (
     company_id: resolvedCompanyId,
     email_jsonb: [{ email, type: "Work" as const }],
     phone_jsonb: [{ number: "", type: "Work" as const }],
-    _compact_first_name: first_name,
-    _compact_last_name: last_name,
-    _compact_email: email,
-    _compact_phone: "",
   };
 };

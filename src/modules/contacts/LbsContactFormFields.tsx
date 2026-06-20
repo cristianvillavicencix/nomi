@@ -12,6 +12,7 @@ import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-
 import { TextInput } from "@/components/admin/text-input";
 import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
 import type { GooglePlaceDetails } from "@/lib/googlePlaces";
+import { resolveStreetLine } from "@/lib/googlePlaces/normalize";
 import { SelectInput } from "@/components/admin/select-input";
 import { ArrayInput } from "@/components/admin/array-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
@@ -72,20 +73,28 @@ const CompactContactFields = ({
   <div className="space-y-4">
     <div className="grid gap-4 md:grid-cols-2">
       <TextInput
-        source="_compact_first_name"
+        source="first_name"
         label="First name"
         validate={required()}
         helperText={false}
       />
       <TextInput
-        source="_compact_last_name"
+        source="last_name"
         label="Last name"
         validate={required()}
         helperText={false}
       />
     </div>
-    <EmailInput source="_compact_email" label="Email" helperText={false} />
-    <PhoneInput source="_compact_phone" label="Phone" helperText={false} />
+    <EmailInput
+      source="email_jsonb.0.email"
+      label="Email"
+      helperText={false}
+    />
+    <PhoneInput
+      source="phone_jsonb.0.number"
+      label="Phone"
+      helperText={false}
+    />
     {lockCompanyId != null ? null : <ContactCompanyPickerField />}
   </div>
 );
@@ -243,8 +252,9 @@ const ContactAddressInputs = () => {
   const placesEnabled = isGooglePlacesEnabled();
 
   const handlePlaceDetails = (details: GooglePlaceDetails) => {
-    if (details.formattedAddress) {
-      setValue("address", details.formattedAddress, { shouldDirty: true });
+    const street = resolveStreetLine(details);
+    if (street) {
+      setValue("address", street, { shouldDirty: true });
     }
     if (details.city) {
       setValue("city", details.city, { shouldDirty: true });
@@ -268,17 +278,20 @@ const ContactAddressInputs = () => {
           source="address"
           label="Street"
           mode="address"
-          multiline
           helperText={false}
           onPlaceDetails={handlePlaceDetails}
         />
       ) : (
         <TextInput source="address" label="Street" helperText={false} />
       )}
-      <TextInput source="city" helperText={false} />
-      <TextInput source="zipcode" helperText={false} />
-      <TextInput source="state_abbr" label="State" helperText={false} />
-      <TextInput source="country" helperText={false} />
+      <div className="grid gap-4 md:grid-cols-2">
+        <TextInput source="city" label="City" helperText={false} />
+        <TextInput source="zipcode" label="Zip Code" helperText={false} />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <TextInput source="state_abbr" label="State" helperText={false} />
+        <TextInput source="country" label="Country" helperText={false} />
+      </div>
     </div>
   );
 };
@@ -323,26 +336,32 @@ const ContactManagementInputs = () => (
 const saleOptionRenderer = (choice: OrganizationMember) =>
   `${choice.first_name} ${choice.last_name}`;
 
-/** Combine the compact first/last name inputs into a single display name. */
+/** Combine first/last name into a single display name. */
 export const compactContactFullName = (values: Record<string, unknown>) =>
   [
-    String(values._compact_first_name ?? "").trim(),
-    String(values._compact_last_name ?? "").trim(),
+    String(values.first_name ?? "").trim(),
+    String(values.last_name ?? "").trim(),
   ]
     .filter(Boolean)
     .join(" ")
     .trim();
 
-/** True when the compact form has at least a first name entered. */
+/** True when the form has at least a first name entered. */
 export const hasCompactContactName = (values: Record<string, unknown>) =>
-  String(values._compact_first_name ?? "").trim().length > 0;
+  String(values.first_name ?? "").trim().length > 0;
 
-/** Map compact dialog fields to a Contact create/update payload fragment. */
+/** Map dialog fields to a Contact create/update payload fragment. */
 export const compactContactFieldsToPayload = (values: Record<string, unknown>) => {
-  const firstName = String(values._compact_first_name ?? "").trim();
-  const lastName = String(values._compact_last_name ?? "").trim() || firstName;
-  const emailValue = String(values._compact_email ?? "").trim();
-  const phoneValue = String(values._compact_phone ?? "").trim();
+  const firstName = String(values.first_name ?? "").trim();
+  const lastName = String(values.last_name ?? "").trim() || firstName;
+  const emailRows = values.email_jsonb as
+    | Array<{ email?: string; type?: string }>
+    | undefined;
+  const phoneRows = values.phone_jsonb as
+    | Array<{ number?: string; type?: string }>
+    | undefined;
+  const emailValue = String(emailRows?.[0]?.email ?? "").trim();
+  const phoneValue = String(phoneRows?.[0]?.number ?? "").trim();
 
   return {
     first_name: firstName,

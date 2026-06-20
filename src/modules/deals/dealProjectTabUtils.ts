@@ -2,9 +2,9 @@ export const LBS_PROJECT_TABS = [
   "overview",
   "website-brief",
   "resources",
-  "delivery",
-  "financials",
   "security",
+  "financials",
+  "delivery",
 ] as const;
 
 export type LbsProjectTab = (typeof LBS_PROJECT_TABS)[number];

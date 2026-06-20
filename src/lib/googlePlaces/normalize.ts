@@ -3,6 +3,25 @@ import type { GooglePlaceDetails } from "./types";
 export const stripWebsiteForDisplay = (uri: string): string =>
   uri.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
 
+export const streetLineFromFormattedAddress = (formatted: string): string =>
+  formatted.split(",")[0]?.trim() ?? formatted.trim();
+
+export const resolveStreetLine = (
+  details: Pick<GooglePlaceDetails, "streetLine" | "formattedAddress">,
+): string =>
+  details.streetLine.trim() ||
+  streetLineFromFormattedAddress(details.formattedAddress);
+
+const buildStreetLine = (
+  streetNumber: string,
+  route: string,
+  formattedAddress: string,
+): string => {
+  const joined = [streetNumber, route].filter(Boolean).join(" ").trim();
+  if (joined) return joined;
+  return streetLineFromFormattedAddress(formattedAddress);
+};
+
 export const normalizeWebsiteForStorage = (raw: string): string => {
   const trimmed = raw.trim();
   if (!trimmed) return "";
@@ -54,6 +73,11 @@ export const mapPlaceDetailsFromLegacyApi = (
     placeId,
     name: String(payload.name ?? "").trim(),
     formattedAddress: String(payload.formatted_address ?? "").trim(),
+    streetLine: buildStreetLine(
+      pickLegacyComponent(components, "street_number"),
+      pickLegacyComponent(components, "route"),
+      String(payload.formatted_address ?? "").trim(),
+    ),
     phone: String(payload.formatted_phone_number ?? "").trim(),
     website: stripWebsiteForDisplay(String(payload.website ?? "")),
     googleMapsUri: String(payload.url ?? "").trim(),
@@ -75,6 +99,11 @@ export const mapPlaceDetailsFromApi = (
     placeId,
     name: String(displayName?.text ?? "").trim(),
     formattedAddress: String(payload.formattedAddress ?? "").trim(),
+    streetLine: buildStreetLine(
+      pickComponent(components, "street_number"),
+      pickComponent(components, "route"),
+      String(payload.formattedAddress ?? "").trim(),
+    ),
     phone: String(
       payload.nationalPhoneNumber ?? payload.internationalPhoneNumber ?? "",
     ).trim(),

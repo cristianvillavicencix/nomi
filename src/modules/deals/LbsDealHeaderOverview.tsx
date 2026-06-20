@@ -1,7 +1,6 @@
-import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { Fragment, type ReactNode, useMemo } from "react";
 import { useGetOne } from "ra-core";
-import { Github } from "lucide-react";
+import { Github, User } from "lucide-react";
 import { Link } from "react-router";
 import type { Contact } from "@/components/atomic-crm/types";
 import {
@@ -13,24 +12,35 @@ import { getGithubRepoLabel, getGithubRepoUrl } from "@/modules/deals/githubRepo
 import { ProjectPortalLinkButton } from "@/modules/portal/ProjectPortalLinkButton";
 import { getClientShowPath } from "@/app/routing";
 import type { LbsDeal } from "@/modules/types";
+import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 
-const CompactLine = ({
-  left,
-  right,
-  leftClassName,
-  rightClassName,
-}: {
-  left: ReactNode;
-  right: ReactNode;
-  leftClassName?: string;
-  rightClassName?: string;
-}) => (
-  <div className="flex min-w-0 items-center gap-2">
-    <span className={`min-w-0 truncate ${leftClassName ?? ""}`}>{left}</span>
-    <span className="shrink-0 text-muted-foreground/50">|</span>
-    <span className={`min-w-0 truncate ${rightClassName ?? ""}`}>{right}</span>
-  </div>
+const MetaSeparator = () => (
+  <span className="shrink-0 text-muted-foreground/40" aria-hidden>
+    ·
+  </span>
 );
+
+const MetaLine = ({
+  items,
+}: {
+  items: { key: string; node: ReactNode | null }[];
+}) => {
+  const visible = items.filter((item) => item.node != null);
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+      {visible.map((item, index) => (
+        <Fragment key={item.key}>
+          {index > 0 ? <MetaSeparator /> : null}
+          <span className="inline-flex min-w-0 items-center gap-1 truncate">
+            {item.node}
+          </span>
+        </Fragment>
+      ))}
+    </div>
+  );
+};
 
 export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
   const mainContactId = useMemo(() => {
@@ -49,7 +59,10 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
 
   const contactName = mainContact ? getContactFullName(mainContact) : null;
   const contactEmail = mainContact ? getContactEmail(mainContact) : null;
-  const contactPhone = mainContact ? getContactPhone(mainContact) : null;
+  const rawPhone = mainContact ? getContactPhone(mainContact) : null;
+  const contactPhone = rawPhone
+    ? formatUsPhoneDisplayFromAny(rawPhone)
+    : null;
   const companyName =
     record.company_name ??
     (record.company_id ? `Company #${record.company_id}` : null);
@@ -57,9 +70,12 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
   const githubLabel = getGithubRepoLabel(record.github_repo);
 
   return (
-    <div className="min-w-0 space-y-0.5">
+    <div className="min-w-0 space-y-1.5">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-2xl font-semibold">{record.name}</span>
+        <h1 className="truncate text-2xl font-bold tracking-tight">
+          {record.name}
+        </h1>
+        <ProjectPortalLinkButton record={record} />
         {githubUrl ? (
           <a
             href={githubUrl}
@@ -76,62 +92,57 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
             <Github className="size-4" />
           </a>
         ) : null}
-        <ProjectPortalLinkButton record={record} />
       </div>
 
-      <CompactLine
-        leftClassName="text-sm text-muted-foreground"
-        rightClassName="text-sm text-muted-foreground"
-        left={
-          record.company_id && companyName ? (
-            <Link
-              to={getClientShowPath(record.company_id)}
-              className="link-action"
-            >
-              {companyName}
-            </Link>
-          ) : (
-            "—"
-          )
-        }
-        right={
-          mainContactId != null && contactName ? (
-            <Link
-              to={`/contacts/${mainContactId}/show`}
-              className="link-action"
-            >
-              {contactName}
-            </Link>
-          ) : (
-            "—"
-          )
-        }
-      />
-
-      <CompactLine
-        leftClassName="text-sm text-muted-foreground"
-        rightClassName="text-sm text-muted-foreground"
-        left={
-          contactEmail ? (
-            <a href={`mailto:${contactEmail}`} className="link-action">
-              {contactEmail}
-            </a>
-          ) : (
-            "—"
-          )
-        }
-        right={
-          contactPhone ? (
-            <a
-              href={`tel:${contactPhone.replace(/[^\d+]/g, "")}`}
-              className="link-action"
-            >
-              {contactPhone}
-            </a>
-          ) : (
-            "—"
-          )
-        }
+      <MetaLine
+        items={[
+          {
+            key: "company",
+            node:
+              record.company_id && companyName ? (
+                <Link
+                  to={getClientShowPath(record.company_id)}
+                  className="link-action truncate"
+                >
+                  {companyName}
+                </Link>
+              ) : null,
+          },
+          {
+            key: "contact",
+            node:
+              mainContactId != null && contactName ? (
+                <>
+                  <User className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                  <Link
+                    to={`/contacts/${mainContactId}/show`}
+                    className="link-action truncate"
+                  >
+                    {contactName}
+                  </Link>
+                </>
+              ) : null,
+          },
+          {
+            key: "email",
+            node: contactEmail ? (
+              <a href={`mailto:${contactEmail}`} className="link-action truncate">
+                {contactEmail}
+              </a>
+            ) : null,
+          },
+          {
+            key: "phone",
+            node: contactPhone ? (
+              <a
+                href={`tel:${rawPhone?.replace(/[^\d+]/g, "")}`}
+                className="link-action truncate"
+              >
+                {contactPhone}
+              </a>
+            ) : null,
+          },
+        ]}
       />
     </div>
   );

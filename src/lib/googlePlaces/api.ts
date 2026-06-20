@@ -4,7 +4,7 @@ import {
   fetchEdgePlacesAutocomplete,
   type PlacesServiceError,
 } from "./edgeProxy";
-import { mapPlaceDetailsFromApi } from "./normalize";
+import { mapPlaceDetailsFromApi, resolveStreetLine } from "./normalize";
 import type {
   GooglePlaceDetails,
   GooglePlacesAutocompleteMode,
@@ -126,6 +126,13 @@ export const fetchPlacesAutocomplete = async (
   return [];
 };
 
+const withStreetLine = (details: GooglePlaceDetails): GooglePlaceDetails => ({
+  ...details,
+  streetLine:
+    details.streetLine?.trim() ||
+    resolveStreetLine({ streetLine: "", formattedAddress: details.formattedAddress }),
+});
+
 const fetchNewPlaceDetails = async (
   placeId: string,
   signal?: AbortSignal,
@@ -169,7 +176,7 @@ export const fetchGooglePlaceDetails = async (
 
   const proxyResult = await fetchEdgePlaceDetails(placeId, signal);
   if (proxyResult.details) {
-    return proxyResult.details;
+    return withStreetLine(proxyResult.details);
   }
 
   const result = await fetchNewPlaceDetails(placeId, signal);
@@ -177,7 +184,7 @@ export const fetchGooglePlaceDetails = async (
     return null;
   }
   if (result) {
-    return result;
+    return withStreetLine(result);
   }
 
   return proxyResult.details;

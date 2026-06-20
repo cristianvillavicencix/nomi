@@ -18,6 +18,7 @@ import {
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { LbsDeal } from "@/modules/types";
 import type { WebsiteBriefSheetTarget } from "@/modules/deals/WebsiteBriefSectionSheet";
+import { formatBriefFieldForDisplay } from "@/modules/deals/businessHoursBrief";
 
 const getProjectTypeLabel = (value?: string | null) =>
   lbsProjectTypeChoices.find((choice) => choice.value === value)?.label ??
@@ -51,7 +52,11 @@ const SectionDetail = ({
       <DetailField
         key={field.key}
         label={field.label}
-        value={brief[field.key] != null ? String(brief[field.key]) : null}
+        value={
+          brief[field.key] != null
+            ? formatBriefFieldForDisplay(field.key, brief[field.key]) || null
+            : null
+        }
       />
     ))}
   </div>

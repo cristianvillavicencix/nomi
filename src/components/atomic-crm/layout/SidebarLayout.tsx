@@ -238,59 +238,85 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
   const isProposalPreview = isProposalPreviewPath(location.pathname);
   const hideGlobalSearch = isMessagesShell || isProposalFocusMode;
   const hideGlobalHeader = isMessagesShell || isProposalPreview;
+  const showDealExplorer =
+    Boolean(currentDealId) && !isMessagesShell && !isProposalPreview;
+  const hideGlobalHeaderOnProjectShow = showDealExplorer;
+
+  const globalHeader =
+    hideGlobalHeader || hideGlobalHeaderOnProjectShow
+      ? null
+      : !hideGlobalSearch
+        ? (
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
+        <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
+        <div className="flex shrink-0 items-center gap-1">
+          <SpotlightSearchButton />
+          <PageActionsTrailingSlot className="flex items-center" />
+        </div>
+      </header>
+        )
+        : (
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
+        <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
+        <PageActionsTrailingSlot className="ml-auto flex items-center" />
+        <SpotlightSearchButton variant="hidden" />
+      </header>
+        );
+
+  const mainContentPadding = cn(
+    "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
+    isMessagesShell
+      ? "gap-2 p-2 pl-1"
+      : isProposalPreview
+        ? "gap-0 p-0"
+        : showDealExplorer
+          ? "px-4 pt-0 pb-0"
+          : "gap-4 px-4 pt-2 pb-0",
+  );
+
+  const scrollableContent = (
+    <div
+      className={cn(
+        "min-h-0 min-w-0 flex-1",
+        isMessagesShell || isProposalPreview
+          ? "overflow-hidden"
+          : "overflow-y-auto overscroll-contain pr-1",
+      )}
+    >
+      <ErrorBoundary FallbackComponent={Error}>
+        <Suspense fallback={<Skeleton className="h-12 w-12 rounded-full" />}>
+          {children}
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  );
 
   return (
     <SidebarProvider className="h-svh overflow-hidden print:h-auto print:overflow-visible">
       <PageActionsProvider>
         <SidebarNavigation />
-        <main className="ml-auto flex h-svh min-h-0 w-full max-w-full flex-col overflow-hidden peer-data-[state=collapsed]:w-[calc(100%-var(--sidebar-width-icon)-1rem)] peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))] sm:transition-[width] sm:duration-200 sm:ease-linear print:h-auto print:w-full print:overflow-visible">
-          {hideGlobalHeader ? (
-            <SpotlightSearchButton variant="hidden" />
-          ) : !hideGlobalSearch ? (
-            <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
-              <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
-              <div className="flex shrink-0 items-center gap-1">
-                <SpotlightSearchButton />
-                <PageActionsTrailingSlot className="flex items-center" />
-              </div>
-            </header>
-          ) : (
-            <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
-              <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
-              <PageActionsTrailingSlot className="ml-auto flex items-center" />
-              <SpotlightSearchButton variant="hidden" />
-            </header>
+        <main
+          className={cn(
+            "ml-auto flex h-svh min-h-0 w-full max-w-full overflow-hidden peer-data-[state=collapsed]:w-[calc(100%-var(--sidebar-width-icon)-1rem)] peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))] sm:transition-[width] sm:duration-200 sm:ease-linear print:h-auto print:w-full print:overflow-visible",
+            showDealExplorer ? "flex-row" : "flex-col",
           )}
-          <div
-            className={cn(
-              "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
-              isMessagesShell
-                ? "gap-2 p-2 pl-1"
-                : isProposalPreview
-                  ? "gap-0 p-0"
-                  : "gap-4 px-4 pt-2 pb-0",
-            )}
-          >
-            {currentDealId ? (
-              <DealsExplorerPanel currentDealId={currentDealId} />
-            ) : null}
-            <div
-              className={cn(
-                "min-h-0 min-w-0 flex-1",
-                isMessagesShell || isProposalPreview
-                  ? "overflow-hidden"
-                  : "overflow-y-auto overscroll-contain pr-1",
-              )}
-            >
-              <ErrorBoundary FallbackComponent={Error}>
-                <Suspense
-                  fallback={<Skeleton className="h-12 w-12 rounded-full" />}
-                >
-                  {children}
-                </Suspense>
-              </ErrorBoundary>
-            </div>
-          </div>
+        >
+          {hideGlobalHeader ? <SpotlightSearchButton variant="hidden" /> : null}
+
+          {showDealExplorer ? (
+            <>
+              <DealsExplorerPanel currentDealId={currentDealId!} />
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                {globalHeader}
+                <div className={mainContentPadding}>{scrollableContent}</div>
+              </div>
+            </>
+          ) : (
+            <>
+              {globalHeader}
+              <div className={mainContentPadding}>{scrollableContent}</div>
+            </>
+          )}
         </main>
         <Notification />
       </PageActionsProvider>

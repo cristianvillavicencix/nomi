@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Form, useGetIdentity, useGetOne, useNotify, useUpdate } from "ra-core";
+import { useEffect, useState } from "react";
+import { Form, useGetIdentity, useNotify, useUpdate } from "ra-core";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/admin/date-input";
@@ -16,24 +16,11 @@ import { WebsiteBriefFormSections } from "@/modules/deals/WebsiteBriefFormSectio
 import { WebsiteBriefSectionView } from "@/modules/deals/WebsiteBriefSectionView";
 import type { WebsiteBriefSectionDef } from "@/modules/deals/websiteBriefSchema";
 import {
-  syncBriefApprovalsForCompleteSections,
-  type WebsiteBriefWithApprovals,
-} from "@/modules/deals/websiteBriefSchema";
-import {
-  getContactEmail,
-  getContactPhone,
-} from "@/modules/clients/clientShowUtils";
-import type { Company, Contact } from "@/components/atomic-crm/types";
+  mergeBriefSubmitData,
+  optionalBriefUrl,
+  useBriefPrefilledRecord,
+} from "@/modules/deals/websiteBriefEditorShared";
 import type { LbsDeal } from "@/modules/types";
-
-const optionalUrl = (url?: string) => {
-  if (!url?.trim()) return;
-  const urlRegex =
-    /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([-.]{1}[a-z0-9]+)*\.[a-z]{2,}(:[0-9]{1,5})?(\/.*)?$/i;
-  if (!urlRegex.test(url.trim())) {
-    return "Must be a valid URL";
-  }
-};
 
 export type WebsiteBriefSheetTarget =
   | { kind: "setup" }
@@ -58,71 +45,7 @@ export const WebsiteBriefSectionSheet = ({
   const notify = useNotify();
   const { data: identity } = useGetIdentity();
   const open = target != null;
-
-  const contactId =
-    record.contact_id ??
-    (Array.isArray(record.contact_ids) ? record.contact_ids[0] : null);
-  const { data: contact } = useGetOne<Contact>(
-    "contacts",
-    { id: contactId as number },
-    { enabled: open && contactId != null },
-  );
-  const { data: company } = useGetOne<Company>(
-    "companies",
-    { id: record.company_id as number },
-    { enabled: open && record.company_id != null },
-  );
-
-  // Build a brief with sensible defaults pulled from the linked contact and
-  // company. Existing values in record.website_brief always win — we only
-  // fill in keys the user has not touched yet. We clone before writing so we
-  // never mutate the original record handed in from react-admin.
-  const prefilledRecord = useMemo(() => {
-    if (!open) return record;
-    const currentBrief: Record<string, unknown> = {
-      ...((record.website_brief as Record<string, unknown> | undefined) ?? {}),
-    };
-    const fillIfEmpty = (key: string, value: string | undefined | null) => {
-      if (value == null || value === "") return;
-      const existing = currentBrief[key];
-      if (existing != null && String(existing).trim().length > 0) return;
-      currentBrief[key] = value;
-    };
-    if (contact) {
-      fillIfEmpty("contact_first_name", contact.first_name);
-      fillIfEmpty("contact_last_name", contact.last_name);
-      // Backwards-compat: split a legacy single contact_name into first/last
-      // when the new split fields are still empty.
-      if (!contact.first_name && !contact.last_name) {
-        const legacy = String(currentBrief.contact_name ?? "").trim();
-        if (legacy) {
-          const [first, ...rest] = legacy.split(/\s+/);
-          fillIfEmpty("contact_first_name", first);
-          fillIfEmpty("contact_last_name", rest.join(" "));
-        }
-      }
-      fillIfEmpty("contact_email", getContactEmail(contact));
-      fillIfEmpty("contact_phone", getContactPhone(contact));
-    }
-    if (company) {
-      fillIfEmpty("company_name", company.name);
-      fillIfEmpty("existing_website", company.website);
-      const fullAddress = [
-        company.address,
-        company.city,
-        company.state_abbr,
-        company.zipcode,
-      ]
-        .filter(Boolean)
-        .join(", ");
-      fillIfEmpty("full_address", fullAddress);
-      fillIfEmpty("full_address_street", company.address ?? "");
-      fillIfEmpty("full_address_city", company.city ?? "");
-      fillIfEmpty("full_address_state", company.state_abbr ?? "");
-      fillIfEmpty("full_address_zip", company.zipcode ?? "");
-    }
-    return { ...record, website_brief: currentBrief };
-  }, [open, record, contact, company]);
+  const prefilledRecord = useBriefPrefilledRecord(record, open);
 
   useEffect(() => {
     if (target) setMode(initialMode);
@@ -179,29 +102,27 @@ export const WebsiteBriefSectionSheet = ({
             record={prefilledRecord}
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
             onSubmit={async (data: LbsDeal) => {
-              const rawBrief = (data.website_brief ??
-                record.website_brief ??
-                {}) as WebsiteBriefWithApprovals;
               const memberId =
                 identity?.id != null && Number.isFinite(Number(identity.id))
                   ? Number(identity.id)
                   : null;
-              const website_brief = syncBriefApprovalsForCompleteSections(
-                rawBrief,
-                data.project_type ?? record.project_type,
-                memberId,
-              );
+              const payload = mergeBriefSubmitData(record, data, memberId);
+
               await update(
                 "deals",
                 {
                   id: record.id,
-                  data: { ...data, website_brief },
+                  data: payload,
                   previousData: record,
                 },
                 {
                   onSuccess: () => {
                     notify("Brief saved");
-                    setMode("view");
+                    if (target.kind === "all") {
+                      onClose();
+                    } else {
+                      setMode("view");
+                    }
                   },
                   onError: () =>
                     notify("Failed to save brief", { type: "error" }),
@@ -231,7 +152,7 @@ export const WebsiteBriefSectionSheet = ({
                   onlySectionId={
                     target.kind === "section" ? target.section.id : undefined
                   }
-                  validateUrl={optionalUrl}
+                  validateUrl={optionalBriefUrl}
                   showSecurityHint={target.kind === "all"}
                 />
               )}

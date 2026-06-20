@@ -126,16 +126,16 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                     <BriefTabProgress percent={resourcesProgress.percent} />
                   ) : null}
                 </TabsTrigger>
-                <TabsTrigger value="delivery" className="shrink-0">
-                  Delivery
+                <TabsTrigger value="security" className="shrink-0">
+                  Security
                 </TabsTrigger>
                 {canViewFinancials ? (
                   <TabsTrigger value="financials" className="shrink-0">
                     Financials
                   </TabsTrigger>
                 ) : null}
-                <TabsTrigger value="security" className="shrink-0">
-                  Security
+                <TabsTrigger value="delivery" className="shrink-0">
+                  Delivery
                 </TabsTrigger>
               </TabsList>
             </StickyTabsBar>
@@ -149,12 +149,8 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
               <TabsContent value="resources" className="pt-4">
                 <ProjectResourcesTab record={record} />
               </TabsContent>
-              <TabsContent value="delivery" className="pt-4">
-                {showTab("delivery") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <ProjectDeliveryTab record={record} />
-                  </Suspense>
-                ) : null}
+              <TabsContent value="security" className="pt-4">
+                <ProjectSecurityWorkspaceTab record={record} />
               </TabsContent>
               {canViewFinancials ? (
                 <TabsContent value="financials" className="pt-4">
@@ -165,8 +161,12 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   ) : null}
                 </TabsContent>
               ) : null}
-              <TabsContent value="security" className="pt-4">
-                <ProjectSecurityWorkspaceTab record={record} />
+              <TabsContent value="delivery" className="pt-4">
+                {showTab("delivery") ? (
+                  <Suspense fallback={<TabFallback />}>
+                    <ProjectDeliveryTab record={record} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
             </ScrollableContentArea>
           </Tabs>

@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BusinessHoursBriefField } from "@/modules/deals/BusinessHoursBriefField";
 import type { WebsiteBriefSectionDef } from "@/modules/deals/websiteBriefSchema";
 import {
   computeYearsExperience,
@@ -47,38 +48,6 @@ const SOCIAL_PLATFORMS = [
   "Thumbtack",
   "Other",
 ];
-
-const DAY_OPTIONS = [
-  { value: "Monday", label: "Mon" },
-  { value: "Tuesday", label: "Tue" },
-  { value: "Wednesday", label: "Wed" },
-  { value: "Thursday", label: "Thu" },
-  { value: "Friday", label: "Fri" },
-  { value: "Saturday", label: "Sat" },
-  { value: "Sunday", label: "Sun" },
-];
-
-const LEGACY_DAY_KEYS: Record<string, string> = {
-  mon: "Monday",
-  tue: "Tuesday",
-  wed: "Wednesday",
-  thu: "Thursday",
-  fri: "Friday",
-  sat: "Saturday",
-  sun: "Sunday",
-};
-
-type ScheduleDay = {
-  enabled: boolean;
-  open: string;
-  close: string;
-};
-
-type BusinessHourEntry = {
-  day: string;
-  open: string;
-  close: string;
-};
 
 type BriefSectionProps = {
   section: WebsiteBriefSectionDef;
@@ -125,60 +94,6 @@ const parseReferenceSites = (value: unknown) => {
   const rows = Array.isArray(value) ? value.map(String) : [];
   return rows.length > 0 ? rows : [""];
 };
-
-const parseBusinessHoursEntries = (value: unknown): BusinessHourEntry[] => {
-  if (Array.isArray(value)) {
-    return value.filter(
-      (entry): entry is BusinessHourEntry =>
-        entry != null &&
-        typeof entry === "object" &&
-        "day" in entry &&
-        "open" in entry &&
-        "close" in entry,
-    );
-  }
-
-  if (typeof value !== "string" || !value.trim()) return [];
-
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    if (Array.isArray(parsed)) {
-      return parseBusinessHoursEntries(parsed);
-    }
-    if (parsed && typeof parsed === "object") {
-      const record = parsed as Record<string, unknown>;
-      if (Array.isArray(record.entries)) {
-        return parseBusinessHoursEntries(record.entries);
-      }
-      const legacy = parsed as Record<string, ScheduleDay>;
-      return Object.entries(LEGACY_DAY_KEYS)
-        .filter(([key]) => legacy[key]?.enabled)
-        .map(([key, day]) => ({
-          day,
-          open: legacy[key]?.open ?? "08:00",
-          close: legacy[key]?.close ?? "17:00",
-        }));
-    }
-  } catch {
-    return [];
-  }
-
-  return [];
-};
-
-const formatBusinessHoursLabel = (entries: BusinessHourEntry[]) => {
-  const shortDay = (day: string) =>
-    DAY_OPTIONS.find((option) => option.value === day)?.label ?? day.slice(0, 3);
-  return entries
-    .map((entry) => `${shortDay(entry.day)} ${entry.open}-${entry.close}`)
-    .join(", ");
-};
-
-const serializeBusinessHours = (entries: BusinessHourEntry[]) =>
-  JSON.stringify({
-    entries,
-    _label: formatBusinessHoursLabel(entries),
-  });
 
 const FilePreviewGrid = ({
   files,
@@ -716,91 +631,6 @@ const CertificationsField = ({
         <Plus className="size-4" />
         Add certification
       </Button>
-    </div>
-  );
-};
-
-const BusinessHoursField = ({
-  value,
-  onChange,
-}: {
-  value: unknown;
-  onChange: (next: string) => void;
-}) => {
-  const saved = parseBusinessHoursEntries(value);
-
-  type DayState = { enabled: boolean; open: string; close: string };
-  const [days, setDays] = useState<Record<string, DayState>>(() => {
-    const map: Record<string, DayState> = {};
-    for (const option of DAY_OPTIONS) {
-      const entry = saved.find((e) => e.day === option.value);
-      map[option.value] = entry
-        ? { enabled: true, open: entry.open, close: entry.close }
-        : { enabled: false, open: "08:00", close: "17:00" };
-    }
-    return map;
-  });
-
-  const commit = (next: Record<string, DayState>) => {
-    const entries = DAY_OPTIONS.filter((o) => next[o.value]?.enabled).map(
-      (o) => ({ day: o.value, open: next[o.value]!.open, close: next[o.value]!.close }),
-    );
-    onChange(serializeBusinessHours(entries));
-  };
-
-  const update = (day: string, patch: Partial<DayState>) => {
-    const next = { ...days, [day]: { ...days[day]!, ...patch } };
-    setDays(next);
-    commit(next);
-  };
-
-  return (
-    <div className="space-y-2">
-      <Label>Business hours</Label>
-      <div className="divide-y rounded-md border">
-        {DAY_OPTIONS.map((option) => {
-          const state = days[option.value]!;
-          return (
-            <div
-              key={option.value}
-              className="flex items-center gap-3 px-3 py-2"
-            >
-              <input
-                type="checkbox"
-                id={`bh-${option.value}`}
-                checked={state.enabled}
-                className="size-4 shrink-0 accent-primary"
-                onChange={(e) => update(option.value, { enabled: e.target.checked })}
-              />
-              <label
-                htmlFor={`bh-${option.value}`}
-                className={`w-8 shrink-0 text-sm font-medium ${state.enabled ? "" : "text-muted-foreground"}`}
-              >
-                {option.label}
-              </label>
-              {state.enabled ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="time"
-                    value={state.open}
-                    className="h-8 w-28 text-sm"
-                    onChange={(e) => update(option.value, { open: e.target.value })}
-                  />
-                  <span className="text-xs text-muted-foreground">–</span>
-                  <Input
-                    type="time"
-                    value={state.close}
-                    className="h-8 w-28 text-sm"
-                    onChange={(e) => update(option.value, { close: e.target.value })}
-                  />
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground">Closed</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 };
@@ -1801,7 +1631,7 @@ export const ContractorBriefSectionFields = (props: BriefSectionProps) => {
           token={props.token}
           onChange={(next) => setField("certifications", next)}
         />
-        <BusinessHoursField
+        <BusinessHoursBriefField
           value={values.business_hours}
           onChange={(next) => setField("business_hours", next)}
         />

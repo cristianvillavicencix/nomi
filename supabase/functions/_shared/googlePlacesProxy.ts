@@ -9,6 +9,7 @@ export type GooglePlaceDetails = {
   placeId: string;
   name: string;
   formattedAddress: string;
+  streetLine: string;
   phone: string;
   website: string;
   googleMapsUri: string;
@@ -20,6 +21,19 @@ export type GooglePlaceDetails = {
 
 export const getGooglePlacesServerApiKey = (): string =>
   Deno.env.get("GOOGLE_PLACES_API_KEY")?.trim() ?? "";
+
+const streetLineFromFormattedAddress = (formatted: string): string =>
+  formatted.split(",")[0]?.trim() ?? formatted.trim();
+
+const buildStreetLine = (
+  streetNumber: string,
+  route: string,
+  formattedAddress: string,
+): string => {
+  const joined = [streetNumber, route].filter(Boolean).join(" ").trim();
+  if (joined) return joined;
+  return streetLineFromFormattedAddress(formattedAddress);
+};
 
 const legacyTypesForMode = (mode: GooglePlacesAutocompleteMode) =>
   mode === "business" ? "establishment" : "address";
@@ -220,6 +234,11 @@ const fetchNewPlaceDetails = async (
     placeId,
     name: String(displayName?.text ?? "").trim(),
     formattedAddress: String(payload.formattedAddress ?? "").trim(),
+    streetLine: buildStreetLine(
+      pickComponent(components, "street_number"),
+      pickComponent(components, "route"),
+      String(payload.formattedAddress ?? "").trim(),
+    ),
     phone: String(
       payload.nationalPhoneNumber ?? payload.internationalPhoneNumber ?? "",
     ).trim(),
@@ -272,6 +291,11 @@ const fetchLegacyPlaceDetails = async (
     placeId,
     name: String(result.name ?? "").trim(),
     formattedAddress: String(result.formatted_address ?? "").trim(),
+    streetLine: buildStreetLine(
+      pickComponent(components, "street_number"),
+      pickComponent(components, "route"),
+      String(result.formatted_address ?? "").trim(),
+    ),
     phone: String(result.formatted_phone_number ?? "").trim(),
     website: stripWebsiteForDisplay(String(result.website ?? "")),
     googleMapsUri: String(result.url ?? "").trim(),

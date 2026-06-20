@@ -124,13 +124,13 @@ const defaultCreateValues = (lockCompanyId?: Identifier) => ({
   email_jsonb: [{ email: "", type: "Work" }],
   phone_jsonb: [{ number: "", type: "Work" }],
   address: "",
+  city: "",
+  state_abbr: "",
+  zipcode: "",
+  country: "",
   status: LBS_CLIENT_STATUS,
   background: "",
   organization_member_id: undefined as Identifier | undefined,
-  _compact_first_name: "",
-  _compact_last_name: "",
-  _compact_email: "",
-  _compact_phone: "",
   [COMPANY_DRAFT_NAME_FIELD]: "",
   [COMPANY_DRAFT_SECTOR_FIELD]: "",
   [PRIMARY_MOVE_CONFIRMED_FIELD]: false,
@@ -326,10 +326,16 @@ export const ContactFormDialog = ({
                 notify("First name is required", { type: "warning" });
                 return;
               }
+              const emailRows = values.email_jsonb as
+                | Array<{ email?: string }>
+                | undefined;
+              const phoneRows = values.phone_jsonb as
+                | Array<{ number?: string }>
+                | undefined;
               onDraftSubmit?.({
                 fullName,
-                email: String(values._compact_email ?? "").trim(),
-                phone: String(values._compact_phone ?? "").trim(),
+                email: String(emailRows?.[0]?.email ?? "").trim(),
+                phone: String(phoneRows?.[0]?.number ?? "").trim(),
               });
               handleClose();
             }}
@@ -367,8 +373,7 @@ export const ContactFormDialog = ({
           resource="contacts"
           redirect={false}
           transform={(values: Record<string, unknown>): Partial<Contact> => {
-            const compact = compactContactFieldsToPayload(values);
-            const useCompact = hasCompactContactName(values);
+            const payload = compactContactFieldsToPayload(values);
             const now = new Date().toISOString();
             const effectiveLock =
               allowOrphanContact || deferCreate
@@ -385,12 +390,8 @@ export const ContactFormDialog = ({
               effectiveLock,
             );
             return {
-              first_name: useCompact
-                ? compact.first_name
-                : String(values.first_name ?? ""),
-              last_name: useCompact
-                ? compact.last_name
-                : String(values.last_name ?? ""),
+              first_name: payload.first_name,
+              last_name: payload.last_name,
               company_id: companyId as Identifier | null,
               [COMPANY_DRAFT_NAME_FIELD]: companyDraft?.name ?? "",
               [COMPANY_DRAFT_SECTOR_FIELD]: companyDraft?.sector ?? "",
@@ -398,13 +399,14 @@ export const ContactFormDialog = ({
               organization_member_id:
                 (values.organization_member_id as Identifier | undefined) ??
                 identity?.id,
-              email_jsonb: useCompact
-                ? compact.email_jsonb
-                : (values.email_jsonb as Contact["email_jsonb"]),
-              phone_jsonb: useCompact
-                ? compact.phone_jsonb
-                : (values.phone_jsonb as Contact["phone_jsonb"]),
+              email_jsonb: payload.email_jsonb,
+              phone_jsonb: payload.phone_jsonb,
               address: String(values.address ?? "") || null,
+              city: String(values.city ?? "") || null,
+              state_abbr: String(values.state_abbr ?? "") || null,
+              zipcode: String(values.zipcode ?? "") || null,
+              country: String(values.country ?? "") || null,
+              title: String(values.title ?? "") || null,
               background: String(values.background ?? ""),
               first_seen: now,
               last_seen: now,

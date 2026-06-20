@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { evaluateCondition } from "@/lib/forms-v2/conditionalLogic";
 import type { LbsDeal } from "@/modules/types";
+import { BusinessHoursBriefField } from "@/modules/deals/BusinessHoursBriefField";
 import {
   BrandColorsField,
   ContactReachField,
   ServiceAreasPlacesInput,
   TagAddField,
-  WeekdayBusinessHoursField,
   YesNoToggleField,
 } from "@/modules/deals/contractorBrief/contractorBriefInternalFields";
 import {
@@ -186,7 +186,7 @@ export const ContractorBriefInternalSection = ({
           value={briefAnswers.service_areas}
           onChange={(next) => setField("service_areas", next)}
         />
-        <WeekdayBusinessHoursField
+        <BusinessHoursBriefField
           value={briefAnswers.business_hours}
           onChange={(next) => setField("business_hours", next)}
         />

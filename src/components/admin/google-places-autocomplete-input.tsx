@@ -110,8 +110,7 @@ export const GooglePlacesAutocompleteInput = ({
   }, [query, mode, placesEnabled]);
 
   const handlePick = async (item: { placeId: string; text: string }) => {
-    const displayValue =
-      mode === "business" ? item.text.split(",")[0]?.trim() || item.text : item.text;
+  const displayValue = item.text.split(",")[0]?.trim() || item.text;
     field.onChange(displayValue);
     setOpen(false);
 

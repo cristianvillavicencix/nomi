@@ -13,22 +13,23 @@ import {
   ArchiveRestore,
   ChevronDown,
   ExternalLink,
+  FileDown,
   FileText,
   HandMetal,
+  Link2,
   ListChecks,
   MessageSquare,
   Pencil,
-  RotateCcw,
   Share2,
   Trash2,
 } from "lucide-react";
 import { Link } from "react-router";
-import { Confirm } from "@/components/admin/confirm";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -40,7 +41,7 @@ import { SendFormButton } from "@/modules/forms/share/SendFormButton";
 import { getClientProposalCreatePath } from "@/app/routing";
 import type { SendFormContext } from "@/modules/forms/share/sendFormTypes";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
-import { useManualHandoffActions } from "@/modules/deals/useManualHandoffActions";
+import { useProjectBriefActions } from "@/modules/deals/projects/ProjectBriefActionsProvider";
 import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 
@@ -66,9 +67,13 @@ export const ProjectActionsMenu = ({
   const refresh = useRefresh();
   const [update] = useUpdate();
   const [shareOpen, setShareOpen] = useState(false);
-  const [handoffConfirmOpen, setHandoffConfirmOpen] = useState(false);
-  const { waived, setWaived, isPending: isHandoffPending } =
-    useManualHandoffActions(record);
+  const {
+    openRequestBrief,
+    openFillAllSections,
+    openManualHandoff,
+    exportBrief,
+    isManualHandoffActive,
+  } = useProjectBriefActions();
 
   const contactId = getMainContactId(record);
   const { data: contact } = useGetOne<Contact>(
@@ -153,7 +158,8 @@ export const ProjectActionsMenu = ({
             <ChevronDown className="size-4 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Project</DropdownMenuLabel>
           {onOpenTasks ? (
             <DropdownMenuItem
               onSelect={(event) => {
@@ -176,11 +182,23 @@ export const ProjectActionsMenu = ({
               Client portal
             </DropdownMenuItem>
           ) : null}
+
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Client</DropdownMenuLabel>
           <SendFormButton
             context={sendFormContext}
             variant="menu-item"
             label="Send form"
           />
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              openRequestBrief();
+            }}
+          >
+            <Link2 className="size-4" />
+            Request brief from client
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link
               to={getClientProposalCreatePath(
@@ -207,6 +225,40 @@ export const ProjectActionsMenu = ({
               SMS client
             </DropdownMenuItem>
           ) : null}
+
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Brief</DropdownMenuLabel>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              openFillAllSections();
+            }}
+          >
+            <Pencil className="size-4" />
+            Fill all sections
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              exportBrief();
+            }}
+          >
+            <FileDown className="size-4" />
+            Export brief
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              openManualHandoff();
+            }}
+          >
+            <HandMetal className="size-4" />
+            {isManualHandoffActive
+              ? "Manual handoff (active)"
+              : "Manual handoff"}
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={(event) => {
               event.preventDefault();
@@ -216,31 +268,11 @@ export const ProjectActionsMenu = ({
             <Share2 className="size-4" />
             Share with team
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          {waived ? (
-            <DropdownMenuItem
-              onSelect={(event) => {
-                event.preventDefault();
-                setHandoffConfirmOpen(true);
-              }}
-            >
-              <RotateCcw className="size-4" />
-              Restore brief requirements
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem
-              onSelect={(event) => {
-                event.preventDefault();
-                setHandoffConfirmOpen(true);
-              }}
-            >
-              <HandMetal className="size-4" />
-              Enable manual handoff
-            </DropdownMenuItem>
-          )}
+
           {canManageSales ? (
             <>
               <DropdownMenuSeparator />
+              <DropdownMenuLabel>Admin</DropdownMenuLabel>
               {record.archived_at ? (
                 <>
                   <DropdownMenuItem onSelect={() => restoreProject()}>
@@ -288,26 +320,6 @@ export const ProjectActionsMenu = ({
         open={shareOpen}
         onOpenChange={setShareOpen}
         hideTrigger
-      />
-
-      <Confirm
-        isOpen={handoffConfirmOpen}
-        title={
-          waived ? "Restore brief requirements?" : "Enable manual handoff?"
-        }
-        content={
-          waived
-            ? "The 70% brief requirement will apply again when moving this project toward delivery."
-            : "Use this for projects completed on another platform. The website brief will no longer block pipeline stage changes or delivery."
-        }
-        confirm={waived ? "Restore requirements" : "Enable manual handoff"}
-        confirmColor={waived ? "warning" : "primary"}
-        loading={isHandoffPending}
-        onClose={() => setHandoffConfirmOpen(false)}
-        onConfirm={() => {
-          setWaived(!waived);
-          setHandoffConfirmOpen(false);
-        }}
       />
     </>
   );

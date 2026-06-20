@@ -8,9 +8,6 @@ import {
   useRefresh,
   useUpdate,
 } from "ra-core";
-import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DealsExplorerPanel } from "@/components/atomic-crm/deals/DealsExplorerPanel";
 import { ProjectStageFlow } from "@/components/atomic-crm/deals/ProjectStageFlow";
@@ -28,6 +25,7 @@ import { getBriefStageAdvanceCheck } from "@/modules/deals/projectBriefProgress"
 import { getLaunchStageAdvanceCheck } from "@/modules/deals/projects/launch/launchChecklistGate";
 import { runProjectStageAutomations } from "@/modules/deals/projects/projectStageAutomations";
 import { ProjectActionsMenu } from "@/modules/deals/projects/ProjectActionsMenu";
+import { ProjectBriefActionsProvider } from "@/modules/deals/projects/ProjectBriefActionsProvider";
 import {
   getProjectDisplayPipelineStages,
   getProjectDisplayStageForDealStage,
@@ -191,27 +189,15 @@ const ProjectShowContent = () => {
   };
 
   return (
-    <div className="space-y-2">
+    <ProjectBriefActionsProvider record={record}>
+      <div className="space-y-2">
       {record.archived_at ? <ArchivedTitle /> : null}
-      <div className="mb-3">
-        <Button asChild variant="ghost" size="sm" className="gap-2">
-          <Link to="/deals">
-            <ArrowLeft className="h-4 w-4" />
-            Back to projects
-          </Link>
-        </Button>
-      </div>
 
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           <LbsDealHeaderOverview record={record} />
         </div>
-        <div
-          className={cn(
-            "flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end",
-            record.archived_at ? "" : "sm:pr-12",
-          )}
-        >
+        <div className="flex shrink-0 items-center gap-4 self-start sm:self-auto">
           <LbsProjectDeliveryUrgency record={record} />
           <ProjectActionsMenu
             record={record}
@@ -228,11 +214,11 @@ const ProjectShowContent = () => {
         className="mb-1.5 rounded-b-none pb-2"
       />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+      <div className="flex flex-col lg:flex-row lg:items-stretch">
         <div className="flex min-w-0 flex-1 flex-col">
           <ProjectWorkspaceTabs record={record} />
         </div>
-        <div className="hidden lg:block">
+        <div className="hidden lg:flex">
           <ProjectTasksRail
             record={record}
             collapsed={tasksRailCollapsed}
@@ -251,7 +237,8 @@ const ProjectShowContent = () => {
         open={portalDialogOpen}
         onOpenChange={setPortalDialogOpen}
       />
-    </div>
+      </div>
+    </ProjectBriefActionsProvider>
   );
 };
 

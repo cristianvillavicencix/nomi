@@ -3,6 +3,7 @@ import {
   getVisibleContractorBriefSections,
   usesContractorBriefForm,
 } from "@/modules/deals/contractorBriefSchema";
+import { formatBriefFieldForDisplay } from "@/modules/deals/businessHoursBrief";
 import {
   getLbsProjectScopeMode,
   lbsProjectTypeChoices,
@@ -533,7 +534,7 @@ export const getBriefSectionPreview = (
   brief: Record<string, string | null | undefined> = {},
 ) => {
   const filledValues = section.fields
-    .map((field) => String(brief[field.key] ?? "").trim())
+    .map((field) => formatBriefFieldForDisplay(field.key, brief[field.key]))
     .filter(Boolean);
   if (filledValues.length === 0) return "Not started";
   if (filledValues.length === 1) return truncatePreview(filledValues[0]!);

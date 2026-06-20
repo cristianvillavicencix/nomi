@@ -98,7 +98,7 @@ export const DealsExplorerPanel = ({
 
   if (minimized) {
     return (
-      <aside className="hidden xl:flex h-full w-12 shrink-0 flex-col bg-transparent items-center py-3">
+      <aside className="hidden xl:flex h-full w-12 shrink-0 flex-col items-center border-r border-border bg-background py-3">
         <Button
           variant="ghost"
           size="icon"
@@ -116,8 +116,8 @@ export const DealsExplorerPanel = ({
   }
 
   return (
-    <aside className="hidden xl:flex h-full w-[22rem] shrink-0 flex-col bg-transparent">
-      <div className="px-3 py-3 space-y-3">
+    <aside className="hidden xl:flex h-full w-[22rem] shrink-0 flex-col border-r border-border bg-background">
+      <div className="shrink-0 space-y-3 border-b px-3 py-3">
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold">Projects</h3>

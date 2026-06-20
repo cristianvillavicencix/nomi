@@ -21,6 +21,8 @@ export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 
 export const getLeadsListPath = () => "/leads";
 
+export const getDealsListPath = () => "/deals";
+
 export const getLeadShowPath = (contactId: string | number) =>
   `/leads/${contactId}/show`;
 

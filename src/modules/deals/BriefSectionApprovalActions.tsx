@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useGetIdentity, useNotify, useRefresh, useUpdate } from "ra-core";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -69,7 +69,7 @@ type BriefSectionApprovalActionsProps = {
   record: LbsDeal;
   sectionId: string;
   sectionTitle?: string;
-  variant?: "bar" | "menu";
+  variant?: "bar" | "menu" | "icon";
   onUpdated?: () => void;
 };
 
@@ -187,6 +187,57 @@ export const BriefSectionApprovalActions = ({
     return <ApprovalPill status={status} />;
   }
 
+  const approvalMenuItems = (
+    <>
+      <DropdownMenuItem
+        disabled={status === "approved" || isPending}
+        onSelect={() => void handleApprove()}
+      >
+        Approved
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        disabled={isPending}
+        className="text-amber-700 focus:text-amber-700 dark:text-amber-300"
+        onSelect={() => setRevisionOpen(true)}
+      >
+        Revision
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        disabled={isPending}
+        onSelect={() => void handleClearApproval()}
+      >
+        Pending
+      </DropdownMenuItem>
+    </>
+  );
+
+  if (variant === "icon") {
+    return (
+      <>
+        <div onClick={(event) => event.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 text-muted-foreground"
+                disabled={isPending}
+                aria-label={`More options for ${sectionTitle ?? "section"}`}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[7rem]">
+              {approvalMenuItems}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        {revisionDialog}
+      </>
+    );
+  }
+
   if (variant === "menu") {
     return (
       <>
@@ -208,25 +259,7 @@ export const BriefSectionApprovalActions = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[7rem]">
-              <DropdownMenuItem
-                disabled={status === "approved" || isPending}
-                onSelect={() => void handleApprove()}
-              >
-                Approved
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={isPending}
-                className="text-amber-700 focus:text-amber-700 dark:text-amber-300"
-                onSelect={() => setRevisionOpen(true)}
-              >
-                Revision
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={isPending}
-                onSelect={() => void handleClearApproval()}
-              >
-                Pending
-              </DropdownMenuItem>
+              {approvalMenuItems}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

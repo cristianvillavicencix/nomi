@@ -1,4 +1,4 @@
-import { CalendarClock } from "lucide-react";
+import { Calendar } from "lucide-react";
 import type { Deal } from "@/components/atomic-crm/types";
 import {
   formatProjectDeliveryDate,
@@ -21,25 +21,25 @@ export const LbsProjectDeliveryUrgency = ({ record }: { record: Deal }) => {
   });
 
   return (
-    <div className="flex min-w-[220px] max-w-[320px] shrink-0 flex-col gap-1 px-1 py-1 text-right sm:text-left">
-      <div className="flex items-center justify-end gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:justify-start">
-        <CalendarClock className="size-3.5 shrink-0" />
+    <div className="flex shrink-0 flex-col gap-0.5 text-right">
+      <div className="flex items-center justify-end gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <Calendar className="size-3.5 shrink-0" aria-hidden />
         Delivery
       </div>
 
       {deliveryDateLabel ? (
-        <div className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5 sm:justify-start">
-          <span className="text-lg font-bold leading-tight text-foreground sm:text-xl">
+        <div className="flex flex-wrap items-baseline justify-end gap-x-1.5 gap-y-0.5">
+          <span className="text-lg font-bold leading-tight text-foreground">
             {deliveryDateLabel}
           </span>
           {countdown ? (
             <>
-              <span className="text-base font-light text-muted-foreground/50">
-                |
+              <span className="text-muted-foreground/40" aria-hidden>
+                ·
               </span>
               <span
                 className={cn(
-                  "text-lg font-bold leading-tight sm:text-xl",
+                  "text-base font-semibold leading-tight",
                   getProjectDeliveryUrgencyClassName(urgency),
                 )}
               >
