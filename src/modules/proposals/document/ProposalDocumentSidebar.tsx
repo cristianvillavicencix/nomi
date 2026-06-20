@@ -141,7 +141,7 @@ export const ProposalDocumentSidebar = ({
             <p
               className={cn(
                 "flex items-center gap-1.5 pt-0.5 font-medium",
-                daysLeft >= 0 ? "text-amber-600 dark:text-amber-400" : "text-destructive",
+                daysLeft >= 0 ? "text-warning" : "text-destructive",
               )}
             >
               <span

@@ -85,10 +85,10 @@ const ProposalClientPreviewBody = () => {
   return (
     <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background">
       <div
-        className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 bg-amber-50 px-4 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/40 print:hidden"
+        className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm print:hidden"
         role="note"
       >
-        <p className="text-amber-950 dark:text-amber-100">
+        <p className="text-foreground">
           <span className="font-semibold">Internal preview</span> — same layout
           and buttons the client sees. Toggle language below.
         </p>
@@ -97,7 +97,7 @@ const ProposalClientPreviewBody = () => {
           <Button
             variant="outline"
             size="sm"
-            className="border-amber-300 bg-white hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950"
+            className="border-warning/40 hover:bg-warning/10"
             asChild
           >
             <Link to={`/proposals/${proposalId}/preview`}>

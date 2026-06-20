@@ -755,7 +755,7 @@ export const TicketBillingSidePanel = ({
             </div>
           </div>
           {!deliverablesReadyForInvoice ? (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+            <p className="text-xs text-warning">
               Set billing on every delivery file before creating the invoice.
             </p>
           ) : null}
@@ -860,9 +860,7 @@ export const TicketBillingSidePanel = ({
                   <p
                     className={cn(
                       "text-xs",
-                      isPaid
-                        ? "text-emerald-800 dark:text-emerald-200"
-                        : "text-amber-800 dark:text-amber-200",
+                      isPaid ? "text-success" : "text-warning",
                     )}
                   >
                     {statusLine}
@@ -1115,8 +1113,8 @@ export const TicketBillingSidePanel = ({
           expanded={smsExpanded}
           onExpandedChange={setSmsExpanded}
           headerAddon={
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-emerald-700">
-              <span className="size-2 rounded-full bg-emerald-500" aria-hidden />
+            <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-success">
+              <span className="size-2 rounded-full bg-success" aria-hidden />
               SMS
             </span>
           }

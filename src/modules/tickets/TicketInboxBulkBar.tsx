@@ -65,7 +65,7 @@ export const TicketInboxBulkBar = ({
 
   return (
     <>
-      <Card className="fixed bottom-2 left-0 right-0 z-50 mx-auto flex w-[90%] flex-col items-stretch gap-2 bg-zinc-100 p-2 px-4 sm:w-fit dark:bg-zinc-900 md:flex-row md:items-center md:gap-4">
+      <Card className="fixed bottom-2 left-0 right-0 z-50 mx-auto flex w-[90%] flex-col items-stretch gap-2 bg-muted p-2 px-4 sm:w-fit md:flex-row md:items-center md:gap-4">
         <div className="flex items-center gap-2">
           <Button
             type="button"

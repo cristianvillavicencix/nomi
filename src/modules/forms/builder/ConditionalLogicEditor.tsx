@@ -241,7 +241,7 @@ export const ConditionalLogicEditor = ({
           </Button>
 
           {priorFields.length === 0 ? (
-            <p className="text-xs text-amber-700 dark:text-amber-300">
+            <p className="text-xs text-warning">
               Add at least one field above this one to build conditions.
             </p>
           ) : (

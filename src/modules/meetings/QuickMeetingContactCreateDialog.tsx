@@ -145,7 +145,7 @@ export const QuickMeetingContactCreateDialog = ({
         >
           <DialogHeader className="border-b px-6 py-4 text-left">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#378ADD]/10 text-[#378ADD]">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
                 <UserPlus className="size-4" />
               </div>
               <div>

@@ -112,7 +112,7 @@ export const ProposalSendExpiryDialog = ({
             }
           >
             {isExpired || isSoon ? (
-              <div className="mb-2 flex items-center gap-2 font-medium text-amber-800 dark:text-amber-200">
+              <div className="mb-2 flex items-center gap-2 font-medium text-warning">
                 <AlertTriangle className="size-4 shrink-0" />
                 {isExpired ? "This proposal has expired" : "Expires very soon"}
               </div>

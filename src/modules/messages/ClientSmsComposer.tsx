@@ -226,7 +226,7 @@ export const ClientSmsComposer = ({
         compact
           ? "px-3 pt-2.5 pb-2.5"
           : "px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]",
-        isInternalNote && "bg-amber-50/40 dark:bg-amber-500/5",
+        isInternalNote && "bg-warning/10",
       )}
     >
       {canWriteInternalNotes ? (

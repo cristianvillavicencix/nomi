@@ -18,14 +18,15 @@ import {
 } from "@/components/atomic-crm/tasks/taskMemberOptions";
 
 const STATUS_OPTIONS = [
-  { id: "new", color: "bg-sky-500" },
-  { id: "open", color: "bg-emerald-500" },
-  { id: "waiting", color: "bg-amber-500" },
-  { id: "resolved", color: "bg-zinc-400" },
+  { id: "new", color: "bg-info" },
+  { id: "open", color: "bg-success" },
+  { id: "waiting", color: "bg-warning" },
+  { id: "resolved", color: "bg-muted-foreground/50" },
 ] as const;
 
 const statusColor = (status: string) =>
-  STATUS_OPTIONS.find((option) => option.id === status)?.color ?? "bg-zinc-400";
+  STATUS_OPTIONS.find((option) => option.id === status)?.color ??
+  "bg-muted-foreground/50";
 
 export const TicketListStatusControl = ({
   ticket,

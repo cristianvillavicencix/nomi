@@ -8,12 +8,12 @@ const STATUS_ITEMS: Array<{
   activeClass: string;
   icon?: "waiting" | "resolved";
 }> = [
-  { id: "new", label: "New", activeClass: "text-emerald-700" },
-  { id: "open", label: "Open", activeClass: "text-emerald-700" },
+  { id: "new", label: "New", activeClass: "text-success" },
+  { id: "open", label: "Open", activeClass: "text-success" },
   {
     id: "waiting",
     label: "Waiting",
-    activeClass: "text-amber-700",
+    activeClass: "text-warning",
     icon: "waiting",
   },
   {

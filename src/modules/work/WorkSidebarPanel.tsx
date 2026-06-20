@@ -131,7 +131,7 @@ export const WorkSidebarPanel = ({
                   : "task";
         return (
           WORK_CATEGORY_OPTIONS.find((entry) => entry.value === category)
-            ?.dotClass ?? "bg-blue-500"
+            ?.dotClass ?? "bg-muted-foreground/50"
         );
       });
     }

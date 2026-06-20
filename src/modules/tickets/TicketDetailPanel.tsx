@@ -210,7 +210,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
             ) : null}
 
             {mergedChildren.length > 0 ? (
-              <p className="border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-800/60 dark:bg-sky-950/35 dark:text-sky-100">
+              <p className="border border-info/30 bg-info/10 px-3 py-2 text-xs text-info">
                 Includes merged tickets:{" "}
                 {mergedChildren
                   .map((child) => `#${child.id} (${child.subject})`)

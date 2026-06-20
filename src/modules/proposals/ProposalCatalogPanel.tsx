@@ -198,8 +198,7 @@ export const ProposalCatalogPanel = ({
                       key={String(addon.id)}
                       className={cn(
                         "flex items-center justify-between gap-2 rounded-lg border p-3 transition-colors",
-                        inCart &&
-                          "border-emerald-600/40 bg-emerald-500/5 dark:border-emerald-500/40",
+                        inCart && "border-success/40 bg-success/5",
                       )}
                     >
                       <div className="min-w-0 flex-1">
@@ -225,8 +224,7 @@ export const ProposalCatalogPanel = ({
                         variant={inCart ? "default" : "outline"}
                         className={cn(
                           "shrink-0",
-                          inCart &&
-                            "bg-emerald-600 hover:bg-emerald-600/90 dark:bg-emerald-600",
+                          inCart && "bg-success hover:bg-success/90",
                         )}
                         onClick={() => toggleAddon(addon)}
                         aria-label={

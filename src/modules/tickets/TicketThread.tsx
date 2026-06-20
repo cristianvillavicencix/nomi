@@ -49,33 +49,33 @@ const TicketThreadMessage = ({
   if (isInternal) {
     const author = senderName || "Team";
     return (
-      <article className="border-b border-amber-200/80 bg-amber-50/95 px-5 py-3 text-sm text-amber-950 last:border-b-0 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-50">
+      <article className="border-b border-warning/30 bg-warning/10 px-5 py-3 text-sm text-foreground last:border-b-0">
         <button
           type="button"
           className="flex w-full items-start gap-2 text-left"
           onClick={onToggle}
         >
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-amber-900/80 dark:text-amber-200/90">
-              <span className="inline-flex items-center gap-1.5 uppercase tracking-wide">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 uppercase tracking-wide text-warning">
                 <Lock className="size-3.5 shrink-0" />
                 Internal note
               </span>
               <span aria-hidden>·</span>
-              <span className="font-semibold normal-case tracking-normal text-amber-950 dark:text-amber-50">
+              <span className="font-semibold normal-case tracking-normal text-foreground">
                 {author}
               </span>
-              <span className="shrink-0 normal-case tracking-normal text-amber-800/70 dark:text-amber-300/80">
+              <span className="shrink-0 normal-case tracking-normal">
                 {formatTicketMessageTime(message.created_at)}
               </span>
             </div>
             {collapsed ? (
-              <p className="mt-1 truncate text-xs text-amber-900/75 dark:text-amber-200/80">{preview}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">{preview}</p>
             ) : null}
           </div>
           <ChevronDown
             className={cn(
-              "mt-0.5 size-4 shrink-0 text-amber-800/70 transition-transform dark:text-amber-300/80",
+              "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
               !collapsed && "rotate-180",
             )}
           />
@@ -85,7 +85,7 @@ const TicketThreadMessage = ({
             body={message.body}
             htmlBody={message.html_body}
             attachments={attachments}
-            className="mt-2 text-amber-950 dark:text-amber-50 [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+            className="mt-2 text-foreground [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
           />
         ) : null}
       </article>
@@ -100,9 +100,9 @@ const TicketThreadMessage = ({
         "border-b px-5 py-3 text-sm transition-colors last:border-b-0",
         inbound
           ? unreadInbound
-            ? "border-sky-200/90 bg-sky-50/90 dark:border-sky-800/60 dark:bg-sky-950/40"
+            ? "border-info/40 bg-info/10"
             : "border-border/70 bg-muted/20 dark:bg-muted/35"
-          : "border-sky-200 bg-sky-50/70 dark:border-sky-800/50 dark:bg-sky-950/30",
+          : "border-info/30 bg-info/5",
       )}
     >
       <button
@@ -115,7 +115,7 @@ const TicketThreadMessage = ({
             <span
               className={cn(
                 "min-w-0 truncate font-semibold",
-                inbound ? "text-foreground" : "text-sky-800 dark:text-sky-200",
+                inbound ? "text-foreground" : "text-info",
               )}
             >
               {senderLabel}
@@ -141,7 +141,7 @@ const TicketThreadMessage = ({
           body={message.body}
           htmlBody={message.html_body}
           attachments={attachments}
-          className={cn("mt-2 text-foreground", !inbound && "dark:text-sky-100")}
+          className="mt-2 text-foreground"
         />
       ) : null}
     </article>

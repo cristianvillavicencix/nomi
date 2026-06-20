@@ -15,7 +15,7 @@ const RatingStars = ({ value, max = 5 }: { value: number; max?: number }) => (
         key={index}
         className={
           index < value
-            ? "size-4 fill-amber-400 text-amber-400"
+            ? "size-4 fill-warning text-warning"
             : "size-4 text-muted-foreground/40"
         }
       />

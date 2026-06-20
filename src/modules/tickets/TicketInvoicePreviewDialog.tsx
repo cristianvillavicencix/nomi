@@ -432,8 +432,8 @@ export const TicketInvoicePreviewDialog = ({
                 </div>
 
                 <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-sky-50">
-                    <FileText className="size-4 text-sky-600" />
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-info/10">
+                    <FileText className="size-4 text-info" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">Delivery package</p>

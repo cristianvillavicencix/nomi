@@ -73,7 +73,7 @@ export const ConversationMessageBubble = ({
         {message.is_internal_note ? (
           <div
             className={cn(
-              "mb-1 font-semibold uppercase tracking-wide text-amber-800/80 dark:text-amber-200/80",
+              "mb-1 font-semibold uppercase tracking-wide text-warning",
               compact ? "text-[9px]" : "text-[10px]",
             )}
           >

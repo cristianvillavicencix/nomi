@@ -53,7 +53,7 @@ const AssigneeChip = ({
           aria-hidden
           className={cn(
             "absolute -bottom-0.5 -right-0.5 size-1.5 rounded-full ring-1 ring-background",
-            online ? "bg-emerald-500" : "bg-muted-foreground/30",
+            online ? "bg-success" : "bg-muted-foreground/30",
           )}
         />
       </span>
@@ -151,9 +151,7 @@ export const ConversationChatHeader = ({
                 aria-hidden
                 className={cn(
                   "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-background",
-                  otherMemberOnline
-                    ? "bg-emerald-500"
-                    : "bg-muted-foreground/30",
+                  otherMemberOnline ? "bg-success" : "bg-muted-foreground/30",
                 )}
               />
               <span className="sr-only">

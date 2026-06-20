@@ -495,7 +495,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
         </div>
 
         {awaitingPaidDelivery ? (
-          <p className="border-b bg-amber-50/80 px-5 py-2 text-xs text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/35 dark:text-amber-100">
+          <p className="border-b border-warning/30 bg-warning/10 px-5 py-2 text-xs text-foreground">
             {TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT}
           </p>
         ) : null}

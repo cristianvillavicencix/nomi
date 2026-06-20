@@ -65,8 +65,6 @@ import {
 } from "@/modules/meetings/quickMeetingShareMessage";
 import { cn } from "@/lib/utils";
 
-const LBS_ACCENT = "#378ADD";
-
 const dealOptionText = (choice: {
   name?: string | null;
   id?: number | string;
@@ -105,7 +103,7 @@ const QuickMeetingContactCard = ({
   return (
     <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-3 py-2.5">
       <Avatar className="size-10 shrink-0">
-        <AvatarFallback className="bg-[#378ADD]/15 text-sm font-semibold text-[#378ADD]">
+        <AvatarFallback className="bg-info/15 text-sm font-semibold text-info">
           {getInitials(name)}
         </AvatarFallback>
       </Avatar>
@@ -408,7 +406,7 @@ const QuickMeetingFormBody = ({
     <>
       <DialogHeader className="space-y-3 border-b px-6 py-5 text-left">
         <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#378ADD]/10 text-[#378ADD]">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-info/10 text-info">
             <Video className="size-5" />
           </div>
           <div className="min-w-0 flex-1">

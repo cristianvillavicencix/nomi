@@ -27,7 +27,7 @@ export const ProposalPreviewToolbar = ({
 }) => (
   <div className="border-b bg-card">
     {unsavedHint ? (
-      <p className="border-b border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+      <p className="border-b border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
         {unsavedHint}
       </p>
     ) : null}

@@ -15,12 +15,12 @@ const invoiceStatusBadge = (status?: string | null) => {
     case "paid":
       return {
         label: "Paid",
-        className: "border-emerald-200 text-emerald-700",
+        className: "border-success/40 text-success",
       };
     case "sent":
       return {
         label: "Unpaid",
-        className: "border-amber-200 text-amber-700",
+        className: "border-warning/40 text-warning",
       };
     case "void":
       return {

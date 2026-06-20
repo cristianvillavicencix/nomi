@@ -173,7 +173,7 @@ export const TeamMembersList = ({
                   aria-hidden
                   className={cn(
                     "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-background",
-                    online ? "bg-emerald-500" : "bg-muted-foreground/30",
+                    online ? "bg-success" : "bg-muted-foreground/30",
                   )}
                 />
                 <span className="sr-only">
