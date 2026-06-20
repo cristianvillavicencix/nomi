@@ -3,11 +3,10 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import {
-  applyClientInvoicePaymentFromStripe,
   isAuthorizedClientBillingCron,
   isStripeMockMode,
+  reconcileStuckClientInvoiceFromStripe,
 } from "../_shared/clientProposalBilling.ts";
-import { isInvoiceStripePaymentAlreadyApplied } from "../_shared/clientInvoicePayment.ts";
 import { notifyInvoicePaymentReceipt } from "../_shared/invoicePaymentEmails.ts";
 import { getStripe } from "../_shared/stripeClient.ts";
 
@@ -51,12 +50,17 @@ Deno.serve(
             "id, org_id, amount, amount_paid, stripe_payment_intent_id, status",
           )
           .eq("status", "sent")
-          .not("stripe_payment_intent_id", "is", null)
           .order("updated_at", { ascending: false })
           .limit(limit);
 
         if (Number.isFinite(invoiceIdFilter)) {
           reconcileQuery = reconcileQuery.eq("id", invoiceIdFilter);
+        } else {
+          reconcileQuery = reconcileQuery.not(
+            "stripe_payment_intent_id",
+            "is",
+            null,
+          );
         }
 
         const { data: stuckInvoices, error: reconcileError } =
@@ -66,65 +70,22 @@ Deno.serve(
         }
 
         for (const invoice of stuckInvoices ?? []) {
-          const piId = invoice.stripe_payment_intent_id?.trim();
-          if (!piId) continue;
-
           try {
-            const intent = await stripe.paymentIntents.retrieve(piId);
-            if (intent.status !== "succeeded" || !intent.amount) {
-              reconciled.push({
-                invoice_id: invoice.id,
-                payment_intent_id: piId,
-                applied: false,
-                reason: `payment_intent_${intent.status}`,
-              });
-              continue;
-            }
-
-            const chargeAmount = Math.round(intent.amount) / 100;
-            if (
-              isInvoiceStripePaymentAlreadyApplied(invoice, {
-                stripePaymentIntentId: piId,
-                chargeAmount,
-              })
-            ) {
-              reconciled.push({
-                invoice_id: invoice.id,
-                payment_intent_id: piId,
-                applied: false,
-                reason: "already_applied",
-              });
-              continue;
-            }
-
-            const result = await applyClientInvoicePaymentFromStripe(
+            const invoiceResults = await reconcileStuckClientInvoiceFromStripe(
               supabaseAdmin,
-              {
-                orgId: invoice.org_id,
-                invoiceId: invoice.id,
-                stripePaymentIntentId: piId,
-                amountCents: intent.amount,
-                metadata: intent.metadata,
-              },
+              stripe,
+              invoice,
             );
-
-            reconciled.push({
-              invoice_id: invoice.id,
-              payment_intent_id: piId,
-              applied: Boolean(result.handled && !result.skipped),
-              paid_in_full: result.paid_in_full,
-              reason: result.skipped ? "skipped" : undefined,
-            });
+            reconciled.push(...invoiceResults);
           } catch (reconcileItemError) {
             console.warn(
               "process_missed_invoice_payment_receipts.reconcile_failed",
               invoice.id,
-              piId,
               reconcileItemError,
             );
             reconciled.push({
               invoice_id: invoice.id,
-              payment_intent_id: piId,
+              payment_intent_id: invoice.stripe_payment_intent_id ?? "",
               applied: false,
               reason:
                 reconcileItemError instanceof Error

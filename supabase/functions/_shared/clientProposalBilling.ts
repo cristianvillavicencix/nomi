@@ -261,6 +261,151 @@ export async function applyClientInvoicePaymentFromStripe(
   };
 }
 
+type StuckClientInvoiceRow = {
+  id: number;
+  org_id: number;
+  amount: number;
+  amount_paid: number;
+  status: string;
+  stripe_payment_intent_id?: string | null;
+};
+
+export async function listSucceededClientInvoicePaymentIntents(
+  stripe: Stripe,
+  params: { orgId: number; invoiceId: number; storedPaymentIntentId?: string | null },
+) {
+  const intents: Stripe.PaymentIntent[] = [];
+  const seen = new Set<string>();
+
+  const storedPaymentIntentId = params.storedPaymentIntentId?.trim();
+  if (storedPaymentIntentId) {
+    try {
+      const intent = await stripe.paymentIntents.retrieve(storedPaymentIntentId);
+      if (intent.status === "succeeded" && intent.amount) {
+        intents.push(intent);
+        seen.add(intent.id);
+      }
+    } catch (error) {
+      console.warn(
+        "listSucceededClientInvoicePaymentIntents.stored_pi_failed",
+        storedPaymentIntentId,
+        error,
+      );
+    }
+  }
+
+  try {
+    const searchResult = await stripe.paymentIntents.search({
+      query:
+        `metadata['type']:'client_invoice' AND metadata['invoice_id']:'${params.invoiceId}' AND metadata['org_id']:'${params.orgId}' AND status:'succeeded'`,
+      limit: 10,
+    });
+    for (const intent of searchResult.data) {
+      if (!seen.has(intent.id)) {
+        intents.push(intent);
+        seen.add(intent.id);
+      }
+    }
+  } catch (error) {
+    console.warn(
+      "listSucceededClientInvoicePaymentIntents.search_failed",
+      params.invoiceId,
+      error,
+    );
+  }
+
+  return intents;
+}
+
+export async function reconcileStuckClientInvoiceFromStripe(
+  supabase: SupabaseClient,
+  stripe: Stripe,
+  invoice: StuckClientInvoiceRow,
+) {
+  const intents = await listSucceededClientInvoicePaymentIntents(stripe, {
+    orgId: invoice.org_id,
+    invoiceId: invoice.id,
+    storedPaymentIntentId: invoice.stripe_payment_intent_id,
+  });
+
+  const results: Array<{
+    invoice_id: number;
+    payment_intent_id: string;
+    applied: boolean;
+    paid_in_full?: boolean;
+    reason?: string;
+  }> = [];
+
+  if (intents.length === 0) {
+    const storedPaymentIntentId = invoice.stripe_payment_intent_id?.trim();
+    if (storedPaymentIntentId) {
+      try {
+        const intent = await stripe.paymentIntents.retrieve(storedPaymentIntentId);
+        results.push({
+          invoice_id: invoice.id,
+          payment_intent_id: storedPaymentIntentId,
+          applied: false,
+          reason: `payment_intent_${intent.status}`,
+        });
+      } catch {
+        results.push({
+          invoice_id: invoice.id,
+          payment_intent_id: storedPaymentIntentId,
+          applied: false,
+          reason: "payment_intent_not_found",
+        });
+      }
+    }
+    return results;
+  }
+
+  let currentInvoice = invoice;
+  for (const intent of intents) {
+    const chargeAmount = Math.round(intent.amount ?? 0) / 100;
+    if (
+      isInvoiceStripePaymentAlreadyApplied(currentInvoice, {
+        stripePaymentIntentId: intent.id,
+        chargeAmount,
+      })
+    ) {
+      results.push({
+        invoice_id: invoice.id,
+        payment_intent_id: intent.id,
+        applied: false,
+        reason: "already_applied",
+      });
+      continue;
+    }
+
+    const result = await applyClientInvoicePaymentFromStripe(supabase, {
+      orgId: currentInvoice.org_id,
+      invoiceId: currentInvoice.id,
+      stripePaymentIntentId: intent.id,
+      amountCents: intent.amount ?? 0,
+      metadata: intent.metadata,
+    });
+
+    if (result.invoice) {
+      currentInvoice = {
+        ...currentInvoice,
+        amount_paid: Number(result.invoice.amount_paid) || 0,
+        status: String(result.invoice.status),
+        stripe_payment_intent_id: result.invoice.stripe_payment_intent_id,
+      };
+    }
+
+    results.push({
+      invoice_id: invoice.id,
+      payment_intent_id: intent.id,
+      applied: Boolean(result.handled && !result.skipped),
+      paid_in_full: result.paid_in_full,
+      reason: result.skipped ? "skipped" : undefined,
+    });
+  }
+
+  return results;
+}
+
 export async function findDepositInstallment(
   supabase: SupabaseClient,
   proposalId: number,

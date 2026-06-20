@@ -86,12 +86,24 @@ export const InvoiceDocumentPreview = ({
           ? "Draft"
           : status.replace(/_/g, " ");
 
+  const statusRibbon =
+    status === "sent"
+      ? { label: "Sent", className: "bg-blue-600" }
+      : status === "paid"
+        ? { label: "Paid", className: "bg-emerald-600" }
+        : null;
+
   return (
     <div className={cn(invoiceDocumentOuterClass, className)}>
       <article className={invoiceDocumentArticleClass}>
-      {status === "sent" ? (
-        <div className="pointer-events-none absolute -left-6 top-4 z-10 w-28 -rotate-45 bg-blue-600 py-1 text-center text-[9px] font-semibold uppercase tracking-wider text-white sm:-left-10 sm:top-5 sm:w-36 sm:text-[10px]">
-          Sent
+      {statusRibbon ? (
+        <div
+          className={cn(
+            "pointer-events-none absolute -left-6 top-4 z-10 w-28 -rotate-45 py-1 text-center text-[9px] font-semibold uppercase tracking-wider text-white sm:-left-10 sm:top-5 sm:w-36 sm:text-[10px]",
+            statusRibbon.className,
+          )}
+        >
+          {statusRibbon.label}
         </div>
       ) : null}
 
