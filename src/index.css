@@ -30,6 +30,9 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-navy: var(--brand-navy);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -94,6 +97,11 @@
   --warning-foreground: oklch(0.27 0.05 70);
   --info: oklch(0.6 0.13 240);
   --info-foreground: oklch(0.985 0 0);
+  /* LBS brand identity — used by the client-facing portal & documents.
+     Centralized here so the navy/blue lives in one place (#1E5FA8 / #0D3B6E). */
+  --brand: oklch(0.47 0.12 252);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-navy: oklch(0.34 0.09 252);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);

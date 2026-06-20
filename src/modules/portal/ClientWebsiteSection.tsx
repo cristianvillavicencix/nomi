@@ -68,7 +68,7 @@ const hostingStatusLabel = (status: string | null | undefined, copy: PortalCopy)
     return <Badge variant="outline">{copy.hostingPending}</Badge>;
   }
   return (
-    <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.hostingActive}</Badge>
+    <Badge className="bg-success hover:bg-success">{copy.hostingActive}</Badge>
   );
 };
 
@@ -145,14 +145,14 @@ export const ClientWebsiteSection = ({
       <div className="border-b bg-white px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            <span className="inline-flex items-center gap-2 rounded-full bg-success/15 px-3 py-1 text-xs font-semibold text-success">
               <span className="relative inline-flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-40" />
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-600" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-40" />
+                <span className="relative inline-flex size-2 rounded-full bg-success" />
               </span>
               En vivo
             </span>
-            <div className="min-w-0 truncate text-sm font-semibold text-[#1E5FA8]">
+            <div className="min-w-0 truncate text-sm font-semibold text-brand">
               {siteUrl || "—"}
             </div>
           </div>
@@ -161,7 +161,7 @@ export const ClientWebsiteSection = ({
             <Button
               asChild
               size="sm"
-              className="h-8 bg-[#1E5FA8] px-3 text-white hover:bg-[#1E5FA8]/90"
+              className="h-8 bg-brand px-3 text-white hover:bg-brand/90"
               disabled={!href}
             >
               <a href={href} target="_blank" rel="noreferrer">
@@ -210,7 +210,7 @@ export const ClientWebsiteSection = ({
                   (isDisabled ? "opacity-50 cursor-not-allowed" : "")
                 }
               >
-                <span className={isActive ? "text-[#1E5FA8]" : "text-muted-foreground"}>
+                <span className={isActive ? "text-brand" : "text-muted-foreground"}>
                   {tab.icon}
                 </span>
                 <span className={isActive ? "font-semibold text-foreground" : "text-muted-foreground"}>
@@ -219,7 +219,7 @@ export const ClientWebsiteSection = ({
                 <span
                   className={
                     isActive
-                      ? "absolute bottom-0 left-0 h-0.5 w-full bg-[#1E5FA8]"
+                      ? "absolute bottom-0 left-0 h-0.5 w-full bg-brand"
                       : "absolute bottom-0 left-0 h-0.5 w-full bg-transparent"
                   }
                 />
@@ -268,7 +268,7 @@ export const ClientWebsiteSection = ({
               <ul className="mt-3 grid gap-2 sm:grid-cols-3">
                 {pages.map((page) => (
                   <li key={page} className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="size-4 text-emerald-600" />
+                    <CheckCircle2 className="size-4 text-success" />
                     {page}
                   </li>
                 ))}
@@ -337,22 +337,22 @@ export const ClientWebsiteSection = ({
               {
                 title: "Chat",
                 description: "Habla con nuestro equipo en tiempo real.",
-                icon: <Headphones className="size-5 text-[#1E5FA8]" />,
+                icon: <Headphones className="size-5 text-brand" />,
               },
               {
                 title: "Ticket",
                 description: "Abre un ticket y da seguimiento.",
-                icon: <FileText className="size-5 text-[#1E5FA8]" />,
+                icon: <FileText className="size-5 text-brand" />,
               },
               {
                 title: "Teléfono",
                 description: "Llámanos para soporte inmediato.",
-                icon: <Phone className="size-5 text-[#1E5FA8]" />,
+                icon: <Phone className="size-5 text-brand" />,
               },
               {
                 title: "Documentación",
                 description: "Guías y preguntas frecuentes.",
-                icon: <Globe className="size-5 text-[#1E5FA8]" />,
+                icon: <Globe className="size-5 text-brand" />,
               },
             ].map((row) => (
               <button

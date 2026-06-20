@@ -86,10 +86,10 @@ export const ClientPortalLayout = ({
     <>
       <div
         className={cn(
-          "relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] bg-muted/30",
+          "relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-navy bg-muted/30",
         )}
       >
-        <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r bg-emerald-500" />
+        <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r bg-success" />
         <span className="text-muted-foreground">
           <FileText className="size-4" />
         </span>
@@ -98,7 +98,7 @@ export const ClientPortalLayout = ({
       {fullPortalHref ? (
         <Link
           to={fullPortalHref}
-          className="relative mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] hover:bg-muted/40"
+          className="relative mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-navy hover:bg-muted/40"
         >
           <span className="text-muted-foreground">
             <LayoutDashboard className="size-4" />
@@ -116,14 +116,14 @@ export const ClientPortalLayout = ({
           type="button"
           onClick={() => onViewChange?.(item.id)}
           className={cn(
-            "relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#0D3B6E] hover:bg-muted/40",
+            "relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-navy hover:bg-muted/40",
             isActive && "bg-muted/30",
           )}
         >
           <span
             className={cn(
               "absolute left-0 top-1 bottom-1 w-[3px] rounded-r",
-              isActive ? "bg-emerald-500" : "bg-transparent",
+              isActive ? "bg-success" : "bg-transparent",
             )}
           />
           <span className="text-muted-foreground">{item.icon}</span>
@@ -160,7 +160,7 @@ export const ClientPortalLayout = ({
       <header className={cn("border-b bg-white", mobileHeaderClass)}>
         <div className="flex items-start justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <div className="text-sm font-semibold tracking-tight text-[#0D3B6E]">
+            <div className="text-sm font-semibold tracking-tight text-brand-navy">
               Nomi Portal
             </div>
             {accountEmail ? (
@@ -169,7 +169,7 @@ export const ClientPortalLayout = ({
               </div>
             ) : null}
             {!invoiceMode && websiteUnlocked && isDeliveryNew(deliveryDeliveredAt) ? (
-              <div className="mt-1 text-[11px] font-medium text-emerald-700">
+              <div className="mt-1 text-[11px] font-medium text-success">
                 {copy.newBadge}
               </div>
             ) : null}
@@ -189,7 +189,7 @@ export const ClientPortalLayout = ({
                 <Link
                   key={item.id}
                   to={item.href}
-                  className="shrink-0 rounded-md px-3 py-2 text-[13px] text-[#0D3B6E] hover:bg-muted/40"
+                  className="shrink-0 rounded-md px-3 py-2 text-[13px] text-brand-navy hover:bg-muted/40"
                 >
                   {item.label}
                 </Link>
@@ -204,7 +204,7 @@ export const ClientPortalLayout = ({
                   if (!invoiceMode) onViewChange?.(item.id as PortalView);
                 }}
                 className={cn(
-                  "shrink-0 rounded-md px-3 py-2 text-[13px] text-[#0D3B6E]",
+                  "shrink-0 rounded-md px-3 py-2 text-[13px] text-brand-navy",
                   isActive ? "bg-muted/30 font-medium" : "hover:bg-muted/40",
                 )}
               >
@@ -226,7 +226,7 @@ export const ClientPortalLayout = ({
         <aside className={cn("w-[190px] shrink-0 border-r bg-white", sidebarClass)}>
           <div className="flex h-full w-full flex-col">
             <div className="px-4 py-4">
-              <div className="text-sm font-semibold tracking-tight text-[#0D3B6E]">
+              <div className="text-sm font-semibold tracking-tight text-brand-navy">
                 Nomi Portal
               </div>
               {accountEmail ? (
@@ -235,7 +235,7 @@ export const ClientPortalLayout = ({
                 </div>
               ) : null}
               {!invoiceMode && websiteUnlocked && isDeliveryNew(deliveryDeliveredAt) ? (
-                <div className="mt-2 text-[11px] font-medium text-emerald-700">
+                <div className="mt-2 text-[11px] font-medium text-success">
                   {copy.newBadge}
                 </div>
               ) : null}

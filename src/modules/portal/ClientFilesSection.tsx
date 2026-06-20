@@ -144,7 +144,7 @@ export const ClientFilesSection = ({
           >
             <AccordionTrigger className="hover:no-underline">
               <div className="flex flex-1 items-center justify-between gap-3 pr-2 text-left">
-                <span className="font-medium text-[#0D3B6E]">
+                <span className="font-medium text-brand-navy">
                   {folder.emoji} {folder.label}{" "}
                   <span className="text-muted-foreground">
                     ({folder.items.length})

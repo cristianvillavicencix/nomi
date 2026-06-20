@@ -33,7 +33,7 @@ export const ClientCorporateEmailsSection = ({
               <tr key={entry.id} className="border-t">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 font-medium">
-                    <Mail className="size-4 text-[#1E5FA8]" />
+                    <Mail className="size-4 text-brand" />
                     {entry.email}
                   </div>
                 </td>

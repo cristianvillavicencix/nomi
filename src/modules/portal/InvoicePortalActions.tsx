@@ -65,7 +65,7 @@ export const InvoicePortalActions = ({
         <div className="p-3">
           <Button
             type="button"
-            className="h-12 w-full rounded-xl bg-amber-500 text-base font-semibold text-amber-950 hover:bg-amber-400"
+            className="h-12 w-full rounded-xl bg-warning text-base font-semibold text-warning-foreground hover:bg-warning/90"
             onClick={onPay}
           >
             Pay now · {balanceFormatted}
@@ -78,7 +78,7 @@ export const InvoicePortalActions = ({
   return (
     <div className="mb-4 hidden flex-col gap-2 lg:flex lg:flex-row lg:flex-wrap lg:items-center lg:justify-end">
       {isPaid ? (
-        <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-800">
+        <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-success/40 bg-success/15 px-3 py-1.5 text-sm font-medium text-success">
           <CheckCircle2 className="size-4" />
           Paid in full
         </span>
@@ -100,7 +100,7 @@ export const InvoicePortalActions = ({
         <Button
           type="button"
           size="sm"
-          className="bg-amber-500 text-amber-950 hover:bg-amber-400"
+          className="bg-warning text-warning-foreground hover:bg-warning/90"
           onClick={onPay}
         >
           Pay now

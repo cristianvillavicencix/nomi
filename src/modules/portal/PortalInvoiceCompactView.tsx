@@ -16,7 +16,7 @@ import {
 } from "@/modules/billing/invoiceLineUtils";
 import { cn } from "@/lib/utils";
 
-const PORTAL_NAVY = "#0D3B6E";
+const PORTAL_NAVY = "var(--brand-navy)";
 
 const formatMoney = (value: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
@@ -128,14 +128,14 @@ export const PortalInvoiceCompactView = ({
 
       <div className="mt-4 flex items-center gap-2">
         {isPaid ? (
-          <span className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-medium text-emerald-800">
+          <span className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-success/40 bg-success/15 px-4 text-sm font-medium text-success">
             <CheckCircle2 className="size-4 shrink-0" />
             Paid in full
           </span>
         ) : (
           <Button
             type="button"
-            className="h-12 flex-1 rounded-xl bg-amber-500 text-base font-semibold text-amber-950 hover:bg-amber-400"
+            className="h-12 flex-1 rounded-xl bg-warning text-base font-semibold text-warning-foreground hover:bg-warning/90"
             onClick={onPay}
           >
             <Wallet className="size-4" />
@@ -168,7 +168,7 @@ export const PortalInvoiceCompactView = ({
         <section className="mt-5">
           <SectionLabel>Bill to</SectionLabel>
           {company?.name ? (
-            <p className="mt-2 text-sm font-semibold text-[#2563EB]">{company.name}</p>
+            <p className="mt-2 text-sm font-semibold text-brand">{company.name}</p>
           ) : null}
           {contactName ? (
             <p className="mt-1 text-sm text-slate-800">{contactName}</p>
@@ -304,7 +304,7 @@ const TotalRow = ({
       className={cn(
         "tabular-nums",
         emphasis
-          ? "text-base font-bold text-[#2563EB]"
+          ? "text-base font-bold text-brand"
           : "font-medium text-slate-900",
         valueClassName,
       )}

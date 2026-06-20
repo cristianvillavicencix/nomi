@@ -588,11 +588,11 @@ const InvoicePaymentReviewActions = ({
         disabled={!canPay || isPending || !amountValid}
         onClick={onPay}
         className={cn(
-          "flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-base font-medium text-white transition-colors",
+          "flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-base font-medium text-brand-foreground transition-colors",
           focusPaymentEntry ? "py-3.5" : "py-4",
           payDisabled
             ? "cursor-not-allowed opacity-50"
-            : "cursor-pointer hover:bg-blue-700",
+            : "cursor-pointer hover:bg-brand/90",
         )}
       >
         {isPending ? (
@@ -882,7 +882,7 @@ const InvoiceStripeCheckout = ({
           {checkout.syncError.message}
         </p>
       ) : checkout.session?.billingMode === "mock" || !clientSecret ? (
-        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-amber-900`}>
+        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-warning`}>
           Stripe is not configured on the server. Set{" "}
           <code className="text-xs">STRIPE_SECRET_KEY</code> in Supabase Edge
           Function secrets.

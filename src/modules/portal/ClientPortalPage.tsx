@@ -160,7 +160,7 @@ export const ClientPortalPage = () => {
     return (
       <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0D3B6E]">{copy.securityTitle}</h1>
+          <h1 className="text-2xl font-bold text-brand-navy">{copy.securityTitle}</h1>
           <p className="text-sm text-muted-foreground">{copy.securitySubtitle}</p>
         </div>
         <ClientCredentialsSection
@@ -191,7 +191,7 @@ export const ClientPortalPage = () => {
     return (
       <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0D3B6E]">{copy.resources}</h1>
+          <h1 className="text-2xl font-bold text-brand-navy">{copy.resources}</h1>
           <p className="text-sm text-muted-foreground">{copy.filesIntro}</p>
         </div>
         <ClientFilesSection resources={payload.resources ?? []} copy={copy} />

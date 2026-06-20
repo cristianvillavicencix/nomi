@@ -12,7 +12,7 @@ import {
 } from "@/modules/billing/public/publicInvoiceDeliveryMessage";
 import { cn } from "@/lib/utils";
 
-const PORTAL_NAVY = "#0D3B6E";
+const PORTAL_NAVY = "var(--brand-navy)";
 
 const formatMoney = (value: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
@@ -139,11 +139,11 @@ export const PublicInvoicePaymentSummary = ({
 
       {deliveryMessage ? (
         <section className="px-4 py-4 sm:px-6">
-          <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-950">
-            <Package2 className="mt-0.5 size-5 shrink-0 text-sky-600" aria-hidden />
+          <div className="flex gap-3 rounded-xl border border-info/30 bg-info/10 px-4 py-3 text-foreground">
+            <Package2 className="mt-0.5 size-5 shrink-0 text-info" aria-hidden />
             <div>
               <p className="text-sm font-semibold">Your files are ready</p>
-              <p className="mt-1 text-sm leading-relaxed text-sky-900/90">
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                 {deliveryMessage}
               </p>
             </div>

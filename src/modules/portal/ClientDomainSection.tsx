@@ -9,7 +9,7 @@ const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) =>
     <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
       {label}
     </div>
-    <div className="mt-1 text-sm font-medium text-[#0D3B6E]">{value}</div>
+    <div className="mt-1 text-sm font-medium text-brand-navy">{value}</div>
   </div>
 );
 
@@ -46,7 +46,7 @@ export const ClientDomainSection = ({
       {resolvedDomains.map((domain) => (
         <div key={domain.id ?? domain.domain} className="space-y-3 rounded-lg border p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-lg font-semibold text-[#0D3B6E]">{domain.domain}</h3>
+            <h3 className="text-lg font-semibold text-brand-navy">{domain.domain}</h3>
             <Badge variant="outline">
               {domain.managed_by === "client" ? copy.managedByClient : copy.managedByLbs}
             </Badge>

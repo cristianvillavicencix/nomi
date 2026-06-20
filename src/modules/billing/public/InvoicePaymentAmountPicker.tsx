@@ -121,7 +121,7 @@ const SelectedPaymentRow = ({
     className={cn(
       "flex items-center justify-between gap-3 rounded-xl px-4 py-3.5",
       selected
-        ? "border border-blue-200 bg-blue-50/40"
+        ? "border border-brand/30 bg-brand/5"
         : "border border-transparent",
     )}
   >
