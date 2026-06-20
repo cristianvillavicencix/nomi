@@ -32,6 +32,7 @@ import {
   resolveProjectDisplayStageChange,
 } from "@/modules/deals/projects/projectDisplayPipeline";
 import { ProjectWorkspaceTabs } from "@/modules/deals/projects/ProjectWorkspaceTabs";
+import { ProjectDeliveredStamp } from "@/modules/deals/projects/ProjectDeliveredStamp";
 import {
   ProjectTasksDialog,
   ProjectTasksRail,
@@ -190,7 +191,8 @@ const ProjectShowContent = () => {
 
   return (
     <ProjectBriefActionsProvider record={record}>
-      <div className="space-y-2">
+      <div className="relative space-y-2">
+      <ProjectDeliveredStamp record={record} />
       {record.archived_at ? <ArchivedTitle /> : null}
 
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
