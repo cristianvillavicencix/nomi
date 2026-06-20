@@ -5,7 +5,7 @@ import { getStripe } from "./stripeClient.ts";
 import {
   markInstallmentPaidFromStripe,
 } from "./proposalFlow.ts";
-import { applyClientInvoicePaymentUpdate } from "./clientInvoicePayment.ts";
+import { applyClientInvoicePaymentUpdate, isInvoiceStripePaymentAlreadyApplied } from "./clientInvoicePayment.ts";
 import { parseRemainderInstallmentNumbersFromMetadata } from "./publicClientInvoicePaymentContext.ts";
 import { notifyInvoicePaymentReceipt } from "./invoicePaymentEmails.ts";
 import { deliverTicketAfterInvoicePayment } from "./ticketDelivery.ts";
@@ -216,8 +216,13 @@ export async function applyClientInvoicePaymentFromStripe(
     return { handled: true, skipped: true, already_paid: true };
   }
 
-  if (invoice.stripe_payment_intent_id === params.stripePaymentIntentId) {
-    const chargedAmount = Math.round(params.amountCents) / 100;
+  const chargedAmount = Math.round(params.amountCents) / 100;
+  if (
+    isInvoiceStripePaymentAlreadyApplied(invoice, {
+      stripePaymentIntentId: params.stripePaymentIntentId,
+      chargeAmount: chargedAmount,
+    })
+  ) {
     const receipt = await notifyInvoicePaymentReceipt(supabase, {
       orgId: params.orgId,
       invoiceId: params.invoiceId,

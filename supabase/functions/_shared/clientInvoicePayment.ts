@@ -99,6 +99,22 @@ type InvoicePaymentRow = {
   stripe_payment_intent_id?: string | null;
 };
 
+/** True when this Stripe PI charge is already reflected in amount_paid. */
+export function isInvoiceStripePaymentAlreadyApplied(
+  invoice: Pick<InvoicePaymentRow, "amount_paid" | "stripe_payment_intent_id">,
+  params: { stripePaymentIntentId: string; chargeAmount: number },
+) {
+  if (
+    !params.stripePaymentIntentId ||
+    invoice.stripe_payment_intent_id !== params.stripePaymentIntentId
+  ) {
+    return false;
+  }
+
+  const paid = Number(invoice.amount_paid) || 0;
+  return paid >= params.chargeAmount - 0.01;
+}
+
 export async function propagateProposalCardToSiblingInvoices(
   supabase: SupabaseClient,
   orgId: number,
@@ -153,7 +169,12 @@ export async function applyClientInvoicePaymentUpdate(
   const upfrontPercent = Number(invoice.upfront_percent ?? 100);
   const now = new Date().toISOString();
 
-  if (invoice.stripe_payment_intent_id === params.stripePaymentIntentId) {
+  if (
+    isInvoiceStripePaymentAlreadyApplied(invoice, {
+      stripePaymentIntentId: params.stripePaymentIntentId,
+      chargeAmount: params.chargeAmount,
+    })
+  ) {
     const balanceDue = Math.max(Math.round((total - paid) * 100) / 100, 0);
     const paidInFull = paid >= total - 0.01;
     if (paidInFull) {
