@@ -7,7 +7,7 @@ import {
 import { loadStripe, type StripePaymentElementChangeEvent } from "@stripe/stripe-js";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Lock } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { isClientBillingSkipped } from "@/modules/billing/clientBillingProvider";
 import { parseInvoiceRemainderSchedule, previewRemainderScheduleAfterPayments } from "@/modules/billing/invoiceRemainderSchedule";
@@ -43,8 +43,12 @@ import {
 import {
   publicInvoicePaymentSectionPadding,
   publicInvoicePaymentShellClass,
+  focusPaymentEntryShellClass,
 } from "@/modules/billing/public/payInvoiceDialogLayout";
-import { PublicInvoicePaymentSummary } from "@/modules/billing/public/PublicInvoicePaymentSummary";
+import {
+  PublicInvoicePaymentCardHeading,
+  PublicInvoicePaymentSummary,
+} from "@/modules/billing/public/PublicInvoicePaymentSummary";
 import { cn } from "@/lib/utils";
 
 const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
@@ -493,6 +497,19 @@ const useStablePaymentCheckoutSession = (
   return { session, isInitialLoading, initialError, syncError, ensureSynced };
 };
 
+const FocusPaymentEntryLayout = ({
+  summary,
+  payment,
+}: {
+  summary: ReactNode;
+  payment: ReactNode;
+}) => (
+  <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-stretch">
+    <div className="min-w-0 lg:border-r lg:border-border/50">{summary}</div>
+    <div className="flex min-w-0 flex-col lg:justify-center">{payment}</div>
+  </div>
+);
+
 const InvoicePaymentReviewActions = ({
   summary,
   paymentAmountState,
@@ -707,49 +724,77 @@ const InvoiceStripePaymentFormInner = ({
   return (
     <>
       {focusPaymentEntry ? (
-        <PublicInvoicePaymentSummary
-          payload={payload}
-          balanceDue={summary.balanceDue}
-          balanceDueFormatted={summary.balanceDueFormatted}
-        />
-      ) : null}
-
-      <div
-        className={cn(
-          focusPaymentEntry
-            ? "px-4 pb-1 pt-0 sm:px-6"
-            : `${publicInvoicePaymentSectionPadding} pb-1 pt-4`,
-          sheetLayout && "pb-4",
-        )}
-      >
-        {!focusPaymentEntry ? (
-          <p className="mb-2 text-[13px] text-muted-foreground">Payment method</p>
-        ) : null}
-        <PaymentElement
-          options={
-            focusPaymentEntry ? cardOnlyPaymentElementOptions : paymentElementOptions
+        <FocusPaymentEntryLayout
+          summary={
+            <PublicInvoicePaymentSummary
+              payload={payload}
+              balanceDue={summary.balanceDue}
+              balanceDueFormatted={summary.balanceDueFormatted}
+            />
           }
-          onChange={(event: StripePaymentElementChangeEvent) => {
-            setPaymentReady(event.complete);
-            setPaymentError(event.error?.message ?? null);
-          }}
+          payment={
+            <>
+              <div className="px-4 pb-1 pt-4 sm:px-6 lg:pt-6">
+                <PublicInvoicePaymentCardHeading />
+                <PaymentElement
+                  options={cardOnlyPaymentElementOptions}
+                  onChange={(event: StripePaymentElementChangeEvent) => {
+                    setPaymentReady(event.complete);
+                    setPaymentError(event.error?.message ?? null);
+                  }}
+                />
+              </div>
+              <InvoicePaymentReviewActions
+                summary={summary}
+                paymentAmountState={paymentAmountState}
+                consent={consent}
+                onConsentChange={setConsent}
+                paymentReady={paymentReady}
+                paymentError={paymentError}
+                flowError={flowError}
+                canPay={canPay}
+                isPending={payMutation.isPending}
+                onPay={() => payMutation.mutate()}
+                focusPaymentEntry={focusPaymentEntry}
+                sheetLayout={sheetLayout}
+              />
+            </>
+          }
         />
-      </div>
+      ) : (
+        <>
+          <div
+            className={cn(
+              `${publicInvoicePaymentSectionPadding} pb-1 pt-4`,
+              sheetLayout && "pb-4",
+            )}
+          >
+            <p className="mb-2 text-[13px] text-muted-foreground">Payment method</p>
+            <PaymentElement
+              options={paymentElementOptions}
+              onChange={(event: StripePaymentElementChangeEvent) => {
+                setPaymentReady(event.complete);
+                setPaymentError(event.error?.message ?? null);
+              }}
+            />
+          </div>
 
-      <InvoicePaymentReviewActions
-        summary={summary}
-        paymentAmountState={paymentAmountState}
-        consent={consent}
-        onConsentChange={setConsent}
-        paymentReady={paymentReady}
-        paymentError={paymentError}
-        flowError={flowError}
-        canPay={canPay}
-        isPending={payMutation.isPending}
-        onPay={() => payMutation.mutate()}
-        focusPaymentEntry={focusPaymentEntry}
-        sheetLayout={sheetLayout}
-      />
+          <InvoicePaymentReviewActions
+            summary={summary}
+            paymentAmountState={paymentAmountState}
+            consent={consent}
+            onConsentChange={setConsent}
+            paymentReady={paymentReady}
+            paymentError={paymentError}
+            flowError={flowError}
+            canPay={canPay}
+            isPending={payMutation.isPending}
+            onPay={() => payMutation.mutate()}
+            focusPaymentEntry={focusPaymentEntry}
+            sheetLayout={sheetLayout}
+          />
+        </>
+      )}
     </>
   );
 };
@@ -815,7 +860,7 @@ const InvoiceStripeCheckout = ({
   const shellClass = sheetLayout
     ? "w-full"
     : focusPaymentEntry
-      ? "mx-auto w-full max-w-[440px] overflow-hidden rounded-2xl border border-border/50 bg-background shadow-sm"
+      ? focusPaymentEntryShellClass
       : publicInvoicePaymentShellClass;
 
   return (
@@ -963,28 +1008,37 @@ const InvoiceMockPaymentForm = ({
 
   if (focusPaymentEntry) {
     return (
-      <div className="mx-auto w-full max-w-[440px] overflow-hidden rounded-2xl border border-border/50 bg-background shadow-sm">
-        <PublicInvoicePaymentSummary
-          payload={payload}
-          balanceDue={summary.balanceDue}
-          balanceDueFormatted={summary.balanceDueFormatted}
+      <div className={focusPaymentEntryShellClass}>
+        <FocusPaymentEntryLayout
+          summary={
+            <PublicInvoicePaymentSummary
+              payload={payload}
+              balanceDue={summary.balanceDue}
+              balanceDueFormatted={summary.balanceDueFormatted}
+            />
+          }
+          payment={
+            <>
+              <div className="px-4 pb-1 pt-4 sm:px-6 lg:pt-6">
+                <PublicInvoicePaymentCardHeading />
+                <p className="text-sm text-muted-foreground">Demo mode · No card required</p>
+              </div>
+              <InvoicePaymentReviewActions
+                summary={summary}
+                paymentAmountState={paymentAmountState}
+                consent={consent}
+                onConsentChange={setConsent}
+                paymentReady
+                paymentError={null}
+                flowError={flowError}
+                canPay={canContinue}
+                isPending={payMutation.isPending}
+                onPay={() => payMutation.mutate()}
+                focusPaymentEntry
+              />
+            </>
+          }
         />
-        <InvoicePaymentReviewActions
-          summary={summary}
-          paymentAmountState={paymentAmountState}
-          consent={consent}
-          onConsentChange={setConsent}
-          paymentReady
-          paymentError={null}
-          flowError={flowError}
-          canPay={canContinue}
-          isPending={payMutation.isPending}
-          onPay={() => payMutation.mutate()}
-          focusPaymentEntry
-        />
-        <p className="pb-4 text-center text-xs text-muted-foreground">
-          Demo mode · No card required
-        </p>
       </div>
     );
   }

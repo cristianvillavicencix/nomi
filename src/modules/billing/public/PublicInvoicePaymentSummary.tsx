@@ -150,13 +150,22 @@ export const PublicInvoicePaymentSummary = ({
           </div>
         </section>
       ) : null}
-
-      <section className="px-4 pb-1 pt-4 sm:px-6">
-        <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <CreditCard className="size-4 text-muted-foreground" aria-hidden />
-          Card details
-        </p>
-      </section>
     </div>
   );
 };
+
+export const PublicInvoicePaymentCardHeading = ({
+  className,
+}: {
+  className?: string;
+}) => (
+  <p
+    className={cn(
+      "mb-2 flex items-center gap-2 text-sm font-semibold text-foreground",
+      className,
+    )}
+  >
+    <CreditCard className="size-4 text-muted-foreground" aria-hidden />
+    Card details
+  </p>
+);
