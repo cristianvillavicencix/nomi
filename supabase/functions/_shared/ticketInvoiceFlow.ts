@@ -35,19 +35,19 @@ import { getTransactionalFromEmail } from "./transactionalEmail.ts";
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE =
-  "Your Xactimate supplement is ready.\n\nPlease pay using the secure link below. Your files will be delivered automatically by email after payment.";
+  "Your project deliverables are ready.\n\nPlease pay using the secure link below. Your files will be delivered automatically by email after payment.";
 
 export const DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE =
-  "This is a friendly reminder that your supplement invoice is still unpaid.\n\nPlease use the secure link below to complete payment. Your files will be delivered automatically after payment.";
+  "This is a friendly reminder that your invoice is still unpaid.\n\nPlease pay using the secure link below to complete payment. Your files will be delivered automatically after payment.";
 
 export const buildTicketPaymentEmailSubject = (propertyAddress: string) =>
-  `Invoice and Supplements Ready (${propertyAddress.trim()})`;
+  `Invoice for services (${propertyAddress.trim()})`;
 
 export const buildTicketPaymentReminderSubject = (propertyAddress: string) =>
-  `Reminder: Invoice and Supplements Ready (${propertyAddress.trim()})`;
+  `Reminder: Invoice for services (${propertyAddress.trim()})`;
 
 export const buildTicketDeliveryEmailSubject = (propertyAddress: string) =>
-  `Your Supplement Files Are Ready (${propertyAddress.trim()})`;
+  `Your project files are ready (${propertyAddress.trim()})`;
 
 const formatTicketInternalNoteDate = (iso?: string | null) => {
   if (!iso?.trim()) return null;
@@ -149,6 +149,7 @@ export const buildTicketPaymentEmailBodies = (params: {
   customMessage?: string;
   subject?: string;
   propertyAddress?: string;
+  serviceLines?: string[];
 }) => {
   const intro =
     params.customMessage?.trim() || DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE;
@@ -156,6 +157,14 @@ export const buildTicketPaymentEmailBodies = (params: {
     .split(/\n\n+/)
     .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
     .join("");
+
+  const serviceLines = (params.serviceLines ?? []).filter(Boolean);
+  const servicesHtml =
+    serviceLines.length > 1
+      ? `<div style="margin:16px 0;"><p style="margin:0 0 8px;font-weight:600;">Services included</p><ul style="margin:0;padding-left:20px;">${serviceLines
+          .map((line) => `<li style="margin:4px 0;">${escapeHtml(line)}</li>`)
+          .join("")}</ul></div>`
+      : "";
 
   const subject =
     params.subject?.trim() ||
@@ -176,6 +185,7 @@ export const buildTicketPaymentEmailBodies = (params: {
   const htmlBody = `
     <div style="font-family:system-ui,sans-serif;color:#0f172a;line-height:1.5;max-width:560px;">
       ${introHtml}
+      ${servicesHtml}
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
         <tr><td style="padding:4px 0;color:#64748b;">Invoice</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(params.invoiceNumber)}</td></tr>
         <tr><td style="padding:4px 0;color:#64748b;">Amount due</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(params.amountFormatted)}</td></tr>

@@ -40,14 +40,13 @@ import {
 } from "@/modules/tickets/TicketInvoiceSendPreview";
 import {
   buildTicketDeliveryEmailHtml,
-  buildTicketDeliveryEmailSubject,
   buildTicketPaymentEmailHtml,
-  buildTicketPaymentEmailSubject,
   buildTicketPaymentSmsText,
   clientInvoiceLineItemsToDrafts,
   DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE,
   formatTicketInvoicePreviewMoney,
 } from "@/modules/tickets/ticketInvoicePreview";
+import { buildTicketPaymentCopyFromDeliverables } from "@/modules/tickets/ticketInvoiceCopy";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -122,6 +121,8 @@ export const TicketInvoicePreviewDialog = ({
   const [emailMessage, setEmailMessage] = useState(
     DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE,
   );
+  const [deliverySubject, setDeliverySubject] = useState("");
+  const [serviceLines, setServiceLines] = useState<string[]>([]);
   const [phone, setPhone] = useState("");
   const [sendSms, setSendSms] = useState(false);
   const sentRef = useRef(false);
@@ -154,6 +155,19 @@ export const TicketInvoicePreviewDialog = ({
 
   const propertyAddress = ticket.subject?.trim() || "Your property";
 
+  const unbilledDeliverables = useMemo(
+    () => deliverables.filter((file) => !file.invoiced_invoice_id),
+    [deliverables],
+  );
+
+  const applyPaymentCopy = (items: TicketDeliverable[]) => {
+    const copy = buildTicketPaymentCopyFromDeliverables(items, propertyAddress);
+    setSubject(copy.subject);
+    setEmailMessage(copy.message);
+    setDeliverySubject(copy.deliverySubject);
+    setServiceLines(copy.serviceLines);
+  };
+
   const prepareMutation = useMutation({
     mutationFn: () =>
       dataProvider.prepareTicketInvoice({
@@ -167,6 +181,7 @@ export const TicketInvoicePreviewDialog = ({
       setRecipientEmail(
         data.to || resolveTicketRequesterEmail(ticket, company, contact) || "",
       );
+      applyPaymentCopy(unbilledDeliverables);
       refresh();
     },
     onError: (error: Error) => {
@@ -208,7 +223,9 @@ export const TicketInvoicePreviewDialog = ({
     sentRef.current = false;
     setStep("invoice");
     setEmailMessage(DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE);
-    setSubject(buildTicketPaymentEmailSubject(propertyAddress));
+    setSubject("");
+    setDeliverySubject("");
+    setServiceLines([]);
     const defaultPhone = resolveInvoiceRecipientPhone({ company, contact });
     setPhone(defaultPhone);
     setSendSms(Boolean(defaultPhone.trim()));
@@ -236,6 +253,7 @@ export const TicketInvoicePreviewDialog = ({
           amountFormatted,
           paymentUrl,
           customMessage: emailMessage,
+          serviceLines,
         })
       : "";
 
@@ -252,7 +270,6 @@ export const TicketInvoicePreviewDialog = ({
         })
       : "";
 
-  const deliverySubject = buildTicketDeliveryEmailSubject(propertyAddress);
   const deliveryEmailHtml = draftInvoice
     ? buildTicketDeliveryEmailHtml({
         orgName: organizationName,

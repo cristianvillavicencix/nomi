@@ -19,6 +19,11 @@ export {
   resolveTicketPropertyAddress,
 } from "@/modules/tickets/ticketEmailTemplates";
 
+export {
+  buildTicketPaymentCopyFromDeliverables,
+  buildTicketPaymentReminderCopyFromDeliverables,
+} from "@/modules/tickets/ticketInvoiceCopy";
+
 const addDays = (isoDate: string, days: number) => {
   const date = new Date(`${isoDate}T12:00:00`);
   date.setDate(date.getDate() + days);

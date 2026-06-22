@@ -437,6 +437,7 @@ export const TicketBillingSidePanel = ({
   };
 
   const openBillingDialogForUpload = (files: File[]) => {
+    setDragActive(false);
     setEditingDeliverable(null);
     setPendingUploads(files);
     setBillingFileName(files[0]?.name ?? null);
@@ -460,6 +461,7 @@ export const TicketBillingSidePanel = ({
   };
 
   const handleBillingDialogOpenChange = (open: boolean) => {
+    if (open) setDragActive(false);
     setBillingDialogOpen(open);
     if (!open) {
       setPendingUploads([]);

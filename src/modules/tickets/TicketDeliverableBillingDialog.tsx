@@ -93,7 +93,7 @@ export const TicketDeliverableBillingDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="overflow-hidden sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Delivery package billing</DialogTitle>
           <DialogDescription>
@@ -110,7 +110,7 @@ export const TicketDeliverableBillingDialog = ({
               value={kind}
               onValueChange={(value) => setKind(value as DeliverableBillingKind)}
             >
-              <SelectTrigger id="deliverable-billing-kind" className="rounded-none">
+              <SelectTrigger id="deliverable-billing-kind">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -135,7 +135,6 @@ export const TicketDeliverableBillingDialog = ({
                 min={1}
                 value={lineCount}
                 onChange={(event) => setLineCount(event.target.value)}
-                className="rounded-none"
               />
               <p className="text-xs text-muted-foreground">
                 Base ${calculateSupplementTotalForLineCount(50).toFixed(0)} includes
@@ -144,7 +143,7 @@ export const TicketDeliverableBillingDialog = ({
             </div>
           ) : null}
 
-          <div className="rounded-none border bg-muted/30 p-3 text-sm">
+          <div className="rounded-md border bg-muted/30 p-3 text-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Invoice line preview
             </p>

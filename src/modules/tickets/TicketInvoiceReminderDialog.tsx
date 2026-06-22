@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   useDataProvider,
   useGetIdentity,
+  useGetList,
   useNotify,
 } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
@@ -18,14 +19,14 @@ import {
   formatOrganizationMemberName,
   resolveInvoiceRecipientPhone,
 } from "@/modules/billing/billingUtils";
-import type { ClientInvoice, Ticket } from "@/modules/types";
+import type { ClientInvoice, Ticket, TicketDeliverable } from "@/modules/types";
 import {
   buildTicketPaymentEmailHtml,
   buildTicketPaymentReminderSmsText,
-  buildTicketPaymentReminderSubject,
   DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE,
   formatTicketInvoicePreviewMoney,
 } from "@/modules/tickets/ticketInvoicePreview";
+import { buildTicketPaymentReminderCopyFromDeliverables } from "@/modules/tickets/ticketInvoiceCopy";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,14 +67,22 @@ export const TicketInvoiceReminderDialog = ({
   const { title, companyLegalName } = useConfigurationContext();
   const propertyAddress = ticket.subject?.trim() || "Your property";
   const [recipientEmail, setRecipientEmail] = useState("");
-  const [subject, setSubject] = useState(
-    buildTicketPaymentReminderSubject(propertyAddress),
-  );
+  const [subject, setSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState(
     DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE,
   );
   const [phone, setPhone] = useState("");
   const [sendSms, setSendSms] = useState(false);
+
+  const { data: deliverables = [] } = useGetList<TicketDeliverable>(
+    "ticket_deliverables",
+    {
+      filter: { "ticket_id@eq": ticket.id },
+      sort: { field: "sort_order", order: "ASC" },
+      pagination: { page: 1, perPage: 20 },
+    },
+    { enabled: open && Boolean(ticket.id) },
+  );
 
   const organizationName = useMemo(
     () => resolveInvoiceOrganizationName({ title, companyLegalName }),
@@ -112,6 +121,8 @@ export const TicketInvoiceReminderDialog = ({
     return "";
   }, [shareLink]);
 
+  const [serviceLines, setServiceLines] = useState<string[]>([]);
+
   useEffect(() => {
     if (!open) return;
     setRecipientEmail(
@@ -119,12 +130,29 @@ export const TicketInvoiceReminderDialog = ({
         invoice.recipient_email?.trim() ||
         "",
     );
-    setSubject(buildTicketPaymentReminderSubject(propertyAddress));
-    setEmailMessage(DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE);
+    const invoiceDeliverables = deliverables.filter(
+      (file) => String(file.invoiced_invoice_id) === String(invoice.id),
+    );
+    const copy = buildTicketPaymentReminderCopyFromDeliverables(
+      invoiceDeliverables,
+      propertyAddress,
+    );
+    setSubject(copy.subject);
+    setEmailMessage(copy.message);
+    setServiceLines(copy.serviceLines);
     const defaultPhone = resolveInvoiceRecipientPhone({ company, contact });
     setPhone(defaultPhone);
     setSendSms(Boolean(defaultPhone.trim()));
-  }, [open, ticket, company, contact, invoice.recipient_email, propertyAddress]);
+  }, [
+    open,
+    ticket,
+    company,
+    contact,
+    invoice.id,
+    invoice.recipient_email,
+    propertyAddress,
+    deliverables,
+  ]);
 
   const amountFormatted = formatTicketInvoicePreviewMoney(
     Number(invoice.amount) || 0,
@@ -137,6 +165,7 @@ export const TicketInvoiceReminderDialog = ({
         amountFormatted,
         paymentUrl,
         customMessage: emailMessage,
+        serviceLines,
       })
     : "";
 

@@ -97,17 +97,38 @@ export const deliverableBillingKindLabel = (kind: DeliverableBillingKind) =>
   DELIVERABLE_BILLING_OPTIONS.find((option) => option.kind === kind)?.label ??
   kind;
 
+export const buildDeliverableLineDescription = (
+  kind: DeliverableBillingKind,
+  propertyAddress: string,
+  _lineCount?: number | null,
+): string => {
+  const address = normalizePropertyAddress(propertyAddress);
+
+  switch (kind) {
+    case "supplement":
+      return `Supplement for ${address}`;
+    case "roof":
+      return `Measurement of roof of ${address}`;
+    case "siding":
+      return `Measurement of siding of ${address}`;
+    case "esx":
+      return `ESX creation for ${address}`;
+    case "pdf_analysis":
+      return `PDF analysis for ${address}`;
+    default:
+      return `Services for ${address}`;
+  }
+};
+
 export const buildDeliverablePricingLine = (
   kind: DeliverableBillingKind,
   propertyAddress: string,
   lineCount?: number | null,
 ): SupplementPricingLine => {
-  const address = normalizePropertyAddress(propertyAddress);
-
   if (kind === "supplement") {
     const total = calculateSupplementTotalForLineCount(lineCount ?? 0);
     return {
-      description: `Supplement of ${address}`,
+      description: buildDeliverableLineDescription(kind, propertyAddress, lineCount),
       quantity: 1,
       unit: "ea",
       unitPrice: total,
@@ -116,17 +137,9 @@ export const buildDeliverablePricingLine = (
   }
 
   const unitPrice = flatPriceForKind(kind);
-  const label =
-    kind === "roof"
-      ? "Roof"
-      : kind === "siding"
-        ? "Siding"
-        : kind === "esx"
-          ? "ESX"
-          : "PDF analysis";
 
   return {
-    description: `${label} of ${address}`,
+    description: buildDeliverableLineDescription(kind, propertyAddress, lineCount),
     quantity: 1,
     unit: "ea",
     unitPrice,
