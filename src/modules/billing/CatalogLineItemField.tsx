@@ -107,14 +107,23 @@ export const CatalogLineItemField = ({
   useEffect(() => {
     if (!open) return;
     updatePosition();
+    const anchor = rootRef.current;
+    if (!anchor) return;
+
+    const resizeObserver = new ResizeObserver(() => updatePosition());
+    resizeObserver.observe(anchor);
+    const textarea = anchor.querySelector("textarea");
+    if (textarea) resizeObserver.observe(textarea);
+
     const handleReposition = () => updatePosition();
     window.addEventListener("resize", handleReposition);
     window.addEventListener("scroll", handleReposition, true);
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener("resize", handleReposition);
       window.removeEventListener("scroll", handleReposition, true);
     };
-  }, [open, query]);
+  }, [open, query, line.item_detail]);
 
   useEffect(() => {
     if (!open) return;

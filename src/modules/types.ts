@@ -80,6 +80,7 @@ export type ServicePackage = {
   billing_interval?: "weekly" | "monthly" | "yearly" | null;
   category?: string | null;
   active?: boolean;
+  booking_enabled?: boolean;
   sort_order?: number;
   created_at?: string;
   updated_at?: string;

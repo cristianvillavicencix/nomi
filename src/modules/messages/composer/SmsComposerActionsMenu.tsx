@@ -1,4 +1,5 @@
 import {
+  CalendarClock,
   FileText,
   Loader2,
   Paperclip,
@@ -20,6 +21,7 @@ import {
 import type { Identifier } from "ra-core";
 import type { Contact } from "@/modules/types";
 import { useSmsWebFormInsert } from "@/modules/messages/useSmsWebFormInsert";
+import { useSmsBookNowInsert } from "@/modules/messages/useSmsBookNowInsert";
 import { cn } from "@/lib/utils";
 
 export const SmsComposerActionsMenu = ({
@@ -56,8 +58,17 @@ export const SmsComposerActionsMenu = ({
     dealId,
     onInsertLink: onInsertFormLink,
   });
+  const { generateMutation: bookNowMutation } = useSmsBookNowInsert({
+    contact,
+    dealId,
+    onInsertLink: onInsertFormLink,
+  });
 
-  const menuDisabled = disabled || isSending || generateMutation.isPending;
+  const menuDisabled =
+    disabled ||
+    isSending ||
+    generateMutation.isPending ||
+    bookNowMutation.isPending;
 
   return (
     <DropdownMenu>
@@ -73,7 +84,7 @@ export const SmsComposerActionsMenu = ({
           disabled={menuDisabled}
           aria-label="Message options"
         >
-          {generateMutation.isPending ? (
+          {generateMutation.isPending || bookNowMutation.isPending ? (
             <Loader2 className={compact ? "size-4" : "size-5"} />
           ) : (
             <Plus className={compact ? "size-4" : "size-5"} strokeWidth={2} />
@@ -109,6 +120,13 @@ export const SmsComposerActionsMenu = ({
         >
           <Paperclip className="size-4" />
           Attach file
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={menuDisabled || isInternalNote}
+          onClick={() => bookNowMutation.mutate()}
+        >
+          <CalendarClock className="size-4" />
+          Book now
         </DropdownMenuItem>
         {activeForms.length > 0 ? (
           <DropdownMenuSub>

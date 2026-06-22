@@ -35,6 +35,7 @@ import { proposalsProvider } from "./modules/proposalsProvider";
 import { messagingProvider } from "./modules/messagingProvider";
 import { webMonitorProvider } from "./modules/webMonitorProvider";
 import { formsProvider } from "./modules/formsProvider";
+import { bookingProvider } from "./modules/bookingProvider";
 import { orgProvider } from "./modules/orgProvider";
 import { dealsProvider } from "./modules/dealsProvider";
 import { uploadToBucket } from "./modules/uploadToBucket";
@@ -350,6 +351,7 @@ const dataProviderWithCustomMethods = {
   ...messagingProvider,
   ...webMonitorProvider,
   ...formsProvider,
+  ...bookingProvider,
   ...orgProvider,
   ...dealsProvider,
 } satisfies DataProvider;

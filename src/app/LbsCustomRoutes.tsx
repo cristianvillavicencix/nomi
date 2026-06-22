@@ -14,6 +14,8 @@ import { LeadCreatePage } from "@/modules/leads/LeadCreatePage";
 import { LeadShowPage } from "@/modules/leads/LeadShowPage";
 import { LbsContactShowPage } from "@/modules/contacts/ContactShowPage";
 import { TicketCreate } from "@/modules/tickets/TicketCreate";
+import { PublicBookingPage } from "@/modules/booking/public/PublicBookingPage";
+import { BookingShortUrlRedirect } from "@/modules/booking/public/BookingShortUrlRedirect";
 import { FormPublicEntry } from "@/modules/forms/public/FormPublicEntry";
 import { ShortUrlRedirect } from "@/modules/forms/public/ShortUrlRedirect";
 import { PublicProposalPage } from "@/modules/proposals/public/PublicProposalPage";
@@ -75,6 +77,8 @@ export const renderLbsPublicPortalRoutes = () => (
 
 export const renderLbsPublicFormRoute = () => (
   <>
+    <Route path="/b/:shortCode" element={<BookingShortUrlRedirect />} />
+    <Route path="/book/:token" element={<PublicBookingPage />} />
     <Route path="/f/:shortCode" element={<ShortUrlRedirect />} />
     <Route path="/pr/:shortCode" element={<ProposalShortUrlRedirect />} />
     <Route path="/iv/:shortCode" element={<InvoiceShortUrlRedirect />} />

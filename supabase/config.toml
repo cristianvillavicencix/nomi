@@ -317,6 +317,15 @@ verify_jwt = false
 [functions.upload_form_file]
 verify_jwt = false
 
+[functions.generate_booking_link]
+verify_jwt = false
+
+[functions.get_public_booking]
+verify_jwt = false
+
+[functions.submit_public_booking]
+verify_jwt = false
+
 [functions.notify_follow_up]
 verify_jwt = false
 
