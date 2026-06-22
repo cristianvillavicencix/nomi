@@ -3,10 +3,11 @@ import type { Identifier } from "ra-core";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { ClientNotesTab, ClientTasksTab } from "@/modules/clients/ClientTabPanels";
+import { ClientTasksTab } from "@/modules/clients/ClientTabPanels";
 import { ClientTabContentCard } from "@/modules/clients/ClientTabSectionCard";
 import { formatTabCount } from "@/modules/clients/clientShowUtils";
 import { LeadActivityPanel } from "@/modules/leads/LeadActivityPanel";
+import { LeadNotesTab } from "@/modules/leads/LeadNotesTab";
 import { LeadPipelinePanel } from "@/modules/leads/LeadPipelinePanel";
 
 type LeadCenterTab = "pipeline" | "activity" | "notes" | "tasks";
@@ -64,10 +65,7 @@ export const LeadCenterContent = ({
 
           <TabsContent value="notes" className="mt-0">
             <ClientTabContentCard flush>
-              <ClientNotesTab
-                contactIds={contactIds}
-                primaryContactId={lead.id}
-              />
+              <LeadNotesTab lead={lead} contactIds={contactIds} />
             </ClientTabContentCard>
           </TabsContent>
 

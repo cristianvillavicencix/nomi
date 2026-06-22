@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useGetList, useGetOne } from "ra-core";
-import { AlertCircle, CalendarClock } from "lucide-react";
+import { AlertCircle, CalendarClock, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
@@ -20,6 +20,10 @@ import {
   isLeadTerminalStage,
 } from "@/modules/leads/leadFollowUpUtils";
 import { getLeadStageDef } from "@/modules/leads/leadStages";
+import {
+  formatLeadWebsiteLabel,
+  resolveLeadWebsiteUrl,
+} from "@/modules/leads/leadBackgroundUtils";
 import { getClientShowPath } from "@/app/routing";
 import { cn } from "@/lib/utils";
 
@@ -80,6 +84,8 @@ export const LeadSummaryCard = ({ record }: { record: Contact }) => {
   const nextFollowUpLabel = formatFollowUpDate(nextFollowUpAt);
   const followUpOverdue = isFollowUpOverdue(nextFollowUpAt);
 
+  const websiteUrl = resolveLeadWebsiteUrl(record, company ?? null);
+
   const statusLabel = record.status
     ? record.status.charAt(0).toUpperCase() + record.status.slice(1)
     : "Lead";
@@ -95,6 +101,19 @@ export const LeadSummaryCard = ({ record }: { record: Contact }) => {
               {statusLabel}
             </Badge>
           </div>
+          {websiteUrl ? (
+            <a
+              href={websiteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1.5 inline-flex max-w-full items-center justify-center gap-1.5 truncate text-sm font-medium text-primary hover:underline"
+            >
+              <Globe className="size-3.5 shrink-0" />
+              <span className="truncate">
+                {formatLeadWebsiteLabel(websiteUrl)}
+              </span>
+            </a>
+          ) : null}
           <Badge
             variant="outline"
             className="mt-2 capitalize"
