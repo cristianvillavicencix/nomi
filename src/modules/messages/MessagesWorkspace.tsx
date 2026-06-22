@@ -1,4 +1,4 @@
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, UserPlus } from "lucide-react";
 import { useState } from "react";
 import type { Identifier } from "ra-core";
 import {
@@ -16,7 +16,13 @@ import type {
   LbsDeal,
   OrganizationMember,
 } from "@/modules/types";
-import { getContactDisplayName, resolveClientSmsPhone } from "@/modules/messages/messageContactUtils";
+import {
+  getClientSmsDraftLabel,
+  resolveClientSmsPhone,
+} from "@/modules/messages/messageContactUtils";
+import { SaveSmsContactDialog } from "@/modules/messages/SaveSmsContactDialog";
+import { Button } from "@/components/ui/button";
+import { useMessagesQuickAccess } from "@/modules/messages/messagesQuickAccessContext";
 import { ConversationThread } from "@/modules/messages/ConversationThread";
 import { ConversationChatHeader } from "@/modules/messages/ConversationChatHeader";
 import { MessagesInbox } from "@/modules/messages/inbox/MessagesInbox";
@@ -38,6 +44,7 @@ export const MessagesWorkspace = ({
   onSelectConversation,
   onClientSmsSent,
   onClientSmsPhoneChange,
+  onClientSmsContactSaved,
   isPending,
   compact = false,
   showMobileChat,
@@ -59,6 +66,7 @@ export const MessagesWorkspace = ({
   onSelectConversation: (conversation: Conversation) => void;
   onClientSmsSent?: (conversation: Conversation) => void;
   onClientSmsPhoneChange?: (phone: string) => void;
+  onClientSmsContactSaved?: (contact: Contact) => void;
   isPending: boolean;
   compact?: boolean;
   showMobileChat?: boolean;
@@ -75,6 +83,8 @@ export const MessagesWorkspace = ({
     close: closeContext,
   } = useMessagesContextPanel();
   const [mobileContextOpen, setMobileContextOpen] = useState(false);
+  const [saveContactOpen, setSaveContactOpen] = useState(false);
+  const { setDraftSms } = useMessagesQuickAccess();
   const showInbox = !isMobile || !showMobileChat;
   const showChat = !isMobile || showMobileChat || !!clientSmsDraft;
   const activeConversation = selectedConversation;
@@ -99,6 +109,23 @@ export const MessagesWorkspace = ({
     (activeContact
       ? resolveClientSmsPhone(activeContact, activeConversation?.external_phone)
       : (activeConversation?.external_phone ?? null));
+
+  const unsavedSmsPhone =
+    activeSmsPhone &&
+    !activeContact &&
+    (clientSmsDraft || (activeConversation?.type === "client" &&
+      !activeConversation.contact_id));
+
+  const handleContactSaved = (contact: Contact) => {
+    if (clientSmsDraft) {
+      setDraftSms({
+        ...clientSmsDraft,
+        contact,
+        externalPhone: activeSmsPhone ?? clientSmsDraft.externalPhone,
+      });
+    }
+    onClientSmsContactSaved?.(contact);
+  };
 
   const handleToggleContext = () => {
     if (isMobile) {
@@ -163,20 +190,42 @@ export const MessagesWorkspace = ({
                 compact={compact}
                 contextOpen={isMobile ? mobileContextOpen : contextOpen}
                 onToggleContext={handleToggleContext}
+                onSaveContact={
+                  unsavedSmsPhone && activeSmsPhone
+                    ? () => setSaveContactOpen(true)
+                    : undefined
+                }
               />
             ) : clientSmsDraft ? (
               <div
                 className={cn(
-                  "border-b border-border/40 bg-background px-4",
+                  "flex items-center justify-between gap-3 border-b border-border/40 bg-background px-4",
                   compact ? "py-2.5" : "py-3",
                 )}
               >
-                <div className="truncate font-semibold">
-                  {getContactDisplayName(clientSmsDraft.contact)}
+                <div className="min-w-0">
+                  <div className="truncate font-semibold">
+                    {getClientSmsDraftLabel(clientSmsDraft)}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {clientSmsDraft.contact?.company_name?.trim() ||
+                      (clientSmsDraft.externalPhone && !clientSmsDraft.contact
+                        ? "Unsaved number"
+                        : "New SMS")}
+                  </div>
                 </div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {clientSmsDraft.contact.company_name?.trim() || "New SMS"}
-                </div>
+                {unsavedSmsPhone && activeSmsPhone ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-1.5"
+                    onClick={() => setSaveContactOpen(true)}
+                  >
+                    <UserPlus className="size-3.5" />
+                    Save contact
+                  </Button>
+                ) : null}
               </div>
             ) : null}
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -195,7 +244,7 @@ export const MessagesWorkspace = ({
             <MessageSquare className="size-9 text-muted-foreground/50" />
             <p className="mt-4 text-base font-medium">Select a conversation</p>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              Pick a chat on the left or search for a client to start an SMS.
+              Pick a chat on the left or search for a client or phone number to start an SMS.
             </p>
           </div>
         )}
@@ -225,6 +274,16 @@ export const MessagesWorkspace = ({
           </div>
         </SheetContent>
       </Sheet>
+
+      {unsavedSmsPhone && activeSmsPhone ? (
+        <SaveSmsContactDialog
+          open={saveContactOpen}
+          onOpenChange={setSaveContactOpen}
+          phoneE164={activeSmsPhone}
+          conversation={activeConversation}
+          onSaved={handleContactSaved}
+        />
+      ) : null}
     </div>
   );
 };

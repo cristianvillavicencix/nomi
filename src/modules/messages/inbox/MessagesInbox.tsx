@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, UserPlus } from "lucide-react";
+import { MessageSquare, Search, UserPlus } from "lucide-react";
 import { useGetList, useNotify, useRefresh } from "ra-core";
 import type { Identifier } from "ra-core";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,13 @@ import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCou
 import {
   contactAlreadyHasClientConversation,
   contactHasSmsPhone,
+  findClientConversationByPhone,
   getContactDisplayName,
   getContactPhoneLabel,
+  getPrimaryContactPhone,
+  normalizePhoneSearchQuery,
 } from "@/modules/messages/messageContactUtils";
+import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { getInitials } from "@/modules/messages/conversationDisplay";
 
 const INBOX_PAGE_SIZE = 30;
@@ -67,6 +71,40 @@ const MessageSearchContactItem = ({
   );
 };
 
+const MessageSearchPhoneItem = ({
+  phoneE164,
+  disabled,
+  onSelect,
+}: {
+  phoneE164: string;
+  disabled?: boolean;
+  onSelect: (phoneE164: string) => void;
+}) => {
+  const display = formatUsPhoneDisplayFromAny(phoneE164);
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted/35",
+        disabled && "opacity-60",
+      )}
+      onClick={() => onSelect(phoneE164)}
+    >
+      <span className="flex size-11 items-center justify-center rounded-full bg-sky-500/10 text-sky-800 dark:text-sky-200">
+        <MessageSquare className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium">Text {display}</span>
+        <span className="block truncate text-sm text-muted-foreground">
+          Not saved as a contact · start a new SMS
+        </span>
+      </span>
+    </button>
+  );
+};
+
 export const MessagesInbox = (props: {
   conversations: Conversation[];
   deals: LbsDeal[];
@@ -90,7 +128,8 @@ export const MessagesInbox = (props: {
   const [startingContactId, setStartingContactId] = useState<Identifier | null>(
     null,
   );
-  const { openSms } = useMessagesQuickAccess();
+  const [startingPhone, setStartingPhone] = useState<string | null>(null);
+  const { openSms, openSmsToPhone } = useMessagesQuickAccess();
   const notify = useNotify();
   const refresh = useRefresh();
   const unread = useMessagesUnreadCounts(
@@ -158,6 +197,31 @@ export const MessagesInbox = (props: {
     );
   }, [props.conversations, debouncedQuery, searchedContacts]);
 
+  const searchedPhoneE164 = useMemo(
+    () => normalizePhoneSearchQuery(debouncedQuery),
+    [debouncedQuery],
+  );
+
+  const showPhoneSmsOption = useMemo(() => {
+    if (!searchedPhoneE164) return false;
+    const existing = findClientConversationByPhone(
+      props.conversations,
+      searchedPhoneE164,
+    );
+    if (existing?.last_message_at) return false;
+    const matchingContact = searchedContacts.find((contact) => {
+      if (!contactHasSmsPhone(contact)) return false;
+      return getPrimaryContactPhone(contact) === searchedPhoneE164;
+    });
+    if (
+      matchingContact &&
+      !contactAlreadyHasClientConversation(matchingContact, props.conversations)
+    ) {
+      return false;
+    }
+    return true;
+  }, [props.conversations, searchedContacts, searchedPhoneE164]);
+
   const handleStartClientSms = async (contact: Contact) => {
     setStartingContactId(contact.id);
     try {
@@ -174,6 +238,23 @@ export const MessagesInbox = (props: {
       );
     } finally {
       setStartingContactId(null);
+    }
+  };
+
+  const handleStartPhoneSms = async (phoneE164: string) => {
+    setStartingPhone(phoneE164);
+    try {
+      await openSmsToPhone(phoneE164);
+      refresh();
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Could not start SMS conversation",
+        { type: "error" },
+      );
+    } finally {
+      setStartingPhone(null);
     }
   };
 
@@ -198,7 +279,7 @@ export const MessagesInbox = (props: {
                 query: event.target.value,
               }))
             }
-            placeholder="Search conversations or clients…"
+            placeholder="Search conversations, clients, or phone…"
             className="h-9 pl-9"
           />
         </div>
@@ -257,8 +338,26 @@ export const MessagesInbox = (props: {
       )}
 
       {debouncedQuery.length > 0 &&
-      (isSearchingContacts || newSmsContacts.length > 0) ? (
+      (showPhoneSmsOption ||
+        isSearchingContacts ||
+        newSmsContacts.length > 0) ? (
         <div className="border-t border-border/40 px-2 py-3">
+          {showPhoneSmsOption && searchedPhoneE164 ? (
+            <div className="mb-3">
+              <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <MessageSquare className="size-3.5" />
+                Text a number
+              </div>
+              <MessageSearchPhoneItem
+                phoneE164={searchedPhoneE164}
+                disabled={startingPhone === searchedPhoneE164}
+                onSelect={(phone) => void handleStartPhoneSms(phone)}
+              />
+            </div>
+          ) : null}
+
+          {isSearchingContacts || newSmsContacts.length > 0 ? (
+            <>
           <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <UserPlus className="size-3.5" />
             Start SMS with a contact
@@ -269,7 +368,9 @@ export const MessagesInbox = (props: {
             </p>
           ) : newSmsContacts.length === 0 ? (
             <p className="px-3 py-2 text-sm text-muted-foreground">
-              No new contacts with phone numbers match this search.
+              {searchedPhoneE164
+                ? "No matching contacts with phone numbers."
+                : "No new contacts with phone numbers match this search."}
             </p>
           ) : (
             <div className="space-y-0.5">
@@ -283,6 +384,8 @@ export const MessagesInbox = (props: {
               ))}
             </div>
           )}
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>

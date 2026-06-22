@@ -14,6 +14,7 @@ import {
 } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientSmsDraft, Contact, Conversation } from "@/modules/types";
+import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { AppNotificationsLayer } from "@/modules/notifications/AppNotificationsLayer";
 import { persistConversationRead } from "@/modules/messages/persistConversationRead";
 import { useOpenClientSms } from "@/modules/messages/useClientSms";
@@ -39,7 +40,8 @@ export const MessagesQuickAccessProvider = ({
   const queryClient = useQueryClient();
   const dataProvider = useDataProvider();
   const { identity } = useGetIdentity();
-  const { findClientConversation } = useOpenClientSms();
+  const { findClientConversation, findClientConversationByPhone } =
+    useOpenClientSms();
   const [isOpening, setIsOpening] = useState(false);
   const [isDockOpen, setIsDockOpen] = useState(false);
   const [focusedConversation, setFocusedConversation] =
@@ -145,6 +147,50 @@ export const MessagesQuickAccessProvider = ({
     [findClientConversation, location.pathname, navigate, notify, viewConversation],
   );
 
+  const openSmsToPhone = useCallback(
+    async (phoneRaw: string) => {
+      const normalized = normalizeUsPhoneToE164(phoneRaw);
+      if (!normalized) {
+        notify("Enter a valid US phone number (10 digits)", { type: "warning" });
+        return;
+      }
+
+      setIsOpening(true);
+      setDraftSms(null);
+      setFocusedConversation(null);
+
+      if (!location.pathname.startsWith("/messages")) {
+        navigate("/messages");
+      }
+
+      try {
+        const existing = await findClientConversationByPhone(normalized);
+        if (existing?.last_message_at) {
+          viewConversation(existing);
+          setFocusedConversation(existing);
+        } else {
+          setDraftSms({ contact: null, externalPhone: normalized });
+        }
+      } catch (error) {
+        notify(
+          error instanceof Error
+            ? error.message
+            : "Failed to open SMS conversation",
+          { type: "error" },
+        );
+      } finally {
+        setIsOpening(false);
+      }
+    },
+    [
+      findClientConversationByPhone,
+      location.pathname,
+      navigate,
+      notify,
+      viewConversation,
+    ],
+  );
+
   const openInbox = useCallback(() => {
     navigate("/messages");
   }, [navigate]);
@@ -161,6 +207,7 @@ export const MessagesQuickAccessProvider = ({
   const value = useMemo<MessagesQuickAccessContextValue>(
     () => ({
       openSms,
+      openSmsToPhone,
       isOpening,
       isDockOpen,
       focusedConversation,
@@ -190,6 +237,7 @@ export const MessagesQuickAccessProvider = ({
       markConversationRead,
       openInbox,
       openSms,
+      openSmsToPhone,
       setDraftSms,
       toggleInbox,
       viewConversation,

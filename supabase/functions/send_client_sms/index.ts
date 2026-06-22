@@ -110,7 +110,7 @@ Deno.serve((req: Request) =>
         let pendingNewConversation: {
           orgId: number;
           externalPhone: string;
-          contactId: number;
+          contactId?: number | null;
           dealId: number | null;
           createdByMemberId: number;
           title: string;
@@ -195,10 +195,32 @@ Deno.serve((req: Request) =>
           }
         } else {
           const contactId = Number(payload.contact_id);
-          if (!Number.isFinite(contactId)) {
-            throw new Error("conversation_id or contact_id is required");
-          }
+          const requestedPhoneRaw = payload.external_phone?.trim();
+          const requestedPhone = requestedPhoneRaw
+            ? normalizeUsPhoneToE164(requestedPhoneRaw)
+            : null;
 
+          if (!Number.isFinite(contactId)) {
+            if (!requestedPhone) {
+              throw new Error(
+                "conversation_id, contact_id, or a valid external_phone is required",
+              );
+            }
+
+            externalPhone = requestedPhone;
+            pendingNewConversation = {
+              orgId,
+              externalPhone: requestedPhone,
+              contactId: null,
+              dealId:
+                payload.deal_id != null &&
+                Number.isFinite(Number(payload.deal_id))
+                  ? Number(payload.deal_id)
+                  : null,
+              createdByMemberId: memberId,
+              title: requestedPhone,
+            };
+          } else {
           const { data: contact, error: contactError } = await supabaseAdmin
             .from("contacts")
             .select("id, first_name, last_name, phone_jsonb, company_id")
@@ -257,6 +279,7 @@ Deno.serve((req: Request) =>
               `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
               normalizedPhone,
           };
+          }
         }
 
         if (body.includes("{{")) {

@@ -330,6 +330,25 @@ export const messagingProvider = {
 
     return (data as import("@/modules/types").Conversation | null) ?? null;
   },
+  async findClientConversationByPhone(externalPhone: string) {
+    const resolvedPhone = normalizeUsPhoneToE164(externalPhone);
+    if (!resolvedPhone) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("type", "client")
+      .eq("external_phone", resolvedPhone)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message ?? "Failed to load client conversation");
+    }
+
+    return (data as import("@/modules/types").Conversation | null) ?? null;
+  },
   async ensureClientConversation(params: {
     contactId: Identifier;
     authorMemberId: Identifier;

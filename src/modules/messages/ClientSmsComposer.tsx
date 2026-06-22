@@ -11,6 +11,10 @@ import { useSendClientSms } from "@/modules/messages/useClientSms";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { ClientSmsPhoneField } from "@/modules/messages/ClientSmsPhoneField";
 import { resolveClientSmsPhone } from "@/modules/messages/messageContactUtils";
+import {
+  formatUsPhoneDisplayFromAny,
+  normalizeUsPhoneToE164,
+} from "@/utils/phone";
 import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
 
 type PendingAttachment = {
@@ -81,16 +85,17 @@ export const ClientSmsComposer = ({
     });
   }, [prefillRequest?.key, prefillRequest?.text]);
 
+  const resolvedExternalPhone = contact
+    ? resolveClientSmsPhone(contact, externalPhone)
+    : externalPhone
+      ? normalizeUsPhoneToE164(externalPhone)
+      : null;
+
   const canSend =
     !disabled &&
     !isSending &&
     (body.trim().length > 0 || pendingFiles.length > 0) &&
-    (conversationId != null ||
-      (contact?.id != null && resolveClientSmsPhone(contact, externalPhone) != null));
-
-  const resolvedExternalPhone = contact
-    ? resolveClientSmsPhone(contact, externalPhone)
-    : null;
+    (conversationId != null || resolvedExternalPhone != null);
 
   if (disabled) {
     return (
@@ -249,6 +254,14 @@ export const ClientSmsComposer = ({
             </button>
           ) : null}
         </div>
+      ) : resolvedExternalPhone ? (
+        <p className="min-w-0 truncate text-sm text-muted-foreground">
+          <span>To </span>
+          <span className="font-medium text-foreground">
+            {formatUsPhoneDisplayFromAny(resolvedExternalPhone)}
+          </span>
+          <span className="text-muted-foreground"> · Unsaved number</span>
+        </p>
       ) : null}
 
       {isInternalNote ? (

@@ -74,6 +74,7 @@ export const ConversationChatHeader = ({
   compact = false,
   contextOpen = false,
   onToggleContext,
+  onSaveContact,
 }: {
   conversation: Conversation;
   deals: LbsDeal[];
@@ -86,6 +87,7 @@ export const ConversationChatHeader = ({
   compact?: boolean;
   contextOpen?: boolean;
   onToggleContext?: () => void;
+  onSaveContact?: () => void;
 }) => {
   const display = getConversationDisplay({
     conversation,
@@ -218,6 +220,7 @@ export const ConversationChatHeader = ({
             dealLabel={conversation.type === "client" ? "Open" : "Project"}
             contextOpen={contextOpen}
             onToggleContext={onToggleContext}
+            onSaveContact={onSaveContact}
           />
         </div>
       </div>

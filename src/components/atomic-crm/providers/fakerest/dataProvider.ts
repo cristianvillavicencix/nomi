@@ -1426,8 +1426,40 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
           dealId,
           externalPhone,
         });
+    } else if (externalPhone) {
+      const resolvedPhone = normalizeUsPhoneToE164(externalPhone);
+      if (!resolvedPhone) {
+        throw new Error("A valid US phone number is required");
+      }
+      const { data: existing = [] } = await baseDataProvider.getList<
+        import("@/modules/types").Conversation
+      >("conversations", {
+        filter: {
+          "type@eq": "client",
+          "external_phone@eq": resolvedPhone,
+        },
+        pagination: { page: 1, perPage: 1 },
+        sort: { field: "id", order: "ASC" },
+      });
+      conversation =
+        existing[0] ??
+        (
+          await baseDataProvider.create<import("@/modules/types").Conversation>(
+            "conversations",
+            {
+              data: {
+                type: "client",
+                title: resolvedPhone,
+                external_phone: resolvedPhone,
+                contact_id: null,
+                deal_id: dealId ?? null,
+                created_by_member_id: 1,
+              },
+            },
+          )
+        ).data;
     } else {
-      throw new Error("conversation_id or contact_id is required");
+      throw new Error("conversation_id, contact_id, or external_phone is required");
     }
 
     const message = await baseDataProvider.create<
@@ -1462,6 +1494,18 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       filter: phone
         ? { "type@eq": "client", "external_phone@eq": phone }
         : { "type@eq": "client", "contact_id@eq": contactId },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "id", order: "ASC" },
+    });
+    return existing[0] ?? null;
+  },
+  findClientConversationByPhone: async (externalPhone) => {
+    const phone = normalizeUsPhoneToE164(externalPhone);
+    if (!phone) return null;
+    const { data: existing = [] } = await baseDataProvider.getList<
+      import("@/modules/types").Conversation
+    >("conversations", {
+      filter: { "type@eq": "client", "external_phone@eq": phone },
       pagination: { page: 1, perPage: 1 },
       sort: { field: "id", order: "ASC" },
     });

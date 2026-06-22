@@ -1,6 +1,6 @@
-import { useState, type MouseEvent } from "react";
+import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { Draggable } from "@hello-pangea/dnd";
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 import { useDelete, useNotify, useRefresh } from "ra-core";
 import {
   GripVertical,
@@ -59,6 +59,7 @@ export type LeadCardProps = {
 export const LeadCard = ({ lead, index }: LeadCardProps) => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const navigate = useNavigate();
   const notify = useNotify();
   const refresh = useRefresh();
   const [deleteOne, { isPending: isDeleting }] = useDelete<Contact>();
@@ -97,8 +98,16 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
     );
   };
 
+  const stopCardNavigation = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
+
   const stopCardAction = (event: MouseEvent) => {
+    event.stopPropagation();
     event.preventDefault();
+  };
+
+  const stopDragHandleClick = (event: MouseEvent) => {
     event.stopPropagation();
   };
 
@@ -117,11 +126,26 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
 
   return (
     <Draggable draggableId={String(lead.id)} index={index}>
-      {(provided, snapshot) => (
+      {(provided, snapshot) => {
+        const openLead = () => {
+          if (snapshot.isDragging) return;
+          navigate(getLeadShowPath(lead.id));
+        };
+
+        return (
         <div ref={provided.innerRef} {...provided.draggableProps}>
           <Card
+            role="button"
+            tabIndex={0}
+            onClick={openLead}
+            onKeyDown={(event: KeyboardEvent) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openLead();
+              }
+            }}
             className={cn(
-              "group relative gap-0 rounded-lg border-[0.5px] border-border/80 p-2 shadow-none transition-shadow",
+              "group relative cursor-pointer gap-0 rounded-lg border-[0.5px] border-border/80 p-2 shadow-none transition-shadow",
               snapshot.isDragging
                 ? "rotate-1 shadow-xl ring-2 ring-primary/40"
                 : "hover:shadow-sm",
@@ -130,6 +154,8 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
             <div className="absolute right-0.5 top-0.5 z-10 flex flex-col gap-0.5">
               <div
                 {...provided.dragHandleProps}
+                onClick={stopDragHandleClick}
+                onMouseDown={stopDragHandleClick}
                 className={cn(
                   cardActionClassName(snapshot.isDragging),
                   "cursor-grab active:cursor-grabbing",
@@ -176,27 +202,17 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
 
             <div className="pr-5">
               <div className="flex items-start gap-2">
-                <Link
-                  to={getLeadShowPath(lead.id)}
-                  className="shrink-0 focus-visible:outline-none"
-                  onClick={stopCardAction}
-                >
-                  <Avatar className="size-[34px]">
-                    <AvatarFallback className="bg-muted text-[11px] font-semibold">
-                      {getLeadInitials(lead)}
-                    </AvatarFallback>
-                  </Avatar>
-                </Link>
+                <Avatar className="size-[34px] shrink-0">
+                  <AvatarFallback className="bg-muted text-[11px] font-semibold">
+                    {getLeadInitials(lead)}
+                  </AvatarFallback>
+                </Avatar>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-1">
-                    <Link
-                      to={getLeadShowPath(lead.id)}
-                      className="min-w-0 truncate text-sm font-medium leading-snug hover:underline focus-visible:outline-none"
-                      onClick={stopCardAction}
-                    >
+                    <p className="min-w-0 truncate text-sm font-medium leading-snug group-hover:underline">
                       {name}
-                    </Link>
+                    </p>
                     <SourceIcon
                       className="size-3.5 shrink-0 text-muted-foreground"
                       aria-label={source.label}
@@ -266,7 +282,7 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                       size="sm"
                       className="h-7 flex-1 gap-1 px-2 text-[11px]"
                       asChild
-                      onClick={stopCardAction}
+                      onClick={stopCardNavigation}
                     >
                       <a href={phone.telHref}>
                         <PhoneCall className="size-3" />
@@ -328,7 +344,8 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
             />
           </Card>
         </div>
-      )}
+        );
+      }}
     </Draggable>
   );
 };

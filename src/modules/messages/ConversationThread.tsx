@@ -17,7 +17,7 @@ import {
   ConversationMessageBubble,
   ConversationSystemMessageNote,
 } from "@/modules/messages/ConversationMessageBubble";
-import { getContactDisplayName } from "@/modules/messages/messageContactUtils";
+import { getClientSmsDraftLabel } from "@/modules/messages/messageContactUtils";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 
 const SEND_MESSAGES_CAPABILITY = "messaging.send";
@@ -83,7 +83,7 @@ export const ConversationThread = ({
   useEffect(() => {
     setBody("");
     setReplyToMessageId(null);
-  }, [conversation?.id, clientSmsDraft?.contact.id]);
+  }, [conversation?.id, clientSmsDraft?.contact?.id, clientSmsDraft?.externalPhone]);
 
   useLayoutEffect(() => {
     if (!conversation && !clientSmsDraft) return;
@@ -96,7 +96,8 @@ export const ConversationThread = ({
   }, [
     messages.length,
     conversation?.id,
-    clientSmsDraft?.contact.id,
+    clientSmsDraft?.contact?.id,
+    clientSmsDraft?.externalPhone,
     isLoadingMessages,
     conversation,
     clientSmsDraft,
@@ -157,9 +158,11 @@ export const ConversationThread = ({
   };
 
   const draftLabel = clientSmsDraft
-    ? getContactDisplayName(clientSmsDraft.contact)
+    ? getClientSmsDraftLabel(clientSmsDraft)
     : null;
-  const draftCompany = clientSmsDraft?.contact.company_name?.trim();
+  const draftCompany = clientSmsDraft?.contact?.company_name?.trim();
+  const draftIsUnsavedNumber =
+    !clientSmsDraft?.contact && Boolean(clientSmsDraft?.externalPhone);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
@@ -186,6 +189,10 @@ export const ConversationThread = ({
             {draftCompany ? (
               <p className="mt-1 text-sm text-muted-foreground">
                 {draftCompany}
+              </p>
+            ) : draftIsUnsavedNumber ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Unsaved number
               </p>
             ) : null}
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">

@@ -1,6 +1,9 @@
 import type { Contact, Conversation } from "@/modules/types";
-import { normalizeUsPhoneToE164 } from "@/utils/phone";
-import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
+import {
+  extractDigits,
+  normalizeUsPhoneToE164,
+  formatUsPhoneDisplayFromAny,
+} from "@/utils/phone";
 
 export type ContactPhoneEntry = {
   e164: string;
@@ -80,4 +83,41 @@ export const contactAlreadyHasClientConversation = (
     }
     return false;
   });
+};
+
+/** True when the query looks like a phone number (not a name/email search). */
+export const looksLikePhoneSearchQuery = (query: string): boolean => {
+  const trimmed = query.trim();
+  if (!trimmed) return false;
+  const withoutExtension = trimmed.replace(
+    /(?:\s|,|;)*(?:ext(?:ension)?\.?|x)\s*\d+\s*$/i,
+    "",
+  );
+  if (/[a-zA-Z@]/.test(withoutExtension)) return false;
+  return extractDigits(trimmed).length >= 10;
+};
+
+export const normalizePhoneSearchQuery = (query: string): string | null => {
+  if (!looksLikePhoneSearchQuery(query)) return null;
+  return normalizeUsPhoneToE164(query);
+};
+
+export const findClientConversationByPhone = (
+  conversations: Conversation[],
+  e164: string,
+) =>
+  conversations.find(
+    (conversation) =>
+      conversation.type === "client" && conversation.external_phone === e164,
+  );
+
+export const getClientSmsDraftLabel = (draft: {
+  contact?: Contact | null;
+  externalPhone?: string | null;
+}) => {
+  if (draft.contact) return getContactDisplayName(draft.contact);
+  if (draft.externalPhone) {
+    return formatUsPhoneDisplayFromAny(draft.externalPhone);
+  }
+  return "New SMS";
 };

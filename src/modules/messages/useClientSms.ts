@@ -4,6 +4,7 @@ import { useDataProvider, type Identifier } from "ra-core";
 import type { Contact, Conversation, ConversationMessage } from "@/modules/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
+import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import {
   appendConversationMessageToCache,
   refreshConversationLists,
@@ -28,7 +29,18 @@ export const useOpenClientSms = () => {
     [dataProvider],
   );
 
-  return { findClientConversation };
+  const findClientConversationByPhone = useCallback(
+    async (phone: string): Promise<Conversation | null> => {
+      const normalized = normalizeUsPhoneToE164(phone);
+      if (!normalized) {
+        throw new Error("Enter a valid US phone number");
+      }
+      return dataProvider.findClientConversationByPhone(normalized);
+    },
+    [dataProvider],
+  );
+
+  return { findClientConversation, findClientConversationByPhone };
 };
 
 export const useSendClientSms = () => {

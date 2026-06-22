@@ -524,9 +524,9 @@ export type VoiceCall = {
 } & Pick<RaRecord, "id">;
 
 export type ClientSmsDraft = {
-  contact: Contact;
+  contact?: Contact | null;
   dealId?: Identifier | null;
-  /** E.164 number to use when the contact has multiple phones. */
+  /** E.164 number to use when the contact has multiple phones, or for phone-only SMS. */
   externalPhone?: string | null;
 };
 

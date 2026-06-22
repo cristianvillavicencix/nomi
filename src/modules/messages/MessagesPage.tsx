@@ -3,7 +3,7 @@ import { useDataProvider, useGetIdentity } from "ra-core";
 import { PageLayout } from "@/components/atomic-crm/layout/page-shell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { Conversation } from "@/modules/types";
+import type { Contact, Conversation } from "@/modules/types";
 import { MessagesWorkspace } from "@/modules/messages/MessagesWorkspace";
 import { INBOX_PAGE_SIZE } from "@/modules/messages/inbox/MessagesInbox";
 import { useInboxConversations } from "@/modules/messages/useInboxConversations";
@@ -87,6 +87,11 @@ export const MessagesPage = () => {
 
   const handleClientSmsPhoneChange = useCallback(
     async (phone: string) => {
+      if (draftSms && !draftSms.contact) {
+        setDraftSms({ ...draftSms, externalPhone: phone });
+        return;
+      }
+
       const contact =
         draftSms?.contact ??
         (selectedConversation?.contact_id != null
@@ -132,6 +137,22 @@ export const MessagesPage = () => {
     ],
   );
 
+  const handleClientSmsContactSaved = useCallback(
+    (contact: Contact) => {
+      if (draftSms) {
+        setDraftSms({ ...draftSms, contact });
+        return;
+      }
+      if (selectedConversation) {
+        setSelectedConversation({
+          ...selectedConversation,
+          contact_id: contact.id,
+        });
+      }
+    },
+    [draftSms, selectedConversation, setDraftSms],
+  );
+
   return (
     <PageLayout className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border/40 bg-background shadow-sm">
       <MessagesWorkspace
@@ -146,6 +167,7 @@ export const MessagesPage = () => {
         onSelectConversation={handleSelectConversation}
         onClientSmsSent={handleClientSmsSent}
         onClientSmsPhoneChange={(phone) => void handleClientSmsPhoneChange(phone)}
+        onClientSmsContactSaved={handleClientSmsContactSaved}
         isPending={isPending}
         isMobile={isMobile}
         showMobileChat={mobileShowChat}

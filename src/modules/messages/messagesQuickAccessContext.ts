@@ -4,6 +4,7 @@ import type { ClientSmsDraft, Contact, Conversation } from "@/modules/types";
 
 export type MessagesQuickAccessContextValue = {
   openSms: (contact: Contact, dealId?: Identifier | null) => Promise<void>;
+  openSmsToPhone: (phone: string) => Promise<void>;
   isOpening: boolean;
   isDockOpen: boolean;
   focusedConversation: Conversation | null;

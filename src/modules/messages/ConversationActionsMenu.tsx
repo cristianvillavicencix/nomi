@@ -5,6 +5,7 @@ import {
   FolderKanban,
   PanelRight,
   Share2,
+  UserPlus,
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export const ConversationActionsMenu = ({
   dealLabel = "Open project",
   contextOpen = false,
   onToggleContext,
+  onSaveContact,
 }: {
   conversation: Conversation;
   members: OrganizationMember[];
@@ -36,6 +38,7 @@ export const ConversationActionsMenu = ({
   dealLabel?: string;
   contextOpen?: boolean;
   onToggleContext?: () => void;
+  onSaveContact?: () => void;
 }) => {
   const { data: identity } = useGetIdentity();
   const [assignOpen, setAssignOpen] = useState(false);
@@ -47,7 +50,11 @@ export const ConversationActionsMenu = ({
   );
 
   const hasActions =
-    onToggleContext != null || dealHref != null || canAssign || canShare;
+    onToggleContext != null ||
+    dealHref != null ||
+    canAssign ||
+    canShare ||
+    onSaveContact != null;
 
   if (!hasActions) return null;
 
@@ -61,6 +68,12 @@ export const ConversationActionsMenu = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
+          {onSaveContact ? (
+            <DropdownMenuItem onSelect={onSaveContact}>
+              <UserPlus className="size-4" />
+              Save contact
+            </DropdownMenuItem>
+          ) : null}
           {onToggleContext ? (
             <DropdownMenuItem onClick={onToggleContext}>
               <PanelRight className="size-4" />
