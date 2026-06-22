@@ -48,15 +48,38 @@ Deno.serve(
           .eq("org_id", member.org_id)
           .maybeSingle();
 
-        if (!ticket?.invoice_id) {
+        if (!ticket?.id) {
+          return createErrorResponse(404, "Ticket not found");
+        }
+
+        let invoiceId = ticket.invoice_id ? Number(ticket.invoice_id) : null;
+
+        if (!invoiceId) {
+          const { data: deliverableLink } = await supabaseAdmin
+            .from("ticket_deliverables")
+            .select("invoiced_invoice_id")
+            .eq("ticket_id", ticket.id)
+            .eq("org_id", member.org_id)
+            .not("invoiced_invoice_id", "is", null)
+            .is("delivered_at", null)
+            .order("id", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          invoiceId = deliverableLink?.invoiced_invoice_id
+            ? Number(deliverableLink.invoiced_invoice_id)
+            : null;
+        }
+
+        if (!invoiceId) {
           return createErrorResponse(
             400,
-            "This ticket has no invoice linked for delivery",
+            "This ticket has no paid invoice with files ready to deliver",
           );
         }
 
         const result = await deliverTicketAfterInvoicePayment(supabaseAdmin, {
-          invoiceId: Number(ticket.invoice_id),
+          invoiceId,
           orgId: member.org_id,
         });
 

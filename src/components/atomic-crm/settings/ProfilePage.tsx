@@ -37,6 +37,7 @@ import { supabase } from "../providers/supabase/supabase";
 import type { CrmDataProvider } from "../providers/types";
 import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 import { ProfileNotificationsSection } from "./ProfileNotificationsSection";
+import { ProfileDesktopNotificationsSection } from "@/modules/notifications/ProfileDesktopNotificationsSection";
 import { EditAvatarDialog } from "@/components/avatar/EditAvatarDialog";
 import {
   initialsOf,
@@ -219,6 +220,7 @@ const ProfileForm = ({
         </CardContent>
       </Card>
       <ProfileNotificationsSection />
+      <ProfileDesktopNotificationsSection />
       {record ? (
         <EditAvatarDialog
           open={avatarDialogOpen}

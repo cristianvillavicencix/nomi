@@ -14,10 +14,10 @@ import {
 } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientSmsDraft, Contact, Conversation } from "@/modules/types";
-import { MessagesNotificationsLayer } from "@/modules/messages/MessagesNotificationsLayer";
+import { AppNotificationsLayer } from "@/modules/notifications/AppNotificationsLayer";
 import { persistConversationRead } from "@/modules/messages/persistConversationRead";
 import { useOpenClientSms } from "@/modules/messages/useClientSms";
-import { primeAudioContext } from "@/modules/messages/messageNotificationSound";
+import { primeNotificationAudioContext } from "@/lib/notificationSound";
 import {
   MessagesQuickAccessContext,
   type MessagesQuickAccessContextValue,
@@ -50,7 +50,7 @@ export const MessagesQuickAccessProvider = ({
 
   useEffect(() => {
     const handler = () => {
-      primeAudioContext();
+      primeNotificationAudioContext();
       window.removeEventListener("click", handler);
       window.removeEventListener("keydown", handler);
     };
@@ -199,7 +199,7 @@ export const MessagesQuickAccessProvider = ({
   return (
     <MessagesQuickAccessContext.Provider value={value}>
       {children}
-      <MessagesNotificationsLayer />
+      <AppNotificationsLayer />
     </MessagesQuickAccessContext.Provider>
   );
 };

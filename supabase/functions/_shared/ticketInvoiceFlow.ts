@@ -1034,11 +1034,7 @@ export async function startNewTicketInvoiceCycle(
 
   const now = new Date().toISOString();
 
-  await supabase
-    .from("client_invoices")
-    .update({ ticket_id: null, updated_at: now })
-    .eq("id", invoice.id)
-    .eq("org_id", params.orgId);
+  // Keep client_invoices.ticket_id on the previous invoice so payment still delivers its files.
 
   await supabase
     .from("tickets")

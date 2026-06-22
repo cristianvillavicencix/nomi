@@ -23,11 +23,40 @@ export async function deliverTicketAfterInvoicePayment(
     .eq("org_id", params.orgId)
     .maybeSingle();
 
-  if (!invoice?.ticket_id || invoice.status !== "paid") {
+  if (!invoice?.id || invoice.status !== "paid") {
     return { delivered: false, skipped: true, reason: "no_ticket_or_unpaid" };
   }
 
-  const ticketId = Number(invoice.ticket_id);
+  let ticketId = invoice.ticket_id ? Number(invoice.ticket_id) : null;
+
+  if (!ticketId) {
+    const { data: deliverableLink } = await supabase
+      .from("ticket_deliverables")
+      .select("ticket_id")
+      .eq("org_id", params.orgId)
+      .eq("invoiced_invoice_id", invoice.id)
+      .is("delivered_at", null)
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    ticketId = deliverableLink?.ticket_id
+      ? Number(deliverableLink.ticket_id)
+      : null;
+  }
+
+  if (!ticketId) {
+    return { delivered: false, skipped: true, reason: "no_ticket" };
+  }
+
+  const nowIso = new Date().toISOString();
+  if (!invoice.ticket_id) {
+    await supabase
+      .from("client_invoices")
+      .update({ ticket_id: ticketId, updated_at: nowIso })
+      .eq("id", invoice.id)
+      .eq("org_id", params.orgId);
+  }
 
   const { data: ticket } = await supabase
     .from("tickets")
@@ -163,14 +192,57 @@ export async function deliverTicketAfterInvoicePayment(
     .eq("invoiced_invoice_id", invoice.id)
     .is("delivered_at", null);
 
+  const [
+    { count: undeliveredInvoiced },
+    { count: unbilledDeliverables },
+    { count: otherSentInvoices },
+  ] = await Promise.all([
+    supabase
+      .from("ticket_deliverables")
+      .select("id", { count: "exact", head: true })
+      .eq("ticket_id", ticket.id)
+      .eq("org_id", params.orgId)
+      .not("invoiced_invoice_id", "is", null)
+      .is("delivered_at", null),
+    supabase
+      .from("ticket_deliverables")
+      .select("id", { count: "exact", head: true })
+      .eq("ticket_id", ticket.id)
+      .eq("org_id", params.orgId)
+      .is("invoiced_invoice_id", null),
+    supabase
+      .from("client_invoices")
+      .select("id", { count: "exact", head: true })
+      .eq("ticket_id", ticket.id)
+      .eq("org_id", params.orgId)
+      .eq("status", "sent")
+      .neq("id", invoice.id),
+  ]);
+
+  const ticketUpdate: {
+    updated_at: string;
+    status?: string;
+    delivery_status?: string;
+    delivered_at?: string | null;
+  } = { updated_at: now };
+
+  if (
+    (undeliveredInvoiced ?? 0) === 0 &&
+    (unbilledDeliverables ?? 0) === 0 &&
+    (otherSentInvoices ?? 0) === 0
+  ) {
+    ticketUpdate.status = "resolved";
+    ticketUpdate.delivery_status = "delivered";
+    ticketUpdate.delivered_at = now;
+  } else if ((unbilledDeliverables ?? 0) > 0) {
+    ticketUpdate.delivery_status = "ready";
+  } else {
+    ticketUpdate.delivery_status = "invoice_sent";
+  }
+
   await supabase
     .from("tickets")
-    .update({
-      status: "resolved",
-      delivery_status: "delivered",
-      delivered_at: now,
-      updated_at: now,
-    })
+    .update(ticketUpdate)
     .eq("id", ticket.id)
     .eq("org_id", params.orgId);
 

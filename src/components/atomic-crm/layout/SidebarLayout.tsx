@@ -36,6 +36,7 @@ import {
   PageActionsTrailingSlot,
 } from "@/components/atomic-crm/layout/PageActions";
 import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
+import { NotificationCenterButton } from "@/modules/notifications/NotificationCenterButton";
 import {
   isProposalFocusModePath,
   isProposalPreviewPath,
@@ -251,6 +252,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
         <div className="flex shrink-0 items-center gap-2">
           <PageActionsTrailingSlot className="flex items-center" />
+          <NotificationCenterButton />
           <SpotlightSearchButton />
         </div>
       </header>
@@ -259,6 +261,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
       <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
         <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
         <PageActionsTrailingSlot className="ml-auto flex items-center" />
+        <NotificationCenterButton />
         <SpotlightSearchButton variant="hidden" />
       </header>
         );

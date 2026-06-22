@@ -826,13 +826,21 @@ export const TicketBillingSidePanel = ({
       formatShortDate(tabInvoice?.paid_at) ??
       formatShortDate(tabInvoice?.sent_at);
     const invoiceFiles = getDeliverablesForInvoice(deliverables, invoiceId);
+    const allFilesDelivered =
+      invoiceFiles.length > 0 &&
+      invoiceFiles.every((file) => Boolean(file.delivered_at));
+    const deliveryPending = isPaid && invoiceFiles.length > 0 && !allFilesDelivered;
     const amountLabel = formatSupplementMoney(
       Number(tabInvoice?.amount) || pricing.total,
     );
     const statusLine =
       tabInvoice && (isPaid || isSent)
         ? [
-            isPaid ? "Paid & delivered" : "Waiting · payment",
+            isPaid
+              ? allFilesDelivered
+                ? "Paid & delivered"
+                : "Paid · files not sent yet"
+              : "Waiting · payment",
             amountLabel,
             statusDate,
           ]
@@ -892,6 +900,21 @@ export const TicketBillingSidePanel = ({
             </p>
           )}
         </div>
+        {deliveryPending ? (
+          <Button
+            type="button"
+            className="w-full rounded-none"
+            disabled={deliverMutation.isPending}
+            onClick={() => deliverMutation.mutate()}
+          >
+            {deliverMutation.isPending ? (
+              <Loader2 className="mr-1.5 size-4 animate-spin" />
+            ) : (
+              <Send className="mr-1.5 size-4" />
+            )}
+            Send files to client
+          </Button>
+        ) : null}
       </div>
     );
   };
