@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import type { ConversationMessage } from "@/modules/types";
 import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
-import { formatMessageTime } from "@/modules/messages/conversationUtils";
-import { SmsMessageMedia } from "@/modules/messages/ClientSmsComposer";
+import { formatMessageTime, getMessageMediaUrls, isMediaPlaceholderBody } from "@/modules/messages/conversationUtils";
+import { SmsMessageMedia } from "@/modules/messages/SmsMessageMedia";
 import { parseMessageBodyWithSignature } from "@/lib/signatures/signatureExpansion";
 import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
 import { cn } from "@/lib/utils";
@@ -51,23 +51,27 @@ export const ConversationMessageBubble = ({
     [message.body, message.direction, message.is_internal_note],
   );
 
+  const mediaUrls = useMemo(() => getMessageMediaUrls(message), [message]);
+  const showBody = content && !isMediaPlaceholderBody(content, mediaUrls.length);
+  const hasMultiplePhotos = mediaUrls.length > 1;
+
   return (
     <div className={cn("flex flex-col", isOwn ? "items-end" : "items-start")}>
       <div
         className={cn(
-          "max-w-[min(78%,560px)] leading-snug",
+          hasMultiplePhotos
+            ? "max-w-[min(92%,520px)]"
+            : "max-w-[min(78%,560px)]",
+          "leading-snug",
           compact
-            ? "max-w-[min(92%,420px)] rounded-none px-2.5 py-1.5 text-xs leading-relaxed"
-            : "rounded-2xl px-3.5 py-2.5 text-[15px]",
+            ? "max-w-[min(92%,420px)] px-2.5 py-1.5 text-xs leading-relaxed"
+            : "px-3.5 py-2.5 text-[15px]",
+          compact ? "rounded-none" : "rounded-sm",
           message.is_internal_note
-            ? "rounded-bl-md border border-amber-300/60 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-50"
+            ? "border border-amber-300/50 bg-amber-50 text-amber-950 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-50"
             : isOwn
-              ? compact
-                ? "rounded-none border border-border bg-muted/50 text-foreground dark:bg-muted/30"
-                : "rounded-br-md border border-border bg-muted/50 text-foreground dark:bg-muted/30"
-              : compact
-                ? "rounded-none bg-muted/50 text-foreground dark:bg-muted/30"
-                : "rounded-bl-md bg-muted/50 text-foreground dark:bg-muted/30",
+              ? "bg-muted/70 text-foreground dark:bg-muted/45"
+              : "bg-muted/50 text-foreground dark:bg-muted/35",
         )}
       >
         {message.is_internal_note ? (
@@ -80,13 +84,10 @@ export const ConversationMessageBubble = ({
             Internal — client cannot see this
           </div>
         ) : null}
-        {message.media_url ? (
-          <SmsMessageMedia
-            url={message.media_url}
-            alt={message.body || "Attachment"}
-          />
+        {mediaUrls.length > 0 ? (
+          <SmsMessageMedia urls={mediaUrls} alt={message.body || "Attachment"} />
         ) : null}
-        {content ? (
+        {showBody ? (
           <div className="whitespace-pre-wrap break-words">{content}</div>
         ) : null}
         {signature ? (

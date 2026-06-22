@@ -480,6 +480,7 @@ export type ConversationMessage = {
   direction?: MessageDirection;
   external_id?: string | null;
   media_url?: string | null;
+  media_urls?: string[] | null;
   is_internal_note?: boolean;
   kind?: ConversationMessageKind;
   reply_to_message_id?: Identifier | null;

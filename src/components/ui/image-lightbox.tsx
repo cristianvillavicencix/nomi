@@ -1,5 +1,5 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, XIcon, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, XIcon, ZoomIn, ZoomOut } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -34,6 +34,7 @@ type ImageLightboxProps = {
   index: number;
   onOpenChange: (open: boolean) => void;
   onIndexChange: (index: number) => void;
+  onDownload?: () => void;
 };
 
 export const ImageLightbox = ({
@@ -42,8 +43,9 @@ export const ImageLightbox = ({
   index,
   onOpenChange,
   onIndexChange,
+  onDownload,
 }: ImageLightboxProps) => {
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(
@@ -97,11 +99,11 @@ export const ImageLightbox = ({
   }, [open, goPrev, goNext]);
 
   useEffect(() => {
-    const node = viewportRef.current;
-    if (!open || !node) return;
+    if (!open) return;
 
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
+      event.stopPropagation();
       const direction = event.deltaY < 0 ? 1 : -1;
       const step = event.ctrlKey ? 0.08 : 0.14;
       setScale((currentScale) => {
@@ -113,8 +115,18 @@ export const ImageLightbox = ({
       });
     };
 
-    node.addEventListener("wheel", onWheel, { passive: false });
-    return () => node.removeEventListener("wheel", onWheel);
+    const node = contentRef.current;
+    if (node) {
+      node.addEventListener("wheel", onWheel, { passive: false });
+    }
+
+    // Capture wheel anywhere while open so the thread behind does not scroll.
+    document.addEventListener("wheel", onWheel, { passive: false, capture: true });
+
+    return () => {
+      node?.removeEventListener("wheel", onWheel);
+      document.removeEventListener("wheel", onWheel, { capture: true });
+    };
   }, [open, index]);
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -159,6 +171,7 @@ export const ImageLightbox = ({
       <DialogPortal>
         <DialogOverlay className="bg-black/75 backdrop-blur-md" />
         <DialogPrimitive.Content
+          ref={contentRef}
           className={cn(
             "fixed inset-0 z-50 flex flex-col outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -182,6 +195,18 @@ export const ImageLightbox = ({
               ) : null}
             </div>
             <div className="flex items-center gap-1">
+              {onDownload ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/10 hover:text-white"
+                  onClick={onDownload}
+                  aria-label="Download image"
+                >
+                  <Download className="size-4" />
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
@@ -230,7 +255,6 @@ export const ImageLightbox = ({
             ) : null}
 
             <div
-              ref={viewportRef}
               className={cn(
                 "flex h-full w-full touch-none items-center justify-center overflow-hidden",
                 scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in",

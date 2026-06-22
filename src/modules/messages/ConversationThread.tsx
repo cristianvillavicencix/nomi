@@ -246,29 +246,29 @@ export const ConversationThread = ({
       ) : canSendMessages ? (
         <form
           onSubmit={handleSubmit}
-          className="mt-auto shrink-0 border-t border-border/40 bg-background px-4 pt-5 pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
+          className="mt-auto shrink-0 bg-background px-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-3"
         >
-          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/25 px-1 py-1 pl-4 shadow-none dark:bg-muted/20">
+          <div className="flex items-end gap-0.5 rounded-full border border-border/40 bg-card px-1.5 py-1 shadow-sm">
             <Input
               ref={composerInputRef}
               value={body}
               onChange={(event) => setBody(event.target.value)}
               placeholder="Write a message…"
-              className="h-10 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+              className="h-10 flex-1 border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
             />
             <Button
               type="submit"
               size="icon"
-              className="size-9 shrink-0 rounded-full"
+              className="mb-0.5 mr-0.5 size-9 shrink-0 rounded-full bg-foreground text-background hover:bg-foreground/90"
               disabled={isPending || !body.trim()}
               aria-label="Send message"
             >
-              <Send className="size-4" />
+              <Send className="size-4" strokeWidth={2.5} />
             </Button>
           </div>
         </form>
       ) : (
-        <div className="mt-auto shrink-0 border-t border-border/40 px-4 py-4">
+        <div className="mt-auto shrink-0 px-4 py-4">
           <SendDisabledNotice />
         </div>
       )}

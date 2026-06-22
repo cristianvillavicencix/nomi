@@ -361,7 +361,6 @@ export const TicketToolsClientSms = ({
         conversationId={conversation?.id}
         disabled={!canSendMessages}
         prefillRequest={composerPrefill}
-        composerShape="square"
         compact
         onSent={({ conversation: nextConversation }) => {
           setConversation(nextConversation);

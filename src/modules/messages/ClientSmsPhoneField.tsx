@@ -18,21 +18,27 @@ export const ClientSmsPhoneField = ({
   onChange,
   disabled,
   className,
+  variant = "default",
 }: {
   contact?: Contact | null;
   value?: string | null;
   onChange?: (e164: string) => void;
   disabled?: boolean;
   className?: string;
+  variant?: "default" | "header";
 }) => {
   if (!contact) return null;
 
   const entries = getContactPhoneEntries(contact);
-  const selectValue = resolveClientSmsPhone(contact, value) ?? entries[0]?.e164 ?? "";
+  const selectValue =
+    resolveClientSmsPhone(contact, value) ?? entries[0]?.e164 ?? "";
+
+  const headerTextClass =
+    variant === "header" ? "text-sm text-muted-foreground" : "text-[11px] text-muted-foreground";
 
   if (entries.length === 0) {
     return (
-      <p className={cn("text-[11px] text-muted-foreground", className)}>
+      <p className={cn(headerTextClass, className)}>
         No phone on file for this contact.
       </p>
     );
@@ -40,15 +46,38 @@ export const ClientSmsPhoneField = ({
 
   if (entries.length === 1) {
     return (
-      <p className={cn("text-[11px] text-muted-foreground", className)}>
-        To{" "}
-        <span className="font-medium text-foreground">
-          {entries[0].display}
-        </span>
+      <p className={cn("min-w-0 truncate", headerTextClass, className)}>
+        <span className="text-muted-foreground">To </span>
+        <span className="font-medium text-foreground">{entries[0].display}</span>
         {entries[0].label !== "Phone" ? (
-          <span className="text-muted-foreground/80"> · {entries[0].label}</span>
+          <span className="text-muted-foreground"> · {entries[0].label}</span>
         ) : null}
       </p>
+    );
+  }
+
+  if (variant === "header") {
+    return (
+      <div className={cn("flex min-w-0 items-center gap-1.5 text-sm", className)}>
+        <span className="shrink-0 text-muted-foreground">To</span>
+        <Select
+          value={selectValue}
+          onValueChange={(next) => onChange?.(next)}
+          disabled={disabled}
+        >
+          <SelectTrigger className="h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-foreground shadow-none focus:ring-0">
+            <SelectValue placeholder="Choose number" />
+          </SelectTrigger>
+          <SelectContent>
+            {entries.map((entry) => (
+              <SelectItem key={entry.e164} value={entry.e164}>
+                {entry.display}
+                {entry.label !== "Phone" ? ` · ${entry.label}` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     );
   }
 

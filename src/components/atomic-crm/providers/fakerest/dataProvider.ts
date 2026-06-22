@@ -1440,6 +1440,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         direction: "outbound",
         author_member_id: conversation.created_by_member_id ?? null,
         media_url: mediaUrls?.[0] ?? null,
+        media_urls: mediaUrls ?? [],
       },
     });
     return { message: message.data, conversation };

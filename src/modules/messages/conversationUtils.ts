@@ -11,15 +11,38 @@ export const getConversationTypeLabel = (type: ConversationType) => {
   return type;
 };
 
+export const isMediaPlaceholderBody = (
+  body: string | null | undefined,
+  mediaCount: number,
+) => {
+  if (mediaCount === 0) return false;
+  const trimmed = body?.trim() ?? "";
+  if (!trimmed) return true;
+  if (trimmed === "Photo" || trimmed === "Attachment") return true;
+  return /^\d+ photos$/.test(trimmed);
+};
+
+export const getMessageMediaUrls = (message: {
+  media_url?: string | null;
+  media_urls?: string[] | null;
+}) => {
+  const fromArray = (message.media_urls ?? []).filter(Boolean);
+  if (fromArray.length > 0) return fromArray;
+  if (message.media_url) return [message.media_url];
+  return [];
+};
+
 export const buildMessagePreview = (message: {
   body?: string | null;
   media_url?: string | null;
+  media_urls?: string[] | null;
   is_internal_note?: boolean | null;
 }) => {
   if (message.is_internal_note) {
     return message.body?.trim() || "Internal note";
   }
-  if (message.media_url) {
+  const mediaCount = getMessageMediaUrls(message).length;
+  if (mediaCount > 0) {
     return message.body?.trim() || "Sent an attachment";
   }
   return message.body?.trim() || "New message";

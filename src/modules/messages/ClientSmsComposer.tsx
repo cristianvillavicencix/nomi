@@ -1,20 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, Paperclip, Send, X } from "lucide-react";
+import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { Contact, Conversation, ConversationMessage } from "@/modules/types";
-import { SmsWebFormPicker } from "@/modules/messages/SmsWebFormPicker";
 import { cn } from "@/lib/utils";
-import {
-  isImageMediaUrl,
-  getMediaFileName,
-  downloadMediaUrl,
-  uploadSmsMedia,
-} from "@/modules/messages/smsMediaUpload";
-import { useResolvedMediaUrl } from "@/modules/messages/useResolvedMediaUrl";
-import { InternalNoteToggle } from "@/modules/messages/composer/InternalNoteToggle";
+import { uploadSmsMedia } from "@/modules/messages/smsMediaUpload";
+import { SmsComposerActionsMenu } from "@/modules/messages/composer/SmsComposerActionsMenu";
 import { useSendClientSms } from "@/modules/messages/useClientSms";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { ClientSmsPhoneField } from "@/modules/messages/ClientSmsPhoneField";
@@ -35,7 +27,6 @@ export const ClientSmsComposer = ({
   onSent,
   disabled,
   prefillRequest,
-  composerShape = "default",
   compact = false,
   externalPhone,
   onExternalPhoneChange,
@@ -50,7 +41,6 @@ export const ClientSmsComposer = ({
   }) => void;
   disabled?: boolean;
   prefillRequest?: { key: number; text: string } | null;
-  composerShape?: "default" | "square";
   compact?: boolean;
   externalPhone?: string | null;
   onExternalPhoneChange?: (e164: string) => void;
@@ -69,7 +59,6 @@ export const ClientSmsComposer = ({
   const [includeSignature, setIncludeSignature] = useState(
     orgSignatureSettings?.sms_signature_enabled ?? true,
   );
-  const [formPickerOpen, setFormPickerOpen] = useState(false);
   const canWriteInternalNotes = useMemberCapability(
     "messaging.internal_notes.write",
   );
@@ -105,7 +94,7 @@ export const ClientSmsComposer = ({
 
   if (disabled) {
     return (
-      <div className="border-t border-border/40 px-4 py-4 bg-background">
+      <div className="bg-background px-4 py-4">
         <p className="text-center text-sm text-muted-foreground">
           You don&apos;t have permission to send messages. Ask an administrator
           to enable <span className="text-foreground">Send messages</span> in
@@ -137,7 +126,6 @@ export const ClientSmsComposer = ({
       const trimmed = current.replace(/\/form\s*$/i, "").trimEnd();
       return trimmed ? `${trimmed}\n${snippet}` : snippet;
     });
-    setFormPickerOpen(false);
   };
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -218,70 +206,74 @@ export const ClientSmsComposer = ({
     await handleSend();
   };
 
+  const showSignatureToggle = Boolean(signature) && !isInternalNote;
+
   return (
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "space-y-2 border-t border-border/40 bg-background",
+        "bg-background",
         compact
-          ? "px-3 pt-2.5 pb-2.5"
-          : "px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]",
-        isInternalNote && "bg-warning/10",
+          ? "space-y-2 px-3 pb-2.5 pt-2"
+          : "space-y-2.5 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-3",
+        isInternalNote && "bg-warning/[0.06]",
       )}
     >
-      {canWriteInternalNotes ? (
-        <InternalNoteToggle
-          checked={isInternalNote}
-          onCheckedChange={setIsInternalNote}
-          disabled={disabled || isSending}
-        />
-      ) : null}
       {contact ? (
-        <ClientSmsPhoneField
-          contact={contact}
-          value={externalPhone ?? resolvedExternalPhone}
-          onChange={(next) => onExternalPhoneChange?.(next)}
-          disabled={disabled || isSending}
-          className={compact ? "px-0.5" : "px-1"}
-        />
-      ) : null}
-      {!isInternalNote && signature ? (
-        <div
-          className={cn(
-            "flex items-center gap-2 px-1 text-muted-foreground",
-            compact ? "text-[10px]" : "text-xs",
-          )}
-        >
-          <Switch
-            id="signature-toggle"
-            checked={includeSignature}
-            onCheckedChange={setIncludeSignature}
+        <div className="flex items-center justify-between gap-3">
+          <ClientSmsPhoneField
+            contact={contact}
+            value={externalPhone ?? resolvedExternalPhone}
+            onChange={(next) => onExternalPhoneChange?.(next)}
             disabled={disabled || isSending}
+            variant="header"
+            className="min-w-0 flex-1"
           />
-          <label htmlFor="signature-toggle" className="cursor-pointer">
-            Include signature{includeSignature ? `: "${signature}"` : ""}
-          </label>
+          {showSignatureToggle ? (
+            <button
+              type="button"
+              disabled={disabled || isSending}
+              onClick={() => setIncludeSignature((current) => !current)}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                includeSignature
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted/70",
+              )}
+            >
+              <span
+                className="size-3.5 rounded-sm border border-current opacity-80"
+                aria-hidden
+              />
+              Signature
+            </button>
+          ) : null}
         </div>
       ) : null}
+
+      {isInternalNote ? (
+        <p className="px-1 text-[11px] font-medium text-warning">
+          Internal note — client cannot see this
+        </p>
+      ) : null}
+
       {pendingFiles.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 px-0.5">
           {pendingFiles.map((pending) => (
             <div
               key={pending.id}
-              className="relative flex items-center gap-2 rounded-lg border bg-muted/30 px-2 py-1.5 text-xs"
+              className="relative flex items-center gap-2 rounded-full bg-muted/40 px-2.5 py-1.5 text-xs"
             >
               {pending.previewUrl ? (
                 <img
                   src={pending.previewUrl}
                   alt=""
-                  className="size-10 rounded object-cover"
+                  className="size-8 rounded-full object-cover"
                 />
               ) : (
-                <Paperclip className="size-4 text-muted-foreground" />
+                <Paperclip className="size-3.5 text-muted-foreground" />
               )}
-              <span className="max-w-[140px] truncate">
-                {pending.file.name}
-              </span>
+              <span className="max-w-[140px] truncate">{pending.file.name}</span>
               <button
                 type="button"
                 className="rounded-full p-0.5 hover:bg-muted"
@@ -297,9 +289,8 @@ export const ClientSmsComposer = ({
 
       <div
         className={cn(
-          "flex items-end gap-1.5 border border-border/60 bg-muted/25 dark:bg-muted/20",
-          compact ? "px-1.5 py-1.5 pr-2" : "gap-2 px-2 py-2 pr-3",
-          composerShape === "square" ? "rounded-none" : "rounded-[1.35rem]",
+          "flex items-end gap-0.5 rounded-full border border-border/40 bg-card px-1.5 py-1 shadow-sm",
+          isInternalNote && "border-warning/30",
         )}
       >
         <input
@@ -316,47 +307,35 @@ export const ClientSmsComposer = ({
           }}
         />
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "shrink-0 rounded-full",
-            compact ? "size-8" : "size-11",
-          )}
-          disabled={disabled || isSending}
-          aria-label="Attach file or photo"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Paperclip className={compact ? "size-3.5" : "size-4"} />
-        </Button>
-
-        <SmsWebFormPicker
+        <SmsComposerActionsMenu
           contact={contact}
           dealId={dealId}
-          onInsertLink={insertFormLink}
-          disabled={disabled || isSending}
-          open={formPickerOpen}
-          onOpenChange={setFormPickerOpen}
+          disabled={disabled}
+          isSending={isSending}
+          isInternalNote={isInternalNote}
+          onInternalNoteChange={setIsInternalNote}
+          canWriteInternalNotes={canWriteInternalNotes}
+          includeSignature={includeSignature}
+          onIncludeSignatureChange={setIncludeSignature}
+          hasSignature={Boolean(signature)}
+          onAttachFile={() => fileInputRef.current?.click()}
+          onInsertFormLink={insertFormLink}
+          compact={compact}
         />
 
         <Textarea
           ref={textareaRef}
           value={body}
-          onChange={(event) => {
-            const next = event.target.value;
-            setBody(next);
-            if (/\/form\s*$/i.test(next)) {
-              setFormPickerOpen(true);
-            }
-          }}
+          onChange={(event) => setBody(event.target.value)}
           onPaste={handlePaste}
-          placeholder="Write an SMS… paste text, photos, or form links"
+          placeholder={
+            isInternalNote ? "Write an internal note…" : "Write an SMS…"
+          }
           className={cn(
-            "flex-1 resize-none border-0 bg-transparent px-2 py-1.5 shadow-none field-sizing-fixed focus-visible:ring-0",
+            "flex-1 resize-none border-0 bg-transparent px-1 py-2 shadow-none field-sizing-fixed focus-visible:ring-0",
             compact
               ? "min-h-[2.25rem] max-h-24 text-xs"
-              : "min-h-[44px] max-h-32 text-sm",
+              : "min-h-[2.5rem] max-h-32 text-sm",
           )}
           rows={1}
           disabled={disabled || isSending}
@@ -372,63 +351,15 @@ export const ClientSmsComposer = ({
           type="submit"
           size="icon"
           className={cn(
-            "shrink-0",
-            compact ? "size-8" : "size-11",
-            composerShape === "square" ? "rounded-none" : "rounded-full",
+            "mb-0.5 mr-0.5 shrink-0 rounded-full bg-foreground text-background hover:bg-foreground/90",
+            compact ? "size-8" : "size-9",
           )}
           disabled={!canSend}
           aria-label={isInternalNote ? "Add internal note" : "Send SMS"}
         >
-          <Send className={compact ? "size-3.5" : "size-4"} />
+          <ArrowUp className={compact ? "size-4" : "size-[18px]"} strokeWidth={2.5} />
         </Button>
       </div>
     </form>
-  );
-};
-
-export const SmsMessageMedia = ({
-  url,
-  alt,
-}: {
-  url: string;
-  alt?: string;
-}) => {
-  const resolvedUrl = useResolvedMediaUrl(url);
-  const fileName = getMediaFileName(url);
-  const isImage = isImageMediaUrl(url);
-
-  if (!resolvedUrl) {
-    return (
-      <div className="mt-1 text-xs text-muted-foreground">
-        Loading attachment…
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-1 space-y-2">
-      {isImage ? (
-        <img
-          src={resolvedUrl}
-          alt={alt ?? fileName}
-          className="max-h-48 rounded-lg object-cover"
-        />
-      ) : (
-        <div className="flex items-center gap-2 rounded-lg border border-current/10 bg-black/5 px-2.5 py-2 text-xs dark:bg-white/5">
-          <Paperclip className="size-3.5 shrink-0 opacity-70" />
-          <span className="min-w-0 flex-1 truncate">{fileName}</span>
-        </div>
-      )}
-      <Button
-        type="button"
-        variant={isImage ? "secondary" : "outline"}
-        size="sm"
-        className="h-7 gap-1.5 px-2 text-xs"
-        onClick={() => void downloadMediaUrl(url)}
-      >
-        <Download className="size-3.5" />
-        Download
-      </Button>
-    </div>
   );
 };

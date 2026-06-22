@@ -150,9 +150,14 @@ export async function insertSmsMessage(params: {
   authorMemberId?: number | null;
   externalId?: string | null;
   mediaUrl?: string | null;
+  mediaUrls?: string[] | null;
   isInternalNote?: boolean;
   replyToMessageId?: number | null;
 }) {
+  const mediaUrls =
+    params.mediaUrls?.filter((entry) => entry?.trim()) ??
+    (params.mediaUrl?.trim() ? [params.mediaUrl.trim()] : []);
+
   const { data, error } = await supabaseAdmin
     .from("conversation_messages")
     .insert({
@@ -162,7 +167,8 @@ export async function insertSmsMessage(params: {
       direction: params.direction,
       author_member_id: params.authorMemberId ?? null,
       external_id: params.externalId ?? null,
-      media_url: params.mediaUrl ?? null,
+      media_url: mediaUrls[0] ?? null,
+      media_urls: mediaUrls,
       is_internal_note: params.isInternalNote === true,
       reply_to_message_id: params.replyToMessageId ?? null,
     })

@@ -329,7 +329,7 @@ Deno.serve((req: Request) =>
             direction: "outbound",
             authorMemberId: memberId,
             externalId,
-            mediaUrl: mediaUrls[0] ?? null,
+            mediaUrls,
             isInternalNote,
             replyToMessageId,
           });

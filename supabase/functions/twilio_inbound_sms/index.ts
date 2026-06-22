@@ -112,21 +112,33 @@ Deno.serve(async (req) => {
       }
     }
 
-    let storedMediaUrl: string | null = null;
-    if (mediaUrls[0] && storedAccountSid) {
-      storedMediaUrl = await mirrorTwilioMediaToStorage({
-        accountSid: storedAccountSid,
-        authToken,
-        mediaUrl: mediaUrls[0],
-        orgId: Number(orgSettings.org_id),
-        conversationId: Number(conversation.id),
-      });
+    let storedMediaUrls: string[] = [];
+    if (mediaUrls.length > 0 && storedAccountSid) {
+      const mirrored = await Promise.all(
+        mediaUrls.map((mediaUrl) =>
+          mirrorTwilioMediaToStorage({
+            accountSid: storedAccountSid,
+            authToken,
+            mediaUrl,
+            orgId: Number(orgSettings.org_id),
+            conversationId: Number(conversation.id),
+          }).catch((mirrorError) => {
+            console.error("Failed to mirror inbound MMS", mirrorError);
+            return null;
+          }),
+        ),
+      );
+      storedMediaUrls = mirrored.filter(
+        (url): url is string => typeof url === "string" && url.length > 0,
+      );
     }
 
     const messageBody =
       body ||
       (mediaUrls.some((url) => /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url))
-        ? "Photo"
+        ? storedMediaUrls.length > 1
+          ? `${storedMediaUrls.length} photos`
+          : "Photo"
         : "Attachment");
 
     await insertSmsMessage({
@@ -134,7 +146,7 @@ Deno.serve(async (req) => {
       body: messageBody,
       direction: "inbound",
       externalId: messageSid ?? null,
-      mediaUrl: storedMediaUrl,
+      mediaUrls: storedMediaUrls,
     });
 
     const fullSettings = await supabaseAdmin
