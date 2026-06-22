@@ -35,6 +35,7 @@ const DealList = () => {
   const matchShow = matchPath("/deals/:id/show", location.pathname);
   const { identity } = useGetIdentity();
   const { dealCategories } = useConfigurationContext();
+  const { view } = useDealsViewPreference();
 
   if (!identity) return null;
   if (matchShow) {
@@ -64,6 +65,8 @@ const DealList = () => {
       filters={dealFilters}
       actions={<DealActions />}
       pagination={null}
+      contentScrollable={view !== "board"}
+      className={view === "board" ? "mt-0 min-h-0 flex-1" : undefined}
     >
       <DealLayout />
     </List>
@@ -95,7 +98,7 @@ const DealLayout = () => {
 
   if (view === "board") {
     return (
-      <div className="w-full">
+      <div className="flex h-full min-h-0 w-full flex-col">
         <LbsDealBoardContent pipelineId={selectedPipelineId} />
         <DealArchivedList />
         <ProjectCreateFlow />

@@ -26,6 +26,7 @@ import {
   filterLbsNavGroups,
   LBS_CLIENTS_NAV_COLLAPSIBLE,
   LBS_MORE_NAV_COLLAPSIBLE,
+  LBS_NAV_AFTER_CLIENTS,
   LBS_NAV_GROUPS,
   LBS_NAV_STANDALONE,
   splitLbsNavGroups,
@@ -104,6 +105,11 @@ export const LbsSidebarNav = ({
     [identity],
   );
 
+  const afterClientsItems = useMemo(
+    () => filterAccessibleItems(identity, LBS_NAV_AFTER_CLIENTS),
+    [identity],
+  );
+
   const clientsNavChildren = useMemo(
     () => filterAccessibleItems(identity, LBS_CLIENTS_NAV_COLLAPSIBLE.children),
     [identity],
@@ -123,6 +129,12 @@ export const LbsSidebarNav = ({
     () => splitLbsNavGroups(navGroups),
     [navGroups],
   );
+
+  const hasPrimaryNav =
+    standaloneItems.length > 0 ||
+    clientsNavChildren.length > 0 ||
+    afterClientsItems.length > 0 ||
+    primaryNavGroups.length > 0;
 
   const secondarySectionActive = useMemo(
     () =>
@@ -148,6 +160,31 @@ export const LbsSidebarNav = ({
               key={item.to}
               item={item}
               active={isActive(item.activePattern)}
+              collapsed={sidebarState === "collapsed"}
+            />
+          ))}
+        </SidebarMenu>
+      ) : null}
+
+      {clientsNavChildren.length > 0 ? (
+        <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
+          <ClientsCollapsibleNav
+            group={LBS_CLIENTS_NAV_COLLAPSIBLE}
+            childrenItems={clientsNavChildren}
+            isActive={isActive}
+            sectionActive={clientsSectionActive}
+            collapsed={sidebarState === "collapsed"}
+          />
+        </SidebarMenu>
+      ) : null}
+
+      {afterClientsItems.length > 0 ? (
+        <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
+          {afterClientsItems.map((item) => (
+            <SidebarNavLink
+              key={item.to}
+              item={item}
+              active={isActive(item.activePattern)}
               badgeCount={item.to === "/messages" ? messagesUnreadCount : 0}
               collapsed={sidebarState === "collapsed"}
             />
@@ -156,7 +193,11 @@ export const LbsSidebarNav = ({
       ) : null}
 
       {primaryNavGroups.map((group, index) => {
-        const hasItemsAbove = standaloneItems.length > 0 || index > 0;
+        const hasItemsAbove =
+          standaloneItems.length > 0 ||
+          clientsNavChildren.length > 0 ||
+          afterClientsItems.length > 0 ||
+          index > 0;
         return (
         <div
           key={group.id}
@@ -169,21 +210,12 @@ export const LbsSidebarNav = ({
             className={cn(
               "h-auto px-0.5 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
               "group-data-[collapsible=icon]:pointer-events-none",
-              index === 0 && standaloneItems.length === 0 ? "mt-0" : "mt-2",
+              index === 0 && !hasPrimaryNav ? "mt-0" : "mt-2",
             )}
           >
             {group.label}
           </SidebarGroupLabel>
           <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
-            {group.id === "pipeline" && clientsNavChildren.length > 0 ? (
-              <ClientsCollapsibleNav
-                group={LBS_CLIENTS_NAV_COLLAPSIBLE}
-                childrenItems={clientsNavChildren}
-                isActive={isActive}
-                sectionActive={clientsSectionActive}
-                collapsed={sidebarState === "collapsed"}
-              />
-            ) : null}
             {group.items.map((item) => (
               <SidebarNavLink
                 key={item.to}
@@ -200,7 +232,7 @@ export const LbsSidebarNav = ({
       {secondaryNavGroups.length > 0 ? (
         <div
           className={cn(
-            (standaloneItems.length > 0 || primaryNavGroups.length > 0) &&
+            hasPrimaryNav &&
               "group-data-[collapsible=icon]:mt-2 group-data-[collapsible=icon]:border-t group-data-[collapsible=icon]:border-sidebar-border/60 group-data-[collapsible=icon]:pt-2",
           )}
         >

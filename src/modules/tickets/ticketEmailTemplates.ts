@@ -66,51 +66,10 @@ export const buildTicketPaymentEmailHtml = (params: {
     </div>`;
 };
 
-export const buildTicketPaymentSmsText = (params: {
-  orgName: string;
-  invoiceNumber: string;
-  amountFormatted: string;
-  dueDateFormatted: string;
-  paymentUrl: string;
-  contact?: Contact | null;
-  senderFirstName?: string | null;
-}) => {
-  const greetingName = params.contact?.first_name?.trim() || null;
-  const sender = params.senderFirstName?.trim().split(/\s+/)[0] ?? null;
-  const intro = sender
-    ? `This is ${sender} from ${params.orgName}:`
-    : `${params.orgName} here:`;
-
-  return [
-    intro,
-    greetingName ? `Hi ${greetingName},` : "Hi,",
-    `Invoice ${params.invoiceNumber} for ${params.amountFormatted} is due ${params.dueDateFormatted}.`,
-    `Pay securely: ${params.paymentUrl}`,
-  ].join("\n");
-};
-
-export const buildTicketPaymentReminderSmsText = (params: {
-  orgName: string;
-  invoiceNumber: string;
-  amountFormatted: string;
-  dueDateFormatted: string;
-  paymentUrl: string;
-  contact?: Contact | null;
-  senderFirstName?: string | null;
-}) => {
-  const greetingName = params.contact?.first_name?.trim() || null;
-  const sender = params.senderFirstName?.trim().split(/\s+/)[0] ?? null;
-  const intro = sender
-    ? `This is ${sender} from ${params.orgName}:`
-    : `${params.orgName} here:`;
-
-  return [
-    intro,
-    greetingName ? `Hi ${greetingName},` : "Hi,",
-    `Reminder: invoice ${params.invoiceNumber} for ${params.amountFormatted} is still due ${params.dueDateFormatted}.`,
-    `Pay securely: ${params.paymentUrl}`,
-  ].join("\n");
-};
+export {
+  buildTicketPaymentReminderSmsText,
+  buildTicketPaymentSmsText,
+} from "@/modules/tickets/ticketInvoiceCopy";
 
 export const buildTicketDeliveryEmailHtml = (params: {
   orgName: string;

@@ -96,7 +96,7 @@ export const filterLbsNavGroups = (
     }))
     .filter((group) => group.items.length > 0);
 
-/** Top-level links rendered outside group headers (most-used first). */
+/** Top-level links before the Clients section. */
 export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   {
     to: "/",
@@ -116,6 +116,19 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
     resource: "contacts",
     action: "list",
   },
+];
+
+/** Top-level links after Clients (no group header). */
+export const LBS_NAV_AFTER_CLIENTS: LbsNavItem[] = [
+  {
+    to: "/deals",
+    label: "Deals",
+    icon: Briefcase,
+    activePattern: "/deals/*",
+    capability: "crm.pipeline.view",
+    resource: "deals",
+    action: "list",
+  },
   {
     to: "/tickets",
     label: "Tickets",
@@ -127,7 +140,7 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   },
   {
     to: "/billing",
-    label: "Billing",
+    label: "Invoices",
     icon: Receipt,
     activePattern: "/billing/*",
     capability: "proposals.view",
@@ -145,7 +158,7 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   },
   {
     to: "/meetings",
-    label: "Meetings",
+    label: "Meeting",
     icon: Video,
     activePattern: "/meetings/*",
     capability: "meetings.view",
@@ -191,22 +204,6 @@ export const LBS_CLIENTS_NAV_COLLAPSIBLE: LbsNavCollapsibleGroup = {
 };
 
 export const LBS_NAV_GROUPS: LbsNavGroup[] = [
-  {
-    id: "pipeline",
-    label: "Pipeline",
-    icon: Building2,
-    items: [
-      {
-        to: "/deals",
-        label: "Deals",
-        icon: Briefcase,
-        activePattern: "/deals/*",
-        capability: "crm.pipeline.view",
-        resource: "deals",
-        action: "list",
-      },
-    ],
-  },
   {
     id: "close-billing",
     label: "Close & bill",
@@ -302,6 +299,7 @@ export const LBS_PLACEHOLDER_MODULES = {
 export const LBS_NAV_ITEMS: LbsNavItem[] = [
   ...LBS_NAV_STANDALONE,
   ...LBS_CLIENTS_NAV_COLLAPSIBLE.children,
+  ...LBS_NAV_AFTER_CLIENTS,
   ...LBS_NAV_GROUPS.flatMap((group) => group.items),
 ];
 

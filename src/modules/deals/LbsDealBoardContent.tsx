@@ -3,12 +3,14 @@ import isEqual from "lodash/isEqual";
 import {
   useDataProvider,
   useGetIdentity,
+  useGetList,
   useListFilterContext,
   useNotify,
 } from "ra-core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DealColumn } from "@/components/atomic-crm/deals/DealColumn";
+import type { OrganizationMember } from "@/components/atomic-crm/types";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import {
   updateDealStage,
@@ -26,6 +28,7 @@ import {
 import { getLaunchStageAdvanceCheck } from "@/modules/deals/projects/launch/launchChecklistGate";
 import { useLbsPipelineConfig } from "@/modules/deals/useLbsPipelineConfig";
 import { useStageDeals } from "@/modules/deals/useStageDeals";
+import { DealKanbanProvider } from "@/modules/deals/DealKanbanContext";
 import type { LbsDeal } from "@/modules/types";
 
 const LbsDealStageColumn = ({
@@ -79,6 +82,23 @@ export const LbsDealBoardContent = ({ pipelineId }: { pipelineId: string }) => {
   const [isDragging, setIsDragging] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
   useHorizontalWheelScroll(boardRef);
+
+  const { data: members = [] } = useGetList<OrganizationMember>(
+    "organization_members",
+    {
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "first_name", order: "ASC" },
+    },
+  );
+
+  const kanbanContextValue = useMemo(
+    () => ({
+      membersById: Object.fromEntries(
+        members.map((member) => [String(member.id), member]),
+      ),
+    }),
+    [members],
+  );
 
   useDealsRealtime();
 
@@ -212,23 +232,28 @@ export const LbsDealBoardContent = ({ pipelineId }: { pipelineId: string }) => {
   };
 
   return (
-    <DragDropContext
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={onDragEnd}
-    >
-      <div ref={boardRef} className="flex gap-4 overflow-x-auto pb-2">
-        {stages.map((stage) => (
-          <LbsDealStageColumn
-            key={stage.id}
-            stageId={stage.id}
-            pipelineId={pipelineId}
-            baseFilter={baseFilter}
-            dealsByStage={dealsByStage}
-            onDealsLoaded={handleDealsLoaded}
-            isDragging={isDragging}
-          />
-        ))}
-      </div>
-    </DragDropContext>
+    <DealKanbanProvider value={kanbanContextValue}>
+      <DragDropContext
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={onDragEnd}
+      >
+        <div
+          ref={boardRef}
+          className="flex h-full min-h-0 w-full gap-3 overflow-x-auto overscroll-x-contain pb-2"
+        >
+          {stages.map((stage) => (
+            <LbsDealStageColumn
+              key={stage.id}
+              stageId={stage.id}
+              pipelineId={pipelineId}
+              baseFilter={baseFilter}
+              dealsByStage={dealsByStage}
+              onDealsLoaded={handleDealsLoaded}
+              isDragging={isDragging}
+            />
+          ))}
+        </div>
+      </DragDropContext>
+    </DealKanbanProvider>
   );
 };

@@ -21,6 +21,7 @@ import {
   createStandaloneClientInvoice,
   deleteStandaloneClientInvoice,
 } from "./clientInvoiceFlow.ts";
+import { DEFAULT_INVOICE_TERMS_AND_CONDITIONS } from "./invoiceDefaults.ts";
 import {
   calculatePricingFromTicketLegacy,
   calculateTicketPricing,
@@ -31,6 +32,10 @@ import {
   loadTicketInvoiceSentNoteContext,
 } from "./ticketInvoiceInternalNoteSummary.ts";
 import { getTransactionalFromEmail } from "./transactionalEmail.ts";
+import {
+  buildTicketPaymentSmsText,
+  resolveTicketSmsServiceSubject,
+} from "./ticketInvoiceCopy.ts";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -196,30 +201,6 @@ export const buildTicketPaymentEmailBodies = (params: {
 
   return { subject, textBody, htmlBody };
 };
-
-const buildTicketPaymentSmsBody = (params: {
-  orgName: string;
-  invoiceNumber: string;
-  amountFormatted: string;
-  paymentUrl: string;
-}) =>
-  [
-    `${params.orgName} here:`,
-    `Invoice ${params.invoiceNumber} for ${params.amountFormatted} is ready.`,
-    `Pay securely: ${params.paymentUrl}`,
-  ].join("\n");
-
-export const buildTicketPaymentReminderSmsBody = (params: {
-  orgName: string;
-  invoiceNumber: string;
-  amountFormatted: string;
-  paymentUrl: string;
-}) =>
-  [
-    `${params.orgName} here:`,
-    `Reminder: invoice ${params.invoiceNumber} for ${params.amountFormatted} is still due.`,
-    `Pay securely: ${params.paymentUrl}`,
-  ].join("\n");
 
 export async function sendTicketInvoiceSms(
   supabase: SupabaseClient,
@@ -540,6 +521,31 @@ async function syncDraftInvoiceFromDeliverables(
   return pricing;
 }
 
+async function ensureTicketInvoiceTermsAndConditions(
+  supabase: SupabaseClient,
+  invoiceId: number,
+  orgId: number,
+  existingNotes?: string | null,
+) {
+  if (existingNotes?.trim()) return existingNotes.trim();
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("client_invoices")
+    .update({
+      notes: DEFAULT_INVOICE_TERMS_AND_CONDITIONS,
+      updated_at: now,
+    })
+    .eq("id", invoiceId)
+    .eq("org_id", orgId);
+
+  if (error) {
+    throw new Error(error.message ?? "Could not update invoice terms");
+  }
+
+  return DEFAULT_INVOICE_TERMS_AND_CONDITIONS;
+}
+
 async function createDraftInvoiceForTicket(
   supabase: SupabaseClient,
   params: {
@@ -584,6 +590,7 @@ async function createDraftInvoiceForTicket(
     issue_date: today,
     due_date: dueDate,
     terms: "Due on receipt",
+    notes: DEFAULT_INVOICE_TERMS_AND_CONDITIONS,
     subtotal: pricing.subtotal,
     fee_amount: pricing.transferFee,
     amount: pricing.total,
@@ -663,6 +670,14 @@ export async function prepareTicketInvoiceDraft(
         .eq("org_id", params.orgId)
         .maybeSingle();
 
+      const invoiceWithNotes = refreshedInvoice ?? existing;
+      const notes = await ensureTicketInvoiceTermsAndConditions(
+        supabase,
+        Number(existing.id),
+        params.orgId,
+        invoiceWithNotes.notes,
+      );
+
       const baseUrl = (params.baseUrl?.trim() || resolvePublicAppBaseUrl())
         .replace(/\/$/, "");
       const { url } = await ensureShareLink(
@@ -673,7 +688,7 @@ export async function prepareTicketInvoiceDraft(
       );
 
       return {
-        invoice: refreshedInvoice ?? existing,
+        invoice: { ...invoiceWithNotes, notes },
         line_items: lineItems ?? [],
         payment_url: url,
         to: recipientEmail,
@@ -864,15 +879,36 @@ export async function sendTicketInvoicePaymentLink(
 
   let smsOutcome: { sent: boolean; skipped: boolean } | null = null;
   if (params.sendSms && params.smsTo?.trim()) {
+    const deliverables = await loadTicketDeliverablesForBilling(
+      supabase,
+      params.orgId,
+      ticket.id,
+      { onlyUninvoiced: false },
+    );
+    let recipientFirstName: string | null = null;
+    if (ticket.contact_id) {
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("first_name")
+        .eq("id", ticket.contact_id)
+        .eq("org_id", params.orgId)
+        .maybeSingle();
+      recipientFirstName = contact?.first_name ?? null;
+    }
+    const serviceSubject = resolveTicketSmsServiceSubject(
+      deliverables,
+      ticket.subject,
+    );
+
     smsOutcome = await sendTicketInvoiceSms(supabase, {
       orgId: params.orgId,
       memberId: params.memberId,
       phoneRaw: params.smsTo.trim(),
-      body: buildTicketPaymentSmsBody({
+      body: buildTicketPaymentSmsText({
         orgName,
-        invoiceNumber: invoice.invoice_number,
-        amountFormatted: balanceFormatted,
         paymentUrl: url,
+        recipientFirstName,
+        serviceSubject,
       }),
       contactId: ticket.contact_id ?? null,
     });

@@ -25,6 +25,7 @@ import {
   buildTicketPaymentReminderSmsText,
   DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE,
   formatTicketInvoicePreviewMoney,
+  resolveTicketSmsServiceSubject,
 } from "@/modules/tickets/ticketInvoicePreview";
 import { buildTicketPaymentReminderCopyFromDeliverables } from "@/modules/tickets/ticketInvoiceCopy";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
@@ -172,12 +173,12 @@ export const TicketInvoiceReminderDialog = ({
   const smsText = paymentUrl
     ? buildTicketPaymentReminderSmsText({
         orgName: organizationName,
-        invoiceNumber: invoice.invoice_number,
-        amountFormatted,
-        dueDateFormatted: formatInvoiceDueDate(invoice.due_date),
         paymentUrl,
-        contact,
-        senderFirstName,
+        recipientFirstName: contact?.first_name,
+        serviceSubject: resolveTicketSmsServiceSubject(
+          deliverables,
+          propertyAddress,
+        ),
       })
     : "";
 

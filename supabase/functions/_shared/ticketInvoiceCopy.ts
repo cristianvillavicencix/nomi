@@ -10,6 +10,14 @@ import {
 const PAYMENT_CTA =
   "Please pay using the secure link below. Your files will be delivered automatically by email after payment.";
 
+const SMS_SERVICE_SUBJECT: Record<DeliverableBillingKind, string> = {
+  supplement: "Xactimate supplement",
+  siding: "siding measurement",
+  roof: "roof measurement",
+  esx: "ESX file",
+  pdf_analysis: "PDF analysis",
+};
+
 const SINGLE_ITEM_COPY: Record<
   DeliverableBillingKind,
   { subjectLabel: string; readyMessage: string; deliverySubject: string }
@@ -92,3 +100,46 @@ export const buildTicketPaymentCopyFromDeliverables = (
     serviceLines: [],
   };
 };
+
+export const resolveTicketSmsServiceSubject = (
+  deliverables: DeliverableBillingInput[],
+  propertyAddress?: string | null,
+) => {
+  const billed = billedDeliverables(deliverables);
+  if (billed.length === 1) {
+    return SMS_SERVICE_SUBJECT[billed[0].billing_kind as DeliverableBillingKind];
+  }
+  if (billed.length > 1) return "project deliverables";
+  const address = propertyAddress?.trim();
+  return address || "project";
+};
+
+export const buildTicketPaymentSmsText = (params: {
+  orgName: string;
+  paymentUrl: string;
+  recipientFirstName?: string | null;
+  serviceSubject: string;
+}) => {
+  const greeting = params.recipientFirstName?.trim()
+    ? `Hi ${params.recipientFirstName.trim()},`
+    : "Hi,";
+  return `${greeting} your ${params.serviceSubject} is completed. Pay here ${params.paymentUrl} to receive your files. ${params.orgName}.`;
+};
+
+export const buildTicketPaymentReminderSmsText = (params: {
+  orgName: string;
+  paymentUrl: string;
+  recipientFirstName?: string | null;
+  serviceSubject: string;
+}) => {
+  const greeting = params.recipientFirstName?.trim()
+    ? `Hi ${params.recipientFirstName.trim()},`
+    : "Hi,";
+  return `${greeting} your ${params.serviceSubject} invoice is still unpaid. Pay here ${params.paymentUrl} to receive your files. ${params.orgName}.`;
+};
+
+/** @deprecated Use buildTicketPaymentSmsText */
+export const buildTicketPaymentSmsBody = buildTicketPaymentSmsText;
+
+/** @deprecated Use buildTicketPaymentReminderSmsText */
+export const buildTicketPaymentReminderSmsBody = buildTicketPaymentReminderSmsText;

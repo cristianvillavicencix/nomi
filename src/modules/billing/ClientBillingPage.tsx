@@ -14,7 +14,7 @@ export const ClientBillingPage = () => {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-6">
       <PageActions>
-        <PageTitle label="Billing" />
+        <PageTitle label="Invoices" />
         <div className="ml-auto">
           <ModuleInfoPopover
             title={LBS_PLACEHOLDER_MODULES.billing.title}

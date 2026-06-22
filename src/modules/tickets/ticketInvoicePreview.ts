@@ -22,6 +22,7 @@ export {
 export {
   buildTicketPaymentCopyFromDeliverables,
   buildTicketPaymentReminderCopyFromDeliverables,
+  resolveTicketSmsServiceSubject,
 } from "@/modules/tickets/ticketInvoiceCopy";
 
 const addDays = (isoDate: string, days: number) => {

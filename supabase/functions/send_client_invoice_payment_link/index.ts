@@ -18,10 +18,13 @@ import {
   buildTicketPaymentEmailBodies,
   buildTicketPaymentReminderInternalNoteBody,
   buildTicketPaymentReminderSubject,
-  buildTicketPaymentReminderSmsBody,
   DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE,
   sendTicketInvoiceSms,
 } from "../_shared/ticketInvoiceFlow.ts";
+import {
+  buildTicketPaymentReminderSmsText,
+  resolveTicketSmsServiceSubject,
+} from "../_shared/ticketInvoiceCopy.ts";
 
 type SendLinkBody = {
   invoice_id?: number;
@@ -226,13 +229,40 @@ Deno.serve(
           const sendSms = body.send_sms === true;
           const smsTo = String(body.sms_to ?? "").trim();
           if (sendSms && smsTo) {
+            let recipientFirstName: string | null = null;
+            if (invoice.contact_id) {
+              const { data: contact } = await supabaseAdmin
+                .from("contacts")
+                .select("first_name")
+                .eq("id", invoice.contact_id)
+                .eq("org_id", member.org_id)
+                .maybeSingle();
+              recipientFirstName = contact?.first_name ?? null;
+            }
+
+            let deliverables: {
+              billing_kind?: string | null;
+            }[] = [];
+            if (invoice.ticket_id) {
+              const { data } = await supabaseAdmin
+                .from("ticket_deliverables")
+                .select("billing_kind")
+                .eq("ticket_id", invoice.ticket_id)
+                .eq("org_id", member.org_id)
+                .order("sort_order", { ascending: true });
+              deliverables = data ?? [];
+            }
+
             const smsBody =
               body.sms_body?.trim() ||
-              buildTicketPaymentReminderSmsBody({
+              buildTicketPaymentReminderSmsText({
                 orgName,
-                invoiceNumber: invoice.invoice_number,
-                amountFormatted: balanceFormatted,
                 paymentUrl: url,
+                recipientFirstName,
+                serviceSubject: resolveTicketSmsServiceSubject(
+                  deliverables,
+                  propertyAddress,
+                ),
               });
             smsOutcome = await sendTicketInvoiceSms(supabaseAdmin, {
               orgId: member.org_id,

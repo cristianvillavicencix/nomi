@@ -198,6 +198,7 @@ export const TicketInvoiceViewDialog = ({
                     Number(invoice.amount) || 0,
                     Number(invoice.amount_paid) || 0,
                   )}
+                  termsAndConditions={invoice.notes}
                 />
               </div>
             ) : (

@@ -39,12 +39,12 @@ import {
   TicketInvoiceSendPreview,
 } from "@/modules/tickets/TicketInvoiceSendPreview";
 import {
-  buildTicketDeliveryEmailHtml,
   buildTicketPaymentEmailHtml,
   buildTicketPaymentSmsText,
   clientInvoiceLineItemsToDrafts,
   DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE,
   formatTicketInvoicePreviewMoney,
+  resolveTicketSmsServiceSubject,
 } from "@/modules/tickets/ticketInvoicePreview";
 import { buildTicketPaymentCopyFromDeliverables } from "@/modules/tickets/ticketInvoiceCopy";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
@@ -261,12 +261,12 @@ export const TicketInvoicePreviewDialog = ({
     draftInvoice && paymentUrl
       ? buildTicketPaymentSmsText({
           orgName: organizationName,
-          invoiceNumber: draftInvoice.invoice_number,
-          amountFormatted,
-          dueDateFormatted: formatInvoiceDueDate(draftInvoice.due_date),
           paymentUrl,
-          contact,
-          senderFirstName,
+          recipientFirstName: contact?.first_name,
+          serviceSubject: resolveTicketSmsServiceSubject(
+            unbilledDeliverables,
+            propertyAddress,
+          ),
         })
       : "";
 
@@ -360,6 +360,7 @@ export const TicketInvoicePreviewDialog = ({
               feeAmount={Number(draftInvoice.fee_amount) || undefined}
               total={Number(draftInvoice.amount) || 0}
               balanceDue={Number(draftInvoice.amount) || 0}
+              termsAndConditions={draftInvoice.notes}
             />
           ) : (
             <div className="grid gap-6 lg:grid-cols-2 lg:items-start">

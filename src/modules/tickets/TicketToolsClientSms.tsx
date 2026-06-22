@@ -3,15 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import {
   useDataProvider,
-  useGetIdentity,
   useNotify,
 } from "ra-core";
 import type { Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
-import { formatInvoiceDueDate } from "@/modules/billing/invoiceEmailTemplate";
-import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceOrganizationInfo";
+import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceEmailTemplate";
 import type { ClientInvoice, Conversation, Ticket, TicketDeliverable } from "@/modules/types";
 import { getDeliverablesForInvoice } from "@/modules/tickets/ticketInvoiceTabs";
 import { getInitials } from "@/modules/messages/conversationDisplay";
@@ -33,6 +31,7 @@ import {
   buildTicketPaymentSmsText,
   buildTicketPaymentThankYouSmsText,
   formatTicketInvoicePreviewMoney,
+  resolveTicketSmsServiceSubject,
 } from "@/modules/tickets/ticketInvoicePreview";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -58,7 +57,6 @@ export const TicketToolsClientSms = ({
 }: TicketToolsClientSmsProps) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const { identity } = useGetIdentity();
   const { title, companyLegalName } = useConfigurationContext();
   const { smsEnabled, isPending: messagingPending } = useMessagingEnabled();
   const canSendMessages = useMemberCapability("messaging.send");
@@ -73,13 +71,6 @@ export const TicketToolsClientSms = ({
     () => resolveInvoiceOrganizationName({ title, companyLegalName }),
     [title, companyLegalName],
   );
-
-  const senderFirstName = useMemo(() => {
-    const name =
-      identity?.fullName ||
-      [identity?.first_name, identity?.last_name].filter(Boolean).join(" ");
-    return name?.split(/\s+/)[0] ?? null;
-  }, [identity]);
 
   const {
     data: loadedConversation,
@@ -180,32 +171,26 @@ export const TicketToolsClientSms = ({
     }
 
     if (activeInvoice.status === "sent") {
+      const serviceSubject = resolveTicketSmsServiceSubject(
+        deliverables,
+        ticket.subject,
+      );
       const payLink =
         activeInvoice && paymentUrl
           ? buildTicketPaymentSmsText({
               orgName: organizationName,
-              invoiceNumber: activeInvoice.invoice_number,
-              amountFormatted: formatTicketInvoicePreviewMoney(
-                Number(activeInvoice.amount) || 0,
-              ),
-              dueDateFormatted: formatInvoiceDueDate(activeInvoice.due_date),
               paymentUrl,
-              contact,
-              senderFirstName,
+              recipientFirstName: contact?.first_name,
+              serviceSubject,
             })
           : null;
       const reminder =
         activeInvoice && paymentUrl
           ? buildTicketPaymentReminderSmsText({
               orgName: organizationName,
-              invoiceNumber: activeInvoice.invoice_number,
-              amountFormatted: formatTicketInvoicePreviewMoney(
-                Number(activeInvoice.amount) || 0,
-              ),
-              dueDateFormatted: formatInvoiceDueDate(activeInvoice.due_date),
               paymentUrl,
-              contact,
-              senderFirstName,
+              recipientFirstName: contact?.first_name,
+              serviceSubject,
             })
           : null;
 
@@ -233,8 +218,8 @@ export const TicketToolsClientSms = ({
     contact,
     organizationName,
     paymentUrl,
-    senderFirstName,
     ticket,
+    deliverables,
   ]);
 
   useEffect(() => {
