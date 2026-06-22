@@ -46,6 +46,7 @@ export const bookingProvider = {
         timezone_label: string;
       };
       host_name: string | null;
+      host_phone?: string | null;
       services: Array<{
         id: number | null;
         name: string;
@@ -55,9 +56,23 @@ export const bookingProvider = {
       settings: {
         duration_minutes: number;
         slot_times: string[];
+        reschedule_cutoff_minutes: number;
       };
       dates: string[];
       prefill?: Record<string, string>;
+      existing_booking?: {
+        id: number;
+        service_name: string;
+        service_package_id: number | null;
+        event_date: string;
+        event_time: string;
+        guest_name: string;
+        guest_company?: string | null;
+        guest_phone?: string | null;
+        guest_email?: string | null;
+        calendar_event_id?: number | null;
+        can_reschedule: boolean;
+      } | null;
       links?: {
         contact_id?: number | null;
         company_id?: number | null;
@@ -78,6 +93,7 @@ export const bookingProvider = {
 
   async submitPublicBooking(payload: {
     token: string;
+    rescheduleBookingId?: number | null;
     servicePackageId?: number | null;
     serviceName: string;
     eventDate: string;
@@ -91,6 +107,7 @@ export const bookingProvider = {
   }) {
     return invokePublicEdgeFunction<{
       ok: boolean;
+      rescheduled?: boolean;
       booking_id?: number | null;
       calendar_event_id?: number;
       contact_id?: number | null;
@@ -103,6 +120,7 @@ export const bookingProvider = {
       };
     }>("submit_public_booking", {
       token: payload.token,
+      reschedule_booking_id: payload.rescheduleBookingId ?? null,
       service_package_id: payload.servicePackageId ?? null,
       service_name: payload.serviceName,
       event_date: payload.eventDate,

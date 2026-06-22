@@ -5,6 +5,7 @@ export type BookingSettings = {
   duration_minutes?: number;
   booking_horizon_days?: number;
   page_title?: string;
+  reschedule_cutoff_minutes?: number;
 };
 
 export const DEFAULT_BOOKING_SETTINGS: Required<BookingSettings> = {
@@ -14,6 +15,7 @@ export const DEFAULT_BOOKING_SETTINGS: Required<BookingSettings> = {
   duration_minutes: 30,
   booking_horizon_days: 30,
   page_title: "Schedule with us",
+  reschedule_cutoff_minutes: 60,
 };
 
 export const normalizeBookingSettings = (
@@ -32,6 +34,7 @@ export const normalizeBookingSettings = (
 
   const duration = Number(value.duration_minutes);
   const horizon = Number(value.booking_horizon_days);
+  const rescheduleCutoff = Number(value.reschedule_cutoff_minutes);
 
   return {
     enabled: value.enabled !== false,
@@ -54,7 +57,29 @@ export const normalizeBookingSettings = (
       typeof value.page_title === "string" && value.page_title.trim().length > 0
         ? value.page_title.trim()
         : DEFAULT_BOOKING_SETTINGS.page_title,
+    reschedule_cutoff_minutes:
+      Number.isFinite(rescheduleCutoff) && rescheduleCutoff >= 0
+        ? Math.min(rescheduleCutoff, 24 * 60)
+        : DEFAULT_BOOKING_SETTINGS.reschedule_cutoff_minutes,
   };
+};
+
+export const getBookingStartMs = (eventDate: string, eventTime: string) => {
+  const time = String(eventTime).slice(0, 5);
+  return new Date(`${eventDate}T${time}:00`).getTime();
+};
+
+export const isUpcomingBooking = (eventDate: string, eventTime: string) =>
+  getBookingStartMs(eventDate, eventTime) > Date.now();
+
+export const canRescheduleBooking = (
+  eventDate: string,
+  eventTime: string,
+  cutoffMinutes: number,
+) => {
+  const startMs = getBookingStartMs(eventDate, eventTime);
+  const cutoffMs = cutoffMinutes * 60_000;
+  return Date.now() < startMs - cutoffMs;
 };
 
 export const formatServicePriceLabel = (input: {

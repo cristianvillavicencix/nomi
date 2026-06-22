@@ -7,11 +7,14 @@ import {
   normalizeSlotTime,
   parseDateKey,
   slotTimeToDb,
+  canRescheduleBooking,
+  isUpcomingBooking,
 } from "../_shared/bookingUtils.ts";
 import { notifyFollowUpForCalendarEvent } from "../_shared/notifyFollowUp.ts";
 
 type SubmitBookingBody = {
   token?: string;
+  reschedule_booking_id?: number | null;
   service_package_id?: number | null;
   service_name?: string;
   event_date?: string;
@@ -106,6 +109,66 @@ Deno.serve(
         return createErrorResponse(400, "Invalid event time");
       }
 
+      const rescheduleBookingId = Number(body.reschedule_booking_id);
+      const isReschedule = Number.isFinite(rescheduleBookingId);
+
+      let rescheduleBooking: {
+        id: number;
+        calendar_event_id: number | null;
+        contact_id: number | null;
+      } | null = null;
+
+      if (isReschedule) {
+        const { data: existingBooking } = await supabaseAdmin
+          .from("public_bookings")
+          .select(
+            "id, calendar_event_id, contact_id, status, event_date, event_time",
+          )
+          .eq("id", rescheduleBookingId)
+          .eq("booking_token_id", tokenData.id)
+          .eq("status", "confirmed")
+          .maybeSingle();
+
+        if (!existingBooking?.id) {
+          return createErrorResponse(404, "Booking not found for reschedule");
+        }
+
+        const existingTime = String(existingBooking.event_time ?? "").slice(0, 5);
+        if (
+          !canRescheduleBooking(
+            existingBooking.event_date,
+            existingTime,
+            settings.reschedule_cutoff_minutes,
+          )
+        ) {
+          return createErrorResponse(
+            403,
+            "Rescheduling is not available this close to your meeting. Please contact your host directly.",
+          );
+        }
+
+        rescheduleBooking = existingBooking;
+      } else {
+        const { data: activeBooking } = await supabaseAdmin
+          .from("public_bookings")
+          .select("id, event_date, event_time")
+          .eq("booking_token_id", tokenData.id)
+          .eq("status", "confirmed")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (
+          activeBooking &&
+          isUpcomingBooking(activeBooking.event_date, activeBooking.event_time)
+        ) {
+          return createErrorResponse(
+            409,
+            "You already have a booking on this link.",
+          );
+        }
+      }
+
       let slotQuery = supabaseAdmin
         .from("calendar_events")
         .select("id")
@@ -123,11 +186,12 @@ Deno.serve(
       }
 
       const { data: existingSlot } = await slotQuery.maybeSingle();
-      if (existingSlot?.id) {
+      const rescheduleEventId = rescheduleBooking?.calendar_event_id ?? null;
+      if (existingSlot?.id && existingSlot.id !== rescheduleEventId) {
         return createErrorResponse(409, "That time slot is no longer available");
       }
 
-      let contactId = tokenData.contact_id;
+      let contactId = tokenData.contact_id ?? rescheduleBooking?.contact_id ?? null;
       if (!contactId) {
         const { first_name, last_name } = splitName(guestName);
         const { data: createdContact, error: contactError } = await supabaseAdmin
@@ -166,63 +230,116 @@ Deno.serve(
         guestCompany ? `Company: ${guestCompany}` : null,
         guestPhone ? `Phone: ${guestPhone}` : null,
         guestEmail ? `Email: ${guestEmail}` : null,
-        "Source: Public booking",
+        isReschedule ? "Source: Public booking (rescheduled)" : "Source: Public booking",
       ]
         .filter(Boolean)
         .join("\n");
 
-      const { data: calendarEvent, error: calendarError } = await supabaseAdmin
-        .from("calendar_events")
-        .insert({
-          org_id: tokenData.org_id,
-          title: `Booking: ${serviceName} — ${guestName}`,
-          event_date: eventDate,
-          event_time: dbTime,
-          duration_minutes: settings.duration_minutes,
-          remind_before_minutes: 15,
-          description,
-          deal_id: tokenData.deal_id,
-          contact_id: contactId,
-          company_id: tokenData.company_id,
-          organization_member_id: tokenData.organization_member_id,
-        })
-        .select("id")
-        .single();
+      const calendarPayload = {
+        title: `Booking: ${serviceName} — ${guestName}`,
+        event_date: eventDate,
+        event_time: dbTime,
+        duration_minutes: settings.duration_minutes,
+        remind_before_minutes: 15,
+        description,
+        deal_id: tokenData.deal_id,
+        contact_id: contactId,
+        company_id: tokenData.company_id,
+        organization_member_id: tokenData.organization_member_id,
+      };
 
-      if (calendarError || !calendarEvent?.id) {
-        console.error("[submit_public_booking] calendar insert", calendarError);
-        return createErrorResponse(500, "Could not create calendar event");
+      let calendarEventId: number;
+
+      if (isReschedule && rescheduleEventId) {
+        const { data: updatedEvent, error: calendarError } = await supabaseAdmin
+          .from("calendar_events")
+          .update(calendarPayload)
+          .eq("id", rescheduleEventId)
+          .eq("org_id", tokenData.org_id)
+          .select("id")
+          .single();
+
+        if (calendarError || !updatedEvent?.id) {
+          console.error("[submit_public_booking] calendar update", calendarError);
+          return createErrorResponse(500, "Could not update calendar event");
+        }
+        calendarEventId = updatedEvent.id;
+      } else {
+        const { data: calendarEvent, error: calendarError } = await supabaseAdmin
+          .from("calendar_events")
+          .insert({
+            org_id: tokenData.org_id,
+            ...calendarPayload,
+          })
+          .select("id")
+          .single();
+
+        if (calendarError || !calendarEvent?.id) {
+          console.error("[submit_public_booking] calendar insert", calendarError);
+          return createErrorResponse(500, "Could not create calendar event");
+        }
+        calendarEventId = calendarEvent.id;
       }
 
       const packageId = Number(body.service_package_id);
-      const { data: booking, error: bookingError } = await supabaseAdmin
-        .from("public_bookings")
-        .insert({
-          org_id: tokenData.org_id,
-          booking_token_id: tokenData.id,
-          service_package_id: Number.isFinite(packageId) ? packageId : null,
-          service_name: serviceName,
-          organization_member_id: tokenData.organization_member_id,
-          contact_id: contactId,
-          calendar_event_id: calendarEvent.id,
-          guest_name: guestName,
-          guest_company: guestCompany || null,
-          guest_phone: guestPhone || null,
-          guest_email: guestEmail || null,
-          event_date: eventDate,
-          event_time: dbTime,
-        })
-        .select("id")
-        .single();
+      let bookingId: number | null = null;
 
-      if (bookingError) {
-        console.error("[submit_public_booking] booking insert", bookingError);
+      if (isReschedule && rescheduleBooking) {
+        const { data: updatedBooking, error: bookingError } = await supabaseAdmin
+          .from("public_bookings")
+          .update({
+            service_package_id: Number.isFinite(packageId) ? packageId : null,
+            service_name: serviceName,
+            contact_id: contactId,
+            calendar_event_id: calendarEventId,
+            guest_name: guestName,
+            guest_company: guestCompany || null,
+            guest_phone: guestPhone || null,
+            guest_email: guestEmail || null,
+            event_date: eventDate,
+            event_time: dbTime,
+          })
+          .eq("id", rescheduleBooking.id)
+          .select("id")
+          .single();
+
+        if (bookingError) {
+          console.error("[submit_public_booking] booking update", bookingError);
+        } else {
+          bookingId = updatedBooking?.id ?? rescheduleBooking.id;
+        }
+      } else {
+        const { data: booking, error: bookingError } = await supabaseAdmin
+          .from("public_bookings")
+          .insert({
+            org_id: tokenData.org_id,
+            booking_token_id: tokenData.id,
+            service_package_id: Number.isFinite(packageId) ? packageId : null,
+            service_name: serviceName,
+            organization_member_id: tokenData.organization_member_id,
+            contact_id: contactId,
+            calendar_event_id: calendarEventId,
+            guest_name: guestName,
+            guest_company: guestCompany || null,
+            guest_phone: guestPhone || null,
+            guest_email: guestEmail || null,
+            event_date: eventDate,
+            event_time: dbTime,
+          })
+          .select("id")
+          .single();
+
+        if (bookingError) {
+          console.error("[submit_public_booking] booking insert", bookingError);
+        } else {
+          bookingId = booking?.id ?? null;
+        }
       }
 
       try {
         await notifyFollowUpForCalendarEvent(
           supabaseAdmin,
-          calendarEvent.id,
+          calendarEventId,
           "scheduled",
           { appBaseUrl: body.app_base_url ?? null },
         );
@@ -246,8 +363,9 @@ Deno.serve(
       return new Response(
         JSON.stringify({
           ok: true,
-          booking_id: booking?.id ?? null,
-          calendar_event_id: calendarEvent.id,
+          rescheduled: isReschedule,
+          booking_id: bookingId,
+          calendar_event_id: calendarEventId,
           contact_id: contactId,
           confirmation: {
             service_name: serviceName,

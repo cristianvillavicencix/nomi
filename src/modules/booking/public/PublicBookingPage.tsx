@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  CalendarPlus,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -20,7 +19,9 @@ import {
   formatBookingDateLong,
   formatBookingTimeLabel,
 } from "@/modules/booking/bookingFormatUtils";
+import { BookingAddToCalendar } from "@/modules/booking/public/BookingAddToCalendar";
 import { BookingDatePicker } from "@/modules/booking/public/BookingDatePicker";
+import { ExistingBookingView } from "@/modules/booking/public/ExistingBookingView";
 import {
   BookingServicePicker,
   type BookingServiceOption,
@@ -37,24 +38,25 @@ const parseDateKeyToLocal = (dateKey: string) => {
   return new Date(year, month - 1, day);
 };
 
-const buildCalendarUrl = (input: {
-  title: string;
-  date: string;
-  time: string;
-  durationMinutes: number;
-  description?: string;
-}) => {
-  const start = new Date(`${input.date}T${input.time}:00`);
-  const end = new Date(start.getTime() + input.durationMinutes * 60_000);
-  const format = (date: Date) =>
-    date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const params = new URLSearchParams({
-    action: "TEMPLATE",
-    text: input.title,
-    dates: `${format(start)}/${format(end)}`,
-    details: input.description ?? "",
-  });
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+const findServiceOption = (
+  services: BookingServiceOption[],
+  existing: {
+    service_name: string;
+    service_package_id: number | null;
+  },
+) => {
+  const byId = services.find(
+    (service) =>
+      existing.service_package_id != null &&
+      service.id === existing.service_package_id,
+  );
+  if (byId) return byId;
+  return (
+    services.find((service) => service.name === existing.service_name) ?? {
+      id: existing.service_package_id,
+      name: existing.service_name,
+    }
+  );
 };
 
 export const PublicBookingPage = () => {
@@ -77,7 +79,12 @@ export const PublicBookingPage = () => {
     event_date: string;
     event_time: string;
     host_name?: string | null;
+    rescheduled?: boolean;
   } | null>(null);
+  const [rescheduleBookingId, setRescheduleBookingId] = useState<
+    number | null
+  >(null);
+  const [flow, setFlow] = useState<"existing" | "wizard">("wizard");
 
   const {
     data: payload,
@@ -103,6 +110,7 @@ export const PublicBookingPage = () => {
       }
       return dataProvider.submitPublicBooking({
         token,
+        rescheduleBookingId,
         servicePackageId: selectedService.id,
         serviceName: selectedService.name,
         eventDate: selectedDate,
@@ -112,13 +120,48 @@ export const PublicBookingPage = () => {
     },
     onSuccess: (result) => {
       if (result.confirmation) {
-        setSubmitted(result.confirmation);
+        setSubmitted({
+          ...result.confirmation,
+          rescheduled: result.rescheduled,
+        });
         setStep(3);
       }
     },
   });
 
   const booking = payload as BookingPayload | undefined;
+  const existingBooking = booking?.existing_booking ?? null;
+
+  const startReschedule = () => {
+    if (!existingBooking?.can_reschedule || !booking) return;
+    setRescheduleBookingId(existingBooking.id);
+    setSelectedService(findServiceOption(booking.services, existingBooking));
+    setSelectedDate(existingBooking.event_date);
+    setSelectedTime(existingBooking.event_time);
+    setMonthAnchor(parseDateKeyToLocal(existingBooking.event_date));
+    setGuest({
+      name: existingBooking.guest_name ?? "",
+      company: existingBooking.guest_company ?? "",
+      phone: existingBooking.guest_phone ?? "",
+      email: existingBooking.guest_email ?? "",
+    });
+    setFlow("wizard");
+    setStep(1);
+  };
+
+  useEffect(() => {
+    if (!existingBooking || !booking) return;
+    if (!rescheduleBookingId) {
+      setFlow("existing");
+    }
+    setSelectedService(findServiceOption(booking.services, existingBooking));
+    setGuest({
+      name: existingBooking.guest_name ?? "",
+      company: existingBooking.guest_company ?? "",
+      phone: existingBooking.guest_phone ?? "",
+      email: existingBooking.guest_email ?? "",
+    });
+  }, [existingBooking, booking, rescheduleBookingId]);
 
   useEffect(() => {
     if (!booking?.prefill) return;
@@ -163,22 +206,30 @@ export const PublicBookingPage = () => {
     );
   }
 
-  if (submitted) {
-    const calendarUrl = buildCalendarUrl({
-      title: `${submitted.service_name} with ${booking.org.name}`,
-      date: submitted.event_date,
-      time: submitted.event_time,
-      durationMinutes: booking.settings.duration_minutes,
-      description: `Booked with ${submitted.host_name ?? booking.org.name}`,
-    });
+  if (existingBooking && flow === "existing") {
+    return (
+      <ExistingBookingView
+        orgName={booking.org.name}
+        hostName={booking.host_name}
+        hostPhone={booking.host_phone}
+        durationMinutes={booking.settings.duration_minutes}
+        rescheduleCutoffMinutes={booking.settings.reschedule_cutoff_minutes}
+        booking={existingBooking}
+        onReschedule={startReschedule}
+      />
+    );
+  }
 
+  if (submitted) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
         <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
           <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <Check className="size-7" />
           </div>
-          <h1 className="mt-4 text-2xl font-semibold">You&apos;re booked!</h1>
+          <h1 className="mt-4 text-2xl font-semibold">
+            {submitted.rescheduled ? "You're rescheduled!" : "You're booked!"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             We sent a confirmation message if a phone number was provided.
           </p>
@@ -199,12 +250,15 @@ export const PublicBookingPage = () => {
               </p>
             ) : null}
           </div>
-          <Button variant="outline" className="mt-6 w-full" asChild>
-            <a href={calendarUrl} target="_blank" rel="noreferrer">
-              <CalendarPlus className="mr-2 size-4" />
-              Add to calendar
-            </a>
-          </Button>
+          <BookingAddToCalendar
+            event={{
+              title: `${submitted.service_name} with ${booking.org.name}`,
+              date: submitted.event_date,
+              time: submitted.event_time,
+              durationMinutes: booking.settings.duration_minutes,
+              description: `Booked with ${submitted.host_name ?? booking.org.name}`,
+            }}
+          />
         </div>
       </div>
     );
@@ -463,7 +517,15 @@ export const PublicBookingPage = () => {
               type="button"
               variant="outline"
               disabled={step === 0 || submitMutation.isPending}
-              onClick={() => setStep((current) => Math.max(0, current - 1))}
+              onClick={() => {
+                if (step === 1 && rescheduleBookingId) {
+                  setFlow("existing");
+                  setRescheduleBookingId(null);
+                  setStep(0);
+                  return;
+                }
+                setStep((current) => Math.max(0, current - 1));
+              }}
             >
               <ChevronLeft className="mr-1 size-4" />
               Back
@@ -486,8 +548,10 @@ export const PublicBookingPage = () => {
                 {submitMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
-                    Confirming…
+                    {rescheduleBookingId ? "Rescheduling…" : "Confirming…"}
                   </>
+                ) : rescheduleBookingId ? (
+                  "Confirm reschedule"
                 ) : (
                   "Confirm booking"
                 )}

@@ -7,6 +7,8 @@ import {
   normalizeBookingSettings,
   normalizeSlotTime,
   parseDateKey,
+  canRescheduleBooking,
+  isUpcomingBooking,
 } from "../_shared/bookingUtils.ts";
 
 const jsonCorsHeaders = {
@@ -83,10 +85,11 @@ const loadBookedSlots = async (
   orgId: number,
   memberId: number | null,
   eventDate: string,
+  excludeCalendarEventId?: number | null,
 ) => {
   let query = supabaseAdmin
     .from("calendar_events")
-    .select("event_time")
+    .select("id, event_time")
     .eq("org_id", orgId)
     .eq("event_date", eventDate)
     .is("completed_at", null);
@@ -98,9 +101,54 @@ const loadBookedSlots = async (
   const { data = [] } = await query;
   return new Set(
     data
+      .filter((row) => {
+        if (excludeCalendarEventId == null) return true;
+        return row.id !== excludeCalendarEventId;
+      })
       .map((row) => String(row.event_time ?? "").slice(0, 5))
       .filter(Boolean),
   );
+};
+
+const isUpcomingBookingLocal = isUpcomingBooking;
+
+const loadExistingBooking = async (
+  tokenId: number,
+  cutoffMinutes: number,
+) => {
+  const { data } = await supabaseAdmin
+    .from("public_bookings")
+    .select(
+      "id, service_name, service_package_id, event_date, event_time, guest_name, guest_company, guest_phone, guest_email, calendar_event_id",
+    )
+    .eq("booking_token_id", tokenId)
+    .eq("status", "confirmed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return null;
+  if (!isUpcomingBookingLocal(data.event_date, data.event_time)) return null;
+
+  const eventTime = String(data.event_time ?? "").slice(0, 5);
+
+  return {
+    id: data.id,
+    service_name: data.service_name,
+    service_package_id: data.service_package_id,
+    event_date: data.event_date,
+    event_time: eventTime,
+    guest_name: data.guest_name,
+    guest_company: data.guest_company,
+    guest_phone: data.guest_phone,
+    guest_email: data.guest_email,
+    calendar_event_id: data.calendar_event_id,
+    can_reschedule: canRescheduleBooking(
+      data.event_date,
+      eventTime,
+      cutoffMinutes,
+    ),
+  };
 };
 
 Deno.serve(async (req) => {
@@ -165,17 +213,26 @@ Deno.serve(async (req) => {
     }
 
     let hostName: string | null = null;
+    let hostPhone: string | null = null;
     if (tokenData.organization_member_id != null) {
       const { data: host } = await supabaseAdmin
         .from("organization_members")
-        .select("first_name, last_name")
+        .select("first_name, last_name, notification_phone")
         .eq("id", tokenData.organization_member_id)
         .maybeSingle();
       const parts = [host?.first_name, host?.last_name]
         .map((part) => String(part ?? "").trim())
         .filter(Boolean);
       hostName = parts.length > 0 ? parts.join(" ") : null;
+      hostPhone = host?.notification_phone
+        ? String(host.notification_phone).trim()
+        : null;
     }
+
+    const existingBooking = await loadExistingBooking(
+      tokenData.id,
+      settings.reschedule_cutoff_minutes,
+    );
 
     const requestedDate = body.date ? String(body.date).trim() : "";
     if (requestedDate) {
@@ -188,12 +245,23 @@ Deno.serve(async (req) => {
         tokenData.org_id,
         tokenData.organization_member_id,
         requestedDate,
+        existingBooking?.calendar_event_id ?? null,
       );
 
       const slots = settings.slot_times
         .map((slot) => normalizeSlotTime(slot))
         .filter((slot): slot is string => Boolean(slot))
         .filter((slot) => !booked.has(slot));
+
+      if (
+        existingBooking &&
+        existingBooking.event_date === requestedDate &&
+        existingBooking.event_time &&
+        !slots.includes(existingBooking.event_time)
+      ) {
+        slots.push(existingBooking.event_time);
+        slots.sort();
+      }
 
       return new Response(
         JSON.stringify({
@@ -245,6 +313,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (existingBooking && Object.keys(prefill).length === 0) {
+      prefill = {
+        name: String(existingBooking.guest_name ?? ""),
+        company: String(existingBooking.guest_company ?? ""),
+        phone: String(existingBooking.guest_phone ?? ""),
+        email: String(existingBooking.guest_email ?? ""),
+      };
+    }
+
     return new Response(
       JSON.stringify({
         token,
@@ -255,13 +332,16 @@ Deno.serve(async (req) => {
           timezone_label: settings.timezone_label,
         },
         host_name: hostName,
+        host_phone: hostPhone,
         services,
         settings: {
           duration_minutes: settings.duration_minutes,
           slot_times: settings.slot_times,
+          reschedule_cutoff_minutes: settings.reschedule_cutoff_minutes,
         },
         dates,
         prefill,
+        existing_booking: existingBooking,
         links: {
           contact_id: tokenData.contact_id,
           company_id: tokenData.company_id,
