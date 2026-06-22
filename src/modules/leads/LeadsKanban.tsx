@@ -220,6 +220,18 @@ export const LeadsKanban = () => {
     const moved = sourceList[source.index];
     if (!moved) return;
 
+    setLeadsByStage((current) => {
+      const nextSource = [...current[sourceStage]];
+      const [item] = nextSource.splice(source.index, 1);
+      const nextDest = [...current[destStage]];
+      nextDest.splice(destination.index, 0, item);
+      return {
+        ...current,
+        [sourceStage]: nextSource,
+        [destStage]: nextDest,
+      };
+    });
+
     setPendingTransition({
       lead: moved,
       fromStage: sourceStage,
@@ -228,14 +240,18 @@ export const LeadsKanban = () => {
     setStageDialogOpen(true);
   };
 
-  const closeStageDialog = () => {
+  const closeStageDialog = (revertBoard = true) => {
     setStageDialogOpen(false);
+    if (revertBoard && pendingTransition && data) {
+      setLeadsByStage(groupLeadsByStage(data));
+    }
     setPendingTransition(null);
   };
 
   const handleStageTransitionCompleted = () => {
     const transition = pendingTransition;
-    closeStageDialog();
+    setStageDialogOpen(false);
+    setPendingTransition(null);
     void refetch();
 
     if (transition?.toStage === "won") {
@@ -281,7 +297,7 @@ export const LeadsKanban = () => {
           toStage={pendingTransition.toStage}
           open={stageDialogOpen}
           onOpenChange={(open) => {
-            if (!open) closeStageDialog();
+            if (!open) closeStageDialog(true);
           }}
           onCompleted={handleStageTransitionCompleted}
         />

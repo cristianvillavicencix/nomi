@@ -1,3 +1,4 @@
+import { invokePublicEdgeFunction } from "@/lib/supabase/invokePublicEdgeFunction";
 import { invokeEdgeFunction } from "../invokeEdgeFunction";
 import { supabase } from "../supabase";
 
@@ -36,48 +37,52 @@ export const formsProvider = {
 
     return data;
   },
-  async getFormByToken(payload: { token: string }) {
-    const { data, error } = await supabase.functions.invoke<{
-      token: string;
-      is_preview?: boolean;
-      form: {
-        id: number;
-        name: string;
-        slug: string;
-        description?: string | null;
-        schema: Record<string, unknown>;
-        type: string;
-        logo_url?: string | null;
-        primary_color?: string | null;
-        background_image_url?: string | null;
-        welcome_title?: string | null;
-        welcome_message?: string | null;
-        thank_you_title?: string | null;
-        thank_you_message?: string | null;
-        recaptcha_enabled?: boolean;
-        honeypot_enabled?: boolean;
-        custom_font_url?: string | null;
-        custom_css?: string | null;
-      };
-      prefill?: Record<string, unknown>;
-      links?: {
-        contact_id?: number | null;
-        company_id?: number | null;
-        deal_id?: number | null;
-      };
-    }>("get_form_by_token", {
-      body: { token: payload.token },
-      headers: {
-        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
-      },
-    });
+  async getFormByToken(payload: { token: string; signal?: AbortSignal }) {
+    try {
+      const data = await invokePublicEdgeFunction<{
+        token: string;
+        is_preview?: boolean;
+        form: {
+          id: number;
+          name: string;
+          slug: string;
+          description?: string | null;
+          schema: Record<string, unknown>;
+          type: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          background_image_url?: string | null;
+          welcome_title?: string | null;
+          welcome_message?: string | null;
+          thank_you_title?: string | null;
+          thank_you_message?: string | null;
+          recaptcha_enabled?: boolean;
+          honeypot_enabled?: boolean;
+          custom_font_url?: string | null;
+          custom_css?: string | null;
+        };
+        prefill?: Record<string, unknown>;
+        links?: {
+          contact_id?: number | null;
+          company_id?: number | null;
+          deal_id?: number | null;
+        };
+      }>("get_form_by_token", { token: payload.token }, { signal: payload.signal });
 
-    if (error || !data?.form) {
+      if (!data?.form) {
+        throw new Error("Form not found or link expired");
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw error;
+      }
       console.error("get_form_by_token.error", error);
-      throw new Error("Form not found or link expired");
+      throw new Error(
+        error instanceof Error ? error.message : "Form not found or link expired",
+      );
     }
-
-    return data;
   },
   async submitFormV2(payload: {
     token: string;
@@ -93,17 +98,17 @@ export const formsProvider = {
       brief_sections?: string[];
     };
   }) {
-    const { data, error } = await supabase.functions.invoke<{
-      ok?: boolean;
-      preview?: boolean;
-      error?: string;
-      details?: string[];
-      submission_id?: number;
-      thank_you_title?: string;
-      thank_you_message?: string;
-      redirect_url?: string | null;
-    }>("submit_form_v2", {
-      body: {
+    try {
+      const data = await invokePublicEdgeFunction<{
+        ok?: boolean;
+        preview?: boolean;
+        error?: string;
+        details?: string[];
+        submission_id?: number;
+        thank_you_title?: string;
+        thank_you_message?: string;
+        redirect_url?: string | null;
+      }>("submit_form_v2", {
         token: payload.token,
         answers: payload.answers,
         recaptcha_token: payload.recaptchaToken,
@@ -114,35 +119,22 @@ export const formsProvider = {
             payload.metadata?.app_base_url ?? window.location.origin,
           source_url: payload.metadata?.source_url ?? window.location.href,
         },
-      },
-      headers: {
-        apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
-      },
-    });
+      });
 
-    if (error || !data?.ok) {
-      let responseBody = data;
-      if (error && !responseBody?.error) {
-        try {
-          const context = (error as { context?: Response }).context;
-          if (context) {
-            responseBody = (await context.json()) as typeof data;
-          }
-        } catch {
-          // ignore malformed error body
-        }
+      if (!data?.ok) {
+        const detail = data?.details?.length
+          ? `: ${data.details.join(", ")}`
+          : "";
+        const message = (data?.error ?? "Failed to submit form") + detail;
+        console.error("submit_form_v2.error", message, data);
+        throw new Error(message);
       }
-      const detail = responseBody?.details?.length
-        ? `: ${responseBody.details.join(", ")}`
-        : "";
-      const message =
-        (responseBody?.error ?? error?.message ?? "Failed to submit form") +
-        detail;
-      console.error("submit_form_v2.error", error ?? message, responseBody);
-      throw new Error(message);
-    }
 
-    return data;
+      return data;
+    } catch (error) {
+      console.error("submit_form_v2.error", error);
+      throw error instanceof Error ? error : new Error("Failed to submit form");
+    }
   },
   async generateFormToken(payload: {
     formInstanceId: number;
@@ -189,25 +181,22 @@ export const formsProvider = {
     event_type: "started" | "field_completed" | "field_focused" | "abandoned";
     field_key?: string;
   }) {
-    const { data, error } = await supabase.functions.invoke<{ ok?: boolean }>(
-      "record_form_event",
-      {
-        body: payload,
-        headers: {
-          apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
-        },
-      },
-    );
+    try {
+      const data = await invokePublicEdgeFunction<{ ok?: boolean }>(
+        "record_form_event",
+        payload,
+      );
 
-    if (error) {
+      if (!data?.ok) {
+        throw new Error("Failed to record form event");
+      }
+
+      return data;
+    } catch (error) {
       console.error("record_form_event.error", error);
-      throw new Error("Failed to record form event");
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to record form event");
     }
-
-    if (!data?.ok) {
-      throw new Error("Failed to record form event");
-    }
-
-    return data;
   },
 };

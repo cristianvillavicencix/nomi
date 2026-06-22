@@ -495,7 +495,13 @@ export const PublicFormRenderer = () => {
     queryKey: ["public-form-v2", token],
     enabled: Boolean(token),
     staleTime: 60_000,
-    queryFn: () => dataProvider.getFormByToken({ token }),
+    retry: (failureCount, queryError) => {
+      if (queryError instanceof Error && queryError.name === "AbortError") {
+        return failureCount < 1;
+      }
+      return failureCount < 2;
+    },
+    queryFn: ({ signal }) => dataProvider.getFormByToken({ token, signal }),
   });
 
   const formPayload = payload as PublicFormPayload | undefined;
@@ -663,12 +669,14 @@ export const PublicFormRenderer = () => {
   }
 
   if (error || !formPayload) {
+    const errorMessage =
+      error instanceof Error && error.message.trim()
+        ? error.message
+        : "This link is invalid or has expired.";
     return (
       <div className={publicFormContentClassName(embedded)}>
         <h1 className="text-xl font-semibold">Form unavailable</h1>
-        <p className="text-sm text-muted-foreground">
-          This link is invalid or has expired.
-        </p>
+        <p className="text-sm text-muted-foreground">{errorMessage}</p>
       </div>
     );
   }

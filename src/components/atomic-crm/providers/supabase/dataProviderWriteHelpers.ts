@@ -35,6 +35,44 @@ export const resolveOrganizationMemberId = async (
   return data.id as Identifier;
 };
 
+/** Org member + org for contact writes when the record has no assignee. */
+export const resolveContactOrgMemberForWrite = async (
+  contact: Record<string, unknown>,
+): Promise<{ memberId: Identifier; orgId: Identifier }> => {
+  const assigned = Array.isArray(contact.assigned_member_ids)
+    ? contact.assigned_member_ids[0]
+    : null;
+  const candidate =
+    contact.organization_member_id ?? assigned ?? null;
+
+  let memberId: Identifier | null = null;
+  if (candidate != null && candidate !== "") {
+    memberId = await resolveOrganizationMemberId(candidate as Identifier);
+  } else {
+    const identity = await getCurrentMutationIdentity();
+    memberId = identity?.id ?? null;
+  }
+
+  if (memberId == null || memberId === "") {
+    throw new Error("Organization member not found");
+  }
+
+  const { data: member, error } = await supabase
+    .from("organization_members")
+    .select("id, org_id")
+    .eq("id", memberId)
+    .single();
+
+  if (error || !member?.org_id) {
+    throw new Error("Organization member not found");
+  }
+
+  return {
+    memberId: member.id as Identifier,
+    orgId: member.org_id as Identifier,
+  };
+};
+
 const getCurrentMutationIdentity = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
   const authUserId = sessionData.session?.user?.id;

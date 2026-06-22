@@ -101,7 +101,6 @@ export const createTaskTagNotifications = async (
       dataProvider.create("task_tag_notifications", {
         data: {
           task_id: taskId,
-          person_id: null,
           recipient_organization_member_id: recipient.id,
         },
       }),

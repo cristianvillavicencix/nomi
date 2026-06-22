@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRefresh } from "ra-core";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,7 @@ export const LeadPipelinePanel = ({
 }) => {
   const [targetStage, setTargetStage] = useState<LeadStageId | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const refresh = useRefresh();
 
   const currentStage = normalizeLeadStage(lead.lead_stage);
 
@@ -151,7 +153,15 @@ export const LeadPipelinePanel = ({
         lead={lead}
         toStage={targetStage}
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setTargetStage(null);
+        }}
+        onCompleted={() => {
+          refresh();
+          setDialogOpen(false);
+          setTargetStage(null);
+        }}
       />
     </>
   );

@@ -93,16 +93,24 @@ export const applyLeadStageChange = async ({
     previousData: lead,
   });
 
+  const sideEffectWarnings: string[] = [];
+
   if (noteText.trim()) {
-    await dataProvider.create("contact_notes", {
-      data: {
-        contact_id: lead.id,
-        text: noteText,
-        date: new Date().toISOString(),
-        organization_member_id: organizationMemberId,
-        status: noteStatus,
-      },
-    });
+    try {
+      await dataProvider.create("contact_notes", {
+        data: {
+          contact_id: lead.id,
+          text: noteText,
+          date: new Date().toISOString(),
+          organization_member_id: organizationMemberId,
+          status: noteStatus,
+        },
+      });
+    } catch (error) {
+      sideEffectWarnings.push(
+        error instanceof Error ? error.message : "Could not save pipeline note",
+      );
+    }
   }
 
   if (
@@ -115,52 +123,66 @@ export const applyLeadStageChange = async ({
       config.followUpTaskTitle?.(values) ??
       `Follow up — ${getLeadStageDef(toStage).label}`;
 
-    await dataProvider.create("tasks", {
-      data: normalizeTaskCreateData({
-        contact_id: lead.id,
-        text: taskTitle,
-        due_date: followUp.dateKey,
-        type: "call",
-        priority: toStage === "closing" ? "high" : "normal",
-        organization_member_id: organizationMemberId,
-      }),
-    });
-
-    const calendarResult = await dataProvider.create("calendar_events", {
-      data: prepareCalendarEventWriteData({
-        title: taskTitle,
-        event_date: followUp.dateKey,
-        event_time: followUp.timeKey,
-        duration_minutes: 30,
-        remind_before_minutes: 15,
-        description: buildFollowUpCalendarDescription({
-          fromStage,
-          toStage,
-          values,
+    try {
+      await dataProvider.create("tasks", {
+        data: normalizeTaskCreateData({
+          contact_id: lead.id,
+          text: taskTitle,
+          due_date: followUp.dateKey,
+          type: "call",
+          priority: toStage === "closing" ? "high" : "normal",
+          organization_member_id: organizationMemberId,
         }),
-        contact_id: lead.id,
-        company_id: lead.company_id ?? null,
-        deal_id: null,
-        meeting_url: null,
-        organization_member_id: organizationMemberId,
-        completed_at: null,
-      }),
-    });
+      });
 
-    const calendarEventId = (calendarResult?.data as { id?: Identifier } | undefined)
-      ?.id;
-    const provider = dataProvider as CrmDataProvider;
-    if (calendarEventId != null && provider.notifyFollowUp) {
-      try {
-        await provider.notifyFollowUp({
-          calendarEventId,
-          kind: "scheduled",
-          appBaseUrl:
-            typeof window !== "undefined" ? window.location.origin : null,
-        });
-      } catch (error) {
-        console.warn("[applyLeadStageChange] follow-up SMS failed", error);
+      const calendarResult = await dataProvider.create("calendar_events", {
+        data: prepareCalendarEventWriteData({
+          title: taskTitle,
+          event_date: followUp.dateKey,
+          event_time: followUp.timeKey,
+          duration_minutes: 30,
+          remind_before_minutes: 15,
+          description: buildFollowUpCalendarDescription({
+            fromStage,
+            toStage,
+            values,
+          }),
+          contact_id: lead.id,
+          company_id: lead.company_id ?? null,
+          deal_id: null,
+          meeting_url: null,
+          organization_member_id: organizationMemberId,
+          completed_at: null,
+        }),
+      });
+
+      const calendarEventId = (calendarResult?.data as { id?: Identifier } | undefined)
+        ?.id;
+      const provider = dataProvider as CrmDataProvider;
+      if (calendarEventId != null && provider.notifyFollowUp) {
+        try {
+          await provider.notifyFollowUp({
+            calendarEventId,
+            kind: "scheduled",
+            appBaseUrl:
+              typeof window !== "undefined" ? window.location.origin : null,
+          });
+        } catch (error) {
+          console.warn("[applyLeadStageChange] follow-up SMS failed", error);
+        }
       }
+    } catch (error) {
+      sideEffectWarnings.push(
+        error instanceof Error
+          ? error.message
+          : "Could not create follow-up task or calendar event",
+      );
     }
+  }
+
+  if (sideEffectWarnings.length > 0) {
+    throw new Error(
+      `Stage updated, but some follow-up actions failed: ${sideEffectWarnings.join("; ")}`,
+    );
   }
 };

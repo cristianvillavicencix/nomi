@@ -39,19 +39,34 @@ export async function uploadFormFile(
     }
     formData.append("file", optimized);
 
-    const { data, error } = await supabase.functions.invoke<UploadedFormFile>(
-      "upload_form_file",
+    const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(
+      /\/$/,
+      "",
+    );
+    const apikey = import.meta.env.VITE_SB_PUBLISHABLE_KEY as string | undefined;
+    if (!supabaseUrl || !apikey) {
+      throw new Error("Supabase is not configured");
+    }
+
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/upload_form_file`,
       {
+        method: "POST",
+        headers: { apikey },
         body: formData,
-        headers: {
-          apikey: import.meta.env.VITE_SB_PUBLISHABLE_KEY,
-        },
       },
     );
 
-    if (error || !data?.url) {
-      console.error("upload_form_file.error", error);
-      throw new Error(error?.message || "Failed to upload file");
+    const data = (await response.json()) as UploadedFormFile & {
+      error?: string;
+      message?: string;
+    };
+
+    if (!response.ok || !data?.url) {
+      const message =
+        data?.error ?? data?.message ?? "Failed to upload file";
+      console.error("upload_form_file.error", message);
+      throw new Error(message);
     }
 
     return data;

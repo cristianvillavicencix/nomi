@@ -100,7 +100,6 @@ export const syncTaskParticipants = async (
         dataProvider.create("task_participants", {
           data: {
             task_id: taskId,
-            person_id: null,
             organization_member_id: entry.organization_member_id,
             completed_at: null,
           },

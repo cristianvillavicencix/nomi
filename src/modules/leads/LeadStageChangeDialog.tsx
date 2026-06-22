@@ -351,11 +351,20 @@ export const LeadStageChangeDialog = ({
         noteStatus: noteStatuses[0]?.value ?? "pending",
       });
       refresh();
-      notify(`Movido a ${toStageDef.label}`, { type: "success" });
-      onOpenChange(false);
+      notify(`Moved to ${toStageDef.label}`, { type: "success" });
       onCompleted?.();
-    } catch {
-      notify("No se pudo actualizar el stage del lead", { type: "error" });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not update lead stage";
+      if (message.startsWith("Stage updated, but")) {
+        refresh();
+        onCompleted?.();
+        notify(message, { type: "warning" });
+        return;
+      }
+      notify(message, { type: "error" });
     } finally {
       setIsSubmitting(false);
     }

@@ -54,6 +54,7 @@ import {
   prepareContactWriteData,
   processCompanyLogo,
   resolveOrganizationMemberId,
+  resolveContactOrgMemberForWrite,
   stripContactFormMetaFields,
 } from "./dataProviderWriteHelpers";
 
@@ -186,23 +187,14 @@ const dataProviderWithCustomMethods = {
         return { data: summary ?? contact };
       }
 
-      const memberId = await resolveOrganizationMemberId(
-        (data.organization_member_id ??
-          previous.organization_member_id) as Identifier,
-      );
-      const { data: member, error: memberError } = await supabase
-        .from("organization_members")
-        .select("id, org_id")
-        .eq("id", memberId)
-        .single();
-
-      if (memberError || !member?.org_id) {
-        throw new Error("Organization member not found");
-      }
+      const { orgId } = await resolveContactOrgMemberForWrite({
+        ...previous,
+        ...data,
+      });
 
       await patchContactRow({
         contactId,
-        orgId: member.org_id,
+        orgId,
         data,
       });
       const summary = await fetchContactSummaryById(contactId);
