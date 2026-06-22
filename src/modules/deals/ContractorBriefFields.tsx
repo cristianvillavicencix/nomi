@@ -28,8 +28,12 @@ import { BusinessHoursBriefField } from "@/modules/deals/BusinessHoursBriefField
 import type { WebsiteBriefSectionDef } from "@/modules/deals/websiteBriefSchema";
 import {
   computeYearsExperience,
-  normalizeFlexibleUrl,
 } from "@/modules/deals/briefFormUtils";
+import {
+  getBriefSocialDisplay,
+  parseBriefSocialUrls,
+  serializeBriefSocialUrls,
+} from "@/modules/deals/briefSocialLinks";
 import { FormFieldRenderer } from "@/modules/forms/public/FormFieldRenderer";
 import type { FormFieldDef } from "@/modules/forms/types";
 import { getVisibleFields } from "@/modules/forms/formSchemaUtils";
@@ -37,17 +41,6 @@ import {
   uploadFormFile,
   type UploadedFormFile,
 } from "@/modules/forms/public/uploadFormFile";
-
-const SOCIAL_PLATFORMS = [
-  "Facebook",
-  "Instagram",
-  "Google Business",
-  "Yelp",
-  "Nextdoor",
-  "TikTok",
-  "Thumbtack",
-  "Other",
-];
 
 type BriefSectionProps = {
   section: WebsiteBriefSectionDef;
@@ -73,22 +66,8 @@ const readServicePhotoMap = (value: unknown): Record<string, UploadedFormFile[]>
 const tabLabel = (service: string) =>
   service.length > 22 ? `${service.slice(0, 20)}…` : service;
 
-const parseSocialLinks = (value: unknown) => {
-  const rows = Array.isArray(value) ? value.map(String) : [];
-  return rows.length > 0
-    ? rows.map((entry) => {
-        const [platform = "Facebook", url = ""] = entry.split("|");
-        return { platform: platform.trim() || "Facebook", url: url.trim() };
-      })
-    : [{ platform: "Facebook", url: "" }];
-};
-
-const serializeSocialLinks = (rows: Array<{ platform: string; url: string }>) =>
-  rows.map((row) =>
-    row.url.trim()
-      ? `${row.platform}|${normalizeFlexibleUrl(row.url)}`
-      : `${row.platform}|`,
-  );
+const parseSocialLinks = parseBriefSocialUrls;
+const serializeSocialLinks = serializeBriefSocialUrls;
 
 const parseReferenceSites = (value: unknown) => {
   const rows = Array.isArray(value) ? value.map(String) : [];
@@ -354,15 +333,10 @@ const SocialLinksField = ({
   value: unknown;
   onChange: (next: string[]) => void;
 }) => {
-  const rows = parseSocialLinks(value);
+  const urls = parseSocialLinks(value);
 
-  const updateRow = (
-    index: number,
-    patch: Partial<{ platform: string; url: string }>,
-  ) => {
-    const next = rows.map((row, rowIndex) =>
-      rowIndex === index ? { ...row, ...patch } : row,
-    );
+  const updateUrl = (index: number, url: string) => {
+    const next = urls.map((row, rowIndex) => (rowIndex === index ? url : row));
     onChange(serializeSocialLinks(next));
   };
 
@@ -370,57 +344,55 @@ const SocialLinksField = ({
     <div className="space-y-3">
       <Label>Social media (optional)</Label>
       <p className="text-xs text-muted-foreground">
-        Add only the profiles you use. URLs can be written as www.yourcompany.com.
+        Paste each profile link — we detect the network name and icon automatically.
       </p>
-      {rows.map((row, index) => (
-        <div key={`social-${index}`} className="flex flex-col gap-2 sm:flex-row">
-          <Select
-            value={row.platform}
-            onValueChange={(next) => updateRow(index, { platform: next })}
+      {urls.map((url, index) => {
+        const { label, Icon } = getBriefSocialDisplay(url);
+        const showDetected = Boolean(url.trim());
+
+        return (
+          <div
+            key={`social-${index}`}
+            className="flex flex-col gap-2 sm:flex-row sm:items-center"
           >
-            <SelectTrigger className="sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SOCIAL_PLATFORMS.map((platform) => (
-                <SelectItem key={platform} value={platform}>
-                  {platform}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={row.url}
-            placeholder="www.yourcompany.com"
-            onChange={(event) => updateRow(index, { url: event.target.value })}
-          />
-          {rows.length > 1 ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Remove social profile"
-              onClick={() => {
-                const next = rows.filter((_, rowIndex) => rowIndex !== index);
-                onChange(
-                  serializeSocialLinks(
-                    next.length > 0 ? next : [{ platform: "Facebook", url: "" }],
-                  ),
-                );
-              }}
-            >
-              <X className="size-4" />
-            </Button>
-          ) : null}
-        </div>
-      ))}
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className="flex w-[5.5rem] shrink-0 items-center gap-1.5">
+                <Icon className="text-muted-foreground size-4 shrink-0" />
+                {showDetected ? (
+                  <span className="truncate text-xs font-medium text-muted-foreground">
+                    {label}
+                  </span>
+                ) : null}
+              </div>
+              <Input
+                value={url}
+                placeholder="instagram.com/yourcompany"
+                className="min-w-0 flex-1"
+                onChange={(event) => updateUrl(index, event.target.value)}
+              />
+            </div>
+            {urls.length > 1 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Remove social profile"
+                onClick={() => {
+                  const next = urls.filter((_, rowIndex) => rowIndex !== index);
+                  onChange(serializeSocialLinks(next.length > 0 ? next : [""]));
+                }}
+              >
+                <X className="size-4" />
+              </Button>
+            ) : null}
+          </div>
+        );
+      })}
       <Button
         type="button"
         variant="outline"
         size="sm"
-        onClick={() =>
-          onChange(serializeSocialLinks([...rows, { platform: "Facebook", url: "" }]))
-        }
+        onClick={() => onChange(serializeSocialLinks([...urls, ""]))}
       >
         <Plus className="size-4" />
         Add social profile

@@ -381,6 +381,11 @@ const taskUpdateContextById = new Map<
   }
 >();
 
+const dealBriefSyncContextById = new Map<
+  string,
+  { previousBrief: unknown }
+>();
+
 const lifeCycleCallbacks: ResourceCallbacks[] = [
   {
     resource: "conversations",
@@ -545,6 +550,38 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
         "project_address",
         "company_name",
       ])(params);
+    },
+    beforeUpdate: async (params) => {
+      if (
+        params.data &&
+        typeof params.data === "object" &&
+        "website_brief" in (params.data as Record<string, unknown>)
+      ) {
+        dealBriefSyncContextById.set(String(params.id), {
+          previousBrief: (params.previousData as { website_brief?: unknown })
+            ?.website_brief,
+        });
+      }
+      return params;
+    },
+    afterUpdate: async (result, dataProvider) => {
+      const context = dealBriefSyncContextById.get(String(result.data.id));
+      dealBriefSyncContextById.delete(String(result.data.id));
+      if (!context) return result;
+
+      const nextBrief = (result.data as { website_brief?: unknown })
+        .website_brief;
+      if (JSON.stringify(context.previousBrief) === JSON.stringify(nextBrief)) {
+        return result;
+      }
+
+      try {
+        await dataProvider.syncDealBriefResources(result.data.id);
+        void invalidateResourceQueries("deal_resources");
+      } catch (error) {
+        console.error("syncDealBriefResources.afterUpdate", error);
+      }
+      return result;
     },
   },
   {

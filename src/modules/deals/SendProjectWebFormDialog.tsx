@@ -151,7 +151,7 @@ export const SendProjectWebFormDialog = ({
         contactId: contactId != null ? Number(contactId) : null,
         dealId: dealId != null ? Number(dealId) : null,
         expiresInDays: 30,
-        maxUses: 1,
+        maxUses: 5,
         baseUrl: window.location.origin,
       });
     },

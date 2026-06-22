@@ -1,14 +1,8 @@
 import type { ReactNode } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import {
-  Facebook,
   Globe,
-  Instagram,
-  Linkedin,
-  Music2,
   Plus,
-  Twitter,
-  Youtube,
   X as XIcon,
 } from "lucide-react";
 import { BooleanInput } from "@/components/admin/boolean-input";
@@ -18,6 +12,8 @@ import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BriefSocialLinksInput } from "@/modules/deals/BriefSocialLinksInput";
+import { detectSocialIconFromBriefEntry } from "@/modules/deals/briefSocialLinks";
 import type { WebsiteBriefFieldDef } from "@/modules/deals/websiteBriefSchema";
 
 const BriefAddressFields = ({ field }: { field: WebsiteBriefFieldDef }) => {
@@ -93,24 +89,9 @@ const BriefAddressFields = ({ field }: { field: WebsiteBriefFieldDef }) => {
   );
 };
 
-const detectSocialIcon = (value: string) => {
-  const v = value.toLowerCase();
-  if (v.includes("facebook.com") || v.startsWith("facebook"))
-    return Facebook;
-  if (v.includes("instagram.com") || v.startsWith("instagram"))
-    return Instagram;
-  if (
-    v.includes("twitter.com") ||
-    v.includes("x.com") ||
-    v.startsWith("twitter") ||
-    v.startsWith("x")
-  )
-    return Twitter;
-  if (v.includes("linkedin.com") || v.startsWith("linkedin")) return Linkedin;
-  if (v.includes("youtube.com") || v.includes("youtu.be")) return Youtube;
-  if (v.includes("tiktok.com") || v.startsWith("tiktok")) return Music2;
-  return Globe;
-};
+const detectSocialIcon = (value: string) => detectSocialIconFromBriefEntry(value);
+
+export { BriefSocialLinksInput } from "@/modules/deals/BriefSocialLinksInput";
 
 export const BriefDynamicListInput = ({
   field,
@@ -232,6 +213,9 @@ export const BriefFieldInput = ({
   }
 
   if (field.fieldType === "dynamic_list") {
+    if (field.key === "social_links") {
+      return <BriefSocialLinksInput field={field} />;
+    }
     return <BriefDynamicListInput field={field} />;
   }
 

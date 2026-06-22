@@ -11,6 +11,24 @@ type UploadedAnswerFile = {
   mime_type?: string;
 };
 
+export type BriefResourceInsert = {
+  org_id: number;
+  deal_id: number;
+  category: string;
+  label: string;
+  file: {
+    title: string;
+    type: string;
+    path: string;
+    src: string;
+    bucket?: string;
+  };
+  visibility: string;
+  mime_kind: string;
+  source: string;
+  submitted_by_form?: number | null;
+};
+
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -42,38 +60,61 @@ const toDealResourceFile = (file: UploadedAnswerFile) => {
   };
 };
 
-const readUploadedFiles = (value: unknown): UploadedAnswerFile[] => {
-  if (Array.isArray(value)) return value as UploadedAnswerFile[];
-  if (value && typeof value === "object") return [value as UploadedAnswerFile];
+export const readUploadedFiles = (value: unknown): UploadedAnswerFile[] => {
+  if (value == null) return [];
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '""') return [];
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value.filter(
+      (entry): entry is UploadedAnswerFile =>
+        Boolean(entry) && typeof entry === "object",
+    );
+  }
+  if (typeof value === "object") {
+    const file = value as UploadedAnswerFile;
+    if (!file.path && !file.url) return [];
+    return [file];
+  }
   return [];
 };
 
-export async function processProjectBriefSubmission(
-  supabase: SupabaseClient,
-  submission: {
-    id: number;
-    org_id: number;
-    deal_id?: number | null;
-  },
+export const buildBriefResourceRows = (
+  orgId: number,
+  dealId: number,
   answers: Record<string, unknown>,
-) {
-  const dealId = submission.deal_id;
-  if (!dealId) return;
+  options?: {
+    source?: string;
+    submittedByForm?: number | null;
+  },
+): BriefResourceInsert[] => {
+  const source = options?.source ?? "project_brief";
+  const submittedByForm = options?.submittedByForm ?? null;
+  const resources: BriefResourceInsert[] = [];
 
-  const resourcesToInsert: Array<Record<string, unknown>> = [];
+  const pushFile = (
+    file: UploadedAnswerFile,
+    category: string,
+    label: string,
+  ) => {
+    if (!file.path && !file.url) return;
+    resources.push({
+      org_id: orgId,
+      deal_id: dealId,
+      category,
+      label,
+      file: toDealResourceFile(file),
+      visibility: "internal",
+      mime_kind: inferMimeKind(file.mime_type ?? file.type ?? ""),
+      source,
+      submitted_by_form: submittedByForm,
+    });
+  };
 
   for (const logo of readUploadedFiles(answers.logo_file)) {
-    resourcesToInsert.push({
-      org_id: submission.org_id,
-      deal_id: dealId,
-      category: "logo",
-      label: logo.original_name ?? logo.name ?? "Logo",
-      file: toDealResourceFile(logo),
-      visibility: "internal",
-      mime_kind: inferMimeKind(logo.mime_type ?? logo.type ?? ""),
-      source: "project_brief",
-      submitted_by_form: submission.id,
-    });
+    pushFile(logo, "logo", logo.original_name ?? logo.name ?? "Logo");
   }
 
   const servicePhotos =
@@ -85,24 +126,15 @@ export async function processProjectBriefSubmission(
 
   for (const [service, photos] of Object.entries(servicePhotos)) {
     for (const photo of photos ?? []) {
-      resourcesToInsert.push({
-        org_id: submission.org_id,
-        deal_id: dealId,
-        category: `service:${slugify(service)}`,
-        label: photo.original_name ?? photo.name ?? service,
-        file: toDealResourceFile(photo),
-        visibility: "internal",
-        mime_kind: inferMimeKind(photo.mime_type ?? photo.type ?? ""),
-        source: "project_brief",
-        submitted_by_form: submission.id,
-      });
+      pushFile(
+        photo,
+        `service:${slugify(service)}`,
+        photo.original_name ?? photo.name ?? service,
+      );
     }
   }
 
-  const insertServicePhotoMap = (
-    answerKey: string,
-    labelPrefix: string,
-  ) => {
+  const insertServicePhotoMap = (answerKey: string, labelPrefix: string) => {
     const map =
       answers[answerKey] &&
       typeof answers[answerKey] === "object" &&
@@ -112,42 +144,100 @@ export async function processProjectBriefSubmission(
 
     for (const [service, photos] of Object.entries(map)) {
       for (const photo of photos ?? []) {
-        resourcesToInsert.push({
-          org_id: submission.org_id,
-          deal_id: dealId,
-          category: `service:${slugify(service)}`,
-          label: `${labelPrefix} — ${service}`,
-          file: toDealResourceFile(photo),
-          visibility: "internal",
-          mime_kind: inferMimeKind(photo.mime_type ?? photo.type ?? ""),
-          source: "project_brief",
-          submitted_by_form: submission.id,
-        });
+        pushFile(
+          photo,
+          `service:${slugify(service)}`,
+          `${labelPrefix} — ${service}`,
+        );
       }
     }
   };
 
-  insertServicePhotoMap("service_before_photos", "Antes");
-  insertServicePhotoMap("service_after_photos", "Después");
+  insertServicePhotoMap("service_before_photos", "Before");
+  insertServicePhotoMap("service_after_photos", "After");
 
   for (const photo of readUploadedFiles(answers.team_photos_files)) {
-    resourcesToInsert.push({
-      org_id: submission.org_id,
-      deal_id: dealId,
-      category: "team",
-      label: photo.original_name ?? photo.name ?? "Team photo",
-      file: toDealResourceFile(photo),
-      visibility: "internal",
-      mime_kind: inferMimeKind(photo.mime_type ?? photo.type ?? ""),
-      source: "project_brief",
-      submitted_by_form: submission.id,
-    });
+    pushFile(photo, "team", photo.original_name ?? photo.name ?? "Team photo");
   }
 
-  if (resourcesToInsert.length === 0) return;
+  return resources;
+};
 
-  const { error } = await supabase.from("deal_resources").insert(resourcesToInsert);
+export async function syncBriefAssetsToDealResources(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    dealId: number;
+    answers: Record<string, unknown>;
+    source?: string;
+    submittedByForm?: number | null;
+  },
+) {
+  const resourcesToInsert = buildBriefResourceRows(
+    params.orgId,
+    params.dealId,
+    params.answers,
+    {
+      source: params.source,
+      submittedByForm: params.submittedByForm,
+    },
+  );
+
+  if (resourcesToInsert.length === 0) return { inserted: 0 };
+
+  const { data: existing = [], error: existingError } = await supabase
+    .from("deal_resources")
+    .select("file")
+    .eq("deal_id", params.dealId)
+    .eq("source", params.source ?? "project_brief");
+
+  if (existingError) {
+    console.error("[syncBriefAssetsToDealResources] lookup failed", existingError);
+    return { inserted: 0, error: existingError.message };
+  }
+
+  const existingPaths = new Set(
+    existing
+      .map((row) => {
+        const file = row.file as { path?: string } | null;
+        return file?.path?.trim() ?? "";
+      })
+      .filter(Boolean),
+  );
+
+  const newResources = resourcesToInsert.filter((resource) => {
+    const path = resource.file.path?.trim();
+    return path && !existingPaths.has(path);
+  });
+
+  if (newResources.length === 0) return { inserted: 0 };
+
+  const { error } = await supabase.from("deal_resources").insert(newResources);
   if (error) {
-    console.error("[processProjectBriefSubmission] insert failed", error);
+    console.error("[syncBriefAssetsToDealResources] insert failed", error);
+    return { inserted: 0, error: error.message };
   }
+
+  return { inserted: newResources.length };
+}
+
+export async function processProjectBriefSubmission(
+  supabase: SupabaseClient,
+  submission: {
+    id: number;
+    org_id: number;
+    deal_id?: number | null;
+  },
+  answers: Record<string, unknown>,
+) {
+  const dealId = submission.deal_id;
+  if (!dealId) return { inserted: 0 };
+
+  return syncBriefAssetsToDealResources(supabase, {
+    orgId: submission.org_id,
+    dealId,
+    answers,
+    source: "project_brief",
+    submittedByForm: submission.id,
+  });
 }

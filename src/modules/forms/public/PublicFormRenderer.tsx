@@ -222,6 +222,10 @@ const ProjectBriefPublicForm = ({
         answers,
         recaptchaToken,
         honeypot,
+        metadata: {
+          source_url: window.location.href,
+          brief_sections: briefSectionScope ?? undefined,
+        },
       });
     },
     onSuccess: (result) => {

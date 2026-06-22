@@ -90,6 +90,7 @@ export const formsProvider = {
       utm_medium?: string;
       utm_campaign?: string;
       app_base_url?: string;
+      brief_sections?: string[];
     };
   }) {
     const { data, error } = await supabase.functions.invoke<{

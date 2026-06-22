@@ -6,6 +6,7 @@ import {
 } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { LbsDeal } from "@/modules/types";
+import { cleanStoredBriefSocialLinks } from "@/modules/deals/briefSocialLinks";
 import {
   syncBriefApprovalsForCompleteSections,
   type WebsiteBriefWithApprovals,
@@ -112,6 +113,12 @@ export const mergeBriefSubmitData = (
     submitted.project_type ?? record.project_type,
     memberId,
   );
+
+  if (Array.isArray(website_brief.social_links)) {
+    website_brief.social_links = cleanStoredBriefSocialLinks(
+      website_brief.social_links,
+    );
+  }
 
   return {
     project_type: submitted.project_type ?? record.project_type,

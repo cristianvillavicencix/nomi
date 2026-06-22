@@ -174,15 +174,34 @@ Deno.serve(
         }
       }
 
-      const validationErrors = validateAnswersAgainstSchema(
-        answers,
-        formInstance.schema as FormSchema,
-      );
-      if (validationErrors.length > 0) {
-        return jsonResponse(
-          { error: "Validation failed", details: validationErrors },
-          400,
+      let templateType: string | null = null;
+      if (formInstance.template_id) {
+        const { data: template } = await supabaseAdmin
+          .from("form_templates")
+          .select("type")
+          .eq("id", formInstance.template_id)
+          .maybeSingle();
+        templateType = template?.type ?? null;
+      }
+
+      const isProjectBrief =
+        templateType === "project_brief" ||
+        formInstance.slug === "project_brief";
+
+      // Public project brief uses the contractor brief schema in the app, not
+      // form_instances.schema (which may be stale). Client-side validation runs
+      // there; server-side we only enforce the legacy schema for other forms.
+      if (!isProjectBrief) {
+        const validationErrors = validateAnswersAgainstSchema(
+          answers,
+          formInstance.schema as FormSchema,
         );
+        if (validationErrors.length > 0) {
+          return jsonResponse(
+            { error: "Validation failed", details: validationErrors },
+            400,
+          );
+        }
       }
 
       const orgId = Number(formInstance.org_id);
@@ -260,11 +279,6 @@ Deno.serve(
         );
       }
 
-      await supabaseAdmin
-        .from("public_form_tokens")
-        .update({ uses_count: (tokenData.uses_count ?? 0) + 1 })
-        .eq("id", tokenData.id);
-
       await supabaseAdmin.from("form_submission_events").insert({
         org_id: formInstance.org_id,
         form_instance_id: formInstance.id,
@@ -293,13 +307,7 @@ Deno.serve(
       );
 
       if (formInstance.template_id && submission.deal_id) {
-        const { data: template } = await supabaseAdmin
-          .from("form_templates")
-          .select("type")
-          .eq("id", formInstance.template_id)
-          .single();
-
-        if (template?.type === "project_brief") {
+        if (templateType === "project_brief") {
           const { data: existingDeal } = await supabaseAdmin
             .from("deals")
             .select("website_brief")
@@ -324,15 +332,22 @@ Deno.serve(
             .update({ website_brief: syncedBrief })
             .eq("id", submission.deal_id);
 
-          await processProjectBriefSubmission(
-            supabaseAdmin,
-            {
-              id: submission.id,
-              org_id: Number(submission.org_id),
-              deal_id: submission.deal_id,
-            },
-            answers,
-          );
+          try {
+            await processProjectBriefSubmission(
+              supabaseAdmin,
+              {
+                id: submission.id,
+                org_id: Number(submission.org_id),
+                deal_id: submission.deal_id,
+              },
+              syncedBrief,
+            );
+          } catch (briefError) {
+            console.error(
+              "[submit_form_v2] project brief asset sync failed",
+              briefError,
+            );
+          }
         }
       }
 
@@ -369,6 +384,11 @@ Deno.serve(
           },
         );
       }
+
+      await supabaseAdmin
+        .from("public_form_tokens")
+        .update({ uses_count: (tokenData.uses_count ?? 0) + 1 })
+        .eq("id", tokenData.id);
 
       return jsonResponse({
         ok: true,

@@ -207,34 +207,35 @@ const BriefSectionTableRow = ({
   const preview = getBriefSectionPreview(section, brief);
   const subtitle = getSectionSubtitle(sectionPercent, preview);
 
-  const rowActions =
-    sectionPercent < 100 ? (
-      <>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground"
-                aria-label={`Request ${section.title} from client`}
-                onClick={() => onRequestSection(scopeForBriefSection(section.id))}
-              >
-                <Link2 className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Request this section</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+  const rowActions = (
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 text-muted-foreground"
+              aria-label={`Request ${section.title} from client`}
+              onClick={() => onRequestSection(scopeForBriefSection(section.id))}
+            >
+              <Link2 className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Request this section</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {sectionPercent < 100 ? (
         <BriefSectionApprovalActions
           record={record}
           sectionId={section.id}
           sectionTitle={section.title}
           variant="icon"
         />
-      </>
-    ) : null;
+      ) : null}
+    </>
+  );
 
   return (
     <BriefTableRow

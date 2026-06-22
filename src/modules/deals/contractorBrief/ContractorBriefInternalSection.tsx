@@ -23,6 +23,7 @@ import {
 import {
   BriefDynamicListInput,
   BriefFieldInput,
+  BriefSocialLinksInput,
 } from "@/modules/deals/WebsiteBriefFormSections.shared";
 import type { WebsiteBriefSectionDef } from "@/modules/deals/websiteBriefSchema";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -152,6 +153,9 @@ export const ContractorBriefInternalSection = ({
   const renderDefaultField = (field: WebsiteBriefSectionDef["fields"][number]) => {
     if (!evaluateCondition(field.visibleWhen, briefAnswers)) return null;
     if (field.fieldType === "dynamic_list") {
+      if (field.key === "social_links") {
+        return <BriefSocialLinksInput key={field.key} field={field} />;
+      }
       return <BriefDynamicListInput key={field.key} field={field} />;
     }
     return (

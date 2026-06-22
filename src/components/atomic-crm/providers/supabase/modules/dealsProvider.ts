@@ -947,4 +947,20 @@ export const dealsProvider = {
     }
     return data;
   },
+  async syncDealBriefResources(dealId: Identifier) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      inserted?: number;
+    }>("sync_deal_brief_resources", {
+      method: "POST",
+      body: { deal_id: Number(dealId) },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to sync brief assets to multimedia",
+      );
+    }
+    return data;
+  },
 };

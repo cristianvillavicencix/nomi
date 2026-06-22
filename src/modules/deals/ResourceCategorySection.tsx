@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ExternalLink, Paperclip, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import {
   type ProjectResourceTabCategory,
 } from "@/modules/deals/projectResourceConstants";
 import { formatResourceDate } from "@/modules/deals/projectResourceGrouping";
+import { getProjectResourceSignedUrl } from "@/modules/deals/projectResourceUpload";
 import type { DealResource } from "@/modules/types";
 
 type ResourceMediaCardProps = {
@@ -13,6 +15,38 @@ type ResourceMediaCardProps = {
   onPreview: () => void;
   onDelete: () => void;
   isDeleting: boolean;
+};
+
+const useResourcePreviewUrl = (resource: DealResource) => {
+  const file = resource.file;
+  const [previewUrl, setPreviewUrl] = useState(file.src ?? "");
+
+  useEffect(() => {
+    let cancelled = false;
+    const bucket = file.bucket ?? "project-files";
+    if (bucket === "attachments" && file.src) {
+      setPreviewUrl(file.src);
+      return;
+    }
+    if (!file.path) {
+      setPreviewUrl(file.src ?? "");
+      return;
+    }
+
+    void getProjectResourceSignedUrl(file.path, bucket)
+      .then((url) => {
+        if (!cancelled) setPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewUrl(file.src ?? "");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [file.bucket, file.path, file.src]);
+
+  return previewUrl;
 };
 
 export const ResourceMediaCard = ({
@@ -24,6 +58,7 @@ export const ResourceMediaCard = ({
   const file = resource.file;
   const title = resource.label?.trim() || file.title;
   const isImage = isImageResource(file.type);
+  const previewUrl = useResourcePreviewUrl(resource);
 
   return (
     <div className="group relative overflow-hidden rounded-lg border bg-card">
@@ -35,7 +70,7 @@ export const ResourceMediaCard = ({
         {isImage ? (
           <div className="flex aspect-square items-center justify-center overflow-hidden bg-[linear-gradient(45deg,hsl(var(--muted)/0.55)_25%,transparent_25%,transparent_75%,hsl(var(--muted)/0.55)_75%,hsl(var(--muted)/0.55)),linear-gradient(45deg,hsl(var(--muted)/0.55)_25%,transparent_25%,transparent_75%,hsl(var(--muted)/0.55)_75%,hsl(var(--muted)/0.55))] bg-[length:16px_16px] bg-[position:0_0,8px_8px] p-2">
             <img
-              src={file.src}
+              src={previewUrl}
               alt={title}
               className="max-h-full max-w-full rounded-sm object-contain transition-transform group-hover:scale-[1.02]"
             />
@@ -70,7 +105,7 @@ export const ResourceMediaCard = ({
           asChild
         >
           <a
-            href={file.src}
+            href={previewUrl}
             target="_blank"
             rel="noreferrer"
             onClick={(event) => event.stopPropagation()}
