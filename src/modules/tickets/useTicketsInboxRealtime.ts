@@ -6,6 +6,8 @@ import { invalidateQueriesForResource } from "@/lib/queryCache";
 const refreshTicketsInbox = (queryClient: ReturnType<typeof useQueryClient>) => {
   void invalidateQueriesForResource(queryClient, "tickets");
   void invalidateQueriesForResource(queryClient, "ticket_messages");
+  void invalidateQueriesForResource(queryClient, "client_invoices");
+  void invalidateQueriesForResource(queryClient, "ticket_deliverables");
 };
 
 export const useTicketsInboxRealtime = (enabled: boolean) => {
@@ -24,6 +26,16 @@ export const useTicketsInboxRealtime = (enabled: boolean) => {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "ticket_messages" },
+        () => refreshTicketsInbox(queryClient),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "client_invoices" },
+        () => refreshTicketsInbox(queryClient),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ticket_deliverables" },
         () => refreshTicketsInbox(queryClient),
       )
       .subscribe();

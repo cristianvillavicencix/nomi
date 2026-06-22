@@ -1,13 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  Copy,
   Pencil,
   CloudUpload,
-  CreditCard,
   Download,
   FileText,
   Loader2,
   MessageSquare,
-  PanelLeftOpen,
   PanelRightClose,
   Plus,
   Send,
@@ -48,7 +47,6 @@ import {
   MAX_TICKET_ATTACHMENT_BYTES,
   uploadTicketAttachment,
 } from "@/modules/tickets/uploadTicketAttachment";
-import { CollapsibleToolsSection } from "@/modules/tickets/CollapsibleToolsSection";
 import { TicketToolsClientSms } from "@/modules/tickets/TicketToolsClientSms";
 import { TicketInvoicePreviewDialog } from "@/modules/tickets/TicketInvoicePreviewDialog";
 import { TicketInvoiceReminderDialog } from "@/modules/tickets/TicketInvoiceReminderDialog";
@@ -84,8 +82,100 @@ import {
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "tickets-tools-side-collapsed";
-const smsExpandedStorageKey = (ticketId: Ticket["id"]) =>
-  `ticket-tools-sms-expanded-${ticketId}`;
+
+type ToolsPanelView = "invoice" | "sms";
+
+const buildInvoicePaymentUrl = (
+  shareLink: {
+    short_code?: string | null;
+    short_url?: string | null;
+    url?: string | null;
+  },
+  origin: string,
+) => {
+  if (shareLink.short_code?.trim()) {
+    return `${origin.replace(/\/$/, "")}/iv/${shareLink.short_code.trim()}?pay=1`;
+  }
+  if (shareLink.short_url?.trim()) return shareLink.short_url.trim();
+  if (shareLink.url?.trim()) return shareLink.url.trim();
+  return "";
+};
+
+const TicketInvoicePaymentLink = ({
+  invoiceId,
+  status,
+}: {
+  invoiceId: number;
+  status: ClientInvoice["status"];
+}) => {
+  const notify = useNotify();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+
+  const { data: shareLink, isPending } = useQuery({
+    queryKey: ["ticket-panel-invoice-link", invoiceId],
+    queryFn: () =>
+      dataProvider.shareClientInvoice({
+        invoiceId,
+        baseUrl: window.location.origin,
+      }),
+    enabled: status === "sent" || status === "paid",
+    staleTime: 60_000,
+  });
+
+  if (status !== "sent" && status !== "paid") return null;
+
+  const paymentUrl = shareLink
+    ? buildInvoicePaymentUrl(shareLink, window.location.origin)
+    : "";
+
+  const copyLink = async () => {
+    if (!paymentUrl) {
+      notify("Payment link is not ready yet", { type: "warning" });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(paymentUrl);
+      notify("Payment link copied", { type: "info" });
+    } catch {
+      notify("Could not copy link", { type: "error" });
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-none border px-3 py-2.5">
+      <p className="text-xs font-medium text-muted-foreground">Payment link sent</p>
+      {isPending ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="size-3.5 animate-spin" />
+          Loading link…
+        </div>
+      ) : paymentUrl ? (
+        <>
+          <a
+            href={paymentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block break-all text-xs text-primary hover:underline"
+          >
+            {paymentUrl}
+          </a>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 w-full rounded-none text-xs"
+            onClick={() => void copyLink()}
+          >
+            <Copy className="mr-1.5 size-3.5" />
+            Copy link
+          </Button>
+        </>
+      ) : (
+        <p className="text-xs text-muted-foreground">Link unavailable</p>
+      )}
+    </div>
+  );
+};
 
 type TicketBillingSidePanelProps = {
   ticket: Ticket;
@@ -107,9 +197,10 @@ export const TicketBillingSidePanel = ({
   const [deleteDeliverable] = useDelete();
 
   const [collapsed, setCollapsed] = useState(() => {
-    if (typeof sessionStorage === "undefined") return false;
-    return sessionStorage.getItem(STORAGE_KEY) === "true";
+    if (typeof sessionStorage === "undefined") return true;
+    return sessionStorage.getItem(STORAGE_KEY) !== "false";
   });
+  const [activeView, setActiveView] = useState<ToolsPanelView>("invoice");
 
   const [pendingUploads, setPendingUploads] = useState<File[]>([]);
   const [billingDialogOpen, setBillingDialogOpen] = useState(false);
@@ -131,11 +222,11 @@ export const TicketBillingSidePanel = ({
   const [newCycleActive, setNewCycleActive] = useState(() =>
     readNewInvoiceCycleActive(ticket.id),
   );
-  const [invoiceExpanded, setInvoiceExpanded] = useState(true);
-  const [smsExpanded, setSmsExpanded] = useState(() => {
-    if (typeof sessionStorage === "undefined") return true;
-    return sessionStorage.getItem(smsExpandedStorageKey(ticket.id)) !== "false";
-  });
+
+  const openPanel = (view: ToolsPanelView) => {
+    setActiveView(view);
+    setCollapsed(false);
+  };
 
   const openInvoiceDialog = (
     mode: TicketInvoiceViewMode,
@@ -147,22 +238,12 @@ export const TicketBillingSidePanel = ({
   };
 
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, String(collapsed));
+    sessionStorage.setItem(STORAGE_KEY, collapsed ? "true" : "false");
   }, [collapsed]);
 
   useEffect(() => {
-    setInvoiceExpanded(true);
-    setSmsExpanded(
-      sessionStorage.getItem(smsExpandedStorageKey(ticket.id)) !== "false",
-    );
+    setActiveView("invoice");
   }, [ticket.id]);
-
-  useEffect(() => {
-    sessionStorage.setItem(
-      smsExpandedStorageKey(ticket.id),
-      String(smsExpanded),
-    );
-  }, [smsExpanded, ticket.id]);
 
   const { data: deliverables = [] } = useGetList<TicketDeliverable>(
     "ticket_deliverables",
@@ -324,10 +405,6 @@ export const TicketBillingSidePanel = ({
     () => calculateTicketPricing(unbilledDeliverables, ticket, propertyAddress),
     [unbilledDeliverables, ticket, propertyAddress],
   );
-
-  const displayTotal = invoice
-    ? Number(invoice.amount) || pricing.total
-    : pricing.subtotal;
 
   const deliverablesReadyForInvoice =
     allDeliverablesHaveBilling(unbilledDeliverables);
@@ -890,6 +967,14 @@ export const TicketBillingSidePanel = ({
           </div>
         ) : null}
 
+        {tabInvoice &&
+        (tabInvoice.status === "sent" || tabInvoice.status === "paid") ? (
+        <TicketInvoicePaymentLink
+          invoiceId={Number(invoiceId)}
+          status={tabInvoice.status}
+        />
+        ) : null}
+
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">
             Delivery files
@@ -995,167 +1080,8 @@ export const TicketBillingSidePanel = ({
     </Tabs>
   );
 
-  if (collapsed) {
-    return (
-      <aside className="flex w-11 shrink-0 flex-col items-center gap-3 self-stretch border-l bg-background py-3">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              aria-label="Show tools panel"
-              onClick={() => setCollapsed(false)}
-            >
-              <PanelLeftOpen className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">Show tools</TooltipContent>
-        </Tooltip>
-
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex flex-col items-center gap-0.5">
-                <FileText className="size-4" />
-                {deliverables.length > 0 ? (
-                  <span className="text-[10px] font-medium tabular-nums">
-                    {deliverables.length}
-                  </span>
-                ) : null}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              Invoice ({deliverables.length} files)
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex flex-col items-center gap-0.5">
-                <CreditCard className="size-4" />
-                <span className="text-[10px] font-medium tabular-nums">
-                  {Math.round(displayTotal)}
-                </span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="left">Payment</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex flex-col items-center gap-0.5">
-                <MessageSquare className="size-4" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="left">Text client</TooltipContent>
-          </Tooltip>
-        </div>
-
-        <span className="mt-auto rotate-180 text-[10px] uppercase tracking-wide text-muted-foreground [writing-mode:vertical-rl]">
-          Tools
-        </span>
-      </aside>
-    );
-  }
-
-  return (
-    <aside className="flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch border-l bg-background">
-      <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-        <p className="text-xs font-medium text-muted-foreground">Tools</p>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              aria-label="Hide tools panel"
-              onClick={() => setCollapsed(true)}
-            >
-              <PanelRightClose className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">Hide panel</TooltipContent>
-        </Tooltip>
-      </div>
-
-      <div
-        className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-hidden",
-          allowsDeliverableUpload && dragActive &&
-            "ring-2 ring-inset ring-primary/30",
-        )}
-        onDragOver={allowsDeliverableUpload ? handleDragOver : undefined}
-        onDragLeave={allowsDeliverableUpload ? handleDragLeave : undefined}
-        onDrop={allowsDeliverableUpload ? handleDrop : undefined}
-      >
-        <input
-          ref={deliverableInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(event) => void queueDeliverableUploads(event.target.files)}
-        />
-
-        <CollapsibleToolsSection
-          title="Invoice"
-          expanded={invoiceExpanded}
-          onExpandedChange={setInvoiceExpanded}
-          titleAddon={
-            showNewInvoiceButton ? (
-              <div className="shrink-0" onClick={(event) => event.stopPropagation()}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="size-6 rounded-none"
-                      disabled={newInvoiceMutation.isPending}
-                      aria-label="New invoice"
-                      onClick={handleNewInvoiceClick}
-                    >
-                      {newInvoiceMutation.isPending ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Plus className="size-3.5" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="left">New invoice</TooltipContent>
-                </Tooltip>
-              </div>
-            ) : null
-          }
-          contentClassName="overflow-y-auto px-4 pb-4"
-        >
-          {renderInvoiceSection()}
-        </CollapsibleToolsSection>
-
-        <CollapsibleToolsSection
-          title="Text client"
-          icon={MessageSquare}
-          expanded={smsExpanded}
-          onExpandedChange={setSmsExpanded}
-          headerAddon={
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-success">
-              <span className="size-2 rounded-full bg-success" aria-hidden />
-              SMS
-            </span>
-          }
-          className={cn(smsExpanded && "flex min-h-0 flex-1 flex-col")}
-          contentClassName={cn(smsExpanded && "flex min-h-0 flex-1 flex-col")}
-        >
-          <TicketToolsClientSms
-            className="min-h-[14rem] flex-1"
-            ticket={ticket}
-            contact={contact}
-            activeInvoice={activeSmsInvoice}
-            deliverables={deliverables}
-          />
-        </CollapsibleToolsSection>
-      </div>
-
+  const renderDialogs = () => (
+    <>
       <TicketDeliverableBillingDialog
         open={billingDialogOpen}
         fileName={billingFileName}
@@ -1196,7 +1122,188 @@ export const TicketBillingSidePanel = ({
           onInvoiceUpdated={refresh}
         />
       ) : null}
-    </aside>
+    </>
+  );
+
+  if (collapsed) {
+    return (
+      <>
+        <aside className="flex w-11 shrink-0 flex-col self-stretch border-l bg-background">
+          <div className="flex flex-1 flex-col items-center gap-2 py-3">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 flex-col gap-0.5 py-1"
+                  aria-label="Open invoice tools"
+                  onClick={() => openPanel("invoice")}
+                >
+                  <FileText className="size-4" />
+                  {deliverables.length > 0 ? (
+                    <span className="text-[9px] font-medium tabular-nums leading-none">
+                      {deliverables.length}
+                    </span>
+                  ) : null}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                Invoice ({deliverables.length} files)
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-9"
+                  aria-label="Open text messages"
+                  onClick={() => openPanel("sms")}
+                >
+                  <MessageSquare className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Text client</TooltipContent>
+            </Tooltip>
+          </div>
+
+          <span className="pb-3 text-center text-[10px] uppercase tracking-wide text-muted-foreground [writing-mode:vertical-rl]">
+            Tools
+          </span>
+        </aside>
+        {renderDialogs()}
+      </>
+    );
+  }
+
+  const panelTabClass = (view: ToolsPanelView) =>
+    cn(
+      "h-8 gap-1.5 rounded-none px-2.5 text-xs",
+      activeView === view && "bg-muted text-foreground",
+    );
+
+  return (
+    <>
+      <aside className="flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch border-l bg-background">
+        <div className="flex items-center gap-1 border-b px-2 py-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={panelTabClass("invoice")}
+            onClick={() => setActiveView("invoice")}
+          >
+            <FileText className="size-3.5" />
+            Invoice
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={panelTabClass("sms")}
+            onClick={() => setActiveView("sms")}
+          >
+            <MessageSquare className="size-3.5" />
+            Text
+          </Button>
+          <div className="flex-1" />
+          {activeView === "invoice" && showNewInvoiceButton ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8 shrink-0 rounded-none"
+                  disabled={newInvoiceMutation.isPending}
+                  aria-label="New invoice"
+                  onClick={handleNewInvoiceClick}
+                >
+                  {newInvoiceMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="size-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">New invoice</TooltipContent>
+            </Tooltip>
+          ) : null}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0"
+                aria-label="Hide tools panel"
+                onClick={() => setCollapsed(true)}
+              >
+                <PanelRightClose className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Hide panel</TooltipContent>
+          </Tooltip>
+        </div>
+
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            activeView === "invoice" &&
+              allowsDeliverableUpload &&
+              dragActive &&
+              "ring-2 ring-inset ring-primary/30",
+          )}
+          onDragOver={
+            activeView === "invoice" && allowsDeliverableUpload
+              ? handleDragOver
+              : undefined
+          }
+          onDragLeave={
+            activeView === "invoice" && allowsDeliverableUpload
+              ? handleDragLeave
+              : undefined
+          }
+          onDrop={
+            activeView === "invoice" && allowsDeliverableUpload
+              ? handleDrop
+              : undefined
+          }
+        >
+          <input
+            ref={deliverableInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(event) => void queueDeliverableUploads(event.target.files)}
+          />
+
+          {activeView === "invoice" ? (
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              {renderInvoiceSection()}
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex items-center gap-2 border-b px-4 py-2 text-[11px] font-medium text-success">
+                <span className="size-2 rounded-full bg-success" aria-hidden />
+                SMS
+              </div>
+              <TicketToolsClientSms
+                className="min-h-0 flex-1"
+                ticket={ticket}
+                contact={contact}
+                activeInvoice={activeSmsInvoice}
+                deliverables={deliverables}
+              />
+            </div>
+          )}
+        </div>
+      </aside>
+      {renderDialogs()}
+    </>
   );
 };
 

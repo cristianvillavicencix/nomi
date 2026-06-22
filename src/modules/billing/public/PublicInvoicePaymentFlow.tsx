@@ -624,6 +624,7 @@ const InvoicePaymentReviewActions = ({
 
 const InvoiceStripePaymentFormInner = ({
   token,
+  payload,
   paymentIntentId,
   chargeAmount,
   remainderInstallmentNumbers,
