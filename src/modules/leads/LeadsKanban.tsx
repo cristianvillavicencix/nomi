@@ -2,6 +2,7 @@ import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd";
 import { useMutation } from "@tanstack/react-query";
 import {
   useDataProvider,
+  useGetList,
   useListContext,
   useNotify,
   useRefresh,
@@ -11,7 +12,8 @@ import { useNavigate } from "react-router";
 import { Sparkles } from "lucide-react";
 
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { Contact } from "@/components/atomic-crm/types";
+import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type { Conversation } from "@/modules/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -32,6 +34,8 @@ import {
   normalizeLeadStage,
 } from "./leadStages";
 import { LeadColumn } from "./LeadColumn";
+import { LeadKanbanProvider } from "./LeadKanbanContext";
+import { LeadStageChangeDialog } from "./LeadStageChangeDialog";
 
 type LeadsByStage = Record<LeadStageId, Contact[]>;
 
@@ -61,11 +65,22 @@ const fullLeadName = (lead: Contact) =>
   lead.company_name ||
   "this lead";
 
+const SCROLL_EDGE_EPSILON = 2;
+
 const canScrollVertically = (element: HTMLElement, deltaY: number) => {
-  if (deltaY > 0) {
-    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+  if (element.scrollHeight <= element.clientHeight + SCROLL_EDGE_EPSILON) {
+    return false;
   }
-  return element.scrollTop > 0;
+  if (deltaY > 0) {
+    return (
+      element.scrollTop + element.clientHeight <
+      element.scrollHeight - SCROLL_EDGE_EPSILON
+    );
+  }
+  if (deltaY < 0) {
+    return element.scrollTop > SCROLL_EDGE_EPSILON;
+  }
+  return false;
 };
 
 /**
@@ -90,40 +105,90 @@ export const LeadsKanban = () => {
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
 
-  const handleBoardWheelCapture = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
-      const board = boardRef.current;
-      if (!board || board.scrollWidth <= board.clientWidth) return;
-
-      // Trackpad / mouse horizontal gesture — leave to the browser.
-      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-
-      const target = event.target as HTMLElement;
-
-      if (event.shiftKey) {
-        event.preventDefault();
-        board.scrollLeft += event.deltaY;
-        return;
-      }
-
-      if (target.closest("[data-kanban-header]")) {
-        event.preventDefault();
-        board.scrollLeft += event.deltaY;
-        return;
-      }
-
-      const cards = target.closest(
-        "[data-kanban-cards]",
-      ) as HTMLElement | null;
-      if (cards && canScrollVertically(cards, event.deltaY)) {
-        return;
-      }
-
-      event.preventDefault();
-      board.scrollLeft += event.deltaY;
+  const { data: members = [] } = useGetList<OrganizationMember>(
+    "organization_members",
+    {
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "first_name", order: "ASC" },
     },
-    [],
   );
+
+  const { data: clientConversations = [] } = useGetList<Conversation>(
+    "conversations",
+    {
+      pagination: { page: 1, perPage: 500 },
+      sort: { field: "last_message_at", order: "DESC" },
+      filter: { "type@eq": "client" },
+    },
+  );
+
+  const kanbanContextValue = useMemo(() => {
+    const membersById = Object.fromEntries(
+      members.map((member) => [String(member.id), member]),
+    );
+
+    const contactIds = new Set((data ?? []).map((lead) => String(lead.id)));
+    const conversationsByContactId: Record<string, Conversation> = {};
+
+    for (const conversation of clientConversations) {
+      if (conversation.contact_id == null) continue;
+      const key = String(conversation.contact_id);
+      if (!contactIds.has(key) || conversationsByContactId[key]) continue;
+      conversationsByContactId[key] = conversation;
+    }
+
+    return { membersById, conversationsByContactId };
+  }, [clientConversations, data, members]);
+
+  const handleBoardWheelCapture = useCallback((event: WheelEvent) => {
+    const board = boardRef.current;
+    if (!board || board.scrollWidth <= board.clientWidth) return;
+
+    const target = event.target as HTMLElement;
+    const cards = target.closest(
+      "[data-kanban-cards]",
+    ) as HTMLElement | null;
+    const absX = Math.abs(event.deltaX);
+    const absY = Math.abs(event.deltaY);
+    const isHorizontalGesture = absX > absY;
+
+    // Trackpad / tilt wheel left-right → pan the board (must be handled here;
+    // nested column scroll areas do not bubble horizontal scroll to the board).
+    if (isHorizontalGesture) {
+      event.preventDefault();
+      board.scrollLeft += event.deltaX;
+      return;
+    }
+
+    // Trackpad / wheel up-down over a tall column → scroll cards vertically.
+    if (cards && canScrollVertically(cards, event.deltaY)) {
+      return;
+    }
+
+    if (cards) {
+      // Column top/bottom edge or short column: stop here — stay in the column.
+      event.preventDefault();
+      return;
+    }
+
+    // Vertical wheel on header / gap: board only pans on horizontal gestures.
+    event.preventDefault();
+  }, []);
+
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+
+    board.addEventListener("wheel", handleBoardWheelCapture, {
+      passive: false,
+      capture: true,
+    });
+    return () => {
+      board.removeEventListener("wheel", handleBoardWheelCapture, {
+        capture: true,
+      });
+    };
+  }, [handleBoardWheelCapture]);
 
   useEffect(() => {
     if (data) {
@@ -193,21 +258,22 @@ export const LeadsKanban = () => {
 
   return (
     <>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div
-          ref={boardRef}
-          onWheelCapture={handleBoardWheelCapture}
-          className="flex h-full min-h-0 w-full gap-3 overflow-x-auto overscroll-x-contain"
-        >
-          {LBS_LEAD_KANBAN_STAGES.map((stage) => (
-            <LeadColumn
-              key={stage.id}
-              stage={stage}
-              leads={leadsByStage[stage.id]}
-            />
-          ))}
-        </div>
-      </DragDropContext>
+      <LeadKanbanProvider value={kanbanContextValue}>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div
+            ref={boardRef}
+            className="flex h-full min-h-0 w-full gap-3 overflow-x-auto overscroll-x-contain"
+          >
+            {LBS_LEAD_KANBAN_STAGES.map((stage) => (
+              <LeadColumn
+                key={stage.id}
+                stage={stage}
+                leads={leadsByStage[stage.id]}
+              />
+            ))}
+          </div>
+        </DragDropContext>
+      </LeadKanbanProvider>
 
       {pendingTransition ? (
         <LeadStageChangeDialog

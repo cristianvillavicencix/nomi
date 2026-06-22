@@ -43,7 +43,7 @@ export const LeadColumn = ({ stage, leads }: LeadColumnProps) => {
               {...droppableProvided.droppableProps}
               data-kanban-cards
               className={cn(
-                "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain rounded-xl border bg-muted/20 p-2 transition-colors",
+                "flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-y-contain rounded-xl border bg-muted/20 p-2 transition-colors",
                 snapshot.isDraggingOver
                   ? "border-primary/50 bg-primary/5"
                   : "border-transparent",
