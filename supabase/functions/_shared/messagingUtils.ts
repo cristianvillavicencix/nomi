@@ -1,4 +1,9 @@
-const DANGEROUS_BODY_PATTERNS = [/<script[\s>]/i, /javascript:/i, /on\w+\s*=/i];
+const DANGEROUS_BODY_PATTERNS = [
+  /<script[\s>]/i,
+  /javascript:/i,
+  // Word boundary avoids false positives in URLs/words (e.g. "?sections=logo").
+  /\bon[a-z]+\s*=/i,
+];
 
 export const sanitizeMessageBody = (body: string) => {
   const trimmed = body.trim();
