@@ -11,6 +11,7 @@ import {
   type Identifier,
 } from "ra-core";
 import { TextInput } from "@/components/admin/text-input";
+import { RadioButtonGroupInput } from "@/components/admin/radio-button-group-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,10 +28,24 @@ import { LBS_LEAD_SOURCE_OTHER } from "@/modules/leads/leadFormConstants";
 import { applyLeadAssignmentFields } from "@/modules/leads/leadAssignments";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 
+export type SaveSmsContactKind = "lead" | "contact_only";
+
 type SaveSmsContactFormValues = {
   first_name: string;
   last_name: string;
+  save_as: SaveSmsContactKind;
 };
+
+const SAVE_AS_CHOICES = [
+  {
+    id: "lead" as const,
+    name: "Lead — add to pipeline (New)",
+  },
+  {
+    id: "contact_only" as const,
+    name: "Contact only — directory, no pipeline",
+  },
+];
 
 const buildSmsContactPayload = (
   values: SaveSmsContactFormValues,
@@ -40,19 +55,14 @@ const buildSmsContactPayload = (
   const now = new Date().toISOString();
   const displayPhone = formatUsPhoneDisplayFromAny(phoneE164);
 
-  return applyLeadAssignmentFields({
+  const base = {
     first_name: values.first_name.trim(),
     last_name: values.last_name.trim(),
     email_jsonb: [],
     phone_jsonb: [{ number: displayPhone, type: "Mobile" }],
-    status: "lead",
-    lead_stage: "new",
-    lead_source: LBS_LEAD_SOURCE_OTHER,
-    lead_source_other: "SMS",
     company_id: null,
     title: "",
     background: "",
-    interested_service: null,
     first_seen: now,
     last_seen: now,
     tags: [],
@@ -61,8 +71,31 @@ const buildSmsContactPayload = (
       organizationMemberId != null && organizationMemberId !== ""
         ? [organizationMemberId]
         : [],
+  };
+
+  if (values.save_as === "contact_only") {
+    return applyLeadAssignmentFields({
+      ...base,
+      status: "contact_only",
+      lead_stage: null,
+      lead_source: null,
+      lead_source_other: null,
+      interested_service: null,
+    });
+  }
+
+  return applyLeadAssignmentFields({
+    ...base,
+    status: "lead",
+    lead_stage: "new",
+    lead_source: LBS_LEAD_SOURCE_OTHER,
+    lead_source_other: "SMS",
+    interested_service: null,
   });
 };
+
+const savedNotifyMessage = (saveAs: SaveSmsContactKind) =>
+  saveAs === "lead" ? "Lead created" : "Contact saved";
 
 export const SaveSmsContactDialog = ({
   open,
@@ -127,7 +160,7 @@ export const SaveSmsContactDialog = ({
     )) as Contact;
 
     await linkConversationToContact(contact);
-    notify("Contact saved", { type: "info" });
+    notify(savedNotifyMessage(values.save_as), { type: "info" });
     refresh();
     onSaved(contact);
     handleOpenChange(false);
@@ -173,7 +206,7 @@ export const SaveSmsContactDialog = ({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
           <Form
             key={`${formKey}-${phoneE164}`}
-            defaultValues={{ first_name: "", last_name: "" }}
+            defaultValues={{ first_name: "", last_name: "", save_as: "lead" }}
             onSubmit={handleSubmit}
           >
             <DialogHeader className="border-b px-6 py-4 text-left">
@@ -199,6 +232,12 @@ export const SaveSmsContactDialog = ({
               </div>
               <TextInput source="first_name" label="First name" isRequired />
               <TextInput source="last_name" label="Last name" />
+              <RadioButtonGroupInput
+                source="save_as"
+                label="Save as"
+                choices={SAVE_AS_CHOICES}
+                helperText="Leads appear in the pipeline. Contact only stays in your directory."
+              />
             </div>
 
             <DialogFooter className="border-t px-6 py-4">
@@ -217,7 +256,7 @@ export const SaveSmsContactDialog = ({
                     Saving…
                   </>
                 ) : (
-                  "Save contact"
+                  "Save"
                 )}
               </Button>
             </DialogFooter>
