@@ -5,6 +5,7 @@ export const CATALOG_CATEGORIES = [
   { value: "seo", label: "SEO" },
   { value: "hosting", label: "Hosting & maintenance" },
   { value: "skop", label: "SKOP" },
+  { value: "tickets", label: "Tickets & deliverables" },
 ] as const;
 
 export type CatalogCategory = (typeof CATALOG_CATEGORIES)[number]["value"];
@@ -19,6 +20,11 @@ export const ADDON_CATALOG_GROUPS = [
     categories: ["hosting"] as const,
   },
   { key: "skop", label: "SKOP", categories: ["skop"] as const },
+  {
+    key: "tickets",
+    label: "Tickets & deliverables",
+    categories: ["tickets"] as const,
+  },
 ] as const;
 
 export const categoryLabel = (value?: string | null) =>

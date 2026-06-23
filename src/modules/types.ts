@@ -81,6 +81,9 @@ export type ServicePackage = {
   category?: string | null;
   active?: boolean;
   booking_enabled?: boolean;
+  ticket_billing_enabled?: boolean;
+  ticket_pricing_mode?: "flat" | "supplement_lines" | null;
+  ticket_billing_slug?: string | null;
   sort_order?: number;
   created_at?: string;
   updated_at?: string;
@@ -301,8 +304,9 @@ export type TicketDeliverable = {
   path: string;
   src?: string | null;
   sort_order?: number;
-  billing_kind?: "supplement" | "roof" | "siding" | "esx" | "pdf_analysis" | null;
+  billing_kind?: "supplement" | "roof" | "siding" | "esx" | "pdf_analysis" | string | null;
   billing_line_count?: number | null;
+  service_package_id?: Identifier | null;
   invoiced_invoice_id?: Identifier | null;
   delivered_at?: string | null;
   created_at?: string;

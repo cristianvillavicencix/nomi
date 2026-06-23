@@ -24,6 +24,7 @@ import {
   DEFAULT_CURRENCY,
 } from "@/modules/proposals/proposalCommercialConstants";
 import { CATALOG_CATEGORIES } from "@/modules/catalog/catalogConstants";
+import { slugifyTicketBillingSlug } from "@/modules/catalog/ticketCatalogPricing";
 
 export type CatalogItemDraft = {
   name: string;
@@ -35,6 +36,10 @@ export type CatalogItemDraft = {
   billing_interval: "weekly" | "monthly" | "yearly" | null;
   active: boolean;
   sort_order: number;
+  booking_enabled?: boolean;
+  ticket_billing_enabled?: boolean;
+  ticket_pricing_mode?: "flat" | "supplement_lines";
+  ticket_billing_slug?: string;
 };
 
 const emptyDraft = (sortOrder: number): CatalogItemDraft => ({
@@ -56,6 +61,7 @@ export const ServiceCatalogItemDialog = ({
   initial,
   sortOrder,
   onSave,
+  variant = "package",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,6 +69,7 @@ export const ServiceCatalogItemDialog = ({
   initial?: Partial<CatalogItemDraft>;
   sortOrder: number;
   onSave: (draft: CatalogItemDraft) => void | Promise<void>;
+  variant?: "package" | "addon";
 }) => {
   const [draft, setDraft] = useState<CatalogItemDraft>(emptyDraft(sortOrder));
   const [isSaving, setIsSaving] = useState(false);
@@ -83,6 +90,11 @@ export const ServiceCatalogItemDialog = ({
         billing_interval:
           draft.billing_type === "recurring"
             ? (draft.billing_interval ?? "monthly")
+            : null,
+        ticket_billing_slug:
+          variant === "package" && draft.ticket_billing_enabled
+            ? draft.ticket_billing_slug?.trim() ||
+              slugifyTicketBillingSlug(draft.name)
             : null,
       });
       onOpenChange(false);
@@ -227,6 +239,87 @@ export const ServiceCatalogItemDialog = ({
             />
             <Label>Active in catalog</Label>
           </div>
+          {variant === "package" ? (
+            <div className="space-y-4 rounded-md border p-4">
+              <p className="text-sm font-medium">Where this product appears</p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <Label>Ticket billing</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Show in ticket delivery package billing.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(draft.ticket_billing_enabled)}
+                  onCheckedChange={(checked) =>
+                    setDraft((current) => ({
+                      ...current,
+                      ticket_billing_enabled: checked,
+                      ticket_pricing_mode: current.ticket_pricing_mode ?? "flat",
+                      ticket_billing_slug:
+                        current.ticket_billing_slug ||
+                        slugifyTicketBillingSlug(current.name),
+                    }))
+                  }
+                />
+              </div>
+              {draft.ticket_billing_enabled ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Pricing mode</Label>
+                    <Select
+                      value={draft.ticket_pricing_mode ?? "flat"}
+                      onValueChange={(value) =>
+                        setDraft((current) => ({
+                          ...current,
+                          ticket_pricing_mode:
+                            value as CatalogItemDraft["ticket_pricing_mode"],
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="flat">Flat price</SelectItem>
+                        <SelectItem value="supplement_lines">
+                          Supplement line count
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="catalog-ticket-slug">Ticket key</Label>
+                    <Input
+                      id="catalog-ticket-slug"
+                      value={draft.ticket_billing_slug ?? ""}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          ticket_billing_slug: event.target.value,
+                        }))
+                      }
+                      placeholder={slugifyTicketBillingSlug(draft.name || "product")}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <Label>Book now</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Offer on public booking pages and links.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(draft.booking_enabled)}
+                  onCheckedChange={(checked) =>
+                    setDraft((current) => ({ ...current, booking_enabled: checked }))
+                  }
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
         <DialogFooter>
           <Button

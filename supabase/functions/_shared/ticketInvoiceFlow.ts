@@ -390,6 +390,23 @@ async function loadTicketForInvoice(
   return { ticket, recipientEmail, deliverableCount: deliverableCount ?? 0 };
 }
 
+async function loadTicketCatalogPackages(
+  supabase: SupabaseClient,
+  orgId: number,
+) {
+  const { data = [] } = await supabase
+    .from("service_packages")
+    .select(
+      "id, name, description, suggested_price, ticket_billing_slug, ticket_pricing_mode, active, sort_order",
+    )
+    .eq("org_id", orgId)
+    .eq("ticket_billing_enabled", true)
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
+
+  return data;
+}
+
 async function loadTicketDeliverablesForBilling(
   supabase: SupabaseClient,
   orgId: number,
@@ -398,7 +415,7 @@ async function loadTicketDeliverablesForBilling(
 ) {
   let query = supabase
     .from("ticket_deliverables")
-    .select("billing_kind, billing_line_count, title")
+    .select("billing_kind, billing_line_count, service_package_id, title")
     .eq("ticket_id", ticketId)
     .eq("org_id", orgId);
 
@@ -430,6 +447,7 @@ async function buildPricingForTicket(
     orgId,
     ticket.id,
   );
+  const catalogPackages = await loadTicketCatalogPackages(supabase, orgId);
 
   if (pricingOverride) {
     return calculatePricingFromTicketLegacy(
@@ -449,7 +467,12 @@ async function buildPricingForTicket(
     );
   }
 
-  return calculateTicketPricing(deliverables, ticket, ticket.subject);
+  return calculateTicketPricing(
+    deliverables,
+    ticket,
+    ticket.subject,
+    catalogPackages,
+  );
 }
 
 async function syncDraftInvoiceFromDeliverables(

@@ -79,7 +79,7 @@ import {
   writeNewInvoiceCycleActive,
   type TicketInvoiceTabKey,
 } from "@/modules/tickets/ticketInvoiceTabs";
-import { cn } from "@/lib/utils";
+import { useTicketCatalogPackages } from "@/modules/catalog/useTicketCatalogPackages";
 
 const STORAGE_KEY = "tickets-tools-side-collapsed";
 
@@ -191,6 +191,7 @@ export const TicketBillingSidePanel = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const { ticketPackages } = useTicketCatalogPackages();
   const deliverableInputRef = useRef<HTMLInputElement | null>(null);
   const [update] = useUpdate();
   const [createDeliverable] = useCreate();
@@ -402,8 +403,14 @@ export const TicketBillingSidePanel = ({
   }, [invoiceHistoryIds, invoicesById, ticket.invoice_id]);
 
   const pricing = useMemo(
-    () => calculateTicketPricing(unbilledDeliverables, ticket, propertyAddress),
-    [unbilledDeliverables, ticket, propertyAddress],
+    () =>
+      calculateTicketPricing(
+        unbilledDeliverables,
+        ticket,
+        propertyAddress,
+        ticketPackages,
+      ),
+    [unbilledDeliverables, ticket, propertyAddress, ticketPackages],
   );
 
   const deliverablesReadyForInvoice =
@@ -527,10 +534,11 @@ export const TicketBillingSidePanel = ({
     setEditingDeliverable(deliverable);
     setBillingFileName(deliverable.title);
     setBillingInitial(
-      deliverable.billing_kind
+      deliverable.billing_kind || deliverable.service_package_id
         ? {
-            billing_kind: deliverable.billing_kind,
+            billing_kind: deliverable.billing_kind ?? "supplement",
             billing_line_count: deliverable.billing_line_count ?? null,
+            service_package_id: deliverable.service_package_id ?? null,
           }
         : null,
     );
@@ -561,6 +569,7 @@ export const TicketBillingSidePanel = ({
             data: {
               billing_kind: selection.billing_kind,
               billing_line_count: selection.billing_line_count,
+              service_package_id: selection.service_package_id ?? null,
             },
             previousData: editingDeliverable,
           },
@@ -599,6 +608,7 @@ export const TicketBillingSidePanel = ({
             sort_order: deliverables.length,
             billing_kind: selection.billing_kind,
             billing_line_count: selection.billing_line_count,
+            service_package_id: selection.service_package_id ?? null,
           },
         },
         { returnPromise: true },
@@ -722,7 +732,11 @@ export const TicketBillingSidePanel = ({
   );
 
   const renderEditableDeliverable = (file: TicketDeliverable) => {
-    const amount = deliverableBillingLineTotal(file, propertyAddress);
+    const amount = deliverableBillingLineTotal(
+      file,
+      propertyAddress,
+      ticketPackages,
+    );
     return (
       <div
         key={file.id}
@@ -764,7 +778,7 @@ export const TicketBillingSidePanel = ({
         </div>
         <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/60 pt-2 text-xs">
           <span className="text-muted-foreground">
-            {deliverableBillingShortLabel(file)}
+            {deliverableBillingShortLabel(file, ticketPackages)}
           </span>
           {amount != null ? (
             <span className="font-medium tabular-nums">

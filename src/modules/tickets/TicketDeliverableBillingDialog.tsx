@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { DeliverableBillingKind } from "@/modules/tickets/supplementPricing";
 import {
   buildDeliverablePricingLine,
-  calculateSupplementTotalForLineCount,
-  DELIVERABLE_BILLING_OPTIONS,
+  buildTicketBillingOptions,
   formatSupplementMoney,
   normalizePropertyAddress,
 } from "@/modules/tickets/supplementPricing";
+import { useTicketCatalogPackages } from "@/modules/catalog/useTicketCatalogPackages";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 export type DeliverableBillingSelection = {
   billing_kind: DeliverableBillingKind;
   billing_line_count: number | null;
+  service_package_id?: number | string | null;
 };
 
 type TicketDeliverableBillingDialogProps = {
@@ -51,43 +52,80 @@ export const TicketDeliverableBillingDialog = ({
   onOpenChange,
   onConfirm,
 }: TicketDeliverableBillingDialogProps) => {
+  const { ticketPackages } = useTicketCatalogPackages();
+  const billingOptions = useMemo(
+    () => buildTicketBillingOptions(ticketPackages),
+    [ticketPackages],
+  );
+
   const [kind, setKind] = useState<DeliverableBillingKind>("supplement");
+  const [packageId, setPackageId] = useState<string>("");
   const [lineCount, setLineCount] = useState("55");
 
   useEffect(() => {
     if (!open) return;
-    setKind(initial?.billing_kind ?? "supplement");
+    const initialOption =
+      billingOptions.find(
+        (option) =>
+          initial?.service_package_id != null &&
+          String(option.packageId) === String(initial.service_package_id),
+      ) ??
+      billingOptions.find((option) => option.kind === initial?.billing_kind);
+
+    setKind(initialOption?.kind ?? billingOptions[0]?.kind ?? "supplement");
+    setPackageId(
+      initial?.service_package_id != null
+        ? String(initial.service_package_id)
+        : initialOption?.packageId != null
+          ? String(initialOption.packageId)
+          : "",
+    );
     setLineCount(
       initial?.billing_line_count != null
         ? String(initial.billing_line_count)
         : "55",
     );
-  }, [open, initial]);
+  }, [open, initial, billingOptions]);
 
   const address = normalizePropertyAddress(propertyAddress);
   const parsedLineCount = Math.max(0, Math.floor(Number(lineCount) || 0));
-  const selectedOption = DELIVERABLE_BILLING_OPTIONS.find(
-    (option) => option.kind === kind,
-  );
+  const selectedOption = billingOptions.find((option) => option.kind === kind);
 
   const previewLine = useMemo(
     () =>
       buildDeliverablePricingLine(
         kind,
         address,
-        kind === "supplement" ? parsedLineCount : null,
+        selectedOption?.needsLineCount ? parsedLineCount : null,
+        ticketPackages,
+        packageId || selectedOption?.packageId,
       ),
-    [kind, address, parsedLineCount],
+    [
+      kind,
+      address,
+      parsedLineCount,
+      ticketPackages,
+      packageId,
+      selectedOption,
+    ],
   );
 
   const canConfirm =
-    kind !== "supplement" || parsedLineCount > 0;
+    Boolean(selectedOption) &&
+    (!selectedOption?.needsLineCount || parsedLineCount > 0);
+
+  const handleKindChange = (nextKind: DeliverableBillingKind) => {
+    setKind(nextKind);
+    const option = billingOptions.find((entry) => entry.kind === nextKind);
+    setPackageId(option?.packageId != null ? String(option.packageId) : "");
+  };
 
   const handleConfirm = () => {
     if (!canConfirm) return;
     onConfirm({
       billing_kind: kind,
-      billing_line_count: kind === "supplement" ? parsedLineCount : null,
+      billing_line_count: selectedOption?.needsLineCount ? parsedLineCount : null,
+      service_package_id: packageId || selectedOption?.packageId || null,
     });
   };
 
@@ -99,27 +137,29 @@ export const TicketDeliverableBillingDialog = ({
           <DialogDescription>
             {fileName
               ? `How should we bill "${fileName}"?`
-              : "Choose the billing type for this file."}
+              : "Choose a catalog product for this file."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="deliverable-billing-kind">Type</Label>
+            <Label htmlFor="deliverable-billing-kind">Product</Label>
             <Select
               value={kind}
-              onValueChange={(value) => setKind(value as DeliverableBillingKind)}
+              onValueChange={(value) =>
+                handleKindChange(value as DeliverableBillingKind)
+              }
             >
               <SelectTrigger id="deliverable-billing-kind">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {DELIVERABLE_BILLING_OPTIONS.map((option) => (
-                  <SelectItem key={option.kind} value={option.kind}>
+                {billingOptions.map((option) => (
+                  <SelectItem key={String(option.packageId ?? option.kind)} value={option.kind}>
                     {option.label}
                     {option.flatPrice != null
                       ? ` · ${formatSupplementMoney(option.flatPrice)}`
-                      : ""}
+                      : null}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -136,26 +176,24 @@ export const TicketDeliverableBillingDialog = ({
                 value={lineCount}
                 onChange={(event) => setLineCount(event.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Base ${calculateSupplementTotalForLineCount(50).toFixed(0)} includes
-                50 lines, then $0.50 per extra line.
-              </p>
             </div>
           ) : null}
 
-          <div className="rounded-md border bg-muted/30 p-3 text-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Invoice line preview
-            </p>
-            <p className="mt-1 font-medium">{previewLine.description}</p>
-            <p className={cn("mt-1 tabular-nums text-muted-foreground")}>
-              {formatSupplementMoney(previewLine.lineTotal)}
+          <div
+            className={cn(
+              "rounded-md border bg-muted/30 p-3 text-sm",
+              !canConfirm && "opacity-70",
+            )}
+          >
+            <p className="font-medium">{previewLine.description}</p>
+            <p className="mt-1 text-muted-foreground">
+              Total: {formatSupplementMoney(previewLine.lineTotal)}
             </p>
           </div>
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" disabled={!canConfirm} onClick={handleConfirm}>

@@ -45,7 +45,7 @@ import { useTicketListAttachments } from "@/modules/tickets/useTicketListAttachm
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
 import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { OrganizationMember, Ticket } from "@/modules/types";
+import type { ClientInvoice, OrganizationMember, Ticket } from "@/modules/types";
 
 export const TicketsInbox = () => {
   const { identity } = useGetIdentity();
@@ -181,6 +181,31 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
       sort: { field: "first_name", order: "ASC" },
     },
   );
+
+  const { data: ticketInvoices = [] } = useGetList<ClientInvoice>(
+    "client_invoices",
+    {
+      pagination: { page: 1, perPage: Math.max(ticketIds.length * 4, 1) },
+      sort: { field: "id", order: "ASC" },
+      filter:
+        ticketIds.length > 0
+          ? { "ticket_id@in": `(${ticketIds.join(",")})` }
+          : undefined,
+    },
+    { enabled: ticketIds.length > 0 },
+  );
+
+  const invoicesByTicketId = useMemo(() => {
+    const map = new Map<string, ClientInvoice[]>();
+    for (const invoice of ticketInvoices) {
+      if (invoice.ticket_id == null) continue;
+      const key = String(invoice.ticket_id);
+      const current = map.get(key) ?? [];
+      current.push(invoice);
+      map.set(key, current);
+    }
+    return map;
+  }, [ticketInvoices]);
 
   const companyById = useMemo(() => {
     const map = new Map<string, Company>();
@@ -359,6 +384,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
                         hasAttachments={
                           hasAttachmentsMap.get(ticketId) ?? false
                         }
+                        invoices={invoicesByTicketId.get(ticketId) ?? []}
                         onSelect={() => navigate(`/tickets/${ticket.id}/show`)}
                         onToggleBulkSelect={(checked) =>
                           toggleTicketSelection(ticketId, checked)

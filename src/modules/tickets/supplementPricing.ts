@@ -1,9 +1,18 @@
+import {
+  buildTicketCatalogPricingLine,
+  listTicketBillingPackages,
+  resolveTicketCatalogPackage,
+  ticketCatalogBillingShortLabel,
+  type TicketCatalogPackage,
+} from "@/modules/catalog/ticketCatalogPricing";
+
 export type DeliverableBillingKind =
   | "supplement"
   | "roof"
   | "siding"
   | "esx"
-  | "pdf_analysis";
+  | "pdf_analysis"
+  | (string & {});
 
 export type SupplementPricingInput = {
   itemCount: number;
@@ -16,8 +25,11 @@ export type SupplementPricingInput = {
 export type DeliverableBillingInput = {
   billing_kind?: DeliverableBillingKind | string | null;
   billing_line_count?: number | null;
+  service_package_id?: number | string | null;
   title?: string | null;
 };
+
+export type { TicketCatalogPackage };
 
 export type SupplementPricingLine = {
   description: string;
@@ -39,6 +51,7 @@ export const DELIVERABLE_BILLING_OPTIONS: {
   label: string;
   needsLineCount: boolean;
   flatPrice?: number;
+  packageId?: number | string;
 }[] = [
   { kind: "supplement", label: "Supplement", needsLineCount: true },
   { kind: "roof", label: "Roof measurements", needsLineCount: false, flatPrice: 25 },
@@ -56,6 +69,26 @@ export const DELIVERABLE_BILLING_OPTIONS: {
     flatPrice: 10,
   },
 ];
+
+export const buildTicketBillingOptions = (packages: TicketCatalogPackage[]) => {
+  const catalogOptions = listTicketBillingPackages(packages).map((pkg) => ({
+    kind: (pkg.ticket_billing_slug ??
+      String(pkg.id)) as DeliverableBillingKind,
+    label: pkg.name,
+    needsLineCount: pkg.ticket_pricing_mode === "supplement_lines",
+    flatPrice:
+      pkg.ticket_pricing_mode === "supplement_lines"
+        ? undefined
+        : Number(pkg.suggested_price) || 0,
+    packageId: pkg.id,
+  }));
+
+  if (catalogOptions.length > 0) {
+    return catalogOptions;
+  }
+
+  return DELIVERABLE_BILLING_OPTIONS;
+};
 
 const BASE_PRICE = 150;
 const BASE_INCLUDED_ITEMS = 50;
@@ -124,7 +157,22 @@ export const buildDeliverablePricingLine = (
   kind: DeliverableBillingKind,
   propertyAddress: string,
   lineCount?: number | null,
+  catalogPackages: TicketCatalogPackage[] = [],
+  servicePackageId?: number | string | null,
 ): SupplementPricingLine => {
+  const catalogLine = buildTicketCatalogPricingLine(
+    {
+      billing_kind: kind,
+      billing_line_count: lineCount,
+      service_package_id: servicePackageId,
+    },
+    propertyAddress,
+    catalogPackages,
+  );
+  if (catalogLine) {
+    return catalogLine;
+  }
+
   if (kind === "supplement") {
     const total = calculateSupplementTotalForLineCount(lineCount ?? 0);
     return {
@@ -157,14 +205,17 @@ const finalizePricing = (lines: SupplementPricingLine[]): SupplementPricingBreak
 export const calculatePricingFromDeliverables = (
   deliverables: DeliverableBillingInput[],
   propertyAddress: string,
+  catalogPackages: TicketCatalogPackage[] = [],
 ): SupplementPricingBreakdown => {
   const lines = deliverables
-    .filter((item) => item.billing_kind)
+    .filter((item) => item.billing_kind || item.service_package_id)
     .map((item) =>
       buildDeliverablePricingLine(
-        item.billing_kind as DeliverableBillingKind,
+        (item.billing_kind ?? "") as DeliverableBillingKind,
         propertyAddress,
         item.billing_line_count,
+        catalogPackages,
+        item.service_package_id,
       ),
     );
 
@@ -200,7 +251,9 @@ export const calculatePricingFromTicketLegacy = (
 
 export const allDeliverablesHaveBilling = (deliverables: DeliverableBillingInput[]) =>
   deliverables.length > 0 &&
-  deliverables.every((item) => Boolean(item.billing_kind));
+  deliverables.every(
+    (item) => Boolean(item.billing_kind) || Boolean(item.service_package_id),
+  );
 
 export const calculateTicketPricing = (
   deliverables: DeliverableBillingInput[],
@@ -212,9 +265,14 @@ export const calculateTicketPricing = (
     billing_has_pdf_analysis?: boolean | null;
   },
   propertyAddress: string,
+  catalogPackages: TicketCatalogPackage[] = [],
 ): SupplementPricingBreakdown => {
   if (allDeliverablesHaveBilling(deliverables)) {
-    return calculatePricingFromDeliverables(deliverables, propertyAddress);
+    return calculatePricingFromDeliverables(
+      deliverables,
+      propertyAddress,
+      catalogPackages,
+    );
   }
 
   return calculatePricingFromTicketLegacy(
@@ -263,14 +321,22 @@ export const formatSupplementMoney = (value: number) =>
 export const deliverableBillingSummary = (
   deliverable: DeliverableBillingInput,
   propertyAddress: string,
+  catalogPackages: TicketCatalogPackage[] = [],
 ) => {
-  if (!deliverable.billing_kind) return "Billing not set";
+  if (!deliverable.billing_kind && !deliverable.service_package_id) {
+    return "Billing not set";
+  }
+
+  const pkg = resolveTicketCatalogPackage(deliverable, catalogPackages);
   const line = buildDeliverablePricingLine(
-    deliverable.billing_kind as DeliverableBillingKind,
+    (deliverable.billing_kind ?? pkg?.ticket_billing_slug ?? "") as DeliverableBillingKind,
     propertyAddress,
     deliverable.billing_line_count,
+    catalogPackages,
+    deliverable.service_package_id,
   );
-  if (deliverable.billing_kind === "supplement") {
+
+  if (pkg?.ticket_pricing_mode === "supplement_lines") {
     return `${line.description} · ${deliverable.billing_line_count ?? 0} lines · ${formatSupplementMoney(line.lineTotal)}`;
   }
   return `${line.description} · ${formatSupplementMoney(line.lineTotal)}`;
@@ -278,8 +344,16 @@ export const deliverableBillingSummary = (
 
 export const deliverableBillingShortLabel = (
   deliverable: DeliverableBillingInput,
+  catalogPackages: TicketCatalogPackage[] = [],
 ) => {
-  if (!deliverable.billing_kind) return "Billing not set";
+  if (!deliverable.billing_kind && !deliverable.service_package_id) {
+    return "Billing not set";
+  }
+
+  if (catalogPackages.length > 0) {
+    return ticketCatalogBillingShortLabel(deliverable, catalogPackages);
+  }
+
   if (deliverable.billing_kind === "supplement") {
     return `Supplement · ${deliverable.billing_line_count ?? 0} lines`;
   }
@@ -291,11 +365,14 @@ export const deliverableBillingShortLabel = (
 export const deliverableBillingLineTotal = (
   deliverable: DeliverableBillingInput,
   propertyAddress: string,
+  catalogPackages: TicketCatalogPackage[] = [],
 ) => {
-  if (!deliverable.billing_kind) return null;
+  if (!deliverable.billing_kind && !deliverable.service_package_id) return null;
   return buildDeliverablePricingLine(
-    deliverable.billing_kind as DeliverableBillingKind,
+    (deliverable.billing_kind ?? "") as DeliverableBillingKind,
     propertyAddress,
     deliverable.billing_line_count,
+    catalogPackages,
+    deliverable.service_package_id,
   ).lineTotal;
 };

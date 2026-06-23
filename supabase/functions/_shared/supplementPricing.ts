@@ -1,3 +1,8 @@
+import {
+  buildTicketCatalogPricingLine,
+  type TicketCatalogPackage,
+} from "./ticketCatalogPricing.ts";
+
 export type DeliverableBillingKind =
   | "supplement"
   | "roof"
@@ -16,6 +21,7 @@ export type SupplementPricingInput = {
 export type DeliverableBillingInput = {
   billing_kind?: DeliverableBillingKind | string | null;
   billing_line_count?: number | null;
+  service_package_id?: number | string | null;
   title?: string | null;
 };
 
@@ -124,7 +130,22 @@ export const buildDeliverablePricingLine = (
   kind: DeliverableBillingKind,
   propertyAddress: string,
   lineCount?: number | null,
+  catalogPackages: TicketCatalogPackage[] = [],
+  servicePackageId?: number | string | null,
 ): SupplementPricingLine => {
+  const catalogLine = buildTicketCatalogPricingLine(
+    {
+      billing_kind: kind,
+      billing_line_count: lineCount,
+      service_package_id: servicePackageId,
+    },
+    propertyAddress,
+    catalogPackages,
+  );
+  if (catalogLine) {
+    return catalogLine;
+  }
+
   if (kind === "supplement") {
     const total = calculateSupplementTotalForLineCount(lineCount ?? 0);
     return {
@@ -157,14 +178,17 @@ const finalizePricing = (lines: SupplementPricingLine[]): SupplementPricingBreak
 export const calculatePricingFromDeliverables = (
   deliverables: DeliverableBillingInput[],
   propertyAddress: string,
+  catalogPackages: TicketCatalogPackage[] = [],
 ): SupplementPricingBreakdown => {
   const lines = deliverables
-    .filter((item) => item.billing_kind)
+    .filter((item) => item.billing_kind || item.service_package_id)
     .map((item) =>
       buildDeliverablePricingLine(
         item.billing_kind as DeliverableBillingKind,
         propertyAddress,
         item.billing_line_count,
+        catalogPackages,
+        item.service_package_id,
       ),
     );
 
@@ -200,7 +224,9 @@ export const calculatePricingFromTicketLegacy = (
 
 export const allDeliverablesHaveBilling = (deliverables: DeliverableBillingInput[]) =>
   deliverables.length > 0 &&
-  deliverables.every((item) => Boolean(item.billing_kind));
+  deliverables.every(
+    (item) => Boolean(item.billing_kind) || Boolean(item.service_package_id),
+  );
 
 export const calculateTicketPricing = (
   deliverables: DeliverableBillingInput[],
@@ -212,9 +238,14 @@ export const calculateTicketPricing = (
     billing_has_pdf_analysis?: boolean | null;
   },
   propertyAddress: string,
+  catalogPackages: TicketCatalogPackage[] = [],
 ): SupplementPricingBreakdown => {
   if (allDeliverablesHaveBilling(deliverables)) {
-    return calculatePricingFromDeliverables(deliverables, propertyAddress);
+    return calculatePricingFromDeliverables(
+      deliverables,
+      propertyAddress,
+      catalogPackages,
+    );
   }
 
   return calculatePricingFromTicketLegacy(

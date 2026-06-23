@@ -1,7 +1,6 @@
 import { Mail, Paperclip, Pencil, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   TicketListAssigneeControl,
@@ -11,10 +10,11 @@ import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
 import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
 import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
-import { isTicketAwaitingPayment } from "@/modules/tickets/ticketOutboundAttachments";
+import { TicketListInvoiceBadges } from "@/modules/tickets/TicketListInvoiceBadges";
+import { ticketHasUnpaidInvoice } from "@/modules/tickets/ticketListInvoiceBadgeUtils";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { OrganizationMember, Ticket } from "@/modules/types";
+import type { ClientInvoice, OrganizationMember, Ticket } from "@/modules/types";
 import { isTicketUnread } from "@/modules/tickets/ticketReadState";
 
 type TicketListItemProps = {
@@ -28,6 +28,7 @@ type TicketListItemProps = {
   assignee?: OrganizationMember | null;
   members?: OrganizationMember[];
   hasAttachments?: boolean;
+  invoices?: ClientInvoice[];
   onSelect: () => void;
   onToggleBulkSelect: (checked: boolean) => void;
   onDelete?: (ticket: Ticket) => void;
@@ -47,6 +48,7 @@ export const TicketListItem = ({
   assignee,
   members = [],
   hasAttachments = false,
+  invoices = [],
   onSelect,
   onToggleBulkSelect,
   onDelete,
@@ -57,7 +59,7 @@ export const TicketListItem = ({
   const companyName = company?.name?.trim() || null;
   const meta = getTicketListMeta(ticket, company, contact);
   const isUnread = !selected && isTicketUnread(ticket, lastReadAt);
-  const awaitingPayment = isTicketAwaitingPayment(ticket);
+  const awaitingPayment = ticketHasUnpaidInvoice(ticket, invoices);
 
   const contactName = (() => {
     if (contact) {
@@ -126,14 +128,7 @@ export const TicketListItem = ({
                     editable={false}
                     className="min-w-0 flex-1 text-sm font-semibold leading-snug"
                   />
-                  {awaitingPayment ? (
-                    <Badge
-                      variant="outline"
-                      className="mt-0.5 shrink-0 rounded-none border-amber-300 bg-amber-100 px-1.5 py-0 text-[10px] font-medium text-amber-900 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-100"
-                    >
-                      Awaiting payment
-                    </Badge>
-                  ) : null}
+                  <TicketListInvoiceBadges ticket={ticket} invoices={invoices} />
                   {hasAttachments ? (
                     <Paperclip
                       className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"

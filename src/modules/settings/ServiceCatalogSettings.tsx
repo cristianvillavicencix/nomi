@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Plus } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   useCreate,
+  useDelete,
   useGetIdentity,
   useGetList,
   useNotify,
@@ -11,6 +12,13 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -47,6 +55,10 @@ const toPackageDraft = (pkg: ServicePackage): Partial<CatalogItemDraft> => ({
   billing_interval: pkg.billing_interval ?? null,
   active: pkg.active ?? true,
   sort_order: pkg.sort_order ?? 0,
+  booking_enabled: pkg.booking_enabled ?? false,
+  ticket_billing_enabled: pkg.ticket_billing_enabled ?? false,
+  ticket_pricing_mode: pkg.ticket_pricing_mode ?? "flat",
+  ticket_billing_slug: pkg.ticket_billing_slug ?? "",
 });
 
 const toAddonDraft = (addon: ServiceAddon): Partial<CatalogItemDraft> => ({
@@ -70,6 +82,12 @@ export const ServiceCatalogSettings = () => {
   const [updatePackage] = useUpdate();
   const [createAddon] = useCreate();
   const [updateAddon] = useUpdate();
+  const [deleteOne] = useDelete();
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { resource: "service_packages"; record: ServicePackage }
+    | { resource: "service_addons"; record: ServiceAddon }
+    | null
+  >(null);
 
   const [packageDialog, setPackageDialog] = useState<
     { mode: "create" } | { mode: "edit"; record: ServicePackage } | null
@@ -134,9 +152,8 @@ export const ServiceCatalogSettings = () => {
     <div className="space-y-4 max-w-5xl">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="text-sm text-muted-foreground max-w-2xl">
-          Manage packages and add-ons for the proposal builder. Catalog prices
-          are <strong>suggested only</strong> — each line can be edited per
-          proposal.
+          One catalog for proposals, invoices, ticket billing, and Book Now.
+          Suggested prices can still be edited per proposal or invoice.
         </p>
         {catalogEmpty ? (
           <Button
@@ -183,6 +200,7 @@ export const ServiceCatalogSettings = () => {
             <CardContent>
               <CatalogTable
                 rows={packages}
+                showUsageBadges
                 onToggleActive={(row, active) =>
                   updatePackage("service_packages", {
                     id: row.id,
@@ -192,6 +210,9 @@ export const ServiceCatalogSettings = () => {
                 }
                 onEdit={(row) =>
                   setPackageDialog({ mode: "edit", record: row })
+                }
+                onDelete={(row) =>
+                  setDeleteTarget({ resource: "service_packages", record: row })
                 }
               />
             </CardContent>
@@ -227,6 +248,9 @@ export const ServiceCatalogSettings = () => {
                   })
                 }
                 onEdit={(row) => setAddonDialog({ mode: "edit", record: row })}
+                onDelete={(row) =>
+                  setDeleteTarget({ resource: "service_addons", record: row })
+                }
               />
             </CardContent>
           </Card>
@@ -236,6 +260,7 @@ export const ServiceCatalogSettings = () => {
       <ServiceCatalogItemDialog
         open={packageDialog != null}
         onOpenChange={(open) => !open && setPackageDialog(null)}
+        variant="package"
         title={
           packageDialog?.mode === "edit" ? "Edit package" : "New package"
         }
@@ -271,6 +296,7 @@ export const ServiceCatalogSettings = () => {
       <ServiceCatalogItemDialog
         open={addonDialog != null}
         onOpenChange={(open) => !open && setAddonDialog(null)}
+        variant="addon"
         title={addonDialog?.mode === "edit" ? "Edit add-on" : "New add-on"}
         sortOrder={addons.length + 1}
         initial={
@@ -300,6 +326,55 @@ export const ServiceCatalogSettings = () => {
           }
         }}
       />
+
+      <Dialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete {deleteTarget?.record.name ?? "item"}?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This removes the catalog item. Existing proposals and invoices keep
+            their saved line text.
+          </p>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                try {
+                  await deleteOne(
+                    deleteTarget.resource,
+                    {
+                      id: deleteTarget.record.id,
+                      previousData: deleteTarget.record,
+                    },
+                    { returnPromise: true },
+                  );
+                  notify("Catalog item deleted", { type: "success" });
+                  setDeleteTarget(null);
+                } catch {
+                  notify("Could not delete catalog item", { type: "error" });
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -313,15 +388,21 @@ const CatalogTable = <
     billing_type: "one_time" | "recurring";
     billing_interval?: string | null;
     active?: boolean;
+    booking_enabled?: boolean;
+    ticket_billing_enabled?: boolean;
   },
 >({
   rows,
+  showUsageBadges = false,
   onToggleActive,
   onEdit,
+  onDelete,
 }: {
   rows: T[];
+  showUsageBadges?: boolean;
   onToggleActive: (row: T, active: boolean) => void;
   onEdit: (row: T) => void;
+  onDelete: (row: T) => void;
 }) => {
   if (rows.length === 0) {
     return (
@@ -338,6 +419,7 @@ const CatalogTable = <
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Category</TableHead>
+            <TableHead>Used in</TableHead>
             <TableHead>Billing</TableHead>
             <TableHead className="text-right">Suggested</TableHead>
             <TableHead className="text-center">Active</TableHead>
@@ -350,6 +432,31 @@ const CatalogTable = <
               <TableCell className="font-medium">{row.name}</TableCell>
               <TableCell className="text-muted-foreground">
                 {categoryLabel(row.category)}
+              </TableCell>
+              <TableCell>
+                {showUsageBadges ? (
+                  <div className="flex flex-wrap gap-1">
+                    {row.ticket_billing_enabled ? (
+                      <Badge variant="outline" className="font-normal">
+                        Tickets
+                      </Badge>
+                    ) : null}
+                    {row.booking_enabled ? (
+                      <Badge variant="outline" className="font-normal">
+                        Book now
+                      </Badge>
+                    ) : null}
+                    {!row.ticket_billing_enabled && !row.booking_enabled ? (
+                      <span className="text-xs text-muted-foreground">
+                        Proposals
+                      </span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Proposals
+                  </span>
+                )}
               </TableCell>
               <TableCell>
                 <Badge variant="outline" className="font-normal">
@@ -375,15 +482,26 @@ const CatalogTable = <
                 />
               </TableCell>
               <TableCell>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEdit(row)}
-                  aria-label={`Edit ${row.name}`}
-                >
-                  <Pencil className="size-4" />
-                </Button>
+                <div className="flex items-center justify-end gap-0.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(row)}
+                    aria-label={`Edit ${row.name}`}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(row)}
+                    aria-label={`Delete ${row.name}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
