@@ -177,6 +177,49 @@ export const matchesTicketInbox = async (payload: PostmarkInboundPayload) => {
   return findInbox(recipients);
 };
 
+/** iPhone and other clients often send photo-only mail with an empty text/plain part. */
+export const buildInboundTicketMessageBody = (
+  textBody: string,
+  htmlBody: string | null | undefined,
+  attachments: Attachment[],
+): { body: string; htmlBody: string | null } | null => {
+  const trimmedText = textBody.trim();
+  const trimmedHtml = htmlBody?.trim() || null;
+
+  if (trimmedText) {
+    return { body: trimmedText, htmlBody: trimmedHtml };
+  }
+
+  if (trimmedHtml) {
+    const stripped = trimmedHtml
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return { body: stripped || "(See email)", htmlBody: trimmedHtml };
+  }
+
+  if (!attachments.length) return null;
+
+  const imageCount = attachments.filter((file) =>
+    file.type?.toLowerCase().startsWith("image/")
+  ).length;
+
+  if (imageCount === attachments.length && imageCount > 0) {
+    return {
+      body: imageCount === 1 ? "Photo attached" : `${imageCount} photos attached`,
+      htmlBody: null,
+    };
+  }
+
+  return {
+    body:
+      attachments.length === 1
+        ? "1 attachment"
+        : `${attachments.length} attachments`,
+    htmlBody: null,
+  };
+};
+
 export const processTicketInbound = async ({
   payload,
   attachments,
@@ -203,7 +246,12 @@ export const processTicketInbound = async ({
   const inReplyTo = headerValue(payload.Headers, "In-Reply-To");
   const references = headerValue(payload.Headers, "References");
 
-  if (!textBody && !htmlBody) {
+  const messageContent = buildInboundTicketMessageBody(
+    textBody,
+    htmlBody,
+    attachments,
+  );
+  if (!messageContent) {
     return new Response("Missing email body", { status: 403 });
   }
 
@@ -275,8 +323,8 @@ export const processTicketInbound = async ({
     .from("ticket_messages")
     .insert({
       ticket_id: ticketId,
-      body: textBody || htmlBody?.replace(/<[^>]+>/g, " ") || "",
-      html_body: htmlBody,
+      body: messageContent.body,
+      html_body: messageContent.htmlBody,
       direction: "inbound",
       from_email: normalizeEmail(fromEmail),
       from_name: fromName,

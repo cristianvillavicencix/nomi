@@ -1,8 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useDataProvider, useGetList, useGetOne } from "ra-core";
+import { useGetList, useGetOne } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { InvoiceDocumentPreview } from "@/modules/billing/InvoiceDocumentPreview";
 import { StandaloneInvoiceEditPage } from "@/modules/billing/StandaloneInvoiceEditPage";
@@ -51,7 +50,6 @@ export const TicketInvoiceViewDialog = ({
   onRequestRemind,
   onInvoiceUpdated,
 }: TicketInvoiceViewDialogProps) => {
-  const dataProvider = useDataProvider<CrmDataProvider>();
   const { title, companyLegalName } = useConfigurationContext();
   const id = String(invoiceId);
   const [mode, setMode] = useState<TicketInvoiceViewMode>(modeProp);
@@ -117,24 +115,6 @@ export const TicketInvoiceViewDialog = ({
   };
 
   const handleEditSaved = async (updated: ClientInvoice) => {
-    if (ticket && editReason) {
-      try {
-        await dataProvider.replyTicket({
-          ticketId: ticket.id,
-          body: [
-            "**Invoice updated**",
-            "",
-            `- **Invoice:** ${updated.invoice_number}`,
-            `- **Reason:** ${editReason}`,
-            "",
-            "Payment link unchanged — client can pay using the same URL already sent.",
-          ].join("\n"),
-          isInternalNote: true,
-        });
-      } catch {
-        // Non-blocking — invoice save already succeeded
-      }
-    }
     setEditReason(null);
     setMode("view");
     onInvoiceUpdated?.();
@@ -171,6 +151,7 @@ export const TicketInvoiceViewDialog = ({
                 <StandaloneInvoiceEditPage
                   embedded
                   invoiceId={id}
+                  initialEditReason={editReason}
                   onSaved={handleEditSaved}
                 />
               </div>

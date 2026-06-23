@@ -7,12 +7,20 @@ export type InvoiceCreateAction =
   | "send"
   | "share"
   | "send_later"
-  | "print";
+  | "print"
+  | "update"
+  | "resend";
 
 type InvoiceCreateActionsProps = {
   isPending: boolean;
   pendingAction: InvoiceCreateAction | null;
   onAction: (action: InvoiceCreateAction) => void;
+  /** Primary button label (defaults to Send). */
+  primaryLabel?: string;
+  /** Primary button action (defaults to send). */
+  primaryAction?: InvoiceCreateAction;
+  /** Show a subtle badge when the invoice was updated but not resent yet. */
+  showUpdatedBadge?: boolean;
   /** Cancel link target (defaults to Billing list). */
   cancelTo?: string;
   /** When false, hides the Cancel button (e.g. embedded invoice workspace). */
@@ -27,6 +35,9 @@ export const InvoiceCreateActions = ({
   isPending,
   pendingAction,
   onAction,
+  primaryLabel = "Send",
+  primaryAction = "send",
+  showUpdatedBadge = false,
   cancelTo = "/billing",
   showCancel = true,
   onConfigurePayment,
@@ -39,6 +50,11 @@ export const InvoiceCreateActions = ({
 
   return (
     <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+      {showUpdatedBadge ? (
+        <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
+          Updated — resend to client
+        </span>
+      ) : null}
       {onConfigurePayment ? (
         <Button
           type="button"
@@ -66,14 +82,14 @@ export const InvoiceCreateActions = ({
       <Button
         type="button"
         disabled={isPending}
-        onClick={() => onAction("send")}
+        onClick={() => onAction(primaryAction)}
       >
-        {isActionPending("send") ? (
+        {isActionPending(primaryAction) ? (
           <Loader2 className="size-4 animate-spin" />
         ) : (
           <Send className="size-4" />
         )}
-        Send
+        {primaryLabel}
       </Button>
 
       {showCancel ? (

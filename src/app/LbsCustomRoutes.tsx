@@ -26,6 +26,7 @@ import { InvoiceShortUrlRedirect } from "@/modules/billing/public/InvoiceShortUr
 import { PortalShortUrlRedirect } from "@/modules/portal/PortalShortUrlRedirect";
 import { ClientPortalPage } from "@/modules/portal/ClientPortalPage";
 import { ClientPortalInvoicePage } from "@/modules/portal/ClientPortalInvoicePage";
+import { PublicShareLayout } from "@/app/PublicShareLayout";
 import { FormsListPage } from "@/modules/forms/FormsListPage";
 import { FormBuilderPage } from "@/modules/forms/builder/FormBuilderPage";
 import { SubmissionsListPage } from "@/modules/forms/submissions/SubmissionsListPage";
@@ -66,17 +67,17 @@ type ProtectedRouteProps = {
 };
 
 export const renderLbsPublicPortalRoutes = () => (
-  <>
+  <Route element={<PublicShareLayout />}>
     <Route path="/portal" element={<ClientPortalPage />} />
     <Route
       path="/portal/invoice/:token"
       element={<ClientPortalInvoicePage />}
     />
-  </>
+  </Route>
 );
 
 export const renderLbsPublicFormRoute = () => (
-  <>
+  <Route element={<PublicShareLayout />}>
     <Route path="/b/:shortCode" element={<BookingShortUrlRedirect />} />
     <Route path="/book/:token" element={<PublicBookingPage />} />
     <Route path="/f/:shortCode" element={<ShortUrlRedirect />} />
@@ -90,7 +91,7 @@ export const renderLbsPublicFormRoute = () => (
     />
     <Route path="/p/:shortCode" element={<PortalShortUrlRedirect />} />
     <Route path="/forms/:slug" element={<FormPublicEntry />} />
-  </>
+  </Route>
 );
 
 /** Staff client preview — no CRM sidebar (CustomRoutes noLayout). */

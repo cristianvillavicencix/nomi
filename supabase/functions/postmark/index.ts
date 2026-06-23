@@ -123,7 +123,7 @@ const checkRequestTypeAndHeaders = (req: Request) => {
 
 // deno-lint-ignore no-explicit-any
 const checkBody = (json: any) => {
-  const { ToFull, FromFull, Subject, TextBody } = json;
+  const { ToFull, FromFull, Subject, TextBody, Attachments } = json;
 
   // In case of incorrect request data, we
   // return a 403 to let Postmark know that it's no use to retry this request
@@ -134,7 +134,14 @@ const checkBody = (json: any) => {
     return new Response("Missing parameter: FromFull", { status: 403 });
   if (!Subject)
     return new Response("Missing parameter: Subject", { status: 403 });
-  if (!TextBody && !json.HtmlBody)
+  const hasAttachments = Array.isArray(Attachments) &&
+    Attachments.some(
+      (attachment: { Name?: string; Content?: string; ContentType?: string }) =>
+        attachment?.Name?.trim() &&
+        attachment?.Content?.trim() &&
+        attachment?.ContentType?.trim(),
+    );
+  if (!TextBody && !json.HtmlBody && !hasAttachments)
     return new Response("Missing parameter: TextBody or HtmlBody", {
       status: 403,
     });

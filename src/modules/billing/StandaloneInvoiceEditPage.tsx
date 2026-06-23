@@ -67,6 +67,8 @@ import { InvoiceDocumentPreview } from "@/modules/billing/InvoiceDocumentPreview
 import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceEmailTemplate";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
+import { TicketInvoiceEditReasonDialog } from "@/modules/tickets/TicketInvoiceEditReasonDialog";
+import { postInvoiceUpdateTicketNote } from "@/modules/tickets/postInvoiceUpdateTicketNote";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -77,12 +79,15 @@ type StandaloneInvoiceEditPageProps = {
   invoiceId?: string;
   /** Called after a successful save when embedded (e.g. ticket invoice edit). */
   onSaved?: (invoice: ClientInvoice) => void | Promise<void>;
+  /** Pre-collected edit reason (e.g. ticket view dialog already asked). */
+  initialEditReason?: string | null;
 };
 
 export const StandaloneInvoiceEditPage = ({
   embedded = false,
   invoiceId: invoiceIdProp,
   onSaved,
+  initialEditReason = null,
 }: StandaloneInvoiceEditPageProps = {}) => {
   const { id: routeId = "" } = useParams();
   const id = invoiceIdProp ?? routeId;
@@ -129,6 +134,12 @@ export const StandaloneInvoiceEditPage = ({
   const [paymentSetupOpen, setPaymentSetupOpen] = useState(false);
   const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
   const [savedInvoice, setSavedInvoice] = useState<ClientInvoice | null>(null);
+  const [editReasonOpen, setEditReasonOpen] = useState(false);
+  const [editReason, setEditReason] = useState<string | null>(
+    initialEditReason,
+  );
+  const [editUnlocked, setEditUnlocked] = useState(false);
+  const [pendingResend, setPendingResend] = useState(false);
 
   const { data: invoice, isPending, error } = useGetOne<ClientInvoice>(
     "client_invoices",
@@ -177,10 +188,20 @@ export const StandaloneInvoiceEditPage = ({
   const activeContact = billTo?.contact ?? billToContact ?? contact ?? null;
 
   const editable = invoice ? canEditClientInvoice(invoice) : false;
+  const isSentInvoice = invoice?.status === "sent";
 
   useEffect(() => {
     setHydrated(false);
-  }, [id]);
+    setPendingResend(false);
+    setEditReason(initialEditReason);
+  }, [id, initialEditReason]);
+
+  useEffect(() => {
+    if (!invoice) return;
+    setEditUnlocked(
+      invoice.status !== "sent" || Boolean(initialEditReason?.trim()),
+    );
+  }, [invoice?.id, invoice?.status, initialEditReason]);
 
   useEffect(() => {
     if (!invoice || linesPending || hydrated) return;
@@ -349,8 +370,27 @@ export const StandaloneInvoiceEditPage = ({
     onSuccess: async ({ action, invoice: updated, shareUrl: link }) => {
       setSavedInvoice(updated);
 
-      if (action === "draft") {
-        notify("Invoice saved", { type: "success" });
+      const notifyTicketUpdate = async () => {
+        if (!editReason?.trim() || !updated.ticket_id) return;
+        try {
+          await postInvoiceUpdateTicketNote(dataProvider, {
+            ticketId: updated.ticket_id,
+            invoiceNumber: updated.invoice_number,
+            reason: editReason.trim(),
+          });
+        } catch {
+          // Non-blocking — invoice save already succeeded
+        }
+      };
+
+      if (action === "draft" || action === "update") {
+        const message =
+          action === "update" ? "Invoice updated" : "Invoice saved";
+        notify(message, { type: "success" });
+        if (action === "update") {
+          setPendingResend(true);
+          await notifyTicketUpdate();
+        }
         refresh();
         if (embedded && onSaved) {
           await onSaved(updated);
@@ -392,7 +432,16 @@ export const StandaloneInvoiceEditPage = ({
 
   const handleSendComplete = () => {
     setSendDialogOpen(false);
+    setPendingResend(false);
     refresh();
+  };
+
+  const handleInvoiceAction = (action: InvoiceCreateAction) => {
+    if (action === "resend") {
+      setSendDialogOpen(true);
+      return;
+    }
+    saveMutation.mutate(action);
   };
 
   const handleShareClose = (open: boolean) => {
@@ -447,6 +496,88 @@ export const StandaloneInvoiceEditPage = ({
     : "flex min-h-0 flex-1 flex-col bg-muted/50";
 
   const previewTotals = calculateInvoiceTotals(lines, discountPercent);
+  const showSentEditGate = isSentInvoice && editable && !editUnlocked;
+
+  const primaryLabel = pendingResend
+    ? "Resend invoice"
+    : isSentInvoice && editUnlocked
+      ? "Update invoice"
+      : "Send";
+  const primaryAction: InvoiceCreateAction = pendingResend
+    ? "resend"
+    : isSentInvoice && editUnlocked
+      ? "update"
+      : "send";
+
+  if (showSentEditGate) {
+    return (
+      <>
+        <div className={shellClass}>
+          <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
+            <div className="flex flex-wrap items-center gap-3">
+              {embedded ? (
+                <h2 className="text-base font-semibold">
+                  {invoice.invoice_number}
+                </h2>
+              ) : (
+                <PageTitle label={invoice.invoice_number} />
+              )}
+              <Badge
+                variant={invoiceStatusVariant(invoice.status, invoice.due_date)}
+                className="ml-auto capitalize"
+              >
+                {invoiceStatusLabel(invoice.status, invoice.due_date)}
+              </Badge>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-6">
+            <InvoiceDocumentPreview
+              organizationName={organizationName}
+              organizationWebsite={companyWebsite}
+              organizationAddress={organizationAddress}
+              invoiceNumber={invoice.invoice_number}
+              status={invoice.status}
+              issueDate={issueDate}
+              dueDate={dueDate}
+              terms={terms}
+              company={company}
+              contact={contact}
+              lines={lines}
+              termsAndConditions={termsAndConditions}
+              subtotal={previewTotals.subtotal}
+              discountAmount={previewTotals.discountAmount}
+              feeAmount={previewTotals.feeAmount}
+              total={previewTotals.total}
+              balanceDue={computeInvoiceBalanceDue(
+                previewTotals.total,
+                Number(invoice.amount_paid) || 0,
+              )}
+            />
+          </div>
+          <div className="shrink-0 border-t bg-background px-3 py-3 md:px-4">
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditReasonOpen(true)}
+              >
+                Edit invoice
+              </Button>
+            </div>
+          </div>
+        </div>
+        <TicketInvoiceEditReasonDialog
+          open={editReasonOpen}
+          invoiceNumber={invoice.invoice_number}
+          onOpenChange={setEditReasonOpen}
+          onConfirm={(reason) => {
+            setEditReason(reason);
+            setEditUnlocked(true);
+          }}
+        />
+      </>
+    );
+  }
 
   if (embedded && !editable) {
     return (
@@ -502,7 +633,10 @@ export const StandaloneInvoiceEditPage = ({
       <InvoiceCreateActions
         isPending={saveMutation.isPending}
         pendingAction={pendingAction}
-        onAction={(action) => saveMutation.mutate(action)}
+        onAction={handleInvoiceAction}
+        primaryLabel={primaryLabel}
+        primaryAction={primaryAction}
+        showUpdatedBadge={pendingResend}
         cancelTo="/billing"
         showCancel={!embedded}
         onConfigurePayment={() => setPaymentSetupOpen(true)}
