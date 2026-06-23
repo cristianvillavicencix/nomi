@@ -176,7 +176,7 @@ const ContactListLayoutMobile = () => {
           <FilterLiveForm>
             <SearchInput
               source="q"
-              placeholder="Search name, company..."
+              placeholder="Search name, last name, phone, company…"
               className="w-full"
             />
           </FilterLiveForm>

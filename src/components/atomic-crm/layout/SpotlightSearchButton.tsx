@@ -84,8 +84,14 @@ const fullName = (record: {
 const truncatedJoin = (parts: Array<string | null | undefined>) =>
   parts.filter((p) => p && String(p).trim()).join(" · ") || "—";
 
+const primaryEmail = (contact: Contact) =>
+  contact.email_jsonb?.find((row) => row.email?.trim())?.email?.trim() ?? null;
+
+const primaryPhone = (contact: Contact) =>
+  contact.phone_jsonb?.find((row) => row.number?.trim())?.number?.trim() ?? null;
+
 export const SpotlightSearchButton = ({
-  placeholder = "Buscar en todo NOMI…",
+  placeholder = "Search name, last name, phone, or email…",
   perModuleLimit = DEFAULT_LIMIT,
   variant = "default",
 }: SpotlightSearchButtonProps = {}) => {
@@ -190,6 +196,7 @@ export const SpotlightSearchButton = ({
             <p className="truncate text-xs text-muted-foreground">
               {truncatedJoin([
                 record.company_name,
+                primaryEmail(record),
                 record.lead_stage,
                 record.interested_service,
               ])}
@@ -232,7 +239,12 @@ export const SpotlightSearchButton = ({
               {fullName(record) || record.company_name || "Sin nombre"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {truncatedJoin([record.company_name, record.title])}
+              {truncatedJoin([
+                record.company_name,
+                primaryEmail(record),
+                primaryPhone(record),
+                record.title,
+              ])}
             </p>
           </div>
         </>
@@ -413,7 +425,7 @@ export const SpotlightSearchButton = ({
           >
             <Search className="size-4 shrink-0" />
             <span className="hidden flex-1 truncate text-left sm:inline">
-              Buscar en NOMI…
+              Search name, last name, phone…
             </span>
             <kbd className="ml-auto hidden shrink-0 rounded border bg-background px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
               ⌘K

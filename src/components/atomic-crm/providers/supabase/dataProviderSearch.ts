@@ -11,7 +11,16 @@ const CONTACT_SEARCH_COLUMNS = [
   "phone",
 ];
 
-/** Match "Jose Quezada" via first_name + last_name AND; single tokens use @or. */
+const looksLikeEmail = (value: string) => value.includes("@");
+
+const digitsOnly = (value: string) => value.replace(/\D/g, "");
+
+const looksLikePhone = (value: string) => {
+  const digits = digitsOnly(value);
+  return digits.length >= 7 && /^[\d\s+\-().]+$/.test(value);
+};
+
+/** Match "Jose Quezada" via first_name + last_name AND; emails/phones get dedicated paths. */
 export const applyContactListSearch = (params: GetListParams) => {
   if (!params.filter?.q) {
     return params;
@@ -20,6 +29,31 @@ export const applyContactListSearch = (params: GetListParams) => {
   const trimmed = String(q).trim();
   if (!trimmed) {
     return { ...params, filter };
+  }
+
+  if (looksLikeEmail(trimmed)) {
+    const searchTerm = normalizePostgrestIlikeQuery(trimmed);
+    return {
+      ...params,
+      filter: {
+        ...filter,
+        "@or": {
+          "email_fts@ilike": searchTerm,
+          "name@ilike": searchTerm,
+          "company_name@ilike": searchTerm,
+        },
+      },
+    };
+  }
+
+  if (looksLikePhone(trimmed)) {
+    return {
+      ...params,
+      filter: {
+        ...filter,
+        "phone_fts@ilike": normalizePostgrestIlikeQuery(digitsOnly(trimmed)),
+      },
+    };
   }
 
   const words = trimmed.split(/\s+/).filter(Boolean);
@@ -35,6 +69,59 @@ export const applyContactListSearch = (params: GetListParams) => {
   }
 
   return applyFullTextSearch(CONTACT_SEARCH_COLUMNS)(params);
+};
+
+const COMPANY_SEARCH_COLUMNS = [
+  "name",
+  "phone_number",
+  "website",
+  "zipcode",
+  "city",
+  "state_abbr",
+  "primary_contact_first_name",
+  "primary_contact_last_name",
+];
+
+export const applyCompanyListSearch = (params: GetListParams) => {
+  if (!params.filter?.q) {
+    return params;
+  }
+  const { q, ...filter } = params.filter;
+  const trimmed = String(q).trim();
+  if (!trimmed) {
+    return { ...params, filter };
+  }
+
+  if (looksLikeEmail(trimmed)) {
+    const searchTerm = normalizePostgrestIlikeQuery(trimmed);
+    return {
+      ...params,
+      filter: {
+        ...filter,
+        "@or": {
+          "primary_contact_email_jsonb::text@ilike": searchTerm,
+          "name@ilike": searchTerm,
+          "website@ilike": searchTerm,
+        },
+      },
+    };
+  }
+
+  if (looksLikePhone(trimmed)) {
+    return {
+      ...params,
+      filter: {
+        ...filter,
+        "primary_contact_phone_jsonb::text@ilike": normalizePostgrestIlikeQuery(
+          digitsOnly(trimmed),
+        ),
+      },
+    };
+  }
+
+  return applyFullTextSearch(COMPANY_SEARCH_COLUMNS, {
+    useContactFtsColumns: false,
+  })(params);
 };
 
 export const applyFullTextSearch =

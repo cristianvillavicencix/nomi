@@ -85,7 +85,8 @@ export const ContactShowContent = ({
   const tabLabel = (_value: ClientTab, label: string, count?: number) =>
     `${label}${formatTabCount(count)}`;
 
-  const financialCount = counts.proposals + counts.contracts + counts.payments;
+  const financialCount =
+    counts.invoices + counts.proposals + counts.contracts + counts.payments;
   const activityCount = counts.notes + counts.tasks;
 
   const centerTabs = (
@@ -117,6 +118,7 @@ export const ContactShowContent = ({
                 companyId={counts.companyId}
                 syncUrl={syncUrl}
                 counts={{
+                  invoices: counts.invoices,
                   proposals: counts.proposals,
                   contracts: counts.contracts,
                   payments: counts.payments,

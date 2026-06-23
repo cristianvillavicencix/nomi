@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useSearchParams } from "react-router";
-import { useGetList } from "ra-core";
+import { useGetList, useGetOne } from "ra-core";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,9 +19,11 @@ import type {
   DealClientPayment,
 } from "@/components/atomic-crm/types";
 import type { Proposal } from "@/modules/types";
+import type { ClientInvoice } from "@/modules/types";
 import { ClientTabEmpty } from "@/modules/clients/ClientContactsTab";
 import {
   ClientContractsTab,
+  ClientInvoicesTab,
   ClientProposalsTab,
 } from "@/modules/clients/ClientTabPanels";
 import {
@@ -38,6 +40,11 @@ import {
   type FinancialSection,
 } from "@/modules/clients/clientShowUtils";
 import { MoneyText } from "@/lib/permissions/MoneyText";
+import {
+  buildInvoicePaymentRows,
+  buildProjectPaymentRows,
+  mergeClientFinancialPaymentRows,
+} from "@/modules/clients/clientFinancialPayments";
 
 const TabLoading = () => (
   <div className="space-y-2">
@@ -49,6 +56,7 @@ const TabLoading = () => (
 type ClientFinancialTabProps = {
   companyId: Company["id"];
   counts: {
+    invoices: number;
     proposals: number;
     contracts: number;
     payments: number;
@@ -115,6 +123,16 @@ export const ClientFinancialTab = ({
       </ClientTabAccordionSection>
 
       <ClientTabAccordionSection
+        value="invoices"
+        title="Invoices"
+        count={counts.invoices}
+      >
+        <ClientTabContentCard flush>
+          <ClientInvoicesTab companyId={companyId} />
+        </ClientTabContentCard>
+      </ClientTabAccordionSection>
+
+      <ClientTabAccordionSection
         value="proposals"
         title="Proposals"
         count={counts.proposals}
@@ -152,7 +170,7 @@ const ClientFinancialSummary = ({
 }: {
   companyId: Company["id"];
 }) => {
-  const { data: deals = [], isPending: dealsPending } = useGetList<Deal>(
+  const { data: deals = [], isLoading: dealsLoading } = useGetList<Deal>(
     "deals",
     {
       filter: { "company_id@eq": companyId },
@@ -163,13 +181,13 @@ const ClientFinancialSummary = ({
   );
 
   const dealIds = useMemo(() => deals.map((deal) => deal.id), [deals]);
+  const paymentsEnabled = dealIds.length > 0;
 
-  const paymentsFilter =
-    dealIds.length > 0
-      ? { "deal_id@in": `(${dealIds.join(",")})` }
-      : { "deal_id@eq": -1 };
+  const paymentsFilter = paymentsEnabled
+    ? { "deal_id@in": `(${dealIds.join(",")})` }
+    : { "deal_id@eq": -1 };
 
-  const { data: payments = [], isPending: paymentsPending } =
+  const { data: payments = [], isLoading: paymentsLoading } =
     useGetList<DealClientPayment>(
       "deal_client_payments",
       {
@@ -177,16 +195,27 @@ const ClientFinancialSummary = ({
         pagination: { page: 1, perPage: 500 },
         sort: { field: "payment_date", order: "DESC" },
       },
-      { staleTime: 30_000, enabled: dealIds.length > 0 },
+      { staleTime: 30_000, enabled: paymentsEnabled },
     );
 
-  const { data: proposals = [], isPending: proposalsPending } =
+  const { data: proposals = [], isLoading: proposalsLoading } =
     useGetList<Proposal>(
       "proposals",
       {
         filter: { "company_id@eq": companyId },
         pagination: { page: 1, perPage: 100 },
         sort: { field: "updated_at", order: "DESC" },
+      },
+      { staleTime: 30_000 },
+    );
+
+  const { data: invoices = [], isLoading: invoicesLoading } =
+    useGetList<ClientInvoice>(
+      "client_invoices",
+      {
+        filter: { "company_id@eq": companyId },
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: "issue_date", order: "DESC" },
       },
       { staleTime: 30_000 },
     );
@@ -225,35 +254,86 @@ const ClientFinancialSummary = ({
     [proposals],
   );
 
-  if (dealsPending || paymentsPending || proposalsPending) {
+  const activeInvoices = useMemo(
+    () => invoices.filter((invoice) => invoice.status !== "void"),
+    [invoices],
+  );
+
+  const totalInvoiced = useMemo(
+    () =>
+      activeInvoices.reduce(
+        (sum, invoice) => sum + Number(invoice.amount ?? 0),
+        0,
+      ),
+    [activeInvoices],
+  );
+
+  const totalInvoicePaid = useMemo(
+    () =>
+      activeInvoices.reduce((sum, invoice) => {
+        if (invoice.status === "paid") {
+          return sum + Number(invoice.amount_paid ?? invoice.amount ?? 0);
+        }
+        return sum + Number(invoice.amount_paid ?? 0);
+      }, 0),
+    [activeInvoices],
+  );
+
+  const invoiceOutstanding = totalInvoiced - totalInvoicePaid;
+
+  if (dealsLoading || paymentsLoading || proposalsLoading || invoicesLoading) {
     return <TabLoading />;
   }
 
-  if (deals.length === 0 && proposals.length === 0) {
+  if (
+    deals.length === 0 &&
+    proposals.length === 0 &&
+    activeInvoices.length === 0
+  ) {
     return (
-      <ClientTabEmpty message="No financial activity for this client yet. Use the + button to create a proposal or project." />
+      <ClientTabEmpty message="No financial activity for this client yet. Ticket invoices, proposals, and project payments appear here once created." />
     );
   }
 
   const balance = totalContracted - totalCollected;
+  const showProjectSummary = deals.length > 0;
+  const showInvoiceSummary = activeInvoices.length > 0;
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label="Contracted"
-          value={<MoneyText value={totalContracted} />}
-        />
-        <SummaryCard
-          label="Collected"
-          value={<MoneyText value={totalCollected} />}
-        />
-        <SummaryCard
-          label="Pending payments"
-          value={<MoneyText value={totalPending} />}
-        />
-        <SummaryCard label="Balance" value={<MoneyText value={balance} />} />
-      </div>
+      {showProjectSummary ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label="Contracted"
+            value={<MoneyText value={totalContracted} />}
+          />
+          <SummaryCard
+            label="Collected"
+            value={<MoneyText value={totalCollected} />}
+          />
+          <SummaryCard
+            label="Pending payments"
+            value={<MoneyText value={totalPending} />}
+          />
+          <SummaryCard label="Balance" value={<MoneyText value={balance} />} />
+        </div>
+      ) : null}
+      {showInvoiceSummary ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <SummaryCard
+            label="Invoiced"
+            value={<MoneyText value={totalInvoiced} />}
+          />
+          <SummaryCard
+            label="Paid"
+            value={<MoneyText value={totalInvoicePaid} />}
+          />
+          <SummaryCard
+            label="Outstanding"
+            value={<MoneyText value={invoiceOutstanding} />}
+          />
+        </div>
+      ) : null}
       {openProposals.length > 0 ? (
         <p className="text-sm text-muted-foreground">
           {openProposals.length} open proposal
@@ -265,7 +345,13 @@ const ClientFinancialSummary = ({
 };
 
 const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
-  const { data: deals = [], isPending: dealsPending } = useGetList<Deal>(
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: companyId },
+    { staleTime: 60_000 },
+  );
+
+  const { data: deals = [], isLoading: dealsLoading } = useGetList<Deal>(
     "deals",
     {
       filter: { "company_id@eq": companyId },
@@ -275,18 +361,29 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
     { staleTime: 30_000 },
   );
 
+  const { data: invoices = [], isLoading: invoicesLoading } =
+    useGetList<ClientInvoice>(
+      "client_invoices",
+      {
+        filter: { "company_id@eq": companyId },
+        pagination: { page: 1, perPage: 200 },
+        sort: { field: "paid_at", order: "DESC" },
+      },
+      { staleTime: 30_000 },
+    );
+
   const dealIds = useMemo(() => deals.map((deal) => deal.id), [deals]);
   const dealsById = useMemo(
     () => Object.fromEntries(deals.map((deal) => [String(deal.id), deal])),
     [deals],
   );
 
-  const paymentsFilter =
-    dealIds.length > 0
-      ? { "deal_id@in": `(${dealIds.join(",")})` }
-      : { "deal_id@eq": -1 };
+  const paymentsEnabled = dealIds.length > 0;
+  const paymentsFilter = paymentsEnabled
+    ? { "deal_id@in": `(${dealIds.join(",")})` }
+    : { "deal_id@eq": -1 };
 
-  const { data: payments = [], isPending: paymentsPending } =
+  const { data: projectPayments = [], isLoading: projectPaymentsLoading } =
     useGetList<DealClientPayment>(
       "deal_client_payments",
       {
@@ -294,79 +391,104 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
         pagination: { page: 1, perPage: 500 },
         sort: { field: "payment_date", order: "DESC" },
       },
-      { staleTime: 30_000, enabled: dealIds.length > 0 },
+      { staleTime: 30_000, enabled: paymentsEnabled },
     );
 
-  if (dealsPending || paymentsPending) return <TabLoading />;
+  const payerLabel = company?.name?.trim() || "Client";
+  const paymentRows = useMemo(
+    () =>
+      mergeClientFinancialPaymentRows(
+        buildInvoicePaymentRows(invoices, payerLabel),
+        buildProjectPaymentRows(projectPayments, dealsById, payerLabel),
+      ),
+    [dealsById, invoices, payerLabel, projectPayments],
+  );
 
-  if (dealIds.length === 0) {
-    return (
-      <ClientTabEmpty message="Create a project first to record client payments." />
-    );
+  if (dealsLoading || invoicesLoading || projectPaymentsLoading) {
+    return <TabLoading />;
   }
 
-  if (payments.length === 0) {
+  if (paymentRows.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No payments recorded yet. Log payments in each project&apos;s detail
-        view.
-      </p>
+      <ClientTabEmpty message="No payments recorded yet. Stripe invoice payments and project payments appear here once collected." />
     );
   }
 
   return (
-    <div className={clientTableWrapperClassName}>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Project</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead className="hidden sm:table-cell">Method</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="hidden lg:table-cell">Reference</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {payments.map((payment) => (
-            <TableRow key={payment.id}>
-              <TableCell className="text-muted-foreground">
-                {payment.payment_date || "—"}
-              </TableCell>
-              <TableCell>
-                {payment.deal_id ? (
-                  <Link
-                    to={`/deals/${payment.deal_id}/show`}
-                    className="link-action font-medium"
-                  >
-                    {dealsById[String(payment.deal_id)]?.name ??
-                      `Project #${payment.deal_id}`}
-                  </Link>
-                ) : (
-                  "—"
-                )}
-              </TableCell>
-              <TableCell className="text-right font-medium">
-                <MoneyText value={payment.amount} />
-              </TableCell>
-              <TableCell className="hidden capitalize text-muted-foreground sm:table-cell">
-                {payment.payment_method?.replace(/_/g, " ") || "—"}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="capitalize">
-                  {payment.status}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden max-w-xs truncate text-muted-foreground lg:table-cell">
-                {payment.reference_number ||
-                  payment.check_number ||
-                  payment.notes ||
-                  "—"}
-              </TableCell>
+    <div className="space-y-3">
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Payment received
+      </h4>
+      <div className={clientTableWrapperClassName}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Invoice</TableHead>
+              <TableHead className="hidden md:table-cell">Reference</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="hidden sm:table-cell">Payment mode</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {paymentRows.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell className="text-muted-foreground">
+                  {row.dateLabel}
+                </TableCell>
+                <TableCell className="font-medium">{row.payerLabel}</TableCell>
+                <TableCell>
+                  {row.invoiceId ? (
+                    <div className="space-y-0.5">
+                      <Link
+                        to={`/billing/invoices/${row.invoiceId}/show`}
+                        className="link-action font-medium"
+                      >
+                        {row.invoiceNumber ?? `Invoice #${row.invoiceId}`}
+                      </Link>
+                      {row.ticketId ? (
+                        <div className="text-xs text-muted-foreground">
+                          <Link
+                            to={`/tickets/${row.ticketId}/show`}
+                            className="link-action"
+                          >
+                            Ticket #{row.ticketId}
+                          </Link>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : row.dealId ? (
+                    <Link
+                      to={`/deals/${row.dealId}/show`}
+                      className="link-action font-medium"
+                    >
+                      {row.dealName ?? `Project #${row.dealId}`}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell className="hidden max-w-[10rem] truncate text-muted-foreground md:table-cell">
+                  {row.reference}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={row.statusVariant} className="capitalize">
+                    {row.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden capitalize text-muted-foreground sm:table-cell">
+                  {row.paymentMode}
+                </TableCell>
+                <TableCell className="text-right font-medium text-emerald-700 dark:text-emerald-400">
+                  <MoneyText value={row.amount} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

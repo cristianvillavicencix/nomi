@@ -2,7 +2,7 @@ import { useGetList, type Identifier } from "ra-core";
 import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
 import type { FormSubmissionV2 } from "@/modules/forms/types";
-import type { Contract, Proposal, Ticket } from "@/modules/types";
+import type { ClientInvoice, Contract, Proposal, Ticket } from "@/modules/types";
 import {
   CONTACT_STATUS_FILTER,
   LEAD_STATUS_FILTER,
@@ -62,6 +62,11 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
     countQuery("contracts", { "company_id@eq": companyId }),
     { staleTime, enabled },
   );
+  const { total: invoices = 0 } = useGetList<ClientInvoice>(
+    "client_invoices",
+    countQuery("client_invoices", { "company_id@eq": companyId }),
+    { staleTime, enabled },
+  );
   const { total: tickets = 0 } = useGetList<Ticket>(
     "tickets",
     countQuery("tickets", { "company_id@eq": companyId }),
@@ -94,7 +99,19 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
       ? { "deal_id@in": `(${dealIds.join(",")})` }
       : { "deal_id@eq": -1 };
 
-  const { total: payments = 0 } = useGetList(
+  const { total: invoicePayments = 0 } = useGetList<ClientInvoice>(
+    "client_invoices",
+    countQuery("client_invoices", {
+      "company_id@eq": companyId,
+      "@or": {
+        "amount_paid@gt": 0,
+        "status@eq": "paid",
+      },
+    }),
+    { staleTime, enabled },
+  );
+
+  const { total: projectPayments = 0 } = useGetList(
     "deal_client_payments",
     countQuery("deal_client_payments", paymentsFilter),
     { staleTime, enabled: enabled && dealIds.length > 0 },
@@ -134,11 +151,12 @@ export const useClientTabCounts = (companyId: Company["id"] | "") => {
     projects,
     proposals,
     contracts,
+    invoices,
     tickets,
     tasks,
     notes,
     webForms,
-    payments,
+    payments: projectPayments + invoicePayments,
     referrals,
     contactIds: contactIds as Identifier[],
   };

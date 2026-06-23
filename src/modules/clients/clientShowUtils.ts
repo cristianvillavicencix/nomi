@@ -8,6 +8,7 @@ export const DEFAULT_CLIENT_TAB: ClientTab = "projects";
 
 export const FINANCIAL_SECTIONS = [
   "summary",
+  "invoices",
   "proposals",
   "contracts",
   "payments",

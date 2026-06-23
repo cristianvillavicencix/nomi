@@ -95,7 +95,8 @@ export const ClientShowContent = () => {
   const tabLabel = (_value: ClientTab, label: string, count?: number) =>
     `${label}${formatTabCount(count)}`;
 
-  const financialCount = counts.proposals + counts.contracts + counts.payments;
+  const financialCount =
+    counts.invoices + counts.proposals + counts.contracts + counts.payments;
   const activityCount = counts.notes + counts.tasks;
 
   const openPrimaryContact = record.primary_contact_id
@@ -127,6 +128,7 @@ export const ClientShowContent = () => {
             <ClientFinancialTab
               companyId={record.id}
               counts={{
+                invoices: counts.invoices,
                 proposals: counts.proposals,
                 contracts: counts.contracts,
                 payments: counts.payments,

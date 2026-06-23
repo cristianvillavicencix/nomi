@@ -1,7 +1,7 @@
 import { useGetList, type Identifier } from "ra-core";
 import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 import type { Contact, Deal } from "@/components/atomic-crm/types";
-import type { Contract, Proposal, Ticket } from "@/modules/types";
+import type { ClientInvoice, Contract, Proposal, Ticket } from "@/modules/types";
 import {
   CONTACT_STATUS_FILTER,
   LEAD_STATUS_FILTER,
@@ -52,6 +52,12 @@ export const useContactTabCounts = (contact: Contact | null | undefined) => {
     { staleTime, enabled: enabled && companyEnabled },
   );
 
+  const { total: invoices = 0 } = useGetList<ClientInvoice>(
+    "client_invoices",
+    countQuery("client_invoices", { "company_id@eq": companyId }),
+    { staleTime, enabled: enabled && companyEnabled },
+  );
+
   const { data: contactDeals = [] } = useGetList<Deal>(
     "deals",
     {
@@ -68,7 +74,19 @@ export const useContactTabCounts = (contact: Contact | null | undefined) => {
       ? { "deal_id@in": `(${dealIds.join(",")})` }
       : { "deal_id@eq": -1 };
 
-  const { total: payments = 0 } = useGetList(
+  const { total: invoicePayments = 0 } = useGetList<ClientInvoice>(
+    "client_invoices",
+    countQuery("client_invoices", {
+      "company_id@eq": companyId,
+      "@or": {
+        "amount_paid@gt": 0,
+        "status@eq": "paid",
+      },
+    }),
+    { staleTime, enabled: enabled && companyEnabled },
+  );
+
+  const { total: projectPayments = 0 } = useGetList(
     "deal_client_payments",
     countQuery("deal_client_payments", paymentsFilter),
     { staleTime, enabled: enabled && dealIds.length > 0 },
@@ -105,7 +123,8 @@ export const useContactTabCounts = (contact: Contact | null | undefined) => {
     projects,
     proposals,
     contracts,
-    payments,
+    invoices,
+    payments: projectPayments + invoicePayments,
     tasks,
     notes,
     referrals,

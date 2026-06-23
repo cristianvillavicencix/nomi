@@ -25,7 +25,12 @@ import { NoteCreate } from "@/components/atomic-crm/notes";
 import { findDealLabel } from "@/components/atomic-crm/deals/deal";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import type { Company, ContactNote, Deal } from "@/components/atomic-crm/types";
-import type { Contract, Proposal, Ticket } from "@/modules/types";
+import type { ClientInvoice, Contract, Proposal, Ticket } from "@/modules/types";
+import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
+import {
+  invoiceStatusSidebarLabel,
+  invoiceStatusSidebarVariant,
+} from "@/modules/billing/invoiceStatusSidebarLabel";
 import type { FormSubmissionV2 } from "@/modules/forms/types";
 import { ClientTabEmpty } from "@/modules/clients/ClientContactsTab";
 import { formatDateTime } from "@/modules/clients/clientShowUtils";
@@ -189,6 +194,92 @@ export const ClientOpenDealsTab = ({
               </TableCell>
               <TableCell className="hidden lg:table-cell text-muted-foreground">
                 {formatDateTime(deal.updated_at)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+export const ClientInvoicesTab = ({
+  companyId,
+}: {
+  companyId: Company["id"];
+}) => {
+  const { data = [], isLoading } = useGetList<ClientInvoice>(
+    "client_invoices",
+    {
+      filter: { "company_id@eq": companyId },
+      pagination: { page: 1, perPage: 50 },
+      sort: { field: "issue_date", order: "DESC" },
+    },
+    { staleTime: 30_000 },
+  );
+
+  if (isLoading) return <TabLoading />;
+
+  if (data.length === 0) {
+    return (
+      <ClientTabEmpty message="No invoices for this client yet. Ticket invoices and standalone invoices appear here once created." />
+    );
+  }
+
+  return (
+    <div className={clientTableWrapperClassName}>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Invoice #</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="hidden md:table-cell">Issue date</TableHead>
+            <TableHead className="hidden lg:table-cell">Ticket</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((invoice) => (
+            <TableRow key={invoice.id}>
+              <TableCell>
+                <Link
+                  to={`/billing/invoices/${invoice.id}/show`}
+                  className="link-action font-medium"
+                >
+                  {invoice.invoice_number}
+                </Link>
+              </TableCell>
+              <TableCell>
+                <Badge
+                  variant={invoiceStatusSidebarVariant(
+                    invoice.status,
+                    invoice.due_date,
+                  )}
+                  className="capitalize"
+                >
+                  {invoiceStatusSidebarLabel(
+                    invoice.status,
+                    invoice.due_date,
+                  )}
+                </Badge>
+              </TableCell>
+              <TableCell className="hidden text-muted-foreground md:table-cell">
+                {formatBillingDate(invoice.issue_date)}
+              </TableCell>
+              <TableCell className="hidden lg:table-cell">
+                {invoice.ticket_id ? (
+                  <Link
+                    to={`/tickets/${invoice.ticket_id}/show`}
+                    className="link-action"
+                  >
+                    Ticket #{invoice.ticket_id}
+                  </Link>
+                ) : (
+                  "—"
+                )}
+              </TableCell>
+              <TableCell className="text-right text-muted-foreground">
+                <MoneyText value={invoice.amount} />
               </TableCell>
             </TableRow>
           ))}

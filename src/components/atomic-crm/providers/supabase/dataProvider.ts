@@ -41,6 +41,7 @@ import { dealsProvider } from "./modules/dealsProvider";
 import { uploadToBucket } from "./modules/uploadToBucket";
 import {
   applyContactListSearch,
+  applyCompanyListSearch,
   applyFullTextSearch,
 } from "./dataProviderSearch";
 import {
@@ -502,18 +503,7 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   },
   {
     resource: "companies",
-    beforeGetList: async (params) => {
-      return applyFullTextSearch([
-        "name",
-        "phone_number",
-        "website",
-        "zipcode",
-        "city",
-        "state_abbr",
-        "primary_contact_first_name",
-        "primary_contact_last_name",
-      ])(params);
-    },
+    beforeGetList: async (params) => applyCompanyListSearch(params),
     beforeCreate: async (params) => {
       const createParams = await processCompanyLogo({
         ...params,

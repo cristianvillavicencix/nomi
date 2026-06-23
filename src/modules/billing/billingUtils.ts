@@ -111,9 +111,10 @@ export const resolveBillToDisplay = (
   const ctx = parseLbsClientContextLinks(company?.context_links);
 
   const companyName = company?.name?.trim() || null;
+  const linkedContactName = formatContactName(contact)?.trim() || null;
   const contactName =
+    linkedContactName ||
     ctx.invoiceContactName?.trim() ||
-    formatContactName(contact) ||
     (company?.primary_contact_first_name
       ? [company.primary_contact_first_name, company.primary_contact_last_name]
           .filter(Boolean)
