@@ -282,7 +282,7 @@ export async function sendTicketInvoiceSms(
   return { sent: true, skipped: false, reason: null };
 };
 
-const ensureShareLink = async (
+export const ensureShareLink = async (
   supabase: SupabaseClient,
   invoiceId: number,
   orgId: number,
@@ -356,6 +356,20 @@ async function loadTicketForInvoice(
   }
   if (ticket.merged_into_ticket_id) {
     throw new Error("Cannot invoice a merged ticket");
+  }
+
+  if (ticket.invoice_id) {
+    const { count: combinedCount } = await supabase
+      .from("client_invoice_tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("invoice_id", ticket.invoice_id)
+      .eq("org_id", orgId);
+
+    if ((combinedCount ?? 0) > 1) {
+      throw new Error(
+        "This ticket is on a combined invoice. Manage it from the bulk Create invoice action.",
+      );
+    }
   }
 
   const { count: deliverableCount } = await supabase
@@ -797,20 +811,51 @@ export async function cancelTicketInvoiceDraft(
     return { cancelled: false, skipped: true };
   }
 
+  const { data: combinedLinks } = await supabase
+    .from("client_invoice_tickets")
+    .select("ticket_id")
+    .eq("invoice_id", invoice.id)
+    .eq("org_id", params.orgId);
+
+  const ticketIdsToClear =
+    combinedLinks && combinedLinks.length > 1
+      ? combinedLinks.map((link) => Number(link.ticket_id))
+      : [ticket.id];
+
   await deleteStandaloneClientInvoice(supabase, Number(invoice.id), params.orgId);
 
-  const nextDeliveryStatus =
-    ticket.delivery_status === "invoice_sent" ? "ready" : ticket.delivery_status;
+  const now = new Date().toISOString();
+  for (const ticketId of ticketIdsToClear) {
+    const { data: ticketRow } = await supabase
+      .from("tickets")
+      .select("delivery_status")
+      .eq("id", ticketId)
+      .eq("org_id", params.orgId)
+      .maybeSingle();
 
-  await supabase
-    .from("tickets")
-    .update({
-      invoice_id: null,
-      delivery_status: nextDeliveryStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", ticket.id)
-    .eq("org_id", params.orgId);
+    const nextDeliveryStatus =
+      ticketRow?.delivery_status === "invoice_sent"
+        ? "ready"
+        : ticketRow?.delivery_status;
+
+    await supabase
+      .from("tickets")
+      .update({
+        invoice_id: null,
+        delivery_status: nextDeliveryStatus,
+        updated_at: now,
+      })
+      .eq("id", ticketId)
+      .eq("org_id", params.orgId);
+  }
+
+  if (combinedLinks && combinedLinks.length > 1) {
+    await supabase
+      .from("client_invoice_tickets")
+      .delete()
+      .eq("invoice_id", invoice.id)
+      .eq("org_id", params.orgId);
+  }
 
   return { cancelled: true, invoice_id: invoice.id };
 }
@@ -850,6 +895,18 @@ export async function sendTicketInvoicePaymentLink(
   }
   if (invoice.status !== "draft") {
     throw new Error("This invoice was already sent");
+  }
+
+  const { count: combinedCount } = await supabase
+    .from("client_invoice_tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("invoice_id", invoice.id)
+    .eq("org_id", params.orgId);
+
+  if ((combinedCount ?? 0) > 1) {
+    throw new Error(
+      "This is a combined ticket invoice. Send it from the bulk Create invoice action.",
+    );
   }
 
   if (!(await isOrgTransactionalEmailConfigured(params.orgId))) {

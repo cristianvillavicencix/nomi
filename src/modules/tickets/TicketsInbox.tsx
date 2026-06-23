@@ -182,6 +182,19 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
     },
   );
 
+  const linkedInvoiceIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          tickets
+            .map((ticket) => ticket.invoice_id)
+            .filter((id): id is number | string => id != null)
+            .map((id) => String(id)),
+        ),
+      ],
+    [tickets],
+  );
+
   const { data: ticketInvoices = [] } = useGetList<ClientInvoice>(
     "client_invoices",
     {
@@ -195,17 +208,50 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
     { enabled: ticketIds.length > 0 },
   );
 
+  const { data: linkedInvoices = [] } = useGetList<ClientInvoice>(
+    "client_invoices",
+    {
+      pagination: { page: 1, perPage: Math.max(linkedInvoiceIds.length, 1) },
+      sort: { field: "id", order: "ASC" },
+      filter:
+        linkedInvoiceIds.length > 0
+          ? { "id@in": `(${linkedInvoiceIds.join(",")})` }
+          : undefined,
+    },
+    { enabled: linkedInvoiceIds.length > 0 },
+  );
+
   const invoicesByTicketId = useMemo(() => {
-    const map = new Map<string, ClientInvoice[]>();
-    for (const invoice of ticketInvoices) {
-      if (invoice.ticket_id == null) continue;
-      const key = String(invoice.ticket_id);
-      const current = map.get(key) ?? [];
-      current.push(invoice);
-      map.set(key, current);
+    const invoiceById = new Map<string, ClientInvoice>();
+    for (const invoice of [...ticketInvoices, ...linkedInvoices]) {
+      invoiceById.set(String(invoice.id), invoice);
     }
+
+    const map = new Map<string, ClientInvoice[]>();
+    const addInvoice = (ticketKey: string, invoice: ClientInvoice) => {
+      const current = map.get(ticketKey) ?? [];
+      if (!current.some((row) => String(row.id) === String(invoice.id))) {
+        current.push(invoice);
+        map.set(ticketKey, current);
+      }
+    };
+
+    for (const invoice of invoiceById.values()) {
+      if (invoice.ticket_id != null) {
+        addInvoice(String(invoice.ticket_id), invoice);
+      }
+    }
+
+    for (const ticket of tickets) {
+      if (ticket.invoice_id == null) continue;
+      const invoice = invoiceById.get(String(ticket.invoice_id));
+      if (invoice) {
+        addInvoice(String(ticket.id), invoice);
+      }
+    }
+
     return map;
-  }, [ticketInvoices]);
+  }, [ticketInvoices, linkedInvoices, tickets]);
 
   const companyById = useMemo(() => {
     const map = new Map<string, Company>();
@@ -423,6 +469,8 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
       {canManage ? (
         <TicketInboxBulkBar
           selectedTickets={selectedTickets}
+          companyById={companyById}
+          contactById={contactById}
           onClear={clearSelection}
           onMerged={handleBulkMerged}
         />

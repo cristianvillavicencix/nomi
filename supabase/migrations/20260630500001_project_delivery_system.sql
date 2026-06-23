@@ -132,6 +132,7 @@ grant all on public.project_delivery_log to service_role;
 grant all on public.project_delivery_notifications to service_role;
 grant all on public.client_credential_access_log to service_role;
 
+drop policy if exists "project_deliveries_team" on public.project_deliveries;
 create policy "project_deliveries_team"
   on public.project_deliveries for all to authenticated
   using (
@@ -144,24 +145,29 @@ create policy "project_deliveries_team"
     and public.current_member_has_capability('crm.pipeline.edit')
   );
 
+drop policy if exists "project_delivery_domains_team" on public.project_delivery_domains;
 create policy "project_delivery_domains_team"
   on public.project_delivery_domains for all to authenticated
   using (org_id = public.current_user_org_id() and public.can_view_deal(deal_id))
   with check (org_id = public.current_user_org_id() and public.can_view_deal(deal_id));
 
+drop policy if exists "project_delivery_corporate_emails_team" on public.project_delivery_corporate_emails;
 create policy "project_delivery_corporate_emails_team"
   on public.project_delivery_corporate_emails for all to authenticated
   using (org_id = public.current_user_org_id() and public.can_view_deal(deal_id))
   with check (org_id = public.current_user_org_id() and public.can_view_deal(deal_id));
 
+drop policy if exists "project_delivery_log_team_select" on public.project_delivery_log;
 create policy "project_delivery_log_team_select"
   on public.project_delivery_log for select to authenticated
   using (org_id = public.current_user_org_id() and public.can_view_deal(deal_id));
 
+drop policy if exists "project_delivery_notifications_team" on public.project_delivery_notifications;
 create policy "project_delivery_notifications_team"
   on public.project_delivery_notifications for select to authenticated
   using (org_id = public.current_user_org_id() and public.can_view_deal(deal_id));
 
+drop policy if exists "client_credential_access_log_team" on public.client_credential_access_log;
 create policy "client_credential_access_log_team"
   on public.client_credential_access_log for select to authenticated
   using (org_id = public.current_user_org_id() and public.can_view_deal(deal_id));

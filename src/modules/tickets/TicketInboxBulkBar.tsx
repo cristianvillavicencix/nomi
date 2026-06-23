@@ -1,11 +1,13 @@
-import { CheckCircle2, GitMerge, Trash2, X } from "lucide-react";
+import { CheckCircle2, GitMerge, Receipt, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import {
   useDelete,
   useNotify,
   useRefresh,
 } from "ra-core";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
+import { TicketBulkCreateInvoiceDialog } from "@/modules/tickets/TicketBulkCreateInvoiceDialog";
 import { TicketBulkMergeDialog } from "@/modules/tickets/TicketBulkMergeDialog";
 import { TicketBulkResolveDialog } from "@/modules/tickets/TicketBulkResolveDialog";
 import { Button } from "@/components/ui/button";
@@ -20,17 +22,22 @@ import {
 
 type TicketInboxBulkBarProps = {
   selectedTickets: Ticket[];
+  companyById: Map<string, Company>;
+  contactById: Map<string, Contact>;
   onClear: () => void;
   onMerged: (primaryTicketId: string | number) => void;
 };
 
 export const TicketInboxBulkBar = ({
   selectedTickets,
+  companyById,
+  contactById,
   onClear,
   onMerged,
 }: TicketInboxBulkBarProps) => {
   const [mergeOpen, setMergeOpen] = useState(false);
   const [resolveOpen, setResolveOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const notify = useNotify();
@@ -87,6 +94,17 @@ export const TicketInboxBulkBar = ({
             size="sm"
             className="h-8"
             disabled={count < 2 || pending}
+            onClick={() => setInvoiceOpen(true)}
+          >
+            <Receipt className="size-3.5" />
+            Create invoice
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8"
+            disabled={count < 2 || pending}
             onClick={() => setMergeOpen(true)}
           >
             <GitMerge className="size-3.5" />
@@ -116,6 +134,15 @@ export const TicketInboxBulkBar = ({
           </Button>
         </div>
       </Card>
+
+      <TicketBulkCreateInvoiceDialog
+        open={invoiceOpen}
+        onOpenChange={setInvoiceOpen}
+        tickets={selectedTickets}
+        companyById={companyById}
+        contactById={contactById}
+        onComplete={onClear}
+      />
 
       <TicketBulkMergeDialog
         open={mergeOpen}

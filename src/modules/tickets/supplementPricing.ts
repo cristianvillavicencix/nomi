@@ -287,6 +287,32 @@ export const calculateTicketPricing = (
   );
 };
 
+export type CombinedTicketPricingInput = {
+  ticket: { id: number | string } & Parameters<typeof calculateTicketPricing>[1];
+  deliverables: DeliverableBillingInput[];
+  propertyAddress: string;
+};
+
+export const calculateCombinedTicketPricing = (
+  tickets: CombinedTicketPricingInput[],
+  catalogPackages: TicketCatalogPackage[] = [],
+): SupplementPricingBreakdown => {
+  const lines = tickets.flatMap((entry) => {
+    const pricing = calculateTicketPricing(
+      entry.deliverables,
+      entry.ticket,
+      entry.propertyAddress,
+      catalogPackages,
+    );
+    return pricing.lines.map((line) => ({
+      ...line,
+      description: `Ticket #${entry.ticket.id}: ${line.description}`,
+    }));
+  });
+
+  return finalizePricing(lines);
+};
+
 /** @deprecated Use calculateTicketPricing */
 export const calculateSupplementPricing = (
   input: SupplementPricingInput,

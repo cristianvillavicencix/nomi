@@ -261,4 +261,112 @@ export const ticketsProvider = {
 
     return data;
   },
+
+  async prepareCombinedTicketInvoice({
+    ticketIds,
+    baseUrl,
+  }: {
+    ticketIds: Identifier[];
+    baseUrl?: string;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+      line_items: Record<string, unknown>[];
+      payment_url: string;
+      to: string;
+      ticket_ids: number[];
+    }>("prepare_combined_ticket_invoice", {
+      method: "POST",
+      body: {
+        ticket_ids: ticketIds.map((id) => Number(id)),
+        ...(baseUrl ? { base_url: baseUrl } : {}),
+      },
+    });
+
+    if (error || !data?.invoice) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to prepare combined invoice",
+            )
+          : "Failed to prepare combined invoice",
+      );
+    }
+
+    return data;
+  },
+
+  async sendCombinedTicketInvoice({
+    ticketIds,
+    baseUrl,
+    message,
+    subject,
+    smsTo,
+    sendSms,
+  }: {
+    ticketIds: Identifier[];
+    baseUrl?: string;
+    message?: string;
+    subject?: string;
+    smsTo?: string;
+    sendSms?: boolean;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+      payment_url: string;
+      to: string;
+      ticket_ids: number[];
+    }>("send_combined_ticket_invoice", {
+      method: "POST",
+      body: {
+        ticket_ids: ticketIds.map((id) => Number(id)),
+        ...(baseUrl ? { base_url: baseUrl } : {}),
+        ...(message ? { message } : {}),
+        ...(subject ? { subject } : {}),
+        ...(smsTo ? { sms_to: smsTo } : {}),
+        ...(sendSms ? { send_sms: true } : {}),
+      },
+    });
+
+    if (error || !data?.invoice) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to send combined invoice",
+            )
+          : "Failed to send combined invoice",
+      );
+    }
+
+    return data;
+  },
+
+  async cancelCombinedTicketInvoiceDraft({
+    ticketIds,
+  }: {
+    ticketIds: Identifier[];
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      cancelled?: boolean;
+      skipped?: boolean;
+    }>("cancel_combined_ticket_invoice", {
+      method: "POST",
+      body: { ticket_ids: ticketIds.map((id) => Number(id)) },
+    });
+
+    if (error) {
+      throw new Error(
+        error
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Could not cancel combined invoice draft",
+            )
+          : "Could not cancel combined invoice draft",
+      );
+    }
+
+    return data;
+  },
 };

@@ -16,7 +16,7 @@ begin
   perform cron.schedule(
     'fail_stale_website_audits_5m',
     '*/5 * * * *',
-    $$ select public.fail_stale_website_audits(240); $$
+    'select public.fail_stale_website_audits(240);'
   );
 end;
 $$;

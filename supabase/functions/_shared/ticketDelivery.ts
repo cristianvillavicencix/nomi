@@ -5,65 +5,26 @@ import {
   buildTicketDeliveredInternalNoteBody,
   buildTicketDeliveryEmailSubject,
 } from "./ticketInvoiceFlow.ts";
+import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
 
 const buildMessageId = (ticketId: number) =>
   `<ticket-${ticketId}-${crypto.randomUUID()}@nomicrm.com>`;
 
-export async function deliverTicketAfterInvoicePayment(
+async function deliverOneTicketForInvoicePayment(
   supabase: SupabaseClient,
   params: {
     invoiceId: number;
     orgId: number;
+    ticketId: number;
+    invoiceNumber: string;
   },
 ) {
-  const { data: invoice } = await supabase
-    .from("client_invoices")
-    .select("id, org_id, ticket_id, invoice_number, status")
-    .eq("id", params.invoiceId)
-    .eq("org_id", params.orgId)
-    .maybeSingle();
-
-  if (!invoice?.id || invoice.status !== "paid") {
-    return { delivered: false, skipped: true, reason: "no_ticket_or_unpaid" };
-  }
-
-  let ticketId = invoice.ticket_id ? Number(invoice.ticket_id) : null;
-
-  if (!ticketId) {
-    const { data: deliverableLink } = await supabase
-      .from("ticket_deliverables")
-      .select("ticket_id")
-      .eq("org_id", params.orgId)
-      .eq("invoiced_invoice_id", invoice.id)
-      .is("delivered_at", null)
-      .order("id", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    ticketId = deliverableLink?.ticket_id
-      ? Number(deliverableLink.ticket_id)
-      : null;
-  }
-
-  if (!ticketId) {
-    return { delivered: false, skipped: true, reason: "no_ticket" };
-  }
-
-  const nowIso = new Date().toISOString();
-  if (!invoice.ticket_id) {
-    await supabase
-      .from("client_invoices")
-      .update({ ticket_id: ticketId, updated_at: nowIso })
-      .eq("id", invoice.id)
-      .eq("org_id", params.orgId);
-  }
-
   const { data: ticket } = await supabase
     .from("tickets")
     .select(
       "id, org_id, subject, status, inbox_address, requester_email, requester_name, delivery_status, merged_into_ticket_id",
     )
-    .eq("id", ticketId)
+    .eq("id", params.ticketId)
     .eq("org_id", params.orgId)
     .maybeSingle();
 
@@ -77,11 +38,11 @@ export async function deliverTicketAfterInvoicePayment(
       .select("id", { count: "exact", head: true })
       .eq("ticket_id", ticket.id)
       .eq("org_id", params.orgId)
-      .eq("invoiced_invoice_id", invoice.id)
+      .eq("invoiced_invoice_id", params.invoiceId)
       .is("delivered_at", null);
 
     if (!pendingForInvoice) {
-      return { delivered: true, skipped: true, duplicate: true };
+      return { delivered: true, skipped: true, duplicate: true, ticket_id: ticket.id };
     }
   }
 
@@ -90,17 +51,17 @@ export async function deliverTicketAfterInvoicePayment(
     .select("id, title, type, path, src, sort_order")
     .eq("ticket_id", ticket.id)
     .eq("org_id", params.orgId)
-    .eq("invoiced_invoice_id", invoice.id)
+    .eq("invoiced_invoice_id", params.invoiceId)
     .is("delivered_at", null)
     .order("sort_order", { ascending: true });
 
   if (!deliverables?.length) {
-    return { delivered: false, skipped: true, reason: "no_deliverables" };
+    return { delivered: false, skipped: true, reason: "no_deliverables", ticket_id: ticket.id };
   }
 
   const recipient = ticket.requester_email?.trim().toLowerCase() ?? "";
   if (!recipient) {
-    return { delivered: false, skipped: true, reason: "missing_recipient" };
+    return { delivered: false, skipped: true, reason: "missing_recipient", ticket_id: ticket.id };
   }
 
   let inboxAddress = ticket.inbox_address?.trim().toLowerCase() ?? "";
@@ -129,7 +90,7 @@ export async function deliverTicketAfterInvoicePayment(
   }
 
   if (!inboxAddress) {
-    return { delivered: false, skipped: true, reason: "missing_inbox" };
+    return { delivered: false, skipped: true, reason: "missing_inbox", ticket_id: ticket.id };
   }
 
   const now = new Date().toISOString();
@@ -137,11 +98,11 @@ export async function deliverTicketAfterInvoicePayment(
   const subject = buildTicketDeliveryEmailSubject(propertyAddress);
   const fileList = deliverables.map((file) => file.title).join(", ");
   const textBody =
-    `Thank you for your payment (${invoice.invoice_number}). ` +
+    `Thank you for your payment (${params.invoiceNumber}). ` +
     `Your supplement files for ${propertyAddress} are attached` +
     (fileList ? `: ${fileList}.` : " to this email.");
   const htmlBody =
-    `<p>Thank you for your payment (<strong>${invoice.invoice_number}</strong>).</p>` +
+    `<p>Thank you for your payment (<strong>${params.invoiceNumber}</strong>).</p>` +
     `<p>Your supplement files for <strong>${propertyAddress}</strong> are attached to this email:</p>` +
     (deliverables.length
       ? `<ul>${deliverables
@@ -189,7 +150,7 @@ export async function deliverTicketAfterInvoicePayment(
     .update({ delivered_at: now })
     .eq("ticket_id", ticket.id)
     .eq("org_id", params.orgId)
-    .eq("invoiced_invoice_id", invoice.id)
+    .eq("invoiced_invoice_id", params.invoiceId)
     .is("delivered_at", null);
 
   const [
@@ -216,7 +177,7 @@ export async function deliverTicketAfterInvoicePayment(
       .eq("ticket_id", ticket.id)
       .eq("org_id", params.orgId)
       .eq("status", "sent")
-      .neq("id", invoice.id),
+      .neq("id", params.invoiceId),
   ]);
 
   const ticketUpdate: {
@@ -249,7 +210,7 @@ export async function deliverTicketAfterInvoicePayment(
   await supabase.from("ticket_messages").insert({
     ticket_id: ticket.id,
     body: buildTicketDeliveredInternalNoteBody({
-      invoiceNumber: invoice.invoice_number,
+      invoiceNumber: params.invoiceNumber,
       propertyAddress: ticket.subject,
       fileCount: deliverables.length,
       recipientEmail: recipient,
@@ -266,4 +227,80 @@ export async function deliverTicketAfterInvoicePayment(
     email_sent: !emailResult.skipped,
     file_count: deliverables.length,
   };
+}
+
+export async function deliverTicketAfterInvoicePayment(
+  supabase: SupabaseClient,
+  params: {
+    invoiceId: number;
+    orgId: number;
+  },
+) {
+  const { data: invoice } = await supabase
+    .from("client_invoices")
+    .select("id, org_id, ticket_id, invoice_number, status")
+    .eq("id", params.invoiceId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  if (!invoice?.id || invoice.status !== "paid") {
+    return { delivered: false, skipped: true, reason: "no_ticket_or_unpaid" };
+  }
+
+  const linkedTicketIds = await loadCombinedInvoiceTicketIds(
+    supabase,
+    params.orgId,
+    params.invoiceId,
+  );
+
+  let ticketIds = linkedTicketIds;
+  if (!ticketIds.length) {
+    let ticketId = invoice.ticket_id ? Number(invoice.ticket_id) : null;
+
+    if (!ticketId) {
+      const { data: deliverableLink } = await supabase
+        .from("ticket_deliverables")
+        .select("ticket_id")
+        .eq("org_id", params.orgId)
+        .eq("invoiced_invoice_id", invoice.id)
+        .is("delivered_at", null)
+        .order("id", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      ticketId = deliverableLink?.ticket_id
+        ? Number(deliverableLink.ticket_id)
+        : null;
+    }
+
+    if (!ticketId) {
+      return { delivered: false, skipped: true, reason: "no_ticket" };
+    }
+
+    ticketIds = [ticketId];
+  }
+
+  const nowIso = new Date().toISOString();
+  if (!invoice.ticket_id && ticketIds[0]) {
+    await supabase
+      .from("client_invoices")
+      .update({ ticket_id: ticketIds[0], updated_at: nowIso })
+      .eq("id", invoice.id)
+      .eq("org_id", params.orgId);
+  }
+
+  const results = [];
+  for (const ticketId of ticketIds) {
+    results.push(
+      await deliverOneTicketForInvoicePayment(supabase, {
+        invoiceId: params.invoiceId,
+        orgId: params.orgId,
+        ticketId,
+        invoiceNumber: invoice.invoice_number,
+      }),
+    );
+  }
+
+  const deliveredResult = results.find((result) => result.delivered);
+  return deliveredResult ?? results[0] ?? { delivered: false, skipped: true };
 }
