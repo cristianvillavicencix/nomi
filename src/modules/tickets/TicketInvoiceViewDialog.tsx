@@ -60,7 +60,8 @@ export const TicketInvoiceViewDialog = ({
 
   const ticketActionsEnabled = Boolean(ticket);
 
-  const { data: invoice, isPending: invoicePending } = useGetOne<ClientInvoice>(
+  const { data: invoice, isPending: invoicePending, isError: invoiceError } =
+    useGetOne<ClientInvoice>(
     "client_invoices",
     { id },
     { enabled: open && Boolean(invoiceId) },
@@ -88,7 +89,8 @@ export const TicketInvoiceViewDialog = ({
     [lineItems],
   );
 
-  const isLoading = mode === "view" && (invoicePending || linesPending || !invoice);
+  const isLoading =
+    mode === "view" && !invoiceError && (invoicePending || linesPending);
   const canEdit = invoice ? canEditClientInvoice(invoice) : false;
   const isPaid = invoice?.status === "paid";
   const showTicketActions =
@@ -177,7 +179,11 @@ export const TicketInvoiceViewDialog = ({
                 <Loader2 className="mr-2 size-4 animate-spin" />
                 Loading invoice…
               </div>
-            ) : invoice ? (
+            ) : invoiceError || !invoice ? (
+              <p className="px-6 py-4 text-sm text-destructive">
+                Could not load this invoice.
+              </p>
+            ) : (
               <div className="px-6 py-4">
                 <InvoiceDocumentPreview
                   organizationName={organizationName}
@@ -201,10 +207,6 @@ export const TicketInvoiceViewDialog = ({
                   termsAndConditions={invoice.notes}
                 />
               </div>
-            ) : (
-              <p className="px-6 py-4 text-sm text-destructive">
-                Could not load this invoice.
-              </p>
             )}
           </div>
 

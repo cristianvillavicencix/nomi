@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCombinedInvoicePropertySummary,
+  getCombinedRecipientEmailOptions,
   validateTicketsForCombinedInvoice,
 } from "@/modules/tickets/combinedTicketInvoiceUtils";
 import type { Ticket } from "@/modules/types";
@@ -17,14 +18,20 @@ const baseTicket = (id: number, email: string): Ticket =>
   }) as Ticket;
 
 describe("combinedTicketInvoiceUtils", () => {
-  it("requires the same recipient email", () => {
+  it("allows different recipient emails when options are available", () => {
     const tickets = [
       baseTicket(1, "client@example.com"),
       baseTicket(2, "other@example.com"),
     ];
+    const options = getCombinedRecipientEmailOptions(
+      tickets,
+      new Map(),
+      new Map(),
+    );
+    expect(options).toHaveLength(2);
     expect(
       validateTicketsForCombinedInvoice(tickets, new Map(), new Map()),
-    ).toMatch(/same recipient email/i);
+    ).toBeNull();
   });
 
   it("builds a property summary across tickets", () => {

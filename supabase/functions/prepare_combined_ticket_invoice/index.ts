@@ -10,6 +10,7 @@ import { prepareCombinedTicketInvoiceDraft } from "../_shared/combinedTicketInvo
 type PrepareBody = {
   ticket_ids?: number[];
   base_url?: string;
+  recipient_email?: string;
 };
 
 Deno.serve(
@@ -49,6 +50,7 @@ Deno.serve(
           orgId: member.org_id,
           ticketIds,
           baseUrl: body.base_url,
+          recipientEmail: body.recipient_email,
         });
 
         return new Response(JSON.stringify(result), {

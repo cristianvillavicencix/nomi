@@ -311,6 +311,16 @@ const dataProviderWithCustomMethods = {
       }
       return baseDataProvider.getOne("monitored_websites", params);
     }
+    if (resource === "client_invoices") {
+      const invoiceRecord = await getOneFromResourceMaybeSingle(
+        "client_invoices",
+        params.id,
+      );
+      if (invoiceRecord) {
+        return { data: invoiceRecord };
+      }
+      throw new Error("Invoice not found or access denied");
+    }
 
     return baseDataProvider.getOne(resource, params);
   },

@@ -124,6 +124,7 @@ async function loadTicketsForCombinedInvoice(
   supabase: SupabaseClient,
   orgId: number,
   ticketIds: number[],
+  selectedRecipientEmail?: string | null,
 ) {
   const normalizedIds = normalizeTicketIds(ticketIds);
   if (normalizedIds.length < 2) {
@@ -207,23 +208,38 @@ async function loadTicketsForCombinedInvoice(
   const recipientEmails = await Promise.all(
     ordered.map((ticket) => resolveRecipientEmail(supabase, ticket)),
   );
-  const primaryRecipient = recipientEmails[0] ?? "";
-  if (!primaryRecipient || !emailRegex.test(primaryRecipient)) {
+  const availableEmails = [
+    ...new Set(recipientEmails.filter((email) => email && emailRegex.test(email))),
+  ];
+
+  if (!availableEmails.length) {
     throw new Error("Add a valid recipient email before sending an invoice");
   }
 
-  const mismatch = recipientEmails.find((email) => email !== primaryRecipient);
-  if (mismatch) {
-    throw new Error(
-      "Combined invoices require the same recipient email on every selected ticket",
-    );
+  const normalizedSelection = selectedRecipientEmail?.trim().toLowerCase() ?? "";
+  let recipientEmail = "";
+
+  if (normalizedSelection) {
+    if (!emailRegex.test(normalizedSelection)) {
+      throw new Error("Recipient email is invalid");
+    }
+    if (!availableEmails.includes(normalizedSelection)) {
+      throw new Error(
+        "Recipient email must match one of the selected ticket emails",
+      );
+    }
+    recipientEmail = normalizedSelection;
+  } else if (availableEmails.length === 1) {
+    recipientEmail = availableEmails[0]!;
+  } else {
+    throw new Error("Select a recipient email for the combined invoice");
   }
 
   return {
     tickets: ordered,
     ticketIds: normalizedIds,
     primaryTicket: ordered[0]!,
-    recipientEmail: primaryRecipient,
+    recipientEmail: recipientEmail,
   };
 }
 
@@ -365,6 +381,7 @@ export async function prepareCombinedTicketInvoiceDraft(
     orgId: number;
     ticketIds: number[];
     baseUrl?: string;
+    recipientEmail?: string;
   },
 ) {
   const { tickets, ticketIds, primaryTicket, recipientEmail } =
@@ -372,6 +389,7 @@ export async function prepareCombinedTicketInvoiceDraft(
       supabase,
       params.orgId,
       params.ticketIds,
+      params.recipientEmail,
     );
 
   const existingDraftId = primaryTicket.invoice_id
@@ -401,6 +419,14 @@ export async function prepareCombinedTicketInvoiceDraft(
         ticketIds,
         primaryTicket.id,
       );
+      await supabase
+        .from("client_invoices")
+        .update({
+          recipient_email: recipientEmail,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingDraftId)
+        .eq("org_id", params.orgId);
     } else if (existing && existing.status !== "void") {
       throw new Error("One of the selected tickets already has an active invoice");
     } else {
@@ -575,6 +601,7 @@ export async function sendCombinedTicketInvoicePaymentLink(
     subject?: string;
     smsTo?: string;
     sendSms?: boolean;
+    recipientEmail?: string;
   },
 ) {
   const { tickets, ticketIds, primaryTicket, recipientEmail } =
@@ -582,6 +609,7 @@ export async function sendCombinedTicketInvoicePaymentLink(
       supabase,
       params.orgId,
       params.ticketIds,
+      params.recipientEmail,
     );
 
   const invoiceId = primaryTicket.invoice_id
@@ -615,6 +643,15 @@ export async function sendCombinedTicketInvoicePaymentLink(
   }
 
   await syncCombinedDraftInvoice(supabase, params.orgId, invoiceId, tickets);
+
+  await supabase
+    .from("client_invoices")
+    .update({
+      recipient_email: recipientEmail,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", invoiceId)
+    .eq("org_id", params.orgId);
 
   const { data: refreshedInvoice } = await supabase
     .from("client_invoices")

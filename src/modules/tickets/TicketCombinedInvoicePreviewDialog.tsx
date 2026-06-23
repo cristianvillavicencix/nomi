@@ -78,6 +78,7 @@ type TicketCombinedInvoicePreviewDialogProps = {
   tickets: Ticket[];
   companyById: Map<string, Company>;
   contactById: Map<string, Contact>;
+  selectedRecipientEmail?: string;
   onInvoiceSent?: () => void;
 };
 
@@ -109,6 +110,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
   tickets,
   companyById,
   contactById,
+  selectedRecipientEmail = "",
   onInvoiceSent,
 }: TicketCombinedInvoicePreviewDialogProps) => {
   const notify = useNotify();
@@ -190,6 +192,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
       dataProvider.prepareCombinedTicketInvoice({
         ticketIds,
         baseUrl: window.location.origin,
+        recipientEmail: selectedRecipientEmail,
       }),
     onSuccess: (data) => {
       setDraftInvoice(data.invoice as ClientInvoice);
@@ -222,6 +225,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
         subject: subject.trim(),
         smsTo: sendSms ? phone.trim() : undefined,
         sendSms,
+        recipientEmail,
       }),
     onSuccess: () => {
       sentRef.current = true;
@@ -257,9 +261,10 @@ export const TicketCombinedInvoicePreviewDialog = ({
     setEditingTo(false);
     setDraftInvoice(null);
     setLineItems([]);
+    setRecipientEmail(selectedRecipientEmail.trim());
     prepareMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- prepare when dialog opens
-  }, [open, ticketIds.join(",")]);
+  }, [open, ticketIds.join(","), selectedRecipientEmail]);
 
   const previewLines = useMemo(
     () => clientInvoiceLineItemsToDrafts(lineItems),

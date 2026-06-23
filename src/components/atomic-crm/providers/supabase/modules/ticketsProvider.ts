@@ -265,9 +265,11 @@ export const ticketsProvider = {
   async prepareCombinedTicketInvoice({
     ticketIds,
     baseUrl,
+    recipientEmail,
   }: {
     ticketIds: Identifier[];
     baseUrl?: string;
+    recipientEmail?: string;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       invoice: Record<string, unknown>;
@@ -280,6 +282,9 @@ export const ticketsProvider = {
       body: {
         ticket_ids: ticketIds.map((id) => Number(id)),
         ...(baseUrl ? { base_url: baseUrl } : {}),
+        ...(recipientEmail?.trim()
+          ? { recipient_email: recipientEmail.trim() }
+          : {}),
       },
     });
 
@@ -304,6 +309,7 @@ export const ticketsProvider = {
     subject,
     smsTo,
     sendSms,
+    recipientEmail,
   }: {
     ticketIds: Identifier[];
     baseUrl?: string;
@@ -311,6 +317,7 @@ export const ticketsProvider = {
     subject?: string;
     smsTo?: string;
     sendSms?: boolean;
+    recipientEmail?: string;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       invoice: Record<string, unknown>;
@@ -326,6 +333,9 @@ export const ticketsProvider = {
         ...(subject ? { subject } : {}),
         ...(smsTo ? { sms_to: smsTo } : {}),
         ...(sendSms ? { send_sms: true } : {}),
+        ...(recipientEmail?.trim()
+          ? { recipient_email: recipientEmail.trim() }
+          : {}),
       },
     });
 

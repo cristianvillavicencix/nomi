@@ -46,6 +46,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 import { cn } from "@/lib/utils";
 
 type PendingAttachment = {
@@ -90,11 +91,16 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     { enabled: Boolean(ticket.company_id) },
   );
 
-  const { data: invoice } = useGetOne<ClientInvoice>(
+  const { data: invoiceRows = [] } = useGetList<ClientInvoice>(
     "client_invoices",
-    { id: ticket.invoice_id ?? "" },
-    { enabled: Boolean(ticket.invoice_id), retry: false },
+    {
+      filter: { "id@eq": ticket.invoice_id },
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: "id", order: "ASC" },
+    },
+    { enabled: isValidRecordId(ticket.invoice_id) },
   );
+  const invoice = invoiceRows[0] ?? null;
 
   const awaitingPaidDelivery = isTicketAwaitingPaidDelivery(ticket, invoice);
   const outboundAttachmentsAllowed = canSendTicketOutboundAttachments(

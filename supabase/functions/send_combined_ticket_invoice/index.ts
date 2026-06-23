@@ -14,6 +14,7 @@ type SendBody = {
   subject?: string;
   sms_to?: string;
   send_sms?: boolean;
+  recipient_email?: string;
 };
 
 Deno.serve(
@@ -65,6 +66,7 @@ Deno.serve(
           subject: body.subject,
           smsTo: body.sms_to,
           sendSms: body.send_sms === true,
+          recipientEmail: body.recipient_email,
         });
 
         return new Response(JSON.stringify(result), {
