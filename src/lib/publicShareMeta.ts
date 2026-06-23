@@ -1,5 +1,5 @@
-export * from "../../lib/publicShareMeta";
-import type { PublicShareMeta } from "../../lib/publicShareMeta";
+export * from "../../share-meta/publicShareMeta";
+import type { PublicShareMeta } from "../../share-meta/publicShareMeta";
 
 const META_TAGS: Array<{
   selector: string;

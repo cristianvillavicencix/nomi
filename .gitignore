@@ -35,7 +35,7 @@ supabase/.temp
 .supabase-functions.log
 
 dist/
-/lib/
+/lib/  # build artifacts only — share-meta/ holds link-preview helpers
 .env
 *storybook.log
 
