@@ -80,6 +80,7 @@ import {
   type TicketInvoiceTabKey,
 } from "@/modules/tickets/ticketInvoiceTabs";
 import { useTicketCatalogPackages } from "@/modules/catalog/useTicketCatalogPackages";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "tickets-tools-side-collapsed";
 
