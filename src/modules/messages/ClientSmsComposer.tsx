@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import type { Contact, Conversation, ConversationMessage } from "@/modules/types";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ import {
   normalizeUsPhoneToE164,
 } from "@/utils/phone";
 import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
+import { SmsTemplateShortcutTiles } from "@/modules/messages/SmsTemplateShortcutTiles";
 
 type PendingAttachment = {
   id: string;
@@ -52,7 +54,7 @@ export const ClientSmsComposer = ({
   const notify = useNotify();
   const { identity } = useGetIdentity();
   const sendClientSms = useSendClientSms();
-  const { signature, settings: orgSignatureSettings } =
+  const { signature, settings: orgSignatureSettings, signatureContext } =
     useOrganizationSmsSignature();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -63,15 +65,30 @@ export const ClientSmsComposer = ({
   const [includeSignature, setIncludeSignature] = useState(
     orgSignatureSettings?.sms_signature_enabled ?? true,
   );
+  const signatureDefaultApplied = useRef(false);
   const canWriteInternalNotes = useMemberCapability(
     "messaging.internal_notes.write",
   );
 
   useEffect(() => {
-    if (orgSignatureSettings?.sms_signature_enabled != null) {
-      setIncludeSignature(orgSignatureSettings.sms_signature_enabled);
-    }
+    if (signatureDefaultApplied.current) return;
+    if (orgSignatureSettings?.sms_signature_enabled == null) return;
+    setIncludeSignature(orgSignatureSettings.sms_signature_enabled);
+    signatureDefaultApplied.current = true;
   }, [orgSignatureSettings?.sms_signature_enabled]);
+
+  const textareaMaxHeightPx = compact ? 144 : 208;
+
+  const syncTextareaHeight = () => {
+    const node = textareaRef.current;
+    if (!node) return;
+    node.style.height = "auto";
+    node.style.height = `${Math.min(node.scrollHeight, textareaMaxHeightPx)}px`;
+  };
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [body, compact, textareaMaxHeightPx]);
 
   useEffect(() => {
     if (!prefillRequest?.text) return;
@@ -82,6 +99,7 @@ export const ClientSmsComposer = ({
       node.focus();
       const length = prefillRequest.text.length;
       node.setSelectionRange(length, length);
+      syncTextareaHeight();
     });
   }, [prefillRequest?.key, prefillRequest?.text]);
 
@@ -130,6 +148,17 @@ export const ClientSmsComposer = ({
     setBody((current) => {
       const trimmed = current.replace(/\/form\s*$/i, "").trimEnd();
       return trimmed ? `${trimmed}\n${snippet}` : snippet;
+    });
+  };
+
+  const insertTemplateBody = (text: string) => {
+    setBody((current) => {
+      const trimmed = current.trim();
+      return trimmed ? `${trimmed}\n\n${text}` : text;
+    });
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      syncTextareaHeight();
     });
   };
 
@@ -190,6 +219,12 @@ export const ClientSmsComposer = ({
       });
       setBody("");
       setPendingFiles([]);
+      window.requestAnimationFrame(() => {
+        const node = textareaRef.current;
+        if (node) {
+          node.style.height = "auto";
+        }
+      });
       onSent?.({
         conversation: result.conversation,
         message: result.message,
@@ -235,23 +270,28 @@ export const ClientSmsComposer = ({
             className="min-w-0 flex-1"
           />
           {showSignatureToggle ? (
-            <button
-              type="button"
-              disabled={disabled || isSending}
-              onClick={() => setIncludeSignature((current) => !current)}
+            <label
+              htmlFor="sms-include-signature"
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
                 includeSignature
                   ? "bg-primary/10 text-primary"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted/70",
+                (disabled || isSending) && "cursor-not-allowed opacity-50",
               )}
             >
-              <span
-                className="size-3.5 rounded-sm border border-current opacity-80"
-                aria-hidden
+              <Checkbox
+                id="sms-include-signature"
+                checked={includeSignature}
+                onCheckedChange={(value) =>
+                  setIncludeSignature(value === true)
+                }
+                disabled={disabled || isSending}
+                className="size-3.5 rounded-[3px]"
+                aria-label="Include signature"
               />
               Signature
-            </button>
+            </label>
           ) : null}
         </div>
       ) : resolvedExternalPhone ? (
@@ -262,6 +302,16 @@ export const ClientSmsComposer = ({
           </span>
           <span className="text-muted-foreground"> · Unsaved number</span>
         </p>
+      ) : null}
+
+      {!isInternalNote ? (
+        <SmsTemplateShortcutTiles
+          contact={contact}
+          companyName={contact?.company_name}
+          templateContext={signatureContext}
+          disabled={disabled || isSending}
+          onInsert={insertTemplateBody}
+        />
       ) : null}
 
       {isInternalNote ? (
@@ -302,7 +352,7 @@ export const ClientSmsComposer = ({
 
       <div
         className={cn(
-          "flex items-end gap-0.5 rounded-full border border-border/40 bg-card px-1.5 py-1 shadow-sm",
+          "flex items-center gap-1 rounded-xl border border-border/40 bg-card p-2 shadow-sm",
           isInternalNote && "border-warning/30",
         )}
       >
@@ -345,10 +395,10 @@ export const ClientSmsComposer = ({
             isInternalNote ? "Write an internal note…" : "Write an SMS…"
           }
           className={cn(
-            "flex-1 resize-none border-0 bg-transparent px-1 py-2 shadow-none field-sizing-fixed focus-visible:ring-0",
+            "flex-1 resize-none overflow-y-auto border-0 bg-transparent px-1.5 py-1.5 shadow-none field-sizing-content focus-visible:ring-0",
             compact
-              ? "min-h-[2.25rem] max-h-24 text-xs"
-              : "min-h-[2.5rem] max-h-32 text-sm",
+              ? "min-h-[2.25rem] max-h-36 text-xs"
+              : "min-h-[2.5rem] max-h-52 text-sm",
           )}
           rows={1}
           disabled={disabled || isSending}
@@ -364,7 +414,7 @@ export const ClientSmsComposer = ({
           type="submit"
           size="icon"
           className={cn(
-            "mb-0.5 mr-0.5 shrink-0 rounded-full bg-foreground text-background hover:bg-foreground/90",
+            "shrink-0 rounded-lg bg-foreground text-background hover:bg-foreground/90",
             compact ? "size-8" : "size-9",
           )}
           disabled={!canSend}

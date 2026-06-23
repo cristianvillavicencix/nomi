@@ -30,7 +30,7 @@ import type { Contact } from "@/components/atomic-crm/types";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
-import { LBS_CONTACT_STATUSES } from "@/app/navigation";
+import { LBS_CONTACT_STATUSES_FOR_FILTER } from "@/app/navigation";
 import { NewContactDialog } from "@/modules/clients/NewContactDialog";
 
 const getPrimaryPhone = (contact: Contact) =>
@@ -64,7 +64,7 @@ export const ContactsListPage = () => {
         perPage={25}
         sort={{ field: "last_name", order: "ASC" }}
         filter={{
-          "status@in": `(${LBS_CONTACT_STATUSES.map((s) => `"${s}"`).join(",")})`,
+          "status@in": `(${LBS_CONTACT_STATUSES_FOR_FILTER.map((s) => `"${s}"`).join(",")})`,
         }}
         actions={
           <PageActions>

@@ -310,8 +310,14 @@ export const LBS_NAV_ITEMS: LbsNavItem[] = [
 export {
   CONTACT_STATUS_CHOICES,
   CONTACT_STATUS_LEGACY_MAP,
+  isContactDirectoryStatus,
+  isLeadLifecycleStatus,
   LBS_CLIENT_STATUS,
   LBS_CONTACT_STATUSES,
+  LBS_CONTACT_STATUSES_FOR_FILTER,
+  LBS_CONTACT_STATUSES_LEGACY,
   LBS_LEAD_STATUSES,
+  LBS_LEAD_STATUSES_FOR_FILTER,
+  LBS_LEAD_STATUSES_LEGACY,
 } from "@/modules/constants/contactStatus";
 export type { ContactStatusValue } from "@/modules/constants/contactStatus";

@@ -34,7 +34,7 @@ export const LeadCreatePage = () => {
             ? (data.referred_by_company_id ?? null)
             : null,
           lead_source_other: isOther ? (data.lead_source_other ?? null) : null,
-          status: data.status ?? "new",
+          status: data.status ?? "lead",
           first_seen: new Date().toISOString(),
           last_seen: new Date().toISOString(),
           tags: [],
@@ -45,7 +45,7 @@ export const LeadCreatePage = () => {
         <div className="max-w-5xl flex-1">
           <Form
             defaultValues={{
-              status: "new",
+              status: "lead",
               organization_member_id: identity?.id,
             }}
           >

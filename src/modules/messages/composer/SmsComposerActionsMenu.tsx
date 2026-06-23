@@ -78,7 +78,7 @@ export const SmsComposerActionsMenu = ({
           variant="ghost"
           size="icon"
           className={cn(
-            "shrink-0 rounded-full text-foreground hover:bg-muted/80",
+            "shrink-0 rounded-lg text-foreground hover:bg-muted/80",
             compact ? "size-8" : "size-9",
           )}
           disabled={menuDisabled}

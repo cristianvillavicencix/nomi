@@ -20,7 +20,7 @@ import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopo
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { ContactEmpty } from "@/components/atomic-crm/contacts/ContactEmpty";
 import type { Contact } from "@/components/atomic-crm/types";
-import { LBS_LEAD_STATUSES } from "@/app/navigation";
+import { LBS_LEAD_STATUSES_FOR_FILTER } from "@/app/navigation";
 import { getLeadShowPath } from "@/app/routing";
 import { Status } from "@/components/atomic-crm/misc/Status";
 import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
@@ -80,7 +80,7 @@ export const LeadsListPage = () => {
         className={view === "kanban" ? "mt-0 min-h-0 flex-1" : undefined}
         sort={{ field: "last_seen", order: "DESC" }}
         filterDefaultValues={{
-          "status@in": `(${LBS_LEAD_STATUSES.map((status) => `"${status}"`).join(",")})`,
+          "status@in": `(${LBS_LEAD_STATUSES_FOR_FILTER.map((status) => `"${status}"`).join(",")})`,
         }}
         actions={
           <LeadsListActions

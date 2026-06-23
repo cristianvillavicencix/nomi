@@ -64,7 +64,7 @@ export const buildContactCreatePayload = (
         ? (values.referred_by_company_id ?? null)
         : null,
       interested_service,
-      status: values.status ?? "new",
+      status: values.status ?? "lead",
       assigned_member_ids: values.assigned_member_ids,
       background: values.background?.trim() || "",
       first_seen: now,
@@ -91,7 +91,7 @@ export const buildContactCreatePayload = (
       ? (values.referred_by_company_id ?? null)
       : null,
     interested_service,
-    status: values.status ?? "new",
+    status: values.status ?? "lead",
     assigned_member_ids: values.assigned_member_ids,
     background: values.background?.trim() || "",
     first_seen: now,

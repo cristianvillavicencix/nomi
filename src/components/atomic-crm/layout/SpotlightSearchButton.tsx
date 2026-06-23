@@ -15,7 +15,10 @@ import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { resolveEffectiveModules } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { cn } from "@/lib/utils";
-import { LBS_CONTACT_STATUSES, LBS_LEAD_STATUSES } from "@/app/navigation";
+import { LBS_CONTACT_STATUSES_FOR_FILTER, LBS_LEAD_STATUSES_FOR_FILTER } from "@/app/navigation";
+import {
+  isLeadLifecycleStatus,
+} from "@/modules/constants/contactStatus";
 import {
   getClientShowPath,
   getContactShowPath,
@@ -64,13 +67,14 @@ type ResolvedSuggestion = {
 };
 
 const DEFAULT_LIMIT = 5;
+const SEARCH_CONTACT_LIMIT = 15;
 
 const leadFilter = () => ({
-  "status@in": `(${LBS_LEAD_STATUSES.map((s) => `"${s}"`).join(",")})`,
+  "status@in": `(${LBS_LEAD_STATUSES_FOR_FILTER.map((s) => `"${s}"`).join(",")})`,
 });
 
 const contactFilter = () => ({
-  "status@in": `(${LBS_CONTACT_STATUSES.map((s) => `"${s}"`).join(",")})`,
+  "status@in": `(${LBS_CONTACT_STATUSES_FOR_FILTER.map((s) => `"${s}"`).join(",")})`,
 });
 
 const matchesPathByPrefix = (prefix: string) => (pathname: string) =>
@@ -103,6 +107,7 @@ export const SpotlightSearchButton = ({
   const { identity } = useGetIdentity();
 
   const trimmedQuery = query.trim();
+  const isSearching = trimmedQuery.length > 0;
 
   const modulePermissions = useMemo(
     () => resolveEffectiveModules(identity ?? null),
@@ -131,6 +136,22 @@ export const SpotlightSearchButton = ({
   }, [pathname]);
 
   // Per-module queries (called in stable order — hooks rule).
+  const unifiedContactsQuery = useGetList<Contact>(
+    "contacts",
+    {
+      pagination: { page: 1, perPage: SEARCH_CONTACT_LIMIT },
+      sort: { field: "last_seen", order: "DESC" },
+      filter: { q: trimmedQuery },
+    },
+    {
+      enabled:
+        open &&
+        isSearching &&
+        (moduleAccess.leads || moduleAccess.contacts),
+      staleTime: 15_000,
+    },
+  );
+
   const leadsQuery = useGetList(
     "contacts",
     {
@@ -140,7 +161,10 @@ export const SpotlightSearchButton = ({
         ? { ...leadFilter(), q: trimmedQuery }
         : leadFilter(),
     },
-    { enabled: open && moduleAccess.leads, staleTime: 15_000 },
+    {
+      enabled: open && !isSearching && moduleAccess.leads,
+      staleTime: 15_000,
+    },
   );
 
   const clientsQuery = useGetList(
@@ -150,7 +174,7 @@ export const SpotlightSearchButton = ({
       sort: { field: "name", order: "ASC" },
       filter: trimmedQuery ? { q: trimmedQuery } : {},
     },
-    { enabled: open && moduleAccess.clients, staleTime: 15_000 },
+    { enabled: open && !isSearching && moduleAccess.clients, staleTime: 15_000 },
   );
 
   const contactsQuery = useGetList(
@@ -162,7 +186,10 @@ export const SpotlightSearchButton = ({
         ? { ...contactFilter(), q: trimmedQuery }
         : contactFilter(),
     },
-    { enabled: open && moduleAccess.contacts, staleTime: 15_000 },
+    {
+      enabled: open && !isSearching && moduleAccess.contacts,
+      staleTime: 15_000,
+    },
   );
 
   const dealsQuery = useGetList(
@@ -287,11 +314,19 @@ export const SpotlightSearchButton = ({
     const all: { id: ModuleId; label: string; rows: ResolvedSuggestion[] }[] =
       [];
     if (moduleAccess.leads) {
-      all.push({
-        id: "leads",
-        label: "Leads",
-        rows: (leadsQuery.data ?? []).map(buildLeadRow),
-      });
+      const leadRows = isSearching
+        ? (unifiedContactsQuery.data ?? [])
+            .filter((record) => isLeadLifecycleStatus(record.status))
+            .slice(0, perModuleLimit)
+            .map(buildLeadRow)
+        : (leadsQuery.data ?? []).map(buildLeadRow);
+      if (leadRows.length > 0) {
+        all.push({
+          id: "leads",
+          label: "Leads",
+          rows: leadRows,
+        });
+      }
     }
     if (moduleAccess.clients) {
       all.push({
@@ -301,11 +336,19 @@ export const SpotlightSearchButton = ({
       });
     }
     if (moduleAccess.contacts) {
-      all.push({
-        id: "contacts",
-        label: "Contactos",
-        rows: (contactsQuery.data ?? []).map(buildContactRow),
-      });
+      const contactRows = isSearching
+        ? (unifiedContactsQuery.data ?? [])
+            .filter((record) => !isLeadLifecycleStatus(record.status))
+            .slice(0, perModuleLimit)
+            .map(buildContactRow)
+        : (contactsQuery.data ?? []).map(buildContactRow);
+      if (contactRows.length > 0) {
+        all.push({
+          id: "contacts",
+          label: "Contactos",
+          rows: contactRows,
+        });
+      }
     }
     if (moduleAccess.deals) {
       all.push({
@@ -325,6 +368,7 @@ export const SpotlightSearchButton = ({
     return all.filter((group) => group.rows.length > 0);
   }, [
     currentModule,
+    isSearching,
     moduleAccess.clients,
     moduleAccess.contacts,
     moduleAccess.deals,
@@ -333,6 +377,8 @@ export const SpotlightSearchButton = ({
     contactsQuery.data,
     dealsQuery.data,
     leadsQuery.data,
+    perModuleLimit,
+    unifiedContactsQuery.data,
   ]);
 
   // Flat list used for keyboard navigation.
@@ -402,9 +448,10 @@ export const SpotlightSearchButton = ({
   };
 
   const isFetching =
-    leadsQuery.isFetching ||
+    (isSearching
+      ? unifiedContactsQuery.isFetching
+      : leadsQuery.isFetching || contactsQuery.isFetching) ||
     clientsQuery.isFetching ||
-    contactsQuery.isFetching ||
     dealsQuery.isFetching ||
     false;
 

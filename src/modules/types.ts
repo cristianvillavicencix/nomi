@@ -505,6 +505,10 @@ export type MessageTemplate = {
   created_by_member_id?: Identifier | null;
   is_archived?: boolean;
   use_count?: number;
+  composer_shortcut?: boolean;
+  shortcut_label?: string | null;
+  tile_color?: string | null;
+  shortcut_sort_order?: number;
   created_at?: string;
   updated_at?: string;
 } & Pick<RaRecord, "id">;

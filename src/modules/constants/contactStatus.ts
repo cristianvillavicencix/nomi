@@ -18,12 +18,38 @@ export type ContactStatusValue =
 /** Shown on /leads */
 export const LBS_LEAD_STATUSES = ["lead", "prospect"] as const;
 
+/** Legacy lead buckets still present in DB until cleanup script 04 runs. */
+export const LBS_LEAD_STATUSES_LEGACY = ["new", "warm", "cold"] as const;
+
+/** List/search filters — canonical + legacy lead statuses. */
+export const LBS_LEAD_STATUSES_FOR_FILTER = [
+  ...LBS_LEAD_STATUSES,
+  ...LBS_LEAD_STATUSES_LEGACY,
+] as const;
+
 /** Shown on /contacts */
 export const LBS_CONTACT_STATUSES = [
   "client",
   "contact_only",
   "inactive",
 ] as const;
+
+/** Legacy contact bucket (`contact` → `contact_only` in cleanup script 04). */
+export const LBS_CONTACT_STATUSES_LEGACY = ["contact"] as const;
+
+/** List/search filters — canonical + legacy contact statuses. */
+export const LBS_CONTACT_STATUSES_FOR_FILTER = [
+  ...LBS_CONTACT_STATUSES,
+  ...LBS_CONTACT_STATUSES_LEGACY,
+] as const;
+
+export const isLeadLifecycleStatus = (status?: string | null) =>
+  !!status &&
+  (LBS_LEAD_STATUSES_FOR_FILTER as readonly string[]).includes(status);
+
+export const isContactDirectoryStatus = (status?: string | null) =>
+  !!status &&
+  (LBS_CONTACT_STATUSES_FOR_FILTER as readonly string[]).includes(status);
 
 export const LBS_CLIENT_STATUS: ContactStatusValue = "client";
 

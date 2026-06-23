@@ -13,6 +13,7 @@ import { VoiceSettingsCard } from "@/modules/settings/communications/VoiceSettin
 import { BusinessHoursSettingsCard } from "@/modules/settings/communications/BusinessHoursSettingsCard";
 import { TestSmsButton } from "@/modules/settings/communications/TestSmsButton";
 import { OrganizationSignatureSection } from "@/modules/settings/OrganizationSignatureSection";
+import { OrganizationMessageTemplatesSection } from "@/modules/settings/OrganizationMessageTemplatesSection";
 import { FormNotificationsSection } from "@/modules/settings/FormNotificationsSection";
 import { EmailDeliverySettingsSection } from "@/modules/settings/EmailDeliverySettingsSection";
 
@@ -239,6 +240,8 @@ export const MessagingSettingsSection = () => {
       )}
 
       <OrganizationSignatureSection />
+
+      <OrganizationMessageTemplatesSection />
 
       <FormNotificationsSection />
 

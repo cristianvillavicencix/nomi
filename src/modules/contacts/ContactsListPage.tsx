@@ -13,7 +13,7 @@ import { InfinitePagination } from "@/components/atomic-crm/misc/InfinitePaginat
 import { Status } from "@/components/atomic-crm/misc/Status";
 import type { Contact } from "@/components/atomic-crm/types";
 import { Badge } from "@/components/ui/badge";
-import { LBS_CONTACT_STATUSES } from "@/app/navigation";
+import { LBS_CONTACT_STATUSES_FOR_FILTER } from "@/app/navigation";
 import { getContactShowPath } from "@/app/routing";
 
 const getPrimaryPhone = (contact: Contact) =>
@@ -37,7 +37,7 @@ export const ContactsListPage = () => {
       perPage={25}
       sort={{ field: "last_name", order: "ASC" }}
       filterDefaultValues={{
-        "status@in": `(${LBS_CONTACT_STATUSES.map((status) => `"${status}"`).join(",")})`,
+        "status@in": `(${LBS_CONTACT_STATUSES_FOR_FILTER.map((status) => `"${status}"`).join(",")})`,
       }}
       actions={<ContactsListActions />}
     >

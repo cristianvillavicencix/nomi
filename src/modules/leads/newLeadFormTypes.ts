@@ -36,7 +36,7 @@ export const defaultNewLeadFormValues = (
   referred_by_contact_id: null,
   referred_by_company_id: null,
   interested_services: [],
-  status: "new",
+  status: "lead",
   assigned_member_ids:
     organizationMemberId != null && organizationMemberId !== ""
       ? [organizationMemberId]
