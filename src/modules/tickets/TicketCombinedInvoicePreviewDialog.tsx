@@ -40,12 +40,12 @@ import {
   sortTicketsForCombinedInvoice,
 } from "@/modules/tickets/combinedTicketInvoiceUtils";
 import {
-  buildTicketSendFooterSummary,
   TicketInvoiceSendPreview,
 } from "@/modules/tickets/TicketInvoiceSendPreview";
 import {
   buildTicketPaymentEmailHtml,
   buildTicketPaymentSmsText,
+  buildTicketDeliveryEmailHtml,
   clientInvoiceLineItemsToDrafts,
   DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE,
   formatTicketInvoicePreviewMoney,
@@ -300,10 +300,14 @@ export const TicketCombinedInvoicePreviewDialog = ({
         })
       : "";
 
-  const footerSummary =
-    draftInvoice && amountFormatted !== "—"
-      ? buildTicketSendFooterSummary(amountFormatted, draftInvoice.due_date)
-      : "";
+  const deliveryEmailHtml = draftInvoice
+    ? buildTicketDeliveryEmailHtml({
+        orgName: organizationName,
+        invoiceNumber: draftInvoice.invoice_number,
+        propertyAddress: propertySummary,
+        fileNames: unbilledDeliverables.map((file) => file.title),
+      })
+    : "";
 
   const handleClose = (next: boolean) => {
     if (!next && open && !sentRef.current && draftInvoice?.status === "draft") {
@@ -505,8 +509,11 @@ export const TicketCombinedInvoicePreviewDialog = ({
                     paymentEmailHtml={paymentEmailHtml}
                     paymentSmsText={paymentSmsText}
                     deliverySubject={deliverySubject}
-                    deliveryEmailHtml=""
-                    footerSummary={footerSummary}
+                    deliveryEmailHtml={deliveryEmailHtml}
+                    emailTo={recipientEmail}
+                    smsTo={phone}
+                    sendSms={sendSms}
+                    fileCount={unbilledDeliverables.length}
                   />
                 ) : null}
               </div>
