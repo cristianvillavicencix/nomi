@@ -14,11 +14,47 @@ export const validateTicketsForCombinedInvoice = (
   companyById: Map<string, Company>,
   contactById: Map<string, Contact>,
 ): string | null => {
+  const issues = getCombinedTicketInvoiceIssues(tickets, companyById, contactById);
+  return issues[0]?.message ?? null;
+};
+
+export const ticketHasLinkedClient = (ticket: Ticket) =>
+  Boolean(ticket.company_id || ticket.contact_id);
+
+export type CombinedTicketInvoiceIssue = {
+  ticketId: Ticket["id"];
+  message: string;
+  kind: "client" | "email" | "selection";
+};
+
+export const getCombinedTicketInvoiceIssues = (
+  tickets: Ticket[],
+  companyById: Map<string, Company>,
+  contactById: Map<string, Contact>,
+): CombinedTicketInvoiceIssue[] => {
   if (tickets.length < 2) {
-    return "Select at least two tickets";
+    return [
+      {
+        ticketId: tickets[0]?.id ?? 0,
+        kind: "selection",
+        message: "Select at least two tickets",
+      },
+    ];
   }
 
   const sorted = sortTicketsForCombinedInvoice(tickets);
+  const issues: CombinedTicketInvoiceIssue[] = [];
+
+  for (const ticket of sorted) {
+    if (!ticketHasLinkedClient(ticket)) {
+      issues.push({
+        ticketId: ticket.id,
+        kind: "client",
+        message: `Link a company or contact on ticket #${ticket.id}`,
+      });
+    }
+  }
+
   const emails = sorted.map((ticket) => {
     const company = ticket.company_id
       ? companyById.get(String(ticket.company_id))
@@ -30,21 +66,25 @@ export const validateTicketsForCombinedInvoice = (
   });
 
   if (emails.some((email) => !email)) {
-    return "Every selected ticket needs a valid recipient email";
-  }
-
-  const primaryEmail = emails[0];
-  if (emails.some((email) => email !== primaryEmail)) {
-    return "Combined invoices require the same recipient email on every ticket";
-  }
-
-  for (const ticket of sorted) {
-    if (!ticket.company_id && !ticket.contact_id) {
-      return `Link a company or contact on ticket #${ticket.id}`;
+    issues.push({
+      ticketId: sorted.find((ticket, index) => !emails[index])?.id ?? sorted[0]!.id,
+      kind: "email",
+      message: "Every selected ticket needs a valid recipient email",
+    });
+  } else {
+    const primaryEmail = emails[0];
+    const mismatch = sorted.find((ticket, index) => emails[index] !== primaryEmail);
+    if (mismatch) {
+      issues.push({
+        ticketId: mismatch.id,
+        kind: "email",
+        message:
+          "Combined invoices require the same recipient email on every ticket",
+      });
     }
   }
 
-  return null;
+  return issues;
 };
 
 export const ticketHasReadyDeliverables = (deliverables: TicketDeliverable[]) => {

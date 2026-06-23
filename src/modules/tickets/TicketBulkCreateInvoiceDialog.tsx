@@ -10,10 +10,13 @@ import {
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket, TicketDeliverable } from "@/modules/types";
 import {
+  getCombinedTicketInvoiceIssues,
   sortTicketsForCombinedInvoice,
+  ticketHasLinkedClient,
   ticketHasReadyDeliverables,
   validateTicketsForCombinedInvoice,
 } from "@/modules/tickets/combinedTicketInvoiceUtils";
+import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
 import {
   TicketDeliverableBillingDialog,
   type DeliverableBillingSelection,
@@ -68,6 +71,7 @@ export const TicketBulkCreateInvoiceDialog = ({
   const [billingFileName, setBillingFileName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [ticketToEdit, setTicketToEdit] = useState<Ticket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { ticketPackages } = useTicketCatalogPackages();
 
@@ -79,6 +83,13 @@ export const TicketBulkCreateInvoiceDialog = ({
     () => validateTicketsForCombinedInvoice(tickets, companyById, contactById),
     [tickets, companyById, contactById],
   );
+  const validationIssues = useMemo(
+    () => getCombinedTicketInvoiceIssues(tickets, companyById, contactById),
+    [tickets, companyById, contactById],
+  );
+  const clientIssueTicketId = validationIssues.find(
+    (issue) => issue.kind === "client",
+  )?.ticketId;
 
   const ticketIds = sortedTickets.map((ticket) => ticket.id);
   const currentTicket = sortedTickets[ticketIndex] ?? null;
@@ -265,9 +276,25 @@ export const TicketBulkCreateInvoiceDialog = ({
           </DialogHeader>
 
           {validationError ? (
-            <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {validationError}
-            </p>
+            <div className="flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between">
+              <p>{validationError}</p>
+              {clientIssueTicketId != null ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    const ticket = sortedTickets.find(
+                      (row) => String(row.id) === String(clientIssueTicketId),
+                    );
+                    if (ticket) setTicketToEdit(ticket);
+                  }}
+                >
+                  Edit ticket #{clientIssueTicketId}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
@@ -275,15 +302,24 @@ export const TicketBulkCreateInvoiceDialog = ({
               const ready = ticketHasReadyDeliverables(
                 deliverablesByTicketId.get(String(ticket.id)) ?? [],
               );
+              const hasClient = ticketHasLinkedClient(ticket);
+              const statusLabel = !hasClient
+                ? " · needs client"
+                : ready
+                  ? " · files ready"
+                  : " · needs files";
               return (
                 <Badge
                   key={ticket.id}
                   variant={index === ticketIndex ? "default" : "outline"}
-                  className="cursor-pointer"
+                  className={cn(
+                    "cursor-pointer",
+                    !hasClient && "border-destructive/40 text-destructive",
+                  )}
                   onClick={() => setTicketIndex(index)}
                 >
                   #{ticket.id}
-                  {ready ? " · ready" : ""}
+                  {statusLabel}
                 </Badge>
               );
             })}
@@ -390,6 +426,16 @@ export const TicketBulkCreateInvoiceDialog = ({
                 </Button>
               )}
             </div>
+            {!validationError && !ticketsReady ? (
+              <p className="w-full text-xs text-muted-foreground">
+                Add and bill delivery files for every selected ticket to continue.
+              </p>
+            ) : null}
+            {validationError ? (
+              <p className="w-full text-xs text-muted-foreground">
+                Fix the issue above before reviewing the invoice.
+              </p>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -418,6 +464,18 @@ export const TicketBulkCreateInvoiceDialog = ({
         onInvoiceSent={() => {
           onComplete?.();
           handleOpenChange(false);
+        }}
+      />
+
+      <EditTicketDialog
+        ticket={ticketToEdit}
+        open={ticketToEdit != null}
+        onOpenChange={(next) => {
+          if (!next) setTicketToEdit(null);
+        }}
+        onSaved={() => {
+          refresh();
+          setTicketToEdit(null);
         }}
       />
     </>
