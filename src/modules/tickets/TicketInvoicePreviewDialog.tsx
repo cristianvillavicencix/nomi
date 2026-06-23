@@ -10,7 +10,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useDataProvider,
-  useGetIdentity,
   useGetList,
   useNotify,
   useRefresh,
@@ -24,7 +23,6 @@ import {
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
 import {
-  formatOrganizationMemberName,
   resolveInvoiceRecipientPhone,
 } from "@/modules/billing/billingUtils";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
@@ -39,13 +37,9 @@ import {
   TicketInvoiceSendPreview,
 } from "@/modules/tickets/TicketInvoiceSendPreview";
 import {
-  buildTicketDeliveryEmailHtml,
-  buildTicketPaymentEmailHtml,
-  buildTicketPaymentSmsText,
+  buildTicketInvoiceSendEmailPreviews,
   clientInvoiceLineItemsToDrafts,
   DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE,
-  formatTicketInvoicePreviewMoney,
-  resolveTicketSmsServiceSubject,
 } from "@/modules/tickets/ticketInvoicePreview";
 import { buildTicketPaymentCopyFromDeliverables } from "@/modules/tickets/ticketInvoiceCopy";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
@@ -110,7 +104,6 @@ export const TicketInvoicePreviewDialog = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const { identity } = useGetIdentity();
   const { title, companyLegalName } = useConfigurationContext();
   const [step, setStep] = useState<PreviewStep>("invoice");
   const [draftInvoice, setDraftInvoice] = useState<ClientInvoice | null>(null);
@@ -143,16 +136,6 @@ export const TicketInvoicePreviewDialog = ({
     [title, companyLegalName],
   );
   const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
-  const senderFirstName = useMemo(() => {
-    const name = formatOrganizationMemberName(
-      identity as {
-        first_name?: string | null;
-        last_name?: string | null;
-        fullName?: string | null;
-      } | null,
-    );
-    return name?.split(/\s+/)[0] ?? null;
-  }, [identity]);
 
   const propertyAddress = ticket.subject?.trim() || "Your property";
 
@@ -242,43 +225,37 @@ export const TicketInvoicePreviewDialog = ({
     [lineItems],
   );
 
-  const amountFormatted = draftInvoice
-    ? formatTicketInvoicePreviewMoney(Number(draftInvoice.amount) || 0)
-    : "—";
-
-  const paymentEmailHtml =
-    draftInvoice && paymentUrl
-      ? buildTicketPaymentEmailHtml({
-          orgName: organizationName,
-          invoiceNumber: draftInvoice.invoice_number,
-          amountFormatted,
-          paymentUrl,
-          customMessage: emailMessage,
-          serviceLines,
-        })
-      : "";
-
-  const paymentSmsText =
-    draftInvoice && paymentUrl
-      ? buildTicketPaymentSmsText({
-          orgName: organizationName,
-          paymentUrl,
-          recipientFirstName: contact?.first_name,
-          serviceSubject: resolveTicketSmsServiceSubject(
-            unbilledDeliverables,
-            propertyAddress,
-          ),
-        })
-      : "";
-
-  const deliveryEmailHtml = draftInvoice
-    ? buildTicketDeliveryEmailHtml({
-        orgName: organizationName,
-        invoiceNumber: draftInvoice.invoice_number,
+  const sendPreviews = useMemo(
+    () =>
+      buildTicketInvoiceSendEmailPreviews({
+        draftInvoice,
+        paymentUrl,
+        organizationName,
+        emailMessage,
+        serviceLines,
         propertyAddress,
-        fileNames: deliverables.map((file) => file.title),
-      })
-    : "";
+        deliverables,
+        contactFirstName: contact?.first_name,
+      }),
+    [
+      contact?.first_name,
+      deliverables,
+      draftInvoice,
+      emailMessage,
+      organizationName,
+      paymentUrl,
+      propertyAddress,
+      serviceLines,
+    ],
+  );
+
+  const {
+    paymentEmailHtml,
+    paymentSmsText,
+    deliveryEmailHtml,
+    amountFormatted,
+    fileCount,
+  } = sendPreviews;
 
   const footerSummary =
     draftInvoice && amountFormatted !== "—"
@@ -502,7 +479,7 @@ export const TicketInvoicePreviewDialog = ({
                     emailTo={recipientEmail}
                     smsTo={phone}
                     sendSms={sendSms}
-                    fileCount={deliverables.length}
+                    fileCount={fileCount}
                   />
                 ) : (
                   <p className="text-sm text-muted-foreground">

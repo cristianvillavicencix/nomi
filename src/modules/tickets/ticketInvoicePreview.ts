@@ -1,7 +1,13 @@
 import { newInvoiceLineKey, type InvoiceLineDraft } from "@/modules/billing/invoiceLineUtils";
-import type { ClientInvoiceLineItem } from "@/modules/types";
+import type { ClientInvoice, ClientInvoiceLineItem, TicketDeliverable } from "@/modules/types";
 import type { SupplementPricingBreakdown } from "@/modules/tickets/supplementPricing";
 import { formatSupplementMoney } from "@/modules/tickets/supplementPricing";
+import {
+  buildTicketDeliveryEmailHtml,
+  buildTicketPaymentEmailHtml,
+  buildTicketPaymentSmsText,
+} from "@/modules/tickets/ticketEmailTemplates";
+import { resolveTicketSmsServiceSubject } from "@/modules/tickets/ticketInvoiceCopy";
 
 export {
   DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE,
@@ -75,3 +81,89 @@ export const clientInvoiceLineItemsToDrafts = (
   }));
 
 export const formatTicketInvoicePreviewMoney = formatSupplementMoney;
+
+const filterUnbilledDeliverables = (deliverables: TicketDeliverable[]) =>
+  deliverables.filter((file) => !file.invoiced_invoice_id);
+
+export type TicketInvoiceSendEmailPreviews = {
+  paymentEmailHtml: string;
+  paymentSmsText: string;
+  deliveryEmailHtml: string;
+  amountFormatted: string;
+  fileCount: number;
+};
+
+/** Shared payment + delivery preview HTML for single and combined ticket invoice send dialogs. */
+export const buildTicketInvoiceSendEmailPreviews = (params: {
+  draftInvoice: ClientInvoice | null;
+  paymentUrl: string;
+  organizationName: string;
+  emailMessage: string;
+  serviceLines: string[];
+  propertyAddress: string;
+  deliverables: TicketDeliverable[];
+  contactFirstName?: string | null;
+  unbilledOnly?: boolean;
+}): TicketInvoiceSendEmailPreviews => {
+  const {
+    draftInvoice,
+    paymentUrl,
+    organizationName,
+    emailMessage,
+    serviceLines,
+    propertyAddress,
+    deliverables,
+    contactFirstName,
+    unbilledOnly = true,
+  } = params;
+
+  const previewFiles = unbilledOnly
+    ? filterUnbilledDeliverables(deliverables)
+    : deliverables;
+
+  const amountFormatted = draftInvoice
+    ? formatTicketInvoicePreviewMoney(Number(draftInvoice.amount) || 0)
+    : "—";
+
+  const paymentEmailHtml =
+    draftInvoice && paymentUrl
+      ? buildTicketPaymentEmailHtml({
+          orgName: organizationName,
+          invoiceNumber: draftInvoice.invoice_number,
+          amountFormatted,
+          paymentUrl,
+          customMessage: emailMessage,
+          serviceLines,
+        })
+      : "";
+
+  const paymentSmsText =
+    draftInvoice && paymentUrl
+      ? buildTicketPaymentSmsText({
+          orgName: organizationName,
+          paymentUrl,
+          recipientFirstName: contactFirstName,
+          serviceSubject: resolveTicketSmsServiceSubject(
+            previewFiles,
+            propertyAddress,
+          ),
+        })
+      : "";
+
+  const deliveryEmailHtml = draftInvoice
+    ? buildTicketDeliveryEmailHtml({
+        orgName: organizationName,
+        invoiceNumber: draftInvoice.invoice_number,
+        propertyAddress,
+        fileNames: previewFiles.map((file) => file.title),
+      })
+    : "";
+
+  return {
+    paymentEmailHtml,
+    paymentSmsText,
+    deliveryEmailHtml,
+    amountFormatted,
+    fileCount: previewFiles.length,
+  };
+};

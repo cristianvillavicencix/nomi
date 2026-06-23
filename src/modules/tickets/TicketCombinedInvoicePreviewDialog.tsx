@@ -10,7 +10,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useDataProvider,
-  useGetIdentity,
   useGetList,
   useNotify,
   useRefresh,
@@ -24,7 +23,6 @@ import {
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
 import {
-  formatOrganizationMemberName,
   resolveInvoiceRecipientPhone,
 } from "@/modules/billing/billingUtils";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
@@ -40,16 +38,13 @@ import {
   sortTicketsForCombinedInvoice,
 } from "@/modules/tickets/combinedTicketInvoiceUtils";
 import {
+  buildTicketSendFooterSummary,
   TicketInvoiceSendPreview,
 } from "@/modules/tickets/TicketInvoiceSendPreview";
 import {
-  buildTicketPaymentEmailHtml,
-  buildTicketPaymentSmsText,
-  buildTicketDeliveryEmailHtml,
+  buildTicketInvoiceSendEmailPreviews,
   clientInvoiceLineItemsToDrafts,
   DEFAULT_TICKET_PAYMENT_EMAIL_MESSAGE,
-  formatTicketInvoicePreviewMoney,
-  resolveTicketSmsServiceSubject,
 } from "@/modules/tickets/ticketInvoicePreview";
 import { buildTicketPaymentCopyFromDeliverables } from "@/modules/tickets/ticketInvoiceCopy";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
@@ -116,7 +111,6 @@ export const TicketCombinedInvoicePreviewDialog = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const { identity } = useGetIdentity();
   const { title, companyLegalName } = useConfigurationContext();
   const [step, setStep] = useState<PreviewStep>("invoice");
   const [draftInvoice, setDraftInvoice] = useState<ClientInvoice | null>(null);
@@ -271,43 +265,42 @@ export const TicketCombinedInvoicePreviewDialog = ({
     [lineItems],
   );
 
-  const amountFormatted = draftInvoice
-    ? formatTicketInvoicePreviewMoney(Number(draftInvoice.amount) || 0)
-    : "—";
-
-  const paymentEmailHtml =
-    draftInvoice && paymentUrl
-      ? buildTicketPaymentEmailHtml({
-          orgName: organizationName,
-          invoiceNumber: draftInvoice.invoice_number,
-          amountFormatted,
-          paymentUrl,
-          customMessage: emailMessage,
-          serviceLines,
-        })
-      : "";
-
-  const paymentSmsText =
-    draftInvoice && paymentUrl
-      ? buildTicketPaymentSmsText({
-          orgName: organizationName,
-          paymentUrl,
-          recipientFirstName: contact?.first_name,
-          serviceSubject: resolveTicketSmsServiceSubject(
-            unbilledDeliverables,
-            propertySummary,
-          ),
-        })
-      : "";
-
-  const deliveryEmailHtml = draftInvoice
-    ? buildTicketDeliveryEmailHtml({
-        orgName: organizationName,
-        invoiceNumber: draftInvoice.invoice_number,
+  const sendPreviews = useMemo(
+    () =>
+      buildTicketInvoiceSendEmailPreviews({
+        draftInvoice,
+        paymentUrl,
+        organizationName,
+        emailMessage,
+        serviceLines,
         propertyAddress: propertySummary,
-        fileNames: unbilledDeliverables.map((file) => file.title),
-      })
-    : "";
+        deliverables,
+        contactFirstName: contact?.first_name,
+      }),
+    [
+      contact?.first_name,
+      deliverables,
+      draftInvoice,
+      emailMessage,
+      organizationName,
+      paymentUrl,
+      propertySummary,
+      serviceLines,
+    ],
+  );
+
+  const {
+    paymentEmailHtml,
+    paymentSmsText,
+    deliveryEmailHtml,
+    amountFormatted,
+    fileCount,
+  } = sendPreviews;
+
+  const footerSummary =
+    draftInvoice && amountFormatted !== "—"
+      ? buildTicketSendFooterSummary(amountFormatted, draftInvoice.due_date)
+      : "";
 
   const handleClose = (next: boolean) => {
     if (!next && open && !sentRef.current && draftInvoice?.status === "draft") {
@@ -513,7 +506,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
                     emailTo={recipientEmail}
                     smsTo={phone}
                     sendSms={sendSms}
-                    fileCount={unbilledDeliverables.length}
+                    fileCount={fileCount}
                   />
                 ) : null}
               </div>
@@ -521,7 +514,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
           )}
         </div>
 
-        <DialogFooter className="shrink-0 border-t px-6 py-4">
+        <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-between">
           {step === "invoice" ? (
             <>
               <Button type="button" variant="outline" onClick={() => handleClose(false)}>
@@ -534,22 +527,27 @@ export const TicketCombinedInvoicePreviewDialog = ({
             </>
           ) : (
             <>
-              <Button type="button" variant="outline" onClick={() => setStep("invoice")}>
-                <ChevronLeft className="size-4" />
-                Back
-              </Button>
-              <Button
-                type="button"
-                disabled={!canSend || sendMutation.isPending}
-                onClick={() => sendMutation.mutate()}
-              >
-                {sendMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Send className="size-4" />
-                )}
-                Send invoice
-              </Button>
+              <p className="text-left text-sm text-muted-foreground">
+                {footerSummary || null}
+              </p>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setStep("invoice")}>
+                  <ChevronLeft className="size-4" />
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  disabled={!canSend || sendMutation.isPending}
+                  onClick={() => sendMutation.mutate()}
+                >
+                  {sendMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Send className="size-4" />
+                  )}
+                  Send invoice
+                </Button>
+              </div>
             </>
           )}
         </DialogFooter>
