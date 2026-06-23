@@ -8,7 +8,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import {
   buildDefaultShareMeta,
   readShareMetaEnv,
-} from "./lib/publicShareMeta.js";
+} from "./lib/publicShareMeta.ts";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
