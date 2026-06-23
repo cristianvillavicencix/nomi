@@ -2,7 +2,7 @@ export const DEFAULT_SHARE_SITE_NAME = "Latino Business Support";
 export const DEFAULT_SHARE_TITLE = "Latino Business Support";
 export const DEFAULT_SHARE_DESCRIPTION =
   "Booking, forms, proposals, invoices, and client updates from Latino Business Support.";
-export const DEFAULT_SHARE_IMAGE_PATH = "/logos/latino-business-support.jpg";
+export const DEFAULT_SHARE_IMAGE_PATH = "/og/lbs-share-card.jpg";
 export const DEFAULT_PUBLIC_APP_ORIGIN = "https://www.nomicrm.com";
 
 export type PublicShareMeta = {
