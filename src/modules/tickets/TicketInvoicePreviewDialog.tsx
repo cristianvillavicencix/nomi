@@ -39,6 +39,7 @@ import {
   TicketInvoiceSendPreview,
 } from "@/modules/tickets/TicketInvoiceSendPreview";
 import {
+  buildTicketDeliveryEmailHtml,
   buildTicketPaymentEmailHtml,
   buildTicketPaymentSmsText,
   clientInvoiceLineItemsToDrafts,
