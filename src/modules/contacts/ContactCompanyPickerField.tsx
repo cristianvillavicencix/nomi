@@ -29,6 +29,7 @@ import {
 } from "@/modules/shared/entityPickerUi";
 import { CommandEmpty } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
 const validateCompanySelection = (
   companyId: Identifier | null | undefined,
@@ -87,12 +88,13 @@ export const ContactCompanyPickerField = () => {
 
   const selectedCompanyId = field.value as Identifier | null | undefined;
   const hasDraft = Boolean(draftName?.trim() && draftSector?.trim());
-  const hasSelection = selectedCompanyId != null || hasDraft;
+  const hasSelectedCompany = isValidRecordId(selectedCompanyId);
+  const hasSelection = hasSelectedCompany || hasDraft;
 
   const { data: fetchedCompany } = useGetOne<Company>(
     "companies",
     { id: selectedCompanyId! },
-    { enabled: selectedCompanyId != null && !hasDraft },
+    { enabled: hasSelectedCompany && !hasDraft },
   );
 
   const activeCompany = useMemo(() => {
@@ -105,7 +107,7 @@ export const ContactCompanyPickerField = () => {
     }
     if (
       optimisticCompany &&
-      selectedCompanyId != null &&
+      hasSelectedCompany &&
       String(optimisticCompany.id) === String(selectedCompanyId)
     ) {
       return optimisticCompany;
@@ -124,7 +126,9 @@ export const ContactCompanyPickerField = () => {
   const { data: originalCompany } = useGetOne<Company>(
     "companies",
     { id: originalCompanyId! },
-    { enabled: record?.id != null && originalCompanyId != null },
+    {
+      enabled: record?.id != null && isValidRecordId(originalCompanyId),
+    },
   );
 
   const isPrimaryOfOriginal =
@@ -134,8 +138,8 @@ export const ContactCompanyPickerField = () => {
 
   const companyChanged =
     record?.id != null &&
-    selectedCompanyId != null &&
-    originalCompanyId != null &&
+    hasSelectedCompany &&
+    isValidRecordId(originalCompanyId) &&
     String(selectedCompanyId) !== String(originalCompanyId) &&
     !hasDraft;
 
@@ -200,7 +204,7 @@ export const ContactCompanyPickerField = () => {
             <EntitySearchGroup heading="Companies">
               {companies.map((company) => {
                 const isSelected =
-                  selectedCompanyId != null &&
+                  hasSelectedCompany &&
                   String(company.id) === String(selectedCompanyId);
 
                 return (

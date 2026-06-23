@@ -50,7 +50,6 @@ export const messagingProvider = {
       body: { action: "get" },
     });
     if (error || !data) {
-      console.warn("getMessagingSettings.error", error);
       return disabledSettings;
     }
     return data;

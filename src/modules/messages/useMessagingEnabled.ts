@@ -11,6 +11,7 @@ export const useMessagingEnabled = () => {
     enabled: !!identity?.id,
     staleTime: 60_000,
     retry: false,
+    refetchOnWindowFocus: false,
   });
 
   return {
