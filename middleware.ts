@@ -3,7 +3,7 @@ import {
   isSocialPreviewCrawler,
   readShareMetaEnv,
   resolvePublicShareMeta,
-} from "./src/lib/publicShareMeta.ts";
+} from "./lib/publicShareMeta.js";
 
 const shareEnv = readShareMetaEnv({
   VITE_OG_SITE_NAME: process.env.VITE_OG_SITE_NAME,
