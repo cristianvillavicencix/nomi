@@ -11,7 +11,7 @@ import {
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useAutoGrowTextarea } from "@/hooks/use-auto-grow-textarea";
-import type { ClientInvoice, Ticket, TicketMessage } from "@/modules/types";
+import type { ClientInvoice, Ticket, TicketInbox, TicketMessage } from "@/modules/types";
 import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
 import {
   canSendTicketOutboundAttachments,
@@ -67,7 +67,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
   const [forwardContext, setForwardContext] = useState<ForwardContext | null>(
     null,
   );
-  const [bodyHtml, setBodyHtml] = useState(createDefaultReplyHtml);
+  const [bodyHtml, setBodyHtml] = useState(() => createDefaultReplyHtml());
   const [toRecipients, setToRecipients] = useState("");
   const [ccRecipients, setCcRecipients] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
@@ -123,6 +123,35 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     { enabled: Boolean(ticket.id) },
   );
 
+  const { data: ticketInboxes = [] } = useGetList<TicketInbox>(
+    "ticket_inboxes",
+    {
+      filter: { "is_active@eq": true },
+      sort: { field: "id", order: "ASC" },
+      pagination: { page: 1, perPage: 20 },
+    },
+  );
+
+  const inboxSignature = useMemo(() => {
+    const targetEmail = (
+      ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL
+    ).toLowerCase();
+    const inbox =
+      ticketInboxes.find(
+        (entry) => entry.email?.trim().toLowerCase() === targetEmail,
+      ) ?? ticketInboxes[0];
+    return (
+      inbox?.reply_signature_html?.trim() ||
+      inbox?.reply_signature_text?.trim() ||
+      null
+    );
+  }, [ticket.inbox_address, ticketInboxes]);
+
+  const defaultReplyHtml = useMemo(
+    () => createDefaultReplyHtml(inboxSignature),
+    [inboxSignature],
+  );
+
   const forwardSourceMessage =
     recentMessages.find((message) => message.direction === "inbound") ??
     recentMessages[0];
@@ -137,7 +166,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     pendingFiles.length > 0;
 
   const resetDraft = () => {
-    setBodyHtml(createDefaultReplyHtml());
+    setBodyHtml(defaultReplyHtml);
     setForwardContext(null);
     setToRecipients(defaultRecipientEmail);
     setCcRecipients("");
@@ -168,7 +197,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     if (mode === "reply") {
       setForwardContext(null);
       setToRecipients(defaultRecipientEmail);
-      setBodyHtml(createDefaultReplyHtml());
+      setBodyHtml(defaultReplyHtml);
     } else {
       setForwardContext(
         forwardSourceMessage
@@ -176,7 +205,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
           : null,
       );
       setToRecipients("");
-      setBodyHtml(createDefaultReplyHtml());
+      setBodyHtml(defaultReplyHtml);
     }
 
     requestAnimationFrame(() => editorRef.current?.focus());
@@ -191,7 +220,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     setIsExpanded(false);
     setComposeMode("reply");
     resetDraft();
-  }, [ticket.id, defaultRecipientEmail]);
+  }, [ticket.id, defaultRecipientEmail, defaultReplyHtml]);
 
   const addPendingFile = (file: File) => {
     if (pendingFiles.length >= MAX_TICKET_ATTACHMENTS) {
@@ -352,6 +381,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
         ticket,
         message: forwardContext.message,
         userNoteHtml,
+        signatureHtml: inboxSignature,
       });
       setSubmittingAs("reply");
       submitMutation.mutate({
@@ -365,7 +395,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     }
 
     const { textBody, htmlBody } =
-      buildReplyOutboundBodiesFromHtml(expandedHtml);
+      buildReplyOutboundBodiesFromHtml(expandedHtml, inboxSignature);
     setSubmittingAs("reply");
     submitMutation.mutate({
       isInternalNote: false,

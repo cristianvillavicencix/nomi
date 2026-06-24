@@ -177,6 +177,7 @@ async function sendViaTwilioEmail(params: {
   htmlBody: string;
   replyTo?: string | null;
   attachments?: EmailAttachment[];
+  headers?: Record<string, string>;
 }) {
   const content: Record<string, unknown> = {
     subject: params.subject,
@@ -219,6 +220,10 @@ async function sendViaTwilioEmail(params: {
     content,
   };
 
+  if (params.headers && Object.keys(params.headers).length > 0) {
+    body.headers = params.headers;
+  }
+
   // Twilio Email API (comms.twilio.com/v1/Emails) rejects replyTo — contact info stays in the body.
 
   const credentials = btoa(`${params.accountSid}:${params.authToken}`);
@@ -256,6 +261,7 @@ export async function sendTransactionalEmail(params: {
   attachments?: EmailAttachment[];
   fromEmail?: string | null;
   fromName?: string | null;
+  headers?: Record<string, string>;
 }) {
   if (isTransactionalEmailSkipped()) {
     console.warn(
@@ -297,6 +303,7 @@ export async function sendTransactionalEmail(params: {
     htmlBody,
     replyTo: params.replyTo,
     attachments: params.attachments,
+    headers: params.headers,
   });
 
   return { skipped: false as const, ...result };

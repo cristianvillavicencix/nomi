@@ -38,13 +38,6 @@ export const TicketMessageContent = ({
   );
 
   const stripHrefs = useMemo(() => collectStripHrefs(assets), [assets]);
-  const attachmentTitles = useMemo(
-    () =>
-      fileAttachments
-        .map((file) => file.title?.trim())
-        .filter((title): title is string => Boolean(title)),
-    [fileAttachments],
-  );
 
   return (
     <div className={cn(className)}>
@@ -52,7 +45,6 @@ export const TicketMessageContent = ({
         body={body}
         htmlBody={htmlBody}
         stripHrefs={stripHrefs}
-        attachmentTitles={attachmentTitles}
       />
       <TicketMessageAttachments
         documents={documents}

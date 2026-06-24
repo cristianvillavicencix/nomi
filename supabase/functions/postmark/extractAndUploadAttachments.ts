@@ -1,11 +1,18 @@
 import { decode } from "npm:base64-arraybuffer";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import {
+  assertInboundAttachmentCount,
+  assertInboundAttachmentSize,
+  MAX_INBOUND_ATTACHMENTS,
+} from "../_shared/inboundAttachmentLimits.ts";
 
 export type Attachment = {
   title: string;
   type: string;
   path: string;
   src: string;
+  /** Postmark inline image Content-ID (cid:…) */
+  contentId?: string | null;
 };
 
 /**
@@ -36,12 +43,16 @@ export const extractAndUploadAttachments = async (
     Content: string;
     ContentType: string;
     ContentLength: number;
+    ContentID?: string | null;
   }[],
 ): Promise<Attachment[]> => {
+  const list = Attachments || [];
+  assertInboundAttachmentCount(list.length);
+
   return (
     await Promise.all(
-      (Attachments || []).map(async (attachment) => {
-        const { Name, Content, ContentType } = attachment;
+      list.slice(0, MAX_INBOUND_ATTACHMENTS).map(async (attachment) => {
+        const { Name, Content, ContentType, ContentID } = attachment;
         if (!Name || !Content || !ContentType) {
           console.warn("Attachment is missing required fields, skipping", {
             attachment,
@@ -56,6 +67,8 @@ export const extractAndUploadAttachments = async (
           });
           return null;
         }
+
+        assertInboundAttachmentSize(decodedContent.byteLength, Name);
 
         const fileParts = Name.split(".");
         const fileExt = fileParts.length > 1 ? `.${Name.split(".").pop()}` : "";
@@ -78,6 +91,7 @@ export const extractAndUploadAttachments = async (
           type: ContentType,
           path: fileName,
           src: fixPublicUrl(data.publicUrl),
+          contentId: ContentID?.trim() || null,
         };
       }),
     )

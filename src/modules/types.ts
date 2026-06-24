@@ -331,6 +331,7 @@ export type TicketMessage = {
   from_email?: string | null;
   from_name?: string | null;
   to_emails?: string[] | null;
+  cc_emails?: string[] | null;
   external_message_id?: string | null;
   html_body?: string | null;
   attachments?: unknown[];
@@ -342,6 +343,8 @@ export type TicketInbox = {
   email: string;
   display_name?: string | null;
   from_name?: string | null;
+  reply_signature_html?: string | null;
+  reply_signature_text?: string | null;
   is_active?: boolean;
   created_at?: string;
 } & Pick<RaRecord, "id">;

@@ -12,7 +12,9 @@ Deno.test("buildInboundTicketMessageBody accepts photo-only mail", () => {
     { title: "b.jpg", type: "image/jpeg", path: "b.jpg", src: "https://x/b.jpg" },
   ];
   const result = buildInboundTicketMessageBody("", null, attachments);
-  assertEquals(result, { body: "2 photos attached", htmlBody: null });
+  assertEquals(result?.body, "2 photos attached");
+  assertEquals(result?.htmlBody?.includes("https://x/a.jpg"), true);
+  assertEquals(result?.htmlBody?.includes("https://x/b.jpg"), true);
 });
 
 Deno.test("buildInboundTicketMessageBody rejects empty mail", () => {

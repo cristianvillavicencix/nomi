@@ -1,7 +1,14 @@
-import { ExternalLink, FileText, Film } from "lucide-react";
+import { Download, ExternalLink, FileText, Film } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { PhotoLightboxGrid } from "@/components/ui/photo-lightbox-grid";
 import { FileAttachmentPill } from "@/lib/fileAttachments";
 import type { MessageAsset } from "@/modules/tickets/ticketMessageAssets";
+import {
+  downloadTicketAsset,
+  downloadTicketAssets,
+  isDownloadableFileAsset,
+} from "@/modules/tickets/downloadTicketAssets";
 import { cn } from "@/lib/utils";
 
 const LinkAssetPill = ({ asset }: { asset: MessageAsset }) => {
@@ -48,10 +55,7 @@ const DocumentRow = ({ assets }: { assets: MessageAsset[] }) => (
   <div className="flex flex-wrap gap-2">
     {assets.map((asset) =>
       asset.source === "file" ? (
-        <FileAttachmentPill
-          key={asset.href}
-          file={{ title: asset.label, type: "", src: asset.href }}
-        />
+        <FileAssetRow key={asset.href} asset={asset} />
       ) : (
         <LinkAssetPill key={asset.href} asset={asset} />
       ),
@@ -59,7 +63,43 @@ const DocumentRow = ({ assets }: { assets: MessageAsset[] }) => (
   </div>
 );
 
-const PhotoGrid = ({ assets }: { assets: MessageAsset[] }) => (
+const FileAssetRow = ({ asset }: { asset: MessageAsset }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  return (
+    <div className="inline-flex max-w-full items-center gap-1 rounded-full border bg-background pr-1">
+      <FileAttachmentPill
+        file={{ title: asset.label, type: "", src: asset.href }}
+      />
+      {isDownloadableFileAsset(asset) ? (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="size-7 shrink-0 rounded-full"
+          disabled={isDownloading}
+          aria-label={`Download ${asset.label}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setIsDownloading(true);
+            void downloadTicketAsset(asset).finally(() => setIsDownloading(false));
+          }}
+        >
+          <Download className="size-3.5" />
+        </Button>
+      ) : null}
+    </div>
+  );
+};
+
+const PhotoGrid = ({
+  assets,
+  onDownload,
+}: {
+  assets: MessageAsset[];
+  onDownload?: (asset: MessageAsset) => void;
+}) => (
   <PhotoLightboxGrid
     items={assets.map((asset) => ({
       id: asset.href,
@@ -69,6 +109,14 @@ const PhotoGrid = ({ assets }: { assets: MessageAsset[] }) => (
     }))}
     variant="gallery"
     showCaption
+    onDownloadItem={
+      onDownload
+        ? (item) => {
+            const asset = assets.find((entry) => entry.href === item.id);
+            if (asset) onDownload(asset);
+          }
+        : undefined
+    }
   />
 );
 
@@ -77,15 +125,35 @@ export const TicketMessageAttachments = ({
   videos,
   photos,
   className,
+  showSectionDownloadAll = true,
 }: {
   documents: MessageAsset[];
   videos: MessageAsset[];
   photos: MessageAsset[];
   className?: string;
+  showSectionDownloadAll?: boolean;
 }) => {
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+
   if (!documents.length && !videos.length && !photos.length) {
     return null;
   }
+
+  const allAssets = [...documents, ...videos, ...photos];
+  const downloadableCount = allAssets.filter(isDownloadableFileAsset).length;
+
+  const handleDownloadAll = async () => {
+    setIsDownloadingAll(true);
+    try {
+      await downloadTicketAssets(allAssets);
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
+  const handlePhotoDownload = (asset: MessageAsset) => {
+    void downloadTicketAsset(asset);
+  };
 
   return (
     <section
@@ -95,6 +163,21 @@ export const TicketMessageAttachments = ({
         className,
       )}
     >
+      {showSectionDownloadAll && downloadableCount > 1 ? (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8"
+            disabled={isDownloadingAll}
+            onClick={() => void handleDownloadAll()}
+          >
+            <Download className="size-3.5" />
+            Download all ({downloadableCount})
+          </Button>
+        </div>
+      ) : null}
       {documents.length > 0 ? (
         <AssetSection title="Documents & links">
           <DocumentRow assets={documents} />
@@ -113,7 +196,12 @@ export const TicketMessageAttachments = ({
 
       {photos.length > 0 ? (
         <AssetSection title="Photos">
-          <PhotoGrid assets={photos} />
+          <PhotoGrid
+            assets={photos}
+            onDownload={
+              photos.some(isDownloadableFileAsset) ? handlePhotoDownload : undefined
+            }
+          />
         </AssetSection>
       ) : null}
     </section>

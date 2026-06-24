@@ -5,6 +5,7 @@ import {
   buildTicketDeliveredInternalNoteBody,
   buildTicketDeliveryEmailSubject,
 } from "./ticketInvoiceFlow.ts";
+import { buildTicketDeliveryEmailHtml } from "./ticketEmailTemplates.ts";
 import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
 
 const buildMessageId = (ticketId: number) =>
@@ -96,19 +97,18 @@ async function deliverOneTicketForInvoicePayment(
   const now = new Date().toISOString();
   const propertyAddress = ticket.subject?.trim() || "Your property";
   const subject = buildTicketDeliveryEmailSubject(propertyAddress);
-  const fileList = deliverables.map((file) => file.title).join(", ");
+  const fileNames = deliverables.map((file) => file.title);
+  const fileList = fileNames.join(", ");
   const textBody =
     `Thank you for your payment (${params.invoiceNumber}). ` +
     `Your supplement files for ${propertyAddress} are attached` +
     (fileList ? `: ${fileList}.` : " to this email.");
-  const htmlBody =
-    `<p>Thank you for your payment (<strong>${params.invoiceNumber}</strong>).</p>` +
-    `<p>Your supplement files for <strong>${propertyAddress}</strong> are attached to this email:</p>` +
-    (deliverables.length
-      ? `<ul>${deliverables
-          .map((file) => `<li>${file.title}</li>`)
-          .join("")}</ul>`
-      : "<p>Your supplement files are attached to this email.</p>");
+  const htmlBody = buildTicketDeliveryEmailHtml({
+    orgName: fromName,
+    invoiceNumber: params.invoiceNumber,
+    propertyAddress,
+    fileNames,
+  });
   const outboundMessageId = buildMessageId(ticket.id);
   const emailAttachments = await loadStorageAttachmentsForEmail(deliverables);
 

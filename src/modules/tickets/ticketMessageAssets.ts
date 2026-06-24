@@ -215,4 +215,7 @@ export const extractMessageAssets = ({
 };
 
 export const collectStripHrefs = (assets: MessageAsset[]) =>
-  assets.map((asset) => asset.href).filter(Boolean);
+  assets
+    .filter((asset) => asset.source === "link")
+    .map((asset) => asset.href)
+    .filter(Boolean);

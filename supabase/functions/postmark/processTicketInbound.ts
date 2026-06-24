@@ -19,6 +19,7 @@ export type PostmarkInboundPayload = {
   Subject?: string;
   TextBody?: string;
   HtmlBody?: string;
+  StrippedTextReply?: string;
   FromFull?: PostmarkAddress;
   ToFull?: PostmarkAddress[];
   CcFull?: PostmarkAddress[];
@@ -178,6 +179,87 @@ export const matchesTicketInbox = async (payload: PostmarkInboundPayload) => {
 };
 
 /** iPhone and other clients often send photo-only mail with an empty text/plain part. */
+const escapeHtmlAttr = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+
+export const buildInlineImagesHtml = (attachments: Attachment[]) =>
+  attachments
+    .filter((file) => file.type?.toLowerCase().startsWith("image/"))
+    .map(
+      (file) =>
+        `<img src="${file.src}" alt="${escapeHtmlAttr(file.title)}" style="max-width:100%;height:auto;display:block;margin:8px 0;" />`,
+    )
+    .join("");
+
+const collectAddressEmails = (rows: PostmarkAddress[] | undefined) =>
+  (rows ?? [])
+    .map((row) => row.Email?.trim())
+    .filter((email): email is string => Boolean(email))
+    .map(normalizeEmail);
+
+/** Replace cid: inline image references with uploaded attachment URLs. */
+export const rewriteInlineAttachmentImages = (
+  htmlBody: string | null | undefined,
+  attachments: Attachment[],
+): string | null => {
+  if (!htmlBody?.trim() || !attachments.length) return htmlBody?.trim() || null;
+
+  let result = htmlBody;
+
+  for (const attachment of attachments) {
+    const contentId = attachment.contentId?.trim();
+    if (!contentId) continue;
+    const bare = contentId.replace(/^<|>$/g, "").replace(/^cid:/i, "");
+    for (const needle of [contentId, `cid:${bare}`, bare, `cid:${bare}@`]) {
+      if (!needle) continue;
+      result = result.split(needle).join(attachment.src);
+    }
+  }
+
+  result = result.replace(
+    /src=(["']?)cid:([^"'\s>]+)\1/gi,
+    (_match, quote, cidValue) => {
+      const bareCid = String(cidValue).replace(/^<|>$/g, "");
+      const attachment = attachments.find((file) => {
+        const id = file.contentId?.trim();
+        if (!id) return false;
+        const bare = id.replace(/^<|>$/g, "").replace(/^cid:/i, "");
+        return (
+          id === bareCid ||
+          bare === bareCid ||
+          bareCid.startsWith(bare) ||
+          bare.startsWith(bareCid)
+        );
+      });
+      return attachment ? `src=${quote}${attachment.src}${quote}` : _match;
+    },
+  );
+
+  return result;
+};
+
+const imageAttachments = (attachments: Attachment[]) =>
+  attachments.filter((file) => file.type?.toLowerCase().startsWith("image/"));
+
+const mergeHtmlWithInlineImages = (
+  htmlBody: string | null,
+  attachments: Attachment[],
+) => {
+  const images = imageAttachments(attachments);
+  if (!images.length) return htmlBody;
+
+  const inline = buildInlineImagesHtml(images);
+  if (!inline) return htmlBody;
+
+  const block = `<div>${inline}</div>`;
+  if (!htmlBody?.trim()) return block;
+  if (htmlBody.includes(inline.slice(0, 40))) return htmlBody;
+  return `${htmlBody}${block}`;
+};
+
 export const buildInboundTicketMessageBody = (
   textBody: string,
   htmlBody: string | null | undefined,
@@ -185,29 +267,46 @@ export const buildInboundTicketMessageBody = (
 ): { body: string; htmlBody: string | null } | null => {
   const trimmedText = textBody.trim();
   const trimmedHtml = htmlBody?.trim() || null;
+  const images = imageAttachments(attachments);
 
   if (trimmedText) {
-    return { body: trimmedText, htmlBody: trimmedHtml };
+    const resolvedHtml = mergeHtmlWithInlineImages(
+      rewriteInlineAttachmentImages(trimmedHtml, attachments),
+      attachments,
+    );
+    return { body: trimmedText, htmlBody: resolvedHtml };
   }
 
   if (trimmedHtml) {
-    const stripped = trimmedHtml
+    const resolvedHtml = mergeHtmlWithInlineImages(
+      rewriteInlineAttachmentImages(trimmedHtml, attachments) ?? trimmedHtml,
+      attachments,
+    );
+    const stripped = resolvedHtml
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    return { body: stripped || "(See email)", htmlBody: trimmedHtml };
+    return { body: stripped || "(See email)", htmlBody: resolvedHtml };
   }
 
   if (!attachments.length) return null;
 
-  const imageCount = attachments.filter((file) =>
-    file.type?.toLowerCase().startsWith("image/")
-  ).length;
-
-  if (imageCount === attachments.length && imageCount > 0) {
+  if (images.length === attachments.length && images.length > 0) {
+    const inlineHtml = buildInlineImagesHtml(attachments);
     return {
-      body: imageCount === 1 ? "Photo attached" : `${imageCount} photos attached`,
-      htmlBody: null,
+      body: images.length === 1 ? "Photo attached" : `${images.length} photos attached`,
+      htmlBody: inlineHtml ? `<div>${inlineHtml}</div>` : null,
+    };
+  }
+
+  if (images.length > 0) {
+    const inlineHtml = buildInlineImagesHtml(images);
+    return {
+      body:
+        attachments.length === 1
+          ? "1 attachment"
+          : `${attachments.length} attachments`,
+      htmlBody: inlineHtml ? `<div>${inlineHtml}</div>` : null,
     };
   }
 
@@ -240,11 +339,32 @@ export const processTicketInbound = async ({
 
   const fromName = payload.FromFull?.Name?.trim() || null;
   const subject = payload.Subject?.trim() || "(No subject)";
-  const textBody = payload.TextBody?.trim() || "";
+  const textBody =
+    payload.StrippedTextReply?.trim() || payload.TextBody?.trim() || "";
   const htmlBody = payload.HtmlBody?.trim() || null;
   const messageId = payload.MessageID?.trim() || null;
   const inReplyTo = headerValue(payload.Headers, "In-Reply-To");
   const references = headerValue(payload.Headers, "References");
+  const toEmails = collectAddressEmails(payload.ToFull);
+  const ccEmails = collectAddressEmails(payload.CcFull);
+
+  if (messageId) {
+    const { data: duplicate } = await supabaseAdmin
+      .from("ticket_messages")
+      .select("id, ticket_id")
+      .eq("external_message_id", messageId)
+      .maybeSingle();
+    if (duplicate?.ticket_id) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          ticket_id: duplicate.ticket_id,
+          duplicate: true,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+  }
 
   const messageContent = buildInboundTicketMessageBody(
     textBody,
@@ -328,7 +448,8 @@ export const processTicketInbound = async ({
       direction: "inbound",
       from_email: normalizeEmail(fromEmail),
       from_name: fromName,
-      to_emails: [normalizeEmail(inbox.email)],
+      to_emails: toEmails.length ? toEmails : [normalizeEmail(inbox.email)],
+      cc_emails: ccEmails,
       external_message_id: messageId,
       attachments,
       created_at: now,

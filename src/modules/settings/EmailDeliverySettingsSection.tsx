@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useDataProvider } from "ra-core";
 import { TicketEmailInboundSetupCard } from "@/modules/settings/TicketEmailInboundSetupCard";
+import { TicketInboxReplySignatureSection } from "@/modules/settings/TicketInboxReplySignatureSection";
 
 export type EmailDeliverySettings = {
   configured: boolean;
@@ -225,6 +226,8 @@ export const EmailDeliverySettingsSection = () => {
         </div>
 
         <TicketEmailInboundSetupCard setup={data?.ticket_inbound ?? null} />
+
+        <TicketInboxReplySignatureSection />
       </CardContent>
     </Card>
   );

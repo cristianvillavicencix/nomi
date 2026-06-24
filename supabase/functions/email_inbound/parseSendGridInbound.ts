@@ -1,4 +1,9 @@
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import {
+  assertInboundAttachmentCount,
+  assertInboundAttachmentSize,
+  MAX_INBOUND_ATTACHMENTS,
+} from "../_shared/inboundAttachmentLimits.ts";
 import type { Attachment } from "../postmark/extractAndUploadAttachments.ts";
 import type { PostmarkInboundPayload } from "../postmark/processTicketInbound.ts";
 
@@ -87,14 +92,20 @@ const uploadSendGridAttachments = async (form: FormData) => {
     }
   }
 
-  const sortedKeys = Array.from(attachmentKeys).sort((a, b) => {
-    const aNum = Number(a.replace(/\D/g, ""));
-    const bNum = Number(b.replace(/\D/g, ""));
-    return aNum - bNum;
-  });
+  const sortedKeys = Array.from(attachmentKeys)
+    .sort((a, b) => {
+      const aNum = Number(a.replace(/\D/g, ""));
+      const bNum = Number(b.replace(/\D/g, ""));
+      return aNum - bNum;
+    })
+    .slice(0, MAX_INBOUND_ATTACHMENTS);
 
-  let metaByKey: Record<string, { filename?: string; name?: string; type?: string }> =
-    {};
+  assertInboundAttachmentCount(sortedKeys.length);
+
+  let metaByKey: Record<
+    string,
+    { filename?: string; name?: string; type?: string; "content-id"?: string }
+  > = {};
   if (infoRaw) {
     try {
       const parsed = JSON.parse(infoRaw) as Record<
@@ -128,6 +139,7 @@ const uploadSendGridAttachments = async (form: FormData) => {
     const fileExt = fileParts.length > 1 ? `.${fileParts.pop()}` : "";
     const fileName = `${Math.random()}${fileExt}`;
     const bytes = await file.arrayBuffer();
+    assertInboundAttachmentSize(bytes.byteLength, title);
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from("attachments")
@@ -135,7 +147,7 @@ const uploadSendGridAttachments = async (form: FormData) => {
 
     if (uploadError) {
       console.error("email_inbound.upload_error", uploadError);
-      continue;
+      throw new Error(`Failed to upload attachment "${title}"`);
     }
 
     const { data } = supabaseAdmin.storage.from("attachments").getPublicUrl(fileName);
@@ -144,6 +156,7 @@ const uploadSendGridAttachments = async (form: FormData) => {
       type,
       path: fileName,
       src: fixPublicUrl(data.publicUrl),
+      contentId: meta["content-id"]?.trim() || null,
     });
   }
 
@@ -153,6 +166,7 @@ const uploadSendGridAttachments = async (form: FormData) => {
 export const parseSendGridInbound = async (form: FormData) => {
   const fromRaw = form.get("from")?.toString() ?? "";
   const toRaw = form.get("to")?.toString() ?? "";
+  const ccRaw = form.get("cc")?.toString() ?? "";
   const subject = form.get("subject")?.toString() ?? "";
   const textBody = form.get("text")?.toString() ?? "";
   const htmlBody = form.get("html")?.toString() ?? "";
@@ -160,6 +174,7 @@ export const parseSendGridInbound = async (form: FormData) => {
   const envelopeRaw = form.get("envelope")?.toString() ?? "";
 
   const ToFull = splitAddressList(toRaw).map(parseEmailAddress);
+  const CcFull = splitAddressList(ccRaw).map(parseEmailAddress);
   const Headers = parseHeadersBlock(headersRaw);
 
   let envelopeTo: string[] = [];
@@ -186,6 +201,7 @@ export const parseSendGridInbound = async (form: FormData) => {
     HtmlBody: htmlBody || undefined,
     FromFull: parseEmailAddress(fromRaw),
     ToFull,
+    CcFull: CcFull.length ? CcFull : undefined,
     Headers,
     OriginalRecipient: ToFull[0]?.Email,
   };

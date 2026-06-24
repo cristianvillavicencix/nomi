@@ -1,4 +1,5 @@
 import { LBS_SUPPORT_SIGNATURE } from "@/modules/tickets/ticketReplyTemplates";
+import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
 import {
   htmlToPlainText,
   includesReplySignatureHtml,
@@ -162,7 +163,7 @@ export const buildForwardHtmlBlock = (
 
   const html = message?.html_body?.trim();
   const bodyHtml = html
-    ? `<div class="forwarded-email-body">${html}</div>`
+    ? `<div class="forwarded-email-body">${sanitizeTicketEmailHtml(html)}</div>`
     : `<pre style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:13px;">${escapeHtml(message?.body?.trim() || "(No message body)")}</pre>`;
 
   return `<div style="margin:16px 0;padding-top:12px;border-top:1px solid #e5e7eb;">${headerParts.join("")}${bodyHtml}</div>`;
@@ -173,11 +174,13 @@ export const buildOutboundEmailHtml = ({
   userNoteHtml,
   forwardHtml,
   includeSignature = true,
+  signatureHtml,
 }: {
   userNote?: string;
   userNoteHtml?: string;
   forwardHtml?: string | null;
   includeSignature?: boolean;
+  signatureHtml?: string | null;
 }) => {
   const parts: string[] = [];
 
@@ -196,20 +199,32 @@ export const buildOutboundEmailHtml = ({
   }
 
   if (includeSignature) {
-    parts.push(buildSignatureHtml());
+    parts.push(buildSignatureHtml(signatureHtml));
   }
 
   return parts.join("");
 };
 
-export const buildSignatureHtml = () =>
-  `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#374151;">
+export const buildSignatureHtml = (customHtml?: string | null) => {
+  if (customHtml?.trim()) {
+    const trimmed = customHtml.trim();
+    if (trimmed.includes("<")) {
+      return `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;">${trimmed}</div>`;
+    }
+    return `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#374151;white-space:pre-wrap;">${escapeHtml(trimmed)}</div>`;
+  }
+
+  return `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#374151;">
     <p style="margin:0 0 6px;font-weight:600;color:#111827;">Latinos Business Support | Marketing Digital, Páginas Web, Xactimate</p>
     <p style="margin:0;">(203) 303-9148 | <a href="mailto:info@lbs.bz" style="color:#2563eb;text-decoration:underline;">info@lbs.bz</a> | <a href="https://www.lbs.bz" style="color:#2563eb;text-decoration:underline;">www.lbs.bz</a></p>
     <p style="margin:6px 0 0;">1200 Summer St, Stamford, 06902 CT</p>
   </div>`;
+};
 
-export const buildReplyOutboundBodies = (body: string) => {
+export const buildReplyOutboundBodies = (
+  body: string,
+  signatureHtml?: string | null,
+) => {
   const textBody = normalizeOutboundPlainText(body.trim() || "(See attachments)");
   const userNote = normalizeOutboundPlainText(stripReplySignature(textBody));
   const includeSignature = textBody.includes(TICKET_REPLY_SIGNATURE);
@@ -217,12 +232,16 @@ export const buildReplyOutboundBodies = (body: string) => {
   const htmlBody = buildOutboundEmailHtml({
     userNote,
     includeSignature,
+    signatureHtml,
   });
 
   return { textBody, htmlBody };
 };
 
-export const buildReplyOutboundBodiesFromHtml = (composerHtml: string) => {
+export const buildReplyOutboundBodiesFromHtml = (
+  composerHtml: string,
+  signatureHtml?: string | null,
+) => {
   const sanitized = sanitizeComposerHtml(composerHtml);
   const userNoteHtml = stripReplySignatureHtml(sanitized).trim();
   const includeSignature = includesReplySignatureHtml(sanitized);
@@ -232,6 +251,7 @@ export const buildReplyOutboundBodiesFromHtml = (composerHtml: string) => {
   const htmlBody = buildOutboundEmailHtml({
     userNoteHtml,
     includeSignature,
+    signatureHtml,
   });
 
   return { textBody, htmlBody };
@@ -242,11 +262,13 @@ export const buildForwardOutboundBodies = ({
   message,
   userNote,
   userNoteHtml,
+  signatureHtml,
 }: {
   ticket: { subject?: string };
   message?: ForwardMessage | null;
   userNote?: string;
   userNoteHtml?: string;
+  signatureHtml?: string | null;
 }) => {
   const forwardPlain = buildForwardPlainBlock(ticket, message);
   const forwardHtml = buildForwardHtmlBlock(ticket, message);
@@ -266,6 +288,7 @@ export const buildForwardOutboundBodies = ({
     userNoteHtml: trimmedNoteHtml || undefined,
     forwardHtml,
     includeSignature: true,
+    signatureHtml,
   });
 
   return { textBody, htmlBody };

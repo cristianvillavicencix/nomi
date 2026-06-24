@@ -22,6 +22,12 @@ const getMessagePreview = (message: TicketMessage) => {
   return `${text.slice(0, PREVIEW_MAX_LENGTH).trimEnd()}…`;
 };
 
+const formatRecipientList = (emails?: string[] | null) => {
+  const list = (emails ?? []).map((email) => email.trim()).filter(Boolean);
+  if (!list.length) return null;
+  return list.join(", ");
+};
+
 const TicketThreadMessage = ({
   message,
   collapsed,
@@ -45,6 +51,8 @@ const TicketThreadMessage = ({
     ? (message.attachments as FileAttachment[])
     : [];
   const preview = useMemo(() => getMessagePreview(message), [message]);
+  const toLine = formatRecipientList(message.to_emails);
+  const ccLine = formatRecipientList(message.cc_emails);
 
   if (isInternal) {
     const author = senderName || "Team";
@@ -81,12 +89,30 @@ const TicketThreadMessage = ({
           />
         </button>
         {!collapsed ? (
-          <TicketMessageContent
-            body={message.body}
-            htmlBody={message.html_body}
-            attachments={attachments}
-            className="mt-2 text-foreground [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
-          />
+          <>
+            {toLine || ccLine ? (
+              <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                {toLine ? (
+                  <p>
+                    <span className="font-medium text-foreground/80">To:</span>{" "}
+                    {toLine}
+                  </p>
+                ) : null}
+                {ccLine ? (
+                  <p>
+                    <span className="font-medium text-foreground/80">Cc:</span>{" "}
+                    {ccLine}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            <TicketMessageContent
+              body={message.body}
+              htmlBody={message.html_body}
+              attachments={attachments}
+              className="mt-2 text-foreground [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+            />
+          </>
         ) : null}
       </article>
     );
@@ -137,12 +163,30 @@ const TicketThreadMessage = ({
       </button>
 
       {!collapsed ? (
-        <TicketMessageContent
-          body={message.body}
-          htmlBody={message.html_body}
-          attachments={attachments}
-          className="mt-2 text-foreground"
-        />
+        <>
+          {toLine || ccLine ? (
+            <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+              {toLine ? (
+                <p>
+                  <span className="font-medium text-foreground/80">To:</span>{" "}
+                  {toLine}
+                </p>
+              ) : null}
+              {ccLine ? (
+                <p>
+                  <span className="font-medium text-foreground/80">Cc:</span>{" "}
+                  {ccLine}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          <TicketMessageContent
+            body={message.body}
+            htmlBody={message.html_body}
+            attachments={attachments}
+            className="mt-2 text-foreground"
+          />
+        </>
       ) : null}
     </article>
   );

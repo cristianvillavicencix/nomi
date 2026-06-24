@@ -14,6 +14,7 @@ import {
   isTicketAwaitingPaidDelivery,
   TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE,
 } from "../_shared/ticketOutboundAttachments.ts";
+import { buildEmailThreadHeaders } from "../_shared/emailThreading.ts";
 
 type ReplyBody = {
   ticket_id?: number;
@@ -209,7 +210,34 @@ Deno.serve(
           return createErrorResponse(400, "No ticket inbox configured for replies");
         }
 
+        const { data: priorMessages } = await supabaseAdmin
+          .from("ticket_messages")
+          .select("external_message_id, direction")
+          .eq("ticket_id", ticket.id)
+          .not("external_message_id", "is", null)
+          .order("created_at", { ascending: true })
+          .limit(50);
+
+        const priorMessageIds = (priorMessages ?? [])
+          .map((row) => row.external_message_id)
+          .filter((id): id is string => Boolean(id?.trim()));
+
+        const lastInboundId = [...(priorMessages ?? [])]
+          .reverse()
+          .find((row) => row.direction === "inbound")
+          ?.external_message_id?.trim();
+
         const outboundMessageId = buildMessageId(ticket.id);
+        const threadHeaders = buildEmailThreadHeaders({
+          messageId: outboundMessageId,
+          inReplyTo:
+            ticket.external_thread_id?.trim() ||
+            lastInboundId ||
+            priorMessageIds[priorMessageIds.length - 1] ||
+            null,
+          priorMessageIds,
+        });
+
         const subject = replySubject(ticket.subject);
         const textBody = body || "(See attachments)";
         const emailAttachments = await loadStorageAttachmentsForEmail(attachments);
@@ -225,6 +253,7 @@ Deno.serve(
           fromName,
           replyTo: inboxAddress,
           attachments: emailAttachments,
+          headers: threadHeaders,
         });
 
         const { data: message, error: messageError } = await supabaseAdmin
@@ -238,6 +267,7 @@ Deno.serve(
             from_email: inboxAddress,
             from_name: memberName || fromName,
             to_emails: recipients,
+            cc_emails: ccEmails,
             external_message_id: outboundMessageId,
             attachments,
             created_at: now,

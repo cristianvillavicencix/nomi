@@ -1,7 +1,9 @@
 import DOMPurify from "dompurify";
 
 let emailHtmlHookInstalled = false;
+let preserveColorsInHook = false;
 
+/** Strip only layout-breaking CSS; keep email typography/colors. */
 const BLOCKED_STYLE_PROPS = new Set([
   "position",
   "float",
@@ -11,12 +13,6 @@ const BLOCKED_STYLE_PROPS = new Set([
   "right",
   "bottom",
   "transform",
-  "margin-top",
-  "margin-left",
-  "margin-right",
-  "color",
-  "background",
-  "background-color",
 ]);
 
 const cleanInlineStyle = (raw: string) =>
@@ -93,8 +89,9 @@ const installEmailSanitizeHooks = () => {
       node.setAttribute("rel", "noopener noreferrer");
     }
 
-    node.removeAttribute("bgcolor");
-    node.removeAttribute("color");
+    if (!preserveColorsInHook) {
+      node.removeAttribute("bgcolor");
+    }
 
     if (node.hasAttribute("style")) {
       const cleaned = cleanInlineStyle(node.getAttribute("style") ?? "");
@@ -111,20 +108,22 @@ const installEmailSanitizeHooks = () => {
   });
 };
 
-export const sanitizeTicketEmailHtml = (
+const runSanitize = (
   html: string,
   options?: {
-    /** Hrefs removed from HTML because they render in the attachments panel. */
     stripHrefs?: string[];
     attachmentSrcs?: string[];
     attachmentTitles?: string[];
+    mode?: "safe" | "original";
   },
 ) => {
+  const mode = options?.mode ?? "safe";
+  preserveColorsInHook = mode === "original";
   installEmailSanitizeHooks();
 
   const sanitized = DOMPurify.sanitize(html, {
-    ADD_ATTR: ["target", "style", "align", "valign", "width", "height"],
-    FORBID_TAGS: ["form", "iframe", "object", "embed"],
+    ADD_ATTR: ["target", "style", "align", "valign", "width", "height", "bgcolor"],
+    FORBID_TAGS: ["form", "script", "iframe", "object", "embed"],
   });
 
   if (typeof document === "undefined") {
@@ -154,3 +153,16 @@ export const sanitizeTicketEmailHtml = (
 
   return container.innerHTML;
 };
+
+export const sanitizeTicketEmailHtml = (
+  html: string,
+  options?: {
+    stripHrefs?: string[];
+    attachmentSrcs?: string[];
+    attachmentTitles?: string[];
+  },
+) => runSanitize(html, { ...options, mode: "safe" });
+
+/** Minimal sanitization for "view original" — keeps marketing email layout. */
+export const sanitizeTicketEmailHtmlOriginal = (html: string) =>
+  runSanitize(html, { mode: "original" });
