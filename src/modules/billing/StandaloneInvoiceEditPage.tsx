@@ -18,9 +18,10 @@ import {
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { type BillToSelection } from "@/modules/billing/BillToClientSearch";
 import {
-  InvoiceCreateActions,
-  type InvoiceCreateAction,
-} from "@/modules/billing/InvoiceCreateActions";
+  InvoiceDetailToolbar,
+  type InvoiceSendChannel,
+} from "@/modules/billing/InvoiceDetailToolbar";
+import { type InvoiceCreateAction } from "@/modules/billing/InvoiceCreateActions";
 import { InvoiceShareLinkDialog } from "@/modules/billing/InvoiceShareLinkDialog";
 import { InlineInvoiceEditor } from "@/modules/billing/InlineInvoiceEditor";
 import { InvoiceOnlinePaymentSetupDialog } from "@/modules/billing/InvoiceOnlinePaymentSetupDialog";
@@ -30,8 +31,11 @@ import { SendInvoiceDialog } from "@/modules/billing/SendInvoiceDialog";
 import {
   billToSelectionFromClient,
   canEditClientInvoice,
+  canViewClientInvoiceDetail,
   resolveInvoiceRecipientEmail,
 } from "@/modules/billing/billingUtils";
+import { buildInvoiceDetailPaymentRows } from "@/modules/billing/invoiceDetailPayments";
+import { InvoicePaymentsReceivedPanel } from "@/modules/billing/InvoicePaymentsReceivedPanel";
 import {
   buildClientInvoicePdfContext,
   downloadClientInvoicePdf,
@@ -62,11 +66,17 @@ import {
 import {
   invoiceStatusLabel,
   invoiceStatusVariant,
+  isClientInvoiceOverdue,
 } from "@/modules/billing/billingDisplayUtils";
+import { invoiceHasRecordedPayment } from "@/modules/clients/clientFinancialPayments";
 import { InvoiceDocumentPreview } from "@/modules/billing/InvoiceDocumentPreview";
 import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceEmailTemplate";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
-import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
+import type {
+  ClientInvoice,
+  ClientInvoiceAutoChargeLog,
+  ClientInvoiceLineItem,
+} from "@/modules/types";
 import { TicketInvoiceEditReasonDialog } from "@/modules/tickets/TicketInvoiceEditReasonDialog";
 import { postInvoiceUpdateTicketNote } from "@/modules/tickets/postInvoiceUpdateTicketNote";
 import { Button } from "@/components/ui/button";
@@ -140,6 +150,7 @@ export const StandaloneInvoiceEditPage = ({
   );
   const [editUnlocked, setEditUnlocked] = useState(false);
   const [pendingResend, setPendingResend] = useState(false);
+  const [sendChannel, setSendChannel] = useState<InvoiceSendChannel>("both");
 
   const { data: invoice, isPending, error } = useGetOne<ClientInvoice>(
     "client_invoices",
@@ -189,6 +200,20 @@ export const StandaloneInvoiceEditPage = ({
 
   const editable = invoice ? canEditClientInvoice(invoice) : false;
   const isSentInvoice = invoice?.status === "sent";
+  const isPaidInvoice = invoice?.status === "paid";
+  const hasRecordedPayments = invoice
+    ? invoiceHasRecordedPayment(invoice)
+    : false;
+
+  const { data: chargeLogs = [] } = useGetList<ClientInvoiceAutoChargeLog>(
+    "client_invoice_auto_charge_logs",
+    {
+      filter: { "invoice_id@eq": id },
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "attempted_at", order: "DESC" },
+    },
+    { enabled: Boolean(id) && hasRecordedPayments },
+  );
 
   useEffect(() => {
     setHydrated(false);
@@ -436,13 +461,165 @@ export const StandaloneInvoiceEditPage = ({
     refresh();
   };
 
+  const handleSendWithChannel = (channel: InvoiceSendChannel) => {
+    setSendChannel(channel);
+    if (isSentInvoice && !pendingResend) {
+      setSendDialogOpen(true);
+      return;
+    }
+    saveMutation.mutate("send");
+  };
+
+  const resendReceiptMutation = useMutation({
+    mutationFn: () =>
+      dataProvider.resendClientInvoicePaymentReceipt({
+        invoiceId: invoice?.id ?? "",
+        force: true,
+      }),
+    onSuccess: (result) => {
+      notify(
+        result?.already_sent
+          ? "Payment receipt was already sent for this payment"
+          : "Payment receipt sent",
+        { type: "success" },
+      );
+    },
+    onError: (error: Error) => {
+      notify(error.message || "Could not send payment receipt", {
+        type: "error",
+      });
+    },
+  });
+
+  const handleInvoiceDeleted = () => {
+    if (embedded) {
+      refresh();
+      return;
+    }
+    navigate("/billing");
+  };
+
+  const readOnlyActionMutation = useMutation({
+    mutationFn: async (action: "print" | "share") => {
+      if (!invoice?.id) throw new Error("Missing invoice");
+      const validLines = lines.filter((line) => line.title.trim());
+      const pdfContext = buildClientInvoicePdfContext({
+        invoice,
+        organizationName,
+        organizationAddress,
+        organizationWebsite: companyWebsite,
+        company: activeCompany,
+        contact: activeContact,
+        lineItems: buildLineItemsForPdf(validLines, invoice.id),
+        billToEmail: resolveInvoiceRecipientEmail({
+          company: activeCompany,
+          contact: activeContact,
+        }),
+      });
+
+      if (action === "print") {
+        await downloadClientInvoicePdf(pdfContext);
+        return { action };
+      }
+
+      const result = await dataProvider.shareClientInvoice({
+        invoiceId: invoice.id,
+        baseUrl: window.location.origin,
+      });
+      const shareLink =
+        result.short_url?.startsWith("http") || result.url?.startsWith("http")
+          ? result.short_url || result.url
+          : `${window.location.origin}${result.short_url || result.url}`;
+      return { action, shareUrl: shareLink };
+    },
+    onSuccess: ({ action, shareUrl: link }) => {
+      if (action === "print") {
+        notify("PDF downloaded", { type: "success" });
+        return;
+      }
+      if (link) {
+        setShareUrl(link);
+        setShareDialogOpen(true);
+      }
+    },
+    onError: (error: Error) => {
+      notify(error.message || "Could not complete action", { type: "error" });
+    },
+  });
+
   const handleInvoiceAction = (action: InvoiceCreateAction) => {
     if (action === "resend") {
       setSendDialogOpen(true);
       return;
     }
+    if (isPaidInvoice && (action === "print" || action === "share")) {
+      readOnlyActionMutation.mutate(action);
+      return;
+    }
     saveMutation.mutate(action);
   };
+
+  const invoiceBalanceDue = useMemo(
+    () =>
+      invoice
+        ? computeInvoiceBalanceDue(
+            totals.total,
+            Number(invoice.amount_paid) || 0,
+          )
+        : 0,
+    [invoice, totals.total],
+  );
+
+  const showResendReceipt =
+    Boolean(invoice) &&
+    Number(invoice?.amount_paid ?? 0) > 0 &&
+    invoice?.status !== "void";
+
+  const paymentRows = useMemo(
+    () => (invoice ? buildInvoiceDetailPaymentRows(invoice, chargeLogs) : []),
+    [invoice, chargeLogs],
+  );
+  const showPaymentsReceived = paymentRows.length > 0;
+
+  const paymentsReceivedPanel =
+    invoice && showPaymentsReceived ? (
+      <InvoicePaymentsReceivedPanel
+        invoice={invoice}
+        rows={paymentRows}
+        onResendReceipt={
+          showResendReceipt ? () => resendReceiptMutation.mutate() : undefined
+        }
+        resendPending={resendReceiptMutation.isPending}
+      />
+    ) : null;
+
+  const invoiceToolbar = invoice ? (
+    <InvoiceDetailToolbar
+      invoice={invoice}
+      isPending={
+        saveMutation.isPending ||
+        resendReceiptMutation.isPending ||
+        readOnlyActionMutation.isPending
+      }
+      pendingAction={pendingAction}
+      onAction={handleInvoiceAction}
+      onSendWithChannel={handleSendWithChannel}
+      onEdit={() => setEditReasonOpen(true)}
+      editLocked={isSentInvoice && !editUnlocked}
+      onScheduleSend={() => setScheduleDialogOpen(true)}
+      cancelTo="/billing"
+      showCancel={!embedded}
+      onConfigurePayment={() => setPaymentSetupOpen(true)}
+      showCharge={canChargeClientInvoice(invoice)}
+      onCharge={() => setChargeDialogOpen(true)}
+      balanceDue={invoiceBalanceDue}
+      showResendReceipt={showResendReceipt}
+      onResendReceipt={() => resendReceiptMutation.mutate()}
+      pendingResend={pendingResend}
+      onRefresh={() => refresh()}
+      onDeleted={handleInvoiceDeleted}
+    />
+  ) : null;
 
   const handleShareClose = (open: boolean) => {
     setShareDialogOpen(open);
@@ -482,14 +659,16 @@ export const StandaloneInvoiceEditPage = ({
     );
   }
 
-  if (!editable && !embedded) {
+  if (!canViewClientInvoiceDetail(invoice) && !embedded) {
     return <Navigate to={`/billing?invoice=${encodeURIComponent(id)}`} replace />;
   }
 
   const statusRibbon =
     invoice.status === "draft"
       ? "Draft"
-      : invoiceStatusLabel(invoice.status, invoice.due_date);
+      : isClientInvoiceOverdue(invoice)
+        ? "Overdue"
+        : invoiceStatusLabel(invoice.status, invoice.due_date);
 
   const shellClass = embedded
     ? "flex min-h-0 flex-1 flex-col"
@@ -497,89 +676,9 @@ export const StandaloneInvoiceEditPage = ({
 
   const previewTotals = calculateInvoiceTotals(lines, discountPercent);
   const showSentEditGate = isSentInvoice && editable && !editUnlocked;
+  const showReadOnlyDocument = isPaidInvoice || showSentEditGate;
 
-  const primaryLabel = pendingResend
-    ? "Resend invoice"
-    : isSentInvoice && editUnlocked
-      ? "Update invoice"
-      : "Send";
-  const primaryAction: InvoiceCreateAction = pendingResend
-    ? "resend"
-    : isSentInvoice && editUnlocked
-      ? "update"
-      : "send";
-
-  if (showSentEditGate) {
-    return (
-      <>
-        <div className={shellClass}>
-          <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
-            <div className="flex flex-wrap items-center gap-3">
-              {embedded ? (
-                <h2 className="text-base font-semibold">
-                  {invoice.invoice_number}
-                </h2>
-              ) : (
-                <PageTitle label={invoice.invoice_number} />
-              )}
-              <Badge
-                variant={invoiceStatusVariant(invoice.status, invoice.due_date)}
-                className="ml-auto capitalize"
-              >
-                {invoiceStatusLabel(invoice.status, invoice.due_date)}
-              </Badge>
-            </div>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-6">
-            <InvoiceDocumentPreview
-              organizationName={organizationName}
-              organizationWebsite={companyWebsite}
-              organizationAddress={organizationAddress}
-              invoiceNumber={invoice.invoice_number}
-              status={invoice.status}
-              issueDate={issueDate}
-              dueDate={dueDate}
-              terms={terms}
-              company={company}
-              contact={contact}
-              lines={lines}
-              termsAndConditions={termsAndConditions}
-              subtotal={previewTotals.subtotal}
-              discountAmount={previewTotals.discountAmount}
-              feeAmount={previewTotals.feeAmount}
-              total={previewTotals.total}
-              balanceDue={computeInvoiceBalanceDue(
-                previewTotals.total,
-                Number(invoice.amount_paid) || 0,
-              )}
-            />
-          </div>
-          <div className="shrink-0 border-t bg-background px-3 py-3 md:px-4">
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditReasonOpen(true)}
-              >
-                Edit invoice
-              </Button>
-            </div>
-          </div>
-        </div>
-        <TicketInvoiceEditReasonDialog
-          open={editReasonOpen}
-          invoiceNumber={invoice.invoice_number}
-          onOpenChange={setEditReasonOpen}
-          onConfirm={(reason) => {
-            setEditReason(reason);
-            setEditUnlocked(true);
-          }}
-        />
-      </>
-    );
-  }
-
-  if (embedded && !editable) {
+  if (embedded && !canViewClientInvoiceDetail(invoice)) {
     return (
       <div className={shellClass}>
         <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
@@ -630,20 +729,7 @@ export const StandaloneInvoiceEditPage = ({
       ) : (
         <PageTitle label={invoice.invoice_number} />
       )}
-      <InvoiceCreateActions
-        isPending={saveMutation.isPending}
-        pendingAction={pendingAction}
-        onAction={handleInvoiceAction}
-        primaryLabel={primaryLabel}
-        primaryAction={primaryAction}
-        showUpdatedBadge={pendingResend}
-        cancelTo="/billing"
-        showCancel={!embedded}
-        onConfigurePayment={() => setPaymentSetupOpen(true)}
-        showCharge={invoice ? canChargeClientInvoice(invoice) : false}
-        onCharge={() => setChargeDialogOpen(true)}
-        chargeDisabled={saveMutation.isPending}
-      />
+      <div className="w-full min-w-0">{invoiceToolbar}</div>
     </>
   );
 
@@ -651,9 +737,11 @@ export const StandaloneInvoiceEditPage = ({
     <div className={shellClass}>
       <div className="shrink-0 border-b bg-background px-3 py-2.5 md:px-4">
         {embedded ? (
-          <div className="flex flex-wrap items-center gap-3">{headerInner}</div>
+          <div className="flex flex-col gap-3">{headerInner}</div>
         ) : (
-          <PageActions>{headerInner}</PageActions>
+          <PageActions>
+            <div className="flex w-full min-w-0 flex-col gap-3">{headerInner}</div>
+          </PageActions>
         )}
       </div>
 
@@ -679,7 +767,33 @@ export const StandaloneInvoiceEditPage = ({
             : "min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
         }
       >
-        <InlineInvoiceEditor
+        {showReadOnlyDocument ? (
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+            {paymentsReceivedPanel}
+            <InvoiceDocumentPreview
+              organizationName={organizationName}
+              organizationWebsite={companyWebsite}
+              organizationAddress={organizationAddress}
+              invoiceNumber={invoice.invoice_number}
+              status={invoice.status}
+              issueDate={issueDate}
+              dueDate={dueDate}
+              terms={terms}
+              company={company}
+              contact={contact}
+              lines={lines}
+              termsAndConditions={termsAndConditions}
+              subtotal={previewTotals.subtotal}
+              discountAmount={previewTotals.discountAmount}
+              feeAmount={previewTotals.feeAmount}
+              total={previewTotals.total}
+              balanceDue={invoiceBalanceDue}
+            />
+          </div>
+        ) : (
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+            {paymentsReceivedPanel}
+            <InlineInvoiceEditor
           organizationName={organizationName}
           organizationWebsite={companyWebsite}
           organizationAddress={organizationAddress}
@@ -716,7 +830,19 @@ export const StandaloneInvoiceEditPage = ({
           paymentMethodLast4={invoice.payment_method_last4}
           autoChargeRemainder={Boolean(invoice.auto_charge_remainder)}
         />
+          </div>
+        )}
       </div>
+
+      <TicketInvoiceEditReasonDialog
+        open={editReasonOpen}
+        invoiceNumber={invoice.invoice_number}
+        onOpenChange={setEditReasonOpen}
+        onConfirm={(reason) => {
+          setEditReason(reason);
+          setEditUnlocked(true);
+        }}
+      />
 
       <SendInvoiceDialog
         open={sendDialogOpen}
@@ -738,6 +864,7 @@ export const StandaloneInvoiceEditPage = ({
           setShareDialogOpen(true);
           refresh();
         }}
+        deliveryChannel={sendChannel}
       />
 
       <InvoiceShareLinkDialog

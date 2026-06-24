@@ -184,6 +184,7 @@ export type ClientInvoice = {
   status?: "draft" | "sent" | "paid" | "void" | "overdue";
   sent_at?: string | null;
   paid_at?: string | null;
+  void_reason?: string | null;
   stripe_payment_intent_id?: string | null;
   stripe_customer_id?: string | null;
   stripe_payment_method_id?: string | null;
@@ -201,6 +202,19 @@ export type ClientInvoice = {
   scheduled_send_sms_body?: string | null;
   created_at?: string;
   updated_at?: string;
+} & Pick<RaRecord, "id">;
+
+export type ClientInvoiceAutoChargeLog = {
+  org_id?: number;
+  invoice_id: Identifier;
+  installment_number: number;
+  stripe_payment_intent_id?: string | null;
+  amount_cents: number;
+  status: "processing" | "succeeded" | "failed" | "requires_action";
+  error_code?: string | null;
+  error_message?: string | null;
+  attempted_at?: string | null;
+  created_at?: string | null;
 } & Pick<RaRecord, "id">;
 
 export type ClientInvoiceLineItem = {

@@ -100,13 +100,21 @@ export const INVOICE_FILTER_OPTIONS: Array<{
   { value: "void", label: "Void" },
 ];
 
+export const isClientInvoiceOverdue = (invoice: {
+  status?: string | null;
+  due_date?: string | null;
+}) =>
+  (invoice.status === "sent" || invoice.status === "overdue") &&
+  Boolean(invoice.due_date) &&
+  invoice.due_date! < todayIso();
+
 export const invoiceStatusLabel = (status?: string | null, dueDate?: string | null) => {
-  if (status === "sent" && dueDate && dueDate < todayIso()) return "Overdue";
+  if (isClientInvoiceOverdue({ status, due_date: dueDate })) return "Overdue";
   return status?.replace(/_/g, " ") ?? "—";
 };
 
 export const invoiceStatusVariant = (status?: string | null, dueDate?: string | null) => {
-  if (status === "sent" && dueDate && dueDate < todayIso()) {
+  if (isClientInvoiceOverdue({ status, due_date: dueDate })) {
     return "destructive" as const;
   }
   switch (status) {

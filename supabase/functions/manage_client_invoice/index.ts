@@ -14,6 +14,7 @@ import {
 type ManageBody = {
   invoice_id?: number;
   action?: "mark_sent" | "void" | "delete";
+  void_reason?: string;
 };
 
 Deno.serve(
@@ -64,6 +65,7 @@ Deno.serve(
             supabaseAdmin,
             invoiceId,
             member.org_id,
+            body.void_reason,
           );
           return new Response(JSON.stringify({ invoice }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },

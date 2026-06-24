@@ -644,6 +644,7 @@ export async function voidClientInvoice(
   supabase: SupabaseClient,
   invoiceId: number,
   orgId: number,
+  voidReason?: string | null,
 ) {
   const { data: existing, error: existingError } = await supabase
     .from("client_invoices")
@@ -670,10 +671,16 @@ export async function voidClientInvoice(
   }
 
   const now = new Date().toISOString();
+  const reason = voidReason?.trim();
+  if (!reason || reason.length < 3) {
+    throw new Error("A void reason is required");
+  }
+
   const { data, error } = await supabase
     .from("client_invoices")
     .update({
       status: "void",
+      void_reason: reason,
       scheduled_send_at: null,
       scheduled_send_message: null,
       scheduled_send_storage_path: null,

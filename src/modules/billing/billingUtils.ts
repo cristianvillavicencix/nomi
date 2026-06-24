@@ -244,6 +244,13 @@ export const canEditClientInvoice = (invoice: {
   status?: string | null;
 }) => invoice.status === "draft" || invoice.status === "sent";
 
+export const canViewClientInvoiceDetail = (invoice: {
+  status?: string | null;
+}) =>
+  invoice.status === "draft" ||
+  invoice.status === "sent" ||
+  invoice.status === "paid";
+
 export const canMarkClientInvoiceSent = (invoice: {
   status?: string | null;
 }) => invoice.status === "draft";

@@ -30,6 +30,7 @@ import {
 } from "@/modules/billing/clientInvoicePdf";
 import { InvoiceShareLinkDialog } from "@/modules/billing/InvoiceShareLinkDialog";
 import { InvoiceStaffChargeDialog } from "@/modules/billing/InvoiceStaffChargeDialog";
+import { VoidInvoiceReasonDialog } from "@/modules/billing/VoidInvoiceReasonDialog";
 import {
   buildDefaultInvoiceEmailSubject,
   buildInvoiceEmailHtml,
@@ -100,6 +101,7 @@ export const SendInvoiceDialog = ({
   onSent,
   onScheduleSend,
   onShareLink,
+  deliveryChannel = "both",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -110,6 +112,7 @@ export const SendInvoiceDialog = ({
   onSent?: () => void;
   onScheduleSend?: () => void;
   onShareLink?: (shareUrl: string) => void;
+  deliveryChannel?: "email" | "sms" | "both";
 }) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -301,14 +304,18 @@ export const SendInvoiceDialog = ({
       }),
     );
     setPhone(defaultPhone);
-    setSendSms(Boolean(defaultPhone.trim()));
+    setSendSms(
+      deliveryChannel === "sms" || deliveryChannel === "both"
+        ? Boolean(defaultPhone.trim())
+        : false,
+    );
     setCc("");
     setBcc("");
     setShowCc(false);
     setShowBcc(false);
     setEditingTo(false);
     setSubject(buildDefaultInvoiceEmailSubject(invoice, organizationName));
-  }, [open, invoice, company, contact, organizationName]);
+  }, [open, invoice, company, contact, organizationName, deliveryChannel]);
 
   const sendMutation = useMutation({
     mutationFn: async () => {
@@ -725,6 +732,7 @@ export const InvoiceRowActions = ({
   const [chargeOpen, setChargeOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const [voidReasonOpen, setVoidReasonOpen] = useState(false);
   const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
   const organizationAddress = invoiceBranding.address;
   const companyWebsite = invoiceBranding.website;
@@ -786,9 +794,22 @@ export const InvoiceRowActions = ({
   });
 
   const manageMutation = useMutation({
-    mutationFn: (action: "mark_sent" | "void" | "delete") =>
-      dataProvider.manageClientInvoice({ invoiceId: invoice.id, action }),
-    onSuccess: (_data, action) => {
+    mutationFn: ({
+      action,
+      voidReason,
+    }: {
+      action: "mark_sent" | "void" | "delete";
+      voidReason?: string;
+    }) =>
+      dataProvider.manageClientInvoice({
+        invoiceId: invoice.id,
+        action,
+        voidReason,
+      }),
+    onSuccess: (_data, { action }) => {
+      if (action === "void") {
+        setVoidReasonOpen(false);
+      }
       if (action === "mark_sent") {
         notify("Invoice marked as sent", { type: "success" });
         onRefresh?.();
@@ -830,10 +851,8 @@ export const InvoiceRowActions = ({
 
   const handleManage = (action: "mark_sent" | "void" | "delete") => {
     if (action === "void") {
-      const confirmed = window.confirm(
-        `Void invoice ${invoice.invoice_number}? This cannot be undone.`,
-      );
-      if (!confirmed) return;
+      setVoidReasonOpen(true);
+      return;
     }
     if (action === "delete") {
       const confirmed = window.confirm(
@@ -841,7 +860,7 @@ export const InvoiceRowActions = ({
       );
       if (!confirmed) return;
     }
-    manageMutation.mutate(action);
+    manageMutation.mutate({ action });
   };
 
   const handleDownload = async () => {
@@ -997,6 +1016,15 @@ export const InvoiceRowActions = ({
           onSuccess={onRefresh}
         />
       ) : null}
+      <VoidInvoiceReasonDialog
+        open={voidReasonOpen}
+        invoiceNumber={invoice.invoice_number}
+        pending={manageMutation.isPending}
+        onOpenChange={setVoidReasonOpen}
+        onConfirm={(voidReason) =>
+          manageMutation.mutate({ action: "void", voidReason })
+        }
+      />
     </>
   );
 };

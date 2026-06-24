@@ -763,12 +763,14 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     scheduled_send_at: scheduledSendAt,
     status: "draft",
   }),
-  manageClientInvoice: async ({ invoiceId, action }) => {
+  manageClientInvoice: async ({ invoiceId, action, voidReason }) => {
     if (action === "delete") {
       return { id: invoiceId, deleted: true };
     }
     if (action === "void") {
-      return { invoice: { id: invoiceId, status: "void" } };
+      return {
+        invoice: { id: invoiceId, status: "void", void_reason: voidReason ?? null },
+      };
     }
     return { invoice: { id: invoiceId, status: "sent" } };
   },

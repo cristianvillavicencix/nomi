@@ -1,5 +1,5 @@
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
+import { formatBillingDate, isClientInvoiceOverdue } from "@/modules/billing/billingDisplayUtils";
 import {
   formatBillToNameLine,
   resolveBillToDisplay,
@@ -78,16 +78,19 @@ export const InvoiceDocumentPreview = ({
   const billToNameLine = formatBillToNameLine(company, contact);
 
   const statusLabel =
-    status === "sent"
-      ? "Sent"
-      : status === "paid"
-        ? "Paid"
-        : status === "draft"
-          ? "Draft"
-          : status.replace(/_/g, " ");
+    isClientInvoiceOverdue({ status, due_date: dueDate })
+      ? "Overdue"
+      : status === "sent"
+        ? "Sent"
+        : status === "paid"
+          ? "Paid"
+          : status === "draft"
+            ? "Draft"
+            : status.replace(/_/g, " ");
 
-  const statusRibbon =
-    status === "sent"
+  const statusRibbon = isClientInvoiceOverdue({ status, due_date: dueDate })
+    ? { label: "Overdue", className: "bg-red-600" }
+    : status === "sent"
       ? { label: "Sent", className: "bg-blue-600" }
       : status === "paid"
         ? { label: "Paid", className: "bg-emerald-600" }

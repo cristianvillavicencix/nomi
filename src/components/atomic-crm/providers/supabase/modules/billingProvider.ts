@@ -183,9 +183,11 @@ export const billingProvider = {
   async manageClientInvoice({
     invoiceId,
     action,
+    voidReason,
   }: {
     invoiceId: Identifier;
     action: "mark_sent" | "void" | "delete";
+    voidReason?: string;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       invoice?: Record<string, unknown>;
@@ -196,6 +198,7 @@ export const billingProvider = {
       body: {
         invoice_id: Number(invoiceId),
         action,
+        ...(voidReason ? { void_reason: voidReason } : {}),
       },
     });
 
