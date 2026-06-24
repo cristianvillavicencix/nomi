@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { CreateClientInvoiceDialog } from "@/modules/billing/CreateClientInvoiceDialog";
+import { InvoiceBillingSummaryCards } from "@/modules/billing/InvoiceBillingSummaryCards";
 import { InvoiceBillingWorkspace } from "@/modules/billing/InvoiceBillingWorkspace";
 import { type InvoiceStatusFilter } from "@/modules/billing/billingDisplayUtils";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -46,7 +47,12 @@ export const ClientInvoicesTab = () => {
   );
 
   return (
-    <>
+    <div className="flex flex-col gap-3">
+      <InvoiceBillingSummaryCards
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+      />
+
       <List
         resource="client_invoices"
         title={false}
@@ -69,6 +75,6 @@ export const ClientInvoicesTab = () => {
         onOpenChange={setFromProposalOpen}
         onCreated={refresh}
       />
-    </>
+    </div>
   );
 };
