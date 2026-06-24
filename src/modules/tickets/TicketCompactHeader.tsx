@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket } from "@/modules/types";
 import { getClientShowPath } from "@/app/routing";
-import { TicketAssignSelect } from "@/modules/tickets/TicketAssignSelect";
+import { TicketMergeLauncher } from "@/modules/tickets/TicketMergeLauncher";
 import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
 import { resolveTicketRequesterName } from "@/modules/tickets/ticketRequester";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
@@ -25,14 +25,12 @@ import {
 import { ticketStatusLabel, ticketStatusVariant } from "@/modules/tickets/ticketInboxConfig";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
-import type { OrganizationMember } from "@/modules/types";
 
 export const TicketCompactHeader = ({
   ticket,
   company,
   contact,
   deal,
-  members,
   canManage,
   onUpdated,
   onBack,
@@ -43,7 +41,6 @@ export const TicketCompactHeader = ({
   company?: Company | null;
   contact?: Contact | null;
   deal?: Deal | null;
-  members?: OrganizationMember[];
   canManage?: boolean;
   onUpdated?: () => void;
   onBack?: () => void;
@@ -175,13 +172,7 @@ export const TicketCompactHeader = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          {canManage ? (
-            <TicketAssignSelect
-              ticket={ticket}
-              members={members ?? []}
-              onAssigned={onUpdated}
-            />
-          ) : null}
+          <TicketMergeLauncher ticket={ticket} onMerged={onUpdated} />
           {contextAction}
         </div>
       </div>

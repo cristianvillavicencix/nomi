@@ -7,7 +7,7 @@ import {
 } from "ra-core";
 import { useNavigate } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { Deal, OrganizationMember, Ticket } from "@/modules/types";
+import type { Deal, Ticket } from "@/modules/types";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TicketCompactHeader } from "@/modules/tickets/TicketCompactHeader";
@@ -68,14 +68,6 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
     },
     { enabled: Boolean(ticket?.id) },
   );
-  const { data: members = [] } = useGetList<OrganizationMember>(
-    "organization_members",
-    {
-      pagination: { page: 1, perPage: 200 },
-      sort: { field: "first_name", order: "ASC" },
-    },
-  );
-
   const {
     messages,
     isPending: messagesPending,
@@ -145,7 +137,6 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
             company={company}
             contact={contact}
             deal={deal}
-            members={members}
             canManage={canManage}
             onUpdated={refresh}
             showBack={isMobile}

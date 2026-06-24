@@ -791,6 +791,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     body,
     isInternalNote = false,
     attachments = [],
+    nextStatus,
   }) => ({
     message: {
       id: `demo-ticket-message-${Date.now()}`,
@@ -803,6 +804,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     email_sent: !isInternalNote,
     email_skipped: isInternalNote,
     is_internal_note: isInternalNote,
+    next_status: nextStatus,
   }),
   mergeTickets: async ({ primaryTicketId, mergeTicketIds }) => ({
     primary_ticket_id: Number(primaryTicketId),

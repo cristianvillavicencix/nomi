@@ -24,6 +24,16 @@ type ReplyBody = {
   attachments?: StoredAttachment[];
   to_emails?: string[];
   cc_emails?: string[];
+  next_status?: string;
+};
+
+const TICKET_STATUSES = new Set(["new", "open", "waiting", "resolved"]);
+
+const requiresStatusChangeNote = (fromStatus: string, toStatus: string) => {
+  if (fromStatus === toStatus) return false;
+  if (toStatus === "waiting" || toStatus === "resolved") return true;
+  if (fromStatus === "resolved") return true;
+  return false;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -282,10 +292,32 @@ Deno.serve(
           throw new Error(messageError?.message ?? "Could not save reply");
         }
 
+        const requestedStatus = payload.next_status?.trim() ?? "";
+        const nextStatus = TICKET_STATUSES.has(requestedStatus)
+          ? requestedStatus
+          : ticket.status === "new"
+            ? "open"
+            : ticket.status;
+
+        if (
+          nextStatus !== ticket.status &&
+          requiresStatusChangeNote(ticket.status, nextStatus)
+        ) {
+          await supabaseAdmin.from("ticket_messages").insert({
+            ticket_id: ticket.id,
+            author_member_id: member.id,
+            body: `**Status:** ${ticket.status} → ${nextStatus}\n\nStatus updated when sending reply.`,
+            direction: "internal",
+            from_name: memberName || member.email || "Team",
+            attachments: [],
+            created_at: now,
+          });
+        }
+
         await supabaseAdmin
           .from("tickets")
           .update({
-            status: ticket.status === "new" ? "waiting" : ticket.status,
+            status: nextStatus,
             assignee_id: member.id,
             updated_at: now,
           })

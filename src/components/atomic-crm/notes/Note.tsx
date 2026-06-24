@@ -24,7 +24,9 @@ import { RelativeDate } from "../misc/RelativeDate";
 import { Status } from "../misc/Status";
 import { parseAssetLinkText } from "../misc/assetLinks";
 import { AuthorBadge } from "../accountability/AuthorBadge";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { useIsAdminLevel } from "@/lib/permissions/useIsAdminLevel";
+import { isPipelineTransitionNote } from "@/modules/leads/leadFollowUpUtils";
 import type { ContactNote, DealNote } from "../types";
 import { NoteAttachments } from "./NoteAttachments";
 import { NoteInputs } from "./NoteInputs";
@@ -32,10 +34,12 @@ import { NoteInputs } from "./NoteInputs";
 export const Note = ({
   showStatus,
   note,
+  resource: resourceProp,
 }: {
   showStatus?: boolean;
   note: DealNote | ContactNote;
   isLast: boolean;
+  resource?: string;
 }) => {
   const assetLink = parseAssetLinkText(note.text);
   const [isHover, setHover] = useState(false);
@@ -43,9 +47,15 @@ export const Note = ({
   const [isExpanded, setExpanded] = useState(false);
   const [isTruncated, setTruncated] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const resource = useResourceContext();
+  const resourceFromContext = useResourceContext({ optional: true });
+  const resource = resourceProp ?? resourceFromContext ?? "contact_notes";
   const notify = useNotify();
   const isAdminLevel = useIsAdminLevel();
+  const canEditNotes = useMemberCapability("crm.notes.edit");
+  const canDeleteNotes = useMemberCapability("crm.notes.delete");
+  const isSystemNote = isPipelineTransitionNote(note);
+  const canEdit = canEditNotes && !isSystemNote;
+  const canDelete = canDeleteNotes && !isSystemNote;
 
   // Detect if content is truncated
   useEffect(() => {
@@ -94,7 +104,7 @@ export const Note = ({
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className="mb-4"
+      className="group/note mb-4"
     >
       <div className="flex items-center space-x-4 w-full">
         <ReferenceField source="company_id" reference="companies" link="show">
@@ -113,7 +123,13 @@ export const Note = ({
             <Status className="ml-2" status={note.status} />
           )}
         </div>
-        <span className={`${isHover ? "visible" : "invisible"}`}>
+        <span
+          className={cn(
+            "inline-flex items-center gap-0.5 transition-opacity",
+            isHover ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover/note:opacity-100",
+          )}
+        >
+          {canEdit ? (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -131,6 +147,8 @@ export const Note = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          ) : null}
+          {canDelete ? (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -148,6 +166,7 @@ export const Note = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          ) : null}
         </span>
         <div className="flex-1"></div>
         <span className="text-sm text-muted-foreground">

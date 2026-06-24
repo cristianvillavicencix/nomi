@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FileText, Info, MessageSquare } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, Info, MessageSquare, PanelRightClose } from "lucide-react";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { TicketBillingSidePanel } from "@/modules/tickets/TicketBillingSidePanel";
@@ -13,6 +13,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type ContextTab = "billing" | "sms" | "info";
 
@@ -26,32 +31,53 @@ const CONTEXT_TABS: Array<{ id: ContextTab; label: string; icon: typeof FileText
 const TicketContextTabs = ({
   activeTab,
   onChange,
+  onCollapse,
   className,
 }: {
   activeTab: ContextTab;
   onChange: (tab: ContextTab) => void;
+  onCollapse?: () => void;
   className?: string;
 }) => (
-  <div className={cn("flex shrink-0 gap-1 border-b px-2 py-2", className)}>
-    {CONTEXT_TABS.map((tab) => {
-      const Icon = tab.icon;
-      return (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => onChange(tab.id)}
-          className={cn(
-            "inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
-            activeTab === tab.id
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-          )}
-        >
-          <Icon className="size-3.5 shrink-0" />
-          {tab.label}
-        </button>
-      );
-    })}
+  <div className={cn("flex shrink-0 items-center gap-1 border-b px-2 py-2", className)}>
+    <div className="flex min-w-0 flex-1 gap-1">
+      {CONTEXT_TABS.map((tab) => {
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onChange(tab.id)}
+            className={cn(
+              "inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
+              activeTab === tab.id
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <Icon className="size-3.5 shrink-0" />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+    {onCollapse ? (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            aria-label="Minimize context panel"
+            onClick={onCollapse}
+          >
+            <PanelRightClose className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Minimize panel</TooltipContent>
+      </Tooltip>
+    ) : null}
   </div>
 );
 
@@ -95,10 +121,49 @@ const TicketContextBody = ({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
-      <TicketClientSummaryCard ticket={ticket} company={company} contact={contact} />
+      <TicketClientSummaryCard
+        ticket={ticket}
+        company={company}
+        contact={contact}
+        variant="panel"
+      />
     </div>
   );
 };
+
+const TicketContextCollapsedRail = ({
+  onOpenTab,
+}: {
+  onOpenTab: (tab: ContextTab) => void;
+}) => (
+  <aside className="flex w-11 shrink-0 flex-col self-stretch border-l bg-background">
+    <div className="flex flex-1 flex-col items-center gap-2 py-3">
+      {CONTEXT_TABS.map((tab) => {
+        const Icon = tab.icon;
+        return (
+          <Tooltip key={tab.id}>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9"
+                aria-label={`Open ${tab.label}`}
+                onClick={() => onOpenTab(tab.id)}
+              >
+                <Icon className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">{tab.label}</TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+    <span className="pb-3 text-center text-[10px] uppercase tracking-wide text-muted-foreground [writing-mode:vertical-rl]">
+      Context
+    </span>
+  </aside>
+);
 
 export const TicketContextPanel = ({
   ticket,
@@ -111,7 +176,21 @@ export const TicketContextPanel = ({
   contact?: Contact | null;
   className?: string;
 }) => {
+  const [collapsed, setCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<ContextTab>("billing");
+
+  useEffect(() => {
+    setCollapsed(true);
+  }, [ticket.id]);
+
+  const openTab = (tab: ContextTab) => {
+    setActiveTab(tab);
+    setCollapsed(false);
+  };
+
+  if (collapsed) {
+    return <TicketContextCollapsedRail onOpenTab={openTab} />;
+  }
 
   return (
     <aside
@@ -120,7 +199,11 @@ export const TicketContextPanel = ({
         className,
       )}
     >
-      <TicketContextTabs activeTab={activeTab} onChange={setActiveTab} />
+      <TicketContextTabs
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        onCollapse={() => setCollapsed(true)}
+      />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <TicketContextBody
           activeTab={activeTab}

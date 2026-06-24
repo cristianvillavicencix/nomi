@@ -9,6 +9,17 @@ import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 type MergeBody = {
   primary_ticket_id?: number;
   merge_ticket_ids?: number[];
+  field_overrides?: {
+    subject?: string;
+    status?: string;
+    priority?: string;
+    requester_email?: string | null;
+    requester_name?: string | null;
+    assignee_id?: number | null;
+    company_id?: number | null;
+    contact_id?: number | null;
+    deal_id?: number | null;
+  };
 };
 
 Deno.serve(
@@ -146,12 +157,42 @@ Deno.serve(
           created_at: now,
         });
 
+        const fieldOverrides = payload.field_overrides ?? {};
+        const primaryFieldUpdate: Record<string, unknown> = {
+          updated_at: now,
+        };
+
+        if (typeof fieldOverrides.subject === "string" && fieldOverrides.subject.trim()) {
+          primaryFieldUpdate.subject = fieldOverrides.subject.trim();
+        }
+        if (typeof fieldOverrides.status === "string" && fieldOverrides.status.trim()) {
+          primaryFieldUpdate.status = fieldOverrides.status.trim();
+        }
+        if (typeof fieldOverrides.priority === "string" && fieldOverrides.priority.trim()) {
+          primaryFieldUpdate.priority = fieldOverrides.priority.trim();
+        }
+        if (fieldOverrides.requester_email !== undefined) {
+          primaryFieldUpdate.requester_email = fieldOverrides.requester_email?.trim() || null;
+        }
+        if (fieldOverrides.requester_name !== undefined) {
+          primaryFieldUpdate.requester_name = fieldOverrides.requester_name?.trim() || null;
+        }
+        if (fieldOverrides.assignee_id !== undefined) {
+          primaryFieldUpdate.assignee_id = fieldOverrides.assignee_id;
+        }
+        if (fieldOverrides.company_id !== undefined) {
+          primaryFieldUpdate.company_id = fieldOverrides.company_id;
+        }
+        if (fieldOverrides.contact_id !== undefined) {
+          primaryFieldUpdate.contact_id = fieldOverrides.contact_id;
+        }
+        if (fieldOverrides.deal_id !== undefined) {
+          primaryFieldUpdate.deal_id = fieldOverrides.deal_id;
+        }
+
         await supabaseAdmin
           .from("tickets")
-          .update({
-            status: primary.status === "resolved" ? "open" : primary.status,
-            updated_at: now,
-          })
+          .update(primaryFieldUpdate)
           .eq("id", primaryTicketId)
           .eq("org_id", member.org_id);
 

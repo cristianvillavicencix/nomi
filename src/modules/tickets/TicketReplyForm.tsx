@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { ChevronUp, Forward, Paperclip, Reply, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Forward, Loader2, Lock, Paperclip, Reply, Save, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useDataProvider,
@@ -10,8 +10,10 @@ import {
 } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { useAutoGrowTextarea } from "@/hooks/use-auto-grow-textarea";
 import type { ClientInvoice, Ticket, TicketInbox, TicketMessage } from "@/modules/types";
+import { getTicketReplyStatusActions } from "@/modules/tickets/ticketReplyStatusActions";
+import { TicketReplyComposerActions } from "@/modules/tickets/TicketReplyComposerActions";
+import type { TicketWorkflowStatus } from "@/modules/tickets/ticketStatusWorkflow";
 import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
 import {
   canSendTicketOutboundAttachments,
@@ -44,6 +46,12 @@ import {
   type TicketReplyAttachment,
 } from "@/modules/tickets/uploadTicketAttachment";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { isValidRecordId } from "@/lib/isValidRecordId";
@@ -55,7 +63,7 @@ type PendingAttachment = {
   previewUrl?: string;
 };
 
-type ComposeMode = "reply" | "forward";
+type ComposeMode = "reply" | "forward" | "internal";
 
 type ForwardContext = {
   message: ForwardMessage;
@@ -75,17 +83,19 @@ export const TicketReplyForm = ({
   onSent?: () => void;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [composeMode, setComposeMode] = useState<ComposeMode>("reply");
   const [forwardContext, setForwardContext] = useState<ForwardContext | null>(
     null,
   );
   const [bodyHtml, setBodyHtml] = useState(() => createDefaultReplyHtml());
+  const [internalNoteText, setInternalNoteText] = useState("");
   const [toRecipients, setToRecipients] = useState("");
   const [ccRecipients, setCcRecipients] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
-  const [submittingAs, setSubmittingAs] = useState<"reply" | "internal" | null>(
-    null,
-  );
+  const [submittingAs, setSubmittingAs] = useState<
+    "internal" | "forward" | TicketWorkflowStatus | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const notify = useNotify();
@@ -144,20 +154,30 @@ export const TicketReplyForm = ({
     },
   );
 
-  const inboxSignature = useMemo(() => {
+  const replyStatusActions = useMemo(
+    () => getTicketReplyStatusActions(ticket.status),
+    [ticket.status],
+  );
+
+  const activeInbox = useMemo(() => {
     const targetEmail = (
       ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL
     ).toLowerCase();
-    const inbox =
+    return (
       ticketInboxes.find(
         (entry) => entry.email?.trim().toLowerCase() === targetEmail,
-      ) ?? ticketInboxes[0];
-    return (
-      inbox?.reply_signature_html?.trim() ||
-      inbox?.reply_signature_text?.trim() ||
+      ) ?? ticketInboxes[0] ??
       null
     );
   }, [ticket.inbox_address, ticketInboxes]);
+
+  const inboxSignature = useMemo(() => {
+    return (
+      activeInbox?.reply_signature_html?.trim() ||
+      activeInbox?.reply_signature_text?.trim() ||
+      null
+    );
+  }, [activeInbox]);
 
   const defaultReplyHtml = useMemo(
     () => createDefaultReplyHtml(inboxSignature),
@@ -173,12 +193,74 @@ export const TicketReplyForm = ({
 
   const fromAddress = ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
   const hasContent =
-    (composeMode === "forward" && forwardContext != null) ||
-    hasReplyContentHtml(bodyHtml) ||
-    pendingFiles.length > 0;
+    composeMode === "internal"
+      ? Boolean(internalNoteText.trim()) || pendingFiles.length > 0
+      : (composeMode === "forward" && forwardContext != null) ||
+        hasReplyContentHtml(bodyHtml) ||
+        pendingFiles.length > 0;
+
+  const composerTabSummary = useMemo(() => {
+    const truncate = (value: string, max = 72) => {
+      const normalized = value.replace(/\s+/g, " ").trim();
+      if (!normalized) return "";
+      return normalized.length > max
+        ? `${normalized.slice(0, max)}…`
+        : normalized;
+    };
+
+    const attachmentHint =
+      pendingFiles.length > 0
+        ? `${pendingFiles.length} attachment${pendingFiles.length === 1 ? "" : "s"}`
+        : "";
+
+    if (composeMode === "internal") {
+      const preview = truncate(internalNoteText, 80);
+      return {
+        title: "Internal note",
+        context: "Team only",
+        preview: preview || attachmentHint || "Empty draft",
+      };
+    }
+
+    if (composeMode === "forward") {
+      const recipient = toRecipients.trim().split(",")[0]?.trim();
+      const preview = truncate(
+        htmlToPlainText(stripReplySignatureHtml(bodyHtml)),
+        80,
+      );
+      return {
+        title: "Forward",
+        context: recipient ? `To ${recipient}` : "Add recipients",
+        preview: preview || attachmentHint || "No message yet",
+      };
+    }
+
+    const recipient =
+      toRecipients.trim().split(",")[0]?.trim() ||
+      defaultRecipientEmail ||
+      "Add recipient";
+    const preview = truncate(
+      htmlToPlainText(stripReplySignatureHtml(bodyHtml)),
+      80,
+    );
+
+    return {
+      title: "Reply",
+      context: recipient.includes("@") ? `To ${recipient}` : recipient,
+      preview: preview || attachmentHint || "Empty draft",
+    };
+  }, [
+    bodyHtml,
+    composeMode,
+    defaultRecipientEmail,
+    internalNoteText,
+    pendingFiles.length,
+    toRecipients,
+  ]);
 
   const resetDraft = () => {
     setBodyHtml(defaultReplyHtml);
+    setInternalNoteText("");
     setForwardContext(null);
     setToRecipients(defaultRecipientEmail);
     setCcRecipients("");
@@ -192,12 +274,26 @@ export const TicketReplyForm = ({
 
   const collapseComposer = () => {
     setIsExpanded(false);
+    setIsMinimized(false);
     resetDraft();
+  };
+
+  const minimizeComposer = () => {
+    setIsMinimized(true);
+  };
+
+  const expandComposer = () => {
+    setIsMinimized(false);
+    requestAnimationFrame(() => {
+      if (composeMode === "internal") return;
+      editorRef.current?.focus();
+    });
   };
 
   const openComposer = (mode: ComposeMode) => {
     setComposeMode(mode);
     setIsExpanded(true);
+    setIsMinimized(false);
     setCcRecipients("");
     setPendingFiles((current) => {
       current.forEach((entry) => {
@@ -210,6 +306,9 @@ export const TicketReplyForm = ({
       setForwardContext(null);
       setToRecipients(defaultRecipientEmail);
       setBodyHtml(defaultReplyHtml);
+    } else if (mode === "internal") {
+      setForwardContext(null);
+      setInternalNoteText("");
     } else {
       setForwardContext(
         forwardSourceMessage
@@ -230,6 +329,7 @@ export const TicketReplyForm = ({
 
   useEffect(() => {
     setIsExpanded(false);
+    setIsMinimized(false);
     setComposeMode("reply");
     resetDraft();
   }, [ticket.id, defaultRecipientEmail, defaultReplyHtml]);
@@ -243,6 +343,7 @@ export const TicketReplyForm = ({
       .join("\n");
     setComposeMode("reply");
     setIsExpanded(true);
+    setIsMinimized(false);
     setBodyHtml((current) =>
       insertAboveSignatureHtml(current, quotedLines.replace(/\n/g, "<br/>")),
     );
@@ -293,12 +394,14 @@ export const TicketReplyForm = ({
       htmlBody,
       toEmails,
       ccEmails,
+      nextStatus,
     }: {
       isInternalNote: boolean;
       messageBody: string;
       htmlBody?: string;
       toEmails?: string[];
       ccEmails?: string[];
+      nextStatus?: TicketWorkflowStatus;
     }) => {
       const uploadedAttachments: TicketReplyAttachment[] = [];
       for (const pending of pendingFiles) {
@@ -313,10 +416,12 @@ export const TicketReplyForm = ({
         attachments: uploadedAttachments,
         toEmails,
         ccEmails,
+        nextStatus,
       });
     },
     onSuccess: (result) => {
       setIsExpanded(false);
+      setIsMinimized(false);
       resetDraft();
       refresh();
       onSent?.();
@@ -353,16 +458,20 @@ export const TicketReplyForm = ({
     onSettled: () => setSubmittingAs(null),
   });
 
-  const handleSend = (isInternalNote: boolean) => {
+  const handleSend = ({
+    isInternalNote,
+    nextStatus,
+  }: {
+    isInternalNote: boolean;
+    nextStatus?: TicketWorkflowStatus;
+  }) => {
     if (!hasContent) {
       notify("Add a message or attach a file", { type: "warning" });
       return;
     }
 
     if (isInternalNote) {
-      const noteBody =
-        htmlToPlainText(stripReplySignatureHtml(bodyHtml)).trim() ||
-        htmlToPlainText(bodyHtml).trim();
+      const noteBody = internalNoteText.trim();
       if (!noteBody && pendingFiles.length === 0) {
         notify("Add a message or attach a file", { type: "warning" });
         return;
@@ -412,7 +521,7 @@ export const TicketReplyForm = ({
         userNoteHtml,
         signatureHtml: inboxSignature,
       });
-      setSubmittingAs("reply");
+      setSubmittingAs("forward");
       submitMutation.mutate({
         isInternalNote: false,
         messageBody: textBody || "(See attachments)",
@@ -425,13 +534,14 @@ export const TicketReplyForm = ({
 
     const { textBody, htmlBody } =
       buildReplyOutboundBodiesFromHtml(expandedHtml, inboxSignature);
-    setSubmittingAs("reply");
+    setSubmittingAs(nextStatus ?? "open");
     submitMutation.mutate({
       isInternalNote: false,
       messageBody: textBody,
       htmlBody,
       toEmails,
       ccEmails: ccEmails.length ? ccEmails : undefined,
+      nextStatus,
     });
   };
 
@@ -463,6 +573,20 @@ export const TicketReplyForm = ({
       ? "animate-in slide-in-from-bottom-2 duration-200"
       : "animate-in slide-in-from-top-2 duration-200";
 
+  const minimizeButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-8 shrink-0 text-muted-foreground"
+      disabled={isPending}
+      aria-label="Minimize"
+      onClick={minimizeComposer}
+    >
+      <ChevronDown className="size-4" />
+    </Button>
+  );
+
   if (!isExpanded) {
     return (
       <div
@@ -471,6 +595,21 @@ export const TicketReplyForm = ({
           edgeBorderClass,
         )}
       >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-9 shrink-0"
+              aria-label="Internal note"
+              onClick={() => openComposer("internal")}
+            >
+              <Lock className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Internal note</TooltipContent>
+        </Tooltip>
         <Button
           type="button"
           size="sm"
@@ -494,79 +633,207 @@ export const TicketReplyForm = ({
     );
   }
 
-  return (
-    <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
-      <div className="flex items-center justify-between border-b bg-muted/20 px-5 py-2">
-        <p className="text-sm font-medium text-foreground">
-          {composeMode === "forward" ? "Forward" : "Reply"}
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
+  if (isMinimized) {
+    return (
+      <div
+        className={cn(
+          "flex justify-end border-t bg-background px-4 py-2.5 md:px-5",
+          edgeBorderClass,
+        )}
+      >
+        <div className="flex w-full max-w-sm items-stretch overflow-hidden rounded-lg border border-border/80 bg-muted/35 shadow-sm sm:w-auto sm:min-w-[17rem]">
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 px-3"
-            disabled={isPending}
-            onClick={collapseComposer}
+            className="flex min-w-0 flex-1 items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted/55"
+            onClick={expandComposer}
           >
-            Cancel
-          </Button>
+            <ChevronUp className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium leading-snug text-foreground">
+                {composerTabSummary.title}
+                <span className="font-normal text-muted-foreground">
+                  {" "}
+                  · {composerTabSummary.context}
+                </span>
+              </p>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {composerTabSummary.preview}
+              </p>
+            </div>
+          </button>
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 px-2 text-muted-foreground"
-            disabled={isPending}
-            onClick={collapseComposer}
+            size="icon"
+            className="size-auto w-9 shrink-0 rounded-none border-l border-border/60 hover:bg-muted/70"
+            aria-label="Close draft"
+            onClick={(event) => {
+              event.stopPropagation();
+              collapseComposer();
+            }}
           >
-            <ChevronUp className="size-4" />
-            Minimize
+            <X className="size-4" />
           </Button>
         </div>
       </div>
+    );
+  }
 
+  if (composeMode === "internal") {
+    return (
+      <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
+        <div className={cn("overflow-hidden bg-background", slideAnimationClass)}>
+          <div className="flex items-center justify-between border-b bg-muted/10 px-4 py-2 md:px-5">
+            <span className="text-xs text-muted-foreground">Internal note</span>
+            {minimizeButton}
+          </div>
+          {pendingFiles.length > 0 ? (
+            <div className="flex flex-wrap gap-2 border-b px-5 py-2">
+              {pendingFiles.map((pending) => (
+                <div
+                  key={pending.id}
+                  className="relative flex items-center gap-2 border bg-muted/30 px-2.5 py-1.5 text-xs"
+                >
+                  {pending.previewUrl ? (
+                    <img
+                      src={pending.previewUrl}
+                      alt=""
+                      className="size-8 object-cover"
+                    />
+                  ) : (
+                    <Paperclip className="size-3.5 text-muted-foreground" />
+                  )}
+                  <span className="max-w-[160px] truncate">
+                    {pending.file.name}
+                  </span>
+                  <button
+                    type="button"
+                    className="p-0.5 hover:bg-muted"
+                    onClick={() => removePendingFile(pending.id)}
+                    aria-label="Remove attachment"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            onChange={(event) => {
+              const files = event.target.files;
+              if (!files) return;
+              Array.from(files).forEach(addPendingFile);
+              event.target.value = "";
+            }}
+          />
+
+          <Textarea
+            value={internalNoteText}
+            onChange={(event) => setInternalNoteText(event.target.value)}
+            placeholder="Add an internal note for the team…"
+            rows={5}
+            disabled={isPending}
+            className="min-h-32 resize-y rounded-none border-0 px-4 py-3 text-sm shadow-none focus-visible:ring-0 md:px-5"
+            autoFocus
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/15 px-4 py-2.5 md:px-5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9"
+              disabled={isPending}
+              aria-label="Attach files"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip className="size-4" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="h-9 gap-2"
+                disabled={isPending || !hasContent}
+                onClick={() => handleSend({ isInternalNote: true })}
+              >
+                {submittingAs === "internal" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Save className="size-4" />
+                )}
+                Save note
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9"
+                disabled={isPending}
+                onClick={collapseComposer}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
       <div
         className={cn(
           "overflow-hidden bg-background",
           slideAnimationClass,
         )}
       >
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b bg-muted/20 px-5 py-2 text-xs">
-          <span className="shrink-0 text-muted-foreground">From</span>
-          <span className="shrink-0 font-medium text-foreground">{fromAddress}</span>
-          <span className="hidden text-muted-foreground sm:inline">·</span>
-          <label
-            htmlFor={`ticket-reply-to-${ticket.id}`}
-            className="shrink-0 text-muted-foreground"
-          >
-            To
-          </label>
-          <TicketRecipientInput
-            id={`ticket-reply-to-${ticket.id}`}
-            value={toRecipients}
-            onChange={setToRecipients}
-            placeholder={
-              composeMode === "forward"
-                ? "Search contact or type email…"
-                : "Search contact or type email…"
-            }
-            disabled={isPending}
-          />
-          <span className="hidden text-muted-foreground sm:inline">·</span>
-          <label
-            htmlFor={`ticket-reply-cc-${ticket.id}`}
-            className="shrink-0 text-muted-foreground"
-          >
-            Cc
-          </label>
-          <TicketRecipientInput
-            id={`ticket-reply-cc-${ticket.id}`}
-            value={ccRecipients}
-            onChange={setCcRecipients}
-            placeholder="Optional"
-            disabled={isPending}
-            className="min-w-[8rem]"
-          />
+        <div className="border-b bg-muted/10 px-4 py-2.5 md:px-5">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1 grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 text-sm">
+              <span className="text-xs text-muted-foreground">From</span>
+              <span className="min-w-0 truncate font-medium text-foreground">
+                {fromAddress}
+              </span>
+
+              <label
+                htmlFor={`ticket-reply-to-${ticket.id}`}
+                className="self-center text-xs text-muted-foreground"
+              >
+                To
+              </label>
+              <TicketRecipientInput
+                id={`ticket-reply-to-${ticket.id}`}
+                value={toRecipients}
+                onChange={setToRecipients}
+                placeholder="Search contact or type email…"
+                disabled={isPending}
+                className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-none focus-visible:ring-1"
+              />
+
+              <label
+                htmlFor={`ticket-reply-cc-${ticket.id}`}
+                className="self-center text-xs text-muted-foreground"
+              >
+                Cc
+              </label>
+              <TicketRecipientInput
+                id={`ticket-reply-cc-${ticket.id}`}
+                value={ccRecipients}
+                onChange={setCcRecipients}
+                placeholder="Optional"
+                disabled={isPending}
+                className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-none focus-visible:ring-1"
+              />
+            </div>
+            {minimizeButton}
+          </div>
         </div>
 
         {awaitingPaidDelivery ? (
@@ -623,14 +890,11 @@ export const TicketReplyForm = ({
           onEditorChange={setBodyHtml}
           disabled={isPending}
           ticket={ticket}
+          inbox={activeInbox}
           contact={contact}
           company={company}
           onInsertTemplate={handleInsertTemplate}
           onAttachClick={() => fileInputRef.current?.click()}
-          onSendInternal={() => handleSend(true)}
-          onSendReply={() => handleSend(false)}
-          canSend={hasContent}
-          submittingAs={submittingAs}
         />
 
         <TicketReplyRichComposer
@@ -651,7 +915,7 @@ export const TicketReplyForm = ({
         />
 
         {composeMode === "forward" && forwardContext ? (
-          <div className="border-t bg-muted/10 px-5 py-3">
+          <div className="border-t bg-muted/10 px-4 py-3 md:px-5">
             <p className="mb-2 text-xs font-medium text-muted-foreground">
               Forwarded message
             </p>
@@ -663,6 +927,19 @@ export const TicketReplyForm = ({
             </div>
           </div>
         ) : null}
+
+        <TicketReplyComposerActions
+          composeMode={composeMode}
+          actions={replyStatusActions}
+          disabled={isPending}
+          hasContent={hasContent}
+          submittingAs={submittingAs}
+          onCancel={collapseComposer}
+          onSendReply={(nextStatus) =>
+            handleSend({ isInternalNote: false, nextStatus })
+          }
+          onSendForward={() => handleSend({ isInternalNote: false })}
+        />
       </div>
     </div>
   );

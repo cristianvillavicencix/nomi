@@ -4,13 +4,10 @@ import {
   Link2,
   List,
   ListOrdered,
-  Loader2,
-  Lock,
   Paperclip,
-  Send,
 } from "lucide-react";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { Ticket } from "@/modules/types";
+import type { Ticket, TicketInbox } from "@/modules/types";
 import { TicketReplyTemplatePicker } from "@/modules/tickets/TicketReplyTemplatePicker";
 import { TicketReplyVariablePicker } from "@/modules/tickets/TicketReplyVariablePicker";
 import {
@@ -26,14 +23,11 @@ type TicketComposerToolbarProps = {
   onEditorChange: (html: string) => void;
   disabled?: boolean;
   ticket: Ticket;
+  inbox?: TicketInbox | null;
   contact?: Contact | null;
   company?: Company | null;
   onInsertTemplate: (text: string) => void;
   onAttachClick: () => void;
-  onSendInternal: () => void;
-  onSendReply: () => void;
-  canSend: boolean;
-  submittingAs: "reply" | "internal" | null;
 };
 
 export const TicketComposerToolbar = ({
@@ -41,14 +35,11 @@ export const TicketComposerToolbar = ({
   onEditorChange,
   disabled = false,
   ticket,
+  inbox,
   contact,
   company,
   onInsertTemplate,
   onAttachClick,
-  onSendInternal,
-  onSendReply,
-  canSend,
-  submittingAs,
 }: TicketComposerToolbarProps) => {
   const syncEditor = () => {
     const html = sanitizeComposerHtml(editorRef.current?.innerHTML ?? "");
@@ -79,79 +70,44 @@ export const TicketComposerToolbar = ({
     </Button>
   );
 
-  const isPending = submittingAs != null;
-
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/15 px-2 py-1.5">
-      <div className="flex flex-wrap items-center gap-0.5">
-        {toolButton("Bold", <Bold className="size-4" />, () => runCommand("bold"))}
-        {toolButton("Italic", <Italic className="size-4" />, () =>
-          runCommand("italic"),
-        )}
-        {toolButton("Insert link", <Link2 className="size-4" />, () => {
-          insertRichEditorLink(editorRef.current);
+    <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/10 px-2 py-1.5">
+      {toolButton("Bold", <Bold className="size-4" />, () => runCommand("bold"))}
+      {toolButton("Italic", <Italic className="size-4" />, () =>
+        runCommand("italic"),
+      )}
+      {toolButton("Insert link", <Link2 className="size-4" />, () => {
+        insertRichEditorLink(editorRef.current);
+        syncEditor();
+      })}
+      {toolButton("Bullet list", <List className="size-4" />, () =>
+        runCommand("insertUnorderedList"),
+      )}
+      {toolButton("Numbered list", <ListOrdered className="size-4" />, () =>
+        runCommand("insertOrderedList"),
+      )}
+
+      <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
+
+      {toolButton("Attach files", <Paperclip className="size-4" />, onAttachClick)}
+      <TicketReplyVariablePicker
+        ticket={ticket}
+        contact={contact}
+        company={company}
+        disabled={disabled}
+        onInsert={(token) => {
+          insertRichEditorText(editorRef.current, token);
           syncEditor();
-        })}
-        {toolButton("Bullet list", <List className="size-4" />, () =>
-          runCommand("insertUnorderedList"),
-        )}
-        {toolButton("Numbered list", <ListOrdered className="size-4" />, () =>
-          runCommand("insertOrderedList"),
-        )}
-
-        <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
-
-        {toolButton("Attach files", <Paperclip className="size-4" />, onAttachClick)}
-        <TicketReplyVariablePicker
-          ticket={ticket}
-          contact={contact}
-          company={company}
-          disabled={disabled}
-          onInsert={(token) => {
-            insertRichEditorText(editorRef.current, token);
-            syncEditor();
-          }}
-        />
-        <TicketReplyTemplatePicker
-          ticket={ticket}
-          contact={contact}
-          company={company}
-          disabled={disabled}
-          onInsert={onInsertTemplate}
-        />
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled || !canSend}
-          className="h-8 rounded-md px-3"
-          onClick={onSendInternal}
-        >
-          {isPending && submittingAs === "internal" ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Lock className="size-4" />
-          )}
-          Internal note
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={disabled || !canSend}
-          className="h-8 rounded-md px-3"
-          onClick={onSendReply}
-        >
-          {isPending && submittingAs === "reply" ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Send className="size-4" />
-          )}
-          Send reply
-        </Button>
-      </div>
+        }}
+      />
+      <TicketReplyTemplatePicker
+        ticket={ticket}
+        inbox={inbox}
+        contact={contact}
+        company={company}
+        disabled={disabled}
+        onInsert={onInsertTemplate}
+      />
     </div>
   );
 };

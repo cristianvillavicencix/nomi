@@ -764,7 +764,7 @@ export const ClientNotesTab = ({
                   <PipelineUpdateBadge />
                 </div>
               ) : null}
-              <Note note={note} />
+              <Note note={note} resource="contact_notes" />
             </div>
           ))}
         </div>

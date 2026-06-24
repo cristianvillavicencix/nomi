@@ -4,6 +4,10 @@ import { ChevronDown, Lock, Reply } from "lucide-react";
 import type { FileAttachment } from "@/lib/fileAttachments";
 import type { TicketMessage } from "@/modules/types";
 import { EmailDeliveryBadge } from "@/modules/tickets/EmailDeliveryBadge";
+import {
+  TicketInternalNoteActions,
+  TicketInternalNoteEditor,
+} from "@/modules/tickets/TicketInternalNoteEditor";
 import { TicketMessageContent } from "@/modules/tickets/TicketMessageContent";
 import { useTicketReadCutoff } from "@/modules/tickets/TicketReadCutoffContext";
 import { useTicketThreadQuote } from "@/modules/tickets/TicketThreadQuoteContext";
@@ -44,6 +48,7 @@ const TicketThreadMessage = ({
 }) => {
   const readCutoff = useTicketReadCutoff();
   const quoteContext = useTicketThreadQuote();
+  const [isEditingInternal, setIsEditingInternal] = useState(false);
   const inbound = message.direction === "inbound";
   const isInternal = message.direction === "internal";
   const outbound = message.direction === "outbound";
@@ -66,16 +71,22 @@ const TicketThreadMessage = ({
     quoteContext?.quoteMessage(plain);
   };
 
+  useEffect(() => {
+    setIsEditingInternal(false);
+  }, [message.id]);
+
   if (isInternal) {
     const author = senderName || "Team";
+
     return (
-      <article className="mx-auto w-full max-w-3xl border-b border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground last:border-b-0 md:px-5">
-        <button
-          type="button"
-          className="flex w-full items-start gap-2 text-left"
-          onClick={onToggle}
-        >
-          <div className="min-w-0 flex-1">
+      <article className="group/internal mx-auto w-full max-w-3xl border-b border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground last:border-b-0 md:px-5">
+        <div className="flex items-start gap-2">
+          <button
+            type="button"
+            className="min-w-0 flex-1 text-left"
+            onClick={() => !isEditingInternal && onToggle()}
+            disabled={isEditingInternal}
+          >
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-muted-foreground">
               <span className="inline-flex items-center gap-1.5 uppercase tracking-wide text-warning">
                 <Lock className="size-3.5 shrink-0" />
@@ -89,18 +100,37 @@ const TicketThreadMessage = ({
                 {formatTicketMessageTime(message.created_at)}
               </span>
             </div>
-            {collapsed ? (
+            {collapsed && !isEditingInternal ? (
               <p className="mt-1 truncate text-xs text-muted-foreground">{preview}</p>
             ) : null}
-          </div>
-          <ChevronDown
-            className={cn(
-              "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
-              !collapsed && "rotate-180",
-            )}
+          </button>
+          {!isEditingInternal ? (
+            <>
+              <TicketInternalNoteActions
+                onEdit={() => setIsEditingInternal(true)}
+              />
+              <button
+                type="button"
+                className="shrink-0 p-0.5 text-muted-foreground"
+                onClick={onToggle}
+                aria-label={collapsed ? "Expand note" : "Collapse note"}
+              >
+                <ChevronDown
+                  className={cn(
+                    "size-4 transition-transform",
+                    !collapsed && "rotate-180",
+                  )}
+                />
+              </button>
+            </>
+          ) : null}
+        </div>
+        {isEditingInternal ? (
+          <TicketInternalNoteEditor
+            message={message}
+            onDone={() => setIsEditingInternal(false)}
           />
-        </button>
-        {!collapsed ? (
+        ) : !collapsed ? (
           <>
             {toLine || ccLine ? (
               <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">

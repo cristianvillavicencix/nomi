@@ -83,6 +83,24 @@ export const hasReplyContentHtml = (html: string) => {
   return Boolean(plain.trim());
 };
 
+const isEmptyEditorBlockHtml = (html: string) => !htmlToPlainText(html).trim();
+
+const removeEmptyLeadingBlocks = (
+  container: HTMLElement,
+  stopBefore: Element | null,
+) => {
+  let node = container.firstChild;
+  while (node && node !== stopBefore) {
+    if (node.nodeType !== Node.ELEMENT_NODE) break;
+    const element = node as HTMLElement;
+    if (element.matches(TICKET_REPLY_SIGNATURE_SELECTOR)) break;
+    if (!isEmptyEditorBlockHtml(element.outerHTML)) break;
+    const next = node.nextSibling;
+    element.remove();
+    node = next;
+  }
+};
+
 export const insertAboveSignatureHtml = (html: string, text: string) => {
   const insertion = plainTextToEditorHtml(text);
   if (!includesReplySignatureHtml(html)) {
@@ -102,23 +120,15 @@ export const insertAboveSignatureHtml = (html: string, text: string) => {
     return `${insertion}${html}`;
   }
 
+  removeEmptyLeadingBlocks(container, signature);
+
   const wrapper = document.createElement("div");
   wrapper.innerHTML = insertion;
   while (wrapper.firstChild) {
     container.insertBefore(wrapper.firstChild, signature);
   }
 
-  const beforePlain = htmlToPlainText(
-    Array.from(container.childNodes)
-      .filter((node) => node !== signature)
-      .map((node) => (node as HTMLElement).outerHTML ?? "")
-      .join(""),
-  ).trim();
-
-  if (!beforePlain) {
-    container.innerHTML = `${insertion}${signature.outerHTML}`;
-    return container.innerHTML;
-  }
+  removeEmptyLeadingBlocks(container, signature);
 
   return container.innerHTML;
 };

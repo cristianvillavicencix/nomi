@@ -1,5 +1,6 @@
 import type { Identifier } from "ra-core";
 import type { TicketMessage } from "@/modules/types";
+import type { TicketMergeFieldOverrides } from "@/modules/tickets/ticketMergeCompare";
 import type { TicketReplyAttachment } from "@/modules/tickets/uploadTicketAttachment";
 import {
   invokeEdgeFunction,
@@ -15,6 +16,7 @@ export const ticketsProvider = {
     attachments = [],
     toEmails,
     ccEmails,
+    nextStatus,
   }: {
     ticketId: Identifier;
     body: string;
@@ -23,6 +25,7 @@ export const ticketsProvider = {
     attachments?: TicketReplyAttachment[];
     toEmails?: string[];
     ccEmails?: string[];
+    nextStatus?: string;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       message: TicketMessage;
@@ -39,6 +42,7 @@ export const ticketsProvider = {
         attachments,
         to_emails: toEmails,
         ...(ccEmails?.length ? { cc_emails: ccEmails } : {}),
+        ...(nextStatus?.trim() ? { next_status: nextStatus.trim() } : {}),
       },
     });
 
@@ -56,9 +60,11 @@ export const ticketsProvider = {
   async mergeTickets({
     primaryTicketId,
     mergeTicketIds,
+    fieldOverrides,
   }: {
     primaryTicketId: Identifier;
     mergeTicketIds: Identifier[];
+    fieldOverrides?: TicketMergeFieldOverrides;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       primary_ticket_id: number;
@@ -68,6 +74,7 @@ export const ticketsProvider = {
       body: {
         primary_ticket_id: Number(primaryTicketId),
         merge_ticket_ids: mergeTicketIds.map((id) => Number(id)),
+        ...(fieldOverrides ? { field_overrides: fieldOverrides } : {}),
       },
     });
 

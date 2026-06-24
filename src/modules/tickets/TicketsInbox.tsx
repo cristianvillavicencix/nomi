@@ -32,15 +32,9 @@ import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
 import { TicketDetailPanel } from "@/modules/tickets/TicketDetailPanel";
 import { TicketEmptyDetailState } from "@/modules/tickets/TicketEmptyDetailState";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
-import { TicketInboxQueueTabs } from "@/modules/tickets/TicketInboxQueueTabs";
 import { TicketListItem } from "@/modules/tickets/TicketListItem";
 import { TicketStatusBreadcrumb } from "@/modules/tickets/TicketStatusBreadcrumb";
-import {
-  countTicketsByQueue,
-  matchesTicketInboxQueue,
-  matchesTicketSearch,
-  type TicketInboxQueueId,
-} from "@/modules/tickets/ticketInboxQueue";
+import { matchesTicketSearch } from "@/modules/tickets/ticketInboxQueue";
 import {
   DEFAULT_TICKET_INBOX_EMAIL,
   type TicketStatusFilterId,
@@ -103,18 +97,12 @@ export const TicketsInbox = () => {
         </PageActions>
       }
     >
-      <TicketsInboxLayout selectedId={id ?? null} memberId={identity?.id ?? null} />
+      <TicketsInboxLayout selectedId={id ?? null} />
     </List>
   );
 };
 
-const TicketsInboxLayout = ({
-  selectedId,
-  memberId,
-}: {
-  selectedId: string | null;
-  memberId?: string | number | null;
-}) => {
+const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const navigate = useNavigate();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -122,7 +110,6 @@ const TicketsInboxLayout = ({
   const isMobile = useIsMobile();
   const canManage = useMemberCapability("support.tickets.manage");
   const [statusFilter, setStatusFilter] = useState<TicketStatusFilterId>("all");
-  const [queueFilter, setQueueFilter] = useState<TicketInboxQueueId>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
@@ -148,21 +135,7 @@ const TicketsInboxLayout = ({
     () => ticketIds.map((id) => String(id)),
     [ticketIds],
   );
-  const allTicketIdStrings = useMemo(
-    () => allTickets.map((ticket) => String(ticket.id)),
-    [allTickets],
-  );
   const readMap = useTicketInboxReads(ticketIdStrings);
-  const allReadMap = useTicketInboxReads(allTicketIdStrings);
-
-  const queueCounts = useMemo(
-    () =>
-      countTicketsByQueue(allTickets, {
-        memberId,
-        readMap: allReadMap,
-      }),
-    [allTickets, memberId, allReadMap],
-  );
   const companyIds = useMemo(
     () =>
       [
@@ -309,8 +282,9 @@ const TicketsInboxLayout = ({
   }, [members]);
 
   const visibleTickets = useMemo(() => {
+    if (!searchQuery.trim()) return tickets;
+
     return tickets.filter((ticket) => {
-      const ticketId = String(ticket.id);
       const company = ticket.company_id
         ? companyById.get(String(ticket.company_id))
         : null;
@@ -323,30 +297,13 @@ const TicketsInboxLayout = ({
           ticket.requester_name
         : ticket.requester_name;
 
-      if (
-        !matchesTicketInboxQueue(ticket, queueFilter, {
-          memberId,
-          lastReadAt: readMap.get(ticketId) ?? null,
-        })
-      ) {
-        return false;
-      }
-
       return matchesTicketSearch(ticket, searchQuery, {
         email: meta.email,
         phone: meta.phone,
         contactName,
       });
     });
-  }, [
-    tickets,
-    queueFilter,
-    memberId,
-    readMap,
-    companyById,
-    contactById,
-    searchQuery,
-  ]);
+  }, [tickets, companyById, contactById, searchQuery]);
 
   const selectedTickets = useMemo(
     () =>
@@ -451,11 +408,6 @@ const TicketsInboxLayout = ({
               active={statusFilter}
               counts={counts}
               onSelect={(status) => handleStatusFilter(status)}
-            />
-            <TicketInboxQueueTabs
-              activeQueue={queueFilter}
-              counts={queueCounts}
-              onChange={setQueueFilter}
             />
           </div>
 

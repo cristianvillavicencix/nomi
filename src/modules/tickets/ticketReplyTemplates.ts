@@ -6,7 +6,7 @@ import {
   resolveTicketRequesterName,
 } from "@/modules/tickets/ticketRequester";
 
-export type TicketReplyTemplateId = "updated_estimate_es";
+export type TicketReplyTemplateId = string;
 
 export type TicketReplyVariableId =
   | "clientName"
@@ -126,8 +126,12 @@ export const renderTicketReplyTemplate = (
   ticket: Ticket,
   contact?: Contact | null,
   company?: Company | null,
+  extraTemplates: TicketReplyTemplate[] = [],
 ) => {
-  const template = TICKET_REPLY_TEMPLATES.find((row) => row.id === templateId);
+  const template =
+    [...TICKET_REPLY_TEMPLATES, ...extraTemplates].find(
+      (row) => row.id === templateId,
+    ) ?? null;
   if (!template) return "";
   return expandTicketReplyTemplate(template.body, ticket, contact, company);
 };

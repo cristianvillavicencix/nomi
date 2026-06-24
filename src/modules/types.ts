@@ -355,9 +355,17 @@ export type TicketInbox = {
   from_name?: string | null;
   reply_signature_html?: string | null;
   reply_signature_text?: string | null;
+  reply_templates?: TicketInboxReplyTemplate[] | null;
   is_active?: boolean;
   created_at?: string;
 } & Pick<RaRecord, "id">;
+
+export type TicketInboxReplyTemplate = {
+  id: string;
+  label: string;
+  description?: string | null;
+  body: string;
+};
 
 export type DealResource = {
   org_id?: number;

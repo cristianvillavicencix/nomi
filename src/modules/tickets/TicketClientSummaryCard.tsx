@@ -41,16 +41,38 @@ const SummaryRow = ({
   label,
   children,
   className,
+  stacked = false,
 }: {
   label: string;
   children: React.ReactNode;
   className?: string;
-}) => (
-  <div className={cn("grid gap-0.5 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-3", className)}>
-    <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-    <dd className="text-sm text-foreground">{children}</dd>
-  </div>
-);
+  stacked?: boolean;
+}) => {
+  if (stacked) {
+    return (
+      <div className={cn("space-y-1", className)}>
+        <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </dt>
+        <dd className="min-w-0 break-words text-sm leading-snug text-foreground">
+          {children}
+        </dd>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "grid gap-0.5 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-3",
+        className,
+      )}
+    >
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 break-words text-sm text-foreground">{children}</dd>
+    </div>
+  );
+};
 
 export const TicketClientSummaryCard = ({
   ticket,
@@ -58,12 +80,14 @@ export const TicketClientSummaryCard = ({
   contact,
   matchedFromEmail = false,
   className,
+  variant = "default",
 }: {
   ticket: Ticket;
   company?: Company | null;
   contact?: Contact | null;
   matchedFromEmail?: boolean;
   className?: string;
+  variant?: "default" | "panel";
 }) => {
   const meta = getTicketListMeta(ticket, company, contact);
   const companyName = company?.name?.trim();
@@ -87,21 +111,30 @@ export const TicketClientSummaryCard = ({
     return null;
   }
 
+  const stacked = variant === "panel";
+
   return (
     <section
       className={cn(
-        "rounded-lg border bg-muted/25 px-3 py-3 sm:px-4",
+        stacked
+          ? "min-w-0"
+          : "rounded-lg border bg-muted/25 px-3 py-3 sm:px-4",
         className,
       )}
       aria-label="Client summary"
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <p
+        className={cn(
+          "font-semibold uppercase tracking-wide text-muted-foreground",
+          stacked ? "text-[11px]" : "text-xs",
+        )}
+      >
         Client details
       </p>
 
-      <dl className="mt-3 space-y-2.5">
+      <dl className={cn("mt-3", stacked ? "space-y-3.5" : "space-y-2.5")}>
         {companyName ? (
-          <SummaryRow label="Company">
+          <SummaryRow label="Company" stacked={stacked}>
             {company?.id != null ? (
               <Link
                 to={getClientShowPath(company.id)}
@@ -116,7 +149,7 @@ export const TicketClientSummaryCard = ({
         ) : null}
 
         {contactName && contactName !== "—" ? (
-          <SummaryRow label="Contact">
+          <SummaryRow label="Contact" stacked={stacked}>
             <span className="font-medium">{contactName}</span>
             {contactTitle ? (
               <span className="mt-0.5 block text-xs text-muted-foreground">
@@ -127,15 +160,18 @@ export const TicketClientSummaryCard = ({
         ) : null}
 
         {email ? (
-          <SummaryRow label="Email">
-            <a href={`mailto:${email}`} className="text-primary hover:underline">
+          <SummaryRow label="Email" stacked={stacked}>
+            <a
+              href={`mailto:${email}`}
+              className="break-all text-primary hover:underline"
+            >
               {email}
             </a>
           </SummaryRow>
         ) : null}
 
         {phone ? (
-          <SummaryRow label="Phone">
+          <SummaryRow label="Phone" stacked={stacked}>
             <a href={`tel:${phoneRaw}`} className="text-primary hover:underline">
               {phone}
             </a>
@@ -143,18 +179,18 @@ export const TicketClientSummaryCard = ({
         ) : null}
 
         {address ? (
-          <SummaryRow label="Address">
+          <SummaryRow label="Address" stacked={stacked}>
             <span className="text-muted-foreground">{address}</span>
           </SummaryRow>
         ) : null}
 
         {website ? (
-          <SummaryRow label="Website">
+          <SummaryRow label="Website" stacked={stacked}>
             <a
               href={websiteHref(website)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="break-all text-primary hover:underline"
             >
               {websiteLabel(website)}
             </a>
@@ -162,7 +198,14 @@ export const TicketClientSummaryCard = ({
         ) : null}
       </dl>
 
-      <p className="mt-3 border-t border-border/60 pt-2.5 text-xs text-muted-foreground">
+      <p
+        className={cn(
+          "text-xs text-muted-foreground",
+          stacked
+            ? "mt-4 border-t border-border/60 pt-3 leading-relaxed"
+            : "mt-3 border-t border-border/60 pt-2.5",
+        )}
+      >
         {matchedFromEmail
           ? "Matched an existing CRM contact from this sender's email. Save changes to link this ticket."
           : "Replies on this ticket go to the contact email above."}
