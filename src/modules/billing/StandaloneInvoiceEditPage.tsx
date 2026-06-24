@@ -694,7 +694,7 @@ export const StandaloneInvoiceEditPage = ({
             </Badge>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-4">
           <InvoiceDocumentPreview
             organizationName={organizationName}
             organizationWebsite={companyWebsite}
@@ -763,8 +763,8 @@ export const StandaloneInvoiceEditPage = ({
       <div
         className={
           embedded
-            ? "min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-4"
-            : "min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+            ? "min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-4"
+            : "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 md:px-6"
         }
       >
         {showReadOnlyDocument ? (

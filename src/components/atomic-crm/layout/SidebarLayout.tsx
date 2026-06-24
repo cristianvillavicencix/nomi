@@ -42,6 +42,7 @@ import {
   isProposalFocusModePath,
   isProposalPreviewPath,
 } from "@/modules/proposals/proposalFocusMode";
+import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
 
 const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   const { theme, setTheme } = useTheme();
@@ -238,6 +239,10 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
   const isMessagesShell = Boolean(matchMessages);
   const isProposalFocusMode = isProposalFocusModePath(location.pathname);
   const isProposalPreview = isProposalPreviewPath(location.pathname);
+  const isBillingInvoiceShell = isBillingInvoiceWorkspace(
+    location.pathname,
+    location.search,
+  );
   const hideGlobalSearch = isMessagesShell || isProposalFocusMode;
   const hideGlobalHeader = isMessagesShell || isProposalPreview;
   const showDealExplorer =
@@ -275,6 +280,8 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
       ? "gap-2 p-2 pl-1"
       : isProposalPreview
         ? "gap-0 p-0"
+        : isBillingInvoiceShell
+          ? "gap-0 p-0"
         : showDealExplorer
           ? "px-4 pt-0 pb-0"
           : "gap-4 px-4 pt-2 pb-0",
@@ -284,7 +291,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
     <div
       className={cn(
         "min-h-0 min-w-0 flex-1",
-        isMessagesShell || isProposalPreview
+        isMessagesShell || isProposalPreview || isBillingInvoiceShell
           ? "overflow-hidden"
           : "overflow-y-auto overscroll-contain pr-1",
       )}

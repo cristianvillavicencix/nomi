@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useRefresh } from "ra-core";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { Plus } from "lucide-react";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
@@ -8,7 +8,9 @@ import { CreateClientInvoiceDialog } from "@/modules/billing/CreateClientInvoice
 import { InvoiceBillingSummaryCards } from "@/modules/billing/InvoiceBillingSummaryCards";
 import { InvoiceBillingWorkspace } from "@/modules/billing/InvoiceBillingWorkspace";
 import { type InvoiceStatusFilter } from "@/modules/billing/billingDisplayUtils";
+import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 const buildInvoiceFilter = (statusFilter: InvoiceStatusFilter) => {
   if (statusFilter === "all") return {};
@@ -24,7 +26,12 @@ const buildInvoiceFilter = (statusFilter: InvoiceStatusFilter) => {
 export const ClientInvoicesTab = () => {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>("all");
   const [fromProposalOpen, setFromProposalOpen] = useState(false);
+  const location = useLocation();
   const refresh = useRefresh();
+  const hasInvoiceOpen = isBillingInvoiceWorkspace(
+    location.pathname,
+    location.search,
+  );
 
   const listFilter = useMemo(
     () => buildInvoiceFilter(statusFilter),
@@ -47,11 +54,18 @@ export const ClientInvoicesTab = () => {
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <InvoiceBillingSummaryCards
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-      />
+    <div
+      className={cn(
+        "flex min-h-0 flex-col",
+        hasInvoiceOpen ? "h-full flex-1 gap-0 overflow-hidden" : "gap-3",
+      )}
+    >
+      {!hasInvoiceOpen ? (
+        <InvoiceBillingSummaryCards
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+        />
+      ) : null}
 
       <List
         resource="client_invoices"
@@ -61,7 +75,15 @@ export const ClientInvoicesTab = () => {
         sort={{ field: "issue_date", order: "DESC" }}
         filter={listFilter}
         actions={false}
-        pagination={<ListPagination rowsPerPageOptions={[25, 50, 100]} />}
+        contentScrollable={!hasInvoiceOpen}
+        className={hasInvoiceOpen ? "min-h-0 flex-1" : undefined}
+        pagination={
+          hasInvoiceOpen ? (
+            false
+          ) : (
+            <ListPagination rowsPerPageOptions={[25, 50, 100]} />
+          )
+        }
       >
         <InvoiceBillingWorkspace
           statusFilter={statusFilter}

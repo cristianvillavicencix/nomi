@@ -55,7 +55,7 @@ export const InvoiceBillingWorkspace = ({
   const showDetail = !isMobile || hasSelection;
 
   const sidebarHeader = (
-    <div className="flex items-center gap-2 border-b px-3 py-2">
+    <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -107,7 +107,14 @@ export const InvoiceBillingWorkspace = ({
   );
 
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-background">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 overflow-hidden bg-background",
+        hasSelection && !isMobile
+          ? "h-full rounded-none border-0"
+          : "rounded-lg border",
+      )}
+    >
       {showSidebar ? (
         <aside
           className={cn(
