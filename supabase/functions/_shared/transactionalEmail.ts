@@ -24,6 +24,34 @@ export type TransactionalEmailProvider = "twilio";
 
 const DEFAULT_ORGANIZATION_NAME = "Latino Business Support";
 
+/** Twilio Email API rejects these in content.headers (case-insensitive). */
+const TWILIO_EMAIL_FORBIDDEN_HEADERS = new Set([
+  "x-sg-id",
+  "x-sg-eid",
+  "received",
+  "dkim-signature",
+  "content-type",
+  "content-transfer-encoding",
+  "to",
+  "from",
+  "subject",
+  "reply-to",
+  "cc",
+  "bcc",
+]);
+
+const filterTwilioEmailHeaders = (headers?: Record<string, string>) => {
+  if (!headers) return undefined;
+  const filtered: Record<string, string> = {};
+  for (const [name, value] of Object.entries(headers)) {
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+    if (TWILIO_EMAIL_FORBIDDEN_HEADERS.has(name.trim().toLowerCase())) continue;
+    filtered[name] = trimmed;
+  }
+  return Object.keys(filtered).length > 0 ? filtered : undefined;
+};
+
 const parseEmailAddress = (value: string) => {
   const trimmed = value.trim();
   const angle = trimmed.match(/^(.+?)\s*<([^>]+)>$/);
@@ -193,6 +221,11 @@ async function sendViaTwilioEmail(params: {
     }));
   }
 
+  const emailHeaders = filterTwilioEmailHeaders(params.headers);
+  if (emailHeaders) {
+    content.headers = emailHeaders;
+  }
+
   const dedupeAddresses = (addresses: string[]) => {
     const seen = new Set<string>();
     return addresses
@@ -219,10 +252,6 @@ async function sendViaTwilioEmail(params: {
     to: recipients.map((address) => ({ address })),
     content,
   };
-
-  if (params.headers && Object.keys(params.headers).length > 0) {
-    body.headers = params.headers;
-  }
 
   // Twilio Email API (comms.twilio.com/v1/Emails) rejects replyTo — contact info stays in the body.
 

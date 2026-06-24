@@ -256,6 +256,8 @@ Deno.serve(
           headers: threadHeaders,
         });
 
+        const emailDeliveryStatus = emailResult.skipped ? "skipped" : "sent";
+
         const { data: message, error: messageError } = await supabaseAdmin
           .from("ticket_messages")
           .insert({
@@ -270,6 +272,7 @@ Deno.serve(
             cc_emails: ccEmails,
             external_message_id: outboundMessageId,
             attachments,
+            email_delivery_status: emailDeliveryStatus,
             created_at: now,
           })
           .select("*")

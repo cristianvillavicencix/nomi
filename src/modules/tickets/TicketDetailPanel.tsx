@@ -1,37 +1,39 @@
-import { useEffect, useRef, useState } from "react";
-import { useGetList, useGetOne, useUpdate } from "ra-core";
-import { Link } from "react-router";
-import { ReferenceManyField } from "@/components/admin/reference-many-field";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useGetList,
+  useGetOne,
+  useRefresh,
+  useUpdate,
+} from "ra-core";
+import { useNavigate } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { Deal, Ticket, TicketMessage } from "@/modules/types";
-import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
-import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
-import { resolveTicketRequesterName } from "@/modules/tickets/ticketRequester";
+import type { Deal, OrganizationMember, Ticket } from "@/modules/types";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { TicketCompactHeader } from "@/modules/tickets/TicketCompactHeader";
+import {
+  TicketContextPanel,
+  TicketContextSheet,
+} from "@/modules/tickets/TicketContextPanel";
 import { TicketReplyForm } from "@/modules/tickets/TicketReplyForm";
-import { TicketBillingSidePanel } from "@/modules/tickets/TicketBillingSidePanel";
-import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
 import { TicketThread } from "@/modules/tickets/TicketThread";
 import { TicketReadCutoffContext } from "@/modules/tickets/TicketReadCutoffContext";
+import { TicketThreadQuoteProvider } from "@/modules/tickets/TicketThreadQuoteContext";
 import { useAutoLinkTicketRequester } from "@/modules/tickets/useAutoLinkTicketRequester";
 import { useTicketMemberRead } from "@/modules/tickets/useTicketInboxReads";
-import { getClientShowPath } from "@/app/routing";
-
-import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
-
-const websiteHref = (value: string) =>
-  /^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/\//, "")}`;
-
-const websiteLabel = (value: string) => {
-  const label = value.replace(/^https?:\/\//i, "").replace(/\/$/, "");
-  return label ? `${label}/` : "";
-};
+import { useTicketThreadMessages } from "@/modules/tickets/useTicketThreadMessages";
 
 export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const refresh = useRefresh();
+  const canManage = useMemberCapability("support.tickets.manage");
   const { lastReadAt, isLoading: isReadLoading, markRead } =
     useTicketMemberRead(ticketId);
   const [readCutoff, setReadCutoff] = useState<string | null | undefined>(
     undefined,
   );
+  const [quoteText, setQuoteText] = useState<string | null>(null);
   const markedTicketRef = useRef<string | null>(null);
   const openedStatusRef = useRef<string | null>(null);
   const [update] = useUpdate();
@@ -66,6 +68,24 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
     },
     { enabled: Boolean(ticket?.id) },
   );
+  const { data: members = [] } = useGetList<OrganizationMember>(
+    "organization_members",
+    {
+      pagination: { page: 1, perPage: 200 },
+      sort: { field: "first_name", order: "ASC" },
+    },
+  );
+
+  const {
+    messages,
+    isPending: messagesPending,
+    threadEndRef,
+    scrollToBottom,
+  } = useTicketThreadMessages(ticket?.id);
+
+  const handleQuote = useCallback((plainText: string) => {
+    setQuoteText(plainText);
+  }, []);
 
   useEffect(() => {
     if (isReadLoading) return;
@@ -103,147 +123,83 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
         {ticket.merge_note ? (
           <p className="max-w-md text-xs text-muted-foreground">{ticket.merge_note}</p>
         ) : null}
-        <Link
-          to={`/tickets/${ticket.merged_into_ticket_id}/show`}
+        <button
+          type="button"
           className="text-sm font-medium text-primary hover:underline"
+          onClick={() =>
+            navigate(`/tickets/${ticket.merged_into_ticket_id}/show`)
+          }
         >
           Open primary ticket
-        </Link>
+        </button>
       </div>
     );
   }
 
-  const meta = getTicketListMeta(ticket, company, contact);
-  const contactName = resolveTicketRequesterName(ticket, contact, company);
-  const companyName = company?.name?.trim() || null;
-  const displayPhone = meta.phone
-    ? formatUsPhoneDisplayFromAny(meta.phone)
-    : null;
-
   return (
-    <div className="flex h-full min-h-0 overflow-hidden bg-background">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="shrink-0 border-b bg-background px-5 py-3.5">
-          <div className="min-w-0 space-y-1.5">
-            <p className="flex min-w-0 flex-wrap items-baseline gap-y-0.5 leading-snug">
-              <TicketSubjectField
-                key={`subject-${ticket.id}`}
-                ticket={ticket}
-                className="text-lg font-semibold tracking-tight text-foreground"
-                inputClassName="text-lg font-semibold"
+    <TicketThreadQuoteProvider onQuote={handleQuote}>
+      <div className="flex h-full min-h-0 overflow-hidden bg-background">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <TicketCompactHeader
+            ticket={ticket}
+            company={company}
+            contact={contact}
+            deal={deal}
+            members={members}
+            canManage={canManage}
+            onUpdated={refresh}
+            showBack={isMobile}
+            onBack={() => navigate("/tickets")}
+            contextAction={
+              isMobile ? (
+                <TicketContextSheet
+                  ticket={ticket}
+                  company={company}
+                  contact={contact}
+                />
+              ) : null
+            }
+          />
+
+          {mergedChildren.length > 0 ? (
+            <p className="shrink-0 border-b border-info/30 bg-info/10 px-4 py-2 text-xs text-info md:px-5">
+              Includes merged tickets:{" "}
+              {mergedChildren
+                .map((child) => `#${child.id} (${child.subject})`)
+                .join(", ")}
+            </p>
+          ) : null}
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 md:px-5">
+            <TicketReadCutoffContext.Provider value={readCutoff}>
+              <TicketThread
+                messages={messages}
+                isPending={messagesPending}
+                threadEndRef={threadEndRef}
               />
-              {companyName && ticket.company_id ? (
-                <>
-                  <TicketMetaSep tone="soft" />
-                  <Link
-                    to={getClientShowPath(ticket.company_id)}
-                    className="text-[15px] text-muted-foreground transition-colors hover:text-foreground hover:underline"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {companyName}
-                  </Link>
-                </>
-              ) : null}
-              {contactName ? (
-                <>
-                  <TicketMetaSep tone="soft" />
-                  <span className="text-[15px] text-muted-foreground">
-                    {contactName}
-                  </span>
-                </>
-              ) : null}
-            </p>
+            </TicketReadCutoffContext.Provider>
+          </div>
 
-            <p className="flex min-w-0 flex-wrap items-baseline gap-y-0.5 text-[15px] leading-snug text-muted-foreground">
-              <span>Ticket #{ticket.id}</span>
-              {meta.email ? (
-                <>
-                  <TicketMetaSep tone="soft" />
-                  <a
-                    href={`mailto:${meta.email}`}
-                    className="transition-colors hover:text-foreground hover:underline"
-                  >
-                    {meta.email}
-                  </a>
-                </>
-              ) : null}
-              {displayPhone ? (
-                <>
-                  <TicketMetaSep tone="soft" />
-                  <a
-                    href={`tel:${meta.phone?.replace(/\s+/g, "") ?? ""}`}
-                    className="transition-colors hover:text-foreground hover:underline"
-                  >
-                    {displayPhone}
-                  </a>
-                </>
-              ) : null}
-              {meta.website ? (
-                <>
-                  <TicketMetaSep tone="soft" />
-                  <a
-                    href={websiteHref(meta.website)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="transition-colors hover:text-foreground hover:underline"
-                  >
-                    {websiteLabel(meta.website)}
-                  </a>
-                </>
-              ) : null}
-            </p>
-
-            {ticket.deal_id ? (
-              <div className="pt-1 text-sm">
-                <Link
-                  to={`/deals/${ticket.deal_id}/show`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  View deal
-                </Link>
-                {deal?.name ? (
-                  <span className="ml-1.5 text-muted-foreground">
-                    ({deal.name})
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-
-            {mergedChildren.length > 0 ? (
-              <p className="border border-info/30 bg-info/10 px-3 py-2 text-xs text-info">
-                Includes merged tickets:{" "}
-                {mergedChildren
-                  .map((child) => `#${child.id} (${child.subject})`)
-                  .join(", ")}
-              </p>
-            ) : null}
+          <div className="shrink-0 bg-background">
+            <TicketReplyForm
+              key={`reply-${ticket.id}`}
+              ticket={ticket}
+              placement="bottom"
+              quoteText={quoteText}
+              onQuoteApplied={() => setQuoteText(null)}
+              onSent={() => scrollToBottom()}
+            />
           </div>
         </div>
 
-        <div className="shrink-0 bg-background">
-          <TicketReplyForm key={`reply-${ticket.id}`} ticket={ticket} />
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
-          <TicketReadCutoffContext.Provider value={readCutoff}>
-            <ReferenceManyField<Ticket, TicketMessage>
-              key={`messages-${ticket.id}`}
-              reference="ticket_messages"
-              target="ticket_id"
-              record={ticket}
-              sort={{ field: "created_at", order: "DESC" }}
-            >
-              <TicketThread />
-            </ReferenceManyField>
-          </TicketReadCutoffContext.Provider>
-        </div>
+        {!isMobile ? (
+          <TicketContextPanel
+            ticket={ticket}
+            company={company}
+            contact={contact}
+          />
+        ) : null}
       </div>
-
-      <TicketBillingSidePanel
-        ticket={ticket}
-        company={company}
-        contact={contact}
-      />
-    </div>
+    </TicketThreadQuoteProvider>
   );
 };

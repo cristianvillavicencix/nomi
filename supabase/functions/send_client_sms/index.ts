@@ -33,6 +33,25 @@ type SendBody = {
   external_phone?: string;
 };
 
+const normalizeTwilioDeliveryStatus = (raw: string | undefined) => {
+  const value = raw?.trim().toLowerCase();
+  if (!value) return null;
+  switch (value) {
+    case "queued":
+    case "sending":
+    case "sent":
+    case "delivered":
+    case "undelivered":
+    case "failed":
+    case "canceled":
+      return value;
+    case "accepted":
+      return "queued";
+    default:
+      return null;
+  }
+};
+
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {
     if (req.method !== "POST") {
@@ -292,6 +311,7 @@ Deno.serve((req: Request) =>
         }
 
         let externalId: string | null = null;
+        let initialDeliveryStatus: string | null = null;
 
         if (!isInternalNote) {
           if (!externalPhone) {
@@ -323,6 +343,9 @@ Deno.serve((req: Request) =>
             mediaUrls: twilioMediaUrls,
           });
           externalId = twilioResponse.sid ?? null;
+          initialDeliveryStatus = externalId
+            ? normalizeTwilioDeliveryStatus(twilioResponse.status) ?? "queued"
+            : null;
         }
 
         if (!hasExistingConversation) {
@@ -355,6 +378,7 @@ Deno.serve((req: Request) =>
             mediaUrls,
             isInternalNote,
             replyToMessageId,
+            smsDeliveryStatus: initialDeliveryStatus,
           });
         } catch (error) {
           await deleteConversationIfEmpty(conversationId);

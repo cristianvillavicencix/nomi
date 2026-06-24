@@ -153,6 +153,8 @@ export async function insertSmsMessage(params: {
   mediaUrls?: string[] | null;
   isInternalNote?: boolean;
   replyToMessageId?: number | null;
+  smsDeliveryStatus?: string | null;
+  smsErrorCode?: string | null;
 }) {
   const mediaUrls =
     params.mediaUrls?.filter((entry) => entry?.trim()) ??
@@ -171,6 +173,8 @@ export async function insertSmsMessage(params: {
       media_urls: mediaUrls,
       is_internal_note: params.isInternalNote === true,
       reply_to_message_id: params.replyToMessageId ?? null,
+      sms_delivery_status: params.smsDeliveryStatus ?? null,
+      sms_error_code: params.smsErrorCode ?? null,
     })
     .select("*")
     .single();

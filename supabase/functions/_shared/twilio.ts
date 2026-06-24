@@ -1,3 +1,11 @@
+const getTwilioSmsStatusCallbackUrl = () => {
+  const explicit = Deno.env.get("TWILIO_SMS_STATUS_CALLBACK_URL")?.trim();
+  if (explicit) return explicit;
+  const base = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  if (!base) return null;
+  return `${base}/functions/v1/twilio_sms_status`;
+};
+
 export async function sendTwilioSms(params: {
   accountSid: string;
   authToken: string;
@@ -5,6 +13,7 @@ export async function sendTwilioSms(params: {
   to: string;
   body: string;
   mediaUrls?: string[];
+  statusCallback?: string | null;
 }) {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${params.accountSid}/Messages.json`;
   const credentials = btoa(`${params.accountSid}:${params.authToken}`);
@@ -14,6 +23,11 @@ export async function sendTwilioSms(params: {
     From: params.from,
     Body: params.body.trim() || " ",
   });
+
+  const statusCallback = params.statusCallback ?? getTwilioSmsStatusCallbackUrl();
+  if (statusCallback) {
+    form.append("StatusCallback", statusCallback);
+  }
 
   for (const mediaUrl of params.mediaUrls ?? []) {
     if (mediaUrl.trim()) {
@@ -99,6 +113,35 @@ export async function validateTwilioSignatureForRequest(
   }
 
   console.error("twilio_inbound_sms invalid signature", {
+    triedUrls: [...new Set(candidates)],
+  });
+  return false;
+}
+
+export async function validateTwilioSignatureForStatusCallback(
+  authToken: string,
+  signature: string | null,
+  req: Request,
+  params: Record<string, string>,
+) {
+  if (!signature) return false;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  const requestUrl = new URL(req.url);
+  const candidates = [
+    Deno.env.get("TWILIO_SMS_STATUS_CALLBACK_URL")?.trim(),
+    supabaseUrl ? `${supabaseUrl}/functions/v1/twilio_sms_status` : null,
+    `${requestUrl.origin}${requestUrl.pathname}`,
+    req.url.split("?")[0],
+  ].filter((value): value is string => Boolean(value));
+
+  for (const url of [...new Set(candidates)]) {
+    if (await validateTwilioSignature(authToken, signature, url, params)) {
+      return true;
+    }
+  }
+
+  console.error("twilio_sms_status invalid signature", {
     triedUrls: [...new Set(candidates)],
   });
   return false;

@@ -182,12 +182,20 @@ type TicketBillingSidePanelProps = {
   ticket: Ticket;
   company?: Company | null;
   contact?: Contact | null;
+  /** When true, panel is embedded in TicketContextPanel (no collapse rail). */
+  embedMode?: boolean;
+  /** Restrict embedded panel to invoice or SMS tools only. */
+  embedView?: "invoice" | "sms";
+  className?: string;
 };
 
 export const TicketBillingSidePanel = ({
   ticket,
   company,
   contact,
+  embedMode = false,
+  embedView,
+  className,
 }: TicketBillingSidePanelProps) => {
   const notify = useNotify();
   const refresh = useRefresh();
@@ -199,10 +207,13 @@ export const TicketBillingSidePanel = ({
   const [deleteDeliverable] = useDelete();
 
   const [collapsed, setCollapsed] = useState(() => {
+    if (embedMode) return false;
     if (typeof sessionStorage === "undefined") return true;
     return sessionStorage.getItem(STORAGE_KEY) !== "false";
   });
-  const [activeView, setActiveView] = useState<ToolsPanelView>("invoice");
+  const [activeView, setActiveView] = useState<ToolsPanelView>(
+    embedView === "sms" ? "sms" : "invoice",
+  );
 
   const [pendingUploads, setPendingUploads] = useState<File[]>([]);
   const [billingDialogOpen, setBillingDialogOpen] = useState(false);
@@ -229,6 +240,12 @@ export const TicketBillingSidePanel = ({
     setActiveView(view);
     setCollapsed(false);
   };
+
+  useEffect(() => {
+    if (!embedView) return;
+    setActiveView(embedView === "sms" ? "sms" : "invoice");
+    setCollapsed(false);
+  }, [embedView]);
 
   const openInvoiceDialog = (
     mode: TicketInvoiceViewMode,
@@ -1140,7 +1157,7 @@ export const TicketBillingSidePanel = ({
     </>
   );
 
-  if (collapsed) {
+  if (collapsed && !embedMode) {
     return (
       <>
         <aside className="flex w-11 shrink-0 flex-col self-stretch border-l bg-background">
@@ -1200,9 +1217,23 @@ export const TicketBillingSidePanel = ({
       activeView === view && "bg-muted text-foreground",
     );
 
+  const resolvedView = embedView
+    ? embedView === "sms"
+      ? "sms"
+      : "invoice"
+    : activeView;
+
   return (
     <>
-      <aside className="flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch border-l bg-background">
+      <aside
+        className={cn(
+          embedMode
+            ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-background"
+            : "flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch border-l bg-background",
+          className,
+        )}
+      >
+        {!embedMode ? (
         <div className="flex items-center gap-1 border-b px-2 py-2">
           <Button
             type="button"
@@ -1263,27 +1294,51 @@ export const TicketBillingSidePanel = ({
             <TooltipContent side="left">Hide panel</TooltipContent>
           </Tooltip>
         </div>
+        ) : embedView === "invoice" && showNewInvoiceButton ? (
+          <div className="flex justify-end border-b px-2 py-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8 shrink-0 rounded-none"
+                  disabled={newInvoiceMutation.isPending}
+                  aria-label="New invoice"
+                  onClick={handleNewInvoiceClick}
+                >
+                  {newInvoiceMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="size-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">New invoice</TooltipContent>
+            </Tooltip>
+          </div>
+        ) : null}
 
         <div
           className={cn(
             "flex min-h-0 flex-1 flex-col overflow-hidden",
-            activeView === "invoice" &&
+            resolvedView === "invoice" &&
               allowsDeliverableUpload &&
               dragActive &&
               "ring-2 ring-inset ring-primary/30",
           )}
           onDragOver={
-            activeView === "invoice" && allowsDeliverableUpload
+            resolvedView === "invoice" && allowsDeliverableUpload
               ? handleDragOver
               : undefined
           }
           onDragLeave={
-            activeView === "invoice" && allowsDeliverableUpload
+            resolvedView === "invoice" && allowsDeliverableUpload
               ? handleDragLeave
               : undefined
           }
           onDrop={
-            activeView === "invoice" && allowsDeliverableUpload
+            resolvedView === "invoice" && allowsDeliverableUpload
               ? handleDrop
               : undefined
           }
@@ -1296,7 +1351,7 @@ export const TicketBillingSidePanel = ({
             onChange={(event) => void queueDeliverableUploads(event.target.files)}
           />
 
-          {activeView === "invoice" ? (
+          {resolvedView === "invoice" ? (
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
               {renderInvoiceSection()}
             </div>

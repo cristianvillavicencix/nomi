@@ -61,7 +61,19 @@ type ForwardContext = {
   message: ForwardMessage;
 };
 
-export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
+export const TicketReplyForm = ({
+  ticket,
+  placement = "bottom",
+  quoteText,
+  onQuoteApplied,
+  onSent,
+}: {
+  ticket: Ticket;
+  placement?: "top" | "bottom";
+  quoteText?: string | null;
+  onQuoteApplied?: () => void;
+  onSent?: () => void;
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [composeMode, setComposeMode] = useState<ComposeMode>("reply");
   const [forwardContext, setForwardContext] = useState<ForwardContext | null>(
@@ -222,6 +234,22 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
     resetDraft();
   }, [ticket.id, defaultRecipientEmail, defaultReplyHtml]);
 
+  useEffect(() => {
+    if (!quoteText?.trim()) return;
+    const quotedLines = quoteText
+      .trim()
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    setComposeMode("reply");
+    setIsExpanded(true);
+    setBodyHtml((current) =>
+      insertAboveSignatureHtml(current, quotedLines.replace(/\n/g, "<br/>")),
+    );
+    onQuoteApplied?.();
+    requestAnimationFrame(() => editorRef.current?.focus());
+  }, [quoteText, onQuoteApplied]);
+
   const addPendingFile = (file: File) => {
     if (pendingFiles.length >= MAX_TICKET_ATTACHMENTS) {
       notify(`You can attach up to ${MAX_TICKET_ATTACHMENTS} files`, {
@@ -291,6 +319,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
       setIsExpanded(false);
       resetDraft();
       refresh();
+      onSent?.();
       if (result.is_internal_note) {
         notify("Internal note added", { type: "success" });
         return;
@@ -428,10 +457,20 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
   };
 
   const isPending = submitMutation.isPending;
+  const edgeBorderClass = placement === "bottom" ? "border-t" : "border-b";
+  const slideAnimationClass =
+    placement === "bottom"
+      ? "animate-in slide-in-from-bottom-2 duration-200"
+      : "animate-in slide-in-from-top-2 duration-200";
 
   if (!isExpanded) {
     return (
-      <div className="flex items-center justify-end gap-2 border-b bg-background px-5 py-2.5">
+      <div
+        className={cn(
+          "flex items-center justify-end gap-2 bg-background px-5 py-2.5",
+          edgeBorderClass,
+        )}
+      >
         <Button
           type="button"
           size="sm"
@@ -456,7 +495,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
   }
 
   return (
-    <div className="shrink-0 border-b bg-background">
+    <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
       <div className="flex items-center justify-between border-b bg-muted/20 px-5 py-2">
         <p className="text-sm font-medium text-foreground">
           {composeMode === "forward" ? "Forward" : "Reply"}
@@ -489,7 +528,7 @@ export const TicketReplyForm = ({ ticket }: { ticket: Ticket }) => {
       <div
         className={cn(
           "overflow-hidden bg-background",
-          "animate-in slide-in-from-top-2 duration-200",
+          slideAnimationClass,
         )}
       >
         <div className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b bg-muted/20 px-5 py-2 text-xs">

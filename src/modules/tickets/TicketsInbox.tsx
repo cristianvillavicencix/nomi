@@ -30,9 +30,17 @@ import { useMemberCapability } from "@/components/atomic-crm/providers/commons/u
 import { CreateTicketButton } from "@/modules/tickets/CreateTicketButton";
 import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
 import { TicketDetailPanel } from "@/modules/tickets/TicketDetailPanel";
+import { TicketEmptyDetailState } from "@/modules/tickets/TicketEmptyDetailState";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
+import { TicketInboxQueueTabs } from "@/modules/tickets/TicketInboxQueueTabs";
 import { TicketListItem } from "@/modules/tickets/TicketListItem";
 import { TicketStatusBreadcrumb } from "@/modules/tickets/TicketStatusBreadcrumb";
+import {
+  countTicketsByQueue,
+  matchesTicketInboxQueue,
+  matchesTicketSearch,
+  type TicketInboxQueueId,
+} from "@/modules/tickets/ticketInboxQueue";
 import {
   DEFAULT_TICKET_INBOX_EMAIL,
   type TicketStatusFilterId,
@@ -41,7 +49,9 @@ import {
   buildTicketInboxStatusFilter,
   countTicketsByInboxFilter,
 } from "@/modules/tickets/ticketStatusWorkflow";
+import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
 import { useTicketListAttachments } from "@/modules/tickets/useTicketListAttachments";
+import { useTicketListMessagePreviews } from "@/modules/tickets/useTicketListMessagePreviews";
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
 import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
 import type { Company, Contact } from "@/components/atomic-crm/types";
@@ -93,12 +103,18 @@ export const TicketsInbox = () => {
         </PageActions>
       }
     >
-      <TicketsInboxLayout selectedId={id ?? null} />
+      <TicketsInboxLayout selectedId={id ?? null} memberId={identity?.id ?? null} />
     </List>
   );
 };
 
-const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
+const TicketsInboxLayout = ({
+  selectedId,
+  memberId,
+}: {
+  selectedId: string | null;
+  memberId?: string | number | null;
+}) => {
   const navigate = useNavigate();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -106,6 +122,8 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const isMobile = useIsMobile();
   const canManage = useMemberCapability("support.tickets.manage");
   const [statusFilter, setStatusFilter] = useState<TicketStatusFilterId>("all");
+  const [queueFilter, setQueueFilter] = useState<TicketInboxQueueId>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
   const [ticketToEdit, setTicketToEdit] = useState<Ticket | null>(null);
@@ -130,7 +148,21 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
     () => ticketIds.map((id) => String(id)),
     [ticketIds],
   );
+  const allTicketIdStrings = useMemo(
+    () => allTickets.map((ticket) => String(ticket.id)),
+    [allTickets],
+  );
   const readMap = useTicketInboxReads(ticketIdStrings);
+  const allReadMap = useTicketInboxReads(allTicketIdStrings);
+
+  const queueCounts = useMemo(
+    () =>
+      countTicketsByQueue(allTickets, {
+        memberId,
+        readMap: allReadMap,
+      }),
+    [allTickets, memberId, allReadMap],
+  );
   const companyIds = useMemo(
     () =>
       [
@@ -154,6 +186,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
     [tickets],
   );
   const attachmentMap = useTicketListAttachments(ticketIds);
+  const messagePreviewMap = useTicketListMessagePreviews(ticketIds);
   const hasAttachmentsMap = useMemo(() => {
     const map = new Map<string, boolean>();
     for (const [ticketId, files] of attachmentMap.entries()) {
@@ -275,19 +308,63 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
     return map;
   }, [members]);
 
+  const visibleTickets = useMemo(() => {
+    return tickets.filter((ticket) => {
+      const ticketId = String(ticket.id);
+      const company = ticket.company_id
+        ? companyById.get(String(ticket.company_id))
+        : null;
+      const contact = ticket.contact_id
+        ? contactById.get(String(ticket.contact_id))
+        : null;
+      const meta = getTicketListMeta(ticket, company, contact);
+      const contactName = contact
+        ? `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+          ticket.requester_name
+        : ticket.requester_name;
+
+      if (
+        !matchesTicketInboxQueue(ticket, queueFilter, {
+          memberId,
+          lastReadAt: readMap.get(ticketId) ?? null,
+        })
+      ) {
+        return false;
+      }
+
+      return matchesTicketSearch(ticket, searchQuery, {
+        email: meta.email,
+        phone: meta.phone,
+        contactName,
+      });
+    });
+  }, [
+    tickets,
+    queueFilter,
+    memberId,
+    readMap,
+    companyById,
+    contactById,
+    searchQuery,
+  ]);
+
   const selectedTickets = useMemo(
     () =>
-      tickets.filter((ticket) => selectedTicketIds.includes(String(ticket.id))),
-    [tickets, selectedTicketIds],
+      visibleTickets.filter((ticket) =>
+        selectedTicketIds.includes(String(ticket.id)),
+      ),
+    [visibleTickets, selectedTicketIds],
   );
 
   const allVisibleSelected =
-    tickets.length > 0 &&
-    tickets.every((ticket) => selectedTicketIds.includes(String(ticket.id)));
+    visibleTickets.length > 0 &&
+    visibleTickets.every((ticket) =>
+      selectedTicketIds.includes(String(ticket.id)),
+    );
 
   const toggleAllVisible = (checked: boolean) => {
     if (checked) {
-      setSelectedTicketIds(tickets.map((ticket) => String(ticket.id)));
+      setSelectedTicketIds(visibleTickets.map((ticket) => String(ticket.id)));
       return;
     }
     setSelectedTicketIds([]);
@@ -308,6 +385,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   };
 
   const handleSearch = (value: string) => {
+    setSearchQuery(value);
     const next = { ...filterValues };
     if (value.trim()) {
       next["subject@ilike"] = `%${value.trim()}%`;
@@ -374,12 +452,19 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
               counts={counts}
               onSelect={(status) => handleStatusFilter(status)}
             />
+            <TicketInboxQueueTabs
+              activeQueue={queueFilter}
+              counts={queueCounts}
+              onChange={setQueueFilter}
+            />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            {!tickets.length ? (
+            {!visibleTickets.length ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No tickets in this inbox yet.
+                {tickets.length
+                  ? "No tickets match this filter."
+                  : "No tickets in this inbox yet."}
               </p>
             ) : (
               <>
@@ -401,7 +486,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
                   </div>
                 ) : null}
                 <ul>
-                  {tickets.map((ticket) => {
+                  {visibleTickets.map((ticket) => {
                     const ticketId = String(ticket.id);
                     return (
                       <TicketListItem
@@ -431,6 +516,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
                           hasAttachmentsMap.get(ticketId) ?? false
                         }
                         invoices={invoicesByTicketId.get(ticketId) ?? []}
+                        messagePreview={messagePreviewMap.get(ticketId)}
                         onSelect={() => navigate(`/tickets/${ticket.id}/show`)}
                         onToggleBulkSelect={(checked) =>
                           toggleTicketSelection(ticketId, checked)
@@ -458,10 +544,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
           {selectedId ? (
             <TicketDetailPanel key={selectedId} ticketId={selectedId} />
           ) : (
-            <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
-              Select a ticket to read the thread and reply from{" "}
-              {DEFAULT_TICKET_INBOX_EMAIL}.
-            </div>
+            <TicketEmptyDetailState />
           )}
         </div>
       </div>

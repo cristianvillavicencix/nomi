@@ -12,6 +12,16 @@ import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
 import { TicketListInvoiceBadges } from "@/modules/tickets/TicketListInvoiceBadges";
 import { ticketHasUnpaidInvoice } from "@/modules/tickets/ticketListInvoiceBadgeUtils";
+import {
+  isElevatedTicketPriority,
+  ticketPriorityClassName,
+  ticketPriorityLabel,
+} from "@/modules/tickets/ticketPriorityUi";
+import {
+  getTicketWaitingDurationLabel,
+  ticketWaitingSlaClassName,
+} from "@/modules/tickets/ticketSlaUtils";
+import { Badge } from "@/components/ui/badge";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { ClientInvoice, OrganizationMember, Ticket } from "@/modules/types";
@@ -29,6 +39,7 @@ type TicketListItemProps = {
   members?: OrganizationMember[];
   hasAttachments?: boolean;
   invoices?: ClientInvoice[];
+  messagePreview?: string | null;
   onSelect: () => void;
   onToggleBulkSelect: (checked: boolean) => void;
   onDelete?: (ticket: Ticket) => void;
@@ -49,6 +60,7 @@ export const TicketListItem = ({
   members = [],
   hasAttachments = false,
   invoices = [],
+  messagePreview,
   onSelect,
   onToggleBulkSelect,
   onDelete,
@@ -60,6 +72,11 @@ export const TicketListItem = ({
   const meta = getTicketListMeta(ticket, company, contact);
   const isUnread = !selected && isTicketUnread(ticket, lastReadAt);
   const awaitingPayment = ticketHasUnpaidInvoice(ticket, invoices);
+  const priorityLabel = ticketPriorityLabel(ticket.priority);
+  const waitingLabel = getTicketWaitingDurationLabel(
+    ticket.status,
+    ticket.updated_at,
+  );
 
   const contactName = (() => {
     if (contact) {
@@ -123,11 +140,42 @@ export const TicketListItem = ({
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-1.5">
+                  {isUnread ? (
+                    <span
+                      className="mt-1.5 size-2 shrink-0 rounded-full bg-info"
+                      aria-label="Unread"
+                    />
+                  ) : null}
                   <TicketSubjectField
                     ticket={ticket}
                     editable={false}
                     className="min-w-0 flex-1 text-sm font-semibold leading-snug"
                   />
+                  {priorityLabel && isElevatedTicketPriority(ticket) ? (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "mt-0.5 h-5 shrink-0 px-1.5 text-[10px] font-medium",
+                        ticketPriorityClassName(ticket.priority),
+                      )}
+                    >
+                      {priorityLabel}
+                    </Badge>
+                  ) : null}
+                  {waitingLabel ? (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "mt-0.5 h-5 shrink-0 px-1.5 text-[10px] font-medium",
+                        ticketWaitingSlaClassName(
+                          ticket.status,
+                          ticket.updated_at,
+                        ),
+                      )}
+                    >
+                      {waitingLabel}
+                    </Badge>
+                  ) : null}
                   <TicketListInvoiceBadges ticket={ticket} invoices={invoices} />
                   {hasAttachments ? (
                     <Paperclip
@@ -156,16 +204,25 @@ export const TicketListItem = ({
               </p>
             ) : null}
 
-            {/* Row 3: email preview + action icons */}
+            {/* Row 3: message preview or contact channel */}
             <div className="flex items-center gap-2">
-              <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                {emailPreview ? (
+              <p
+                className={cn(
+                  "min-w-0 flex-1 truncate text-xs",
+                  messagePreview
+                    ? "text-foreground/80"
+                    : "text-muted-foreground",
+                )}
+              >
+                {messagePreview ? (
+                  <span className="truncate">{messagePreview}</span>
+                ) : emailPreview ? (
                   <span className="inline-flex max-w-full items-center gap-1">
                     <Mail className="size-3 shrink-0 opacity-70" />
                     <span className="truncate">{emailPreview}</span>
                   </span>
                 ) : (
-                  <span className="italic opacity-70">No contact email</span>
+                  <span className="italic opacity-70">No messages yet</span>
                 )}
               </p>
 

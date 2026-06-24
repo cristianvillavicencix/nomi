@@ -209,6 +209,9 @@ export const MessagingSettingsSection = () => {
               Optional: set{" "}
               <code className="rounded bg-muted px-1">TWILIO_WEBHOOK_URL</code>{" "}
               in Supabase if Twilio signature validation fails behind proxies.
+              Delivery status updates use{" "}
+              <code className="rounded bg-muted px-1">twilio_sms_status</code>{" "}
+              automatically on new outbound SMS.
             </p>
           </div>
 

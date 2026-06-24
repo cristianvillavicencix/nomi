@@ -335,6 +335,16 @@ export type TicketMessage = {
   external_message_id?: string | null;
   html_body?: string | null;
   attachments?: unknown[];
+  email_delivery_status?:
+    | "queued"
+    | "sent"
+    | "delivered"
+    | "undelivered"
+    | "failed"
+    | "skipped"
+    | string
+    | null;
+  email_error_code?: string | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
 
@@ -480,6 +490,15 @@ export type ConversationParticipant = {
 
 export type ConversationMessageKind = "user" | "system" | "internal_note";
 
+export type SmsDeliveryStatus =
+  | "queued"
+  | "sending"
+  | "sent"
+  | "delivered"
+  | "undelivered"
+  | "failed"
+  | "canceled";
+
 export type ConversationMessage = {
   conversation_id: Identifier;
   author_member_id?: Identifier | null;
@@ -494,6 +513,8 @@ export type ConversationMessage = {
   reply_to_message_id?: Identifier | null;
   edited_at?: string | null;
   deleted_at?: string | null;
+  sms_delivery_status?: SmsDeliveryStatus | string | null;
+  sms_error_code?: string | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;
 

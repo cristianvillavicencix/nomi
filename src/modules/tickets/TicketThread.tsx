@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useListContext } from "ra-core";
+import type { RefObject } from "react";
+import { ChevronDown, Lock, Reply } from "lucide-react";
 import type { FileAttachment } from "@/lib/fileAttachments";
 import type { TicketMessage } from "@/modules/types";
+import { EmailDeliveryBadge } from "@/modules/tickets/EmailDeliveryBadge";
 import { TicketMessageContent } from "@/modules/tickets/TicketMessageContent";
 import { useTicketReadCutoff } from "@/modules/tickets/TicketReadCutoffContext";
+import { useTicketThreadQuote } from "@/modules/tickets/TicketThreadQuoteContext";
 import { isInboundMessageUnread } from "@/modules/tickets/ticketReadState";
 import { formatTicketMessageTime } from "@/modules/tickets/ticketInboxUi";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Lock } from "lucide-react";
 
 const PREVIEW_MAX_LENGTH = 140;
 
@@ -32,14 +35,18 @@ const TicketThreadMessage = ({
   message,
   collapsed,
   onToggle,
+  isLatest,
 }: {
   message: TicketMessage;
   collapsed: boolean;
   onToggle: () => void;
+  isLatest: boolean;
 }) => {
   const readCutoff = useTicketReadCutoff();
+  const quoteContext = useTicketThreadQuote();
   const inbound = message.direction === "inbound";
   const isInternal = message.direction === "internal";
+  const outbound = message.direction === "outbound";
   const senderEmail = message.from_email?.trim();
   const senderName = message.from_name?.trim();
   const senderLabel =
@@ -54,10 +61,15 @@ const TicketThreadMessage = ({
   const toLine = formatRecipientList(message.to_emails);
   const ccLine = formatRecipientList(message.cc_emails);
 
+  const handleQuote = () => {
+    const plain = getMessagePreview(message).replace(/…$/, "");
+    quoteContext?.quoteMessage(plain);
+  };
+
   if (isInternal) {
     const author = senderName || "Team";
     return (
-      <article className="border-b border-warning/30 bg-warning/10 px-5 py-3 text-sm text-foreground last:border-b-0">
+      <article className="mx-auto w-full max-w-3xl border-b border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground last:border-b-0 md:px-5">
         <button
           type="button"
           className="flex w-full items-start gap-2 text-left"
@@ -123,82 +135,121 @@ const TicketThreadMessage = ({
   return (
     <article
       className={cn(
-        "border-b px-5 py-3 text-sm transition-colors last:border-b-0",
-        inbound
-          ? unreadInbound
-            ? "border-info/40 bg-info/10"
-            : "border-border/70 bg-muted/20 dark:bg-muted/35"
-          : "border-info/30 bg-info/5",
+        "group/message flex w-full",
+        outbound ? "justify-end" : "justify-start",
       )}
     >
-      <button
-        type="button"
-        className="flex w-full items-start gap-2 text-left"
-        onClick={onToggle}
+      <div
+        className={cn(
+          "w-full max-w-[min(100%,42rem)] border-b px-4 py-3 text-sm transition-colors last:border-b-0 md:px-5",
+          inbound
+            ? unreadInbound
+              ? "border-info/40 bg-info/10"
+              : "border-border/70 bg-muted/20 dark:bg-muted/35"
+            : "border-info/30 bg-info/5",
+        )}
       >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3 text-xs">
-            <span
-              className={cn(
-                "min-w-0 truncate font-semibold",
-                inbound ? "text-foreground" : "text-info",
-              )}
-            >
-              {senderLabel}
-            </span>
-            <span className="shrink-0 text-muted-foreground">
-              {formatTicketMessageTime(message.created_at)}
-            </span>
-          </div>
-          {collapsed ? (
-            <p className="mt-1 truncate text-xs text-muted-foreground">{preview}</p>
-          ) : null}
-        </div>
-        <ChevronDown
-          className={cn(
-            "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
-            !collapsed && "rotate-180",
-          )}
-        />
-      </button>
-
-      {!collapsed ? (
-        <>
-          {toLine || ccLine ? (
-            <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-              {toLine ? (
-                <p>
-                  <span className="font-medium text-foreground/80">To:</span>{" "}
-                  {toLine}
-                </p>
-              ) : null}
-              {ccLine ? (
-                <p>
-                  <span className="font-medium text-foreground/80">Cc:</span>{" "}
-                  {ccLine}
-                </p>
-              ) : null}
+        <div className="flex items-start gap-2">
+          <button
+            type="button"
+            className="min-w-0 flex-1 text-left"
+            onClick={onToggle}
+          >
+            <div className="flex items-start justify-between gap-3 text-xs">
+              <span
+                className={cn(
+                  "min-w-0 truncate font-semibold",
+                  inbound ? "text-foreground" : "text-info",
+                )}
+              >
+                {senderLabel}
+              </span>
+              <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                {outbound ? <EmailDeliveryBadge message={message} compact /> : null}
+                {formatTicketMessageTime(message.created_at)}
+              </span>
             </div>
+            {collapsed ? (
+              <p className="mt-1 truncate text-xs text-muted-foreground">{preview}</p>
+            ) : null}
+          </button>
+          {inbound && quoteContext ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 shrink-0 opacity-0 transition-opacity group-hover/message:opacity-100"
+              aria-label="Quote reply"
+              onClick={handleQuote}
+            >
+              <Reply className="size-3.5" />
+            </Button>
           ) : null}
-          <TicketMessageContent
-            body={message.body}
-            htmlBody={message.html_body}
-            attachments={attachments}
-            className="mt-2 text-foreground"
-          />
-        </>
-      ) : null}
+          <button
+            type="button"
+            className="shrink-0 p-0.5 text-muted-foreground"
+            onClick={onToggle}
+            aria-label={collapsed ? "Expand message" : "Collapse message"}
+          >
+            <ChevronDown
+              className={cn(
+                "size-4 transition-transform",
+                !collapsed && "rotate-180",
+              )}
+            />
+          </button>
+        </div>
+
+        {!collapsed ? (
+          <>
+            {toLine || ccLine ? (
+              <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                {toLine ? (
+                  <p>
+                    <span className="font-medium text-foreground/80">To:</span>{" "}
+                    {toLine}
+                  </p>
+                ) : null}
+                {ccLine ? (
+                  <p>
+                    <span className="font-medium text-foreground/80">Cc:</span>{" "}
+                    {ccLine}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            <TicketMessageContent
+              body={message.body}
+              htmlBody={message.html_body}
+              attachments={attachments}
+              className="mt-2 text-foreground"
+            />
+            {isLatest && outbound ? (
+              <div className="mt-2">
+                <EmailDeliveryBadge message={message} />
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </article>
   );
 };
 
-export const TicketThread = () => {
-  const { data = [], isPending } = useListContext<TicketMessage>();
+export const TicketThread = ({
+  messages,
+  isPending = false,
+  threadEndRef,
+}: {
+  messages: TicketMessage[];
+  isPending?: boolean;
+  threadEndRef?: RefObject<HTMLDivElement | null>;
+}) => {
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(() => new Set());
 
   const messageIds = useMemo(
-    () => data.map((message) => Number(message.id)).filter(Number.isFinite),
-    [data],
+    () => messages.map((message) => Number(message.id)).filter(Number.isFinite),
+    [messages],
   );
 
   useEffect(() => {
@@ -206,7 +257,7 @@ export const TicketThread = () => {
       setCollapsedIds(new Set());
       return;
     }
-    setCollapsedIds(new Set(messageIds.slice(1)));
+    setCollapsedIds(new Set(messageIds.slice(0, -1)));
   }, [messageIds.join(",")]);
 
   const toggleMessage = (messageId: number) => {
@@ -221,9 +272,15 @@ export const TicketThread = () => {
     });
   };
 
-  if (isPending) return null;
+  if (isPending) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        Loading messages…
+      </p>
+    );
+  }
 
-  if (!data.length) {
+  if (!messages.length) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
         No messages on this ticket yet.
@@ -231,9 +288,11 @@ export const TicketThread = () => {
     );
   }
 
+  const latestId = messageIds[messageIds.length - 1];
+
   return (
-    <div className="-mx-5 border-y border-border">
-      {data.map((message) => {
+    <div className="flex flex-col">
+      {messages.map((message) => {
         const messageId = Number(message.id);
         return (
           <TicketThreadMessage
@@ -241,9 +300,11 @@ export const TicketThread = () => {
             message={message}
             collapsed={collapsedIds.has(messageId)}
             onToggle={() => toggleMessage(messageId)}
+            isLatest={messageId === latestId}
           />
         );
       })}
+      <div ref={threadEndRef} className="h-px shrink-0" aria-hidden />
     </div>
   );
 };

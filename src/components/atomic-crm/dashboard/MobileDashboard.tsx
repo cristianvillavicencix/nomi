@@ -1,13 +1,9 @@
 import { useTimeout } from "ra-core";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { DashboardActivityLog } from "./DashboardActivityLog";
 import { DashboardStepper } from "./DashboardStepper";
-import { DealsChart } from "./DealsChart";
-import { HotContacts } from "./HotContacts";
-import { Welcome } from "./Welcome";
 import { useOnboardingState } from "./useOnboardingState";
-import { LbsDashboardTasks } from "@/modules/dashboard/LbsDashboardTasks";
+import { DashboardHomeContent } from "@/modules/dashboard/DashboardHomeContent";
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -73,13 +69,7 @@ export const MobileDashboard = () => {
 
   return (
     <Wrapper>
-      <div className="flex flex-col gap-6">
-        {import.meta.env.VITE_IS_DEMO === "true" ? <Welcome /> : null}
-        <LbsDashboardTasks />
-        <HotContacts />
-        <DealsChart />
-        <DashboardActivityLog />
-      </div>
+      <DashboardHomeContent />
     </Wrapper>
   );
 };

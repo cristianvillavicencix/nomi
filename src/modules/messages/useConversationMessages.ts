@@ -93,13 +93,31 @@ export const useConversationMessages = (
   useEffect(() => {
     if (conversationId == null) return;
 
-    const handleInsert = (payload: { new: Record<string, unknown> }) => {
+    const handleChange = (payload: {
+      eventType: string;
+      new: Record<string, unknown>;
+    }) => {
       const row = payload.new;
       if (String(row.conversation_id) !== String(conversationId)) return;
 
       const message = row as ConversationMessage;
-      appendConversationMessageToCache(queryClient, message);
-      refreshConversationLists(queryClient);
+
+      if (payload.eventType === "INSERT") {
+        appendConversationMessageToCache(queryClient, message);
+        refreshConversationLists(queryClient);
+        return;
+      }
+
+      if (payload.eventType === "UPDATE") {
+        appendConversationMessageToCache(queryClient, message);
+        setOlderMessages((current) =>
+          current.map((entry) =>
+            String(entry.id) === String(message.id)
+              ? { ...entry, ...message }
+              : entry,
+          ),
+        );
+      }
     };
 
     const channel = supabase
@@ -112,7 +130,17 @@ export const useConversationMessages = (
           table: "conversation_messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        handleInsert,
+        (payload) => handleChange({ eventType: "INSERT", new: payload.new }),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversation_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => handleChange({ eventType: "UPDATE", new: payload.new }),
       )
       .subscribe();
 

@@ -5,6 +5,7 @@ import { formatMessageTime, getMessageMediaUrls, isMediaPlaceholderBody } from "
 import { SmsMessageMedia } from "@/modules/messages/SmsMessageMedia";
 import { parseMessageBodyWithSignature } from "@/lib/signatures/signatureExpansion";
 import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
+import { SmsDeliveryBadge } from "@/modules/messages/SmsDeliveryBadge";
 import { cn } from "@/lib/utils";
 
 export const ConversationSystemMessageNote = ({
@@ -102,11 +103,12 @@ export const ConversationMessageBubble = ({
         ) : null}
         <div
           className={cn(
-            "mt-1 text-muted-foreground",
+            "mt-1 flex items-center gap-2 text-muted-foreground",
             compact ? "text-[9px]" : "text-[10px]",
           )}
         >
-          {formatMessageTime(message.created_at)}
+          <span>{formatMessageTime(message.created_at)}</span>
+          <SmsDeliveryBadge message={message} compact={compact} />
         </div>
       </div>
       {!compact &&
