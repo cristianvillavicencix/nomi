@@ -5,7 +5,8 @@ export type NotificationCategory =
   | "tickets_assigned"
   | "tasks_mention"
   | "leads_followup_due"
-  | "leads_stale";
+  | "leads_stale"
+  | "bookings_new";
 
 export type NotificationPrefs = {
   sound_enabled: boolean;
@@ -17,6 +18,7 @@ export type NotificationPrefs = {
   tasks_mention: boolean;
   leads_followup_due: boolean;
   leads_stale: boolean;
+  bookings_new: boolean;
 };
 
 export type NotificationHistoryItem = {
@@ -25,6 +27,8 @@ export type NotificationHistoryItem = {
   title: string;
   body: string;
   href?: string;
+  /** Stable key for deduplicating repeated alerts (e.g. same ticket assignment). */
+  tag?: string;
   created_at: string;
   read: boolean;
 };
@@ -60,5 +64,9 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<
   leads_stale: {
     label: "Stale leads",
     description: "Leads with no activity for 4+ days (Anti-Olvido).",
+  },
+  bookings_new: {
+    label: "New bookings",
+    description: "When someone books an appointment through your Book Now link.",
   },
 };

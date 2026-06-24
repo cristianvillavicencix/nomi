@@ -10,7 +10,7 @@ import {
   canRescheduleBooking,
   isUpcomingBooking,
 } from "../_shared/bookingUtils.ts";
-import { notifyFollowUpForCalendarEvent } from "../_shared/notifyFollowUp.ts";
+import { processBookingAfterSubmit } from "../_shared/notifyBooking.ts";
 
 type SubmitBookingBody = {
   token?: string;
@@ -116,13 +116,14 @@ Deno.serve(
         id: number;
         calendar_event_id: number | null;
         contact_id: number | null;
+        task_id: number | null;
       } | null = null;
 
       if (isReschedule) {
         const { data: existingBooking } = await supabaseAdmin
           .from("public_bookings")
           .select(
-            "id, calendar_event_id, contact_id, status, event_date, event_time",
+            "id, calendar_event_id, contact_id, task_id, status, event_date, event_time",
           )
           .eq("id", rescheduleBookingId)
           .eq("booking_token_id", tokenData.id)
@@ -253,7 +254,11 @@ Deno.serve(
       if (isReschedule && rescheduleEventId) {
         const { data: updatedEvent, error: calendarError } = await supabaseAdmin
           .from("calendar_events")
-          .update(calendarPayload)
+          .update({
+            ...calendarPayload,
+            follow_up_scheduled_notified_at: null,
+            follow_up_reminder_sent_at: null,
+          })
           .eq("id", rescheduleEventId)
           .eq("org_id", tokenData.org_id)
           .select("id")
@@ -298,6 +303,7 @@ Deno.serve(
             guest_email: guestEmail || null,
             event_date: eventDate,
             event_time: dbTime,
+            guest_reminder_sent_at: null,
           })
           .eq("id", rescheduleBooking.id)
           .select("id")
@@ -337,12 +343,21 @@ Deno.serve(
       }
 
       try {
-        await notifyFollowUpForCalendarEvent(
-          supabaseAdmin,
+        await processBookingAfterSubmit(supabaseAdmin, {
+          bookingId,
           calendarEventId,
-          "scheduled",
-          { appBaseUrl: body.app_base_url ?? null },
-        );
+          orgId: tokenData.org_id,
+          contactId,
+          organizationMemberId: tokenData.organization_member_id,
+          serviceName,
+          guestName,
+          eventDate,
+          eventTime,
+          dealId: tokenData.deal_id,
+          existingTaskId: rescheduleBooking?.task_id ?? null,
+          rescheduled: isReschedule,
+          appBaseUrl: body.app_base_url ?? null,
+        });
       } catch (notifyError) {
         console.warn("[submit_public_booking] notify failed", notifyError);
       }

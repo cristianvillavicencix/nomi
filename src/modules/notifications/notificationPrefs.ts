@@ -10,6 +10,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   tasks_mention: true,
   leads_followup_due: true,
   leads_stale: true,
+  bookings_new: true,
 };
 
 const BOOL_KEYS = Object.keys(
@@ -54,6 +55,8 @@ export const isNotificationCategoryEnabled = (
       return prefs.leads_followup_due;
     case "leads_stale":
       return prefs.leads_stale;
+    case "bookings_new":
+      return prefs.bookings_new;
     default:
       return true;
   }

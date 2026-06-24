@@ -129,9 +129,27 @@ const getContactDisplayName = (contact: ContactRow | null, fallback: string) => 
   return fullName || contact.company_name?.trim() || fallback;
 };
 
+const parsePhoneJsonb = (
+  value: ContactRow["phone_jsonb"],
+): Array<{ number?: string | null; type?: string | null }> => {
+  if (value == null) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 const getContactPrimaryPhone = (contact: ContactRow | null): string | null => {
-  if (!contact?.phone_jsonb?.length) return null;
-  for (const entry of contact.phone_jsonb) {
+  const entries = parsePhoneJsonb(contact?.phone_jsonb ?? null);
+  if (!entries.length) return null;
+
+  for (const entry of entries) {
     const raw = entry?.number?.trim();
     if (!raw) continue;
     const e164 = toE164(raw);
@@ -264,13 +282,22 @@ export async function notifyFollowUpForCalendarEvent(
   }
 
   let contact: ContactRow | null = null;
-  const { data: contactRow } = await supabase
-    .from("contacts")
+  const { data: contactRow, error: contactError } = await supabase
+    .from("contacts_summary")
     .select(
       "id, first_name, last_name, company_name, status, lead_stage, phone_jsonb",
     )
     .eq("id", row.contact_id)
     .maybeSingle();
+
+  if (contactError) {
+    console.error("[notifyFollowUp] contact lookup failed", {
+      calendarEventId,
+      contactId: row.contact_id,
+      error: contactError.message,
+    });
+  }
+
   contact = (contactRow as ContactRow | null) ?? null;
 
   let settings;
@@ -390,12 +417,23 @@ export async function processDueCalendarFollowUpReminders(
     );
     if (!eventAt) continue;
 
+    const eventAtMs = eventAt.getTime();
     const remindMinutes =
       event.remind_before_minutes != null &&
       Number.isFinite(Number(event.remind_before_minutes))
         ? Number(event.remind_before_minutes)
         : 15;
-    const notifyAt = eventAt.getTime() - remindMinutes * 60 * 1000;
+    const notifyAt = eventAtMs - remindMinutes * 60 * 1000;
+
+    // Event already passed — mark reminded without SMS (clears historical backlog).
+    if (now >= eventAtMs) {
+      await supabase
+        .from("calendar_events")
+        .update({ follow_up_reminder_sent_at: new Date().toISOString() })
+        .eq("id", event.id)
+        .is("follow_up_reminder_sent_at", null);
+      continue;
+    }
 
     if (now < notifyAt) continue;
 

@@ -45,6 +45,10 @@ const CATEGORY_GROUPS: {
     title: "Leads",
     keys: ["leads_followup_due", "leads_stale"],
   },
+  {
+    title: "Bookings",
+    keys: ["bookings_new"],
+  },
 ];
 
 const prefsKeyForCategory = (
@@ -65,6 +69,8 @@ const prefsKeyForCategory = (
       return "leads_followup_due";
     case "leads_stale":
       return "leads_stale";
+    case "bookings_new":
+      return "bookings_new";
   }
 };
 

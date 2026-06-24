@@ -140,6 +140,7 @@ export const NotificationPrefsProvider = ({
         title: input.title,
         body: input.body,
         href: input.href,
+        tag: input.tag,
       });
 
       if (shouldSound && prefs.sound_enabled) {

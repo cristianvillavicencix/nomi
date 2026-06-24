@@ -25,6 +25,9 @@ const writeHistory = (items: NotificationHistoryItem[]) => {
 
 export const getNotificationHistory = () => readHistory();
 
+const dedupeKey = (item: Pick<NotificationHistoryItem, "category" | "tag" | "href">) =>
+  item.tag ?? (item.href ? `${item.category}::${item.href}` : null);
+
 export const pushNotificationHistory = (
   item: Omit<NotificationHistoryItem, "id" | "created_at" | "read"> & {
     id?: string;
@@ -38,14 +41,34 @@ export const pushNotificationHistory = (
     title: item.title,
     body: item.body,
     href: item.href,
+    tag: item.tag,
     created_at: item.created_at ?? new Date().toISOString(),
     read: item.read ?? false,
   };
 
-  const next = [entry, ...readHistory().filter((row) => row.id !== entry.id)];
+  const key = dedupeKey(entry);
+  const history = readHistory();
+  const duplicateIndex =
+    key == null
+      ? -1
+      : history.findIndex((row) => dedupeKey(row) === key);
+
+  const next =
+    duplicateIndex === -1
+      ? [entry, ...history.filter((row) => row.id !== entry.id)]
+      : [
+          { ...entry, id: history[duplicateIndex].id, read: false },
+          ...history.filter((_, index) => index !== duplicateIndex),
+        ];
+
   writeHistory(next);
   window.dispatchEvent(new CustomEvent("nomi:notifications-updated"));
   return entry;
+};
+
+export const clearNotificationHistory = () => {
+  writeHistory([]);
+  window.dispatchEvent(new CustomEvent("nomi:notifications-updated"));
 };
 
 export const markAllNotificationHistoryRead = () => {
@@ -57,6 +80,17 @@ export const markAllNotificationHistoryRead = () => {
 export const markNotificationHistoryRead = (id: string) => {
   const next = readHistory().map((item) =>
     item.id === id ? { ...item, read: true } : item,
+  );
+  writeHistory(next);
+  window.dispatchEvent(new CustomEvent("nomi:notifications-updated"));
+};
+
+export const markNotificationHistoryItemsRead = (ids: string[]) => {
+  const idSet = new Set(ids);
+  if (idSet.size === 0) return;
+
+  const next = readHistory().map((item) =>
+    idSet.has(item.id) ? { ...item, read: true } : item,
   );
   writeHistory(next);
   window.dispatchEvent(new CustomEvent("nomi:notifications-updated"));

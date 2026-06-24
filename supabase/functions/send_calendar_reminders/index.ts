@@ -5,15 +5,17 @@ import {
   isAuthorizedFollowUpCron,
   processDueCalendarFollowUpReminders,
 } from "../_shared/notifyFollowUp.ts";
+import { processDueBookingGuestReminders } from "../_shared/notifyBooking.ts";
 
 type CronBody = {
   app_base_url?: string | null;
 };
 
 /**
- * Sends SMS reminders for lead follow-ups when remind_before_minutes is reached.
+ * Sends SMS reminders for calendar follow-ups and guest booking appointments.
  *
- * Schedule every 5 minutes (Supabase Dashboard → Edge Functions → Cron, or external cron):
+ * Schedule every 5 minutes via pg_cron (migration send_calendar_reminders_every_5m)
+ * or external cron:
  * POST /functions/v1/send_calendar_reminders
  * Header: x-cron-secret: <CRON_SECRET>
  */
@@ -39,23 +41,29 @@ Deno.serve((req: Request) =>
 
     try {
       const { supabaseAdmin } = await import("../_shared/supabaseAdmin.ts");
-      const results = await processDueCalendarFollowUpReminders(
+      const hostResults = await processDueCalendarFollowUpReminders(
         supabaseAdmin,
         { appBaseUrl: payload.app_base_url },
       );
+      const guestResults = await processDueBookingGuestReminders(supabaseAdmin);
 
-      const sent = results.filter((entry) => entry.ok && entry.sent).length;
-      const skipped = results.filter((entry) => entry.ok && !entry.sent).length;
-      const failed = results.filter((entry) => !entry.ok).length;
+      const sent =
+        hostResults.filter((entry) => entry.ok && entry.sent).length +
+        guestResults.filter((entry) => entry.sent).length;
+      const skipped =
+        hostResults.filter((entry) => entry.ok && !entry.sent).length +
+        guestResults.filter((entry) => !entry.sent).length;
+      const failed = hostResults.filter((entry) => !entry.ok).length;
 
       return new Response(
         JSON.stringify({
           ok: true,
-          processed: results.length,
+          processed: hostResults.length + guestResults.length,
           sent,
           skipped,
           failed,
-          results,
+          host_results: hostResults,
+          guest_results: guestResults,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
