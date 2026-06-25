@@ -34,7 +34,8 @@ import {
   BUSINESS_ADDRESS_FIELD_NAMES,
   StructuredAddressFields,
 } from "@/modules/clients/StructuredAddressFields";
-import type { Contact } from "@/components/atomic-crm/types";
+import { ClientCreateStreamlinedFields } from "@/modules/clients/ClientCreateStreamlinedFields";
+import type { Contact, Company } from "@/components/atomic-crm/types";
 
 export type ClientCreateFormValues = {
   primary_full_name: string;
@@ -63,10 +64,16 @@ export type ClientCreateFormValues = {
   invoice_email: string;
   invoice_phone: string;
   notes: string;
+  organization_member_id?: Identifier | null;
+  company_size?: Company["size"] | null;
+  company_revenue?: string;
+  tax_identifier?: string;
+  linkedin_url?: string;
 };
 
 export type ClientCreateFormFieldsProps = {
   mode: "create" | "edit";
+  layout?: "default" | "streamlined";
   companyId?: Identifier;
   /** Current `companies.primary_contact_id` when editing. */
   savedPrimaryContactId?: Identifier | null;
@@ -87,10 +94,15 @@ const optionalUrl = (url?: string) => {
 
 export const ClientCreateFormFields = ({
   mode,
+  layout = "default",
   companyId,
   savedPrimaryContactId,
   primaryContact,
 }: ClientCreateFormFieldsProps) => {
+  if (mode === "create" && layout === "streamlined") {
+    return <ClientCreateStreamlinedFields />;
+  }
+
   const { setValue } = useFormContext<ClientCreateFormValues>();
   const placesEnabled = isGooglePlacesEnabled();
   const industryChoices = LBS_COMPANY_INDUSTRY_CHOICES.map((entry) => ({

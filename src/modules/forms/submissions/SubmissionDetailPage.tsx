@@ -40,7 +40,7 @@ import {
 import { exportSubmissionPdf } from "@/modules/forms/submissions/submissionPdfExport";
 import { buildSubmissionStatusPatch } from "@/modules/forms/submissions/submissionStatusUpdate";
 import type { FormInstance, FormSubmissionV2 } from "@/modules/forms/types";
-import { getClientShowPath } from "@/app/routing";
+import { getClientShowPath, getLeadCreatePath } from "@/app/routing";
 
 const formatEventLabel = (event: FormSubmissionEvent) => {
   switch (event.event_type) {
@@ -142,17 +142,13 @@ export const SubmissionDetailPage = () => {
     ? submission.status
     : "new";
 
-  const createContactHref = `/leads/create?${new URLSearchParams({
+  const createContactHref = getLeadCreatePath({
     ...(submission.submitter_name
       ? { first_name: submission.submitter_name.split(" ")[0] ?? "" }
       : {}),
-    ...(submission.submitter_email
-      ? { email: submission.submitter_email }
-      : {}),
-    ...(submission.submitter_phone
-      ? { phone: submission.submitter_phone }
-      : {}),
-  }).toString()}`;
+    ...(submission.submitter_email ? { email: submission.submitter_email } : {}),
+    ...(submission.submitter_phone ? { phone: submission.submitter_phone } : {}),
+  });
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">

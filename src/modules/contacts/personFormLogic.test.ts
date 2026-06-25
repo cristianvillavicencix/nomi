@@ -91,14 +91,14 @@ describe("personFormLogic", () => {
       ).toBe("inline_draft");
     });
 
-    it("hides company for pipeline individual prospect", () => {
+    it("shows optional company picker for pipeline individual prospect", () => {
       expect(
         resolveCompanySectionVariant({
           mode: "pipeline",
           personKind: "prospect",
           leadType: "individual",
         }),
-      ).toBe("hidden");
+      ).toBe("picker");
     });
 
     it("uses picker for directory", () => {

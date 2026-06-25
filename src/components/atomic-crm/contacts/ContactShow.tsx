@@ -23,6 +23,7 @@ import { MobileBackButton } from "../misc/MobileBackButton";
 import { RelativeDate } from "../misc/RelativeDate";
 import type { Contact, Deal } from "../types";
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
+import { getNewDealManualCreatePath } from "@/modules/deals/projectCreatePaths";
 import { ContactHeader } from "./ContactHeader";
 import { getPersonListPath } from "@/app/routing";
 import { ReferralsTab } from "@/modules/leads/ReferralsTab";
@@ -291,7 +292,13 @@ const ContactProjectsTab = ({ record }: { record: Contact }) => {
   );
 };
 
-const ProjectsTabHeader = () => (
+const ProjectsTabHeader = () => {
+  const { record } = useShowContext<Contact>();
+  const createHref = record
+    ? getNewDealManualCreatePath(record.company_id, record.id)
+    : getNewDealManualCreatePath();
+
+  return (
   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h3 className="text-lg font-semibold">Projects</h3>
@@ -300,13 +307,14 @@ const ProjectsTabHeader = () => (
       </p>
     </div>
     <Button asChild>
-      <Link to="/deals/create">
+      <Link to={createHref}>
         <FolderKanban className="size-4" />
         Create Project
       </Link>
     </Button>
   </div>
-);
+  );
+};
 
 const TabEmptyState = ({ label }: { label: string }) => (
   <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">

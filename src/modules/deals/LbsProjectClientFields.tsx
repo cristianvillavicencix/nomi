@@ -1,112 +1,281 @@
-import { useRef, useState } from "react";
-import { required, type Identifier } from "ra-core";
-import { useFormContext } from "react-hook-form";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  required,
+  useGetOne,
+  type Identifier,
+} from "ra-core";
+import { Mail, Phone } from "lucide-react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
-import type { Deal } from "@/components/atomic-crm/types";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { getPersonShowPath } from "@/app/routing";
+import type { Contact, Deal } from "@/components/atomic-crm/types";
 import {
-  lbsProjectContactName,
-  lbsProjectContactOptionText,
-} from "@/modules/deals/LbsProjectContactOption";
-import {
-  QuickCreateClientDialog,
-  toQuickCreateContactRecord,
-  type QuickCreateClientDefaults,
-  type QuickCreateContactRecord,
-} from "@/modules/clients/QuickCreateClientDialog";
-import type { QuickCreateClientInput } from "@/modules/clients/lbsClientUpsert";
+  getContactEmail,
+  getContactFullName,
+  getContactPhone,
+} from "@/modules/clients/clientShowUtils";
+import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
+import { lbsProjectContactName } from "@/modules/deals/LbsProjectContactOption";
+import { CreateFormSectionLabel } from "@/modules/shared/createForm/CreateFormLayout";
+import { SelectedEntityRow } from "@/modules/shared/entityPickerUi";
+import { isValidRecordId } from "@/lib/isValidRecordId";
 
-type PendingQuickCreate = {
-  resolve: (record: QuickCreateContactRecord) => void;
-  reject: (error: Error) => void;
+type ContactCreateDefaults = {
+  contactName?: string;
 };
 
-export const LbsProjectClientFields = () => {
-  const isMobile = useIsMobile();
+const buildContactCreateDefaults = (contactName?: string) => {
+  const trimmed = contactName?.trim() ?? "";
+  if (!trimmed) return undefined;
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  return {
+    first_name: parts[0] ?? "",
+    last_name: parts.slice(1).join(" "),
+  };
+};
+
+type PendingClientCreate = {
+  resolve: (record?: Contact) => void;
+};
+
+const toAutocompleteContact = (
+  contactId: Identifier,
+  companyName: string,
+  contact?: Partial<Contact> | null,
+): Contact => {
+  const fullName = contact
+    ? getContactFullName(contact as Contact)
+    : "";
+  const parts = fullName.split(/\s+/).filter(Boolean);
+  return {
+    id: contactId,
+    first_name: contact?.first_name ?? parts[0] ?? "",
+    last_name: contact?.last_name ?? parts.slice(1).join(" "),
+    company_name: companyName,
+  } as Contact;
+};
+
+export const LbsProjectClientFields = ({
+  variant = "default",
+  seedContact,
+}: {
+  variant?: "default" | "create";
+  /** Preloaded contact (e.g. URL preset) — skips getOne on first paint. */
+  seedContact?: Contact | null;
+} = {}) => {
+  const isCreateVariant = variant === "create";
   const { setValue } = useFormContext<Deal & Record<string, unknown>>();
+  const contactId = useWatch({ name: "contact_id" });
+  const selectedContactId = isValidRecordId(contactId) ? Number(contactId) : null;
+
+  const [optimisticContact, setOptimisticContact] = useState<Contact | null>(
+    null,
+  );
+  const skipGetOneForId = useRef<number | null>(null);
+
+  const shouldFetchSelectedContact =
+    selectedContactId != null &&
+    skipGetOneForId.current !== selectedContactId;
+
+  const { data: selectedContact, isError: selectedContactError } = useGetOne<Contact>(
+    "contacts",
+    { id: selectedContactId as number },
+    { enabled: shouldFetchSelectedContact, retry: false },
+  );
+
+  useEffect(() => {
+    if (!seedContact || !isValidRecordId(seedContact.id)) return;
+    const id = Number(seedContact.id);
+    skipGetOneForId.current = id;
+    setOptimisticContact(
+      toAutocompleteContact(id, seedContact.company_name ?? "", seedContact),
+    );
+  }, [seedContact]);
+
+  useEffect(() => {
+    if (!selectedContactError) return;
+    clearClient();
+  }, [clearClient, selectedContactError]);
+
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogDefaults, setDialogDefaults] =
-    useState<QuickCreateClientDefaults>({});
-  const pendingCreateRef = useRef<PendingQuickCreate | null>(null);
+  const [dialogDefaults, setDialogDefaults] = useState<ContactCreateDefaults>(
+    {},
+  );
+  const pendingCreateRef = useRef<PendingClientCreate | null>(null);
+
+  useEffect(() => {
+    if (
+      selectedContact &&
+      optimisticContact &&
+      String(selectedContact.id) === String(optimisticContact.id)
+    ) {
+      setOptimisticContact(null);
+      skipGetOneForId.current = null;
+    }
+  }, [optimisticContact, selectedContact]);
+
+  const activeContact =
+    optimisticContact &&
+    selectedContactId != null &&
+    String(optimisticContact.id) === String(selectedContactId)
+      ? optimisticContact
+      : selectedContact;
 
   const applyClientToProject = (
-    contactId: Identifier,
-    companyId: Identifier,
+    contactIdValue: Identifier,
+    companyId: Identifier | null | undefined,
     businessName: string,
   ) => {
-    setValue("contact_id", Number(contactId), { shouldDirty: true });
-    setValue("contact_ids", [Number(contactId)], { shouldDirty: true });
-    setValue("company_id", Number(companyId), { shouldDirty: true });
-    setValue("company_name", businessName, { shouldDirty: false });
-  };
-
-  const closeQuickCreate = () => {
-    setDialogOpen(false);
-    if (pendingCreateRef.current) {
-      pendingCreateRef.current.reject(new Error("cancelled"));
-      pendingCreateRef.current = null;
+    setValue("contact_id", Number(contactIdValue), { shouldDirty: true });
+    setValue("contact_ids", [Number(contactIdValue)], { shouldDirty: true });
+    if (isValidRecordId(companyId)) {
+      setValue("company_id", Number(companyId), { shouldDirty: true });
+      setValue("company_name", businessName, { shouldDirty: false });
+    } else {
+      setValue("company_id", null, { shouldDirty: true });
+      setValue("company_name", businessName.trim(), { shouldDirty: true });
     }
   };
 
-  const startQuickCreateFromSearch = (defaults?: QuickCreateClientDefaults) => {
+  const clearClient = useCallback(() => {
+    setOptimisticContact(null);
+    skipGetOneForId.current = null;
+    setValue("contact_id", null, { shouldDirty: true });
+    setValue("contact_ids", [], { shouldDirty: true });
+    setValue("company_id", null, { shouldDirty: true });
+    setValue("company_name", "", { shouldDirty: true });
+  }, [setValue]);
+
+  const settlePendingCreate = (record?: Contact) => {
+    pendingCreateRef.current?.resolve(record);
+    pendingCreateRef.current = null;
+  };
+
+  const closeClientCreate = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      queueMicrotask(() => {
+        if (pendingCreateRef.current) {
+          settlePendingCreate(undefined);
+        }
+      });
+    }
+  };
+
+  const startContactCreateFromSearch = (defaults?: ContactCreateDefaults) => {
     setDialogDefaults(defaults ?? {});
     setDialogOpen(true);
-    return new Promise<QuickCreateContactRecord>((resolve, reject) => {
-      pendingCreateRef.current = { resolve, reject };
+    return new Promise<Contact | undefined>((resolve) => {
+      pendingCreateRef.current = { resolve };
     });
   };
 
-  const handleCreated = (
-    result: { company_id: Identifier; contact_id: Identifier },
-    values: QuickCreateClientInput,
+  const finishContactSelection = (
+    contactIdValue: Identifier,
+    companyId: Identifier | null | undefined,
+    businessName: string,
+    contact?: Partial<Contact> | null,
   ) => {
-    applyClientToProject(
-      result.contact_id,
-      result.company_id,
-      values.businessName.trim(),
-    );
-    const record = toQuickCreateContactRecord(result, values);
-    pendingCreateRef.current?.resolve(record);
-    pendingCreateRef.current = null;
+    const record = toAutocompleteContact(contactIdValue, businessName, contact);
+    skipGetOneForId.current = Number(contactIdValue);
+    setOptimisticContact(record);
+    applyClientToProject(contactIdValue, companyId, businessName);
+    settlePendingCreate(record);
     setDialogOpen(false);
   };
 
+  const handleContactCreated = (contact: Contact) => {
+    finishContactSelection(
+      contact.id,
+      contact.company_id ?? null,
+      contact.company_name ?? "",
+      contact,
+    );
+  };
+
+  const contactSummaryDetails = activeContact
+    ? [
+        ...(getContactEmail(activeContact) !== "—"
+          ? [
+              {
+                key: "email",
+                icon: Mail,
+                text: getContactEmail(activeContact),
+              },
+            ]
+          : []),
+        ...(getContactPhone(activeContact) !== "—"
+          ? [
+              {
+                key: "phone",
+                icon: Phone,
+                text: getContactPhone(activeContact),
+              },
+            ]
+          : []),
+      ]
+    : [];
+
   return (
     <>
-      <ReferenceInput source="contact_id" reference="contacts">
-        <AutocompleteInput
-          label="Client contact"
-          optionText={lbsProjectContactOptionText}
-          inputText={lbsProjectContactName}
-          validate={required()}
-          helperText={false}
-          placeholder="Search contact"
-          filterToQuery={(searchText) => ({ q: searchText })}
-          onCreate={(searchText) => {
-            const query = searchText?.trim() ?? "";
-            return startQuickCreateFromSearch({ contactName: query });
-          }}
-          createItemLabel='Create a new client "%{item}"'
-          modal={isMobile}
-        />
-      </ReferenceInput>
+      {isCreateVariant ? (
+        <CreateFormSectionLabel required>Contact</CreateFormSectionLabel>
+      ) : null}
 
-      <ReferenceInput source="company_id" reference="companies">
-        <AutocompleteInput
-          label="Company"
-          optionText="name"
-          helperText={false}
-          placeholder="Search company"
-          filterToQuery={(searchText) => ({ q: searchText })}
+      {isCreateVariant && selectedContactId != null ? (
+        <SelectedEntityRow
+          title={
+            activeContact
+              ? getContactFullName(activeContact)
+              : lbsProjectContactName(activeContact)
+          }
+          subtitle={activeContact?.company_name?.trim() || undefined}
+          details={contactSummaryDetails}
+          profileHref={
+            activeContact ? getPersonShowPath(activeContact) : undefined
+          }
+          onRemove={clearClient}
+          removeAriaLabel="Clear contact"
         />
-      </ReferenceInput>
+      ) : (
+        <ReferenceInput source="contact_id" reference="contacts">
+          <AutocompleteInput
+            label={isCreateVariant ? false : "Contact"}
+            inputText={lbsProjectContactName}
+            validate={required()}
+            helperText={false}
+            placeholder="Search contact"
+            filterToQuery={(searchText) => ({ q: searchText })}
+            onCreate={(searchText) => {
+              const query = searchText?.trim() ?? "";
+              return startContactCreateFromSearch({ contactName: query });
+            }}
+            createItemLabel='Create contact "%{item}"'
+          />
+        </ReferenceInput>
+      )}
 
-      <QuickCreateClientDialog
+      {!isCreateVariant ? (
+        <ReferenceInput source="company_id" reference="companies">
+          <AutocompleteInput
+            label="Company"
+            optionText="name"
+            helperText={false}
+            placeholder="Search company"
+            filterToQuery={(searchText) => ({ q: searchText })}
+          />
+        </ReferenceInput>
+      ) : null}
+
+      <ContactFormDialog
         open={dialogOpen}
-        defaults={dialogDefaults}
-        onClose={closeQuickCreate}
-        onCreated={handleCreated}
+        onOpenChange={closeClientCreate}
+        navigateOnCreate={false}
+        title="New contact"
+        submitLabel="Create contact"
+        createDefaults={buildContactCreateDefaults(dialogDefaults.contactName)}
+        onCreated={handleContactCreated}
       />
     </>
   );

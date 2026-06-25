@@ -35,6 +35,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { entitySearchPopoverClassName } from "@/modules/shared/referenceAutocompleteOptions";
 import type { Contact } from "@/components/atomic-crm/types";
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import {
@@ -49,6 +50,7 @@ import {
   EntitySearchToolbar,
   SelectedEntityRow,
 } from "@/modules/shared/entityPickerUi";
+import { buildContactSearchMeta } from "@/modules/shared/referenceAutocompleteOptions";
 
 const pickPrimaryPhone = (contact?: Contact | null) =>
   contact?.phone_jsonb?.find((p) => p.number?.trim())?.number?.trim() ?? "";
@@ -224,7 +226,6 @@ const CreatePrimaryContactPicker = ({
             <EntitySearchGroup heading="Unassigned contacts">
               {contacts.map((contact) => {
                 const name = getContactFullName(contact);
-                const contactEmail = getContactEmail(contact);
                 const isSelected =
                   selectedContactId != null &&
                   String(contact.id) === String(selectedContactId);
@@ -233,7 +234,7 @@ const CreatePrimaryContactPicker = ({
                   <EntitySearchOption
                     key={String(contact.id)}
                     label={name}
-                    sublabel={contactEmail !== "—" ? contactEmail : undefined}
+                    sublabel={buildContactSearchMeta(contact) || undefined}
                     selected={isSelected}
                     onSelect={() => selectContact(contact)}
                   />
@@ -402,7 +403,7 @@ export const PrimaryContactReferenceCard = ({
     <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
-        className="w-[min(100vw-2rem,24rem)] p-0 sm:w-[var(--radix-popover-trigger-width)]"
+        className={entitySearchPopoverClassName}
         align="start"
       >
         <Command shouldFilter={showSearch}>

@@ -68,6 +68,8 @@ export const buildContactCreatePayload = (
       last_seen: now,
       tags: [],
       title: "",
+      lead_value_estimate: values.lead_value_estimate ?? null,
+      next_followup_at: values.next_followup_at ?? null,
     });
   }
 
@@ -76,7 +78,10 @@ export const buildContactCreatePayload = (
     last_name: values.last_name.trim(),
     address: values.address?.trim() || "",
     title: values.lead_type === "business" ? values.title?.trim() || "" : "",
-    company_id: values.lead_type === "business" ? (companyId ?? null) : null,
+    company_id:
+      values.lead_type === "business"
+        ? (companyId ?? null)
+        : (companyId ?? values.company_id ?? null),
     email_jsonb: cleanEmailJsonb(values.email_jsonb),
     phone_jsonb: cleanPhoneJsonb(values.phone_jsonb),
     lead_source: values.lead_source,
@@ -95,5 +100,7 @@ export const buildContactCreatePayload = (
     first_seen: now,
     last_seen: now,
     tags: [],
+    lead_value_estimate: values.lead_value_estimate ?? null,
+    next_followup_at: values.next_followup_at ?? null,
   });
 };

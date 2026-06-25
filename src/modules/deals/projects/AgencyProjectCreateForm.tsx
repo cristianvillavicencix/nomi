@@ -1,25 +1,26 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Form,
   useDataProvider,
   useGetIdentity,
+  useGetOne,
   useNotify,
   useRedirect,
 } from "ra-core";
 import { useSearchParams } from "react-router";
+import { Briefcase, Loader2 } from "lucide-react";
 import { Create } from "@/components/admin/create";
 import { SaveButton } from "@/components/admin/form";
-import { FormToolbar } from "@/components/admin/simple-form";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import type { Deal } from "@/components/atomic-crm/types";
+import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { isValidRecordId } from "@/lib/isValidRecordId";
+import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
 import { normalizeProjectPayload } from "@/components/atomic-crm/deals/projectForm";
-import { LbsDealInputs } from "@/modules/deals/LbsDealInputs";
+import { LbsDealCreateFields } from "@/modules/deals/LbsDealCreateFields";
 import {
   LBS_DEFAULT_AGENCY_PROJECT_TYPE,
   LBS_DEFAULT_AGENCY_STAGE,
@@ -32,46 +33,17 @@ import { emptyWebsiteBriefValues } from "@/modules/deals/websiteBriefSchema";
 import { runProjectCreateAutomations } from "@/modules/deals/projects/projectStageAutomations";
 import { DEFAULT_WEBSITE_CONTENT_PAGES } from "@/modules/deals/projects/websiteContentSchema";
 import type { LbsDeal } from "@/modules/types";
+import { CreateFormDialogShell } from "@/modules/shared/createForm/CreateFormDialogShell";
 
-const CREATE_STEPS = [
-  { id: 1 as const, label: "Client & basics" },
-  { id: 2 as const, label: "Timeline & team" },
-];
+const NEW_DEAL_FORM_ID = "lbs-new-deal-project-form";
 
-const AgencyProjectCreateStepToolbar = ({
-  step,
-  onBack,
-  onNext,
-}: {
-  step: 1 | 2;
-  onBack: () => void;
-  onNext: () => void;
-}) => (
-  <FormToolbar>
-    <div className="flex w-full items-center justify-between gap-2">
-      <Button
-        type="button"
-        variant="outline"
-        disabled={step === 1}
-        onClick={onBack}
-      >
-        Back
-      </Button>
-      {step < 2 ? (
-        <Button type="button" onClick={onNext}>
-          Next
-        </Button>
-      ) : (
-        <SaveButton
-          transform={normalizeProjectPayload}
-          label="Create project"
-        />
-      )}
-    </div>
-  </FormToolbar>
-);
+const parsePresetId = (value: string | null) => {
+  if (!value) return null;
+  const parsed = Number(value);
+  return isValidRecordId(parsed) ? parsed : null;
+};
 
-/** LBS agency project create dialog — multi-step, no contractor fields. */
+/** LBS agency project create dialog — single-step essentials matching the product mockup. */
 export const AgencyProjectCreateForm = ({
   open,
   onClose,
@@ -79,16 +51,104 @@ export const AgencyProjectCreateForm = ({
   open: boolean;
   onClose: () => void;
 }) => {
+  const isMobile = useIsMobile();
   const notify = useNotify();
   const redirect = useRedirect();
   const dataProvider = useDataProvider();
-  const { identity } = useGetIdentity();
+  const { identity, isPending: identityPending } = useGetIdentity();
   const [searchParams] = useSearchParams();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [isSaving, setIsSaving] = useState(false);
 
   const presetCompanyId = searchParams.get("company_id");
   const presetContactId = searchParams.get("contact_id");
   const presetProposalId = searchParams.get("proposal_id");
+
+  const parsedContactId = useMemo(
+    () => parsePresetId(presetContactId),
+    [presetContactId],
+  );
+  const parsedCompanyId = useMemo(
+    () => parsePresetId(presetCompanyId),
+    [presetCompanyId],
+  );
+  const parsedProposalId = useMemo(
+    () => parsePresetId(presetProposalId),
+    [presetProposalId],
+  );
+
+  const {
+    data: presetContact,
+    isPending: presetContactPending,
+    isError: presetContactError,
+  } = useGetOne<Contact>(
+    "contacts",
+    { id: parsedContactId as number },
+    { enabled: parsedContactId != null, retry: false },
+  );
+
+  const { data: presetCompany } = useGetOne<Company>(
+    "companies",
+    { id: parsedCompanyId as number },
+    {
+      enabled:
+        parsedCompanyId != null &&
+        !presetContact?.company_name?.trim(),
+      retry: false,
+    },
+  );
+
+  const resolvedContactId =
+    parsedContactId != null && presetContact && !presetContactError
+      ? parsedContactId
+      : null;
+
+  const resolvedCompanyId =
+    parsedCompanyId ??
+    (presetContact?.company_id && isValidRecordId(presetContact.company_id)
+      ? Number(presetContact.company_id)
+      : null);
+
+  const resolvedCompanyName =
+    presetContact?.company_name?.trim() || presetCompany?.name?.trim() || "";
+
+  const formReady =
+    !identityPending && (parsedContactId == null || !presetContactPending);
+
+  const formKey = `${identity?.id ?? "anon"}-${resolvedContactId ?? "none"}`;
+
+  const defaultValues = useMemo(
+    () => ({
+      organization_member_id: identity?.id ?? null,
+      category: LBS_DEFAULT_PROJECT_CATEGORY,
+      stage: LBS_DEFAULT_AGENCY_STAGE,
+      project_type: LBS_DEFAULT_AGENCY_PROJECT_TYPE,
+      lifecycle_phase: LBS_DEFAULT_LIFECYCLE_PHASE,
+      delivery_status: LBS_DEFAULT_DELIVERY_STATUS,
+      priority: LBS_DEFAULT_PROJECT_PRIORITY,
+      website_brief: emptyWebsiteBriefValues(),
+      website_content: { pages: DEFAULT_WEBSITE_CONTENT_PAGES },
+      company_id: resolvedCompanyId,
+      company_name: resolvedCompanyName,
+      contact_id: resolvedContactId,
+      contact_ids: resolvedContactId ? [resolvedContactId] : [],
+      accepted_proposal_id: parsedProposalId,
+      name: "",
+      amount: null,
+      estimated_value: null,
+      expected_closing_date: null,
+      salesperson_ids: [] as number[],
+      subcontractor_ids: [] as number[],
+      index: 0,
+      pipeline_id: "default",
+    }),
+    [
+      identity?.id,
+      parsedProposalId,
+      resolvedCompanyId,
+      resolvedCompanyName,
+      resolvedContactId,
+    ],
+  );
 
   const onSuccess = async (deal: Deal) => {
     if (identity?.id) {
@@ -108,83 +168,71 @@ export const AgencyProjectCreateForm = ({
       }
     }
 
-    setStep(1);
     onClose();
     redirect(`/deals/${deal.id}/show`);
   };
 
   const handleClose = () => {
-    setStep(1);
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto lg:max-w-4xl">
-        <DialogTitle className="text-2xl font-semibold">
-          New agency project
-        </DialogTitle>
-        <DialogDescription>
-          Step {step} of {CREATE_STEPS.length}: {CREATE_STEPS[step - 1].label}
-        </DialogDescription>
-
-        <div className="flex gap-2 pb-2">
-          {CREATE_STEPS.map((entry) => (
-            <div
-              key={entry.id}
-              className={`h-1 flex-1 rounded-full ${
-                entry.id <= step ? "bg-primary" : "bg-muted"
-              }`}
-              aria-hidden
-            />
-          ))}
-        </div>
-
-        <Create
-          resource="deals"
-          title={false}
-          disableBreadcrumb
-          mutationOptions={{ onSuccess }}
-        >
-          <Form
-            defaultValues={{
-              organization_member_id: identity?.id,
-              category: LBS_DEFAULT_PROJECT_CATEGORY,
-              stage: LBS_DEFAULT_AGENCY_STAGE,
-              project_type: LBS_DEFAULT_AGENCY_PROJECT_TYPE,
-              lifecycle_phase: LBS_DEFAULT_LIFECYCLE_PHASE,
-              delivery_status: LBS_DEFAULT_DELIVERY_STATUS,
-              priority: LBS_DEFAULT_PROJECT_PRIORITY,
-              website_brief: emptyWebsiteBriefValues(),
-              website_content: { pages: DEFAULT_WEBSITE_CONTENT_PAGES },
-              company_id: presetCompanyId ? Number(presetCompanyId) : null,
-              contact_id: presetContactId ? Number(presetContactId) : null,
-              contact_ids: presetContactId ? [Number(presetContactId)] : [],
-              accepted_proposal_id: presetProposalId
-                ? Number(presetProposalId)
-                : null,
-              salesperson_ids: [],
-              subcontractor_ids: [],
-              index: 0,
-              pipeline_id: "default",
+      <DialogContent
+        showCloseButton={false}
+        className={cn(
+          "flex max-h-[min(92vh,44rem)] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0",
+          "sm:max-w-xl md:max-w-2xl",
+          isMobile &&
+            "top-auto bottom-0 left-1/2 max-h-[92vh] translate-x-[-50%] translate-y-0 rounded-b-none rounded-t-2xl",
+        )}
+      >
+        {!formReady ? (
+          <div className="flex min-h-48 items-center justify-center p-8">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <Create
+            resource="deals"
+            title={false}
+            disableBreadcrumb
+            mutationOptions={{
+              onMutate: () => setIsSaving(true),
+              onSuccess,
+              onSettled: () => setIsSaving(false),
             }}
           >
-            <LbsDealInputs createStep={step} />
-            <AgencyProjectCreateStepToolbar
-              step={step}
-              onBack={() =>
-                setStep((current) =>
-                  current > 1 ? ((current - 1) as 1 | 2) : current,
-                )
-              }
-              onNext={() =>
-                setStep((current) =>
-                  current < 2 ? ((current + 1) as 1 | 2) : current,
-                )
-              }
-            />
-          </Form>
-        </Create>
+            <Form
+              id={NEW_DEAL_FORM_ID}
+              key={formKey}
+              className="flex min-h-0 flex-1 flex-col"
+              defaultValues={defaultValues}
+            >
+              <CreateFormDialogShell
+                icon={Briefcase}
+                iconTone="slate"
+                title="New deal / project"
+                description="Link this deal to a contact. Search by name, email, or phone."
+                isSaving={isSaving}
+                isMobile={isMobile}
+                onClose={handleClose}
+                submitLabel="Create deal"
+                submitSlot={
+                  <SaveButton
+                    type="button"
+                    transform={normalizeProjectPayload}
+                    label="Create deal"
+                    disabled={isSaving}
+                  />
+                }
+              >
+                <LbsDealCreateFields
+                  seedContact={presetContact ?? null}
+                />
+              </CreateFormDialogShell>
+            </Form>
+          </Create>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { ProjectDeliveryCountdownText } from "@/modules/deals/ProjectDeliveryCountdownText";
+import { getNewDealManualCreatePath } from "@/modules/deals/projectCreatePaths";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type {
   Company,
@@ -209,7 +210,7 @@ export const DealTableView = () => {
           Try another filter or create a new project.
         </p>
         <Link
-          to="/deals/create"
+          to={getNewDealManualCreatePath()}
           className={buttonVariants({ variant: "default" })}
         >
           New Project

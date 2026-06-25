@@ -31,6 +31,16 @@ export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 
 export const getLeadsListPath = () => "/leads";
 
+export const getLeadCreatePath = (params?: Record<string, string>) => {
+  const search = new URLSearchParams({ create: "lead" });
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      if (value) search.set(key, value);
+    }
+  }
+  return `/leads?${search.toString()}`;
+};
+
 export const getDealsListPath = () => "/deals";
 
 export const getLeadShowPath = (contactId: string | number) =>
@@ -63,14 +73,12 @@ export const getLeadProposalCreatePath = (
   dealId?: string | number | null,
 ) => getClientProposalCreatePath(companyId, contactId, dealId);
 
+import { getNewDealManualCreatePath } from "@/modules/deals/projectCreatePaths";
+
 export const getClientDealCreatePath = (
   companyId: string | number,
   contactId?: string | number | null,
-) => {
-  const params = new URLSearchParams({ company_id: String(companyId) });
-  if (contactId != null) params.set("contact_id", String(contactId));
-  return `/deals/create?${params.toString()}`;
-};
+) => getNewDealManualCreatePath(companyId, contactId);
 
 export const getPersonListPath = (status?: string | null) =>
   isLeadStatus(status) ? getLeadsListPath() : getContactsListPath();

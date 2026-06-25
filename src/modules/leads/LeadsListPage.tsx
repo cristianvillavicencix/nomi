@@ -7,6 +7,7 @@ import {
   Plus,
   UserCheck,
 } from "lucide-react";
+import { useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable } from "@/components/admin/data-table";
@@ -57,8 +58,18 @@ const getPrimaryEmail = (contact: Contact) =>
 
 export const LeadsListPage = () => {
   const { identity } = useGetIdentity();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [view, setView] = useState<LeadsView>(() => readPersistedView());
+
+  useEffect(() => {
+    if (searchParams.get("create") === "lead") {
+      setDialogOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("create");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

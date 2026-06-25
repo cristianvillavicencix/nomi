@@ -27,41 +27,48 @@ const requireAssignedMembers = (value?: unknown) => {
 
 type PersonAssignmentSectionProps = {
   assignmentMulti: boolean;
+  /** Omit section heading — used in compact create dialogs. */
+  flat?: boolean;
 };
 
 export const PersonAssignmentSection = ({
   assignmentMulti,
-}: PersonAssignmentSectionProps) => (
-  <PersonFormSection title="Assignment">
-    {assignmentMulti ? (
-      <ReferenceArrayInput
-        source="assigned_member_ids"
-        reference="organization_members"
-        filter={{ "disabled@neq": true }}
-      >
-        <AutocompleteArrayInput
-          label="Assigned to"
-          optionText={getMemberOptionText}
-          validate={requireAssignedMembers}
-          helperText={false}
-          placeholder="Select one or more team members"
-          filterToQuery={(searchText) => ({ q: searchText })}
-        />
-      </ReferenceArrayInput>
-    ) : (
-      <ReferenceInput
-        reference="organization_members"
-        source="organization_member_id"
-        sort={{ field: "last_name", order: "ASC" }}
-        filter={{ "disabled@neq": true }}
-      >
-        <SelectInput
-          helperText={false}
-          label="Assigned to"
-          optionText={saleOptionRenderer}
-          validate={required()}
-        />
-      </ReferenceInput>
-    )}
-  </PersonFormSection>
-);
+  flat = false,
+}: PersonAssignmentSectionProps) => {
+  const fields = assignmentMulti ? (
+    <ReferenceArrayInput
+      source="assigned_member_ids"
+      reference="organization_members"
+      filter={{ "disabled@neq": true }}
+    >
+      <AutocompleteArrayInput
+        label="Assigned to"
+        optionText={getMemberOptionText}
+        validate={requireAssignedMembers}
+        helperText={false}
+        placeholder="Select one or more team members"
+        filterToQuery={(searchText) => ({ q: searchText })}
+      />
+    </ReferenceArrayInput>
+  ) : (
+    <ReferenceInput
+      reference="organization_members"
+      source="organization_member_id"
+      sort={{ field: "last_name", order: "ASC" }}
+      filter={{ "disabled@neq": true }}
+    >
+      <SelectInput
+        helperText={false}
+        label="Assigned to"
+        optionText={saleOptionRenderer}
+        validate={required()}
+      />
+    </ReferenceInput>
+  );
+
+  if (flat) {
+    return <div className="space-y-4">{fields}</div>;
+  }
+
+  return <PersonFormSection title="Assignment">{fields}</PersonFormSection>;
+};

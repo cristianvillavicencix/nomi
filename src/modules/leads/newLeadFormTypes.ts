@@ -10,6 +10,7 @@ export type NewLeadFormValues = {
   interested_services: string[];
   status: string;
   assigned_member_ids: (number | string)[];
+  company_id?: number | string | null;
   add_primary_contact: boolean;
   company_draft_name: string;
   company_draft_website: string;
@@ -25,6 +26,8 @@ export type NewLeadFormValues = {
   email_jsonb: { email: string; type: string }[];
   phone_jsonb: { number: string; type: string }[];
   background: string;
+  lead_value_estimate?: number | null;
+  next_followup_at?: string | null;
 };
 
 export const defaultNewLeadFormValues = (
@@ -55,6 +58,8 @@ export const defaultNewLeadFormValues = (
   email_jsonb: [{ email: "", type: "Work" }],
   phone_jsonb: [{ number: "", type: "Work" }],
   background: "",
+  lead_value_estimate: null,
+  next_followup_at: null,
 });
 
 export type CreatedLeadPayload = Partial<Contact> & {

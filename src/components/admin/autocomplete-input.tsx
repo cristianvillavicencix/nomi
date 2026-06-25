@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
@@ -20,8 +19,8 @@ import {
 } from "@/components/admin/form";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import type {
   ChoicesProps,
@@ -40,6 +39,11 @@ import {
 } from "ra-core";
 import { InputHelperText } from "./input-helper-text";
 import { PopoverProps } from "@radix-ui/react-popover";
+import {
+  entitySearchPopoverClassName,
+  getReferenceOptionShortLabel,
+  renderReferenceOptionContent,
+} from "@/modules/shared/referenceAutocompleteOptions";
 
 /**
  * Form control that lets users choose a value from a list using a dropdown with autocompletion.
@@ -88,6 +92,10 @@ export const AutocompleteInput = (
       inputText?:
         | React.ReactNode
         | ((option: any | undefined) => React.ReactNode);
+      optionContent?:
+        | React.ReactNode
+        | ((option: any | undefined) => React.ReactNode);
+      popoverContentClassName?: string;
     } & Pick<PopoverProps, "modal">,
 ) => {
   const {
@@ -100,6 +108,8 @@ export const AutocompleteInput = (
     createItemLabel,
     onCreate,
     optionText,
+    optionContent,
+    popoverContentClassName,
     modal,
   } = props;
   const {
@@ -124,8 +134,9 @@ export const AutocompleteInput = (
   });
 
   const [filterValue, setFilterValue] = React.useState("");
-
   const [open, setOpen] = React.useState(false);
+  const anchorRef = React.useRef<HTMLDivElement>(null);
+  const suppressCloseRef = React.useRef(false);
   const selectedChoice = allChoices.find(
     (choice) => getChoiceValue(choice) === field.value,
   );
@@ -138,18 +149,111 @@ export const AutocompleteInput = (
       if (inputText !== undefined) {
         return inputText;
       }
+      const shortLabel = getReferenceOptionShortLabel(resource, selectedChoice);
+      if (shortLabel) return shortLabel;
       return getChoiceText(selectedChoice);
     },
-    [inputText, getChoiceText],
+    [inputText, getChoiceText, resource],
   );
 
+  const getOptionContent = useCallback(
+    (choice: any, isCreateItem: boolean) => {
+      if (isCreateItem) return getChoiceText(choice);
+      if (optionContent) {
+        return typeof optionContent === "function"
+          ? optionContent(choice)
+          : optionContent;
+      }
+      const richContent = renderReferenceOptionContent(resource, choice);
+      if (richContent) return richContent;
+      return getChoiceText(choice);
+    },
+    [getChoiceText, optionContent, resource],
+  );
+
+  const toInputString = (value: React.ReactNode) => {
+    if (value == null || value === false) return "";
+    if (typeof value === "string" || typeof value === "number") {
+      return String(value);
+    }
+    return "";
+  };
+
+  const selectedLabel = selectedChoice ? getInputText(selectedChoice) : null;
+  const inputDisplayValue = open
+    ? filterValue
+    : toInputString(selectedLabel);
+
+  const applySearchFilter = useCallback(
+    (value: string) => {
+      setFilterValue(value);
+      if (isFromReference) {
+        setFilters(filterToQuery(value));
+      }
+    },
+    [filterToQuery, isFromReference, setFilters],
+  );
+
+  const scheduleSuppressClose = useCallback(() => {
+    suppressCloseRef.current = true;
+    window.requestAnimationFrame(() => {
+      suppressCloseRef.current = false;
+    });
+  }, []);
+
   const handleOpenChange = useEvent((isOpen: boolean) => {
+    if (!isOpen && suppressCloseRef.current) {
+      return;
+    }
     setOpen(isOpen);
-    // Reset the filter when the popover is closed
     if (!isOpen) {
-      setFilters(filterToQuery(""));
+      setFilterValue("");
+      if (isFromReference) {
+        setFilters(filterToQuery(""));
+      }
     }
   });
+
+  const handleInputFocus = useCallback(() => {
+    setOpen(true);
+    if (selectedChoice) {
+      setFilterValue("");
+      if (isFromReference) {
+        setFilters(filterToQuery(""));
+      }
+    }
+  }, [filterToQuery, isFromReference, selectedChoice, setFilters]);
+
+  const handleInputPointerDown = useCallback(() => {
+    scheduleSuppressClose();
+    setOpen(true);
+  }, [scheduleSuppressClose]);
+
+  const handlePopoverInteractOutside = useCallback(
+    (event: Event) => {
+      const target = event.target;
+      if (anchorRef.current?.contains(target as Node)) {
+        event.preventDefault();
+      }
+    },
+    [],
+  );
+
+  const stopScrollPropagation = useCallback(
+    (event: React.WheelEvent | React.TouchEvent) => {
+      event.stopPropagation();
+    },
+    [],
+  );
+
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      applySearchFilter(value);
+      if (!open) setOpen(true);
+    },
+    [applySearchFilter, open],
+  );
 
   const handleChange = useCallback(
     (choice: any) => {
@@ -163,6 +267,10 @@ export const AutocompleteInput = (
         return;
       }
       field.onChange(getChoiceValue(choice));
+      setFilterValue("");
+      if (isFromReference) {
+        setFilters(filterToQuery(""));
+      }
       setOpen(false);
     },
     [
@@ -203,6 +311,14 @@ export const AutocompleteInput = (
     finalChoices = [...finalChoices, createItem];
   }
 
+  const visibleChoices = useMemo(() => {
+    if (isFromReference || !filterValue.trim()) return finalChoices;
+    const query = filterValue.trim().toLowerCase();
+    return finalChoices.filter((choice) =>
+      String(getChoiceText(choice)).toLowerCase().includes(query),
+    );
+  }, [filterValue, finalChoices, getChoiceText, isFromReference]);
+
   return (
     <>
       <FormField className={props.className} id={id} name={source}>
@@ -217,76 +333,88 @@ export const AutocompleteInput = (
           </FormLabel>
         )}
         <FormControl>
-          <Popover open={open} onOpenChange={handleOpenChange} modal={modal}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-between h-auto py-1.75 font-normal"
-              >
-                {selectedChoice ? (
-                  getInputText(selectedChoice)
-                ) : (
-                  <span className="text-muted-foreground">{placeholder}</span>
-                )}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full max-w-(--radix-popover-trigger-width) p-0">
-              {/* We handle the filtering ourselves */}
-              <Command shouldFilter={!isFromReference}>
-                <CommandInput
-                  placeholder="Search..."
-                  value={filterValue}
-                  onValueChange={(filter) => {
-                    setFilterValue(filter);
-                    // We don't want the ChoicesContext to filter the choices if the input
-                    // is not from a reference as it would also filter out the selected values
-                    if (isFromReference) {
-                      setFilters(filterToQuery(filter));
+          <div className="relative w-full">
+            <Popover open={open} onOpenChange={handleOpenChange} modal={modal ?? false}>
+              <PopoverAnchor asChild>
+                <div ref={anchorRef} className="relative w-full">
+                  <Input
+                    value={inputDisplayValue}
+                    onChange={handleInputChange}
+                    onFocus={handleInputFocus}
+                    onPointerDown={handleInputPointerDown}
+                    placeholder={
+                      !open && selectedLabel
+                        ? undefined
+                        : placeholder
                     }
-                  }}
-                />
-                <CommandList>
-                  <CommandEmpty>No matching item found.</CommandEmpty>
-                  <CommandGroup>
-                    {finalChoices.map((choice) => {
-                      const isCreateItem =
-                        !!createItem && choice?.id === createItem.id;
-                      const disabled = getOptionDisabled(choice);
+                    aria-expanded={open}
+                    aria-autocomplete="list"
+                    role="combobox"
+                    className="pr-9"
+                  />
+                  <ChevronsUpDown
+                    className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 shrink-0 opacity-50"
+                    aria-hidden
+                  />
+                </div>
+              </PopoverAnchor>
+              <PopoverContent
+                className={cn(
+                  entitySearchPopoverClassName,
+                  popoverContentClassName,
+                )}
+                align="start"
+                onOpenAutoFocus={(event) => event.preventDefault()}
+                onCloseAutoFocus={(event) => event.preventDefault()}
+                onInteractOutside={handlePopoverInteractOutside}
+                onPointerDownOutside={handlePopoverInteractOutside}
+                onWheel={stopScrollPropagation}
+                onTouchMove={stopScrollPropagation}
+              >
+                <Command shouldFilter={false}>
+                  <CommandList className="max-h-[min(18rem,50vh)]">
+                    <CommandEmpty>No matching item found.</CommandEmpty>
+                    <CommandGroup>
+                      {visibleChoices.map((choice) => {
+                        const isCreateItem =
+                          !!createItem && choice?.id === createItem.id;
+                        const disabled = getOptionDisabled(choice);
+                        const choiceValue = String(getChoiceValue(choice));
 
-                      return (
-                        <CommandItem
-                          key={getChoiceValue(choice)}
-                          value={
-                            isCreateItem
-                              ? // if it's the create option, include the filter value so it is shown in the command input
-                                // characters before and after the filter value are required
-                                // to show the option when the filter value starts or ends with a space
-                                `?${filterValue}?`
-                              : getChoiceValue(choice)
-                          }
-                          onSelect={() => handleChangeWithCreateSupport(choice)}
-                          disabled={disabled}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              field.value === getChoiceValue(choice)
-                                ? "opacity-100"
-                                : "opacity-0",
+                        return (
+                          <CommandItem
+                            key={choiceValue}
+                            value={
+                              isCreateItem
+                                ? `?${filterValue}?`
+                                : choiceValue
+                            }
+                            onSelect={() =>
+                              handleChangeWithCreateSupport(choice)
+                            }
+                            disabled={disabled}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4 shrink-0",
+                                field.value === getChoiceValue(choice)
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {getOptionContent(
+                              isCreateItem ? createItem : choice,
+                              isCreateItem,
                             )}
-                          />
-                          {getChoiceText(isCreateItem ? createItem : choice)}
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
         </FormControl>
         <InputHelperText helperText={props.helperText} />
         <FormError />

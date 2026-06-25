@@ -100,4 +100,55 @@ export const emptyClientFormValues = (): ClientCreateFormValues => ({
   invoice_email: "",
   invoice_phone: "",
   notes: "",
+  organization_member_id: null,
+  company_size: null,
+  company_revenue: "",
+  tax_identifier: "",
+  linkedin_url: "",
 });
+
+/** Reset streamlined create fields when company name is cleared (keeps assignee). */
+export const clearStreamlinedCompanyDependentFields = (
+  setValue: import("react-hook-form").UseFormSetValue<ClientCreateFormValues>,
+  keepOrganizationMemberId?: ClientCreateFormValues["organization_member_id"],
+) => {
+  const empty = emptyClientFormValues();
+  const assign = <K extends keyof ClientCreateFormValues>(
+    key: K,
+    value: ClientCreateFormValues[K],
+  ) => setValue(key, value, { shouldDirty: true });
+
+  assign("company_website", empty.company_website);
+  assign("company_emails", empty.company_emails);
+  assign("company_phones", empty.company_phones);
+  assign("company_sector", empty.company_sector);
+  assign("company_address", empty.company_address);
+  assign("company_city", empty.company_city);
+  assign("company_state_abbr", empty.company_state_abbr);
+  assign("company_zipcode", empty.company_zipcode);
+  assign("company_country", empty.company_country);
+  assign("company_size", empty.company_size);
+  assign("company_revenue", empty.company_revenue);
+  assign("tax_identifier", empty.tax_identifier);
+  assign("linkedin_url", empty.linkedin_url);
+  assign("notes", empty.notes);
+  assign("social_links", empty.social_links);
+  assign("primary_full_name", empty.primary_full_name);
+  assign("primary_email", empty.primary_email);
+  assign("primary_phone", empty.primary_phone);
+  assign("selected_primary_contact_id", empty.selected_primary_contact_id);
+  assign("billing_same_as_business", empty.billing_same_as_business);
+  assign("billing_address", empty.billing_address);
+  assign("billing_city", empty.billing_city);
+  assign("billing_state_abbr", empty.billing_state_abbr);
+  assign("billing_zipcode", empty.billing_zipcode);
+  assign("billing_country", empty.billing_country);
+  assign("invoice_same_as_primary", empty.invoice_same_as_primary);
+  assign("invoice_contact_name", empty.invoice_contact_name);
+  assign("invoice_email", empty.invoice_email);
+  assign("invoice_phone", empty.invoice_phone);
+
+  if (keepOrganizationMemberId != null) {
+    assign("organization_member_id", keepOrganizationMemberId);
+  }
+};

@@ -46,6 +46,10 @@ export type LbsClientUpsertInput = {
     zipcode?: string;
     country?: string;
     notes?: string;
+    size?: 1 | 10 | 50 | 250 | 500 | null;
+    revenue?: string;
+    taxIdentifier?: string;
+    linkedinUrl?: string;
   };
   billing: {
     sameAsBusiness: boolean;
@@ -160,13 +164,18 @@ export const buildCompanyPayloadFromUpsert = (
     phone_number: getPrimaryChannelValue(input.business.phones) || null,
     website: normalizeWebsite(input.business.website),
     sector: input.business.sector?.trim() || null,
-    linkedin_url: normalizeWebsite(findLinkedinUrl(companySocialLinks)),
+    linkedin_url: normalizeWebsite(
+      input.business.linkedinUrl ?? findLinkedinUrl(companySocialLinks),
+    ),
     address: input.business.address?.trim() || null,
     city: input.business.city?.trim() || null,
     state_abbr: input.business.stateAbbr?.trim() || null,
     zipcode: input.business.zipcode?.trim() || null,
     country: input.business.country?.trim() || null,
     description: input.business.notes?.trim() || null,
+    size: input.business.size ?? undefined,
+    revenue: input.business.revenue?.trim() || null,
+    tax_identifier: input.business.taxIdentifier?.trim() || null,
     organization_member_id: input.organizationMemberId,
     context_links: buildLbsClientContextLinks(
       {
@@ -252,7 +261,8 @@ export const clientCreateFormValuesToUpsertInput = (
   values: import("@/modules/clients/ClientCreateForm").ClientCreateFormValues,
   organizationMemberId: Identifier,
 ): LbsClientUpsertInput => ({
-  organizationMemberId,
+  organizationMemberId:
+    values.organization_member_id ?? organizationMemberId,
   primary: {
     fullName: values.primary_full_name,
     emails: singleChannelFromValue(values.primary_email),
@@ -271,6 +281,10 @@ export const clientCreateFormValuesToUpsertInput = (
     zipcode: values.company_zipcode,
     country: values.company_country,
     notes: values.notes,
+    size: values.company_size ?? undefined,
+    revenue: values.company_revenue,
+    taxIdentifier: values.tax_identifier,
+    linkedinUrl: values.linkedin_url,
   },
   billing: {
     sameAsBusiness: values.billing_same_as_business,

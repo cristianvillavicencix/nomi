@@ -85,6 +85,8 @@ export const defaultPersonFormValues = (
     referred_by_contact_id: null,
     referred_by_company_id: null,
     interested_services: [],
+    lead_value_estimate: null,
+    next_followup_at: null,
     organization_member_id: organizationMemberId,
     assigned_member_ids:
       organizationMemberId != null && organizationMemberId !== ""
@@ -128,7 +130,7 @@ export const resolveCompanySectionVariant = (
     isProspectKind(input.personKind) &&
     input.leadType === "individual"
   ) {
-    return "hidden";
+    return "picker";
   }
 
   return "picker";

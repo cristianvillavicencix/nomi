@@ -9,6 +9,7 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { ClientCreateFormValues } from "@/modules/clients/ClientCreateForm";
 import {
   clientCreateFormValuesToUpsertInput,
+  type LbsClientUpsertResult,
 } from "@/modules/clients/lbsClientUpsert";
 import { resolveCreatePrimaryUpsertOptions } from "@/modules/clients/primaryContactDraft";
 
@@ -21,7 +22,7 @@ export const useCreateClientSubmit = () => {
 
   const submitClientCreate = async (
     values: ClientCreateFormValues,
-  ): Promise<number | string | null> => {
+  ): Promise<LbsClientUpsertResult | null> => {
     if (!identity?.id) {
       notify("You must be signed in to create a client", { type: "error" });
       return null;
@@ -50,7 +51,7 @@ export const useCreateClientSubmit = () => {
         type: "info",
       });
       refresh();
-      return result.company_id;
+      return result;
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "Failed to save client",

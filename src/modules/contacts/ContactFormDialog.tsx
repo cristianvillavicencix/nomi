@@ -9,7 +9,7 @@ import {
   useRefresh,
   useTranslate,
 } from "ra-core";
-import { Loader2, X } from "lucide-react";
+import { Loader2, User, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
@@ -40,6 +40,8 @@ import {
   hasCompactContactName,
   LbsContactFormFields,
 } from "@/modules/contacts/LbsContactFormFields";
+import { defaultPersonFormValues } from "@/modules/contacts/PersonFormFields";
+import { CreateFormDialogShell } from "@/modules/shared/createForm/CreateFormDialogShell";
 import {
   LBS_LEAD_SOURCE_OTHER,
   LBS_LEAD_SOURCE_REFERRAL,
@@ -133,6 +135,36 @@ const defaultCreateValues = (lockCompanyId?: Identifier) => ({
   ...emptyCompanyDraftFormFields(),
   [PRIMARY_MOVE_CONFIRMED_FIELD]: false,
 });
+
+const ContactFormDialogCreateChrome = ({
+  title,
+  description,
+  isSaving,
+  isMobile,
+  onClose,
+  submitLabel,
+  children,
+}: {
+  title: string;
+  description: string;
+  isSaving: boolean;
+  isMobile: boolean;
+  onClose: () => void;
+  submitLabel: string;
+  children: ReactNode;
+}) => (
+  <CreateFormDialogShell
+    icon={User}
+    title={title}
+    description={description}
+    isSaving={isSaving}
+    isMobile={isMobile}
+    onClose={onClose}
+    submitLabel={submitLabel}
+  >
+    {children}
+  </CreateFormDialogShell>
+);
 
 const ContactFormDialogChrome = ({
   title,
@@ -372,6 +404,26 @@ export const ContactFormDialog = ({
           redirect={false}
           transform={(values: Record<string, unknown>): Partial<Contact> => {
             const payload = compactContactFieldsToPayload(values);
+            const emailRows = values.email_jsonb as
+              | Array<{ email?: string; type?: string }>
+              | undefined;
+            const phoneRows = values.phone_jsonb as
+              | Array<{ number?: string; type?: string }>
+              | undefined;
+            const email_jsonb =
+              emailRows
+                ?.filter((row) => row.email?.trim())
+                .map((row) => ({
+                  email: row.email!.trim(),
+                  type: row.type || "Work",
+                })) ?? payload.email_jsonb;
+            const phone_jsonb =
+              phoneRows
+                ?.filter((row) => row.number?.trim())
+                .map((row) => ({
+                  number: row.number!.trim(),
+                  type: row.type || "Work",
+                })) ?? payload.phone_jsonb;
             const now = new Date().toISOString();
             const effectiveLock =
               allowOrphanContact || deferCreate
@@ -379,14 +431,23 @@ export const ContactFormDialog = ({
                 : lockCompanyId;
             if (
               !allowOrphanContact &&
-              !hasCompanySelection(values, effectiveLock)
+              !deferCreate &&
+              lockCompanyId != null &&
+              lockCompanyId !== PENDING_COMPANY_LOCK &&
+              !hasCompanySelection(values, lockCompanyId)
             ) {
               throw new Error("Company is required");
             }
-            const { companyId, companyDraft } = resolveContactCompanyForSave(
+            const { companyId, companyDraft } = hasCompanySelection(
               values,
               effectiveLock,
-            );
+            )
+              ? resolveContactCompanyForSave(values, effectiveLock)
+              : { companyId: null, companyDraft: null };
+            const status = String(values.status ?? "contact_only");
+            const interestedServices = Array.isArray(values.interested_services)
+              ? (values.interested_services as string[])
+              : [];
             return {
               first_name: payload.first_name,
               last_name: payload.last_name,
@@ -401,16 +462,16 @@ export const ContactFormDialog = ({
                     company_draft_sector: companyDraft.sector,
                   }
                 : {}),
-              status: String(values.status ?? "contact_only"),
-              lead_stage:
-                String(values.status ?? "contact_only") === "contact_only"
-                  ? null
-                  : undefined,
+              status,
+              lead_stage: status === "lead" ? "new" : null,
+              lead_source: String(values.lead_source ?? "") || null,
+              interested_service:
+                interestedServices.filter(Boolean).join(", ") || null,
               organization_member_id:
                 (values.organization_member_id as Identifier | undefined) ??
                 identity?.id,
-              email_jsonb: payload.email_jsonb,
-              phone_jsonb: payload.phone_jsonb,
+              email_jsonb,
+              phone_jsonb,
               address: String(values.address ?? "") || null,
               city: String(values.city ?? "") || null,
               state_abbr: String(values.state_abbr ?? "") || null,
@@ -445,27 +506,26 @@ export const ContactFormDialog = ({
             key={createDefaults ? JSON.stringify(createDefaults) : "lbs-contact-form"}
             className="flex min-h-0 flex-1 flex-col"
             defaultValues={{
-              ...defaultCreateValues(formLockCompanyId),
+              ...defaultPersonFormValues("directory", identity?.id),
               ...createDefaults,
+              ...(lockCompanyId != null && lockCompanyId !== PENDING_COMPANY_LOCK
+                ? { company_id: lockCompanyId }
+                : {}),
             }}
           >
-            <ContactFormDialogChrome
+            <ContactFormDialogCreateChrome
               title={resolvedTitle}
-              description={
-                allowOrphanContact
-                  ? "Creates a contact without a company. The new company form will link them on save."
-                  : description
-              }
+              description="Create the person and link them to an existing company when applicable."
               isSaving={isSaving}
               isMobile={isMobile}
               onClose={handleClose}
               submitLabel={resolvedSubmitLabel}
             >
               <LbsContactFormFields
-                variant="compact"
+                variant="create"
                 lockCompanyId={formLockCompanyId}
               />
-            </ContactFormDialogChrome>
+            </ContactFormDialogCreateChrome>
           </Form>
         </CreateBase>
       </DialogContent>

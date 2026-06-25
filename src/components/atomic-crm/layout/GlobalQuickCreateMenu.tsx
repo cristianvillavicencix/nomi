@@ -28,10 +28,8 @@ import {
   hasMemberCapability,
   resolveEffectiveModules,
 } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
-import {
-  getClientCreatePath,
-  getContactCreatePath,
-} from "@/app/routing";
+import { getClientCreatePath, getContactCreatePath } from "@/app/routing";
+import { getNewDealManualCreatePath } from "@/modules/deals/projectCreatePaths";
 import { BookNowShareDialog } from "@/modules/booking/BookNowShareDialog";
 
 export const GlobalQuickCreateMenu = () => {
@@ -81,7 +79,7 @@ export const GlobalQuickCreateMenu = () => {
         label: "New deal",
         icon: Briefcase,
         section: "create",
-        onSelect: () => navigate("/deals/create"),
+        onSelect: () => navigate(getNewDealManualCreatePath()),
       });
     }
 

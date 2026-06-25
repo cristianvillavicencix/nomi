@@ -39,6 +39,8 @@ export type PersonFormValues = {
   referred_by_company_id?: number | null;
   interested_services: string[];
   lead_stage: string | null;
+  lead_value_estimate?: number | null;
+  next_followup_at?: string | null;
   organization_member_id?: Identifier;
   assigned_member_ids: (number | string)[];
   background: string;
@@ -49,7 +51,7 @@ export type PersonFormFieldsProps = {
   /** When set, company picker is hidden (existing company or deferred create). */
   lockCompanyId?: Identifier;
   /** Compact create shows identity + contact + company until expanded. */
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "create";
 };
 
 export type PersonFormVisibilityInput = {

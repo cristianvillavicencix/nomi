@@ -12,11 +12,9 @@ import { PersonIdentitySection } from "@/modules/contacts/personFormSections/Per
 import { PersonMoreOptionsSection } from "@/modules/contacts/personFormSections/PersonMoreOptionsSection";
 import { PersonSalesSection } from "@/modules/contacts/personFormSections/PersonSalesSection";
 import { PersonTypeSection } from "@/modules/contacts/personFormSections/PersonTypeSection";
+import { PersonFormCreateLayout } from "@/modules/contacts/personFormSections/PersonFormCreateLayout";
 
-/**
- * Unified person create/edit fields (contact + lead).
- * Wire into dialogs in later phases — not imported by production flows yet.
- */
+/** Unified person create/edit fields (directory contact + pipeline lead). */
 export const PersonFormFields = ({
   mode = "directory",
   lockCompanyId,
@@ -24,6 +22,16 @@ export const PersonFormFields = ({
 }: PersonFormFieldsProps) => {
   const { personKind, leadType, addPrimaryContact } = usePersonFormWatchValues();
   const { expanded, setExpanded } = usePersonFormExpandedState(variant);
+
+  if (variant === "create") {
+    return (
+      <PersonFormCreateLayout
+        mode={mode}
+        lockCompanyId={lockCompanyId}
+        companyOptional={mode === "directory" && lockCompanyId == null}
+      />
+    );
+  }
 
   const resolvedMode = variant === "compact" ? "compact" : mode;
 

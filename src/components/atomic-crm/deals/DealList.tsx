@@ -6,8 +6,6 @@ import {
 } from "ra-core";
 import { matchPath, useLocation } from "react-router";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
-import { CreateButton } from "@/components/admin/create-button";
-import { ExportButton } from "@/components/admin/export-button";
 import { List } from "@/components/admin/list";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { FilterButton } from "@/components/admin/filter-form";
@@ -26,6 +24,7 @@ import { DealEdit } from "./DealEdit";
 import { DealTableView } from "./DealTableView";
 import { DealShow } from "./DealShow";
 import { ProjectCreateFlow } from "@/modules/deals/ProjectCreateFlow";
+import { NewDealCreateButton } from "@/modules/deals/NewDealCreateButton";
 import { LbsDealBoardContent } from "@/modules/deals/LbsDealBoardContent";
 import { getDefaultPipeline } from "./pipelines";
 import { useDealsViewPreference } from "./useDealsViewPreference";
@@ -144,13 +143,7 @@ const DealActions = () => {
           <ToggleGroupItem value="list">List</ToggleGroupItem>
         </ToggleGroup>
         <FilterButton size="icon" showLabel={false} />
-        <ExportButton showLabel={false} className="px-2.5" />
-        {canManageSales ? (
-          <CreateButton
-            label="New Deal"
-            className="bg-black text-white hover:bg-black/90 border-black"
-          />
-        ) : null}
+        {canManageSales ? <NewDealCreateButton /> : null}
         <ModuleInfoPopover
           title="Deals"
           description="Pipeline control for every deal, from setup to delivered."

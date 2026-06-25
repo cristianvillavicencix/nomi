@@ -1,24 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetOne, useRedirect } from "ra-core";
 import { matchPath, useLocation, useSearchParams } from "react-router";
 import { AgencyProjectCreateForm } from "@/modules/deals/projects/AgencyProjectCreateForm";
-import { NewProjectChooserDialog } from "@/modules/deals/NewProjectChooserDialog";
 import { SendProjectWebFormDialog } from "@/modules/deals/SendProjectWebFormDialog";
+import {
+  buildProjectCreatePath,
+  type ProjectCreateMode,
+} from "@/modules/deals/projectCreatePaths";
 
 type ProjectCreateFlowProps = {
   onClose?: () => void;
 };
 
-type CreateStep = "chooser" | "manual" | "web-form";
+type CreateStep = ProjectCreateMode;
 
 const getStepFromRoute = (
   pathname: string,
   presetMode: string | null,
 ): CreateStep | null => {
   if (!matchPath("/deals/create", pathname)) return null;
-  if (presetMode === "manual") return "manual";
   if (presetMode === "web-form") return "web-form";
-  return "chooser";
+  return "manual";
 };
 
 export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
@@ -34,7 +36,6 @@ export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
   const [step, setStep] = useState<CreateStep | null>(() =>
     getStepFromRoute(location.pathname, presetMode),
   );
-  const suppressChooserCloseRef = useRef(false);
 
   useEffect(() => {
     setStep(getStepFromRoute(location.pathname, presetMode));
@@ -46,24 +47,6 @@ export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
       return;
     }
     redirect("/deals");
-  };
-
-  const goToManual = () => {
-    suppressChooserCloseRef.current = true;
-    setStep("manual");
-  };
-
-  const goToWebForm = () => {
-    suppressChooserCloseRef.current = true;
-    setStep("web-form");
-  };
-
-  const handleChooserClose = () => {
-    if (suppressChooserCloseRef.current) {
-      suppressChooserCloseRef.current = false;
-      return;
-    }
-    closeAll();
   };
 
   const { data: company } = useGetOne(
@@ -88,12 +71,6 @@ export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
 
   return (
     <>
-      <NewProjectChooserDialog
-        open={step === "chooser"}
-        onManual={goToManual}
-        onWebForm={goToWebForm}
-        onClose={handleChooserClose}
-      />
       {step === "manual" ? (
         <AgencyProjectCreateForm open onClose={closeAll} />
       ) : null}
@@ -114,10 +91,5 @@ export const ProjectCreateFlow = ({ onClose }: ProjectCreateFlowProps) => {
 export const openProjectCreatePath = (
   companyId?: string | number | null,
   contactId?: string | number | null,
-) => {
-  const params = new URLSearchParams();
-  if (companyId != null) params.set("company_id", String(companyId));
-  if (contactId != null) params.set("contact_id", String(contactId));
-  const query = params.toString();
-  return query ? `/deals/create?${query}` : "/deals/create";
-};
+  mode: ProjectCreateMode = "manual",
+) => buildProjectCreatePath({ companyId, contactId, mode });

@@ -3,7 +3,7 @@ import { PersonFormFields } from "@/modules/contacts/PersonFormFields";
 
 export type LbsContactFormFieldsProps = {
   /** Compact create: name, email, phone, company only until expanded. */
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "create";
   /** When set, company field is hidden and not editable. */
   lockCompanyId?: Identifier;
 };
