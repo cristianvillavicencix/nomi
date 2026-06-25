@@ -76,6 +76,8 @@ describe("buildContactPayloadFromUpsert", () => {
     ) as Record<string, unknown>;
 
     expect(payload.status).toBe("client");
+    expect(payload.lead_stage).toBe("won");
+    expect(payload.snooze_until).toBe("2099-12-31T00:00:00+00:00");
     expect(payload.tags).toEqual([]);
     expect(payload.first_seen).toBeTruthy();
     expect(payload).not.toHaveProperty("lead_source");

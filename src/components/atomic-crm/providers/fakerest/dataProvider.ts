@@ -1291,6 +1291,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         url: `https://github.com/${slug}/actions`,
       },
       github_token_configured: true,
+      languages: ["TypeScript", "CSS", "HTML"],
     };
   },
   submitProjectResources: async (payload: {

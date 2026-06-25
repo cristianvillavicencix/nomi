@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Globe } from "lucide-react";
 import { useGetOne } from "ra-core";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -34,10 +35,28 @@ import {
   type ClientSocialLinkValue,
 } from "@/modules/clients/clientSocialLinks";
 import { formatDateTime } from "@/modules/clients/clientShowUtils";
+import {
+  CLIENT_SERVICE_TYPE_LABELS,
+  type ClientServiceType,
+} from "@/modules/clients/clientServiceType";
 
 type ClientSummaryCardProps = {
   record: CompanyWithPrimaryContact;
+  serviceType?: ClientServiceType | null;
   onOpenPrimaryContact?: () => void;
+};
+
+const getServiceTypeBadgeLabels = (
+  serviceType: ClientServiceType | null | undefined,
+): string[] => {
+  if (!serviceType) return [];
+  if (serviceType === "both") {
+    return [
+      CLIENT_SERVICE_TYPE_LABELS.website,
+      CLIENT_SERVICE_TYPE_LABELS.xactimate,
+    ];
+  }
+  return [CLIENT_SERVICE_TYPE_LABELS[serviceType]];
 };
 
 const ProfileSectionTitle = ({ children }: { children: ReactNode }) => (
@@ -200,6 +219,7 @@ const dedupeSocialLinks = (links: ClientSocialLinkValue[]) => {
 
 export const ClientSummaryCard = ({
   record,
+  serviceType,
   onOpenPrimaryContact,
 }: ClientSummaryCardProps) => {
   const { companySectors } = useConfigurationContext();
@@ -247,6 +267,11 @@ export const ClientSummaryCard = ({
   const canOpenPrimary =
     Boolean(onOpenPrimaryContact && record.primary_contact_id);
 
+  const serviceTypeLabels = useMemo(
+    () => getServiceTypeBadgeLabels(serviceType),
+    [serviceType],
+  );
+
   return (
     <Card className="gap-0 py-0">
       <CardContent className="px-4 py-4">
@@ -269,6 +294,16 @@ export const ClientSummaryCard = ({
               {businessName}
             </ProfileFadeText>
           </div>
+
+          {serviceTypeLabels.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 px-1">
+              {serviceTypeLabels.map((label) => (
+                <Badge key={label} variant="secondary" className="text-xs">
+                  {label}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
 
           {websiteHref ? (
             <a

@@ -53,7 +53,7 @@ const normalizeWebsiteHref = (website?: string | null) => {
 const getCompanyListEmail = (record: CompanyWithPrimaryContact) =>
   resolveCompanyEmailForDisplay(record);
 
-export const CompaniesListPage = () => {
+export const CompaniesListPage = ({ embedded = false }: { embedded?: boolean }) => {
   const { identity } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
@@ -79,7 +79,7 @@ export const CompaniesListPage = () => {
         sort={{ field: "name", order: "ASC" }}
         actions={
           <PageActions>
-            <PageTitle label="Companies" />
+            {!embedded ? <PageTitle label="Companies" /> : null}
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"

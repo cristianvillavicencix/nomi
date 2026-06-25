@@ -1,38 +1,58 @@
-import { Badge } from "@/components/ui/badge";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PortalCopy } from "@/modules/portal/portalI18n";
-import { parseDomainFromUrl } from "@/modules/portal/portalResourceUtils";
-import { formatPortalDate, type PortalDomain } from "@/modules/portal/portalTypes";
 
-const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="rounded-lg border bg-background/80 px-4 py-3">
-    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-      {label}
+const normalizeHref = (url?: string | null) => {
+  const raw = url?.trim() ?? "";
+  if (!raw) return "";
+  return raw.startsWith("http") ? raw : `https://${raw}`;
+};
+
+const UrlRow = ({
+  label,
+  url,
+  copy,
+}: {
+  label: string;
+  url: string;
+  copy: PortalCopy;
+}) => {
+  const href = normalizeHref(url);
+  if (!href) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background/80 px-4 py-3">
+      <div className="min-w-0">
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </div>
+        <div className="mt-1 truncate text-sm font-medium text-brand-navy">{url}</div>
+      </div>
+      <Button asChild size="sm" variant="outline" className="shrink-0">
+        <a href={href} target="_blank" rel="noreferrer">
+          <ExternalLink className="size-4" />
+          {copy.openLive}
+        </a>
+      </Button>
     </div>
-    <div className="mt-1 text-sm font-medium text-brand-navy">{value}</div>
-  </div>
-);
+  );
+};
 
 export const ClientDomainSection = ({
-  domains,
   siteUrl,
+  stagingUrl,
   copy,
-  locale,
 }: {
-  domains: PortalDomain[];
   siteUrl?: string | null;
+  stagingUrl?: string | null;
   copy: PortalCopy;
-  locale: "es" | "en";
 }) => {
-  const localeTag = locale === "es" ? "es-US" : "en-US";
-  const resolvedDomains =
-    domains.length > 0
-      ? domains
-      : parseDomainFromUrl(siteUrl)
-        ? [{ domain: parseDomainFromUrl(siteUrl) }]
-        : [];
+  const rows = [
+    { label: copy.liveUrl, url: siteUrl },
+    { label: copy.stagingUrl, url: stagingUrl },
+  ].filter((row) => Boolean(row.url?.trim()));
 
-  if (resolvedDomains.length === 0) {
+  if (rows.length === 0) {
     return (
       <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
         {copy.noDomainInfo}
@@ -41,52 +61,9 @@ export const ClientDomainSection = ({
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{copy.domainIntro}</p>
-      {resolvedDomains.map((domain) => (
-        <div key={domain.id ?? domain.domain} className="space-y-3 rounded-lg border p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-lg font-semibold text-brand-navy">{domain.domain}</h3>
-            <Badge variant="outline">
-              {domain.managed_by === "client" ? copy.managedByClient : copy.managedByLbs}
-            </Badge>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <InfoRow label={copy.domainRegistrar} value={domain.registrar || "—"} />
-            <InfoRow
-              label={copy.domainRegistered}
-              value={formatPortalDate(domain.registered_at, localeTag)}
-            />
-            <InfoRow
-              label={copy.domainRenewal}
-              value={formatPortalDate(domain.renewal_date, localeTag)}
-            />
-            <InfoRow
-              label={copy.domainAutoRenew}
-              value={domain.auto_renew ? copy.yes : copy.no}
-            />
-          </div>
-          {domain.dns_servers?.length ? (
-            <div className="rounded-lg border px-4 py-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {copy.dnsServers}
-              </div>
-              <ul className="mt-2 space-y-1 font-mono text-xs">
-                {domain.dns_servers.map((server) => (
-                  <li key={server}>{server}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" disabled>
-              {copy.requestDomainTransfer}
-            </Button>
-            <Button type="button" variant="outline" size="sm" disabled>
-              {copy.reportDomainIssue}
-            </Button>
-          </div>
-        </div>
+    <div className="space-y-3">
+      {rows.map((row) => (
+        <UrlRow key={row.label} label={row.label} url={row.url!} copy={copy} />
       ))}
     </div>
   );

@@ -989,7 +989,7 @@ async function promoteContact(
     ),
     background: pickString(payload.Description),
     lead_source: pickString(payload.Lead_Source),
-    status: "contact",
+    status: "contact_only",
   };
 
   const { data: existing } = await supabaseAdmin

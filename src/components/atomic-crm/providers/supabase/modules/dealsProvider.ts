@@ -476,7 +476,6 @@ export const dealsProvider = {
       .from("contacts")
       .update({
         company_id: companyId,
-        status: "client",
       })
       .eq("id", contactId);
 
@@ -576,6 +575,7 @@ export const dealsProvider = {
         url: string | null;
       } | null;
       github_token_configured: boolean;
+      languages?: string[];
       error?: string | null;
     }>("get_github_repo_status", {
       method: "POST",
@@ -899,6 +899,15 @@ export const dealsProvider = {
     delivery_date?: string;
     hosting_renewal_date?: string;
     hosting_status?: string;
+    hosting_info?: {
+      provider?: string | null;
+      panel_url?: string | null;
+      managed_by?: "lbs" | "client" | string | null;
+      location?: string | null;
+    };
+    domain_info?: {
+      registrar?: string | null;
+    };
     site_language?: string;
     included_pages?: string[];
     maintenance_plan?: Record<string, unknown>;

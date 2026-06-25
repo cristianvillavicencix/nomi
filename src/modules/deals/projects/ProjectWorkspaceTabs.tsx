@@ -28,11 +28,6 @@ import { useDealsRealtime } from "@/components/atomic-crm/deals/useDealsRealtime
 import { useDealResourcesRealtime } from "@/modules/deals/useDealResourcesRealtime";
 import type { DealResource, LbsDeal } from "@/modules/types";
 
-const ProjectDeliveryTab = lazy(() =>
-  import("@/modules/deals/projects/tabs/ProjectDeliveryTab").then((m) => ({
-    default: m.ProjectDeliveryTab,
-  })),
-);
 const ProjectFinancialsTab = lazy(() =>
   import("@/modules/deals/projects/tabs/ProjectFinancialsTab").then((m) => ({
     default: m.ProjectFinancialsTab,
@@ -102,7 +97,7 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   const showTab = (tab: string) => visited.has(tab) || currentTab === tab;
 
   return (
-    <Card className="flex h-full flex-1 flex-col gap-0 rounded-t-none border-t-0 pt-0 -mt-px min-w-0">
+    <Card className="flex h-full min-w-0 flex-1 flex-col gap-0 border-0 py-0 shadow-none">
         <CardContent className="px-4 pt-1 sm:px-6">
           <Tabs value={currentTab} onValueChange={handleTabChange}>
             <StickyTabsBar className="pb-1">
@@ -134,9 +129,6 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                     Financials
                   </TabsTrigger>
                 ) : null}
-                <TabsTrigger value="delivery" className="shrink-0">
-                  Delivery
-                </TabsTrigger>
               </TabsList>
             </StickyTabsBar>
             <ScrollableContentArea>
@@ -161,13 +153,6 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
                   ) : null}
                 </TabsContent>
               ) : null}
-              <TabsContent value="delivery" className="pt-4">
-                {showTab("delivery") ? (
-                  <Suspense fallback={<TabFallback />}>
-                    <ProjectDeliveryTab record={record} />
-                  </Suspense>
-                ) : null}
-              </TabsContent>
             </ScrollableContentArea>
           </Tabs>
         </CardContent>

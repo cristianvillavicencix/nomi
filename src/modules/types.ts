@@ -451,6 +451,7 @@ export type ProjectDelivery = {
   included_pages?: string[];
   maintenance_plan?: Record<string, unknown>;
   enabled_sections?: string[];
+  domain_info?: Record<string, unknown>;
   revoked_at?: string | null;
   manual_override?: {
     reason: string;

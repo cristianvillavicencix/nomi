@@ -32,6 +32,36 @@ export type PortalDelivery = {
   onboarding_info?: Record<string, unknown>;
 };
 
+/** Sections shown in the client delivery portal. */
+export const DEFAULT_PORTAL_ENABLED_SECTIONS = [
+  "overview",
+  "hosting",
+  "domain",
+  "credentials",
+  "billing",
+  "files",
+  "handoff",
+] as const;
+
+export type PortalView = (typeof DEFAULT_PORTAL_ENABLED_SECTIONS)[number];
+
+const LEGACY_PORTAL_SECTIONS_V1 = ["credentials", "handoff", "domain_dns"] as const;
+const LEGACY_PORTAL_SECTIONS_V2 = [
+  "overview",
+  "credentials",
+  "files",
+  "handoff",
+  "domain_dns",
+] as const;
+const LEGACY_PORTAL_SECTIONS_V3 = [
+  "overview",
+  "hosting_domain",
+  "credentials",
+  "billing",
+  "files",
+  "handoff",
+] as const;
+
 export type PortalCredential = {
   id: number;
   label: string;
@@ -87,6 +117,34 @@ export type PortalNotification = {
   created_at?: string | null;
 };
 
+export type PortalInvoice = {
+  id: number;
+  invoice_number: string;
+  issue_date: string;
+  due_date: string;
+  amount: number;
+  amount_paid: number;
+  currency: string;
+  status: string;
+  description?: string | null;
+  paid_at?: string | null;
+  reference?: string | null;
+  portal_token?: string | null;
+};
+
+export type PortalPayment = {
+  id: number | string;
+  payment_date: string;
+  amount: number;
+  payment_method?: string | null;
+  reference_number?: string | null;
+  check_number?: string | null;
+  status?: string | null;
+  notes?: string | null;
+  source: "invoice" | "project";
+  invoice_number?: string | null;
+};
+
 export type PortalPayload = {
   account?: { email?: string };
   projects?: PortalProject[];
@@ -96,19 +154,34 @@ export type PortalPayload = {
   resources?: PortalResource[];
   domains?: PortalDomain[];
   corporate_emails?: PortalCorporateEmail[];
+  invoices?: PortalInvoice[];
+  payments?: PortalPayment[];
   approvals?: Array<Record<string, unknown>>;
   notifications?: PortalNotification[];
 };
 
-export type PortalView =
-  | "general"
-  | "credentials"
-  | "corporate_email"
-  | "domain_dns"
-  | "files"
-  | "marketing_seo"
-  | "training"
-  | "support";
+const expandLegacyPortalSection = (section: string): PortalView[] => {
+  if (section === "hosting_domain") return ["hosting", "domain"];
+  if (section === "domain_dns") return ["domain"];
+  if (DEFAULT_PORTAL_ENABLED_SECTIONS.includes(section as PortalView)) {
+    return [section as PortalView];
+  }
+  return [];
+};
+
+export const normalizePortalEnabledSections = (
+  enabled?: string[] | null,
+): PortalView[] => {
+  const pickedSet = new Set<PortalView>(DEFAULT_PORTAL_ENABLED_SECTIONS);
+
+  for (const section of enabled ?? []) {
+    for (const expanded of expandLegacyPortalSection(section)) {
+      pickedSet.add(expanded);
+    }
+  }
+
+  return DEFAULT_PORTAL_ENABLED_SECTIONS.filter((id) => pickedSet.has(id));
+};
 
 export const DEFAULT_INCLUDED_PAGES = [
   "Home",

@@ -122,6 +122,20 @@ const fetchGithubRepoStatus = async (
     console.warn("get_github_repo_status.actions", error);
   }
 
+  let languages: string[] = [];
+  try {
+    const langData = (await githubFetch(
+      `/repos/${owner}/${repo}/languages`,
+      token,
+    )) as Record<string, number>;
+    languages = Object.entries(langData)
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 8)
+      .map(([name]) => name);
+  } catch (error) {
+    console.warn("get_github_repo_status.languages", error);
+  }
+
   return {
     slug,
     repo_url: repoUrl,
@@ -129,6 +143,7 @@ const fetchGithubRepoStatus = async (
     last_commit: lastCommit,
     latest_run: latestRun,
     github_token_configured: Boolean(token),
+    languages,
   };
 };
 
@@ -191,6 +206,7 @@ Deno.serve(async (req: Request) =>
                 last_commit: null,
                 latest_run: null,
                 github_token_configured: Boolean(token),
+                languages: [],
                 error:
                   error instanceof Error
                     ? error.message

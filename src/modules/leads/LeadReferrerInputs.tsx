@@ -64,7 +64,7 @@ export const LeadReferrerInputs = ({
           data: {
             first_name: firstName,
             last_name: lastName || firstName,
-            status: "contact",
+            status: "contact_only",
             organization_member_id: identity?.id,
             first_seen: now,
             last_seen: now,

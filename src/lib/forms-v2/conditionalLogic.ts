@@ -103,6 +103,7 @@ export const evaluateSingleCondition = (
     case "less_or_equal":
       return Number(value) <= Number(condition.value);
     case "is_empty":
+      if (typeof value === "boolean") return !value;
       return isEmptyValue(value);
     case "is_not_empty":
       return !isEmptyValue(value);

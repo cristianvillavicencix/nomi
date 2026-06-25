@@ -1,25 +1,32 @@
 import { useMemo, useState, useEffect } from "react";
 import {
+  useCreate,
+  useGetIdentity,
   useGetList,
   useGetOne,
   useInput,
+  useNotify,
   useRecordContext,
+  useRefresh,
   type Identifier,
 } from "ra-core";
-import { Building2, Check } from "lucide-react";
+import { Building2, Check, Loader2 } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { Company, Contact } from "@/components/atomic-crm/types";
+import { CompanyInlineDraftFields } from "@/modules/contacts/CompanyInlineDraftFields";
 import {
+  COMPANY_DRAFT_FIELD_NAMES,
   COMPANY_DRAFT_NAME_FIELD,
-  COMPANY_DRAFT_SECTOR_FIELD,
   PRIMARY_MOVE_CONFIRMED_FIELD,
+  clearCompanyDraftFormFields,
+  companyDraftToCreateData,
   companySectorLabel,
+  emptyCompanyDraftFormFields,
   getCompanyDraftFromFormValues,
 } from "@/modules/contacts/companyDraft";
-import { LBS_COMPANY_INDUSTRY_CHOICES } from "@/modules/leads/leadFormConstants";
 import { getClientShowPath } from "@/app/routing";
 import {
   EntitySearchGroup,
@@ -27,8 +34,6 @@ import {
   EntitySearchToolbar,
   SelectedEntityRow,
 } from "@/modules/shared/entityPickerUi";
-import { CommandEmpty } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 
 const validateCompanySelection = (
@@ -44,24 +49,24 @@ const validateCompanySelection = (
 
 export const ContactCompanyPickerField = () => {
   const record = useRecordContext<Contact>();
-  const { setValue, clearErrors, register } = useFormContext();
+  const { setValue, clearErrors, register, getValues } = useFormContext();
+  const [create] = useCreate();
+  const { identity } = useGetIdentity();
+  const notify = useNotify();
+  const refresh = useRefresh();
 
   useEffect(() => {
-    register(COMPANY_DRAFT_NAME_FIELD);
-    register(COMPANY_DRAFT_SECTOR_FIELD);
     register(PRIMARY_MOVE_CONFIRMED_FIELD);
+    for (const field of COMPANY_DRAFT_FIELD_NAMES) {
+      register(field);
+    }
   }, [register]);
+
   const { field } = useInput({
     source: "company_id",
     validate: validateCompanySelection,
   });
 
-  const draftName = useWatch({ name: COMPANY_DRAFT_NAME_FIELD }) as
-    | string
-    | undefined;
-  const draftSector = useWatch({ name: COMPANY_DRAFT_SECTOR_FIELD }) as
-    | string
-    | undefined;
   const moveConfirmed = useWatch({ name: PRIMARY_MOVE_CONFIRMED_FIELD }) as
     | boolean
     | undefined;
@@ -69,6 +74,8 @@ export const ContactCompanyPickerField = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddCompany, setShowAddCompany] = useState(false);
+  const [panelInitialName, setPanelInitialName] = useState("");
+  const [isCreatingCompany, setIsCreatingCompany] = useState(false);
   const [optimisticCompany, setOptimisticCompany] = useState<Company | null>(
     null,
   );
@@ -87,24 +94,15 @@ export const ContactCompanyPickerField = () => {
   );
 
   const selectedCompanyId = field.value as Identifier | null | undefined;
-  const hasDraft = Boolean(draftName?.trim() && draftSector?.trim());
   const hasSelectedCompany = isValidRecordId(selectedCompanyId);
-  const hasSelection = hasSelectedCompany || hasDraft;
 
   const { data: fetchedCompany } = useGetOne<Company>(
     "companies",
     { id: selectedCompanyId! },
-    { enabled: hasSelectedCompany && !hasDraft },
+    { enabled: hasSelectedCompany },
   );
 
   const activeCompany = useMemo(() => {
-    if (hasDraft) {
-      return {
-        id: undefined,
-        name: draftName!.trim(),
-        sector: draftSector!.trim(),
-      } satisfies Partial<Company> as Company;
-    }
     if (
       optimisticCompany &&
       hasSelectedCompany &&
@@ -113,14 +111,7 @@ export const ContactCompanyPickerField = () => {
       return optimisticCompany;
     }
     return fetchedCompany ?? null;
-  }, [
-    draftName,
-    draftSector,
-    fetchedCompany,
-    hasDraft,
-    optimisticCompany,
-    selectedCompanyId,
-  ]);
+  }, [fetchedCompany, hasSelectedCompany, optimisticCompany, selectedCompanyId]);
 
   const originalCompanyId = record?.company_id ?? null;
   const { data: originalCompany } = useGetOne<Company>(
@@ -140,44 +131,82 @@ export const ContactCompanyPickerField = () => {
     record?.id != null &&
     hasSelectedCompany &&
     isValidRecordId(originalCompanyId) &&
-    String(selectedCompanyId) !== String(originalCompanyId) &&
-    !hasDraft;
+    String(selectedCompanyId) !== String(originalCompanyId);
 
-  const needsPrimaryMoveConfirm =
-    isPrimaryOfOriginal && (companyChanged || hasDraft);
+  const needsPrimaryMoveConfirm = isPrimaryOfOriginal && companyChanged;
 
   const selectCompany = (company: Company) => {
     setOptimisticCompany(company);
     field.onChange(company.id);
-    setValue(COMPANY_DRAFT_NAME_FIELD, "");
-    setValue(COMPANY_DRAFT_SECTOR_FIELD, "");
+    clearCompanyDraftFormFields(setValue);
     setValue(PRIMARY_MOVE_CONFIRMED_FIELD, false);
     clearErrors("company_id");
     setSearchOpen(false);
     setSearchQuery("");
     setShowAddCompany(false);
+    setPanelInitialName("");
   };
 
   const clearSelection = () => {
     setOptimisticCompany(null);
     field.onChange(null);
-    setValue(COMPANY_DRAFT_NAME_FIELD, "");
-    setValue(COMPANY_DRAFT_SECTOR_FIELD, "");
+    clearCompanyDraftFormFields(setValue);
     setValue(PRIMARY_MOVE_CONFIRMED_FIELD, false);
     setShowAddCompany(false);
+    setPanelInitialName("");
   };
 
-  const applyDraftCompany = (name: string, sector: string) => {
-    field.onChange(null);
-    setValue(COMPANY_DRAFT_NAME_FIELD, name);
-    setValue(COMPANY_DRAFT_SECTOR_FIELD, sector);
-    setValue(PRIMARY_MOVE_CONFIRMED_FIELD, false);
-    clearErrors("company_id");
-    setShowAddCompany(false);
+  const openAddCompanyPanel = (initialName = "") => {
+    clearCompanyDraftFormFields(setValue);
+    setPanelInitialName(initialName);
+    if (initialName) {
+      setValue(COMPANY_DRAFT_NAME_FIELD, initialName, { shouldDirty: true });
+    }
+    setShowAddCompany(true);
+    setSearchOpen(false);
+  };
+
+  const handleCreateCompany = async () => {
+    const draft = getCompanyDraftFromFormValues(getValues());
+    if (!draft?.name?.trim()) {
+      notify("Company name is required", { type: "warning" });
+      return;
+    }
+    if (!draft.sector?.trim()) {
+      notify("Industry is required", { type: "warning" });
+      return;
+    }
+
+    setIsCreatingCompany(true);
+    try {
+      const created = (await create(
+        "companies",
+        {
+          data: companyDraftToCreateData(draft, identity?.id),
+        },
+        { returnPromise: true },
+      )) as Company;
+
+      if (!created?.id) {
+        throw new Error("Failed to create company");
+      }
+
+      refresh();
+      selectCompany(created);
+      notify("Company created", { type: "info" });
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "Failed to create company",
+        { type: "error" },
+      );
+    } finally {
+      setIsCreatingCompany(false);
+    }
   };
 
   const rowTitle = activeCompany?.name?.trim() ?? "";
   const rowSubtitle = companySectorLabel(activeCompany?.sector);
+  const hasSelection = hasSelectedCompany && Boolean(rowTitle);
 
   return (
     <div className="space-y-3">
@@ -191,7 +220,7 @@ export const ContactCompanyPickerField = () => {
         searchPlaceholder="Search companies…"
         addButtonLabel="Add company"
         addButtonIcon={<Building2 className="size-4" />}
-        onAddClick={() => setShowAddCompany((open) => !open)}
+        onAddClick={() => openAddCompanyPanel()}
         isFetching={isFetching}
         emptyMessage="Type to search companies."
         emptySearchMessage="No companies match your search."
@@ -199,7 +228,12 @@ export const ContactCompanyPickerField = () => {
       >
         {!isFetching && trimmedSearch.length > 0 ? (
           companies.length === 0 ? (
-            <CommandEmpty>No companies match your search.</CommandEmpty>
+            <EntitySearchGroup heading="Companies">
+              <EntitySearchOption
+                label={`Create "${trimmedSearch}" as new company`}
+                onSelect={() => openAddCompanyPanel(trimmedSearch)}
+              />
+            </EntitySearchGroup>
           ) : (
             <EntitySearchGroup heading="Companies">
               {companies.map((company) => {
@@ -224,12 +258,18 @@ export const ContactCompanyPickerField = () => {
 
       {showAddCompany ? (
         <AddCompanyDraftPanel
-          onApply={applyDraftCompany}
-          onCancel={() => setShowAddCompany(false)}
+          initialName={panelInitialName}
+          isCreating={isCreatingCompany}
+          onCreate={handleCreateCompany}
+          onCancel={() => {
+            setShowAddCompany(false);
+            setPanelInitialName("");
+            clearCompanyDraftFormFields(setValue);
+          }}
         />
       ) : null}
 
-      {hasSelection && rowTitle ? (
+      {hasSelection ? (
         <SelectedEntityRow
           title={rowTitle}
           subtitle={rowSubtitle || undefined}
@@ -275,73 +315,59 @@ export const ContactCompanyPickerField = () => {
 };
 
 const AddCompanyDraftPanel = ({
-  onApply,
+  initialName,
+  isCreating,
+  onCreate,
   onCancel,
 }: {
-  onApply: (name: string, sector: string) => void;
+  initialName: string;
+  isCreating: boolean;
+  onCreate: () => void;
   onCancel: () => void;
 }) => {
-  const [name, setName] = useState("");
-  const [sector, setSector] = useState("");
-  const sectorError = name.trim() && !sector.trim();
+  const { setValue } = useFormContext();
+
+  useEffect(() => {
+    if (!initialName) return;
+    setValue(COMPANY_DRAFT_NAME_FIELD, initialName, { shouldDirty: true });
+  }, [initialName, setValue]);
 
   return (
     <div className="space-y-3 rounded-md border bg-muted/10 p-3">
       <p className="text-sm font-medium">New company</p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="contact-company-draft-name">Business name</Label>
-          <input
-            id="contact-company-draft-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={cn(
-              "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs",
-              "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-            )}
-            placeholder="Company name"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="contact-company-draft-sector">Industry</Label>
-          <select
-            id="contact-company-draft-sector"
-            value={sector}
-            onChange={(event) => setSector(event.target.value)}
-            className={cn(
-              "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs",
-              "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-            )}
-          >
-            <option value="">Select industry…</option>
-            {LBS_COMPANY_INDUSTRY_CHOICES.map((choice) => (
-              <option key={choice.id} value={choice.id}>
-                {choice.name}
-              </option>
-            ))}
-          </select>
-          {sectorError ? (
-            <p className="text-xs text-destructive">Industry is required</p>
-          ) : null}
-        </div>
-      </div>
+      <CompanyInlineDraftFields />
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
           size="sm"
-          disabled={!name.trim() || !sector.trim()}
-          onClick={() => onApply(name.trim(), sector.trim())}
+          disabled={isCreating}
+          onClick={onCreate}
         >
-          Use this company
+          {isCreating ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Creating…
+            </>
+          ) : (
+            "Create company"
+          )}
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={isCreating}
+          onClick={onCancel}
+        >
           Cancel
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Saved with the contact — nothing is written until you save the contact
-        form.
+        The company is saved immediately and linked to this contact. You can
+        finish and save the contact when ready.
       </p>
     </div>
   );
 };
+
+export { emptyCompanyDraftFormFields };

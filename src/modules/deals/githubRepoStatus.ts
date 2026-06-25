@@ -22,6 +22,7 @@ export type GithubRepoStatus = {
   last_commit: GithubRepoCommitStatus | null;
   latest_run: GithubRepoRunStatus | null;
   github_token_configured: boolean;
+  languages?: string[];
   error?: string | null;
 };
 

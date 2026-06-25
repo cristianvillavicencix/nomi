@@ -4,7 +4,6 @@ export const LBS_PROJECT_TABS = [
   "resources",
   "security",
   "financials",
-  "delivery",
 ] as const;
 
 export type LbsProjectTab = (typeof LBS_PROJECT_TABS)[number];
@@ -24,9 +23,10 @@ const LEGACY_TAB_MAP: Record<string, LbsProjectTab> = {
   activities: "overview",
   settings: "security",
   tickets: "overview",
-  schedule: "delivery",
-  launch: "delivery",
-  maintenance: "delivery",
+  schedule: "overview",
+  launch: "overview",
+  maintenance: "financials",
+  delivery: "overview",
   expenses: "financials",
   change_orders: "financials",
   payments: "financials",

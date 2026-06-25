@@ -1,9 +1,8 @@
-import type { UseFormSetValue } from "react-hook-form";
+import type { UseFormSetValue, FieldValues } from "react-hook-form";
 import type { GooglePlaceDetails } from "@/lib/googlePlaces";
-import type { NewLeadFormValues } from "./newLeadFormTypes";
 
 export const applyGoogleBusinessToLeadForm = (
-  setValue: UseFormSetValue<NewLeadFormValues>,
+  setValue: UseFormSetValue<FieldValues>,
   details: GooglePlaceDetails,
 ) => {
   if (details.name) {
@@ -23,7 +22,7 @@ export const applyGoogleBusinessToLeadForm = (
 };
 
 export const applyGoogleAddressToLeadForm = (
-  setValue: UseFormSetValue<NewLeadFormValues>,
+  setValue: UseFormSetValue<FieldValues>,
   details: GooglePlaceDetails,
 ) => {
   if (details.formattedAddress) {
@@ -40,7 +39,7 @@ export const applyGoogleAddressToLeadForm = (
 };
 
 export const applyGoogleAddressToContactLeadForm = (
-  setValue: UseFormSetValue<NewLeadFormValues>,
+  setValue: UseFormSetValue<FieldValues>,
   details: GooglePlaceDetails,
 ) => {
   if (details.formattedAddress) {

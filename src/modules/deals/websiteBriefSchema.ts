@@ -3,6 +3,8 @@ import {
   getVisibleContractorBriefSections,
   usesContractorBriefForm,
 } from "@/modules/deals/contractorBriefSchema";
+import { enrichBriefAnswers } from "@/modules/deals/briefFormUtils";
+import { evaluateCondition } from "@/lib/forms-v2/conditionalLogic";
 import { formatBriefFieldForDisplay } from "@/modules/deals/businessHoursBrief";
 import {
   getLbsProjectScopeMode,
@@ -503,18 +505,37 @@ export type BriefSectionStats = {
   isEmpty: boolean;
 };
 
+const isBriefFieldFilled = (
+  field: WebsiteBriefFieldDef,
+  brief: Record<string, unknown>,
+): boolean => {
+  const value = brief[field.key];
+
+  if (field.fieldType === "checkbox" && !field.required) {
+    if (value === true || value === false) return true;
+    if (value === "true" || value === "false") return true;
+  }
+
+  if (value == null) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "boolean") return value;
+  return Boolean(String(value).trim());
+};
+
 export const getBriefSectionStats = (
   section: WebsiteBriefSectionDef,
   brief: Record<string, string | null | undefined> = {},
 ): BriefSectionStats => {
-  const total = section.fields.length;
-  const filled = section.fields.filter((field) => {
-    const value = brief[field.key];
-    if (value == null) return false;
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === "boolean") return value;
-    return Boolean(String(value).trim());
-  }).length;
+  const briefAnswers = enrichBriefAnswers(
+    brief as Record<string, unknown>,
+  ) as Record<string, unknown>;
+  const applicableFields = section.fields.filter((field) =>
+    evaluateCondition(field.visibleWhen, briefAnswers),
+  );
+  const filled = applicableFields.filter((field) =>
+    isBriefFieldFilled(field, briefAnswers),
+  ).length;
+  const total = applicableFields.length;
   return {
     filled,
     total,

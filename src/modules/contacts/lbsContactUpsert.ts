@@ -3,6 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Contact } from "@/components/atomic-crm/types";
 import { shouldClearPrimaryOnCompany } from "@/modules/clients/primaryContactRelink";
 import type { CompanyDraft } from "@/modules/contacts/companyDraft";
+import {
+  companyDraftToCreateData,
+  getCompanyDraftFromFormValues,
+} from "@/modules/contacts/companyDraft";
 import { prepareContactWriteData, stripContactFormMetaFields } from "@/components/atomic-crm/providers/supabase/dataProviderWriteHelpers";
 
 type OrgMember = {
@@ -30,10 +34,7 @@ const createCompanyFromDraft = async (
     .from("companies")
     .insert({
       org_id: member.org_id,
-      name: draft.name,
-      sector: draft.sector,
-      organization_member_id: member.id,
-      created_at: new Date().toISOString(),
+      ...companyDraftToCreateData(draft, member.id),
     })
     .select("id")
     .single();
@@ -177,13 +178,15 @@ export const persistContactWithCompany = async ({
 export const resolveContactCompanyFromPayload = (
   data: Record<string, unknown>,
 ) => {
-  const draftName = String(data._company_draft_name ?? "").trim();
-  const draftSector = String(data._company_draft_sector ?? "").trim();
-  const companyDraft =
-    draftName && draftSector ? { name: draftName, sector: draftSector } : null;
+  const companyId = (data.company_id as Identifier | null | undefined) ?? null;
+  if (companyId != null && companyId !== "") {
+    return { companyId, companyDraft: null };
+  }
 
+  const companyDraft = getCompanyDraftFromFormValues(data);
   return {
-    companyId: (data.company_id as Identifier | null | undefined) ?? null,
-    companyDraft,
+    companyId,
+    companyDraft:
+      companyDraft?.name && companyDraft.sector ? companyDraft : null,
   };
 };

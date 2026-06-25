@@ -25,6 +25,11 @@ const ProjectPaymentsTab = lazy(() =>
     default: m.ProjectPaymentsTab,
   })),
 );
+const MaintenanceTab = lazy(() =>
+  import("@/modules/deals/projects/tabs/MaintenanceTab").then((m) => ({
+    default: m.MaintenanceTab,
+  })),
+);
 
 const TabFallback = () => <Skeleton className="h-40 w-full rounded-lg" />;
 
@@ -78,6 +83,9 @@ export const ProjectFinancialsTab = ({ record }: { record: LbsDeal }) => {
               Change orders
             </TabsTrigger>
           ) : null}
+          <TabsTrigger value="maintenance" className="shrink-0">
+            Maintenance
+          </TabsTrigger>
         </TabsList>
 
         {canViewPayments ? (
@@ -101,6 +109,11 @@ export const ProjectFinancialsTab = ({ record }: { record: LbsDeal }) => {
             </Suspense>
           </TabsContent>
         ) : null}
+        <TabsContent value="maintenance" className="pt-4">
+          <Suspense fallback={<TabFallback />}>
+            <MaintenanceTab record={record} />
+          </Suspense>
+        </TabsContent>
       </Tabs>
     </div>
   );

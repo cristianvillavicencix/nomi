@@ -1,11 +1,20 @@
 import { LBS_LEAD_STATUSES } from "@/app/navigation";
 
+export type ClientsHubListTab = "companies" | "people";
+
+/** Canonical Clients hub entry (`/clients`). */
+export const getClientsHubPath = (tab: ClientsHubListTab = "companies") => {
+  if (tab === "people") return "/clients?tab=people";
+  return "/clients";
+};
+
+/** Bookmark-friendly list aliases — still mount the hub without redirecting. */
 export const getCompaniesListPath = () => "/companies";
 
 export const getContactsListPath = () => "/contacts";
 
-/** @deprecated Use getCompaniesListPath */
-export const getClientsListPath = getCompaniesListPath;
+/** Preferred navigation target for the unified Clients hub. */
+export const getClientsListPath = () => getClientsHubPath();
 
 export const getClientShowPath = (companyId: string | number) =>
   `/companies/${companyId}`;
@@ -13,9 +22,10 @@ export const getClientShowPath = (companyId: string | number) =>
 export const getClientEditPath = (companyId: string | number) =>
   `/companies/${companyId}?edit=1`;
 
-export const getClientCreatePath = () => "/companies?create=company";
+export const getClientCreatePath = () => "/clients?create=company";
 
-export const getContactCreatePath = () => "/contacts?create=contact";
+export const getContactCreatePath = () =>
+  "/clients?tab=people&create=contact";
 
 export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 

@@ -12,6 +12,11 @@ import {
 } from "@/components/ui/table";
 import type { PortalCopy } from "@/modules/portal/portalI18n";
 import {
+  getPortalCredentialCategoryLabel,
+  groupPortalCredentials,
+  type PortalCredentialCategory,
+} from "@/modules/portal/portalCredentialCategories";
+import {
   logPortalCredentialCopy,
   revealPortalCredentialPassword,
 } from "@/modules/portal/portalCredentialsApi";
@@ -21,11 +26,127 @@ import { formatPortalDate, type PortalCredential } from "@/modules/portal/portal
 
 const maskPassword = () => "••••••••••";
 
+const CredentialRows = ({
+  entries,
+  visibleIds,
+  revealed,
+  busyId,
+  copy,
+  localeTag,
+  onView,
+  onCopy,
+}: {
+  entries: PortalCredential[];
+  visibleIds: Set<number>;
+  revealed: Record<number, string | null>;
+  busyId: number | null;
+  copy: PortalCopy;
+  localeTag: string;
+  onView: (entryId: number) => void;
+  onCopy: (entry: PortalCredential) => void;
+}) => (
+  <>
+    {entries.map((entry) => {
+      const isVisible = visibleIds.has(entry.id);
+      const passwordValue = revealed[entry.id];
+      const displayPassword =
+        isVisible && passwordValue
+          ? passwordValue
+          : entry.has_password
+            ? maskPassword()
+            : "—";
+
+      return (
+        <TableRow key={entry.id}>
+          <TableCell>
+            <div className="font-medium">{entry.label}</div>
+            <div className="mt-1 flex flex-wrap gap-1">
+              <Badge variant="outline" className="text-[10px]">
+                {entry.managed_by === "client"
+                  ? copy.managedByClient
+                  : copy.managedByLbs}
+              </Badge>
+              {entry.password_updated_at ? (
+                <span className="text-[10px] text-muted-foreground">
+                  {copy.updated}{" "}
+                  {formatPortalDate(entry.password_updated_at, localeTag)}
+                </span>
+              ) : null}
+            </div>
+          </TableCell>
+          <TableCell className="font-mono text-xs">
+            {entry.username || "—"}
+          </TableCell>
+          <TableCell className="font-mono text-xs">{displayPassword}</TableCell>
+          <TableCell>
+            <div className="flex justify-end gap-1">
+              {entry.has_password ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    disabled={busyId === entry.id}
+                    aria-label={isVisible ? copy.hidePassword : copy.viewPassword}
+                    onClick={() => onView(entry.id)}
+                  >
+                    {isVisible ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    disabled={busyId === entry.id}
+                    aria-label={copy.copyPassword}
+                    onClick={() => onCopy(entry)}
+                  >
+                    <Copy className="size-4" />
+                  </Button>
+                </>
+              ) : null}
+              {entry.url ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  asChild
+                >
+                  <a
+                    href={
+                      entry.url.startsWith("http")
+                        ? entry.url
+                        : `https://${entry.url}`
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={copy.openPanel}
+                  >
+                    <ExternalLink className="size-4" />
+                  </a>
+                </Button>
+              ) : null}
+            </div>
+          </TableCell>
+        </TableRow>
+      );
+    })}
+  </>
+);
+
 export const ClientCredentialsSection = ({
   portalToken,
   dealId,
   accountEmail,
   credentials,
+  categories,
+  emptyMessage,
   copy,
   locale,
 }: {
@@ -33,6 +154,8 @@ export const ClientCredentialsSection = ({
   dealId: number;
   accountEmail?: string | null;
   credentials: PortalCredential[];
+  categories?: PortalCredentialCategory[];
+  emptyMessage?: string;
   copy: PortalCopy;
   locale: "es" | "en";
 }) => {
@@ -42,14 +165,9 @@ export const ClientCredentialsSection = ({
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const sensitive = usePortalSensitiveSession(portalToken, accountEmail);
-
-  const sortedCredentials = useMemo(
-    () =>
-      [...credentials].sort(
-        (left, right) =>
-          (left.portal_sort_order ?? 0) - (right.portal_sort_order ?? 0),
-      ),
-    [credentials],
+  const groupedCredentials = useMemo(
+    () => groupPortalCredentials(credentials, categories),
+    [categories, credentials],
   );
 
   const revealEntry = async (entryId: number) => {
@@ -125,16 +243,16 @@ export const ClientCredentialsSection = ({
     });
   };
 
-  if (sortedCredentials.length === 0) {
+  if (groupedCredentials.length === 0) {
     return (
       <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-        {copy.noSharedCredentials}
+        {emptyMessage ?? copy.noSharedCredentials}
       </p>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{copy.credentialsIntro}</p>
         {sensitive.isActive ? (
@@ -149,107 +267,40 @@ export const ClientCredentialsSection = ({
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{copy.serviceColumn}</TableHead>
-              <TableHead>{copy.usernameColumn}</TableHead>
-              <TableHead>{copy.passwordColumn}</TableHead>
-              <TableHead className="text-right">{copy.actionsColumn}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedCredentials.map((entry) => {
-              const isVisible = visibleIds.has(entry.id);
-              const passwordValue = revealed[entry.id];
-              const displayPassword =
-                isVisible && passwordValue
-                  ? passwordValue
-                  : entry.has_password
-                    ? maskPassword()
-                    : "—";
-
-              return (
-                <TableRow key={entry.id}>
-                  <TableCell>
-                    <div className="font-medium">{entry.label}</div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      <Badge variant="outline" className="text-[10px]">
-                        {entry.managed_by === "client"
-                          ? copy.managedByClient
-                          : copy.managedByLbs}
-                      </Badge>
-                      {entry.password_updated_at ? (
-                        <span className="text-[10px] text-muted-foreground">
-                          {copy.updated}{" "}
-                          {formatPortalDate(entry.password_updated_at, localeTag)}
-                        </span>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {entry.username || "—"}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{displayPassword}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      {entry.has_password ? (
-                        <>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="size-8"
-                            disabled={busyId === entry.id}
-                            aria-label={isVisible ? copy.hidePassword : copy.viewPassword}
-                            onClick={() => handleView(entry.id)}
-                          >
-                            {isVisible ? (
-                              <EyeOff className="size-4" />
-                            ) : (
-                              <Eye className="size-4" />
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="size-8"
-                            disabled={busyId === entry.id}
-                            aria-label={copy.copyPassword}
-                            onClick={() => handleCopy(entry)}
-                          >
-                            <Copy className="size-4" />
-                          </Button>
-                        </>
-                      ) : null}
-                      {entry.url ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="size-8"
-                          asChild
-                        >
-                          <a
-                            href={entry.url.startsWith("http") ? entry.url : `https://${entry.url}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label={copy.openPanel}
-                          >
-                            <ExternalLink className="size-4" />
-                          </a>
-                        </Button>
-                      ) : null}
-                    </div>
-                  </TableCell>
+      {groupedCredentials.map((group) => (
+        <section key={group.category} className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">
+            {getPortalCredentialCategoryLabel(
+              group.category as PortalCredentialCategory,
+              copy,
+            )}
+          </h3>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{copy.serviceColumn}</TableHead>
+                  <TableHead>{copy.usernameColumn}</TableHead>
+                  <TableHead>{copy.passwordColumn}</TableHead>
+                  <TableHead className="text-right">{copy.actionsColumn}</TableHead>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                <CredentialRows
+                  entries={group.items}
+                  visibleIds={visibleIds}
+                  revealed={revealed}
+                  busyId={busyId}
+                  copy={copy}
+                  localeTag={localeTag}
+                  onView={handleView}
+                  onCopy={handleCopy}
+                />
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      ))}
 
       <SensitiveSessionDialog
         open={sensitive.confirmOpen}

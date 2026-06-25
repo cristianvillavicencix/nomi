@@ -24,17 +24,17 @@ import { canAccess } from "@/components/atomic-crm/providers/commons/canAccess";
 import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import {
   filterLbsNavGroups,
-  LBS_CLIENTS_NAV_COLLAPSIBLE,
+  LBS_CLIENTS_NAV_ITEM,
   LBS_MORE_NAV_COLLAPSIBLE,
   LBS_NAV_AFTER_CLIENTS,
   LBS_NAV_GROUPS,
   LBS_NAV_STANDALONE,
   splitLbsNavGroups,
-  type LbsNavCollapsibleGroup,
   type LbsNavCollapsibleSection,
   type LbsNavGroup,
   type LbsNavItem,
 } from "@/app/navigation";
+import { getAccessibleClientsHubTabs } from "@/modules/clients/clientsHubAccess";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 
 import {
@@ -82,6 +82,11 @@ const readStoredOpen = (storageKey: string, fallback: boolean) => {
   return stored === "true";
 };
 
+const isClientsNavActive = (pathname: string) =>
+  matchesNavPattern("/clients/*", pathname) ||
+  matchesNavPattern("/companies/*", pathname) ||
+  matchesNavPattern("/contacts/*", pathname);
+
 type LbsSidebarNavProps = {
   websiteMonitorEnabled: boolean;
   messagesUnreadCount: number;
@@ -110,10 +115,12 @@ export const LbsSidebarNav = ({
     [identity],
   );
 
-  const clientsNavChildren = useMemo(
-    () => filterAccessibleItems(identity, LBS_CLIENTS_NAV_COLLAPSIBLE.children),
-    [identity],
-  );
+  const clientsNavItem = useMemo(() => {
+    if (!identity) return null;
+    return getAccessibleClientsHubTabs(identity).length > 0
+      ? LBS_CLIENTS_NAV_ITEM
+      : null;
+  }, [identity]);
 
   const navGroups = useMemo(() => {
     const groups = filterLbsNavGroups(LBS_NAV_GROUPS, { websiteMonitorEnabled });
@@ -132,7 +139,7 @@ export const LbsSidebarNav = ({
 
   const hasPrimaryNav =
     standaloneItems.length > 0 ||
-    clientsNavChildren.length > 0 ||
+    clientsNavItem != null ||
     afterClientsItems.length > 0 ||
     primaryNavGroups.length > 0;
 
@@ -144,16 +151,9 @@ export const LbsSidebarNav = ({
     [secondaryNavGroups, isActive],
   );
 
-  const clientsSectionActive = useMemo(
-    () =>
-      clientsNavChildren.some((item) => isActive(item.activePattern)) ||
-      isActive("/clients/*"),
-    [clientsNavChildren, isActive],
-  );
-
   return (
     <SidebarGroup className="gap-0 p-2">
-      {standaloneItems.length > 0 ? (
+      {standaloneItems.length > 0 || clientsNavItem ? (
         <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
           {standaloneItems.map((item) => (
             <SidebarNavLink
@@ -163,18 +163,14 @@ export const LbsSidebarNav = ({
               collapsed={sidebarState === "collapsed"}
             />
           ))}
-        </SidebarMenu>
-      ) : null}
-
-      {clientsNavChildren.length > 0 ? (
-        <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
-          <ClientsCollapsibleNav
-            group={LBS_CLIENTS_NAV_COLLAPSIBLE}
-            childrenItems={clientsNavChildren}
-            isActive={isActive}
-            sectionActive={clientsSectionActive}
-            collapsed={sidebarState === "collapsed"}
-          />
+          {clientsNavItem ? (
+            <SidebarNavLink
+              key={clientsNavItem.to}
+              item={clientsNavItem}
+              active={isClientsNavActive(location.pathname)}
+              collapsed={sidebarState === "collapsed"}
+            />
+          ) : null}
         </SidebarMenu>
       ) : null}
 
@@ -195,7 +191,7 @@ export const LbsSidebarNav = ({
       {primaryNavGroups.map((group, index) => {
         const hasItemsAbove =
           standaloneItems.length > 0 ||
-          clientsNavChildren.length > 0 ||
+          clientsNavItem != null ||
           afterClientsItems.length > 0 ||
           index > 0;
         return (
@@ -379,120 +375,6 @@ const MoreCollapsibleNav = ({
         </SidebarMenuSub>
       ) : null}
     </SidebarMenu>
-  );
-};
-
-const ClientsCollapsibleNav = ({
-  group,
-  childrenItems,
-  isActive,
-  sectionActive,
-  collapsed,
-}: {
-  group: LbsNavCollapsibleGroup;
-  childrenItems: LbsNavItem[];
-  isActive: (pattern: string) => boolean;
-  sectionActive: boolean;
-  collapsed: boolean;
-  badgeCount?: number;
-}) => {
-  const [open, setOpen] = useState(() =>
-    readStoredOpen(group.storageKey, sectionActive),
-  );
-
-  useEffect(() => {
-    if (sectionActive) {
-      setOpen(true);
-    }
-  }, [sectionActive]);
-
-  const toggleOpen = () => {
-    const next = !open;
-    setOpen(next);
-    window.localStorage.setItem(group.storageKey, String(next));
-  };
-
-  const ParentIcon = group.icon;
-
-  if (collapsed) {
-    return (
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label={group.label}
-            title={group.label}
-            className={sidebarNavLinkCollapsedClass(sectionActive)}
-          >
-            <ParentIcon className={sidebarNavIconClass(sectionActive)} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="right" align="start" className="min-w-40">
-            {childrenItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.activePattern);
-              return (
-                <DropdownMenuItem key={item.to} asChild>
-                  <Link
-                    to={item.to}
-                    state={LINK_STATE}
-                    className={sidebarNavDropdownItemClass(active)}
-                  >
-                    <Icon className="size-4" />
-                    {item.label}
-                  </Link>
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    );
-  }
-
-  return (
-    <>
-      <SidebarMenuItem>
-        <button
-          type="button"
-          onClick={toggleOpen}
-          className={cn(
-            "relative flex w-full items-center gap-2 rounded-sm py-1.5 px-2.5 text-sm transition-colors",
-            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground",
-          )}
-          aria-expanded={open}
-        >
-          <ParentIcon className="size-4 shrink-0 text-muted-foreground" />
-          <span className="truncate">{group.label}</span>
-          <ChevronDown
-            className={cn(
-              "ml-auto size-4 shrink-0 text-muted-foreground transition-transform",
-              open && "rotate-180",
-            )}
-          />
-        </button>
-      </SidebarMenuItem>
-      {open ? (
-        <SidebarMenuSub className="mx-2.5 border-l border-sidebar-border/80 px-2">
-          {childrenItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.activePattern);
-            return (
-              <SidebarMenuSubItem key={item.to}>
-                <SidebarMenuSubButton asChild isActive={active}>
-                  <Link
-                    to={item.to}
-                    state={LINK_STATE}
-                    className={sidebarNavSubLinkClass(active)}
-                  >
-                    <Icon className={sidebarNavIconClass(active)} />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-            );
-          })}
-        </SidebarMenuSub>
-      ) : null}
-    </>
   );
 };
 

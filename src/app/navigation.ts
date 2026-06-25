@@ -1,9 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart2,
-  BookUser,
   Briefcase,
-  Building2,
   CalendarDays,
   FileSignature,
   FileText,
@@ -109,7 +107,7 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   },
   {
     to: "/leads",
-    label: "Leads",
+    label: "Pipeline",
     icon: UserPlus,
     activePattern: "/leads/*",
     capability: "crm.contacts.view",
@@ -118,11 +116,19 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   },
 ];
 
+/** Single sidebar entry for the unified Clients hub. */
+export const LBS_CLIENTS_NAV_ITEM: LbsNavItem = {
+  to: "/clients",
+  label: "Clients",
+  icon: Users,
+  activePattern: "/clients/*",
+};
+
 /** Top-level links after Clients (no group header). */
 export const LBS_NAV_AFTER_CLIENTS: LbsNavItem[] = [
   {
     to: "/deals",
-    label: "Deals",
+    label: "Projects",
     icon: Briefcase,
     activePattern: "/deals/*",
     capability: "crm.pipeline.view",
@@ -175,33 +181,6 @@ export const LBS_NAV_AFTER_CLIENTS: LbsNavItem[] = [
     action: "list",
   },
 ];
-
-export const LBS_CLIENTS_NAV_COLLAPSIBLE: LbsNavCollapsibleGroup = {
-  id: "clients",
-  label: "Clients",
-  icon: Users,
-  storageKey: "sidebar_clients_open",
-  children: [
-    {
-      to: "/companies",
-      label: "Companies",
-      icon: Building2,
-      activePattern: "/companies/*",
-      capability: "crm.companies.view",
-      resource: "companies",
-      action: "list",
-    },
-    {
-      to: "/contacts",
-      label: "Contacts",
-      icon: BookUser,
-      activePattern: "/contacts/*",
-      capability: "crm.contacts.view",
-      resource: "contacts",
-      action: "list",
-    },
-  ],
-};
 
 export const LBS_NAV_GROUPS: LbsNavGroup[] = [
   {
@@ -298,7 +277,7 @@ export const LBS_PLACEHOLDER_MODULES = {
 /** Flat list for top navigation and legacy callers. */
 export const LBS_NAV_ITEMS: LbsNavItem[] = [
   ...LBS_NAV_STANDALONE,
-  ...LBS_CLIENTS_NAV_COLLAPSIBLE.children,
+  LBS_CLIENTS_NAV_ITEM,
   ...LBS_NAV_AFTER_CLIENTS,
   ...LBS_NAV_GROUPS.flatMap((group) => group.items),
 ];

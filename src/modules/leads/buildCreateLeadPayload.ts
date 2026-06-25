@@ -1,13 +1,11 @@
 import type { Company, Contact } from "@/components/atomic-crm/types";
+import {
+  companyDraftToCreateData,
+  getCompanyDraftFromFormValues,
+} from "@/modules/contacts/companyDraft";
 import { applyLeadAssignmentFields } from "./leadAssignments";
 import { isOtherSource, isReferralSource } from "./leadFormConstants";
 import type { CreatedLeadPayload, NewLeadFormValues } from "./newLeadFormTypes";
-
-const normalizeWebsite = (raw: string) => {
-  const trimmed = raw.trim();
-  if (!trimmed) return "";
-  return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
-};
 
 const cleanEmailJsonb = (rows: NewLeadFormValues["email_jsonb"]) =>
   rows
@@ -22,15 +20,13 @@ const cleanPhoneJsonb = (rows: NewLeadFormValues["phone_jsonb"]) =>
 export const buildCompanyCreateData = (
   values: NewLeadFormValues,
   organizationMemberId?: number | string,
-): Partial<Company> => ({
-  name: values.company_draft_name.trim(),
-  website: normalizeWebsite(values.company_draft_website),
-  phone_number: values.company_draft_phone.trim(),
-  address: values.company_draft_address.trim(),
-  sector: values.company_draft_sector || "other",
-  organization_member_id: organizationMemberId,
-  created_at: new Date().toISOString(),
-});
+): Partial<Company> => {
+  const draft = getCompanyDraftFromFormValues(values);
+  if (!draft?.name) {
+    throw new Error("Company name is required");
+  }
+  return companyDraftToCreateData(draft, organizationMemberId);
+};
 
 export const buildContactCreatePayload = (
   values: NewLeadFormValues,
@@ -65,6 +61,7 @@ export const buildContactCreatePayload = (
         : null,
       interested_service,
       status: values.status ?? "lead",
+      lead_stage: "new",
       assigned_member_ids: values.assigned_member_ids,
       background: values.background?.trim() || "",
       first_seen: now,
@@ -92,6 +89,7 @@ export const buildContactCreatePayload = (
       : null,
     interested_service,
     status: values.status ?? "lead",
+    lead_stage: "new",
     assigned_member_ids: values.assigned_member_ids,
     background: values.background?.trim() || "",
     first_seen: now,

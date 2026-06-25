@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { PortalDeliverySettingsCard } from "@/modules/portal/PortalDeliverySettingsCard";
 import { useProjectPortalLink } from "@/modules/portal/useProjectPortalLink";
 import type { LbsDeal } from "@/modules/types";
 
@@ -100,6 +101,7 @@ export const ClientPortalSection = ({ record }: { record: LbsDeal }) => {
             </Button>
           </div>
         ) : null}
+        <PortalDeliverySettingsCard record={record} />
       </CardContent>
     </Card>
   );

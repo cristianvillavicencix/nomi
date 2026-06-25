@@ -39,7 +39,7 @@ const getPrimaryPhone = (contact: Contact) =>
 const getPrimaryEmail = (contact: Contact) =>
   contact.email_jsonb?.find((email) => email.email?.trim())?.email ?? "—";
 
-export const ContactsListPage = () => {
+export const ContactsListPage = ({ embedded = false }: { embedded?: boolean }) => {
   const { identity } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -68,7 +68,7 @@ export const ContactsListPage = () => {
         }}
         actions={
           <PageActions>
-            <PageTitle label="Contacts" />
+            {!embedded ? <PageTitle label="Contacts" /> : null}
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"

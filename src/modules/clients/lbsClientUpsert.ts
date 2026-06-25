@@ -235,6 +235,8 @@ export const buildContactPayloadFromUpsert = (
   return {
     ...formFields,
     status: LBS_CLIENT_STATUS,
+    lead_stage: "won",
+    snooze_until: "2099-12-31T00:00:00+00:00",
     first_seen: now,
     last_seen: now,
     tags: [],

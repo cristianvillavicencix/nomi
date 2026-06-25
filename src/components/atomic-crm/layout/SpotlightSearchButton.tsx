@@ -174,7 +174,7 @@ export const SpotlightSearchButton = ({
       sort: { field: "name", order: "ASC" },
       filter: trimmedQuery ? { q: trimmedQuery } : {},
     },
-    { enabled: open && !isSearching && moduleAccess.clients, staleTime: 15_000 },
+    { enabled: open && moduleAccess.clients, staleTime: 15_000 },
   );
 
   const contactsQuery = useGetList(
@@ -329,11 +329,14 @@ export const SpotlightSearchButton = ({
       }
     }
     if (moduleAccess.clients) {
-      all.push({
-        id: "clients",
-        label: "Clientes",
-        rows: (clientsQuery.data ?? []).map(buildClientRow),
-      });
+      const clientRows = (clientsQuery.data ?? []).map(buildClientRow);
+      if (clientRows.length > 0) {
+        all.push({
+          id: "clients",
+          label: "Clientes",
+          rows: clientRows,
+        });
+      }
     }
     if (moduleAccess.contacts) {
       const contactRows = isSearching

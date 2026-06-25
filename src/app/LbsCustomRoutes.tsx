@@ -1,13 +1,12 @@
 import { Route, Navigate } from "react-router";
 import { LeadsListPage } from "@/modules/leads/LeadsListPage";
-import { CompaniesListPage } from "@/modules/clients/CompaniesListPage";
-import { ContactsListPage } from "@/modules/clients/ContactsListPage";
 import { ClientShowPage } from "@/modules/clients/ClientShowPage";
+import { ClientsHubPage } from "@/modules/clients/ClientsHubPage";
+import { ClientsHubRoute } from "@/modules/clients/ClientsHubRoute";
 import {
   LegacyClientEditRedirect,
   LegacyClientIdRedirect,
   LegacyClientShowRedirect,
-  LegacyClientsListRedirect,
 } from "@/modules/clients/ClientRouteRedirects";
 import { FindDuplicatesPage } from "@/modules/clients/FindDuplicatesPage";
 import { LeadCreatePage } from "@/modules/leads/LeadCreatePage";
@@ -66,6 +65,12 @@ type ProtectedRouteProps = {
   children: JSX.Element;
 };
 
+const ClientsHubList = () => (
+  <ClientsHubRoute>
+    <ClientsHubPage />
+  </ClientsHubRoute>
+);
+
 export const renderLbsPublicPortalRoutes = () => (
   <Route element={<PublicShareLayout />}>
     <Route path="/portal" element={<ClientPortalPage />} />
@@ -114,7 +119,7 @@ export const renderLbsCustomRoutes = ({
         path="/contacts"
         element={
           <ProtectedRoute resource="contacts" action="list">
-            <ContactsListPage />
+            <ClientsHubList />
           </ProtectedRoute>
         }
       />
@@ -154,7 +159,7 @@ export const renderLbsCustomRoutes = ({
         path="/companies"
         element={
           <ProtectedRoute resource="companies" action="list">
-            <CompaniesListPage />
+            <ClientsHubList />
           </ProtectedRoute>
         }
       />
@@ -232,9 +237,12 @@ export const renderLbsCustomRoutes = ({
       />
       <Route
         path="/clients/create"
-        element={<Navigate to="/companies?create=company" replace />}
+        element={<Navigate to="/clients?create=company" replace />}
       />
-      <Route path="/clients" element={<LegacyClientsListRedirect />} />
+      <Route
+        path="/clients"
+        element={<ClientsHubList />}
+      />
       <Route
         path="/clients/find-duplicates"
         element={<Navigate to="/companies/find-duplicates" replace />}

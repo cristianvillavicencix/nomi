@@ -26,14 +26,12 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Contact } from "@/components/atomic-crm/types";
-import { LBS_CLIENT_STATUS } from "@/app/navigation";
 import { getPersonShowPath } from "@/app/routing";
 import type { PrimaryContactDraft } from "@/modules/clients/primaryContactDraft";
 import {
-  COMPANY_DRAFT_NAME_FIELD,
-  COMPANY_DRAFT_SECTOR_FIELD,
-  PRIMARY_MOVE_CONFIRMED_FIELD,
+  emptyCompanyDraftFormFields,
   hasCompanySelection,
+  PRIMARY_MOVE_CONFIRMED_FIELD,
   resolveContactCompanyForSave,
 } from "@/modules/contacts/companyDraft";
 import {
@@ -128,11 +126,11 @@ const defaultCreateValues = (lockCompanyId?: Identifier) => ({
   state_abbr: "",
   zipcode: "",
   country: "",
-  status: LBS_CLIENT_STATUS,
+  status: "contact_only",
+  lead_stage: null,
   background: "",
   organization_member_id: undefined as Identifier | undefined,
-  [COMPANY_DRAFT_NAME_FIELD]: "",
-  [COMPANY_DRAFT_SECTOR_FIELD]: "",
+  ...emptyCompanyDraftFormFields(),
   [PRIMARY_MOVE_CONFIRMED_FIELD]: false,
 });
 
@@ -393,9 +391,21 @@ export const ContactFormDialog = ({
               first_name: payload.first_name,
               last_name: payload.last_name,
               company_id: companyId as Identifier | null,
-              [COMPANY_DRAFT_NAME_FIELD]: companyDraft?.name ?? "",
-              [COMPANY_DRAFT_SECTOR_FIELD]: companyDraft?.sector ?? "",
-              status: String(values.status ?? LBS_CLIENT_STATUS),
+              ...emptyCompanyDraftFormFields(),
+              ...(companyDraft
+                ? {
+                    company_draft_name: companyDraft.name,
+                    company_draft_website: companyDraft.website ?? "",
+                    company_draft_phone: companyDraft.phone ?? "",
+                    company_draft_address: companyDraft.address ?? "",
+                    company_draft_sector: companyDraft.sector,
+                  }
+                : {}),
+              status: String(values.status ?? "contact_only"),
+              lead_stage:
+                String(values.status ?? "contact_only") === "contact_only"
+                  ? null
+                  : undefined,
               organization_member_id:
                 (values.organization_member_id as Identifier | undefined) ??
                 identity?.id,

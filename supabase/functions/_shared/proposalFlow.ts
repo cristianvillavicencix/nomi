@@ -606,7 +606,7 @@ export async function finalizeProposalIfPaidInFull(
   if (contactId) {
     await supabase
       .from("contacts")
-      .update({ status: "client", lead_stage: "won" })
+      .update({ lead_stage: "won" })
       .eq("id", contactId);
   }
 

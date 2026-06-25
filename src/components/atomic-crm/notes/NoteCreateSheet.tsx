@@ -48,7 +48,7 @@ export const NoteCreateSheet = ({
     if (!contact) return;
     update("contacts", {
       id: referenceRecordId as unknown as Identifier,
-      data: { last_seen: new Date().toISOString(), status: data.status },
+      data: { last_seen: new Date().toISOString() },
       previousData: contact,
     });
     notify("Note added");

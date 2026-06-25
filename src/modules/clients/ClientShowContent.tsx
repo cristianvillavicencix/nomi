@@ -23,6 +23,7 @@ import {
   type ClientTab,
 } from "@/modules/clients/clientShowUtils";
 import { useClientTabCounts } from "@/modules/clients/useClientTabCounts";
+import { deriveClientServiceType } from "@/modules/clients/clientServiceType";
 
 export const ClientShowContent = () => {
   const { record, isPending } = useShowContext<CompanyWithPrimaryContact>();
@@ -38,6 +39,12 @@ export const ClientShowContent = () => {
   );
 
   const counts = useClientTabCounts(record?.id ?? "");
+
+  const serviceType = deriveClientServiceType({
+    dealCount: counts.projects,
+    ticketCount: counts.tickets,
+    invoiceCount: counts.invoices,
+  });
 
   useEffect(() => {
     if (searchParams.get("edit") === "1") {
@@ -178,6 +185,7 @@ export const ClientShowContent = () => {
   const leftColumn = (
     <ClientSummaryCard
       record={record}
+      serviceType={serviceType}
       onOpenPrimaryContact={openPrimaryContact}
     />
   );

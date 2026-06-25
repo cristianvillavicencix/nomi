@@ -14,6 +14,15 @@ type DeliverProjectBody = {
   delivery_date?: string;
   hosting_renewal_date?: string | null;
   hosting_status?: string;
+  hosting_info?: {
+    provider?: string | null;
+    panel_url?: string | null;
+    managed_by?: "lbs" | "client" | string | null;
+    location?: string | null;
+  };
+  domain_info?: {
+    registrar?: string | null;
+  };
   site_language?: string | null;
   included_pages?: string[];
   maintenance_plan?: Record<string, unknown>;
@@ -49,14 +58,13 @@ type DeliverProjectBody = {
 const MIN_OVERRIDE_REASON_LENGTH = 10;
 
 const DEFAULT_WEBSITE_SECTIONS = [
-  "general",
+  "overview",
+  "hosting",
+  "domain",
   "credentials",
-  "corporate_email",
-  "domain_dns",
+  "billing",
   "files",
-  "marketing_seo",
-  "onboarding",
-  "support",
+  "handoff",
 ];
 
 const parseDomainFromUrl = (siteUrl?: string | null) => {
@@ -183,6 +191,10 @@ Deno.serve((req: Request) =>
             null,
           included_pages: body.included_pages ?? [],
           maintenance_plan: body.maintenance_plan ?? {},
+          domain_info: {
+            hosting: body.hosting_info ?? {},
+            registrar: body.domain_info?.registrar?.trim() || null,
+          },
           enabled_sections: body.enabled_sections?.length
             ? body.enabled_sections
             : DEFAULT_WEBSITE_SECTIONS,

@@ -1,31 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  isPortalAuthSessionActive,
+  readPortalAuthSession,
+} from "@/modules/portal/portalAuthSession";
+import {
   requestPortalSensitiveCode,
   verifyPortalSensitiveCode,
   type PortalSensitiveSession,
 } from "@/modules/portal/portalCredentialsApi";
 
-const storageKey = (portalToken: string) =>
+const legacyStorageKey = (portalToken: string) =>
   `lbs.client_portal.sensitive_session.${portalToken.slice(0, 12)}`;
 
 type StoredSession = PortalSensitiveSession & {
   accountEmail?: string;
 };
 
-const readStoredSession = (portalToken: string): StoredSession | null => {
+const readLegacySession = (portalToken: string): StoredSession | null => {
   try {
-    const raw = sessionStorage.getItem(storageKey(portalToken));
+    const raw = sessionStorage.getItem(legacyStorageKey(portalToken));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredSession;
     if (!parsed.sensitive_session || !parsed.expires_at) return null;
     if (new Date(parsed.expires_at).getTime() <= Date.now()) {
-      sessionStorage.removeItem(storageKey(portalToken));
+      sessionStorage.removeItem(legacyStorageKey(portalToken));
       return null;
     }
     return parsed;
   } catch {
     return null;
   }
+};
+
+const readStoredSession = (portalToken: string): StoredSession | null => {
+  const portalAuth = readPortalAuthSession(portalToken);
+  if (isPortalAuthSessionActive(portalAuth)) {
+    return {
+      sensitive_session: portalAuth.sensitive_session,
+      expires_at: portalAuth.expires_at,
+    };
+  }
+  return readLegacySession(portalToken);
 };
 
 export const usePortalSensitiveSession = (
@@ -57,15 +72,15 @@ export const usePortalSensitiveSession = (
         ...next,
         accountEmail: accountEmail ?? undefined,
       };
-      sessionStorage.setItem(storageKey(portalToken), JSON.stringify(stored));
+      sessionStorage.setItem(legacyStorageKey(portalToken), JSON.stringify(stored));
       setSession(stored);
     },
     [accountEmail, portalToken],
   );
 
   const clearSession = useCallback(() => {
-    sessionStorage.removeItem(storageKey(portalToken));
-    setSession(null);
+    sessionStorage.removeItem(legacyStorageKey(portalToken));
+    setSession(readStoredSession(portalToken));
   }, [portalToken]);
 
   const requestCode = useCallback(async () => {

@@ -2,11 +2,13 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
+import { loadPortalSession } from "../_shared/portalSession.ts";
 
 type ClientPortalBody = {
   token?: string;
+  portal_session?: string;
   deal_id?: number;
-  action?: "mark_notification_read";
+  action?: "mark_notification_read" | "bootstrap";
   notification_id?: number;
 };
 
@@ -151,13 +153,31 @@ const sanitizeCorporateEmail = (row: Record<string, unknown>) => ({
   has_password: row.has_password,
 });
 
+const sanitizePortalInvoice = (
+  row: Record<string, unknown>,
+  portalToken?: string | null,
+) => ({
+  id: row.id,
+  invoice_number: row.invoice_number,
+  issue_date: row.issue_date,
+  due_date: row.due_date,
+  amount: Number(row.amount ?? 0),
+  amount_paid: Number(row.amount_paid ?? 0),
+  currency: row.currency ?? "USD",
+  status: row.status,
+  description: row.description,
+  paid_at: row.paid_at,
+  reference: row.reference,
+  portal_token: portalToken ?? null,
+});
+
 Deno.serve(
   OptionsMiddleware(async (req) => {
     try {
       const body = (await req.json()) as ClientPortalBody;
       const token = body.token?.trim();
       if (!token) {
-        return createErrorResponse("Missing portal token", 400);
+        return createErrorResponse(400, "Missing portal token");
       }
 
       const { data: account, error: accountError } = await supabaseAdmin
@@ -168,7 +188,25 @@ Deno.serve(
         .maybeSingle();
 
       if (accountError || !account?.id) {
-        return createErrorResponse("Invalid or expired portal link", 403);
+        return createErrorResponse(403, "Invalid or expired portal link");
+      }
+
+      if (body.action === "bootstrap") {
+        return new Response(
+          JSON.stringify({
+            account: { email: account.email },
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const portalSession = body.portal_session?.trim();
+      if (!portalSession) {
+        return createErrorResponse(401, "Portal session required");
+      }
+      const activeSession = await loadPortalSession(account.id, portalSession);
+      if (!activeSession) {
+        return createErrorResponse(401, "Portal session expired");
       }
 
       if (body.action === "mark_notification_read" && body.notification_id) {
@@ -204,7 +242,7 @@ Deno.serve(
           .maybeSingle();
 
         if (!access?.deal_id) {
-          return createErrorResponse("Project not shared with this client", 403);
+          return createErrorResponse(403, "Project not shared with this client");
         }
 
         const { data: deal, error: dealError } = await supabaseAdmin
@@ -217,7 +255,7 @@ Deno.serve(
           .maybeSingle();
 
         if (dealError || !deal) {
-          return createErrorResponse("Project not found", 404);
+          return createErrorResponse(404, "Project not found");
         }
 
         const { data: delivery } = await supabaseAdmin
@@ -319,6 +357,95 @@ Deno.serve(
           sanitizeCorporateEmail(row as Record<string, unknown>),
         );
 
+        const { data: invoiceRows = [] } = delivery
+          ? await supabaseAdmin
+              .from("client_invoices")
+              .select(
+                "id, invoice_number, issue_date, due_date, amount, amount_paid, currency, status, description, paid_at, reference",
+              )
+              .eq("deal_id", dealId)
+              .eq("org_id", account.org_id)
+              .neq("status", "void")
+              .neq("status", "draft")
+              .order("issue_date", { ascending: false })
+              .limit(50)
+          : { data: [] };
+
+        const invoiceIds = (invoiceRows ?? [])
+          .map((row) => Number(row.id))
+          .filter((id) => Number.isFinite(id));
+        const tokenByInvoiceId = new Map<number, string>();
+        if (invoiceIds.length > 0) {
+          const { data: tokenRows = [] } = await supabaseAdmin
+            .from("public_client_invoice_tokens")
+            .select("invoice_id, token, created_at")
+            .in("invoice_id", invoiceIds)
+            .order("created_at", { ascending: false });
+          for (const row of tokenRows) {
+            const invoiceId = Number(row.invoice_id);
+            if (!tokenByInvoiceId.has(invoiceId) && row.token) {
+              tokenByInvoiceId.set(invoiceId, String(row.token));
+            }
+          }
+        }
+
+        const invoices = (invoiceRows ?? []).map((row) =>
+          sanitizePortalInvoice(
+            row as Record<string, unknown>,
+            tokenByInvoiceId.get(Number(row.id)) ?? null,
+          ),
+        );
+
+        const { data: projectPaymentRows = [] } = delivery
+          ? await supabaseAdmin
+              .from("deal_client_payments")
+              .select(
+                "id, payment_date, amount, payment_method, reference_number, check_number, status, notes",
+              )
+              .eq("deal_id", dealId)
+              .order("payment_date", { ascending: false })
+              .limit(50)
+          : { data: [] };
+
+        const invoicePayments = invoices
+          .filter(
+            (invoice) =>
+              Number(invoice.amount_paid) > 0 || invoice.status === "paid",
+          )
+          .map((invoice) => ({
+            id: `invoice-${invoice.id}`,
+            payment_date: String(invoice.paid_at ?? invoice.issue_date),
+            amount:
+              Number(invoice.amount_paid) > 0
+                ? Number(invoice.amount_paid)
+                : Number(invoice.amount),
+            payment_method: "card",
+            reference_number: invoice.reference,
+            check_number: null,
+            status: invoice.status === "paid" ? "paid" : "partial",
+            notes: invoice.description,
+            source: "invoice" as const,
+            invoice_number: String(invoice.invoice_number),
+          }));
+
+        const projectPayments = (projectPaymentRows ?? []).map((row) => ({
+          id: row.id,
+          payment_date: row.payment_date,
+          amount: Number(row.amount ?? 0),
+          payment_method: row.payment_method,
+          reference_number: row.reference_number,
+          check_number: row.check_number,
+          status: row.status,
+          notes: row.notes,
+          source: "project" as const,
+          invoice_number: null,
+        }));
+
+        const payments = [...invoicePayments, ...projectPayments].sort(
+          (left, right) =>
+            String(right.payment_date).localeCompare(String(left.payment_date)),
+        );
+
         const { data: approvals = [] } = await supabaseAdmin
           .from("deal_approvals")
           .select(
@@ -339,6 +466,8 @@ Deno.serve(
             resources,
             domains,
             corporate_emails: corporateEmails,
+            invoices,
+            payments,
             approvals,
             notifications,
           }),

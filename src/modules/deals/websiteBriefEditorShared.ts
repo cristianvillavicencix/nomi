@@ -7,6 +7,7 @@ import {
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { LbsDeal } from "@/modules/types";
 import { cleanStoredBriefSocialLinks } from "@/modules/deals/briefSocialLinks";
+import { deploymentUrlPatchFromBrief } from "@/modules/deals/projects/projectDeploymentUrls";
 import {
   syncBriefApprovalsForCompleteSections,
   type WebsiteBriefWithApprovals,
@@ -125,5 +126,6 @@ export const mergeBriefSubmitData = (
     expected_end_date:
       submitted.expected_end_date ?? record.expected_end_date,
     website_brief,
+    ...deploymentUrlPatchFromBrief(record, website_brief as Record<string, unknown>),
   };
 };

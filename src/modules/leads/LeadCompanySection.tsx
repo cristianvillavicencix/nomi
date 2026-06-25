@@ -1,17 +1,9 @@
 import { useFormContext, useWatch } from "react-hook-form";
-import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
-import { PhoneInput } from "@/components/admin/phone-input";
-import { SelectInput } from "@/components/admin/select-input";
-import { TextInput } from "@/components/admin/text-input";
 import { cn } from "@/lib/utils";
-import { LBS_COMPANY_INDUSTRY_CHOICES } from "./leadFormConstants";
-import {
-  applyGoogleAddressToLeadForm,
-  applyGoogleBusinessToLeadForm,
-} from "./applyGoogleBusinessToLeadForm";
-import type { NewLeadFormValues } from "./newLeadFormTypes";
+import { CompanyInlineDraftFields } from "@/modules/contacts/CompanyInlineDraftFields";
+import type { PersonFormValues } from "@/modules/contacts/personFormTypes";
 
-const AddContactChoice = ({
+const AddPrimaryContactChoice = ({
   value,
   onChange,
 }: {
@@ -19,7 +11,9 @@ const AddContactChoice = ({
   onChange: (next: boolean) => void;
 }) => (
   <div className="space-y-2 rounded-md border border-dashed bg-muted/30 p-3">
-    <p className="text-sm font-medium">Add a primary contact for this company?</p>
+    <p className="text-sm font-medium">
+      Add a primary contact for this company?
+    </p>
     <div className="flex gap-2">
       <button
         type="button"
@@ -50,54 +44,16 @@ const AddContactChoice = ({
 );
 
 export const LeadCompanySection = () => {
-  const { setValue } = useFormContext<NewLeadFormValues>();
-  const addPrimaryContact = useWatch<NewLeadFormValues, "add_primary_contact">({
+  const { setValue } = useFormContext<PersonFormValues>();
+  const addPrimaryContact = useWatch<PersonFormValues, "add_primary_contact">({
     name: "add_primary_contact",
   });
 
   return (
     <div className="space-y-3">
-      <GooglePlacesAutocompleteInput
-        source="company_draft_name"
-        label="Company name"
-        mode="business"
-        helperText={false}
-        placeholder="e.g. Acme Landscaping"
-        onPlaceDetails={(details) =>
-          applyGoogleBusinessToLeadForm(setValue, details)
-        }
-      />
-      <TextInput
-        source="company_draft_website"
-        label="Website"
-        helperText={false}
-        placeholder="www.example.com"
-      />
-      <PhoneInput
-        source="company_draft_phone"
-        label="Company phone"
-        helperText={false}
-      />
-      <GooglePlacesAutocompleteInput
-        source="company_draft_address"
-        label="Address"
-        mode="address"
-        helperText={false}
-        onPlaceDetails={(details) =>
-          applyGoogleAddressToLeadForm(setValue, details)
-        }
-      />
-      <SelectInput
-        source="company_draft_sector"
-        label="Industry"
-        choices={[...LBS_COMPANY_INDUSTRY_CHOICES]}
-        optionText="name"
-        helperText={false}
-        emptyText="Select industry"
-      />
-
-      <AddContactChoice
-        value={addPrimaryContact}
+      <CompanyInlineDraftFields />
+      <AddPrimaryContactChoice
+        value={Boolean(addPrimaryContact)}
         onChange={(next) =>
           setValue("add_primary_contact", next, { shouldDirty: true })
         }

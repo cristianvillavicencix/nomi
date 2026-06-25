@@ -35,6 +35,7 @@ export const LeadCreatePage = () => {
             : null,
           lead_source_other: isOther ? (data.lead_source_other ?? null) : null,
           status: data.status ?? "lead",
+          lead_stage: "new",
           first_seen: new Date().toISOString(),
           last_seen: new Date().toISOString(),
           tags: [],

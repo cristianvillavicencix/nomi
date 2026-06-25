@@ -267,6 +267,11 @@ export const prepareContactWriteData = <
 /** Form-only fields — never PATCH/INSERT on contacts. */
 const CONTACT_FORM_META_FIELDS = [
   "_primary_move_confirmed",
+  "company_draft_name",
+  "company_draft_website",
+  "company_draft_phone",
+  "company_draft_address",
+  "company_draft_sector",
   "_company_draft_name",
   "_company_draft_sector",
 ] as const;

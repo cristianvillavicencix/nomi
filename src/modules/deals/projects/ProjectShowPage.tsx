@@ -33,6 +33,8 @@ import {
 } from "@/modules/deals/projects/projectDisplayPipeline";
 import { ProjectWorkspaceTabs } from "@/modules/deals/projects/ProjectWorkspaceTabs";
 import { ProjectDeliveredStamp } from "@/modules/deals/projects/ProjectDeliveredStamp";
+import { ProjectDeliverButton } from "@/modules/deals/projects/ProjectDeliverButton";
+import { ProjectNextMaintenanceBadge } from "@/modules/deals/projects/ProjectNextMaintenanceBadge";
 import {
   ProjectTasksDialog,
   ProjectTasksRail,
@@ -199,8 +201,10 @@ const ProjectShowContent = () => {
         <div className="min-w-0 flex-1">
           <LbsDealHeaderOverview record={record} />
         </div>
-        <div className="flex shrink-0 items-center gap-4 self-start sm:self-auto">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
+          <ProjectNextMaintenanceBadge record={record} />
           <LbsProjectDeliveryUrgency record={record} />
+          <ProjectDeliverButton record={record} />
           <ProjectActionsMenu
             record={record}
             onOpenTasks={() => setTasksDialogOpen(true)}

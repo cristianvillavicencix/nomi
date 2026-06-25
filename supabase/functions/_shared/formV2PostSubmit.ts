@@ -95,6 +95,7 @@ export async function handlePostSubmitActions(
             email_jsonb: email ? [{ email, type: "Work" }] : [],
             phone_jsonb: phone ? [{ number: phone, type: "Work" }] : [],
             status: "lead",
+            lead_stage: "new",
           })
           .select("id")
           .single();

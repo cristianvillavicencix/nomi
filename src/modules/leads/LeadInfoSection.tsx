@@ -3,7 +3,6 @@ import { AutocompleteArrayInput } from "@/components/admin/autocomplete-array-in
 import { ReferenceArrayInput } from "@/components/admin/reference-array-input";
 import { SelectInput } from "@/components/admin/select-input";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import {
   LBS_INTERESTED_SERVICE_CHOICES,
   LBS_LEAD_SOURCE_CHOICES,
@@ -26,10 +25,7 @@ const requireAssignedMembers = (value?: unknown) => {
   return ids.length > 0 ? undefined : "Required";
 };
 
-export const LeadInfoSection = () => {
-  const { noteStatuses } = useConfigurationContext();
-
-  return (
+export const LeadInfoSection = () => (
     <div className="space-y-3">
       <SelectInput
         source="lead_source"
@@ -55,17 +51,6 @@ export const LeadInfoSection = () => {
         placeholder="Select one or more services"
       />
 
-      <SelectInput
-        source="status"
-        label="Status"
-        choices={noteStatuses.map((status) => ({
-          id: status.value,
-          name: status.label,
-        }))}
-        validate={required()}
-        helperText={false}
-      />
-
       <ReferenceArrayInput
         source="assigned_member_ids"
         reference="organization_members"
@@ -81,5 +66,4 @@ export const LeadInfoSection = () => {
         />
       </ReferenceArrayInput>
     </div>
-  );
-};
+);
