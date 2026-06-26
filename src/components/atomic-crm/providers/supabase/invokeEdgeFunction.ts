@@ -47,16 +47,23 @@ export const readEdgeFunctionErrorMessage = async (
   const response = (error as { context?: Response }).context;
   if (response instanceof Response) {
     try {
-      const payload = (await response.clone().json()) as { message?: string };
+      const payload = (await response.clone().json()) as {
+        message?: string;
+        error?: string;
+      };
       if (payload?.message) {
         return payload.message;
+      }
+      if (payload?.error) {
+        return payload.error;
       }
     } catch {
       try {
         const text = (await response.clone().text()).trim();
         if (text) {
-          const parsed = JSON.parse(text) as { message?: string };
+          const parsed = JSON.parse(text) as { message?: string; error?: string };
           if (parsed?.message) return parsed.message;
+          if (parsed?.error) return parsed.error;
         }
       } catch {
         // Fall through to generic message below.

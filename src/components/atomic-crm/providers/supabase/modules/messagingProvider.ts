@@ -101,8 +101,10 @@ export const messagingProvider = {
     });
     if (error || !data?.token) {
       throw new Error(
-        (error as { message?: string })?.message ??
+        await readEdgeFunctionErrorMessage(
+          error ?? { message: "Voice calling is not configured" },
           "Voice calling is not configured",
+        ),
       );
     }
     return data;

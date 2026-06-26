@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import twilio from "npm:twilio@5.5.1";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { UserMiddleware } from "../_shared/authentication.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
@@ -9,6 +8,7 @@ import {
   assertVoiceConfigured,
   getVoiceSettingsSecrets,
 } from "../_shared/voiceSettings.ts";
+import { createTwilioVoiceAccessToken } from "../_shared/twilioAccessToken.ts";
 
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {
@@ -38,42 +38,25 @@ Deno.serve((req: Request) =>
         try {
           assertVoiceConfigured(settings);
         } catch (error) {
-          return new Response(
-            JSON.stringify({
-              error:
-                error instanceof Error ? error.message : "Voice not configured",
-              code: "VOICE_NOT_CONFIGURED",
-            }),
-            {
-              status: 503,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            },
+          return createErrorResponse(
+            503,
+            error instanceof Error ? error.message : "Voice not configured",
+            { code: "VOICE_NOT_CONFIGURED" },
           );
         }
 
-        const accountSid = settings!.twilio_account_sid!.trim();
-        const apiKeySid = settings!.voice_api_key_sid!.trim();
-        const apiKeySecret = settings!.voice_api_key_secret!.trim();
-        const twimlAppSid = settings!.voice_twiml_app_sid!.trim();
-        const identity = `member-${member.org_id}-${member.id}`;
-
-        const token = new twilio.jwt.AccessToken(
-          accountSid,
-          apiKeySid,
-          apiKeySecret,
-          { identity, ttl: 3600 },
-        );
-
-        const voiceGrant = new twilio.jwt.AccessToken.VoiceGrant({
-          outgoingApplicationSid: twimlAppSid,
-          incomingAllow: false,
+        const token = await createTwilioVoiceAccessToken({
+          accountSid: settings!.twilio_account_sid!.trim(),
+          apiKeySid: settings!.voice_api_key_sid!.trim(),
+          apiKeySecret: settings!.voice_api_key_secret!.trim(),
+          twimlAppSid: settings!.voice_twiml_app_sid!.trim(),
+          identity: `member-${member.org_id}-${member.id}`,
         });
-        token.addGrant(voiceGrant);
 
         return new Response(
           JSON.stringify({
-            token: token.toJwt(),
-            identity,
+            token,
+            identity: `member-${member.org_id}-${member.id}`,
           }),
           {
             headers: { "Content-Type": "application/json", ...corsHeaders },
