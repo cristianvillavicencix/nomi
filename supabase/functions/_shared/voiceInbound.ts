@@ -9,6 +9,21 @@ import {
 
 const VOICE_RECEIVE_CAPABILITY = "voice.calls.make";
 
+const memberCanReceiveInboundVoice = (member: {
+  administrator?: boolean | null;
+  module_permissions?: unknown;
+}) => {
+  if (member.administrator === true) return true;
+  const stored =
+    member.module_permissions != null &&
+    typeof member.module_permissions === "object" &&
+    !Array.isArray(member.module_permissions)
+      ? (member.module_permissions as Record<string, unknown>)
+      : null;
+  if (stored?.[VOICE_RECEIVE_CAPABILITY] === true) return true;
+  return hasMemberCapability(member, VOICE_RECEIVE_CAPABILITY);
+};
+
 export const findOrgVoiceSettingsByInboundNumber = async (
   calledNumber: string,
 ): Promise<VoiceSettingsSecrets | null> => {
@@ -54,9 +69,7 @@ export const listInboundVoiceClientIdentities = async (orgId: number) => {
   }
 
   return (data ?? [])
-    .filter((member) =>
-      hasMemberCapability(member, VOICE_RECEIVE_CAPABILITY),
-    )
+    .filter((member) => memberCanReceiveInboundVoice(member))
     .map((member) => buildVoiceClientIdentity(orgId, Number(member.id)))
     .filter((identity) => identity.length > 0)
     .slice(0, 10);
