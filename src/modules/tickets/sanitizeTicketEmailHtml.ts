@@ -92,6 +92,14 @@ const installEmailSanitizeHooks = () => {
   DOMPurify.addHook("afterSanitizeAttributes", (node) => {
     if (!(node instanceof HTMLElement)) return;
 
+    if (node.tagName === "IMG") {
+      const src = node.getAttribute("src")?.trim().toLowerCase() ?? "";
+      if (src.startsWith("cid:")) {
+        node.remove();
+        return;
+      }
+    }
+
     if (node.tagName === "A") {
       node.setAttribute("target", "_blank");
       node.setAttribute("rel", "noopener noreferrer");

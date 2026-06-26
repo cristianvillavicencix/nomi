@@ -4,6 +4,8 @@ export const formatMessageId = (value: string) => {
   return trimmed.startsWith("<") ? trimmed : `<${trimmed}>`;
 };
 
+const MAX_REFERENCE_MESSAGE_IDS = 15;
+
 export const buildEmailThreadHeaders = (params: {
   messageId: string;
   inReplyTo?: string | null;
@@ -18,7 +20,8 @@ export const buildEmailThreadHeaders = (params: {
     ...(params.priorMessageIds ?? [])
       .map((id) => id?.trim())
       .filter((id): id is string => Boolean(id))
-      .map(formatMessageId),
+      .map(formatMessageId)
+      .slice(-MAX_REFERENCE_MESSAGE_IDS),
   ];
 
   if (inReplyTo && !referenceIds.includes(inReplyTo)) {

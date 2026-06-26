@@ -184,6 +184,13 @@ export const sanitizeComposerHtml = (html: string) => {
     node.remove();
   });
 
+  container.querySelectorAll("img").forEach((node) => {
+    const src = node.getAttribute("src")?.trim().toLowerCase() ?? "";
+    if (src.startsWith("cid:")) {
+      node.remove();
+    }
+  });
+
   container.querySelectorAll("*").forEach((node) => {
     for (const attribute of Array.from(node.attributes)) {
       if (attribute.name.toLowerCase().startsWith("on")) {

@@ -110,7 +110,8 @@ const formatEmailSendFailure = (message: string) => {
   ) {
     return (
       "Twilio Email sender is not verified. In Twilio Console → Email, authenticate your domain " +
-      "(e.g. lbs.bz). Set TWILIO_EMAIL_FROM on Supabase or your organization reply-to in Settings."
+      "(e.g. lbs.bz) and ensure the ticket inbox address is allowed. " +
+      "Set TWILIO_EMAIL_FROM on Supabase or your organization reply-to in Settings."
     );
   }
 

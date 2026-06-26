@@ -15,6 +15,7 @@ import {
   TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE,
 } from "../_shared/ticketOutboundAttachments.ts";
 import { buildEmailThreadHeaders } from "../_shared/emailThreading.ts";
+import { stripCidFromHtml } from "../_shared/stripCidFromHtml.ts";
 
 type ReplyBody = {
   ticket_id?: number;
@@ -250,21 +251,38 @@ Deno.serve(
 
         const subject = replySubject(ticket.subject);
         const textBody = body || "(See attachments)";
+        const outboundHtmlBody = htmlBody
+          ? stripCidFromHtml(htmlBody)
+          : undefined;
         const emailAttachments = await loadStorageAttachmentsForEmail(attachments);
 
-        const emailResult = await sendTransactionalEmail({
-          orgId: member.org_id,
-          to: recipients,
-          cc: ccEmails.length ? ccEmails : undefined,
-          subject,
-          textBody,
-          htmlBody: htmlBody || undefined,
-          fromEmail: inboxAddress,
-          fromName,
-          replyTo: inboxAddress,
-          attachments: emailAttachments,
-          headers: threadHeaders,
-        });
+        let emailResult;
+        try {
+          emailResult = await sendTransactionalEmail({
+            orgId: member.org_id,
+            to: recipients,
+            cc: ccEmails.length ? ccEmails : undefined,
+            subject,
+            textBody,
+            htmlBody: outboundHtmlBody || undefined,
+            fromEmail: inboxAddress,
+            fromName,
+            replyTo: inboxAddress,
+            attachments: emailAttachments,
+            headers: threadHeaders,
+          });
+        } catch (emailError) {
+          const message =
+            emailError instanceof Error
+              ? emailError.message
+              : "Could not send ticket email";
+          console.error("reply_ticket.email_failed", {
+            ticketId: ticket.id,
+            inboxAddress,
+            message,
+          });
+          return createErrorResponse(502, message);
+        }
 
         const emailDeliveryStatus = emailResult.skipped ? "skipped" : "sent";
 
@@ -274,7 +292,7 @@ Deno.serve(
             ticket_id: ticket.id,
             author_member_id: member.id,
             body: body || "(See attachments)",
-            html_body: htmlBody || null,
+            html_body: outboundHtmlBody || null,
             direction: "outbound",
             from_email: inboxAddress,
             from_name: memberName || fromName,
