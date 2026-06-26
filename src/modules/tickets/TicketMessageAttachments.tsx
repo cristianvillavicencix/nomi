@@ -1,7 +1,11 @@
 import { Download, ExternalLink, FileText, Film } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PhotoLightboxGrid } from "@/components/ui/photo-lightbox-grid";
+import {
+  PhotoLightboxGrid,
+  type PhotoLightboxGridItem,
+} from "@/components/ui/photo-lightbox-grid";
+import { useStorageSignedUrls } from "@/hooks/useStorageSignedUrls";
 import { FileAttachmentPill } from "@/lib/fileAttachments";
 import type { MessageAsset } from "@/modules/tickets/ticketMessageAssets";
 import {
@@ -101,26 +105,50 @@ const PhotoGrid = ({
 }: {
   assets: MessageAsset[];
   onDownload?: (asset: MessageAsset) => void;
-}) => (
-  <PhotoLightboxGrid
-    items={assets.map((asset) => ({
-      id: asset.href,
-      src: asset.previewSrc ?? asset.href,
-      alt: asset.label,
-      title: asset.label,
-    }))}
-    variant="gallery"
-    showCaption
-    onDownloadItem={
-      onDownload
-        ? (item) => {
-            const asset = assets.find((entry) => entry.href === item.id);
-            if (asset) onDownload(asset);
-          }
-        : undefined
-    }
-  />
-);
+}) => {
+  const storageRefs = useMemo(
+    () => assets.map((asset) => asset.previewSrc ?? asset.href),
+    [assets],
+  );
+  const signedUrls = useStorageSignedUrls(storageRefs, {
+    defaultBucket: "attachments",
+  });
+
+  const items = useMemo(() => {
+    const resolved: PhotoLightboxGridItem[] = [];
+    assets.forEach((asset, index) => {
+      const src = signedUrls[index];
+      if (!src) return;
+      resolved.push({
+        id: asset.href,
+        src,
+        alt: asset.label,
+        title: asset.label,
+      });
+    });
+    return resolved;
+  }, [assets, signedUrls]);
+
+  if (!items.length && assets.length > 0) {
+    return <p className="text-xs text-muted-foreground">Loading photos…</p>;
+  }
+
+  return (
+    <PhotoLightboxGrid
+      items={items}
+      variant="gallery"
+      showCaption
+      onDownloadItem={
+        onDownload
+          ? (item) => {
+              const asset = assets.find((entry) => entry.href === item.id);
+              if (asset) onDownload(asset);
+            }
+          : undefined
+      }
+    />
+  );
+};
 
 export const TicketMessageAttachments = ({
   documents,

@@ -647,9 +647,6 @@ const ConnectedPanel = ({
   logActivity: (text: string, tone?: ActivityEntry["tone"]) => void;
   notify: ReturnType<typeof useNotify>;
 }) => {
-  if (status.credentials.configured !== true) return null;
-  const creds = status.credentials;
-
   const stagingTotal = useMemo(
     () =>
       MODULE_CONFIG.reduce(
@@ -666,6 +663,9 @@ const ConnectedPanel = ({
       }, 0),
     [status],
   );
+
+  if (status.credentials.configured !== true) return null;
+  const creds = status.credentials;
 
   const runSync = async (modules: ModuleKey[]) => {
     setBusy(`sync:${modules.join(",")}`);

@@ -52,8 +52,6 @@ export const DashboardLeadsCard = () => {
     { staleTime: 30_000, enabled: canViewLeads },
   );
 
-  if (!canViewLeads) return null;
-
   const actionableLeads = useMemo(
     () => leads.filter(isActionableLead),
     [leads],
@@ -95,6 +93,8 @@ export const DashboardLeadsCard = () => {
         .slice(0, 5),
     [actionableLeads],
   );
+
+  if (!canViewLeads) return null;
 
   const badges = [
     { label: `${dueToday} due today` },

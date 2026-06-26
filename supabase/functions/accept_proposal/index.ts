@@ -170,7 +170,7 @@ Deno.serve(
         return createErrorResponse(400, "Invalid proposal_id");
       }
 
-      let memberId: number | null = null;
+      const memberId: number | null = null;
       let forClientPortal = false;
 
       if (body.public_token) {

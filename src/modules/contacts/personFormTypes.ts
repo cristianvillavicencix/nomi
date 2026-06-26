@@ -1,6 +1,6 @@
 import type { Identifier } from "ra-core";
 import type { LeadType } from "@/modules/leads/leadFormConstants";
-import { PRIMARY_MOVE_CONFIRMED_FIELD } from "@/modules/contacts/companyDraft";
+import type { PRIMARY_MOVE_CONFIRMED_FIELD } from "@/modules/contacts/companyDraft";
 
 /** UI person type — maps to `contacts.status` (`lead` or `contact_only` only). */
 export type PersonKind = "prospect" | "contact_only";

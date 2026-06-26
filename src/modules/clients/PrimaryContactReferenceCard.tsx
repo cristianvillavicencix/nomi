@@ -293,18 +293,6 @@ export const PrimaryContactReferenceCard = ({
 
   const isCreate = mode === "create";
 
-  if (isCreate) {
-    return (
-      <CreatePrimaryContactPicker
-        selectedContactId={selectedContactId}
-        draftPrimaryContact={draftPrimaryContact}
-        onSelectContact={onSelectContact}
-        onSelectDraftContact={onSelectDraftContact}
-        onClearContact={onClearContact}
-      />
-    );
-  }
-
   const { data: companyContacts = [], isPending: companyContactsPending } =
     useGetList<Contact>(
       "contacts",
@@ -314,11 +302,12 @@ export const PrimaryContactReferenceCard = ({
         sort: { field: "first_name", order: "ASC" },
       },
       {
-        enabled: companyId != null && companyId !== "",
+        enabled: !isCreate && companyId != null && companyId !== "",
       },
     );
 
   const contacts = useMemo(() => {
+    if (isCreate) return [];
     const byId = new Map<string, Contact>();
     for (const contact of companyContacts) {
       byId.set(String(contact.id), contact);
@@ -340,10 +329,10 @@ export const PrimaryContactReferenceCard = ({
     return [...byId.values()].sort((left, right) =>
       getContactFullName(left).localeCompare(getContactFullName(right)),
     );
-  }, [companyContacts, companyId, optimisticContact, primaryContact]);
+  }, [companyContacts, companyId, isCreate, optimisticContact, primaryContact]);
 
   const activeContact = useMemo(() => {
-    if (selectedContactId == null) return undefined;
+    if (isCreate || selectedContactId == null) return undefined;
     if (
       primaryContact &&
       String(primaryContact.id) === String(selectedContactId)
@@ -357,7 +346,25 @@ export const PrimaryContactReferenceCard = ({
       return optimisticContact;
     }
     return contacts.find((c) => String(c.id) === String(selectedContactId));
-  }, [contacts, optimisticContact, primaryContact, selectedContactId]);
+  }, [
+    contacts,
+    isCreate,
+    optimisticContact,
+    primaryContact,
+    selectedContactId,
+  ]);
+
+  if (isCreate) {
+    return (
+      <CreatePrimaryContactPicker
+        selectedContactId={selectedContactId}
+        draftPrimaryContact={draftPrimaryContact}
+        onSelectContact={onSelectContact}
+        onSelectDraftContact={onSelectDraftContact}
+        onClearContact={onClearContact}
+      />
+    );
+  }
 
   const isPending = companyContactsPending;
   const showSearch = contacts.length > SEARCH_THRESHOLD;

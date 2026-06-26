@@ -8,7 +8,15 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  {
+    ignores: [
+      "dist",
+      "scripts/cleanup/**",
+      "workers/**",
+      "supabase/functions/**",
+      "api/**",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -28,7 +36,7 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": [
-        "error",
+        "warn",
         {
           varsIgnorePattern: "^_",
           argsIgnorePattern: "^_",

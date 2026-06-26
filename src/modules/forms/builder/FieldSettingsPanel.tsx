@@ -31,6 +31,20 @@ export const FieldSettingsPanel = () => {
           .flatMap((section) => section.fields ?? [])
           .find((item) => item.key === selectedFieldKey) ?? null);
 
+  const priorFields = useMemo(() => {
+    if (!field) return [];
+    const result: { key: string; label: string }[] = [];
+    for (const section of schema.sections ?? []) {
+      for (const item of section.fields ?? []) {
+        if (item.key === field.key) return result;
+        if (item.type !== "formula" && item.type !== "hidden") {
+          result.push({ key: item.key, label: item.label ?? item.key });
+        }
+      }
+    }
+    return result;
+  }, [schema.sections, field]);
+
   if (!field) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
@@ -42,19 +56,6 @@ export const FieldSettingsPanel = () => {
   const hasOptions = ["select", "radio", "checkbox", "multi_select"].includes(
     String(field.type),
   );
-
-  const priorFields = useMemo(() => {
-    const result: { key: string; label: string }[] = [];
-    for (const section of schema.sections ?? []) {
-      for (const item of section.fields ?? []) {
-        if (item.key === field.key) return result;
-        if (item.type !== "formula" && item.type !== "hidden") {
-          result.push({ key: item.key, label: item.label ?? item.key });
-        }
-      }
-    }
-    return result;
-  }, [schema.sections, field.key]);
 
   return (
     <div className="space-y-4">

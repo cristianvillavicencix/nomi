@@ -92,17 +92,20 @@ const optionalUrl = (url?: string) => {
   }
 };
 
-export const ClientCreateFormFields = ({
+export const ClientCreateFormFields = (props: ClientCreateFormFieldsProps) => {
+  if (props.mode === "create" && props.layout === "streamlined") {
+    return <ClientCreateStreamlinedFields />;
+  }
+  return <ClientCreateFormFieldsDefault {...props} />;
+};
+
+const ClientCreateFormFieldsDefault = ({
   mode,
-  layout = "default",
+  layout: _layout = "default",
   companyId,
   savedPrimaryContactId,
   primaryContact,
 }: ClientCreateFormFieldsProps) => {
-  if (mode === "create" && layout === "streamlined") {
-    return <ClientCreateStreamlinedFields />;
-  }
-
   const { setValue } = useFormContext<ClientCreateFormValues>();
   const placesEnabled = isGooglePlacesEnabled();
   const industryChoices = LBS_COMPANY_INDUSTRY_CHOICES.map((entry) => ({

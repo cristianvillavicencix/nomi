@@ -35,8 +35,6 @@ export const DashboardInvoicesCard = () => {
     { staleTime: 30_000, enabled: canViewInvoices },
   );
 
-  if (!canViewInvoices) return null;
-
   const overdue = useMemo(
     () => invoices.filter(isInvoiceOverdue).length,
     [invoices],
@@ -63,6 +61,8 @@ export const DashboardInvoicesCard = () => {
         .slice(0, 5),
     [invoices],
   );
+
+  if (!canViewInvoices) return null;
 
   const badges = [
     {

@@ -36,8 +36,6 @@ export const DashboardTicketsCard = () => {
     { staleTime: 30_000, enabled: canViewTickets },
   );
 
-  if (!canViewTickets) return null;
-
   const ticketIds = useMemo(
     () => tickets.map((ticket) => String(ticket.id)),
     [tickets],
@@ -58,6 +56,8 @@ export const DashboardTicketsCard = () => {
   );
 
   const preview = useMemo(() => tickets.slice(0, 5), [tickets]);
+
+  if (!canViewTickets) return null;
 
   const badges = [
     ...(newCount > 0 ? [{ label: `${newCount} new` }] : []),

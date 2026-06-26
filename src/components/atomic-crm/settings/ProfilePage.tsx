@@ -107,6 +107,12 @@ const ProfileForm = ({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
 
+  const avatarPreviewUrl = useStorageSignedUrl(
+    record ? resolveAvatarUrl(record, 96) : null,
+    { defaultBucket: "avatars" },
+  );
+  const avatarInitials = initialsOf(record);
+
   if (!identity) return null;
 
   const resetPasswordForm = () => {
@@ -148,12 +154,6 @@ const ProfileForm = ({
       setPasswordSaving(false);
     }
   };
-
-  const avatarPreviewUrl = useStorageSignedUrl(
-    record ? resolveAvatarUrl(record, 96) : null,
-    { defaultBucket: "avatars" },
-  );
-  const avatarInitials = initialsOf(record);
 
   return (
     <div className="space-y-4">
