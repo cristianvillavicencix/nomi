@@ -43,8 +43,9 @@ import type { CompanyWithPrimaryContact } from "@/modules/clients/clientProfile"
 import {
   getContactEmail,
   getContactFullName,
-  getContactPhone,
+  getContactPhoneRaw,
 } from "@/modules/clients/clientShowUtils";
+import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useMessagesQuickAccess } from "@/modules/messages/MessagesQuickAccessProvider";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
@@ -191,7 +192,10 @@ export const ClientContactsTab = ({
                       </button>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">
-                      {getContactPhone(contact)}
+                      <CrmPhoneDisplay
+                        phone={getContactPhoneRaw(contact)}
+                        contactId={contact.id}
+                      />
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-muted-foreground">
                       <span className="break-all">

@@ -8,6 +8,7 @@ import {
   companyPhonesToFormValues,
   type ClientChannelFormValue,
 } from "@/modules/clients/clientChannels";
+import { formatPhoneDisplay } from "@/utils/phone";
 
 const pickFirstEmail = (emails?: EmailAndType[] | null) =>
   emails?.find((entry) => String(entry.email ?? "").trim())?.email?.trim() ??
@@ -48,8 +49,8 @@ export const resolveCompanyOwnEmails = (
   return companyEmailsToFormValues(ctx.companyEmails, ctx.businessEmail);
 };
 
-/** Display-only cascade for list and profile. */
-export const resolveCompanyPhoneForDisplay = (
+/** Raw phone cascade for dialing and storage — not formatted for display. */
+export const resolveCompanyPhoneRaw = (
   company: CompanyChannelDisplaySource,
 ): string => {
   const ctx = parseLbsClientContextLinks(company.context_links);
@@ -61,7 +62,15 @@ export const resolveCompanyPhoneForDisplay = (
   const primary = pickFirstPhone(company.primary_contact_phone_jsonb);
   if (primary) return primary;
   if (ctx.invoicePhone?.trim()) return ctx.invoicePhone.trim();
-  return "—";
+  return "";
+};
+
+/** Display-only cascade for list and profile. */
+export const resolveCompanyPhoneForDisplay = (
+  company: CompanyChannelDisplaySource,
+): string => {
+  const raw = resolveCompanyPhoneRaw(company);
+  return raw ? formatPhoneDisplay(raw) : "—";
 };
 
 /** Own company keys only — hydrates the edit form Phone field. */

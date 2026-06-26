@@ -6,7 +6,7 @@ import type { Contact } from "@/components/atomic-crm/types";
 import {
   getContactEmail,
   getContactFullName,
-  getContactPhone,
+  getContactPhoneRaw,
 } from "@/modules/clients/clientShowUtils";
 import {
   getGithubRepoLabel,
@@ -16,7 +16,7 @@ import { DealClientSmsButton } from "@/modules/deals/DealClientSmsButton";
 import { ProjectPortalLinkButton } from "@/modules/portal/ProjectPortalLinkButton";
 import { getClientShowPath } from "@/app/routing";
 import type { LbsDeal } from "@/modules/types";
-import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 
 const MetaSeparator = () => (
   <span className="shrink-0 text-muted-foreground/40" aria-hidden>
@@ -63,8 +63,7 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
 
   const contactName = mainContact ? getContactFullName(mainContact) : null;
   const contactEmail = mainContact ? getContactEmail(mainContact) : null;
-  const rawPhone = mainContact ? getContactPhone(mainContact) : null;
-  const contactPhone = rawPhone ? formatUsPhoneDisplayFromAny(rawPhone) : null;
+  const rawPhone = mainContact ? getContactPhoneRaw(mainContact) : null;
   const companyName =
     record.company_name ??
     (record.company_id ? `Company #${record.company_id}` : null);
@@ -146,13 +145,13 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
           },
           {
             key: "phone",
-            node: contactPhone ? (
-              <a
-                href={`tel:${rawPhone?.replace(/[^\d+]/g, "")}`}
+            node: rawPhone ? (
+              <CrmPhoneLink
+                phone={rawPhone}
+                contactId={mainContactId}
+                dealId={record.id}
                 className="link-action truncate"
-              >
-                {contactPhone}
-              </a>
+              />
             ) : null,
           },
         ]}

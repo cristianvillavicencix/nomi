@@ -16,7 +16,8 @@ import { RotateCcw } from "lucide-react";
 import type { Contact } from "../types";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { Avatar } from "./Avatar";
-import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
+import { mailtoHref, mapsHref } from "@/lib/linking";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 
 const getPrimaryPhone = (contact: Contact) =>
   contact.phone_jsonb?.find((phone) => phone.number?.trim())?.number ?? "—";
@@ -56,18 +57,19 @@ const PlainAnchor = ({
   </a>
 );
 
-const PhoneText = ({ value }: { value: string }) => {
-  const { display, telHref } = normalizePhoneForTel(value);
-  if (!telHref) {
-    return <span>{display}</span>;
-  }
-
-  return (
-    <PlainAnchor href={telHref} title={display}>
-      {display}
-    </PlainAnchor>
-  );
-};
+const PhoneText = ({
+  value,
+  contactId,
+}: {
+  value: string;
+  contactId?: Identifier;
+}) => (
+  <CrmPhoneLink
+    phone={value}
+    contactId={contactId}
+    className="focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+  />
+);
 
 const ContactAddress = ({ contact }: { contact: Contact }) => {
   if (!contact.address?.trim()) {
@@ -222,7 +224,7 @@ const ContactItemContent = ({
             </div>
           </div>
           <div className="min-w-0 truncate text-sm text-muted-foreground">
-            <PhoneText value={getPrimaryPhone(contact)} />
+            <PhoneText value={getPrimaryPhone(contact)} contactId={contact.id} />
           </div>
           <div
             className="min-w-0 truncate text-sm text-muted-foreground"
@@ -358,7 +360,7 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => {
                 )}
               </span>
               <span className="truncate">
-                <PhoneText value={getPrimaryPhone(contact)} />
+                <PhoneText value={getPrimaryPhone(contact)} contactId={contact.id} />
               </span>
               <span className="truncate" title={email}>
                 {emailHref ? (

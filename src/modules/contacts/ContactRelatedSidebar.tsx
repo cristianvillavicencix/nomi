@@ -14,8 +14,9 @@ import { findDealLabel } from "@/components/atomic-crm/deals/deal";
 import type { CompanyWithPrimaryContact } from "@/modules/clients/clientProfile";
 import {
   getPrimaryContactFullName,
-  getPrimaryContactPhone,
+  getPrimaryContactPhoneRaw,
 } from "@/modules/clients/clientProfile";
+import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { Badge } from "@/components/ui/badge";
 import {
   ClientOpenDealsTab,
@@ -180,9 +181,13 @@ export const ContactRelatedSidebar = ({
                       {getPrimaryContactFullName(company)}
                     </p>
                   ) : null}
-                  {getPrimaryContactPhone(company) !== "—" ? (
+                  {getPrimaryContactPhoneRaw(company) ? (
                     <p className="truncate text-sm text-muted-foreground">
-                      {getPrimaryContactPhone(company)}
+                      <CrmPhoneDisplay
+                        phone={getPrimaryContactPhoneRaw(company)}
+                        contactId={company.primary_contact_id}
+                        className="link-action"
+                      />
                     </p>
                   ) : null}
                 </div>

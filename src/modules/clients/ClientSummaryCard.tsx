@@ -21,9 +21,10 @@ import {
   collectBusinessSocialLinks,
   collectPrimaryContactSocialLinks,
   getPrimaryContactFullName,
-  getPrimaryContactPhone,
+  getPrimaryContactPhoneRaw,
   type CompanyWithPrimaryContact,
 } from "@/modules/clients/clientProfile";
+import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { ClientQuickActions } from "@/modules/clients/ClientQuickActions";
 import {
   getSocialLinkLabel,
@@ -344,7 +345,12 @@ export const ClientSummaryCard = ({
           ) : null}
           <ProfileInfoRow
             label="Teléfono"
-            value={getPrimaryContactPhone(record)}
+            value={
+              <CrmPhoneDisplay
+                phone={getPrimaryContactPhoneRaw(record)}
+                contactId={record.primary_contact_id}
+              />
+            }
           />
           <ProfileInfoRow label="Ciudad" value={record.city?.trim() || "—"} />
           <ProfileInfoRow

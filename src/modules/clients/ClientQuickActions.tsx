@@ -29,12 +29,13 @@ import { CalendarReminderDialog } from "@/modules/calendar/CalendarReminderDialo
 import { NewDealDialog } from "@/modules/deals/NewDealDialog";
 import type { Contact } from "@/components/atomic-crm/types";
 import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
+import { useCrmPhoneCall } from "@/modules/voice/useCrmPhoneCall";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
 import {
   getPrimaryContactEmailFromContact,
-  getPrimaryContactPhone,
+  getPrimaryContactPhoneRaw,
   type CompanyWithPrimaryContact,
 } from "@/modules/clients/clientProfile";
 
@@ -125,8 +126,10 @@ export const ClientQuickActions = ({
     getPrimaryContactEmailFromContact(primaryContact) !== "—"
       ? getPrimaryContactEmailFromContact(primaryContact)
       : "";
-  const phoneRaw = getPrimaryContactPhone(record);
-  const phoneLink = phoneRaw !== "—" ? normalizePhoneForTel(phoneRaw) : null;
+  const phoneRaw = getPrimaryContactPhoneRaw(record);
+  const phoneLink = phoneRaw ? normalizePhoneForTel(phoneRaw) : null;
+  const { canCall, voiceReady, callPhone } = useCrmPhoneCall();
+  const canCallPhone = Boolean(phoneLink?.e164 && canCall && voiceReady);
   const today = new Date().toISOString().slice(0, 10);
   const canSms =
     smsEnabled &&
@@ -160,8 +163,15 @@ export const ClientQuickActions = ({
         <LabeledAction label="Call">
           <CircleButton
             label="Call"
-            href={phoneLink?.telHref ?? undefined}
-            disabled={!phoneLink?.telHref}
+            onClick={() => {
+              if (phoneLink?.e164) {
+                void callPhone({
+                  to: phoneLink.e164,
+                  contactId: primaryContactId ?? undefined,
+                });
+              }
+            }}
+            disabled={!canCallPhone}
           >
             <Phone className="size-4" />
           </CircleButton>

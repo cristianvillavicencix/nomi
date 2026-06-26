@@ -25,6 +25,7 @@ import {
   ticketStatusVariant,
 } from "@/modules/tickets/ticketInboxConfig";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
 
 export const TicketCompactHeader = ({
@@ -142,15 +143,15 @@ export const TicketCompactHeader = ({
                 </a>
               </>
             ) : null}
-            {displayPhone ? (
+            {displayPhone && meta.phone ? (
               <>
                 <TicketMetaSep tone="soft" />
-                <a
-                  href={`tel:${meta.phone?.replace(/\s+/g, "") ?? ""}`}
+                <CrmPhoneLink
+                  phone={meta.phone}
+                  contactId={contact?.id}
+                  dealId={ticket.deal_id}
                   className="transition-colors hover:text-foreground hover:underline"
-                >
-                  {displayPhone}
-                </a>
+                />
               </>
             ) : null}
           </p>

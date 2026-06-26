@@ -30,6 +30,7 @@ import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
 import { InfinitePagination } from "../misc/InfinitePagination";
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 
 const showSidebar = false;
 const getPrimaryPhone = (contact: Contact) =>
@@ -99,7 +100,9 @@ const ContactListLayoutDesktop = () => {
             label="Phone"
             className="w-[13%]"
             cellClassName="w-[13%] text-xs text-muted-foreground"
-            render={(record: Contact) => getPrimaryPhone(record)}
+            render={(record: Contact) => (
+              <CrmPhoneLink phone={getPrimaryPhone(record)} contactId={record.id} />
+            )}
           />
           <DataTable.Col
             source="email_jsonb"

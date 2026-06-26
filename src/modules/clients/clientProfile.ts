@@ -13,6 +13,7 @@ import {
   formatStructuredAddressDisplay,
   resolveCompanyAddressForDisplay,
 } from "@/modules/clients/clientAddressUtils";
+import { formatPhoneDisplay } from "@/utils/phone";
 
 export type CompanyWithPrimaryContact = Company & {
   primary_contact_id?: Contact["id"] | null;
@@ -114,10 +115,17 @@ export {
   type ClientSocialLink,
 } from "@/modules/clients/clientSocialLinks";
 
-export const getPrimaryContactPhone = (company: CompanyWithPrimaryContact) =>
+export const getPrimaryContactPhoneRaw = (
+  company: CompanyWithPrimaryContact,
+) =>
   pickFirstPhone(company.primary_contact_phone_jsonb) ||
   company.phone_number?.trim() ||
-  "—";
+  "";
+
+export const getPrimaryContactPhone = (company: CompanyWithPrimaryContact) => {
+  const raw = getPrimaryContactPhoneRaw(company);
+  return raw ? formatPhoneDisplay(raw) : "—";
+};
 
 export const formatCompanyAddress = (company: CompanyWithPrimaryContact) =>
   resolveCompanyAddressForDisplay(company);

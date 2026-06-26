@@ -32,12 +32,13 @@ import {
   type CompanyWithPrimaryContact,
 } from "@/modules/clients/clientProfile";
 import {
-  resolveCompanyEmailForDisplay,
   resolveCompanyPhoneForDisplay,
+  resolveCompanyPhoneRaw,
 } from "@/modules/clients/companyChannelResolvers";
 import { ClientEditDialog } from "@/modules/clients/ClientEditDialog";
 import { ClientSocialLinksDisplay } from "@/modules/clients/ClientSocialLinksDisplay";
-import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
+import { mailtoHref } from "@/lib/linking";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { getClientShowPath } from "@/app/routing";
 import { NewClientDialog } from "@/modules/clients/NewClientDialog";
 
@@ -176,21 +177,13 @@ const CompaniesLayout = () => {
         <DataTable.Col
           source="phone_number"
           label="Phone"
-          render={(record: CompanyWithPrimaryContact) => {
-            const { display, telHref } = normalizePhoneForTel(
-              resolveCompanyPhoneForDisplay(record),
-            );
-            if (!telHref || display === "—") return display;
-            return (
-              <a
-                href={telHref}
-                className="link-action"
-                onClick={(event) => event.stopPropagation()}
-              >
-                {display}
-              </a>
-            );
-          }}
+          render={(record: CompanyWithPrimaryContact) => (
+            <CrmPhoneLink
+              phone={resolveCompanyPhoneRaw(record)}
+              contactId={record.primary_contact_id}
+              className="link-action"
+            />
+          )}
         />
         <DataTable.Col
           source="primary_contact_email_jsonb"

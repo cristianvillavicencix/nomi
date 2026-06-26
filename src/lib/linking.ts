@@ -9,14 +9,14 @@ export const normalizePhoneForTel = (input: string) => {
 
   if (!normalized) {
     return {
-      display: input || "—",
-      telHref: "",
+      display: "—",
+      e164: "",
     };
   }
 
   return {
     display: formatUsPhoneDisplayFromAny(normalized),
-    telHref: `tel:${normalized}`,
+    e164: normalized,
   };
 };
 

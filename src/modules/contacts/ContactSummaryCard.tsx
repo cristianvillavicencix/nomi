@@ -22,9 +22,10 @@ import {
 import {
   getContactEmail,
   getContactFullName,
-  getContactPhone,
+  getContactPhoneRaw,
   formatDateTime,
 } from "@/modules/clients/clientShowUtils";
+import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { ContactQuickActions } from "@/modules/contacts/ContactQuickActions";
 import { getClientShowPath } from "@/app/routing";
 
@@ -202,7 +203,12 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
               }
             />
           ) : null}
-          <ProfileInfoRow label="Phone" value={getContactPhone(record)} />
+          <ProfileInfoRow
+            label="Phone"
+            value={
+              <CrmPhoneDisplay phone={getContactPhoneRaw(record)} contactId={record.id} />
+            }
+          />
           <ProfileInfoRow label="Email" value={getContactEmail(record)} />
           <ProfileInfoRow
             label="Address"

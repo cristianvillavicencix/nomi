@@ -5,10 +5,10 @@ import { getClientShowPath } from "@/app/routing";
 import {
   getContactEmail,
   getContactFullName,
-  getContactPhone,
+  getContactPhoneRaw,
 } from "@/modules/clients/clientShowUtils";
 import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
-import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { cn } from "@/lib/utils";
 
 const websiteHref = (value: string) =>
@@ -102,11 +102,8 @@ export const TicketClientSummaryCard = ({
       : null);
   const phoneRaw =
     meta.phone ??
-    (contact && getContactPhone(contact) !== "—"
-      ? getContactPhone(contact)
-      : null) ??
+    (contact ? getContactPhoneRaw(contact) || null : null) ??
     company?.phone_number?.trim();
-  const phone = phoneRaw ? formatUsPhoneDisplayFromAny(phoneRaw) : null;
   const address = formatLocation(contact) ?? formatLocation(company) ?? null;
   const website = meta.website ?? company?.website?.trim() ?? null;
 
@@ -114,7 +111,7 @@ export const TicketClientSummaryCard = ({
     !companyName &&
     !contactName &&
     !email &&
-    !phone &&
+    !phoneRaw &&
     !address &&
     !website
   ) {
@@ -178,14 +175,14 @@ export const TicketClientSummaryCard = ({
           </SummaryRow>
         ) : null}
 
-        {phone ? (
+        {phoneRaw ? (
           <SummaryRow label="Phone" stacked={stacked}>
-            <a
-              href={`tel:${phoneRaw}`}
+            <CrmPhoneLink
+              phone={phoneRaw}
+              contactId={contact?.id}
+              dealId={ticket.deal_id}
               className="text-primary hover:underline"
-            >
-              {phone}
-            </a>
+            />
           </SummaryRow>
         ) : null}
 

@@ -7,7 +7,7 @@ import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { SortButton } from "@/components/admin/sort-button";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
-import { normalizePhoneForTel } from "@/lib/linking";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 
 import { PageActions, PageTitle } from "../layout/PageActions";
 import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
@@ -135,21 +135,12 @@ const CompaniesRowsList = () => {
         label="Phone"
         className="w-[10%]"
         cellClassName="w-[10%] text-xs text-muted-foreground"
-        render={(record: any) => {
-          const { display, telHref } = normalizePhoneForTel(
-            String(record?.phone_number ?? ""),
-          );
-          if (!telHref) return display;
-          return (
-            <a
-              href={telHref}
-              className="link-action"
-              onClick={(event) => event.stopPropagation()}
-            >
-              {display}
-            </a>
-          );
-        }}
+        render={(record: any) => (
+          <CrmPhoneLink
+            phone={String(record?.phone_number ?? "")}
+            className="link-action"
+          />
+        )}
       />
     </DataTable>
   );

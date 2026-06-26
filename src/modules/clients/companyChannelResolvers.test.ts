@@ -49,7 +49,7 @@ describe("resolveCompanyPhoneForDisplay", () => {
         phone_number: null,
         primary_contact_phone_jsonb: [],
       }),
-    ).toBe("+1-5188675186");
+    ).toBe("(518) 867-5186");
   });
 });
 

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router";
 
-import { mailtoHref, mapsHref, normalizePhoneForTel } from "@/lib/linking";
+import { mailtoHref, mapsHref } from "@/lib/linking";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { useGetIdentity, useGetOne } from "ra-core";
 import type { Company, Contact } from "../types";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
@@ -42,7 +43,7 @@ export const ContactHeader = ({
     record.phone_jsonb?.find((entry) => entry.number?.trim())?.number?.trim() ??
     "";
   const emailLink = primaryEmail ? mailtoHref(primaryEmail) : "";
-  const phoneLink = primaryPhone ? normalizePhoneForTel(primaryPhone) : null;
+  const phoneLink = primaryPhone ? primaryPhone : null;
   const address = record.address?.trim() ?? "";
   const statusLabel = record.status
     ? record.status.charAt(0).toUpperCase() + record.status.slice(1)
@@ -92,10 +93,12 @@ export const ContactHeader = ({
               </span>
               <span className="inline-flex items-center gap-2">
                 <Phone className="size-4" />
-                {phoneLink?.telHref ? (
-                  <a href={phoneLink.telHref} className="link-action">
-                    {phoneLink.display}
-                  </a>
+                {phoneLink ? (
+                  <CrmPhoneLink
+                    phone={phoneLink}
+                    contactId={record.id}
+                    className="link-action"
+                  />
                 ) : (
                   "—"
                 )}

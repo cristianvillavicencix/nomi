@@ -39,7 +39,15 @@ export const formatUsPhoneDisplayFromAny = (input: string): string => {
   return `(${area}) ${prefix}-${line}`;
 };
 
-export const getPhoneHref = (input: string): string | null => {
-  const normalized = normalizeUsPhoneToE164(input);
-  return normalized ? `tel:${normalized}` : null;
+/** Formatted US display or em dash when the value is not a 10-digit number. */
+export const formatPhoneDisplay = (
+  input: string | null | undefined,
+): string => {
+  if (!input?.trim() || input.trim() === DASH) {
+    return DASH;
+  }
+  return formatUsPhoneDisplayFromAny(input);
 };
+
+export const getPhoneE164 = (input: string): string | null =>
+  normalizeUsPhoneToE164(input);

@@ -2,7 +2,7 @@ import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import {
   getContactEmail,
-  getContactPhone,
+  getContactPhoneRaw,
 } from "@/modules/clients/clientShowUtils";
 
 const looksLikeUrl = (value: string) => {
@@ -27,7 +27,7 @@ export const getTicketListMeta = (
   const contactEmail =
     contact != null ? normalizeOptional(getContactEmail(contact)) : null;
   const contactPhone =
-    contact != null ? normalizeOptional(getContactPhone(contact)) : null;
+    contact != null ? normalizeOptional(getContactPhoneRaw(contact)) : null;
 
   const companyEmail = normalizeOptional(
     company?.primary_contact_email_jsonb

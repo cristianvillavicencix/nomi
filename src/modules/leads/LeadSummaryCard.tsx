@@ -9,9 +9,10 @@ import type { Contact, Task } from "@/components/atomic-crm/types";
 import {
   getContactEmail,
   getContactFullName,
-  getContactPhone,
+  getContactPhoneRaw,
   formatDateTime,
 } from "@/modules/clients/clientShowUtils";
+import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { ContactQuickActions } from "@/modules/contacts/ContactQuickActions";
 import {
   formatFollowUpDate,
@@ -181,7 +182,12 @@ export const LeadSummaryCard = ({ record }: { record: Contact }) => {
               )
             }
           />
-          <ProfileInfoRow label="Phone" value={getContactPhone(record)} />
+          <ProfileInfoRow
+            label="Phone"
+            value={
+              <CrmPhoneDisplay phone={getContactPhoneRaw(record)} contactId={record.id} />
+            }
+          />
           <ProfileInfoRow label="Email" value={getContactEmail(record)} />
           <ProfileInfoRow
             label="Last contact"

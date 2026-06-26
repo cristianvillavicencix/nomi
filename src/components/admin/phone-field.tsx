@@ -1,8 +1,8 @@
 import { genericMemo, useFieldValue, useTranslate } from "ra-core";
-import type { AnchorHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes } from "react";
 import React from "react";
-import { cn } from "@/lib/utils";
 import { normalizePhoneForTel } from "@/lib/linking";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import type { FieldProps } from "@/lib/field.type";
 
 const PhoneFieldImpl = <
@@ -28,8 +28,8 @@ const PhoneFieldImpl = <
     );
   }
 
-  const { display, telHref } = normalizePhoneForTel(String(resolvedValue));
-  if (!telHref) {
+  const { display, e164 } = normalizePhoneForTel(String(resolvedValue));
+  if (!e164) {
     return (
       <span className={className} {...rest}>
         {display}
@@ -38,14 +38,11 @@ const PhoneFieldImpl = <
   }
 
   return (
-    <a
-      className={cn("link-action", className)}
-      href={telHref}
+    <CrmPhoneLink
+      phone={String(resolvedValue)}
+      className={className}
       onClick={stopPropagation}
-      {...rest}
-    >
-      {display}
-    </a>
+    />
   );
 };
 
@@ -56,9 +53,9 @@ export const PhoneField = genericMemo(PhoneFieldImpl);
 export interface PhoneFieldProps<
   RecordType extends Record<string, unknown> = Record<string, unknown>,
 > extends FieldProps<RecordType>,
-    AnchorHTMLAttributes<HTMLAnchorElement> {
+    ButtonHTMLAttributes<HTMLButtonElement> {
   value?: string | null;
 }
 
-const stopPropagation = (e: React.MouseEvent<HTMLAnchorElement>) =>
+const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) =>
   e.stopPropagation();

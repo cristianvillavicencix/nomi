@@ -42,6 +42,7 @@ import {
 import { normalizeLeadStage } from "@/modules/leads/leadStages";
 import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
+import { useCrmPhoneCall } from "@/modules/voice/useCrmPhoneCall";
 
 const cardActionClassName = (isDragging: boolean) =>
   cn(
@@ -80,6 +81,8 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
   const activityStale = isLeadActivityStale(activity.at);
   const showEmail = shouldShowLeadEmail(lead);
   const showQuote = shouldShowLeadQuoteAmount(lead);
+  const { canCall, voiceReady, callPhone } = useCrmPhoneCall();
+  const canCallPhone = Boolean(phone?.e164 && canCall && voiceReady);
 
   const handleDelete = () => {
     deleteOne(
@@ -282,19 +285,25 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
 
                 {stage === "new" ? (
                   <div className="mt-1.5 flex items-center gap-1.5 border-t border-border/60 pt-1.5">
-                    {phone?.telHref ? (
+                    {phone?.e164 ? (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         className="h-7 flex-1 gap-1 px-2 text-[11px]"
-                        asChild
-                        onClick={stopCardNavigation}
+                        disabled={!canCallPhone}
+                        onClick={(event) => {
+                          stopCardNavigation(event);
+                          if (phone?.e164) {
+                            void callPhone({
+                              to: phone.e164,
+                              contactId: lead.id,
+                            });
+                          }
+                        }}
                       >
-                        <a href={phone.telHref}>
-                          <PhoneCall className="size-3" />
-                          Call
-                        </a>
+                        <PhoneCall className="size-3" />
+                        Call
                       </Button>
                     ) : (
                       <Button

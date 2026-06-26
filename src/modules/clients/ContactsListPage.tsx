@@ -28,7 +28,8 @@ import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopo
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import type { Contact } from "@/components/atomic-crm/types";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
-import { mailtoHref, normalizePhoneForTel } from "@/lib/linking";
+import { mailtoHref } from "@/lib/linking";
+import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { LBS_CONTACT_STATUSES_FOR_FILTER } from "@/app/navigation";
 import { NewContactDialog } from "@/modules/clients/NewContactDialog";
@@ -163,21 +164,13 @@ const ContactsLayout = () => {
           source="phone_jsonb"
           label="Phone"
           disableSort
-          render={(record: Contact) => {
-            const { display, telHref } = normalizePhoneForTel(
-              getPrimaryPhone(record),
-            );
-            if (!telHref || display === "—") return display;
-            return (
-              <a
-                href={telHref}
-                className="link-action"
-                onClick={(event) => event.stopPropagation()}
-              >
-                {display}
-              </a>
-            );
-          }}
+          render={(record: Contact) => (
+            <CrmPhoneLink
+              phone={getPrimaryPhone(record)}
+              contactId={record.id}
+              className="link-action"
+            />
+          )}
         />
         <DataTable.Col
           source="email_jsonb"

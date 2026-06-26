@@ -4,11 +4,11 @@ import { Handshake } from "lucide-react";
 import type { Contact } from "@/components/atomic-crm/types";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { getPersonShowPath } from "@/app/routing";
+import { getContactPhoneRaw } from "@/modules/clients/clientShowUtils";
+import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 
 const getPrimaryEmail = (contact: Contact) =>
   contact.email_jsonb?.find((entry) => entry.email?.trim())?.email ?? "—";
-const getPrimaryPhone = (contact: Contact) =>
-  contact.phone_jsonb?.find((entry) => entry.number?.trim())?.number ?? "—";
 
 /**
  * Lists every contact referred by the given person or company. Used as a
@@ -98,7 +98,10 @@ export const ReferralsTab = ({
                   {getPrimaryEmail(contact)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {getPrimaryPhone(contact)}
+                  <CrmPhoneDisplay
+                    phone={getContactPhoneRaw(contact)}
+                    contactId={contact.id}
+                  />
                 </td>
               </tr>
             );
