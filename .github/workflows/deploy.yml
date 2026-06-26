@@ -71,7 +71,15 @@ jobs:
 
             - if: ${{ env.IS_SUPABASE_CONFIGURED }}
               name: 📡 Deploy supabase functions
-              run: npx supabase functions deploy
+              run: |
+                  for attempt in 1 2 3; do
+                    if npx supabase functions deploy; then
+                      exit 0
+                    fi
+                    echo "functions deploy attempt ${attempt} failed; retrying in 30s…"
+                    sleep 30
+                  done
+                  exit 1
 
             - if: ${{ !env.SUPABASE_ACCESS_TOKEN }}
               name: Check SUPABASE_ACCESS_TOKEN secret

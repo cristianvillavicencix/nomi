@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { sql, type Selectable } from "https://esm.sh/kysely@0.27.2";
+import { sql, type Selectable } from "npm:kysely@0.27.2";
 import { db, type ContactsTable, CompiledQuery } from "../_shared/db.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";

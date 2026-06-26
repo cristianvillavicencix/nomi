@@ -2,7 +2,7 @@ import type {
   DatabaseConnection,
   Driver,
   QueryResult,
-} from "https://esm.sh/kysely@0.27.2";
+} from "npm:kysely@0.27.2";
 import {
   CompiledQuery,
   Kysely,
@@ -10,7 +10,7 @@ import {
   PostgresIntrospector,
   PostgresQueryCompiler,
   type Generated,
-} from "https://esm.sh/kysely@0.27.2";
+} from "npm:kysely@0.27.2";
 
 export { CompiledQuery };
 import type { PoolClient } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
