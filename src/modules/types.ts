@@ -612,6 +612,14 @@ export type MessagingSettingsPublic = {
   out_of_hours_message?: string | null;
   auto_acknowledge_enabled?: boolean;
   auto_acknowledge_message?: string | null;
+  voice_enabled?: boolean;
+  voice_twiml_app_sid?: string | null;
+  voice_api_key_sid?: string | null;
+  has_voice_api_key_secret?: boolean;
+  voice_caller_id?: string | null;
+  voice_recording_default?: boolean;
+  voice_twiml_url?: string | null;
+  voice_status_webhook_url?: string | null;
 };
 
 export type DealLaunchChecklistItem = {

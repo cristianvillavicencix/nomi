@@ -64,6 +64,12 @@ export const messagingProvider = {
     out_of_hours_message?: string | null;
     auto_acknowledge_enabled?: boolean;
     auto_acknowledge_message?: string | null;
+    voice_enabled?: boolean;
+    voice_twiml_app_sid?: string | null;
+    voice_api_key_sid?: string | null;
+    voice_api_key_secret?: string | null;
+    voice_caller_id?: string | null;
+    voice_recording_default?: boolean;
   }) {
     const { data, error } = await invokeEdgeFunction<
       import("@/modules/types").MessagingSettingsPublic
@@ -82,6 +88,22 @@ export const messagingProvider = {
     }
     if (!data) {
       throw new Error("Failed to save messaging settings");
+    }
+    return data;
+  },
+  async getVoiceToken() {
+    const { data, error } = await invokeEdgeFunction<{
+      token: string;
+      identity: string;
+    }>("voice_token", {
+      method: "POST",
+      body: {},
+    });
+    if (error || !data?.token) {
+      throw new Error(
+        (error as { message?: string })?.message ??
+          "Voice calling is not configured",
+      );
     }
     return data;
   },

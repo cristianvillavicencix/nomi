@@ -2,6 +2,11 @@ import type { User } from "jsr:@supabase/supabase-js@2";
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { getUserOrganizationMember } from "./getUserOrganizationMember.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
+import {
+  getVoiceSettingsPublicFromRow,
+  getVoiceWebhookUrls,
+  type VoiceSettingsPublic,
+} from "./voiceSettings.ts";
 
 export type MessagingSettingsPublic = {
   org_id: number;
@@ -17,7 +22,7 @@ export type MessagingSettingsPublic = {
   out_of_hours_message?: string | null;
   auto_acknowledge_enabled?: boolean;
   auto_acknowledge_message?: string | null;
-};
+} & VoiceSettingsPublic;
 
 export type MessagingSettingsSecrets = {
   org_id: number;
@@ -81,7 +86,7 @@ export async function getMessagingSettingsPublic(
   const { data, error } = await supabaseAdmin
     .from("organization_messaging_settings")
     .select(
-      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted, business_hours, out_of_hours_message, auto_acknowledge_enabled, auto_acknowledge_message",
+      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted, business_hours, out_of_hours_message, auto_acknowledge_enabled, auto_acknowledge_message, voice_enabled, voice_twiml_app_sid, voice_api_key_sid, voice_api_key_secret_encrypted, voice_caller_id, voice_recording_default",
     )
     .eq("org_id", orgId)
     .maybeSingle();
@@ -106,6 +111,7 @@ export async function getMessagingSettingsPublic(
     out_of_hours_message: data?.out_of_hours_message ?? null,
     auto_acknowledge_enabled: data?.auto_acknowledge_enabled === true,
     auto_acknowledge_message: data?.auto_acknowledge_message ?? null,
+    ...getVoiceSettingsPublicFromRow(data),
   };
 }
 
@@ -169,12 +175,25 @@ export async function upsertMessagingSettings(
     out_of_hours_message?: string | null;
     auto_acknowledge_enabled?: boolean;
     auto_acknowledge_message?: string | null;
+    voice_enabled?: boolean;
+    voice_twiml_app_sid?: string | null;
+    voice_api_key_sid?: string | null;
+    voice_api_key_secret?: string | null;
+    keepExistingVoiceApiKeySecret?: boolean;
+    voice_caller_id?: string | null;
+    voice_recording_default?: boolean;
   },
 ) {
   const existing = await getMessagingSettingsSecrets(orgId);
 
-  const accountSid = input.twilio_account_sid?.trim() || null;
-  const phoneRaw = input.twilio_phone_number?.trim() || null;
+  const accountSid =
+    input.twilio_account_sid !== undefined
+      ? input.twilio_account_sid?.trim() || null
+      : existing?.twilio_account_sid ?? null;
+  const phoneRaw =
+    input.twilio_phone_number !== undefined
+      ? input.twilio_phone_number?.trim() || null
+      : existing?.twilio_phone_number ?? null;
   const phoneNumber = phoneRaw ? normalizeUsPhoneToE164(phoneRaw) : null;
   if (phoneRaw && !phoneNumber) {
     throw new Error("Invalid Twilio phone number. Use 10 digits.");
@@ -185,18 +204,64 @@ export async function upsertMessagingSettings(
     authToken = existing?.twilio_auth_token ?? null;
   }
 
-  const payload = {
+  const callerRaw =
+    input.voice_caller_id !== undefined
+      ? input.voice_caller_id?.trim() || null
+      : undefined;
+  const voiceCallerId =
+    callerRaw === undefined
+      ? undefined
+      : callerRaw
+        ? normalizeUsPhoneToE164(callerRaw)
+        : null;
+  if (callerRaw && !voiceCallerId) {
+    throw new Error("Invalid outbound caller ID. Use 10 digits.");
+  }
+
+  const payload: Record<string, unknown> = {
     org_id: orgId,
-    twilio_account_sid: accountSid,
-    twilio_auth_token: null,
-    twilio_phone_number: phoneNumber,
-    sms_enabled: input.sms_enabled === true,
-    business_hours: input.business_hours ?? undefined,
-    out_of_hours_message: input.out_of_hours_message ?? undefined,
-    auto_acknowledge_enabled: input.auto_acknowledge_enabled ?? undefined,
-    auto_acknowledge_message: input.auto_acknowledge_message ?? undefined,
     updated_at: new Date().toISOString(),
   };
+
+  if (
+    input.twilio_account_sid !== undefined ||
+    input.twilio_phone_number !== undefined ||
+    input.sms_enabled !== undefined ||
+    input.business_hours !== undefined ||
+    input.out_of_hours_message !== undefined ||
+    input.auto_acknowledge_enabled !== undefined ||
+    input.auto_acknowledge_message !== undefined
+  ) {
+    payload.twilio_account_sid = accountSid;
+    payload.twilio_auth_token = null;
+    payload.twilio_phone_number = phoneNumber;
+    payload.sms_enabled =
+      input.sms_enabled !== undefined
+        ? input.sms_enabled === true
+        : existing?.sms_enabled === true;
+    payload.business_hours = input.business_hours ?? undefined;
+    payload.out_of_hours_message = input.out_of_hours_message ?? undefined;
+    payload.auto_acknowledge_enabled =
+      input.auto_acknowledge_enabled ?? undefined;
+    payload.auto_acknowledge_message =
+      input.auto_acknowledge_message ?? undefined;
+  }
+
+  if (input.voice_enabled !== undefined) {
+    payload.voice_enabled = input.voice_enabled === true;
+  }
+  if (input.voice_twiml_app_sid !== undefined) {
+    payload.voice_twiml_app_sid = input.voice_twiml_app_sid?.trim() || null;
+  }
+  if (input.voice_api_key_sid !== undefined) {
+    payload.voice_api_key_sid = input.voice_api_key_sid?.trim() || null;
+  }
+  if (input.voice_caller_id !== undefined) {
+    payload.voice_caller_id = voiceCallerId ?? null;
+  }
+  if (input.voice_recording_default !== undefined) {
+    payload.voice_recording_default = input.voice_recording_default === true;
+  }
 
   const { error } = await supabaseAdmin
     .from("organization_messaging_settings")
@@ -224,6 +289,31 @@ export async function upsertMessagingSettings(
         encryptError.message ?? "Failed to encrypt Twilio auth token",
       );
     }
+  }
+
+  if (input.voice_api_key_secret?.trim()) {
+    const key = getPgcryptoKey();
+    if (!key) {
+      throw new Error("PGCRYPTO_KEY is not configured");
+    }
+    const { error: voiceKeyError } = await supabaseAdmin.rpc(
+      "set_voice_api_key_secret",
+      {
+        p_org_id: orgId,
+        p_secret: input.voice_api_key_secret.trim(),
+        p_key: key,
+      },
+    );
+    if (voiceKeyError) {
+      throw new Error(
+        voiceKeyError.message ?? "Failed to encrypt Voice API key secret",
+      );
+    }
+  } else if (input.keepExistingVoiceApiKeySecret === false) {
+    await supabaseAdmin
+      .from("organization_messaging_settings")
+      .update({ voice_api_key_secret_encrypted: null, updated_at: new Date().toISOString() })
+      .eq("org_id", orgId);
   }
 
   return getMessagingSettingsPublic(orgId);

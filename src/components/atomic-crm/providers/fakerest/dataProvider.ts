@@ -1373,6 +1373,10 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     webcal_url:
       "webcal://example.supabase.co/functions/v1/calendar_feed?token=demo-feed-token",
   }),
+  getVoiceToken: async () => ({
+    token: "demo-voice-token",
+    identity: "member-1-1",
+  }),
   getMessagingSettings: async () => ({
     org_id: 1,
     twilio_account_sid: null,
@@ -1380,6 +1384,14 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     sms_enabled: false,
     has_auth_token: false,
     webhook_url: null,
+    voice_enabled: false,
+    voice_twiml_app_sid: null,
+    voice_api_key_sid: null,
+    has_voice_api_key_secret: false,
+    voice_caller_id: null,
+    voice_recording_default: false,
+    voice_twiml_url: null,
+    voice_status_webhook_url: null,
   }),
   ensureProjectConversation: async ({ dealId }) => dealId,
   ensureTeamDmConversation: async ({ otherMemberId }) => otherMemberId,

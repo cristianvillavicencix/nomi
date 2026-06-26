@@ -25,6 +25,13 @@ type SettingsBody = {
   out_of_hours_message?: string | null;
   auto_acknowledge_enabled?: boolean;
   auto_acknowledge_message?: string | null;
+  voice_api_key_secret?: string | null;
+  keepExistingVoiceApiKeySecret?: boolean;
+  voice_caller_id?: string | null;
+  voice_recording_default?: boolean;
+  voice_enabled?: boolean;
+  voice_twiml_app_sid?: string | null;
+  voice_api_key_sid?: string | null;
   test_phone?: string | null;
 };
 
@@ -101,6 +108,13 @@ Deno.serve((req: Request) =>
           out_of_hours_message: body.out_of_hours_message ?? undefined,
           auto_acknowledge_enabled: body.auto_acknowledge_enabled ?? undefined,
           auto_acknowledge_message: body.auto_acknowledge_message ?? undefined,
+          voice_enabled: body.voice_enabled,
+          voice_twiml_app_sid: body.voice_twiml_app_sid ?? null,
+          voice_api_key_sid: body.voice_api_key_sid ?? null,
+          voice_api_key_secret: body.voice_api_key_secret ?? null,
+          keepExistingVoiceApiKeySecret: !body.voice_api_key_secret?.trim(),
+          voice_caller_id: body.voice_caller_id ?? null,
+          voice_recording_default: body.voice_recording_default,
         });
 
         return new Response(JSON.stringify(settings), {

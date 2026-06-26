@@ -16,6 +16,7 @@ export const useMessagingEnabled = () => {
 
   return {
     smsEnabled: data?.sms_enabled === true,
+    voiceEnabled: data?.voice_enabled === true,
     isPending: identityPending || isPending,
   };
 };

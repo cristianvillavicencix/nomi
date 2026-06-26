@@ -35,7 +35,7 @@ export const OrganizationSignatureSection = () => {
     signatureContext,
   } = useOrganizationSmsSignature();
 
-  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [template, setTemplate] = useState(DEFAULT_SMS_SIGNATURE_TEMPLATE);
   const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {

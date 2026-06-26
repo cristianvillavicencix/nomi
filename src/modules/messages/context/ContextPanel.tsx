@@ -12,6 +12,7 @@ import { useMaskedAmount } from "@/lib/permissions/useMaskedAmount";
 import { getPersonShowPath } from "@/app/routing";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { cn } from "@/lib/utils";
+import { VoiceCallButton } from "@/modules/voice/VoiceCallButton";
 
 const DetailSection = ({
   label,
@@ -50,6 +51,11 @@ export const ContextPanelContent = ({
   }
 
   const phoneEntries = contact ? getContactPhoneEntries(contact) : [];
+  const callPhone =
+    activeSmsPhone ??
+    conversation?.external_phone ??
+    phoneEntries[0]?.e164 ??
+    null;
   const emailEntries =
     contact?.email_jsonb?.filter((entry) => entry.email?.trim()) ?? [];
 
@@ -196,16 +202,12 @@ export const ContextPanelContent = ({
             </Link>
           </Button>
         ) : null}
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start"
-          disabled
-          title="Voice not configured"
-        >
-          <Phone className="mr-2 size-4" />
-          Call (coming soon)
-        </Button>
+        <VoiceCallButton
+          phoneNumber={callPhone}
+          contactId={contact?.id ?? conversation?.contact_id}
+          conversationId={conversation?.id}
+          dealId={deal?.id ?? conversation?.deal_id}
+        />
       </div>
     </div>
   );

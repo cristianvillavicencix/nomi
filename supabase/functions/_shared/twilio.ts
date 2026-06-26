@@ -147,3 +147,37 @@ export async function validateTwilioSignatureForStatusCallback(
   });
   return false;
 }
+
+export async function validateTwilioSignatureForVoiceWebhook(
+  authToken: string,
+  signature: string | null,
+  req: Request,
+  params: Record<string, string>,
+  functionName: "voice_twiml" | "voice_status_webhook",
+) {
+  if (!signature) return false;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  const requestUrl = new URL(req.url);
+  const explicit =
+    functionName === "voice_twiml"
+      ? Deno.env.get("TWILIO_VOICE_TWIML_URL")?.trim()
+      : Deno.env.get("TWILIO_VOICE_STATUS_CALLBACK_URL")?.trim();
+  const candidates = [
+    explicit,
+    supabaseUrl ? `${supabaseUrl}/functions/v1/${functionName}` : null,
+    `${requestUrl.origin}${requestUrl.pathname}`,
+    req.url.split("?")[0],
+  ].filter((value): value is string => Boolean(value));
+
+  for (const url of [...new Set(candidates)]) {
+    if (await validateTwilioSignature(authToken, signature, url, params)) {
+      return true;
+    }
+  }
+
+  console.error(`${functionName} invalid signature`, {
+    triedUrls: [...new Set(candidates)],
+  });
+  return false;
+}
