@@ -129,3 +129,11 @@ If you want more information on how to customize email templates, check the [Cus
 **I have a *Security Definer View* error in *Security Advisor* for `init_state`**
 
 This was addressed in migration `20260830140000_init_state_security_invoker.sql`: the view now uses `security_invoker = true` and delegates the privileged count to `public.crm_is_initialized()` (a narrow `SECURITY DEFINER` function). After applying migrations, re-run Security Advisor to confirm the view warning is cleared.
+
+**Security Advisor phase 1 (search_path + internal RPC lockdown)**
+
+Migration `20260831120000_security_advisor_phase1.sql` pins `search_path` on functions flagged by the linter, revokes direct browser access to cron/secret helpers (service role only), and blocks anonymous RPC on app helpers while keeping authenticated grants used by RLS and the CRM.
+
+**Leaked password protection (Dashboard, not SQL)**
+
+In **Authentication → Providers → Email**, enable **Prevent use of leaked passwords** (Have I Been Pwned check). This clears the `auth_leaked_password_protection` Security Advisor warning and blocks compromised passwords at sign-up/password change.
