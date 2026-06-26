@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useDataProvider, useGetIdentity } from "ra-core";
+import { useSearchParams } from "react-router";
 import { PageLayout } from "@/components/atomic-crm/layout/page-shell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
@@ -9,11 +16,18 @@ import { INBOX_PAGE_SIZE } from "@/modules/messages/inbox/MessagesInbox";
 import { useInboxConversations } from "@/modules/messages/useInboxConversations";
 import { useMessagesQuickAccess } from "@/modules/messages/messagesQuickAccessContext";
 import { requestMessagingDesktopNotifications } from "@/modules/messages/messagingDesktopNotifications";
+import {
+  MESSAGES_CONVERSATION_PARAM,
+  parseMessagesConversationId,
+} from "@/modules/messages/messagesRouting";
 
 export const MessagesPage = () => {
   const isMobile = useIsMobile();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const { identity } = useGetIdentity();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkConversationId = parseMessagesConversationId(searchParams);
+  const resolvingDeepLinkRef = useRef<string | null>(null);
   const [inboxPageSize, setInboxPageSize] = useState(INBOX_PAGE_SIZE);
   const [loadingMoreInbox, setLoadingMoreInbox] = useState(false);
   const {
@@ -32,6 +46,72 @@ export const MessagesPage = () => {
 
   const { conversations, deals, dmParticipants, members, contacts, isPending } =
     useInboxConversations({ pageSize: inboxPageSize });
+
+  const clearConversationDeepLink = useCallback(() => {
+    if (!searchParams.has(MESSAGES_CONVERSATION_PARAM)) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete(MESSAGES_CONVERSATION_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const openConversation = useCallback(
+    (conversation: Conversation) => {
+      clearDraftSms();
+      viewConversation(conversation);
+      focusConversation(conversation);
+      setSelectedConversation(conversation);
+      if (isMobile) setMobileShowChat(true);
+    },
+    [clearDraftSms, focusConversation, isMobile, viewConversation],
+  );
+
+  useEffect(() => {
+    if (!deepLinkConversationId) {
+      resolvingDeepLinkRef.current = null;
+      return;
+    }
+
+    if (resolvingDeepLinkRef.current === deepLinkConversationId) {
+      return;
+    }
+
+    const inList = conversations.find(
+      (entry) => String(entry.id) === deepLinkConversationId,
+    );
+    if (inList) {
+      resolvingDeepLinkRef.current = deepLinkConversationId;
+      openConversation(inList);
+      clearConversationDeepLink();
+      return;
+    }
+
+    if (isPending) return;
+
+    resolvingDeepLinkRef.current = deepLinkConversationId;
+    let cancelled = false;
+
+    void dataProvider
+      .getOne<Conversation>("conversations", { id: deepLinkConversationId })
+      .then(({ data }) => {
+        if (cancelled || !data?.id) return;
+        openConversation(data);
+        clearConversationDeepLink();
+      })
+      .catch(() => {
+        resolvingDeepLinkRef.current = null;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    clearConversationDeepLink,
+    conversations,
+    dataProvider,
+    deepLinkConversationId,
+    isPending,
+    openConversation,
+  ]);
 
   useEffect(() => {
     if (typeof Notification === "undefined") return;
@@ -64,17 +144,22 @@ export const MessagesPage = () => {
 
   useEffect(() => {
     if (draftSms || selectedConversation) return;
+    if (deepLinkConversationId) return;
     if (conversations[0]) {
       viewConversation(conversations[0]);
       setSelectedConversation(conversations[0]);
     }
-  }, [conversations, draftSms, selectedConversation, viewConversation]);
+  }, [
+    conversations,
+    deepLinkConversationId,
+    draftSms,
+    selectedConversation,
+    viewConversation,
+  ]);
 
   const handleSelectConversation = (conversation: Conversation) => {
-    clearDraftSms();
-    viewConversation(conversation);
-    setSelectedConversation(conversation);
-    if (isMobile) setMobileShowChat(true);
+    clearConversationDeepLink();
+    openConversation(conversation);
   };
 
   const handleClientSmsSent = (conversation: Conversation) => {

@@ -26,7 +26,7 @@ import {
   parseNotificationPrefs,
 } from "@/modules/notifications/notificationPrefs";
 import { canAccessNotificationCategory } from "@/modules/notifications/notificationCategoryAccess";
-import { pushNotificationHistory } from "@/modules/notifications/notificationHistory";
+import { navigateToNotificationHref } from "@/modules/notifications/notificationNavigation";
 import type {
   NotificationCategory,
   NotificationPrefs,
@@ -182,7 +182,7 @@ export const NotificationPrefsProvider = ({
           tag: input.tag,
           onClick: input.href
             ? () => {
-                window.location.href = input.href!;
+                navigateToNotificationHref(input.href!);
               }
             : undefined,
         });

@@ -10,6 +10,7 @@ import { useMessagesInboxRealtime } from "@/modules/messages/useMessagesInboxRea
 import { useMessagesQuickAccess } from "@/modules/messages/messagesQuickAccessContext";
 import { useNotificationPrefsContext } from "@/modules/notifications/NotificationPrefsContext";
 import type { NotificationCategory } from "@/modules/notifications/types";
+import { getMessagesConversationPath } from "@/modules/messages/messagesRouting";
 
 type NotifyDecision = {
   category: NotificationCategory;
@@ -131,7 +132,7 @@ export const useMessagesNotifications = () => {
         body: buildMessagePreview(message),
         tag: `msg-${message.id}`,
         href: conversation
-          ? `/messages?conversation=${conversation.id}`
+          ? getMessagesConversationPath(conversation.id)
           : "/messages",
         sound: decision.sound,
         desktop: decision.desktop,
