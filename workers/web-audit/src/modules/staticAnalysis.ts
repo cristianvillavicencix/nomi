@@ -169,7 +169,7 @@ export const runStaticAnalysis = async (
             }
           }
           const filename = rawSrc
-            ? rawSrc.split("/").pop()?.split("?")[0] ?? null
+            ? (rawSrc.split("/").pop()?.split("?")[0] ?? null)
             : null;
           base.imagesMissingAlt.push({ src: resolvedSrc, filename });
         }

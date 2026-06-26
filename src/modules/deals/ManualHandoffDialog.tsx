@@ -162,7 +162,11 @@ export const ManualHandoffDialog = ({
           ) : (
             <span />
           )}
-          <Button type="button" disabled={isPending} onClick={() => persist(true)}>
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={() => persist(true)}
+          >
             {isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

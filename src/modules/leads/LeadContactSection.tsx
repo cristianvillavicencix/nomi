@@ -17,14 +17,22 @@ import type { NewLeadFormValues } from "./newLeadFormTypes";
 
 export const LeadContactSection = () => {
   const { setValue } = useFormContext<NewLeadFormValues>();
-  const leadType = useWatch<NewLeadFormValues, "lead_type">({ name: "lead_type" });
-  const useCompanyInfo = useWatch<NewLeadFormValues, "use_company_contact_info">({
+  const leadType = useWatch<NewLeadFormValues, "lead_type">({
+    name: "lead_type",
+  });
+  const useCompanyInfo = useWatch<
+    NewLeadFormValues,
+    "use_company_contact_info"
+  >({
     name: "use_company_contact_info",
   });
   const companyDraftPhone = useWatch<NewLeadFormValues, "company_draft_phone">({
     name: "company_draft_phone",
   });
-  const companyDraftAddress = useWatch<NewLeadFormValues, "company_draft_address">({
+  const companyDraftAddress = useWatch<
+    NewLeadFormValues,
+    "company_draft_address"
+  >({
     name: "company_draft_address",
   });
 
@@ -105,9 +113,7 @@ export const LeadContactSection = () => {
         }
         mode="address"
         helperText={
-          leadType === "individual"
-            ? "Required for future billing."
-            : false
+          leadType === "individual" ? "Required for future billing." : false
         }
         onPlaceDetails={(details) =>
           applyGoogleAddressToContactLeadForm(setValue, details)

@@ -4,9 +4,7 @@ import { UserMiddleware } from "../_shared/authentication.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
-import {
-  getWebsiteAuditWorkerSecret,
-} from "../_shared/websiteAuditAuth.ts";
+import { getWebsiteAuditWorkerSecret } from "../_shared/websiteAuditAuth.ts";
 import {
   buildAuditContextForAi,
   generateWebsiteAuditAiSummary,
@@ -58,7 +56,10 @@ const runSummarize = async (req: Request, user?: User) => {
     return createErrorResponse(404, "Audit not found");
   }
   if (audit.status !== "done") {
-    return createErrorResponse(400, "Audit must be completed before summarizing");
+    return createErrorResponse(
+      400,
+      "Audit must be completed before summarizing",
+    );
   }
 
   if (user) {
@@ -70,10 +71,7 @@ const runSummarize = async (req: Request, user?: User) => {
   }
 
   const currentStatus = audit.ai_summary_status as string | null;
-  if (
-    !force &&
-    (currentStatus === "running" || currentStatus === "done")
-  ) {
+  if (!force && (currentStatus === "running" || currentStatus === "done")) {
     return new Response(
       JSON.stringify({
         ok: true,

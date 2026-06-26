@@ -70,7 +70,9 @@ export const parseProposalTimelineBars = (
             : `timeline-${index + 1}`,
         label,
         week_label: week_label || `W${index + 1}`,
-        left_percent: Number.isFinite(left) ? Math.max(0, Math.min(100, left)) : 0,
+        left_percent: Number.isFinite(left)
+          ? Math.max(0, Math.min(100, left))
+          : 0,
         width_percent: Number.isFinite(width)
           ? Math.max(4, Math.min(100, width))
           : 20,
@@ -106,5 +108,4 @@ export const TIMELINE_TONE_PDF_COLORS: Record<
   gold: { fill: "#f59e0b", text: "#3a2800" },
 };
 
-export const newTimelineBarId = () =>
-  `timeline-${Date.now().toString(36)}`;
+export const newTimelineBarId = () => `timeline-${Date.now().toString(36)}`;

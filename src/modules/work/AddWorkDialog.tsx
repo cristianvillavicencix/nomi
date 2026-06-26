@@ -75,7 +75,9 @@ export const AddWorkDialog = ({
     closeDialog();
     refresh();
     notify(
-      isMeetingWorkCategory(category) ? "Meeting scheduled" : "Added to calendar",
+      isMeetingWorkCategory(category)
+        ? "Meeting scheduled"
+        : "Added to calendar",
     );
   };
 
@@ -134,8 +136,14 @@ export const AddWorkDialog = ({
               <DialogHeader>
                 <DialogTitle>Add to Calendar</DialogTitle>
               </DialogHeader>
-              <WorkCreateCategoryPicker value={category} onChange={setCategory} />
-              <WorkCreateTaskFields category={category} defaultDealId={dealId} />
+              <WorkCreateCategoryPicker
+                value={category}
+                onChange={setCategory}
+              />
+              <WorkCreateTaskFields
+                category={category}
+                defaultDealId={dealId}
+              />
               <p className="rounded-sm border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
                 {categoryHint}
               </p>
@@ -177,7 +185,10 @@ export const AddWorkDialog = ({
               <DialogHeader className="mb-4">
                 <DialogTitle>Add to Calendar</DialogTitle>
               </DialogHeader>
-              <WorkCreateCategoryPicker value={category} onChange={setCategory} />
+              <WorkCreateCategoryPicker
+                value={category}
+                onChange={setCategory}
+              />
             </div>
             <MeetingScheduleForm isEdit={false} />
           </DialogContent>

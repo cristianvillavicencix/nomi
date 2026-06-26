@@ -34,14 +34,15 @@ const resolveOrganizationMemberId = async (
 
 export const messagingProvider = {
   async getMessagingSettings() {
-    const disabledSettings: import("@/modules/types").MessagingSettingsPublic = {
-      org_id: 0,
-      twilio_account_sid: null,
-      twilio_phone_number: null,
-      sms_enabled: false,
-      has_auth_token: false,
-      webhook_url: null,
-    };
+    const disabledSettings: import("@/modules/types").MessagingSettingsPublic =
+      {
+        org_id: 0,
+        twilio_account_sid: null,
+        twilio_phone_number: null,
+        sms_enabled: false,
+        has_auth_token: false,
+        webhook_url: null,
+      };
 
     const { data, error } = await invokeEdgeFunction<
       import("@/modules/types").MessagingSettingsPublic
@@ -474,5 +475,17 @@ export const messagingProvider = {
       );
     }
     return data ?? { ok: true, sent: false };
+  },
+  async ensureTeamDmConversation(params: { otherMemberId: Identifier }) {
+    const { data, error } = await supabase.rpc("ensure_team_dm_conversation", {
+      p_other_member_id: Number(params.otherMemberId),
+    });
+
+    if (error) {
+      console.error("ensureTeamDmConversation.error", error);
+      throw new Error(error.message || "Failed to open direct message");
+    }
+
+    return data as Identifier;
   },
 };

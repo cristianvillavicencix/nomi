@@ -33,8 +33,7 @@ export const DEFAULT_PROPOSAL_TEMPLATES: DefaultProposalTemplateSeed[] = [
     content: withDeck("website-contractor", {
       template_slug: "website-contractor",
       hero_title: "Your new professional website",
-      hero_subtitle:
-        "Prepared for {{empresa}} by Latinos Business Support",
+      hero_subtitle: "Prepared for {{empresa}} by Latinos Business Support",
       locales: {
         es: {
           hero_title: "Tu nuevo sitio web profesional",
@@ -79,7 +78,8 @@ export const DEFAULT_PROPOSAL_TEMPLATES: DefaultProposalTemplateSeed[] = [
       locales: {
         es: {
           hero_title: "Crecimiento de marketing para {{empresa}}",
-          hero_subtitle: "Propuesta de marketing digital · Latinos Business Support",
+          hero_subtitle:
+            "Propuesta de marketing digital · Latinos Business Support",
           accept_title: "Aceptar esta propuesta",
           accept_body:
             "Revisa los términos del contrato, confirma abajo y firma una sola vez.",
@@ -99,7 +99,8 @@ export const DEFAULT_PROPOSAL_TEMPLATES: DefaultProposalTemplateSeed[] = [
       locales: {
         es: {
           hero_title: "Acceso a la plataforma SKOP",
-          hero_subtitle: "Preparado para {{empresa}} · Latinos Business Support",
+          hero_subtitle:
+            "Preparado para {{empresa}} · Latinos Business Support",
           accept_title: "Aceptar esta propuesta",
           accept_body:
             "Revisa los términos del contrato, confirma abajo y firma una sola vez.",

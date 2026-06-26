@@ -114,7 +114,10 @@ export const renderLbsCustomRoutes = ({
 }) => {
   return (
     <>
-      <Route path="/contacts/create" element={<Navigate to="/contacts?create=contact" replace />} />
+      <Route
+        path="/contacts/create"
+        element={<Navigate to="/contacts?create=contact" replace />}
+      />
       <Route
         path="/contacts"
         element={
@@ -239,10 +242,7 @@ export const renderLbsCustomRoutes = ({
         path="/clients/create"
         element={<Navigate to="/clients?create=company" replace />}
       />
-      <Route
-        path="/clients"
-        element={<ClientsHubList />}
-      />
+      <Route path="/clients" element={<ClientsHubList />} />
       <Route
         path="/clients/find-duplicates"
         element={<Navigate to="/companies/find-duplicates" replace />}
@@ -309,7 +309,10 @@ export const renderLbsCustomRoutes = ({
       <Route
         path="/billing"
         element={
-          <ProtectedRoute resource="proposal_payment_installments" action="list">
+          <ProtectedRoute
+            resource="proposal_payment_installments"
+            action="list"
+          >
             <ClientBillingPage />
           </ProtectedRoute>
         }
@@ -395,7 +398,10 @@ export const renderLbsCustomRoutes = ({
         }
       />
       <Route path="/web-forms" element={<Navigate to="/forms-v2" replace />} />
-      <Route path="/web-forms/*" element={<Navigate to="/forms-v2" replace />} />
+      <Route
+        path="/web-forms/*"
+        element={<Navigate to="/forms-v2" replace />}
+      />
       <Route
         path="/tickets"
         element={

@@ -69,8 +69,7 @@ export const TicketMergeLauncher = ({
   };
 
   const compareTicket =
-    selectedTicket ??
-    (relatedTickets.length === 1 ? relatedTickets[0] : null);
+    selectedTicket ?? (relatedTickets.length === 1 ? relatedTickets[0] : null);
 
   return (
     <>
@@ -99,13 +98,19 @@ export const TicketMergeLauncher = ({
             <DialogTitle>Choose ticket to merge</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <Select value={selectedTicketId} onValueChange={setSelectedTicketId}>
+            <Select
+              value={selectedTicketId}
+              onValueChange={setSelectedTicketId}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select ticket" />
               </SelectTrigger>
               <SelectContent>
                 {relatedTickets.map((candidate) => (
-                  <SelectItem key={String(candidate.id)} value={String(candidate.id)}>
+                  <SelectItem
+                    key={String(candidate.id)}
+                    value={String(candidate.id)}
+                  >
                     #{candidate.id} · {candidate.subject}
                   </SelectItem>
                 ))}

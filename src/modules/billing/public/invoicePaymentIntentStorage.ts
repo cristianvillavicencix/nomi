@@ -21,7 +21,11 @@ export const writeStoredInvoicePaymentIntentId = (
   token: string,
   paymentIntentId: string,
 ) => {
-  if (typeof window === "undefined" || !token.trim() || !paymentIntentId.trim()) {
+  if (
+    typeof window === "undefined" ||
+    !token.trim() ||
+    !paymentIntentId.trim()
+  ) {
     return;
   }
   const payload: StoredInvoiceCheckoutPayment = {

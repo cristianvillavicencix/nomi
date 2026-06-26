@@ -45,7 +45,11 @@ export const DEFAULT_PORTAL_ENABLED_SECTIONS = [
 
 export type PortalView = (typeof DEFAULT_PORTAL_ENABLED_SECTIONS)[number];
 
-const LEGACY_PORTAL_SECTIONS_V1 = ["credentials", "handoff", "domain_dns"] as const;
+const LEGACY_PORTAL_SECTIONS_V1 = [
+  "credentials",
+  "handoff",
+  "domain_dns",
+] as const;
 const LEGACY_PORTAL_SECTIONS_V2 = [
   "overview",
   "credentials",
@@ -199,10 +203,7 @@ export const isDeliveryNew = (deliveredAt?: string | null) => {
   return Date.now() - delivered < sevenDaysMs;
 };
 
-export const formatPortalDate = (
-  value?: string | null,
-  locale = "es-US",
-) => {
+export const formatPortalDate = (value?: string | null, locale = "es-US") => {
   if (!value) return "—";
   const date = new Date(`${value.includes("T") ? value : `${value}T12:00:00`}`);
   if (Number.isNaN(date.getTime())) return "—";

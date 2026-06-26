@@ -54,9 +54,7 @@ export const computeInvoiceBillingSummary = (
 
     if (status === "paid" && paidWithinLast30Days(invoice)) {
       const paidAmount =
-        Number(invoice.amount_paid) > 0
-          ? Number(invoice.amount_paid)
-          : total;
+        Number(invoice.amount_paid) > 0 ? Number(invoice.amount_paid) : total;
       summary.paid30d.amount += paidAmount;
       summary.paid30d.count += 1;
       continue;

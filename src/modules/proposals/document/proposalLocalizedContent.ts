@@ -39,7 +39,9 @@ export const resolveProposalDocumentContent = (
     const fromBlock = fromLocaleBlock?.[key as keyof typeof fromLocaleBlock];
     if (key === "hero_image_url") {
       const image =
-        (typeof fromBlock === "string" && fromBlock.trim() ? fromBlock : null) ??
+        (typeof fromBlock === "string" && fromBlock.trim()
+          ? fromBlock
+          : null) ??
         (typeof esSuffix === "string" && esSuffix.trim()
           ? (esSuffix as string)
           : null);
@@ -76,10 +78,9 @@ const mergeCustomSections = (
       ...section,
       title: translated.title?.trim() ? translated.title : section.title,
       body: translated.body?.trim() ? translated.body : section.body,
-      image_url:
-        translated.image_url?.trim()
-          ? translated.image_url
-          : section.image_url,
+      image_url: translated.image_url?.trim()
+        ? translated.image_url
+        : section.image_url,
     };
   });
   return merged.length > 0 ? merged : es;

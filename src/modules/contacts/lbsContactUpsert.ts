@@ -7,7 +7,10 @@ import {
   companyDraftToCreateData,
   getCompanyDraftFromFormValues,
 } from "@/modules/contacts/companyDraft";
-import { prepareContactWriteData, stripContactFormMetaFields } from "@/components/atomic-crm/providers/supabase/dataProviderWriteHelpers";
+import {
+  prepareContactWriteData,
+  stripContactFormMetaFields,
+} from "@/components/atomic-crm/providers/supabase/dataProviderWriteHelpers";
 
 type OrgMember = {
   id: Identifier;
@@ -63,7 +66,9 @@ const clearPrimaryOnPreviousCompany = async (
     throw new Error("Failed to load previous company");
   }
 
-  if (!shouldClearPrimaryOnCompany(previousCompany?.primary_contact_id, contactId)) {
+  if (
+    !shouldClearPrimaryOnCompany(previousCompany?.primary_contact_id, contactId)
+  ) {
     return;
   }
 

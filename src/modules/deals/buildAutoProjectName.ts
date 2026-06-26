@@ -3,8 +3,8 @@ import { lbsProjectTypeChoices } from "@/modules/deals/lbsProjectConstants";
 const projectTypeLabel = (projectType?: string | null) => {
   if (!projectType) return "";
   return (
-    lbsProjectTypeChoices.find((choice) => choice.value === projectType)?.label ??
-    projectType.replace(/-/g, " ")
+    lbsProjectTypeChoices.find((choice) => choice.value === projectType)
+      ?.label ?? projectType.replace(/-/g, " ")
   );
 };
 

@@ -149,8 +149,14 @@ Deno.serve(
           contactName = [contact.first_name, contact.last_name]
             .filter(Boolean)
             .join(" ");
-          const emails = contact.email_jsonb as Array<{ email?: string; isPrimary?: boolean }> | null;
-          const phones = contact.phone_jsonb as Array<{ number?: string; isPrimary?: boolean }> | null;
+          const emails = contact.email_jsonb as Array<{
+            email?: string;
+            isPrimary?: boolean;
+          }> | null;
+          const phones = contact.phone_jsonb as Array<{
+            number?: string;
+            isPrimary?: boolean;
+          }> | null;
           billToEmail =
             emails?.find((row) => row.isPrimary)?.email?.trim() ??
             emails?.[0]?.email?.trim() ??

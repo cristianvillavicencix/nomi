@@ -90,7 +90,9 @@ export const ServiceAreasPlacesInput = ({
       const details = await fetchGooglePlaceDetails(placeId);
       addArea(formatServiceAreaLabel(details));
     } catch {
-      const fallback = suggestions.find((item) => item.placeId === placeId)?.text;
+      const fallback = suggestions.find(
+        (item) => item.placeId === placeId,
+      )?.text;
       if (fallback) addArea(fallback);
     } finally {
       setIsFetchingDetails(false);
@@ -165,7 +167,9 @@ export const ServiceAreasPlacesInput = ({
                 type="button"
                 aria-label={`Remove ${chip}`}
                 className="text-muted-foreground hover:text-foreground"
-                onClick={() => onChange(chips.filter((entry) => entry !== chip))}
+                onClick={() =>
+                  onChange(chips.filter((entry) => entry !== chip))
+                }
               >
                 <X className="size-3" />
               </button>
@@ -296,7 +300,11 @@ const CONTACT_METHODS = [
   { id: "SMS / text", label: "SMS", numberKey: "business_phone" },
   { id: "WhatsApp", label: "WhatsApp", numberKey: "whatsapp_business" },
   { id: "Email", label: "Email", numberKey: "form_notification_email" },
-  { id: "Website form", label: "Website form", numberKey: "form_notification_email" },
+  {
+    id: "Website form",
+    label: "Website form",
+    numberKey: "form_notification_email",
+  },
 ] as const;
 
 export const ContactReachField = ({
@@ -329,7 +337,10 @@ export const ContactReachField = ({
       if (current) return;
       if (meta.numberKey === "form_notification_email" && fallbackEmail) {
         onChangeField(meta.numberKey, fallbackEmail);
-      } else if (meta.numberKey !== "form_notification_email" && fallbackPhone) {
+      } else if (
+        meta.numberKey !== "form_notification_email" &&
+        fallbackPhone
+      ) {
         onChangeField(meta.numberKey, fallbackPhone);
       }
     }

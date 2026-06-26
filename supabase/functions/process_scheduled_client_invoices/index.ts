@@ -47,8 +47,11 @@ Deno.serve(
         throw new Error(listError.message);
       }
 
-      const results: Array<{ invoice_id: number; ok: boolean; error?: string }> =
-        [];
+      const results: Array<{
+        invoice_id: number;
+        ok: boolean;
+        error?: string;
+      }> = [];
 
       for (const row of dueRows ?? []) {
         try {
@@ -72,9 +75,10 @@ Deno.serve(
             continue;
           }
 
-          const { data: file, error: downloadError } = await supabaseAdmin.storage
-            .from("attachments")
-            .download(storagePath);
+          const { data: file, error: downloadError } =
+            await supabaseAdmin.storage
+              .from("attachments")
+              .download(storagePath);
 
           if (downloadError || !file) {
             results.push({
@@ -85,7 +89,9 @@ Deno.serve(
             continue;
           }
 
-          const pdfBase64 = bytesToBase64(new Uint8Array(await file.arrayBuffer()));
+          const pdfBase64 = bytesToBase64(
+            new Uint8Array(await file.arrayBuffer()),
+          );
 
           const { data: org } = await supabaseAdmin
             .from("organizations")

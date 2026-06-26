@@ -105,8 +105,7 @@ export const mergeBriefSubmitData = (
 ): Partial<LbsDeal> => {
   const rawBrief = {
     ...((record.website_brief as Record<string, unknown> | undefined) ?? {}),
-    ...((submitted.website_brief as Record<string, unknown> | undefined) ??
-      {}),
+    ...((submitted.website_brief as Record<string, unknown> | undefined) ?? {}),
   } as WebsiteBriefWithApprovals;
 
   const website_brief = syncBriefApprovalsForCompleteSections(
@@ -123,9 +122,11 @@ export const mergeBriefSubmitData = (
 
   return {
     project_type: submitted.project_type ?? record.project_type,
-    expected_end_date:
-      submitted.expected_end_date ?? record.expected_end_date,
+    expected_end_date: submitted.expected_end_date ?? record.expected_end_date,
     website_brief,
-    ...deploymentUrlPatchFromBrief(record, website_brief as Record<string, unknown>),
+    ...deploymentUrlPatchFromBrief(
+      record,
+      website_brief as Record<string, unknown>,
+    ),
   };
 };

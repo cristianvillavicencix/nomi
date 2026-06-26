@@ -63,7 +63,9 @@ Deno.serve(
       } catch (error) {
         console.error("sync_deal_brief_resources", error);
         const message =
-          error instanceof Error ? error.message : "Failed to sync brief assets";
+          error instanceof Error
+            ? error.message
+            : "Failed to sync brief assets";
         return createErrorResponse(500, message);
       }
     }),

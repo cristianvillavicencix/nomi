@@ -1,4 +1,8 @@
-import type { PortalCredential, PortalDelivery, PortalDomain } from "@/modules/portal/portalTypes";
+import type {
+  PortalCredential,
+  PortalDelivery,
+  PortalDomain,
+} from "@/modules/portal/portalTypes";
 import { readPortalHostingMeta } from "@/modules/portal/portalDeliveryMeta";
 import {
   PORTAL_HOSTING_CATEGORIES,

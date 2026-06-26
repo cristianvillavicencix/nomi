@@ -17,7 +17,8 @@ export const waitForPageContent = async (page: Page, timeoutMs = 8_000) => {
           if (h1 && h1.length >= 3) return true;
 
           const main =
-            document.querySelector("main, [role='main'], #main, .main-content")
+            document
+              .querySelector("main, [role='main'], #main, .main-content")
               ?.textContent?.trim() ?? "";
           if (main.length >= 80) return true;
 

@@ -58,14 +58,16 @@ export const applyProposalPrintStressTest = (
     filenameBase: `${model.filenameBase}-STRESS`,
     intro: {
       ...model.intro,
-      bodyMarkdown: `${model.intro.bodyMarkdown}\n\n${LONG_PARAGRAPH}\n\n${LONG_PARAGRAPH}`.trim(),
+      bodyMarkdown:
+        `${model.intro.bodyMarkdown}\n\n${LONG_PARAGRAPH}\n\n${LONG_PARAGRAPH}`.trim(),
     },
     investment: {
       ...model.investment,
       notes: `${model.investment.notes ?? ""}\n\n${LONG_PARAGRAPH}`.trim(),
       lineItems: [...model.investment.lineItems, ...extraLineItems],
       installments: [...model.investment.installments, ...extraInstallments],
-      paymentNotes: `${model.investment.paymentNotes ?? ""}\n\n${LONG_PARAGRAPH}`.trim(),
+      paymentNotes:
+        `${model.investment.paymentNotes ?? ""}\n\n${LONG_PARAGRAPH}`.trim(),
       warranty: model.investment.warranty
         ? {
             ...model.investment.warranty,
@@ -82,7 +84,8 @@ export const applyProposalPrintStressTest = (
     },
     sections: model.sections.map((section, index) => ({
       ...section,
-      bodyMarkdown: `${section.bodyMarkdown}\n\n${LONG_PARAGRAPH.slice(0, 400 + index * 50)}`.trim(),
+      bodyMarkdown:
+        `${section.bodyMarkdown}\n\n${LONG_PARAGRAPH.slice(0, 400 + index * 50)}`.trim(),
     })),
   };
 };

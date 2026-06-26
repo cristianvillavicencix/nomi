@@ -10,7 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { getGithubRepoLabel, getGithubRepoUrl } from "@/modules/deals/githubRepo";
+import {
+  getGithubRepoLabel,
+  getGithubRepoUrl,
+} from "@/modules/deals/githubRepo";
 import {
   formatGithubStatusDate,
   getGithubRunStatusClassName,
@@ -44,7 +47,7 @@ export const ProjectGithubLink = ({
       <div className="flex items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3">
         <div className="flex items-center gap-2">
           <Github className="size-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold">GitHub</h3>
+          <h3 className="text-sm font-semibold">GitHub</h3>
         </div>
         {showEditLink ? (
           <Link to={`/deals/${record.id}`} className="text-sm link-action">
@@ -167,7 +170,9 @@ export const ProjectGithubLink = ({
 
       {status && (status.languages?.length ?? 0) > 0 ? (
         <div className="flex flex-wrap items-center gap-2 border-t px-4 py-3">
-          <span className="text-xs font-medium text-muted-foreground">Stack</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            Stack
+          </span>
           {status.languages?.map((language) => (
             <Badge key={language} variant="secondary" className="text-xs">
               {language}

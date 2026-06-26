@@ -53,7 +53,9 @@ export const TicketCreateTemplatePicker = ({
                 onClick={() => handleSelect(template.id)}
                 className="w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted"
               >
-                <span className="block text-sm font-medium">{template.label}</span>
+                <span className="block text-sm font-medium">
+                  {template.label}
+                </span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   {template.description}
                 </span>

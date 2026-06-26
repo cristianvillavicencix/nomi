@@ -30,13 +30,14 @@ export type InvoiceOrganizationBranding = {
   email: string;
 };
 
-export const getInvoiceOrganizationBranding = (): InvoiceOrganizationBranding => ({
-  name: INVOICE_ORGANIZATION_NAME,
-  address: INVOICE_ORGANIZATION_ADDRESS_BLOCK,
-  website: INVOICE_ORGANIZATION_WEBSITE,
-  phone: INVOICE_ORGANIZATION_PHONE,
-  email: INVOICE_ORGANIZATION_EMAIL,
-});
+export const getInvoiceOrganizationBranding =
+  (): InvoiceOrganizationBranding => ({
+    name: INVOICE_ORGANIZATION_NAME,
+    address: INVOICE_ORGANIZATION_ADDRESS_BLOCK,
+    website: INVOICE_ORGANIZATION_WEBSITE,
+    phone: INVOICE_ORGANIZATION_PHONE,
+    email: INVOICE_ORGANIZATION_EMAIL,
+  });
 
 /** Public-facing org name for invoice emails and PDFs — not the app product title. */
 export const resolveInvoiceOrganizationName = (config?: {

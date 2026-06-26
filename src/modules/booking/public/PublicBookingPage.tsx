@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useDataProvider } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +22,7 @@ import {
   type BookingServiceOption,
 } from "@/modules/booking/public/BookingServicePicker";
 
-type BookingPayload = Awaited<
-  ReturnType<CrmDataProvider["getPublicBooking"]>
->;
+type BookingPayload = Awaited<ReturnType<CrmDataProvider["getPublicBooking"]>>;
 
 const STEP_LABELS = ["Service", "Date & time", "Your details", "Confirm"];
 
@@ -81,9 +74,9 @@ export const PublicBookingPage = () => {
     host_name?: string | null;
     rescheduled?: boolean;
   } | null>(null);
-  const [rescheduleBookingId, setRescheduleBookingId] = useState<
-    number | null
-  >(null);
+  const [rescheduleBookingId, setRescheduleBookingId] = useState<number | null>(
+    null,
+  );
   const [flow, setFlow] = useState<"existing" | "wizard">("wizard");
 
   const {

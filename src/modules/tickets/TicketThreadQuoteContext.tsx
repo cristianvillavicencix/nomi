@@ -14,12 +14,9 @@ export const TicketThreadQuoteProvider = ({
   children: ReactNode;
   onQuote: (plainText: string) => void;
 }) => (
-  <TicketThreadQuoteContext.Provider
-    value={{ quoteMessage: onQuote }}
-  >
+  <TicketThreadQuoteContext.Provider value={{ quoteMessage: onQuote }}>
     {children}
   </TicketThreadQuoteContext.Provider>
 );
 
-export const useTicketThreadQuote = () =>
-  useContext(TicketThreadQuoteContext);
+export const useTicketThreadQuote = () => useContext(TicketThreadQuoteContext);

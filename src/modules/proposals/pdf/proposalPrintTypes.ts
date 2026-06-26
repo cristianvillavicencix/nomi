@@ -31,7 +31,10 @@ export type ProposalPrintBlock =
     }
   | { type: "client_logos"; logos: { name?: string }[] }
   | { type: "portfolio"; items: { title: string; subtitle: string }[] }
-  | { type: "reviews"; items: { rating: number; text: string; author: string }[] }
+  | {
+      type: "reviews";
+      items: { rating: number; text: string; author: string }[];
+    }
   | { type: "timeline"; bars: ProposalPrintTimelineBar[] };
 
 export type ProposalPrintSection = {
@@ -76,5 +79,10 @@ export type ProposalPrintModel = {
     warranty?: { title: string; bodyMarkdown: string };
   };
   terms?: { title: string; markdown: string };
-  accept: { kicker: string; title: string; bodyMarkdown: string; pdfNote: string };
+  accept: {
+    kicker: string;
+    title: string;
+    bodyMarkdown: string;
+    pdfNote: string;
+  };
 };

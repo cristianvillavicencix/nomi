@@ -11,7 +11,9 @@ export type ContactPhoneEntry = {
   label: string;
 };
 
-export const getContactPhoneEntries = (contact: Contact): ContactPhoneEntry[] => {
+export const getContactPhoneEntries = (
+  contact: Contact,
+): ContactPhoneEntry[] => {
   const seen = new Set<string>();
   const entries: ContactPhoneEntry[] = [];
 

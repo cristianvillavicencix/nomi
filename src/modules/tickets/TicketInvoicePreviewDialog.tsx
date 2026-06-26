@@ -8,12 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  useDataProvider,
-  useGetList,
-  useNotify,
-  useRefresh,
-} from "ra-core";
+import { useDataProvider, useGetList, useNotify, useRefresh } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
@@ -22,9 +17,7 @@ import {
   formatInvoiceDueDate,
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
-import {
-  resolveInvoiceRecipientPhone,
-} from "@/modules/billing/billingUtils";
+import { resolveInvoiceRecipientPhone } from "@/modules/billing/billingUtils";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
 import type {
   ClientInvoice,
@@ -259,10 +252,7 @@ export const TicketInvoicePreviewDialog = ({
 
   const footerSummary =
     draftInvoice && amountFormatted !== "—"
-      ? buildTicketSendFooterSummary(
-          amountFormatted,
-          draftInvoice.due_date,
-        )
+      ? buildTicketSendFooterSummary(amountFormatted, draftInvoice.due_date)
       : "";
 
   const handleClose = (next: boolean) => {
@@ -302,7 +292,10 @@ export const TicketInvoicePreviewDialog = ({
           <DialogTitle className="flex flex-wrap items-center gap-2">
             {step === "invoice" ? "Review invoice" : "Send invoice"}
             {draftInvoice ? (
-              <Badge variant="outline" className="font-mono text-xs font-normal">
+              <Badge
+                variant="outline"
+                className="font-mono text-xs font-normal"
+              >
                 {draftInvoice.invoice_number}
               </Badge>
             ) : null}
@@ -393,7 +386,9 @@ export const TicketInvoicePreviewDialog = ({
                         id="ticket-invoice-send-to"
                         type="email"
                         value={recipientEmail}
-                        onChange={(event) => setRecipientEmail(event.target.value)}
+                        onChange={(event) =>
+                          setRecipientEmail(event.target.value)
+                        }
                         onBlur={() => setEditingTo(false)}
                         className="h-8 border-0 px-1 shadow-none focus-visible:ring-0"
                         placeholder="Recipient email"
@@ -422,8 +417,8 @@ export const TicketInvoicePreviewDialog = ({
                     className="resize-y text-sm"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Invoice details and the payment button are added automatically
-                    below your message.
+                    Invoice details and the payment button are added
+                    automatically below your message.
                   </p>
                 </div>
 
@@ -442,7 +437,10 @@ export const TicketInvoicePreviewDialog = ({
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="ticket-invoice-send-sms" className="cursor-pointer">
+                    <Label
+                      htmlFor="ticket-invoice-send-sms"
+                      className="cursor-pointer"
+                    >
                       Also send text message
                     </Label>
                     <Switch

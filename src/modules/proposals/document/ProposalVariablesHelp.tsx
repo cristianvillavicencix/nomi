@@ -41,9 +41,7 @@ export const ProposalVariablesHelp = ({
         {PROPOSAL_DOCUMENT_VARIABLE_DEFINITIONS.map((row) => {
           const value = variables?.[row.key];
           const preview =
-            value != null && String(value).trim() !== ""
-              ? String(value)
-              : "—";
+            value != null && String(value).trim() !== "" ? String(value) : "—";
           return (
             <li key={row.key} className="px-3 py-2.5">
               <div className="flex items-baseline justify-between gap-2">

@@ -33,7 +33,9 @@ export const loadStorageAttachmentsForEmail = async (
     const path = file.path?.trim();
     if (!path) continue;
 
-    const { data, error } = await supabaseAdmin.storage.from(bucket).download(path);
+    const { data, error } = await supabaseAdmin.storage
+      .from(bucket)
+      .download(path);
     if (error || !data) {
       console.error("storage_attachments.download_failed", path, error);
       continue;

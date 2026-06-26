@@ -54,7 +54,9 @@ Deno.serve(
 
         const body = (await req.json()) as ScheduleBody;
         const invoiceId = Number(body.invoice_id);
-        const to = String(body.to ?? "").trim().toLowerCase();
+        const to = String(body.to ?? "")
+          .trim()
+          .toLowerCase();
         const pdfBase64 = String(body.pdf_base64 ?? "").trim();
         const scheduledSendAt = String(body.scheduled_send_at ?? "").trim();
         const message = body.message?.trim() || null;
@@ -62,11 +64,17 @@ Deno.serve(
         const smsBody = body.sms_body?.trim() || null;
 
         if (smsTo && !smsBody) {
-          return createErrorResponse(400, "sms_body is required when sms_to is set");
+          return createErrorResponse(
+            400,
+            "sms_body is required when sms_to is set",
+          );
         }
 
         if (!Number.isFinite(invoiceId) || !to || !emailRegex.test(to)) {
-          return createErrorResponse(400, "Invalid invoice_id or recipient email");
+          return createErrorResponse(
+            400,
+            "Invalid invoice_id or recipient email",
+          );
         }
 
         if (!pdfBase64) {
@@ -102,8 +110,7 @@ Deno.serve(
 
         const filename =
           body.filename?.trim() || `${invoice.invoice_number}.pdf`;
-        const storagePath =
-          `invoice-scheduled/${member.org_id}/${invoiceId}/${Date.now()}-${filename}`;
+        const storagePath = `invoice-scheduled/${member.org_id}/${invoiceId}/${Date.now()}-${filename}`;
 
         const { error: uploadError } = await supabaseAdmin.storage
           .from("attachments")

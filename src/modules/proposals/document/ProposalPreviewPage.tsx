@@ -36,9 +36,7 @@ import {
   proposalNeedsDeckRevisionRefresh,
 } from "@/modules/proposals/document/proposalDeckRevision";
 import { useProposalDocumentData } from "@/modules/proposals/document/useProposalDocumentData";
-import {
-  buildProposalVariableContext,
-} from "@/modules/proposals/document/proposalVariableMerge";
+import { buildProposalVariableContext } from "@/modules/proposals/document/proposalVariableMerge";
 import { ProposalVariablesHelp } from "@/modules/proposals/document/ProposalVariablesHelp";
 import { ProposalSendActions } from "@/modules/proposals/ProposalSendActions";
 import type { ServicePackage } from "@/modules/types";
@@ -115,7 +113,9 @@ export const ProposalPreviewPage = () => {
       return {
         ...draft,
         template_slug: slug,
-        template_id: template ? Number(template.id) : draft.template_id ?? null,
+        template_id: template
+          ? Number(template.id)
+          : (draft.template_id ?? null),
       };
     },
     [resolveTemplateForSlug],
@@ -127,7 +127,8 @@ export const ProposalPreviewPage = () => {
     const parsed = parseProposalContent(proposal.content);
     const inferredSlug = inferProposalDeckPresetFromLines(lines, packagesById);
     const slug =
-      (parsed.template_slug as ProposalDeckPresetId | undefined) ?? inferredSlug;
+      (parsed.template_slug as ProposalDeckPresetId | undefined) ??
+      inferredSlug;
 
     let next = hydrateProposalContent({
       ...parsed,
@@ -174,7 +175,11 @@ export const ProposalPreviewPage = () => {
   });
 
   useEffect(() => {
-    if (!isTemplatesPending && templates.length === 0 && !seedTemplates.isPending) {
+    if (
+      !isTemplatesPending &&
+      templates.length === 0 &&
+      !seedTemplates.isPending
+    ) {
       seedTemplates.mutate();
     }
   }, [isTemplatesPending, templates.length, seedTemplates.isPending]);
@@ -214,8 +219,7 @@ export const ProposalPreviewPage = () => {
       if (proposal && savedContent) {
         queryClient.setQueryData<Proposal>(
           proposalGetOneQueryKey(proposal.id),
-          (cached) =>
-            cached ? { ...cached, content: savedContent } : cached,
+          (cached) => (cached ? { ...cached, content: savedContent } : cached),
         );
       }
       await queryClient.invalidateQueries({ queryKey: ["proposals"] });
@@ -289,7 +293,9 @@ export const ProposalPreviewPage = () => {
 
   const previewLocale = useMemo((): ProposalLocale => {
     if (typeof window === "undefined") return "en";
-    return window.localStorage.getItem(PROPOSAL_LOCALE_KEY) === "es" ? "es" : "en";
+    return window.localStorage.getItem(PROPOSAL_LOCALE_KEY) === "es"
+      ? "es"
+      : "en";
   }, []);
 
   const stepper = useMemo(
@@ -321,75 +327,77 @@ export const ProposalPreviewPage = () => {
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <div className="shrink-0">{stepper}</div>
         <div className="shrink-0">
-      <ProposalPreviewToolbar
-        proposalId={proposalId}
-        languageToggle={<ProposalLanguageToggle />}
-        variablesHelp={
-          proposal ? (
-            <ProposalVariablesHelp variables={proposalVariables} />
-          ) : null
-        }
-        deckLabel={activeDeckLabel}
-        unsavedHint={
-          hasUnsavedChanges
-            ? getProposalDocumentCopy(previewLocale)[
-                showDeckSaveHint
-                  ? "deckUpdatedSaveHint"
-                  : "saveBeforeClientHint"
-              ]
-            : undefined
-        }
-        onSaveTemplate={() => saveAsTemplate.mutate()}
-        onSaveContent={() => saveContent.mutate(contentForSave)}
-        isSaving={saveContent.isPending}
-        sendActions={
-          proposal ? (
-            <ProposalSendActions
-              proposal={proposal}
-              lineItems={lines}
-              installments={paymentInstallments}
-              confirmExpiryBeforeSend
-              onSent={async () => {
-                await queryClient.invalidateQueries({ queryKey: ["proposals"] });
-              }}
-            />
-          ) : null
-        }
-      />
-      </div>
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <ProposalDocumentView
-          proposalId={proposalId}
-          content={content}
-          editable
-          clientView={false}
-          showSectionNav
-          onContentChange={(patch) =>
-            setContent((current) => ({ ...current, ...patch }))
-          }
-          onRemoveCustomSection={(customSectionId) =>
-            setContent((current) => ({
-              ...current,
-              custom_sections: (current.custom_sections ?? []).filter(
-                (section) => section.id !== customSectionId,
-              ),
-            }))
-          }
-          onAddSection={() =>
-            setContent((current) => ({
-              ...current,
-              custom_sections: [
-                ...(current.custom_sections ?? []),
-                {
-                  id: newCustomSectionId(),
-                  title: "New section",
-                  body: "",
-                  image_url: "",
-                },
-              ],
-            }))
-          }
-        />
+          <ProposalPreviewToolbar
+            proposalId={proposalId}
+            languageToggle={<ProposalLanguageToggle />}
+            variablesHelp={
+              proposal ? (
+                <ProposalVariablesHelp variables={proposalVariables} />
+              ) : null
+            }
+            deckLabel={activeDeckLabel}
+            unsavedHint={
+              hasUnsavedChanges
+                ? getProposalDocumentCopy(previewLocale)[
+                    showDeckSaveHint
+                      ? "deckUpdatedSaveHint"
+                      : "saveBeforeClientHint"
+                  ]
+                : undefined
+            }
+            onSaveTemplate={() => saveAsTemplate.mutate()}
+            onSaveContent={() => saveContent.mutate(contentForSave)}
+            isSaving={saveContent.isPending}
+            sendActions={
+              proposal ? (
+                <ProposalSendActions
+                  proposal={proposal}
+                  lineItems={lines}
+                  installments={paymentInstallments}
+                  confirmExpiryBeforeSend
+                  onSent={async () => {
+                    await queryClient.invalidateQueries({
+                      queryKey: ["proposals"],
+                    });
+                  }}
+                />
+              ) : null
+            }
+          />
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <ProposalDocumentView
+            proposalId={proposalId}
+            content={content}
+            editable
+            clientView={false}
+            showSectionNav
+            onContentChange={(patch) =>
+              setContent((current) => ({ ...current, ...patch }))
+            }
+            onRemoveCustomSection={(customSectionId) =>
+              setContent((current) => ({
+                ...current,
+                custom_sections: (current.custom_sections ?? []).filter(
+                  (section) => section.id !== customSectionId,
+                ),
+              }))
+            }
+            onAddSection={() =>
+              setContent((current) => ({
+                ...current,
+                custom_sections: [
+                  ...(current.custom_sections ?? []),
+                  {
+                    id: newCustomSectionId(),
+                    title: "New section",
+                    body: "",
+                    image_url: "",
+                  },
+                ],
+              }))
+            }
+          />
         </div>
       </div>
     </ProposalLocaleProvider>

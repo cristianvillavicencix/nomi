@@ -98,14 +98,16 @@ export const notifyWebsiteAuditScoreDrop = async (
   }
 
   const label = site.display_name ?? site.url;
-  const baseUrl = (options?.appBaseUrl ?? Deno.env.get("APP_BASE_URL") ?? "")
-    .replace(/\/$/, "");
+  const baseUrl = (
+    options?.appBaseUrl ??
+    Deno.env.get("APP_BASE_URL") ??
+    ""
+  ).replace(/\/$/, "");
   const reportLink = baseUrl
     ? `${baseUrl}/web-monitor/${site.id}/show?tab=report`
     : "";
 
-  let message =
-    `[Web Report] ${label} score dropped ${drop} pts (${previousScore} → ${currentScore}). ${site.url}`;
+  let message = `[Web Report] ${label} score dropped ${drop} pts (${previousScore} → ${currentScore}). ${site.url}`;
   if (reportLink) message += ` ${reportLink}`;
 
   let sentCount = 0;

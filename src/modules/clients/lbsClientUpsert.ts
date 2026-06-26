@@ -261,8 +261,7 @@ export const clientCreateFormValuesToUpsertInput = (
   values: import("@/modules/clients/ClientCreateForm").ClientCreateFormValues,
   organizationMemberId: Identifier,
 ): LbsClientUpsertInput => ({
-  organizationMemberId:
-    values.organization_member_id ?? organizationMemberId,
+  organizationMemberId: values.organization_member_id ?? organizationMemberId,
   primary: {
     fullName: values.primary_full_name,
     emails: singleChannelFromValue(values.primary_email),

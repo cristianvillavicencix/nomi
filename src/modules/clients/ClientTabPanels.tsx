@@ -25,7 +25,12 @@ import { NoteCreate } from "@/components/atomic-crm/notes";
 import { findDealLabel } from "@/components/atomic-crm/deals/deal";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import type { Company, ContactNote, Deal } from "@/components/atomic-crm/types";
-import type { ClientInvoice, Contract, Proposal, Ticket } from "@/modules/types";
+import type {
+  ClientInvoice,
+  Contract,
+  Proposal,
+  Ticket,
+} from "@/modules/types";
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 import {
   invoiceStatusSidebarLabel,
@@ -257,10 +262,7 @@ export const ClientInvoicesTab = ({
                   )}
                   className="capitalize"
                 >
-                  {invoiceStatusSidebarLabel(
-                    invoice.status,
-                    invoice.due_date,
-                  )}
+                  {invoiceStatusSidebarLabel(invoice.status, invoice.due_date)}
                 </Badge>
               </TableCell>
               <TableCell className="hidden text-muted-foreground md:table-cell">

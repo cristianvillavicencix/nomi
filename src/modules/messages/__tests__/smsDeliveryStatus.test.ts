@@ -24,9 +24,7 @@ describe("getSmsDeliveryDisplay", () => {
 
   it("marks delivered messages as success", () => {
     expect(
-      getSmsDeliveryDisplay(
-        outbound({ sms_delivery_status: "delivered" }),
-      ),
+      getSmsDeliveryDisplay(outbound({ sms_delivery_status: "delivered" })),
     ).toMatchObject({ label: "Delivered", tone: "success" });
   });
 

@@ -119,8 +119,7 @@ const fetchEmailAuth = async (
       fetchTxtRecords(`_dmarc.${hostname}`, signal),
     ]);
 
-    const spfRecord =
-      rootTxt.find((record) => /^v=spf1/i.test(record)) ?? null;
+    const spfRecord = rootTxt.find((record) => /^v=spf1/i.test(record)) ?? null;
     const dmarcRecord =
       dmarcTxt.find((record) => /^v=DMARC1/i.test(record)) ?? null;
 
@@ -235,7 +234,8 @@ const probeHostVariant = async (
   const hostsMatch =
     Boolean(altHost) &&
     (altHost === primaryHost ||
-      (altHost ?? "").replace(/^www\./, "") === primaryHost.replace(/^www\./, ""));
+      (altHost ?? "").replace(/^www\./, "") ===
+        primaryHost.replace(/^www\./, ""));
 
   let canonicalHost: DomainHostVariantAnalysis["canonicalHost"] = "unknown";
   if (isWww && hostsMatch) canonicalHost = "www";

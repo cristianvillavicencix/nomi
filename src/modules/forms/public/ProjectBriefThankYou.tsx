@@ -21,7 +21,9 @@ export const ProjectBriefThankYou = ({
   }, []);
 
   return (
-    <div className={`${className ?? ""} flex flex-col items-center px-4 py-10 text-center`}>
+    <div
+      className={`${className ?? ""} flex flex-col items-center px-4 py-10 text-center`}
+    >
       {preview ? (
         <p className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-900 dark:text-amber-100">
           Preview mode — submission was not saved.
@@ -32,8 +34,8 @@ export const ProjectBriefThankYou = ({
       </div>
       <h1 className="text-2xl font-semibold tracking-tight">Thank you!</h1>
       <p className="mt-3 max-w-md text-sm text-muted-foreground">
-        We received your project brief. Our team will review your information and
-        reach out if we need anything else.
+        We received your project brief. Our team will review your information
+        and reach out if we need anything else.
       </p>
       <p className="mt-2 text-xs text-muted-foreground">
         Redirecting to lbs.bz in a few seconds…

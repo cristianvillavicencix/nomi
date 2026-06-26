@@ -46,13 +46,16 @@ export const DynamicListField = ({
     onChange([...items, ""]);
   };
 
-  const visibleItems = items.length > 0 ? items : Array.from({ length: minItems }, () => "");
+  const visibleItems =
+    items.length > 0 ? items : Array.from({ length: minItems }, () => "");
 
   return (
     <div className="space-y-3">
       {visibleItems.map((item, index) => (
         <div key={`${field.key}-${index}`} className="space-y-1">
-          <Label htmlFor={`${field.key}-${index}`}>{formatItemLabel(field, index)}</Label>
+          <Label htmlFor={`${field.key}-${index}`}>
+            {formatItemLabel(field, index)}
+          </Label>
           <div className="flex gap-2">
             <Input
               id={`${field.key}-${index}`}
@@ -76,7 +79,13 @@ export const DynamicListField = ({
           </div>
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={addItem}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={addItem}
+      >
         <Plus className="size-4" />
         {field.add_button_label ?? "Add item"}
       </Button>

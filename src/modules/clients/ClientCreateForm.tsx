@@ -113,9 +113,11 @@ export const ClientCreateFormFields = ({
     ClientCreateFormValues,
     "selected_primary_contact_id"
   >({ name: "selected_primary_contact_id" });
-  const primaryFullName = useWatch<ClientCreateFormValues, "primary_full_name">({
-    name: "primary_full_name",
-  });
+  const primaryFullName = useWatch<ClientCreateFormValues, "primary_full_name">(
+    {
+      name: "primary_full_name",
+    },
+  );
   const primaryEmail = useWatch<ClientCreateFormValues, "primary_email">({
     name: "primary_email",
   });
@@ -133,13 +135,7 @@ export const ClientCreateFormFields = ({
             primary_phone: primaryPhone ?? "",
           })
         : null,
-    [
-      mode,
-      primaryEmail,
-      primaryFullName,
-      primaryPhone,
-      selectedPrimaryId,
-    ],
+    [mode, primaryEmail, primaryFullName, primaryPhone, selectedPrimaryId],
   );
 
   const { data: selectedPrimaryContact } = useGetOne<Contact>(
@@ -167,12 +163,7 @@ export const ClientCreateFormFields = ({
       return null;
     }
     return primaryContact ?? null;
-  }, [
-    draftPrimaryContact,
-    mode,
-    primaryContact,
-    selectedPrimaryContact,
-  ]);
+  }, [draftPrimaryContact, mode, primaryContact, selectedPrimaryContact]);
 
   const applyExistingPrimary = (id: Identifier) => {
     setValue("selected_primary_contact_id", id, { shouldDirty: true });
@@ -207,12 +198,7 @@ export const ClientCreateFormFields = ({
       return getContactFullName(resolvedPrimaryContact);
     }
     return mode === "edit" ? "Contact selected" : null;
-  }, [
-    draftPrimaryContact,
-    mode,
-    resolvedPrimaryContact,
-    selectedPrimaryId,
-  ]);
+  }, [draftPrimaryContact, mode, resolvedPrimaryContact, selectedPrimaryId]);
 
   return (
     <div className="flex flex-col gap-6 p-1">
@@ -279,7 +265,11 @@ export const ClientCreateFormFields = ({
             }
           />
         ) : null}
-        <StructuredAddressFields prefix="company" forceShowCountry={placesEnabled} showStreet={!placesEnabled} />
+        <StructuredAddressFields
+          prefix="company"
+          forceShowCountry={placesEnabled}
+          showStreet={!placesEnabled}
+        />
       </section>
 
       <details className="group rounded-md border">
@@ -356,7 +346,12 @@ export const ClientCreateFormFields = ({
         </summary>
         <div className="space-y-4 border-t px-4 pt-4 pb-4">
           <ClientSocialLinksInput source="social_links" />
-          <TextInput source="notes" label="Notes" helperText={false} multiline />
+          <TextInput
+            source="notes"
+            label="Notes"
+            helperText={false}
+            multiline
+          />
         </div>
       </details>
     </div>
@@ -445,8 +440,16 @@ const InvoiceContactFields = ({
         label="Invoice contact name"
         helperText={false}
       />
-      <EmailInput source="invoice_email" label="Invoice email" helperText={false} />
-      <PhoneInput source="invoice_phone" label="Invoice phone" helperText={false} />
+      <EmailInput
+        source="invoice_email"
+        label="Invoice email"
+        helperText={false}
+      />
+      <PhoneInput
+        source="invoice_phone"
+        label="Invoice phone"
+        helperText={false}
+      />
     </div>
   );
 };

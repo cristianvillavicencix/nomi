@@ -16,7 +16,9 @@ export const ProjectTaskStats = ({
         {stats.overdue > 0 ? (
           <>
             <span aria-hidden>·</span>
-            <span className="font-medium text-destructive">{stats.overdue}</span>
+            <span className="font-medium text-destructive">
+              {stats.overdue}
+            </span>
             <span>overdue</span>
           </>
         ) : null}

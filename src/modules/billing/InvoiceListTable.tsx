@@ -88,8 +88,7 @@ export const InvoiceListTable = ({
             const company = invoice.company_id
               ? companyById.get(String(invoice.company_id))
               : null;
-            const isSelected =
-              String(invoice.id) === String(selectedInvoiceId);
+            const isSelected = String(invoice.id) === String(selectedInvoiceId);
             const statusLabel = invoiceStatusSidebarLabel(
               invoice.status,
               invoice.due_date,
@@ -99,10 +98,7 @@ export const InvoiceListTable = ({
                 key={String(invoice.id)}
                 data-state={isSelected ? "selected" : undefined}
                 onClick={() => onSelectInvoice(String(invoice.id))}
-                className={cn(
-                  "cursor-pointer",
-                  isSelected && "bg-primary/5",
-                )}
+                className={cn("cursor-pointer", isSelected && "bg-primary/5")}
               >
                 <TableCell className="font-medium">
                   {company?.name ?? (
@@ -118,9 +114,7 @@ export const InvoiceListTable = ({
                     : "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {invoice.due_date
-                    ? formatBillingDate(invoice.due_date)
-                    : "—"}
+                  {invoice.due_date ? formatBillingDate(invoice.due_date) : "—"}
                 </TableCell>
                 <TableCell>
                   <Badge

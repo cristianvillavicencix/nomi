@@ -24,10 +24,7 @@ export const BookingDatePicker = ({
   selectedDate,
   onSelectDate,
 }: BookingDatePickerProps) => {
-  const bookableSet = useMemo(
-    () => new Set(bookableDates),
-    [bookableDates],
-  );
+  const bookableSet = useMemo(() => new Set(bookableDates), [bookableDates]);
 
   const days = getMonthGridDays(monthAnchor);
   const monthLabel = monthAnchor.toLocaleDateString("en-US", {

@@ -13,21 +13,13 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { WebsiteMonitorCheckResult } from "@/components/atomic-crm/providers/supabase/modules/webMonitorProvider";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
 import { WebsiteStatusBadge } from "./WebsiteStatusBadge";
 import { WebsiteMonitorFavicon } from "./WebsiteMonitorFavicon";
-import {
-  formatCheckedAt,
-  formatResponseMs,
-} from "./websiteMonitorUtils";
+import { formatCheckedAt, formatResponseMs } from "./websiteMonitorUtils";
 import type { MonitoredWebsite, WebsiteMonitorStatus } from "./types";
 
 type CheckResultState = WebsiteMonitorCheckResult & { url: string };
@@ -65,10 +57,9 @@ export const WebsiteMonitorQuickCheckPage = () => {
       setResult({ ...data, url: data.url ?? rawUrl });
     },
     onError: (error: unknown) => {
-      notify(
-        error instanceof Error ? error.message : "Check failed",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Check failed", {
+        type: "error",
+      });
     },
   });
 
@@ -84,10 +75,9 @@ export const WebsiteMonitorQuickCheckPage = () => {
       queryClient.invalidateQueries({ queryKey: PINNED_QUERY_KEY });
     },
     onError: (error: unknown) => {
-      notify(
-        error instanceof Error ? error.message : "Failed to pin site",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Failed to pin site", {
+        type: "error",
+      });
     },
   });
 
@@ -101,10 +91,9 @@ export const WebsiteMonitorQuickCheckPage = () => {
       queryClient.invalidateQueries({ queryKey: PINNED_QUERY_KEY });
     },
     onError: (error: unknown) => {
-      notify(
-        error instanceof Error ? error.message : "Re-check failed",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Re-check failed", {
+        type: "error",
+      });
     },
   });
 
@@ -120,10 +109,9 @@ export const WebsiteMonitorQuickCheckPage = () => {
       queryClient.invalidateQueries({ queryKey: PINNED_QUERY_KEY });
     },
     onError: (error: unknown) => {
-      notify(
-        error instanceof Error ? error.message : "Failed to unpin site",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Failed to unpin site", {
+        type: "error",
+      });
     },
   });
 
@@ -276,9 +264,7 @@ const CheckResultCard = ({
           <ResultField label="Response">
             {formatResponseMs(result.responseMs)}
           </ResultField>
-          <ResultField label="HTTP">
-            {result.httpStatus ?? "—"}
-          </ResultField>
+          <ResultField label="HTTP">{result.httpStatus ?? "—"}</ResultField>
           <ResultField label="SSL expires">
             {result.sslDaysRemaining != null
               ? `${result.sslDaysRemaining} days`
@@ -287,9 +273,7 @@ const CheckResultCard = ({
           <ResultField label="Hosting">
             {result.hostingProvider ?? "—"}
           </ResultField>
-          <ResultField label="DNS IP">
-            {result.dnsIp ?? "—"}
-          </ResultField>
+          <ResultField label="DNS IP">{result.dnsIp ?? "—"}</ResultField>
           <ResultField label="Nameservers">
             {result.dnsNameservers && result.dnsNameservers.length > 0
               ? result.dnsNameservers.join(", ")
@@ -307,9 +291,7 @@ const CheckResultCard = ({
           </ResultField>
         </dl>
         {result.errorMessage ? (
-          <p className="text-destructive mt-3 text-sm">
-            {result.errorMessage}
-          </p>
+          <p className="text-destructive mt-3 text-sm">{result.errorMessage}</p>
         ) : null}
       </CardContent>
     </Card>

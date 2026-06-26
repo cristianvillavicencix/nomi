@@ -80,15 +80,19 @@ const ensureShareLink = async (
       .maybeSingle();
     return Boolean(hit?.id);
   });
-  const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(
+    Date.now() + 90 * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
-  const { error } = await supabaseAdmin.from("public_client_invoice_tokens").insert({
-    org_id: orgId,
-    invoice_id: invoiceId,
-    token,
-    short_code: shortCode,
-    expires_at: expiresAt,
-  });
+  const { error } = await supabaseAdmin
+    .from("public_client_invoice_tokens")
+    .insert({
+      org_id: orgId,
+      invoice_id: invoiceId,
+      token,
+      short_code: shortCode,
+      expires_at: expiresAt,
+    });
   if (error) {
     throw new Error(error.message);
   }
@@ -150,8 +154,11 @@ Deno.serve(
         }
 
         const to =
-          String(body.to ?? "").trim().toLowerCase() ||
-          (await resolveContactEmail(supabaseAdmin, invoice.contact_id))?.trim()
+          String(body.to ?? "")
+            .trim()
+            .toLowerCase() ||
+          (await resolveContactEmail(supabaseAdmin, invoice.contact_id))
+            ?.trim()
             ?.toLowerCase() ||
           invoice.recipient_email?.trim().toLowerCase() ||
           "";
@@ -171,7 +178,11 @@ Deno.serve(
         }
 
         const baseUrl = resolveBaseUrl(body.base_url);
-        const { url } = await ensureShareLink(invoiceId, member.org_id, baseUrl);
+        const { url } = await ensureShareLink(
+          invoiceId,
+          member.org_id,
+          baseUrl,
+        );
 
         const total = Number(invoice.amount) || 0;
         const paid = Number(invoice.amount_paid) || 0;
@@ -203,18 +214,20 @@ Deno.serve(
         }
 
         if (propertyAddress) {
-          const { subject, textBody, htmlBody } = buildTicketPaymentEmailBodies({
-            orgName,
-            invoiceNumber: invoice.invoice_number,
-            amountFormatted: balanceFormatted,
-            paymentUrl: url,
-            customMessage:
-              customMessage || DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE,
-            subject:
-              body.subject?.trim() ||
-              buildTicketPaymentReminderSubject(propertyAddress),
-            propertyAddress,
-          });
+          const { subject, textBody, htmlBody } = buildTicketPaymentEmailBodies(
+            {
+              orgName,
+              invoiceNumber: invoice.invoice_number,
+              amountFormatted: balanceFormatted,
+              paymentUrl: url,
+              customMessage:
+                customMessage || DEFAULT_TICKET_PAYMENT_REMINDER_MESSAGE,
+              subject:
+                body.subject?.trim() ||
+                buildTicketPaymentReminderSubject(propertyAddress),
+              propertyAddress,
+            },
+          );
 
           await sendTransactionalEmail({
             orgId: member.org_id,
@@ -274,7 +287,10 @@ Deno.serve(
           }
 
           const memberName =
-            [member.first_name, member.last_name].filter(Boolean).join(" ").trim() ||
+            [member.first_name, member.last_name]
+              .filter(Boolean)
+              .join(" ")
+              .trim() ||
             member.email?.trim() ||
             "Team";
           const now = new Date().toISOString();

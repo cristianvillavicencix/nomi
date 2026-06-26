@@ -37,10 +37,7 @@ const classifyImage = (img: {
 }): PageImageStatus => {
   if (!img.src) return "broken";
   const hasAlt = Boolean(img.alt?.trim());
-  const loaded =
-    img.complete &&
-    img.naturalWidth > 0 &&
-    img.naturalHeight > 0;
+  const loaded = img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
   if (!loaded) return "broken";
   if (!hasAlt) return "missing_alt";
   return "ok";
@@ -80,17 +77,19 @@ export const extractRenderedPageContent = async (
   await triggerLazyContent(page);
 
   const raw = await page.evaluate(() => {
-    const links = Array.from(document.querySelectorAll("a[href]")).map((node) => {
-      const anchor = node as HTMLAnchorElement;
-      return {
-        href: anchor.href,
-        text:
-          anchor.textContent?.trim() ||
-          anchor.getAttribute("aria-label")?.trim() ||
-          anchor.getAttribute("title")?.trim() ||
-          null,
-      };
-    });
+    const links = Array.from(document.querySelectorAll("a[href]")).map(
+      (node) => {
+        const anchor = node as HTMLAnchorElement;
+        return {
+          href: anchor.href,
+          text:
+            anchor.textContent?.trim() ||
+            anchor.getAttribute("aria-label")?.trim() ||
+            anchor.getAttribute("title")?.trim() ||
+            null,
+        };
+      },
+    );
 
     const images = Array.from(document.querySelectorAll("img")).map((node) => {
       const img = node as HTMLImageElement;
@@ -143,7 +142,9 @@ export const extractRenderedPageContent = async (
 
 export const summarizePageImages = (images: PageImageFound[]) => {
   const totalImages = images.length;
-  const imagesWithoutAlt = images.filter((img) => img.status === "missing_alt").length;
+  const imagesWithoutAlt = images.filter(
+    (img) => img.status === "missing_alt",
+  ).length;
   const brokenImages = images.filter((img) => img.status === "broken").length;
   const imagesOk = images.filter((img) => img.status === "ok").length;
 

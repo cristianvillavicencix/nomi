@@ -1,8 +1,6 @@
 import { decode } from "npm:base64-arraybuffer";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
-import {
-  buildStorageObjectReference,
-} from "../_shared/storageObjectUrl.ts";
+import { buildStorageObjectReference } from "../_shared/storageObjectUrl.ts";
 import {
   assertInboundAttachmentCount,
   assertInboundAttachmentSize,

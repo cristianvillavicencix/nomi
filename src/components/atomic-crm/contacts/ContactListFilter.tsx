@@ -21,7 +21,9 @@ export const ContactListFilter = () => {
   });
 
   return (
-    <ResponsiveFilters searchInput={{ placeholder: "Search name, last name, phone, company…" }}>
+    <ResponsiveFilters
+      searchInput={{ placeholder: "Search name, last name, phone, company…" }}
+    >
       <FilterCategory label="Last activity" icon={<Clock />}>
         <ToggleFilterButton
           className="w-auto md:w-full justify-between h-10 md:h-8"

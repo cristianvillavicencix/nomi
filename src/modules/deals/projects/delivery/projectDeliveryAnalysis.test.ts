@@ -44,9 +44,9 @@ describe("buildProjectDeliveryAnalysis", () => {
     expect(items.find((item) => item.id === "launch_checklist")?.detail).toBe(
       "2 pending: SSL certificate, Analytics tag",
     );
-    expect(items.find((item) => item.id === "launch_checklist")?.pendingLabels).toEqual(
-      ["SSL certificate", "Analytics tag"],
-    );
+    expect(
+      items.find((item) => item.id === "launch_checklist")?.pendingLabels,
+    ).toEqual(["SSL certificate", "Analytics tag"]);
   });
 
   it("formats blocker messages with fix hints", () => {

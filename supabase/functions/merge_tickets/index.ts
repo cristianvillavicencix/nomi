@@ -84,7 +84,9 @@ Deno.serve(
           return createErrorResponse(404, "One or more tickets were not found");
         }
 
-        const primary = tickets?.find((ticket) => ticket.id === primaryTicketId);
+        const primary = tickets?.find(
+          (ticket) => ticket.id === primaryTicketId,
+        );
         if (!primary) {
           return createErrorResponse(404, "Primary ticket not found");
         }
@@ -162,20 +164,31 @@ Deno.serve(
           updated_at: now,
         };
 
-        if (typeof fieldOverrides.subject === "string" && fieldOverrides.subject.trim()) {
+        if (
+          typeof fieldOverrides.subject === "string" &&
+          fieldOverrides.subject.trim()
+        ) {
           primaryFieldUpdate.subject = fieldOverrides.subject.trim();
         }
-        if (typeof fieldOverrides.status === "string" && fieldOverrides.status.trim()) {
+        if (
+          typeof fieldOverrides.status === "string" &&
+          fieldOverrides.status.trim()
+        ) {
           primaryFieldUpdate.status = fieldOverrides.status.trim();
         }
-        if (typeof fieldOverrides.priority === "string" && fieldOverrides.priority.trim()) {
+        if (
+          typeof fieldOverrides.priority === "string" &&
+          fieldOverrides.priority.trim()
+        ) {
           primaryFieldUpdate.priority = fieldOverrides.priority.trim();
         }
         if (fieldOverrides.requester_email !== undefined) {
-          primaryFieldUpdate.requester_email = fieldOverrides.requester_email?.trim() || null;
+          primaryFieldUpdate.requester_email =
+            fieldOverrides.requester_email?.trim() || null;
         }
         if (fieldOverrides.requester_name !== undefined) {
-          primaryFieldUpdate.requester_name = fieldOverrides.requester_name?.trim() || null;
+          primaryFieldUpdate.requester_name =
+            fieldOverrides.requester_name?.trim() || null;
         }
         if (fieldOverrides.assignee_id !== undefined) {
           primaryFieldUpdate.assignee_id = fieldOverrides.assignee_id;

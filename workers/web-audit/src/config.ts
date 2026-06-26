@@ -8,7 +8,10 @@ export const config = {
   workerSecret: process.env.WEB_AUDIT_WORKER_SECRET?.trim() ?? "",
   workerId: process.env.WEB_AUDIT_WORKER_ID?.trim() ?? "web-audit-worker",
   timeoutMs: parseIntEnv(process.env.WEB_AUDIT_TIMEOUT_MS, 900_000),
-  callbackMaxAttempts: parseIntEnv(process.env.WEB_AUDIT_CALLBACK_MAX_ATTEMPTS, 6),
+  callbackMaxAttempts: parseIntEnv(
+    process.env.WEB_AUDIT_CALLBACK_MAX_ATTEMPTS,
+    6,
+  ),
   callbackInitialDelayMs: parseIntEnv(
     process.env.WEB_AUDIT_CALLBACK_INITIAL_DELAY_MS,
     1_000,

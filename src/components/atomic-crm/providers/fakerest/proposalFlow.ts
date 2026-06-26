@@ -389,7 +389,11 @@ export const fakePayProposalDeposit = async (
     }
   }
 
-  return { deposit_paid_at: now, deal_id: proposal.deal_id, paid_in_full: allPaid };
+  return {
+    deposit_paid_at: now,
+    deal_id: proposal.deal_id,
+    paid_in_full: allPaid,
+  };
 };
 
 export type { PublicProposalToken };

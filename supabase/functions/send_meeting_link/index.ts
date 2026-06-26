@@ -61,7 +61,9 @@ Deno.serve(
 
         const contactId = Number(body.contact_id);
         const to =
-          String(body.to ?? "").trim().toLowerCase() ||
+          String(body.to ?? "")
+            .trim()
+            .toLowerCase() ||
           (Number.isFinite(contactId)
             ? (await resolveContactEmail(supabaseAdmin, contactId))
                 ?.trim()
@@ -98,14 +100,9 @@ Deno.serve(
           `${member.first_name?.trim() || "Team"} from ${orgName}`;
         const subject = `${orgName}: ${meetingTitle}`;
 
-        const textBody = [
-          greeting,
-          "",
-          intro,
-          meetingUrl,
-          "",
-          signature,
-        ].join("\n");
+        const textBody = [greeting, "", intro, meetingUrl, "", signature].join(
+          "\n",
+        );
 
         const introHtml = escapeHtml(intro).replace(/\n/g, "<br>");
         const htmlBody = `

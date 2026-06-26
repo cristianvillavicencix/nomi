@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import {
-  useDataProvider,
-  useNotify,
-} from "ra-core";
+import { useDataProvider, useNotify } from "ra-core";
 import type { Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
@@ -14,7 +11,12 @@ import {
   useCanViewAmounts,
 } from "@/lib/permissions/useMaskedAmount";
 import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceEmailTemplate";
-import type { ClientInvoice, Conversation, Ticket, TicketDeliverable } from "@/modules/types";
+import type {
+  ClientInvoice,
+  Conversation,
+  Ticket,
+  TicketDeliverable,
+} from "@/modules/types";
 import { getDeliverablesForInvoice } from "@/modules/tickets/ticketInvoiceTabs";
 import { getInitials } from "@/modules/messages/conversationDisplay";
 import {
@@ -251,7 +253,12 @@ export const TicketToolsClientSms = ({
 
   if (messagingPending) {
     return (
-      <div className={cn("flex items-center gap-2 px-4 py-4 text-xs text-muted-foreground", className)}>
+      <div
+        className={cn(
+          "flex items-center gap-2 px-4 py-4 text-xs text-muted-foreground",
+          className,
+        )}
+      >
         <Loader2 className="size-3.5 animate-spin" />
         Loading messaging…
       </div>
@@ -287,7 +294,9 @@ export const TicketToolsClientSms = ({
         </Avatar>
         <div className="min-w-0">
           <p className="truncate text-xs font-medium">{clientName}</p>
-          <p className="truncate text-[11px] text-muted-foreground">{phoneLabel}</p>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {phoneLabel}
+          </p>
         </div>
       </div>
 

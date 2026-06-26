@@ -318,7 +318,14 @@ export type TicketDeliverable = {
   path: string;
   src?: string | null;
   sort_order?: number;
-  billing_kind?: "supplement" | "roof" | "siding" | "esx" | "pdf_analysis" | string | null;
+  billing_kind?:
+    | "supplement"
+    | "roof"
+    | "siding"
+    | "esx"
+    | "pdf_analysis"
+    | string
+    | null;
   billing_line_count?: number | null;
   service_package_id?: Identifier | null;
   invoiced_invoice_id?: Identifier | null;

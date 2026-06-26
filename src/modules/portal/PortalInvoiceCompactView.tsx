@@ -168,7 +168,9 @@ export const PortalInvoiceCompactView = ({
         <section className="mt-5">
           <SectionLabel>Bill to</SectionLabel>
           {company?.name ? (
-            <p className="mt-2 text-sm font-semibold text-brand">{company.name}</p>
+            <p className="mt-2 text-sm font-semibold text-brand">
+              {company.name}
+            </p>
           ) : null}
           {contactName ? (
             <p className="mt-1 text-sm text-slate-800">{contactName}</p>
@@ -211,7 +213,8 @@ export const PortalInvoiceCompactView = ({
                     </p>
                   ) : null}
                   <p className="mt-2 text-xs tabular-nums text-slate-500">
-                    Qty {line.quantity.toFixed(2)} × {formatMoney(line.unitPrice, currency)}
+                    Qty {line.quantity.toFixed(2)} ×{" "}
+                    {formatMoney(line.unitPrice, currency)}
                   </p>
                 </div>
               ))
@@ -249,13 +252,19 @@ export const PortalInvoiceCompactView = ({
         </section>
 
         {termsAndConditions?.trim() ? (
-          <Accordion type="single" collapsible className="mt-2 border-t border-slate-100">
+          <Accordion
+            type="single"
+            collapsible
+            className="mt-2 border-t border-slate-100"
+          >
             <AccordionItem value="terms" className="border-0">
               <AccordionTrigger className="py-4 text-sm font-medium text-slate-800 hover:no-underline">
                 Terms & Conditions
               </AccordionTrigger>
               <AccordionContent className="pb-2 text-sm leading-relaxed text-slate-600">
-                <p className="whitespace-pre-line">{termsAndConditions.trim()}</p>
+                <p className="whitespace-pre-line">
+                  {termsAndConditions.trim()}
+                </p>
               </AccordionContent>
             </AccordionItem>
           </Accordion>

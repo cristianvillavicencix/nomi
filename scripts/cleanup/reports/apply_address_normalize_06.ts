@@ -30,10 +30,13 @@ function loadBackupCompanies(): CompanyAddressRow[] {
 }
 
 function query(sql: string): CompanyAddressRow[] {
-  const out = execSync(`supabase db query --linked ${JSON.stringify(sql)} -o json`, {
-    encoding: "utf8",
-    maxBuffer: 20 * 1024 * 1024,
-  });
+  const out = execSync(
+    `supabase db query --linked ${JSON.stringify(sql)} -o json`,
+    {
+      encoding: "utf8",
+      maxBuffer: 20 * 1024 * 1024,
+    },
+  );
   return JSON.parse(out).rows ?? [];
 }
 
@@ -70,7 +73,8 @@ const hasStructuredColumns = (row: CompanyAddressRow) =>
 function legacyEmbeddedCityCandidate(row: CompanyAddressRow): boolean {
   const address = firstAddressLine(row.address);
   const city = row.city?.trim();
-  if (!hasStructuredColumns(row) || !city || address.includes("\n")) return false;
+  if (!hasStructuredColumns(row) || !city || address.includes("\n"))
+    return false;
   if (!address.toLowerCase().includes(city.toLowerCase())) return false;
 
   const idx = address.toLowerCase().indexOf(city.toLowerCase());
@@ -95,12 +99,16 @@ const allCompanies = query(
 );
 
 const pipeline = normalizeAddressPipeline(allCompanies, backupById);
-const preApplyIdempotency = verifyIdempotentSecondPass(allCompanies, backupById);
+const preApplyIdempotency = verifyIdempotentSecondPass(
+  allCompanies,
+  backupById,
+);
 
 const bucketCounts = {
   multiline: pipeline.filter((e) => e.bucket === "multiline").length,
-  singleLineComposed: pipeline.filter((e) => e.bucket === "single-line-composed")
-    .length,
+  singleLineComposed: pipeline.filter(
+    (e) => e.bucket === "single-line-composed",
+  ).length,
   backupRestore: pipeline.filter((e) => e.bucket === "backup-restore").length,
   embeddedCity: pipeline.filter((e) => e.bucket === "embedded-city").length,
 };

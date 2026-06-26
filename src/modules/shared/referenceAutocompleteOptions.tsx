@@ -67,23 +67,13 @@ export const buildCompanySearchMeta = (company: Company) => {
 export const renderContactReferenceOption = (contact: Contact): ReactNode => {
   const title = contactReferenceShortLabel(contact);
   const meta = buildContactSearchMeta(contact);
-  return (
-    <ReferenceOptionSingleLine
-      title={title}
-      meta={meta || undefined}
-    />
-  );
+  return <ReferenceOptionSingleLine title={title} meta={meta || undefined} />;
 };
 
 export const renderCompanyReferenceOption = (company: Company): ReactNode => {
   const title = companyReferenceShortLabel(company) || "—";
   const meta = buildCompanySearchMeta(company);
-  return (
-    <ReferenceOptionSingleLine
-      title={title}
-      meta={meta || undefined}
-    />
-  );
+  return <ReferenceOptionSingleLine title={title} meta={meta || undefined} />;
 };
 
 export const renderReferenceOptionContent = (

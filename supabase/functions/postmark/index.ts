@@ -134,7 +134,8 @@ const checkBody = (json: any) => {
     return new Response("Missing parameter: FromFull", { status: 403 });
   if (!Subject)
     return new Response("Missing parameter: Subject", { status: 403 });
-  const hasAttachments = Array.isArray(Attachments) &&
+  const hasAttachments =
+    Array.isArray(Attachments) &&
     Attachments.some(
       (attachment: { Name?: string; Content?: string; ContentType?: string }) =>
         attachment?.Name?.trim() &&

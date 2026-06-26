@@ -503,12 +503,17 @@ export const ContactFormDialog = ({
         >
           <Form
             id="lbs-contact-form"
-            key={createDefaults ? JSON.stringify(createDefaults) : "lbs-contact-form"}
+            key={
+              createDefaults
+                ? JSON.stringify(createDefaults)
+                : "lbs-contact-form"
+            }
             className="flex min-h-0 flex-1 flex-col"
             defaultValues={{
               ...defaultPersonFormValues("directory", identity?.id),
               ...createDefaults,
-              ...(lockCompanyId != null && lockCompanyId !== PENDING_COMPANY_LOCK
+              ...(lockCompanyId != null &&
+              lockCompanyId !== PENDING_COMPANY_LOCK
                 ? { company_id: lockCompanyId }
                 : {}),
             }}

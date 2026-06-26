@@ -10,9 +10,7 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-export const getCollectedPaymentsTotal = (
-  payments: DealClientPayment[],
-) =>
+export const getCollectedPaymentsTotal = (payments: DealClientPayment[]) =>
   payments
     .filter(
       (payment) =>
@@ -20,9 +18,7 @@ export const getCollectedPaymentsTotal = (
     )
     .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
 
-export const getApprovedChangeOrdersTotal = (
-  changeOrders: DealChangeOrder[],
-) =>
+export const getApprovedChangeOrdersTotal = (changeOrders: DealChangeOrder[]) =>
   changeOrders
     .filter((entry) => entry.status === "approved")
     .reduce((sum, entry) => sum + toNumber(entry.amount), 0);

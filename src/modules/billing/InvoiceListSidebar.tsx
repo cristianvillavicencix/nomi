@@ -24,14 +24,15 @@ export const InvoiceListSidebar = ({
   const { data: invoices = [], isPending } = useListContext<ClientInvoice>();
 
   const companyIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          invoices
-            .map((row) => row.company_id)
-            .filter((id): id is NonNullable<ClientInvoice["company_id"]> => id != null),
-        ),
-      ],
+    () => [
+      ...new Set(
+        invoices
+          .map((row) => row.company_id)
+          .filter(
+            (id): id is NonNullable<ClientInvoice["company_id"]> => id != null,
+          ),
+      ),
+    ],
     [invoices],
   );
 
@@ -80,7 +81,8 @@ export const InvoiceListSidebar = ({
                 onClick={() => onSelectInvoice(String(invoice.id))}
                 className={cn(
                   "flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/40",
-                  isSelected && "bg-primary/5 ring-1 ring-inset ring-primary/20",
+                  isSelected &&
+                    "bg-primary/5 ring-1 ring-inset ring-primary/20",
                 )}
               >
                 <div className="flex items-start justify-between gap-2">

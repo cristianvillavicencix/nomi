@@ -6,7 +6,10 @@ export type ProposalBodyLine = {
 };
 
 const parseLineWithDetail = (line: string): ProposalBodyLine => {
-  const text = line.replace(/^-\s*/, "").replace(/^\d+\.\s*/, "").trim();
+  const text = line
+    .replace(/^-\s*/, "")
+    .replace(/^\d+\.\s*/, "")
+    .trim();
   if (!text) return { title: "", detail: "" };
   const dash = text.indexOf("—");
   if (dash > -1) {
@@ -115,7 +118,9 @@ export const ProposalFormattedBody = ({
                   </span>
                 ) : null}
                 {item.detail ? (
-                  <span className={cn("pf-body-li-detail", itemDetailClassName)}>
+                  <span
+                    className={cn("pf-body-li-detail", itemDetailClassName)}
+                  >
                     {item.detail}
                   </span>
                 ) : null}

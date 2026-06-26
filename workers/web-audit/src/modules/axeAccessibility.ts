@@ -66,7 +66,9 @@ const violationTitle = (violation: Result) =>
 const violationDescription = (violation: Result) => {
   const nodes = violation.nodes?.length ?? 0;
   const base = violation.description?.trim() ?? "";
-  return nodes > 0 ? `${base} (${nodes} element${nodes === 1 ? "" : "s"} affected)`.trim() : base;
+  return nodes > 0
+    ? `${base} (${nodes} element${nodes === 1 ? "" : "s"} affected)`.trim()
+    : base;
 };
 
 export const mapAxeViolationsToFindings = (
@@ -93,9 +95,7 @@ export const mapAxeViolationsToFindings = (
       .filter(Boolean);
 
     const locationText =
-      locations.length > 0
-        ? ` Dónde: ${locations.join(" · ")}`
-        : "";
+      locations.length > 0 ? ` Dónde: ${locations.join(" · ")}` : "";
 
     return {
       category: "a11y",
@@ -103,10 +103,13 @@ export const mapAxeViolationsToFindings = (
       source: "axe",
       source_id: violation.id,
       title: violationTitle(violation),
-      description: `${violationDescription(violation) || ""}${locationText}`.trim() || null,
+      description:
+        `${violationDescription(violation) || ""}${locationText}`.trim() ||
+        null,
       recommendation: violation.helpUrl
         ? `${violation.help ?? "Corrige esta regla de accesibilidad."} Guía: ${violation.helpUrl}`
-        : violation.help ?? "Corrige esta regla de accesibilidad en el HTML/CSS del sitio.",
+        : (violation.help ??
+          "Corrige esta regla de accesibilidad en el HTML/CSS del sitio."),
       metric_key: `axe:${violation.id}`,
       metric_value: violation.impact ?? null,
       display_order: startOrder + index,

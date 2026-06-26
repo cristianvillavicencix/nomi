@@ -1,5 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
-import { Copy, Download, Loader2, Mail, MessageSquare, Send } from "lucide-react";
+import {
+  Copy,
+  Download,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Send,
+} from "lucide-react";
 import { useDataProvider, useGetIdentity, useNotify } from "ra-core";
 import { useState } from "react";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
@@ -121,9 +128,7 @@ export const ProposalSendActions = ({
     const subject = encodeURIComponent(
       `Proposal: ${proposal.title}${proposal.proposal_number ? ` (${proposal.proposal_number})` : ""}`,
     );
-    const body = encodeURIComponent(
-      `${shareMessage.trim()}\n\n${clientUrl}`,
-    );
+    const body = encodeURIComponent(`${shareMessage.trim()}\n\n${clientUrl}`);
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   };
 
@@ -147,10 +152,9 @@ export const ProposalSendActions = ({
       notify("Proposal link sent via SMS", { type: "success" });
       setLinkDialogOpen(false);
     } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Failed to send SMS",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Failed to send SMS", {
+        type: "error",
+      });
     } finally {
       setIsSendingSms(false);
     }

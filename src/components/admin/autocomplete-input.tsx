@@ -180,9 +180,7 @@ export const AutocompleteInput = (
   };
 
   const selectedLabel = selectedChoice ? getInputText(selectedChoice) : null;
-  const inputDisplayValue = open
-    ? filterValue
-    : toInputString(selectedLabel);
+  const inputDisplayValue = open ? filterValue : toInputString(selectedLabel);
 
   const applySearchFilter = useCallback(
     (value: string) => {
@@ -229,15 +227,12 @@ export const AutocompleteInput = (
     setOpen(true);
   }, [scheduleSuppressClose]);
 
-  const handlePopoverInteractOutside = useCallback(
-    (event: Event) => {
-      const target = event.target;
-      if (anchorRef.current?.contains(target as Node)) {
-        event.preventDefault();
-      }
-    },
-    [],
-  );
+  const handlePopoverInteractOutside = useCallback((event: Event) => {
+    const target = event.target;
+    if (anchorRef.current?.contains(target as Node)) {
+      event.preventDefault();
+    }
+  }, []);
 
   const stopScrollPropagation = useCallback(
     (event: React.WheelEvent | React.TouchEvent) => {
@@ -334,7 +329,11 @@ export const AutocompleteInput = (
         )}
         <FormControl>
           <div className="relative w-full">
-            <Popover open={open} onOpenChange={handleOpenChange} modal={modal ?? false}>
+            <Popover
+              open={open}
+              onOpenChange={handleOpenChange}
+              modal={modal ?? false}
+            >
               <PopoverAnchor asChild>
                 <div ref={anchorRef} className="relative w-full">
                   <Input
@@ -343,9 +342,7 @@ export const AutocompleteInput = (
                     onFocus={handleInputFocus}
                     onPointerDown={handleInputPointerDown}
                     placeholder={
-                      !open && selectedLabel
-                        ? undefined
-                        : placeholder
+                      !open && selectedLabel ? undefined : placeholder
                     }
                     aria-expanded={open}
                     aria-autocomplete="list"
@@ -385,9 +382,7 @@ export const AutocompleteInput = (
                           <CommandItem
                             key={choiceValue}
                             value={
-                              isCreateItem
-                                ? `?${filterValue}?`
-                                : choiceValue
+                              isCreateItem ? `?${filterValue}?` : choiceValue
                             }
                             onSelect={() =>
                               handleChangeWithCreateSupport(choice)

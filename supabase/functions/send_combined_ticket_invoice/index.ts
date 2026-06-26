@@ -57,17 +57,20 @@ Deno.serve(
           return createErrorResponse(400, "Select at least two tickets");
         }
 
-        const result = await sendCombinedTicketInvoicePaymentLink(supabaseAdmin, {
-          orgId: member.org_id,
-          memberId: member.id,
-          ticketIds,
-          baseUrl: body.base_url,
-          message: body.message,
-          subject: body.subject,
-          smsTo: body.sms_to,
-          sendSms: body.send_sms === true,
-          recipientEmail: body.recipient_email,
-        });
+        const result = await sendCombinedTicketInvoicePaymentLink(
+          supabaseAdmin,
+          {
+            orgId: member.org_id,
+            memberId: member.id,
+            ticketIds,
+            baseUrl: body.base_url,
+            message: body.message,
+            subject: body.subject,
+            smsTo: body.sms_to,
+            sendSms: body.send_sms === true,
+            recipientEmail: body.recipient_email,
+          },
+        );
 
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

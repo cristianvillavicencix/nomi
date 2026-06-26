@@ -160,7 +160,8 @@ const en: ProposalDocumentCopy = {
     "Google reviews will appear here when VITE_LBS_GOOGLE_PLACE_ID is configured.",
   trustedByTitle: "Companies we've worked with",
   addClientLogo: "Add logo",
-  clientLogosEmpty: "Upload client or partner logos (PNG/SVG with transparent background work best).",
+  clientLogosEmpty:
+    "Upload client or partner logos (PNG/SVG with transparent background work best).",
   clientLogoNamePlaceholder: "Company name (optional)",
   signatoryBioPlaceholder:
     "Short bio — e.g. your role and how you support this project.",
@@ -168,8 +169,7 @@ const en: ProposalDocumentCopy = {
   teamSectionTitle: "The team behind your project",
   downloadPdf: "Download PDF",
   includesTitle: "Your package and services",
-  includesSubtitle:
-    "Services included in this proposal.",
+  includesSubtitle: "Services included in this proposal.",
   basePackage: "Base package",
   oneTime: "one-time",
   noAddons: "No add-ons selected.",
@@ -210,7 +210,8 @@ const en: ProposalDocumentCopy = {
   signedOn: (date) => `Contract signed on ${date}`,
   depositRecorded:
     "Deposit confirmation recorded. Our team will follow up shortly.",
-  previewAcceptDisabled: "Preview only — this button works on the link we email you.",
+  previewAcceptDisabled:
+    "Preview only — this button works on the link we email you.",
   previewSignDisabled: "Available after you accept the proposal on your link.",
   pdfAcceptNote:
     "To accept, sign, and pay the deposit, use the secure proposal link we sent you (not this PDF).",
@@ -230,7 +231,8 @@ const en: ProposalDocumentCopy = {
   introEditHint:
     "This letter sets context before scope and pricing. It adapts when you change templates.",
   introSignatoryNamePlaceholder: "Contact name on this letter",
-  introSignatoryCompanyPlaceholder: "Organization (e.g. Latinos Business Support)",
+  introSignatoryCompanyPlaceholder:
+    "Organization (e.g. Latinos Business Support)",
   introSignatoryHint:
     "Shown on the intro letter only — the proposal contact, not your CRM login.",
   saveBeforeClientHint:
@@ -291,8 +293,7 @@ const es: ProposalDocumentCopy = {
   clientLogosEmpty:
     "Sube logos de clientes o socios (PNG/SVG con fondo transparente funcionan mejor).",
   clientLogoNamePlaceholder: "Nombre de la empresa (opcional)",
-  signatoryBioPlaceholder:
-    "Bio breve — tu rol y cómo apoyas este proyecto.",
+  signatoryBioPlaceholder: "Bio breve — tu rol y cómo apoyas este proyecto.",
   teamBioPlaceholder: "Resumen breve (2–3 oraciones)",
   teamSectionTitle: "El equipo detrás de tu proyecto",
   downloadPdf: "Descargar PDF",
@@ -362,7 +363,8 @@ const es: ProposalDocumentCopy = {
   introEditHint:
     "Esta carta da contexto antes del alcance y los precios. Cambia al elegir otra plantilla.",
   introSignatoryNamePlaceholder: "Nombre del contacto en esta carta",
-  introSignatoryCompanyPlaceholder: "Organización (ej. Latinos Business Support)",
+  introSignatoryCompanyPlaceholder:
+    "Organización (ej. Latinos Business Support)",
   introSignatoryHint:
     "Solo en la carta de intro — el contacto de la propuesta, no tu usuario del CRM.",
   saveBeforeClientHint:
@@ -379,8 +381,9 @@ const es: ProposalDocumentCopy = {
   removeItem: "Quitar",
 };
 
-export const getProposalDocumentCopy = (locale: ProposalLocale): ProposalDocumentCopy =>
-  locale === "es" ? es : en;
+export const getProposalDocumentCopy = (
+  locale: ProposalLocale,
+): ProposalDocumentCopy => (locale === "es" ? es : en);
 
 export const proposalDateLocale = (locale: ProposalLocale) =>
   locale === "es" ? "es-US" : "en-US";

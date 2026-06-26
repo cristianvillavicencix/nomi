@@ -1,11 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import {
-  useDataProvider,
-  useDelete,
-  useGetList,
-  useNotify,
-} from "ra-core";
+import { useDataProvider, useDelete, useGetList, useNotify } from "ra-core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -26,12 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import {
@@ -82,9 +72,7 @@ export const FindDuplicatesPage = () => {
         </div>
       ) : null}
 
-      {!isPending && (data?.length ?? 0) === 0 ? (
-        <EmptyState />
-      ) : null}
+      {!isPending && (data?.length ?? 0) === 0 ? <EmptyState /> : null}
 
       {!isPending && (data?.length ?? 0) > 0 && totalGroups === 0 ? (
         <Card>
@@ -216,9 +204,12 @@ const DuplicateGroupCard = ({
       return losers.length;
     },
     onSuccess: (deletedCount) => {
-      notify(`Deleted ${deletedCount} contact${deletedCount === 1 ? "" : "s"}`, {
-        type: "info",
-      });
+      notify(
+        `Deleted ${deletedCount} contact${deletedCount === 1 ? "" : "s"}`,
+        {
+          type: "info",
+        },
+      );
       setDeleteLosersOpen(false);
       invalidateAndRefresh();
     },

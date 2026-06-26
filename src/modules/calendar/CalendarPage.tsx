@@ -6,5 +6,7 @@ export const CalendarPage = () => {
   const next = new URLSearchParams(searchParams);
   next.set("view", "calendar");
   const query = next.toString();
-  return <Navigate to={query ? `/tasks?${query}` : "/tasks?view=calendar"} replace />;
+  return (
+    <Navigate to={query ? `/tasks?${query}` : "/tasks?view=calendar"} replace />
+  );
 };

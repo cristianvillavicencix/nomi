@@ -74,7 +74,11 @@ const introBlock = (model: ProposalPrintModel): Content[] => {
   ];
 
   if (model.intro.title.trim()) {
-    stack.push({ text: model.intro.title, style: "h2", margin: [14, 0, 0, 10] });
+    stack.push({
+      text: model.intro.title,
+      style: "h2",
+      margin: [14, 0, 0, 10],
+    });
   }
 
   for (const block of markdownBody(model.intro.bodyMarkdown)) {
@@ -130,15 +134,14 @@ const lineItemRow = (
   sublabel: string | undefined,
   amount: string,
 ): Content[] => {
-  const left: Content =
-    sublabel
-      ? {
-          stack: [
-            { text: description, bold: true, fontSize: 10 },
-            { text: sublabel, fontSize: 9, color: "#64748b", italics: true },
-          ],
-        }
-      : { text: description, fontSize: 10 };
+  const left: Content = sublabel
+    ? {
+        stack: [
+          { text: description, bold: true, fontSize: 10 },
+          { text: sublabel, fontSize: 9, color: "#64748b", italics: true },
+        ],
+      }
+    : { text: description, fontSize: 10 };
 
   return [left, { text: amount, alignment: "right", bold: true, fontSize: 10 }];
 };
@@ -149,19 +152,25 @@ const investmentBlock = (
 ): Content[] => {
   const inv = model.investment;
   const includeWarranty = options?.includeWarranty ?? true;
-  const content: Content[] = [
-    ...sectionHeader(inv.kicker, inv.title),
-  ];
+  const content: Content[] = [...sectionHeader(inv.kicker, inv.title)];
 
   if (inv.notes) {
-    content.push({ text: inv.notes, style: "bodyMuted", margin: [0, 0, 0, 12] });
+    content.push({
+      text: inv.notes,
+      style: "bodyMuted",
+      margin: [0, 0, 0, 12],
+    });
   }
 
   const tableBody: Content[][] = [];
 
   if (inv.packageLine) {
     tableBody.push(
-      lineItemRow(inv.packageLine.description, "Base package", inv.packageLine.amount),
+      lineItemRow(
+        inv.packageLine.description,
+        "Base package",
+        inv.packageLine.amount,
+      ),
     );
   }
 
@@ -203,7 +212,12 @@ const investmentBlock = (
       body: [
         [
           { text: inv.oneTimeLabel, fontSize: 10 },
-          { text: inv.oneTimeAmount, alignment: "right", bold: true, fontSize: 10 },
+          {
+            text: inv.oneTimeAmount,
+            alignment: "right",
+            bold: true,
+            fontSize: 10,
+          },
         ],
         ...(inv.recurringLabel && inv.recurringAmount
           ? [
@@ -300,7 +314,11 @@ const investmentBlock = (
   }
 
   if (inv.paymentNotes) {
-    content.push({ text: inv.paymentNotes, style: "bodyMuted", margin: [0, 4, 0, 12] });
+    content.push({
+      text: inv.paymentNotes,
+      style: "bodyMuted",
+      margin: [0, 4, 0, 12],
+    });
   }
 
   if (includeWarranty && inv.warranty) {

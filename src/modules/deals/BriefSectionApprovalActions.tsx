@@ -167,7 +167,11 @@ export const BriefSectionApprovalActions = ({
           />
         </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => setRevisionOpen(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setRevisionOpen(false)}
+          >
             Cancel
           </Button>
           <Button

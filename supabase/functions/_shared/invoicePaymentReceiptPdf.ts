@@ -141,7 +141,15 @@ export async function generatePaymentReceiptPdfBase64(
     formatDisplayDate(params.paymentDate),
   );
   y -= 22;
-  drawLabelValue(page, font, fontBold, 48, y, "Reference", params.paymentReference);
+  drawLabelValue(
+    page,
+    font,
+    fontBold,
+    48,
+    y,
+    "Reference",
+    params.paymentReference,
+  );
   y -= 22;
   drawLabelValue(page, font, fontBold, 48, y, "Bill to", params.billToName);
   if (params.billToEmail?.trim()) {

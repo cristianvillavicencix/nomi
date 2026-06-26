@@ -9,7 +9,10 @@ const params = (query: string) => new URLSearchParams(query);
 
 describe("syncClientsHubSearchParams", () => {
   it("removes tab when companies is active but the URL still has a tab param", () => {
-    const result = syncClientsHubSearchParams("companies", params("tab=people"));
+    const result = syncClientsHubSearchParams(
+      "companies",
+      params("tab=people"),
+    );
     expect(result?.has("tab")).toBe(false);
   });
 
@@ -29,7 +32,10 @@ describe("syncClientsHubSearchParams", () => {
   });
 
   it("replaces a denied companies tab request for contacts-only users", () => {
-    const result = syncClientsHubSearchParams("people", params("tab=companies"));
+    const result = syncClientsHubSearchParams(
+      "people",
+      params("tab=companies"),
+    );
     expect(result?.get("tab")).toBe("people");
   });
 

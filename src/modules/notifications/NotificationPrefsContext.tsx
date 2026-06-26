@@ -76,9 +76,8 @@ export const NotificationPrefsProvider = ({
     { enabled: identity?.id != null },
   );
 
-  const [desktopSupport, setDesktopSupport] = useState<DesktopNotificationSupport>(
-    () => getDesktopNotificationSupport(),
-  );
+  const [desktopSupport, setDesktopSupport] =
+    useState<DesktopNotificationSupport>(() => getDesktopNotificationSupport());
 
   const prefs = useMemo(
     () => parseNotificationPrefs(member?.notification_prefs),
@@ -114,9 +113,12 @@ export const NotificationPrefsProvider = ({
       });
     },
     onError: (error) => {
-      notify(error instanceof Error ? error.message : "Failed to save preferences", {
-        type: "error",
-      });
+      notify(
+        error instanceof Error ? error.message : "Failed to save preferences",
+        {
+          type: "error",
+        },
+      );
     },
   });
 
@@ -137,7 +139,10 @@ export const NotificationPrefsProvider = ({
     (input: PushNotificationInput) => {
       if (
         !canAccessNotificationCategory(input.category, (capabilityId) =>
-          hasMemberCapability(identity as AccessIdentity | undefined, capabilityId),
+          hasMemberCapability(
+            identity as AccessIdentity | undefined,
+            capabilityId,
+          ),
         )
       ) {
         return;

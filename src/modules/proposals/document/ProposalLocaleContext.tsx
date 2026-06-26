@@ -52,10 +52,13 @@ export const ProposalLocaleProvider = ({
 export const useProposalLocale = () => {
   const context = useContext(ProposalLocaleContext);
   if (!context) {
-    throw new Error("useProposalLocale must be used within ProposalLocaleProvider");
+    throw new Error(
+      "useProposalLocale must be used within ProposalLocaleProvider",
+    );
   }
   return context;
 };
 
 /** Optional locale when document is rendered outside provider (staff editor). */
-export const useProposalLocaleOptional = () => useContext(ProposalLocaleContext);
+export const useProposalLocaleOptional = () =>
+  useContext(ProposalLocaleContext);

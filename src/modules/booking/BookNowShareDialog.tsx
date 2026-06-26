@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import {
-  useDataProvider,
-  useGetIdentity,
-  useNotify,
-} from "ra-core";
+import { useDataProvider, useGetIdentity, useNotify } from "ra-core";
 import { Copy, Loader2, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,12 +55,12 @@ export const BookNowShareDialog = ({
 
   const selectedContact = recipient?.contact ?? null;
   const canSendSms =
-    smsEnabled && selectedContact != null && contactHasSmsPhone(selectedContact);
+    smsEnabled &&
+    selectedContact != null &&
+    contactHasSmsPhone(selectedContact);
 
   const previewMessage = useMemo(() => {
-    const url =
-      generatedUrl ||
-      `${window.location.origin}/b/example`;
+    const url = generatedUrl || `${window.location.origin}/b/example`;
     return `${customMessage.trim()}\n\n${url}`.trim();
   }, [customMessage, generatedUrl]);
 
@@ -74,8 +70,7 @@ export const BookNowShareDialog = ({
         contactId: recipient?.contactId ?? null,
         companyId: recipient?.companyId ?? null,
         dealId: null,
-        organizationMemberId:
-          identity?.id != null ? Number(identity.id) : null,
+        organizationMemberId: identity?.id != null ? Number(identity.id) : null,
         expiresInDays: 30,
         baseUrl: window.location.origin,
       }),
@@ -84,7 +79,9 @@ export const BookNowShareDialog = ({
     },
     onError: (error) => {
       notify(
-        error instanceof Error ? error.message : "Failed to generate booking link",
+        error instanceof Error
+          ? error.message
+          : "Failed to generate booking link",
         { type: "error" },
       );
     },
@@ -128,8 +125,8 @@ export const BookNowShareDialog = ({
         <DialogHeader>
           <DialogTitle>Book now</DialogTitle>
           <DialogDescription>
-            Generate a booking link. Optionally attach a contact so their details
-            are prefilled.
+            Generate a booking link. Optionally attach a contact so their
+            details are prefilled.
           </DialogDescription>
         </DialogHeader>
 

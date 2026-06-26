@@ -118,7 +118,9 @@ export const NotificationPreviewLayer = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium leading-snug">{row.title}</p>
+                  <p className="text-sm font-medium leading-snug">
+                    {row.title}
+                  </p>
                   <button
                     type="button"
                     className="shrink-0 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"

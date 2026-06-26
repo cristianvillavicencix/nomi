@@ -7,16 +7,16 @@ import {
   PROPOSAL_LOCALE_KEY,
   type ProposalLocale,
 } from "@/modules/proposals/document/proposalDocumentI18n";
-import {
-  ProposalLocaleProvider,
-} from "@/modules/proposals/document/ProposalLocaleContext";
+import { ProposalLocaleProvider } from "@/modules/proposals/document/ProposalLocaleContext";
 import { useProposalLocale } from "@/modules/proposals/document/ProposalLocaleContext";
 import { PublicProposalAcceptPortal } from "@/modules/proposals/public/PublicProposalAcceptPortal";
 import { fetchPublicProposal } from "@/modules/proposals/public/publicProposalApi";
 
 const readStoredLocale = (): ProposalLocale => {
   if (typeof window === "undefined") return "en";
-  return window.localStorage.getItem(PROPOSAL_LOCALE_KEY) === "es" ? "es" : "en";
+  return window.localStorage.getItem(PROPOSAL_LOCALE_KEY) === "es"
+    ? "es"
+    : "en";
 };
 
 export const PublicProposalAcceptPage = () => {

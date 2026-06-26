@@ -12,7 +12,9 @@ export const formatOrganizationMemberName = (
     email?: string | null;
   } | null,
 ) => {
-  const name = [member?.first_name, member?.last_name].filter(Boolean).join(" ");
+  const name = [member?.first_name, member?.last_name]
+    .filter(Boolean)
+    .join(" ");
   return name || member?.email?.trim() || null;
 };
 
@@ -232,7 +234,8 @@ export const billToSelectionFromClient = ({
   const contactName = formatContactName(contact);
   const label = companyName ?? contactName ?? "Client";
   return {
-    companyId: company?.id != null ? Number(company.id) : contact?.company_id ?? null,
+    companyId:
+      company?.id != null ? Number(company.id) : (contact?.company_id ?? null),
     contactId: contact?.id != null ? Number(contact.id) : null,
     label,
     company: company ?? null,
@@ -240,9 +243,8 @@ export const billToSelectionFromClient = ({
   };
 };
 
-export const canEditClientInvoice = (invoice: {
-  status?: string | null;
-}) => invoice.status === "draft" || invoice.status === "sent";
+export const canEditClientInvoice = (invoice: { status?: string | null }) =>
+  invoice.status === "draft" || invoice.status === "sent";
 
 export const canViewClientInvoiceDetail = (invoice: {
   status?: string | null;
@@ -251,20 +253,14 @@ export const canViewClientInvoiceDetail = (invoice: {
   invoice.status === "sent" ||
   invoice.status === "paid";
 
-export const canMarkClientInvoiceSent = (invoice: {
-  status?: string | null;
-}) => invoice.status === "draft";
+export const canMarkClientInvoiceSent = (invoice: { status?: string | null }) =>
+  invoice.status === "draft";
 
-export const canSendClientInvoice = (invoice: {
-  status?: string | null;
-}) =>
+export const canSendClientInvoice = (invoice: { status?: string | null }) =>
   invoice.status === "draft" || invoice.status === "sent";
 
-export const canVoidClientInvoice = (invoice: {
-  status?: string | null;
-}) =>
-  invoice.status !== "void" &&
-  invoice.status !== "paid";
+export const canVoidClientInvoice = (invoice: { status?: string | null }) =>
+  invoice.status !== "void" && invoice.status !== "paid";
 
 export const canDeleteClientInvoice = (invoice: {
   status?: string | null;

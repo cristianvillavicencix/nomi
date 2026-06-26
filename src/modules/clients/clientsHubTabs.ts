@@ -16,7 +16,8 @@ const parseTabQuery = (raw: string | null): ClientsHubTab | null => {
   if (!raw) return null;
   const normalized = raw.trim().toLowerCase();
   if (normalized === "people" || normalized === "contacts") return "people";
-  if (normalized === "companies" || normalized === "company") return "companies";
+  if (normalized === "companies" || normalized === "company")
+    return "companies";
   return null;
 };
 

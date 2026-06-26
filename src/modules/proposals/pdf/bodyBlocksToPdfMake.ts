@@ -13,10 +13,7 @@ const timelineBarsToPdfMake = (bars: ProposalPrintTimelineBar[]): Content[] =>
   bars.map((bar) => {
     const colors = TIMELINE_TONE_PDF_COLORS[bar.tone];
     const barX = (bar.leftPercent / 100) * TIMELINE_TRACK_W;
-    const barW = Math.max(
-      28,
-      (bar.widthPercent / 100) * TIMELINE_TRACK_W,
-    );
+    const barW = Math.max(28, (bar.widthPercent / 100) * TIMELINE_TRACK_W);
 
     return {
       columns: [

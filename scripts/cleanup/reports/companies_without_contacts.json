@@ -1,5 +1,3 @@
-WARN: no SMS provider is enabled. Disabling phone login
-Initialising login role...
 [
   {
     "created_at": "2026-05-26 18:13:12.626735+00",
@@ -34,7 +32,7 @@ Initialising login role...
   {
     "created_at": "2026-05-26 18:13:17.712275+00",
     "id": 640,
-    "name": "G\u0026G Lopez All Pro Handyman \u0026 Cleaning Service LLC",
+    "name": "G&G Lopez All Pro Handyman & Cleaning Service LLC",
     "sector": "Roofing"
   },
   {
@@ -46,7 +44,7 @@ Initialising login role...
   {
     "created_at": "2026-05-26 18:13:18.608861+00",
     "id": 643,
-    "name": "BMC ROOFING \u0026 SIDING",
+    "name": "BMC ROOFING & SIDING",
     "sector": null
   },
   {
@@ -118,7 +116,7 @@ Initialising login role...
   {
     "created_at": "2026-05-26 18:13:30.710248+00",
     "id": 668,
-    "name": "G\u0026S Home Improvement CT",
+    "name": "G&S Home Improvement CT",
     "sector": null
   },
   {
@@ -160,7 +158,7 @@ Initialising login role...
   {
     "created_at": "2026-05-26 18:13:31.697986+00",
     "id": 678,
-    "name": "United Restoration \u0026 Remodeling LLC",
+    "name": "United Restoration & Remodeling LLC",
     "sector": "Roofing"
   },
   {
@@ -224,5 +222,3 @@ Initialising login role...
     "sector": null
   }
 ]
-A new version of Supabase CLI is available: v2.105.0 (currently installed v2.92.0)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

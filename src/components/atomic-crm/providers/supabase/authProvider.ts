@@ -17,8 +17,9 @@ const baseAuthProvider = supabaseAuthProvider(supabase, {
 
     const rawAvatar = resolveAvatarUrl(sale as any, 96);
     const avatar =
-      (await resolveStorageDisplayUrl(rawAvatar, { defaultBucket: "avatars" })) ??
-      rawAvatar;
+      (await resolveStorageDisplayUrl(rawAvatar, {
+        defaultBucket: "avatars",
+      })) ?? rawAvatar;
 
     return {
       id: sale.id,

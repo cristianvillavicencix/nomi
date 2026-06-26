@@ -114,7 +114,9 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
   const openSms = async (event: MouseEvent) => {
     stopCardAction(event);
     if (!contactHasSmsPhone(lead)) {
-      notify("This lead has no valid phone number for SMS", { type: "warning" });
+      notify("This lead has no valid phone number for SMS", {
+        type: "warning",
+      });
       return;
     }
     if (messagesQuickAccess) {
@@ -133,217 +135,222 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
         };
 
         return (
-        <div ref={provided.innerRef} {...provided.draggableProps}>
-          <Card
-            role="button"
-            tabIndex={0}
-            onClick={openLead}
-            onKeyDown={(event: KeyboardEvent) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                openLead();
-              }
-            }}
-            className={cn(
-              "group relative cursor-pointer gap-0 rounded-lg border-[0.5px] border-border/80 p-2 shadow-none transition-shadow",
-              snapshot.isDragging
-                ? "rotate-1 shadow-xl ring-2 ring-primary/40"
-                : "hover:shadow-sm",
-            )}
-          >
-            <div className="absolute right-0.5 top-0.5 z-10 flex flex-col gap-0.5">
-              <div
-                {...provided.dragHandleProps}
-                onClick={stopDragHandleClick}
-                onMouseDown={stopDragHandleClick}
-                className={cn(
-                  cardActionClassName(snapshot.isDragging),
-                  "cursor-grab active:cursor-grabbing",
-                )}
-                aria-label="Drag lead"
-                role="button"
-                tabIndex={0}
-              >
-                <GripVertical className="size-3.5" />
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={cn(cardActionClassName(snapshot.isDragging), "size-6")}
-                title="Activity history"
-                onClick={(event) => {
-                  stopCardAction(event);
-                  setHistoryOpen(true);
-                }}
-              >
-                <History className="size-3.5" />
-                <span className="sr-only">Activity history</span>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  cardActionClassName(snapshot.isDragging),
-                  "size-6 hover:text-destructive",
-                )}
-                title="Delete lead"
-                disabled={isDeleting}
-                onClick={(event) => {
-                  stopCardAction(event);
-                  setDeleteOpen(true);
-                }}
-              >
-                <Trash2 className="size-3.5" />
-                <span className="sr-only">Delete lead</span>
-              </Button>
-            </div>
-
-            <div className="pr-5">
-              <div className="flex items-start gap-2">
-                <Avatar className="size-[34px] shrink-0">
-                  <AvatarFallback className="bg-muted text-[11px] font-semibold">
-                    {getLeadInitials(lead)}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-1">
-                    <p className="min-w-0 truncate text-sm font-medium leading-snug group-hover:underline">
-                      {name}
-                    </p>
-                    <SourceIcon
-                      className="size-3.5 shrink-0 text-muted-foreground"
-                      aria-label={source.label}
-                      title={source.label}
-                    />
-                  </div>
-                  {lead.interested_service ? (
-                    <p className="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
-                      {lead.interested_service}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="mt-1.5 space-y-0.5">
-                {phone ? (
-                  <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
-                    <Phone className="size-3 shrink-0" />
-                    <span className="truncate">{phone.display}</span>
-                  </div>
-                ) : null}
-
-                {showEmail && email ? (
-                  <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
-                    <Mail className="size-3 shrink-0" />
-                    <span className="truncate">{email}</span>
-                  </div>
-                ) : null}
-
-                {showQuote && canViewAmounts ? (
-                  <div className="text-xs font-medium leading-snug text-foreground">
-                    <MoneyText value={lead.lead_value_estimate} compact />
-                  </div>
-                ) : null}
-
-                <div className="flex items-center gap-1.5">
-                  {assignee ? (
-                    <>
-                      <Avatar className="size-5">
-                        <AvatarFallback
-                          className="text-[9px] font-semibold text-white"
-                          style={{
-                            backgroundColor: getMemberAccentColor(assignee.id),
-                          }}
-                        >
-                          {getMemberInitials(assignee)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="truncate text-[11px] leading-snug text-muted-foreground">
-                        {getMemberDisplayName(assignee)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-[11px] leading-snug text-muted-foreground">
-                      Unassigned
-                    </span>
+          <div ref={provided.innerRef} {...provided.draggableProps}>
+            <Card
+              role="button"
+              tabIndex={0}
+              onClick={openLead}
+              onKeyDown={(event: KeyboardEvent) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openLead();
+                }
+              }}
+              className={cn(
+                "group relative cursor-pointer gap-0 rounded-lg border-[0.5px] border-border/80 p-2 shadow-none transition-shadow",
+                snapshot.isDragging
+                  ? "rotate-1 shadow-xl ring-2 ring-primary/40"
+                  : "hover:shadow-sm",
+              )}
+            >
+              <div className="absolute right-0.5 top-0.5 z-10 flex flex-col gap-0.5">
+                <div
+                  {...provided.dragHandleProps}
+                  onClick={stopDragHandleClick}
+                  onMouseDown={stopDragHandleClick}
+                  className={cn(
+                    cardActionClassName(snapshot.isDragging),
+                    "cursor-grab active:cursor-grabbing",
                   )}
+                  aria-label="Drag lead"
+                  role="button"
+                  tabIndex={0}
+                >
+                  <GripVertical className="size-3.5" />
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    cardActionClassName(snapshot.isDragging),
+                    "size-6",
+                  )}
+                  title="Activity history"
+                  onClick={(event) => {
+                    stopCardAction(event);
+                    setHistoryOpen(true);
+                  }}
+                >
+                  <History className="size-3.5" />
+                  <span className="sr-only">Activity history</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    cardActionClassName(snapshot.isDragging),
+                    "size-6 hover:text-destructive",
+                  )}
+                  title="Delete lead"
+                  disabled={isDeleting}
+                  onClick={(event) => {
+                    stopCardAction(event);
+                    setDeleteOpen(true);
+                  }}
+                >
+                  <Trash2 className="size-3.5" />
+                  <span className="sr-only">Delete lead</span>
+                </Button>
               </div>
 
-              {stage === "new" ? (
-                <div className="mt-1.5 flex items-center gap-1.5 border-t border-border/60 pt-1.5">
-                  {phone?.telHref ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 flex-1 gap-1 px-2 text-[11px]"
-                      asChild
-                      onClick={stopCardNavigation}
-                    >
-                      <a href={phone.telHref}>
+              <div className="pr-5">
+                <div className="flex items-start gap-2">
+                  <Avatar className="size-[34px] shrink-0">
+                    <AvatarFallback className="bg-muted text-[11px] font-semibold">
+                      {getLeadInitials(lead)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-1">
+                      <p className="min-w-0 truncate text-sm font-medium leading-snug group-hover:underline">
+                        {name}
+                      </p>
+                      <SourceIcon
+                        className="size-3.5 shrink-0 text-muted-foreground"
+                        aria-label={source.label}
+                        title={source.label}
+                      />
+                    </div>
+                    {lead.interested_service ? (
+                      <p className="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
+                        {lead.interested_service}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="mt-1.5 space-y-0.5">
+                  {phone ? (
+                    <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                      <Phone className="size-3 shrink-0" />
+                      <span className="truncate">{phone.display}</span>
+                    </div>
+                  ) : null}
+
+                  {showEmail && email ? (
+                    <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                      <Mail className="size-3 shrink-0" />
+                      <span className="truncate">{email}</span>
+                    </div>
+                  ) : null}
+
+                  {showQuote && canViewAmounts ? (
+                    <div className="text-xs font-medium leading-snug text-foreground">
+                      <MoneyText value={lead.lead_value_estimate} compact />
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center gap-1.5">
+                    {assignee ? (
+                      <>
+                        <Avatar className="size-5">
+                          <AvatarFallback
+                            className="text-[9px] font-semibold text-white"
+                            style={{
+                              backgroundColor: getMemberAccentColor(
+                                assignee.id,
+                              ),
+                            }}
+                          >
+                            {getMemberInitials(assignee)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate text-[11px] leading-snug text-muted-foreground">
+                          {getMemberDisplayName(assignee)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[11px] leading-snug text-muted-foreground">
+                        Unassigned
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {stage === "new" ? (
+                  <div className="mt-1.5 flex items-center gap-1.5 border-t border-border/60 pt-1.5">
+                    {phone?.telHref ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 flex-1 gap-1 px-2 text-[11px]"
+                        asChild
+                        onClick={stopCardNavigation}
+                      >
+                        <a href={phone.telHref}>
+                          <PhoneCall className="size-3" />
+                          Call
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 flex-1 gap-1 px-2 text-[11px]"
+                        disabled
+                      >
                         <PhoneCall className="size-3" />
                         Call
-                      </a>
-                    </Button>
-                  ) : (
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="h-7 flex-1 gap-1 px-2 text-[11px]"
-                      disabled
+                      disabled={!contactHasSmsPhone(lead)}
+                      onClick={openSms}
                     >
-                      <PhoneCall className="size-3" />
-                      Call
+                      <MessageSquare className="size-3" />
+                      SMS
                     </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 flex-1 gap-1 px-2 text-[11px]"
-                    disabled={!contactHasSmsPhone(lead)}
-                    onClick={openSms}
+                  </div>
+                ) : (
+                  <p
+                    className={cn(
+                      "mt-1.5 border-t border-border/60 pt-1.5 text-[11px] leading-snug",
+                      activityStale
+                        ? "font-medium text-amber-600 dark:text-amber-500"
+                        : "text-muted-foreground",
+                    )}
                   >
-                    <MessageSquare className="size-3" />
-                    SMS
-                  </Button>
-                </div>
-              ) : (
-                <p
-                  className={cn(
-                    "mt-1.5 border-t border-border/60 pt-1.5 text-[11px] leading-snug",
-                    activityStale
-                      ? "font-medium text-amber-600 dark:text-amber-500"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {formatLeadActivityFooter(activity)}
-                </p>
-              )}
-            </div>
+                    {formatLeadActivityFooter(activity)}
+                  </p>
+                )}
+              </div>
 
-            <LeadActivitySheet
-              lead={lead}
-              open={historyOpen}
-              onOpenChange={setHistoryOpen}
-            />
-            <Confirm
-              isOpen={deleteOpen}
-              title="Delete this lead?"
-              content="This action cannot be undone."
-              confirm="Delete"
-              confirmColor="warning"
-              onConfirm={handleDelete}
-              onClose={() => setDeleteOpen(false)}
-              loading={isDeleting}
-            />
-          </Card>
-        </div>
+              <LeadActivitySheet
+                lead={lead}
+                open={historyOpen}
+                onOpenChange={setHistoryOpen}
+              />
+              <Confirm
+                isOpen={deleteOpen}
+                title="Delete this lead?"
+                content="This action cannot be undone."
+                confirm="Delete"
+                confirmColor="warning"
+                onConfirm={handleDelete}
+                onClose={() => setDeleteOpen(false)}
+                loading={isDeleting}
+              />
+            </Card>
+          </div>
         );
       }}
     </Draggable>

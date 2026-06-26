@@ -79,7 +79,8 @@ export const extractPhones = (contact: Contact): string[] => {
 };
 
 export const getContactDisplayLabel = (contact: Contact) =>
-  [contact.first_name, contact.last_name].filter(Boolean).join(" ") || "(no name)";
+  [contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
+  "(no name)";
 
 export const formatContactChannels = (contact: Contact) => {
   const emails = extractEmails(contact);
@@ -187,7 +188,8 @@ export const classifyDuplicateGroup = (
   if (emailOverlap || phoneOverlap) {
     return {
       confidence: "review",
-      reason: "Same name with overlapping email or phone — review before merging.",
+      reason:
+        "Same name with overlapping email or phone — review before merging.",
     };
   }
 
@@ -205,9 +207,7 @@ export const scoreCreateDuplicateMatch = (
   const pendingName = normalizeName(pending.first_name, pending.last_name);
   const contactName = normalizeName(contact.first_name, contact.last_name);
   const nameMatch =
-    pendingName !== null &&
-    contactName !== null &&
-    pendingName === contactName;
+    pendingName !== null && contactName !== null && pendingName === contactName;
 
   const pendingPhone = pending.phone ? normalizePhone(pending.phone) : null;
   const phoneMatch =
@@ -231,8 +231,7 @@ export const scoreCreateDuplicateMatch = (
   if (emailMatch && !nameMatch && !phoneMatch) {
     return {
       confidence: "do_not_merge",
-      reason:
-        "Email in use by someone else — may be a shared company inbox.",
+      reason: "Email in use by someone else — may be a shared company inbox.",
     };
   }
   if (phoneMatch && !nameMatch && !emailMatch) {
@@ -247,7 +246,9 @@ export const scoreCreateDuplicateMatch = (
   };
 };
 
-export const buildGroups = (contacts: Contact[]): Record<DupKey, DupGroup[]> => {
+export const buildGroups = (
+  contacts: Contact[],
+): Record<DupKey, DupGroup[]> => {
   const byEmail = new Map<string, Contact[]>();
   const byPhone = new Map<string, Contact[]>();
   const byName = new Map<string, Contact[]>();
@@ -394,7 +395,8 @@ export const contactNeedsChannelEnrichment = (
 ) => {
   const email = normalizeEmail(additions.email);
   const phone = additions.phone ? normalizePhone(additions.phone) : null;
-  const missingEmail = email !== null && !extractEmails(contact).includes(email);
+  const missingEmail =
+    email !== null && !extractEmails(contact).includes(email);
   const missingPhone =
     phone !== null && !extractPhones(contact).includes(phone);
   return missingEmail || missingPhone;

@@ -29,7 +29,9 @@ export const getInvoicePaymentReference = (invoice: ClientInvoice) => {
   const paymentIntent = invoice.stripe_payment_intent_id?.trim();
   if (paymentIntent) {
     const compact = paymentIntent.replace(/^pi_/, "");
-    return compact.length > 12 ? compact.slice(-12).toUpperCase() : compact.toUpperCase();
+    return compact.length > 12
+      ? compact.slice(-12).toUpperCase()
+      : compact.toUpperCase();
   }
   return invoice.invoice_number;
 };
@@ -92,10 +94,7 @@ export const buildProjectPaymentRows = (
     dateLabel: formatBillingDate(payment.payment_date),
     payerLabel,
     reference:
-      payment.reference_number ||
-      payment.check_number ||
-      payment.notes ||
-      "—",
+      payment.reference_number || payment.check_number || payment.notes || "—",
     status: payment.status?.replace(/_/g, " ") ?? "—",
     statusVariant: "outline",
     paymentMode: payment.payment_method?.replace(/_/g, " ") || "—",

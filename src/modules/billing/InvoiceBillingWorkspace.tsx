@@ -119,7 +119,9 @@ export const InvoiceBillingWorkspace = ({
         <aside
           className={cn(
             "flex min-h-0 flex-col bg-muted/10",
-            hasSelection && !isMobile && "w-full max-w-[320px] shrink-0 border-r",
+            hasSelection &&
+              !isMobile &&
+              "w-full max-w-[320px] shrink-0 border-r",
             (!hasSelection || isMobile) && "w-full",
           )}
         >

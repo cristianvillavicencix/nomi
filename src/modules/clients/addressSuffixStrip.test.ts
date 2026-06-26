@@ -103,8 +103,8 @@ describe("address normalize idempotency", () => {
 
 describe("countCityOccurrences", () => {
   it("flags duplicate city tokens in address", () => {
-    expect(countCityOccurrences("123 Danbury Rd, Danbury, CT 06811", "Danbury")).toBe(
-      2,
-    );
+    expect(
+      countCityOccurrences("123 Danbury Rd, Danbury, CT 06811", "Danbury"),
+    ).toBe(2);
   });
 });

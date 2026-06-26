@@ -52,7 +52,9 @@ type InvoiceStaffChargeDialogProps = {
 };
 
 const formatMoney = (amount: number, currency = "USD") =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(
+    amount,
+  );
 
 export const InvoiceStaffChargeDialog = ({
   invoice,
@@ -91,8 +93,7 @@ export const InvoiceStaffChargeDialog = ({
     contact,
     fallbackEmail: invoice.recipient_email,
   });
-  const canSms =
-    smsEnabled && contact != null && contactHasSmsPhone(contact);
+  const canSms = smsEnabled && contact != null && contactHasSmsPhone(contact);
 
   const resetState = () => {
     setStep("choose");
@@ -219,10 +220,9 @@ export const InvoiceStaffChargeDialog = ({
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Could not send SMS",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Could not send SMS", {
+        type: "error",
+      });
     }
   };
 
@@ -266,8 +266,8 @@ export const InvoiceStaffChargeDialog = ({
             <DialogHeader>
               <DialogTitle>Collect payment</DialogTitle>
               <DialogDescription>
-                {invoice.invoice_number} ·{" "}
-                {formatMoney(balanceDue, currency)} balance due
+                {invoice.invoice_number} · {formatMoney(balanceDue, currency)}{" "}
+                balance due
               </DialogDescription>
             </DialogHeader>
 
@@ -286,7 +286,9 @@ export const InvoiceStaffChargeDialog = ({
                     <CreditCard className="size-4 shrink-0" />
                   )}
                   <span>
-                    <span className="block font-medium">Charge card on file</span>
+                    <span className="block font-medium">
+                      Charge card on file
+                    </span>
                     <span className="block text-xs text-muted-foreground">
                       {cardOnFile ?? "Saved card"} · no checkout needed
                     </span>
@@ -327,7 +329,9 @@ export const InvoiceStaffChargeDialog = ({
                   <ShieldCheck className="size-4 shrink-0" />
                 )}
                 <span>
-                  <span className="block font-medium">Send secure payment link</span>
+                  <span className="block font-medium">
+                    Send secure payment link
+                  </span>
                   <span className="block text-xs text-muted-foreground">
                     Email or SMS — client enters card on the secure portal
                   </span>
@@ -336,7 +340,8 @@ export const InvoiceStaffChargeDialog = ({
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Card numbers are never stored in the CRM. Payments run through Stripe.
+              Card numbers are never stored in the CRM. Payments run through
+              Stripe.
             </p>
           </>
         ) : (
@@ -344,8 +349,8 @@ export const InvoiceStaffChargeDialog = ({
             <DialogHeader>
               <DialogTitle>Send secure payment link</DialogTitle>
               <DialogDescription>
-                The client pays on a PCI-compliant page. Do not collect card numbers
-                by email, text, or phone.
+                The client pays on a PCI-compliant page. Do not collect card
+                numbers by email, text, or phone.
               </DialogDescription>
             </DialogHeader>
 

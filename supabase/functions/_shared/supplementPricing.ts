@@ -47,7 +47,12 @@ export const DELIVERABLE_BILLING_OPTIONS: {
   flatPrice?: number;
 }[] = [
   { kind: "supplement", label: "Supplement", needsLineCount: true },
-  { kind: "roof", label: "Roof measurements", needsLineCount: false, flatPrice: 25 },
+  {
+    kind: "roof",
+    label: "Roof measurements",
+    needsLineCount: false,
+    flatPrice: 25,
+  },
   {
     kind: "siding",
     label: "Siding measurements",
@@ -149,7 +154,11 @@ export const buildDeliverablePricingLine = (
   if (kind === "supplement") {
     const total = calculateSupplementTotalForLineCount(lineCount ?? 0);
     return {
-      description: buildDeliverableLineDescription(kind, propertyAddress, lineCount),
+      description: buildDeliverableLineDescription(
+        kind,
+        propertyAddress,
+        lineCount,
+      ),
       quantity: 1,
       unit: "ea",
       unitPrice: total,
@@ -160,7 +169,11 @@ export const buildDeliverablePricingLine = (
   const unitPrice = flatPriceForKind(kind);
 
   return {
-    description: buildDeliverableLineDescription(kind, propertyAddress, lineCount),
+    description: buildDeliverableLineDescription(
+      kind,
+      propertyAddress,
+      lineCount,
+    ),
     quantity: 1,
     unit: "ea",
     unitPrice,
@@ -168,9 +181,15 @@ export const buildDeliverablePricingLine = (
   };
 };
 
-const finalizePricing = (lines: SupplementPricingLine[]): SupplementPricingBreakdown => {
-  const subtotal = roundMoney(lines.reduce((sum, line) => sum + line.lineTotal, 0));
-  const total = roundMoney((subtotal + STRIPE_FIXED_FEE) / (1 - STRIPE_PERCENT_FEE));
+const finalizePricing = (
+  lines: SupplementPricingLine[],
+): SupplementPricingBreakdown => {
+  const subtotal = roundMoney(
+    lines.reduce((sum, line) => sum + line.lineTotal, 0),
+  );
+  const total = roundMoney(
+    (subtotal + STRIPE_FIXED_FEE) / (1 - STRIPE_PERCENT_FEE),
+  );
   const transferFee = roundMoney(total - subtotal);
   return { lines, subtotal, transferFee, total };
 };
@@ -222,7 +241,9 @@ export const calculatePricingFromTicketLegacy = (
   return finalizePricing(lines);
 };
 
-export const allDeliverablesHaveBilling = (deliverables: DeliverableBillingInput[]) =>
+export const allDeliverablesHaveBilling = (
+  deliverables: DeliverableBillingInput[],
+) =>
   deliverables.length > 0 &&
   deliverables.every(
     (item) => Boolean(item.billing_kind) || Boolean(item.service_package_id),

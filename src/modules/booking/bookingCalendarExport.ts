@@ -15,7 +15,10 @@ const toLocalDate = (date: string, time: string) => {
 };
 
 const formatGoogleCalendarStamp = (date: Date) =>
-  date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
 
 export const buildGoogleCalendarUrl = (input: BookingCalendarEventInput) => {
   const start = toLocalDate(input.date, input.time);

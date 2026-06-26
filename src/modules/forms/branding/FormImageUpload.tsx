@@ -28,7 +28,9 @@ export const FormImageUpload = ({
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const previewUrl = useStorageSignedUrl(value, { defaultBucket: "form-branding" });
+  const previewUrl = useStorageSignedUrl(value, {
+    defaultBucket: "form-branding",
+  });
 
   const uploadFile = useCallback(
     async (file: File) => {

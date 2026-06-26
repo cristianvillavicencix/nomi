@@ -127,7 +127,11 @@ export const ClientShowContent = () => {
           </TabsList>
 
           <TabsContent value="projects" className="mt-0">
-            <ClientTabSectionCard title="Projects" count={counts.projects} flush>
+            <ClientTabSectionCard
+              title="Projects"
+              count={counts.projects}
+              flush
+            >
               <ClientProjectsTab companyId={record.id} />
             </ClientTabSectionCard>
           </TabsContent>
@@ -192,10 +196,7 @@ export const ClientShowContent = () => {
 
   return (
     <div className="mt-2 pb-4">
-      <ClientShowActions
-        record={record}
-        onEdit={() => setEditOpen(true)}
-      />
+      <ClientShowActions record={record} onEdit={() => setEditOpen(true)} />
 
       {isMobile ? (
         <div className="space-y-4">

@@ -75,7 +75,8 @@ const STAGE_VIBE: Record<
   },
   quoted: {
     emoji: "📄",
-    intro: "Propuesta enviada. Deja claro qué mandaste y cuándo volver a tocar base.",
+    intro:
+      "Propuesta enviada. Deja claro qué mandaste y cuándo volver a tocar base.",
   },
   closing: {
     emoji: "🤝",
@@ -83,7 +84,8 @@ const STAGE_VIBE: Record<
   },
   paused: {
     emoji: "⏸️",
-    intro: "Pausa con inteligencia: define cuándo retomar para que no se pierda.",
+    intro:
+      "Pausa con inteligencia: define cuándo retomar para que no se pierda.",
   },
   won: {
     emoji: "🎉",
@@ -92,7 +94,8 @@ const STAGE_VIBE: Record<
   },
   lost: {
     emoji: "📝",
-    intro: "Cierre sin conversión — una nota rápida ayuda al equipo a aprender.",
+    intro:
+      "Cierre sin conversión — una nota rápida ayuda al equipo a aprender.",
   },
 };
 
@@ -152,7 +155,10 @@ const SelectChipField = ({
           )}
           style={
             selected
-              ? { backgroundColor: accentColor, boxShadow: `0 8px 24px ${accentColor}40` }
+              ? {
+                  backgroundColor: accentColor,
+                  boxShadow: `0 8px 24px ${accentColor}40`,
+                }
               : undefined
           }
         >
@@ -244,7 +250,13 @@ const FieldControl = ({
   return (
     <Input
       id={field.name}
-      type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+      type={
+        field.type === "number"
+          ? "number"
+          : field.type === "date"
+            ? "date"
+            : "text"
+      }
       value={value}
       placeholder={field.placeholder}
       min={field.type === "number" ? "0" : undefined}
@@ -328,13 +340,14 @@ export const LeadStageChangeDialog = ({
   const isFirstStep = stepIndex === 0;
   const isLastStep = stepIndex === steps.length - 1;
 
-  const canAdvance = currentStep?.kind === "intro"
-    ? true
-    : currentStep?.kind === "field"
-      ? isFieldValid(currentStep.field, values[currentStep.field.name] ?? "")
-      : config.fields.every((field) =>
-          isFieldValid(field, values[field.name] ?? ""),
-        );
+  const canAdvance =
+    currentStep?.kind === "intro"
+      ? true
+      : currentStep?.kind === "field"
+        ? isFieldValid(currentStep.field, values[currentStep.field.name] ?? "")
+        : config.fields.every((field) =>
+            isFieldValid(field, values[field.name] ?? ""),
+          );
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -355,9 +368,7 @@ export const LeadStageChangeDialog = ({
       onCompleted?.();
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Could not update lead stage";
+        error instanceof Error ? error.message : "Could not update lead stage";
       if (message.startsWith("Stage updated, but")) {
         refresh();
         onCompleted?.();
@@ -386,7 +397,9 @@ export const LeadStageChangeDialog = ({
   const formatReviewValue = (field: LeadTransitionField, raw: string) => {
     if (!raw.trim()) return "—";
     if (field.type === "select") {
-      return field.options?.find((option) => option.value === raw)?.label ?? raw;
+      return (
+        field.options?.find((option) => option.value === raw)?.label ?? raw
+      );
     }
     if (field.type === "datetime" || field.type === "date") {
       return formatFollowUpDateTimeLabel(raw);
@@ -434,7 +447,9 @@ export const LeadStageChangeDialog = ({
               <div className="mt-6 flex w-full items-center gap-3 rounded-2xl border bg-muted/30 p-4">
                 <Avatar record={lead} width={44} />
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="truncate font-semibold">{leadDisplayName(lead)}</p>
+                  <p className="truncate font-semibold">
+                    {leadDisplayName(lead)}
+                  </p>
                   {lead.company_name ? (
                     <p className="truncate text-xs text-muted-foreground">
                       {lead.company_name}
@@ -444,7 +459,10 @@ export const LeadStageChangeDialog = ({
               </div>
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <StageBadge label={fromStageDef.label} color={fromStageDef.color} />
+                <StageBadge
+                  label={fromStageDef.label}
+                  color={fromStageDef.color}
+                />
                 <ArrowRight className="size-4 text-muted-foreground" />
                 <StageBadge
                   label={toStageDef.label}
@@ -455,7 +473,9 @@ export const LeadStageChangeDialog = ({
 
               <p className="mt-5 text-xs text-muted-foreground">
                 {config.fields.length}{" "}
-                {config.fields.length === 1 ? "pregunta rápida" : "preguntas rápidas"}{" "}
+                {config.fields.length === 1
+                  ? "pregunta rápida"
+                  : "preguntas rápidas"}{" "}
                 · ~{Math.max(1, config.fields.length)} min
               </p>
             </div>
@@ -487,7 +507,8 @@ export const LeadStageChangeDialog = ({
               />
               {currentStep.field.type === "textarea" ? (
                 <p className="text-xs text-muted-foreground">
-                  Tip: una o dos frases bastan — lo importante es no perder el contexto.
+                  Tip: una o dos frases bastan — lo importante es no perder el
+                  contexto.
                 </p>
               ) : null}
             </div>
@@ -501,13 +522,18 @@ export const LeadStageChangeDialog = ({
                 </DialogTitle>
                 <DialogDescription className="mt-1">
                   Revisa antes de mover a{" "}
-                  <span style={{ color: toStageDef.color }}>{toStageDef.label}</span>
+                  <span style={{ color: toStageDef.color }}>
+                    {toStageDef.label}
+                  </span>
                 </DialogDescription>
               </div>
 
               <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
                 <div className="flex items-center gap-2 text-sm">
-                  <StageBadge label={fromStageDef.label} color={fromStageDef.color} />
+                  <StageBadge
+                    label={fromStageDef.label}
+                    color={fromStageDef.color}
+                  />
                   <ArrowRight className="size-3.5 text-muted-foreground" />
                   <StageBadge
                     label={toStageDef.label}
@@ -516,7 +542,10 @@ export const LeadStageChangeDialog = ({
                   />
                 </div>
                 {config.fields.map((field) => (
-                  <div key={field.name} className="border-t pt-3 first:border-t-0 first:pt-0">
+                  <div
+                    key={field.name}
+                    className="border-t pt-3 first:border-t-0 first:pt-0"
+                  >
                     <p className="text-xs font-medium text-muted-foreground">
                       {field.label}
                     </p>
@@ -529,7 +558,10 @@ export const LeadStageChangeDialog = ({
 
               <p className="rounded-xl bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                 Se creará una nota en actividades
-                {config.followUpTaskFromField ? " y un follow-up en el calendario" : ""}.
+                {config.followUpTaskFromField
+                  ? " y un follow-up en el calendario"
+                  : ""}
+                .
               </p>
             </div>
           ) : null}
@@ -565,7 +597,11 @@ export const LeadStageChangeDialog = ({
               onClick={() => void goNext()}
             >
               {isLastStep ? (
-                isSubmitting ? "Guardando…" : "¡Listo, mover!"
+                isSubmitting ? (
+                  "Guardando…"
+                ) : (
+                  "¡Listo, mover!"
+                )
               ) : (
                 <>
                   Siguiente

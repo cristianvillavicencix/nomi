@@ -46,12 +46,9 @@ export const usePortalAuthSession = (portalToken: string) => {
     syncSession();
   }, [portalToken, syncSession]);
 
-  const isActive = useMemo(
-    () => isPortalAuthSessionActive(session),
-    [session],
-  );
+  const isActive = useMemo(() => isPortalAuthSessionActive(session), [session]);
 
-  const sessionToken = isActive ? session?.sensitive_session ?? null : null;
+  const sessionToken = isActive ? (session?.sensitive_session ?? null) : null;
 
   useEffect(() => {
     if (!portalToken || !isActive || !session) return;

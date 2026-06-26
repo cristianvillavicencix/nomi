@@ -144,10 +144,7 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
       ]),
     [briefServiceSlugs, pendingServiceSlugs, resources],
   );
-  const mainTabCounts = useMemo(
-    () => getMainTabCounts(resources),
-    [resources],
-  );
+  const mainTabCounts = useMemo(() => getMainTabCounts(resources), [resources]);
   const serviceSubTabCounts = useMemo(
     () => getServiceSubTabCounts(serviceSubTabs, resources),
     [resources, serviceSubTabs],
@@ -481,7 +478,10 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                 {renderTabActions(
                   "service-photo",
                   activeServiceTabDef
-                    ? getResourcesForServiceSubTab(activeServiceTabDef, resources)
+                    ? getResourcesForServiceSubTab(
+                        activeServiceTabDef,
+                        resources,
+                      )
                     : getResourcesForMainTab("service-photo", resources),
                   activeServiceTabDef?.id ?? "service-photo",
                   "Add files",

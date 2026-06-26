@@ -31,9 +31,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { toStageChoices, getDefaultPipeline } from "@/components/atomic-crm/deals/pipelines";
+import {
+  toStageChoices,
+  getDefaultPipeline,
+} from "@/components/atomic-crm/deals/pipelines";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import { getDefaultDealStage } from "@/modules/deals/createDeal";
 import { useLbsPipelineConfig } from "@/modules/deals/useLbsPipelineConfig";
@@ -129,12 +135,7 @@ export const NewDealDialog = ({
       organization_member_id: identity?.id ?? null,
       notes: "",
     }),
-    [
-      companyContacts,
-      defaultContactId,
-      defaultStage,
-      identity?.id,
-    ],
+    [companyContacts, defaultContactId, defaultStage, identity?.id],
   );
 
   const handleSubmit = async (values: NewDealFormValues) => {
@@ -180,10 +181,9 @@ export const NewDealDialog = ({
       );
     } catch (error) {
       console.error("[NewDealDialog] create failed", error);
-      notify(
-        error instanceof Error ? error.message : "Failed to create deal",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Failed to create deal", {
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }

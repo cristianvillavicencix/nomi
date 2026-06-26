@@ -1,7 +1,10 @@
 import { formatBillingDate } from "@/modules/billing/billingDisplayUtils";
 import type { InvoiceAmortizationRow } from "@/modules/billing/invoicePaymentUtils";
 import type { InvoiceRemainderScheduleConfig } from "@/modules/billing/invoiceRemainderSchedule";
-import { filterRemainderInstallmentRows, findNextDueInstallment } from "@/modules/billing/public/invoicePaymentAmount";
+import {
+  filterRemainderInstallmentRows,
+  findNextDueInstallment,
+} from "@/modules/billing/public/invoicePaymentAmount";
 import { publicInvoicePaymentSectionPadding } from "@/modules/billing/public/payInvoiceDialogLayout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Check, ChevronDown } from "lucide-react";
@@ -51,14 +54,11 @@ const InstallmentSchedule = ({
         className="mt-3 flex w-full items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <span>
-          {open ? "Hide payment schedule" : "View payment schedule"}
-          {" "}({upcomingInstallments.length})
+          {open ? "Hide payment schedule" : "View payment schedule"} (
+          {upcomingInstallments.length})
         </span>
         <ChevronDown
-          className={cn(
-            "size-4 transition-transform",
-            open && "rotate-180",
-          )}
+          className={cn("size-4 transition-transform", open && "rotate-180")}
         />
       </button>
 
@@ -76,7 +76,9 @@ const InstallmentSchedule = ({
                 : displayDate
                   ? `Due ${formatBillingDate(displayDate)}`
                   : "Scheduled";
-            const checked = selectedInstallmentNumbers.includes(row.paymentNumber);
+            const checked = selectedInstallmentNumbers.includes(
+              row.paymentNumber,
+            );
             const checkboxId = `installment-${row.paymentNumber}`;
 
             return (
@@ -86,10 +88,20 @@ const InstallmentSchedule = ({
                 className="flex cursor-pointer items-center justify-between gap-3 py-2 text-sm"
               >
                 <span className="flex min-w-0 items-center gap-2.5">
-                  <Checkbox id={checkboxId} checked={checked} onCheckedChange={() => onToggleInstallment(row.paymentNumber)} />
+                  <Checkbox
+                    id={checkboxId}
+                    checked={checked}
+                    onCheckedChange={() =>
+                      onToggleInstallment(row.paymentNumber)
+                    }
+                  />
                   <span className="min-w-0">
-                    <span className="block text-foreground">{row.description}</span>
-                    <span className="block text-xs text-muted-foreground">{dueLabel}</span>
+                    <span className="block text-foreground">
+                      {row.description}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {dueLabel}
+                    </span>
                   </span>
                 </span>
                 <span className="shrink-0 tabular-nums text-foreground">
@@ -169,15 +181,18 @@ export const InvoicePaymentAmountPicker = ({
       selectedInstallmentNumbers.includes(row.paymentNumber),
     );
 
-  const payAllButton = hasInstallmentPlan || showDepositRow ? (
-    <button
-      type="button"
-      onClick={allSelected ? onClearSelectedInstallments : onSelectAllInstallments}
-      className="shrink-0 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700"
-    >
-      {`Pay all · ${formatMoney(balanceDue, currency)}`}
-    </button>
-  ) : null;
+  const payAllButton =
+    hasInstallmentPlan || showDepositRow ? (
+      <button
+        type="button"
+        onClick={
+          allSelected ? onClearSelectedInstallments : onSelectAllInstallments
+        }
+        className="shrink-0 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700"
+      >
+        {`Pay all · ${formatMoney(balanceDue, currency)}`}
+      </button>
+    ) : null;
 
   if (!hasInstallmentPlan && !showDepositRow) {
     return null;
@@ -214,7 +229,9 @@ export const InvoicePaymentAmountPicker = ({
           selectedInstallmentNumbers={selectedInstallmentNumbers}
           onToggleInstallment={onToggleInstallment}
           currency={currency}
-          previewDueDatesByInstallmentNumber={previewDueDatesByInstallmentNumber}
+          previewDueDatesByInstallmentNumber={
+            previewDueDatesByInstallmentNumber
+          }
         />
       </div>
     );
@@ -245,7 +262,9 @@ export const InvoicePaymentAmountPicker = ({
           selectedInstallmentNumbers={selectedInstallmentNumbers}
           onToggleInstallment={onToggleInstallment}
           currency={currency}
-          previewDueDatesByInstallmentNumber={previewDueDatesByInstallmentNumber}
+          previewDueDatesByInstallmentNumber={
+            previewDueDatesByInstallmentNumber
+          }
         />
       ) : null}
     </div>

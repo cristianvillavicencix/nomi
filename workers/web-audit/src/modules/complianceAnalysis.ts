@@ -32,9 +32,7 @@ const COOKIE_BANNER_SELECTORS = [
 ];
 
 const extractSchemaPhone = (html: string) => {
-  const phoneMatch = html.match(
-    /"telephone"\s*:\s*"([^"]+)"/i,
-  );
+  const phoneMatch = html.match(/"telephone"\s*:\s*"([^"]+)"/i);
   return phoneMatch?.[1]?.trim() ?? null;
 };
 

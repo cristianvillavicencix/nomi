@@ -67,6 +67,7 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<
   },
   bookings_new: {
     label: "New bookings",
-    description: "When someone books an appointment through your Book Now link.",
+    description:
+      "When someone books an appointment through your Book Now link.",
   },
 };

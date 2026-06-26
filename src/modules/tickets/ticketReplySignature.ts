@@ -65,7 +65,9 @@ export const plainTextToHtml = (textBody: string) => {
   const normalized = normalizeOutboundPlainText(textBody);
   if (!normalized) return "";
 
-  const paragraphs = normalized.split(/\n{2,}/).filter((paragraph) => paragraph.trim());
+  const paragraphs = normalized
+    .split(/\n{2,}/)
+    .filter((paragraph) => paragraph.trim());
 
   return paragraphs
     .map((paragraph, index) => {
@@ -225,7 +227,9 @@ export const buildReplyOutboundBodies = (
   body: string,
   signatureHtml?: string | null,
 ) => {
-  const textBody = normalizeOutboundPlainText(body.trim() || "(See attachments)");
+  const textBody = normalizeOutboundPlainText(
+    body.trim() || "(See attachments)",
+  );
   const userNote = normalizeOutboundPlainText(stripReplySignature(textBody));
   const includeSignature = textBody.includes(TICKET_REPLY_SIGNATURE);
 
@@ -246,7 +250,8 @@ export const buildReplyOutboundBodiesFromHtml = (
   const userNoteHtml = stripReplySignatureHtml(sanitized).trim();
   const includeSignature = includesReplySignatureHtml(sanitized);
   const textBody =
-    normalizeOutboundPlainText(htmlToPlainText(sanitized)) || "(See attachments)";
+    normalizeOutboundPlainText(htmlToPlainText(sanitized)) ||
+    "(See attachments)";
 
   const htmlBody = buildOutboundEmailHtml({
     userNoteHtml,

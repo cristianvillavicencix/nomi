@@ -56,12 +56,7 @@ export const runLighthouseAudit = async (
       if (!retryable) {
         throw cause;
       }
-      console.error(
-        "web-audit lighthouse retry",
-        strategy,
-        attempt,
-        message,
-      );
+      console.error("web-audit lighthouse retry", strategy, attempt, message);
     }
   }
   throw lastError;
@@ -143,7 +138,8 @@ const runLighthouseAuditOnce = async (
     const overall =
       scoresList.length > 0
         ? Math.round(
-            scoresList.reduce((sum, value) => sum + value, 0) / scoresList.length,
+            scoresList.reduce((sum, value) => sum + value, 0) /
+              scoresList.length,
           )
         : null;
 

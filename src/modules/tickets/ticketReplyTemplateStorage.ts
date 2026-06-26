@@ -35,8 +35,7 @@ export const mergeTicketReplyTemplates = (
   })),
 ];
 
-export const createInboxReplyTemplateId = () =>
-  `custom-${crypto.randomUUID()}`;
+export const createInboxReplyTemplateId = () => `custom-${crypto.randomUUID()}`;
 
 export const persistInboxReplyTemplates = async (
   inboxId: number | string,

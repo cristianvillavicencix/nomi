@@ -118,7 +118,8 @@ export const OrganizationMessageTemplatesSection = () => {
         body: draft.body.trim(),
         shortcut_label: draft.shortcut_label.trim().slice(0, 3) || null,
         tile_color:
-          draft.tile_color.trim() && /^#[0-9a-fA-F]{6}$/.test(draft.tile_color.trim())
+          draft.tile_color.trim() &&
+          /^#[0-9a-fA-F]{6}$/.test(draft.tile_color.trim())
             ? draft.tile_color.trim()
             : null,
         composer_shortcut: draft.composer_shortcut,
@@ -164,9 +165,12 @@ export const OrganizationMessageTemplatesSection = () => {
       });
     },
     onError: (error) => {
-      notify(error instanceof Error ? error.message : "Could not save shortcut", {
-        type: "error",
-      });
+      notify(
+        error instanceof Error ? error.message : "Could not save shortcut",
+        {
+          type: "error",
+        },
+      );
     },
   });
 
@@ -182,9 +186,12 @@ export const OrganizationMessageTemplatesSection = () => {
       notify("Shortcut deleted", { type: "success" });
     },
     onError: (error) => {
-      notify(error instanceof Error ? error.message : "Could not delete shortcut", {
-        type: "error",
-      });
+      notify(
+        error instanceof Error ? error.message : "Could not delete shortcut",
+        {
+          type: "error",
+        },
+      );
     },
   });
 
@@ -241,7 +248,9 @@ export const OrganizationMessageTemplatesSection = () => {
     },
     onError: (error) => {
       notify(
-        error instanceof Error ? error.message : "Could not load sample shortcuts",
+        error instanceof Error
+          ? error.message
+          : "Could not load sample shortcuts",
         { type: "error" },
       );
     },
@@ -271,8 +280,8 @@ export const OrganizationMessageTemplatesSection = () => {
           <div>
             <CardTitle>Message shortcuts</CardTitle>
             <CardDescription>
-              Quick-insert SMS templates shown as small tiles above the composer.
-              Pin shortcuts to show them on the To line in Messages.
+              Quick-insert SMS templates shown as small tiles above the
+              composer. Pin shortcuts to show them on the To line in Messages.
             </CardDescription>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
@@ -299,9 +308,10 @@ export const OrganizationMessageTemplatesSection = () => {
         <CardContent className="space-y-3">
           {sortedTemplates.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No shortcuts yet. Use <span className="font-medium">Load samples</span>{" "}
-              for starter templates (supplements intake, hello, follow-up) or create
-              your own.
+              No shortcuts yet. Use{" "}
+              <span className="font-medium">Load samples</span> for starter
+              templates (supplements intake, hello, follow-up) or create your
+              own.
             </p>
           ) : (
             sortedTemplates.map((template, index) => (
@@ -312,7 +322,10 @@ export const OrganizationMessageTemplatesSection = () => {
                 <div
                   className="flex size-9 shrink-0 items-center justify-center rounded-md text-[10px] font-bold uppercase text-white"
                   style={{
-                    backgroundColor: shortcutTileColor(template.tile_color, index),
+                    backgroundColor: shortcutTileColor(
+                      template.tile_color,
+                      index,
+                    ),
                   }}
                 >
                   {templateTileLabel(template.name, template.shortcut_label)}
@@ -471,7 +484,10 @@ export const OrganizationMessageTemplatesSection = () => {
                 id="template-body"
                 value={draft.body}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, body: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    body: event.target.value,
+                  }))
                 }
                 rows={5}
                 placeholder="Hi {{contact_first_name}}, thanks for reaching out…"
@@ -489,7 +505,10 @@ export const OrganizationMessageTemplatesSection = () => {
                   }))
                 }
               />
-              <Label htmlFor="template-composer-shortcut" className="cursor-pointer">
+              <Label
+                htmlFor="template-composer-shortcut"
+                className="cursor-pointer"
+              >
                 Show as quick tile in Messages
               </Label>
             </div>

@@ -23,8 +23,7 @@ export const useSmsBookNowInsert = ({
         companyId:
           contact?.company_id != null ? Number(contact.company_id) : null,
         dealId: dealId != null ? Number(dealId) : null,
-        organizationMemberId:
-          identity?.id != null ? Number(identity.id) : null,
+        organizationMemberId: identity?.id != null ? Number(identity.id) : null,
         expiresInDays: 30,
         baseUrl: window.location.origin,
       }),

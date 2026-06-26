@@ -109,10 +109,12 @@ export const buildContentForTemplate = (
   variables: ProposalVariableContext,
 ): ProposalDocumentContent => {
   const canonical = buildCanonicalTemplateContent(template.slug);
-  const base = canonical ?? attachIntroPreamble(
-    template.slug,
-    attachProposalShowcaseDefaults(parseProposalContent(template.content)),
-  );
+  const base =
+    canonical ??
+    attachIntroPreamble(
+      template.slug,
+      attachProposalShowcaseDefaults(parseProposalContent(template.content)),
+    );
 
   return {
     ...mergeProposalDocumentContent(base, variables),

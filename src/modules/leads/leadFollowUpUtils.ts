@@ -23,7 +23,11 @@ export const formatFollowUpDate = (value?: string | null) => {
 
   const hasExplicitTime =
     value.includes("T") &&
-    !(date.getHours() === 0 && date.getMinutes() === 0 && value.endsWith("T00:00:00.000Z"));
+    !(
+      date.getHours() === 0 &&
+      date.getMinutes() === 0 &&
+      value.endsWith("T00:00:00.000Z")
+    );
 
   if (hasExplicitTime || value.includes("T")) {
     return formatFollowUpDateTimeLabel(value);

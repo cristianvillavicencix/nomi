@@ -1,5 +1,8 @@
 import type { CheerioAPI } from "cheerio";
-import type { CrawlFileSnapshot, CrawlFilesFetchers } from "./crawlFilesAnalysis.js";
+import type {
+  CrawlFileSnapshot,
+  CrawlFilesFetchers,
+} from "./crawlFilesAnalysis.js";
 import {
   resolveCrawlResource,
   type CrawlFileFetcher,
@@ -66,7 +69,10 @@ const isHumansContent = (text: string) => {
 const isAdsTxtContent = (text: string) => {
   const t = text.trim();
   if (t.startsWith("<!DOCTYPE") || t.startsWith("<html")) return false;
-  return /direct|google\.com|pub-|ownerdomain|managerdomain/i.test(t) || t.includes("=");
+  return (
+    /direct|google\.com|pub-|ownerdomain|managerdomain/i.test(t) ||
+    t.includes("=")
+  );
 };
 
 const isManifestContent = (text: string) => {
@@ -129,7 +135,12 @@ const resolveFirst = async (
   validator: (text: string) => boolean,
 ): Promise<CrawlFileSnapshot> => {
   for (const url of urls) {
-    const resolved = await resolveCrawlResource(url, signal, fetchers, validator);
+    const resolved = await resolveCrawlResource(
+      url,
+      signal,
+      fetchers,
+      validator,
+    );
     if (resolved.found) return snapshotFrom(resolved);
     if (resolved.access === "blocked") return snapshotFrom(resolved);
   }
@@ -157,11 +168,11 @@ export const extractHtmlResourceHints = (
   $('link[rel="manifest"]').each((_i, el) => {
     add(manifestUrls, $(el).attr("href"));
   });
-  $('link[rel="alternate"][type*="rss"], link[rel="alternate"][type*="atom"]').each(
-    (_i, el) => {
-      add(rssUrls, $(el).attr("href"));
-    },
-  );
+  $(
+    'link[rel="alternate"][type*="rss"], link[rel="alternate"][type*="atom"]',
+  ).each((_i, el) => {
+    add(rssUrls, $(el).attr("href"));
+  });
   $('link[rel="icon"], link[rel="shortcut icon"]').each((_i, el) => {
     add(faviconUrls, $(el).attr("href"));
   });
@@ -241,10 +252,7 @@ export const analyzeExtendedCrawlFiles = async (
     feedType: parseFeedType(rssResolved.content),
   };
 
-  const faviconCandidates = [
-    ...hints.faviconUrls,
-    `${origin}/favicon.ico`,
-  ];
+  const faviconCandidates = [...hints.faviconUrls, `${origin}/favicon.ico`];
   const favicon = await resolveFirst(
     [...new Set(faviconCandidates)],
     signal,

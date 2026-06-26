@@ -6,9 +6,7 @@ import {
   type CrawlResourceAccess,
   type CrawlResourceSource,
 } from "./crawlResourceResolver.js";
-import {
-  mergeExtendedCrawlFiles,
-} from "./extendedCrawlFiles.js";
+import { mergeExtendedCrawlFiles } from "./extendedCrawlFiles.js";
 import {
   analyzeSiteInfra,
   type SiteInfraAnalysis,
@@ -61,7 +59,12 @@ export type RobotsTxtAnalysis = CrawlFileSnapshot & {
 
 export type SitemapAnalysis = CrawlFileSnapshot & {
   urlCount: number | null;
-  sitemapRoute: "default" | "robots_txt" | "wp_sitemap" | "sitemap_index" | "none";
+  sitemapRoute:
+    | "default"
+    | "robots_txt"
+    | "wp_sitemap"
+    | "sitemap_index"
+    | "none";
   candidatesTried?: string[];
 };
 
@@ -164,7 +167,10 @@ const isLlmsContent = (text: string) => {
 const isSecurityTxtContent = (text: string) => {
   const t = text.trim();
   if (t.startsWith("<!DOCTYPE") || t.startsWith("<html")) return false;
-  return /contact|policy|encryption|canonical|preferred-languages/i.test(t) || t.includes(":");
+  return (
+    /contact|policy|encryption|canonical|preferred-languages/i.test(t) ||
+    t.includes(":")
+  );
 };
 
 const parseSecurityTxt = (content: string) => ({
@@ -201,7 +207,10 @@ const truncate = (text: string, max = MAX_CONTENT_CHARS) => {
   if (text.length <= max) {
     return { text, truncated: false };
   }
-  return { text: `${text.slice(0, max)}\n\n… (contenido truncado)`, truncated: true };
+  return {
+    text: `${text.slice(0, max)}\n\n… (contenido truncado)`,
+    truncated: true,
+  };
 };
 
 const fetchTextResource: CrawlFileFetcher = async (url, signal) => {
@@ -241,7 +250,12 @@ export const createBrowserCrawlFileFetcher = (page: Page): CrawlFileFetcher => {
         }
       }, url);
 
-      if (viaFetch && viaFetch.status >= 200 && viaFetch.status < 400 && viaFetch.text.trim()) {
+      if (
+        viaFetch &&
+        viaFetch.status >= 200 &&
+        viaFetch.status < 400 &&
+        viaFetch.text.trim()
+      ) {
         return viaFetch;
       }
 
@@ -261,13 +275,15 @@ export const createBrowserCrawlFileFetcher = (page: Page): CrawlFileFetcher => {
         return document.documentElement?.outerHTML ?? "";
       });
 
-      return text.trim()
-        ? { status: response.status(), text }
-        : viaFetch;
+      return text.trim() ? { status: response.status(), text } : viaFetch;
     } catch {
       return null;
     } finally {
-      if (currentUrl && currentUrl.startsWith("http") && page.url() !== currentUrl) {
+      if (
+        currentUrl &&
+        currentUrl.startsWith("http") &&
+        page.url() !== currentUrl
+      ) {
         await page
           .goto(currentUrl, { waitUntil: "domcontentloaded", timeout: 25_000 })
           .catch(() => undefined);
@@ -281,10 +297,20 @@ export const mergeCrawlFilesPreferBrowser = (
   browser: CrawlFilesAnalysisResult,
 ): CrawlFilesAnalysisResult => {
   const pickSnap = <T extends CrawlFileSnapshot>(a: T, b: T): T => {
-    if (b.found) return { ...b, fetchStatus: a.fetchStatus ?? b.fetchStatus, source: a.found && b.found ? "merged" : b.source };
+    if (b.found)
+      return {
+        ...b,
+        fetchStatus: a.fetchStatus ?? b.fetchStatus,
+        source: a.found && b.found ? "merged" : b.source,
+      };
     if (a.found) return a;
     if (b.access === "blocked" || a.access === "blocked") {
-      return { ...b, fetchStatus: a.fetchStatus ?? b.fetchStatus, browserStatus: b.browserStatus ?? a.browserStatus, access: "blocked" as const };
+      return {
+        ...b,
+        fetchStatus: a.fetchStatus ?? b.fetchStatus,
+        browserStatus: b.browserStatus ?? a.browserStatus,
+        access: "blocked" as const,
+      };
     }
     return b.status != null ? b : a;
   };
@@ -293,34 +319,62 @@ export const mergeCrawlFilesPreferBrowser = (
     ...pickSnap(current?.robots ?? browser.robots, browser.robots),
     sitemapUrls: browser.robots.sitemapUrls.length
       ? browser.robots.sitemapUrls
-      : current?.robots.sitemapUrls ?? [],
-    blocksAllCrawlers: browser.robots.found ? browser.robots.blocksAllCrawlers : current?.robots.blocksAllCrawlers ?? false,
-    blockedAiAgents: browser.robots.found ? browser.robots.blockedAiAgents : current?.robots.blockedAiAgents ?? [],
-    allowsAiCrawlers: browser.robots.found ? browser.robots.allowsAiCrawlers : current?.robots.allowsAiCrawlers ?? false,
-    hasSitemapDirective: browser.robots.hasSitemapDirective || Boolean(current?.robots.hasSitemapDirective),
+      : (current?.robots.sitemapUrls ?? []),
+    blocksAllCrawlers: browser.robots.found
+      ? browser.robots.blocksAllCrawlers
+      : (current?.robots.blocksAllCrawlers ?? false),
+    blockedAiAgents: browser.robots.found
+      ? browser.robots.blockedAiAgents
+      : (current?.robots.blockedAiAgents ?? []),
+    allowsAiCrawlers: browser.robots.found
+      ? browser.robots.allowsAiCrawlers
+      : (current?.robots.allowsAiCrawlers ?? false),
+    hasSitemapDirective:
+      browser.robots.hasSitemapDirective ||
+      Boolean(current?.robots.hasSitemapDirective),
   };
 
   const sitemap = {
     ...pickSnap(current?.sitemap ?? browser.sitemap, browser.sitemap),
-    urlCount: browser.sitemap.found ? browser.sitemap.urlCount : current?.sitemap.urlCount ?? null,
-    sitemapRoute: browser.sitemap.found ? browser.sitemap.sitemapRoute : current?.sitemap.sitemapRoute ?? "none",
-    candidatesTried: browser.sitemap.candidatesTried ?? current?.sitemap.candidatesTried,
+    urlCount: browser.sitemap.found
+      ? browser.sitemap.urlCount
+      : (current?.sitemap.urlCount ?? null),
+    sitemapRoute: browser.sitemap.found
+      ? browser.sitemap.sitemapRoute
+      : (current?.sitemap.sitemapRoute ?? "none"),
+    candidatesTried:
+      browser.sitemap.candidatesTried ?? current?.sitemap.candidatesTried,
   };
 
   const llmsTxt = {
     ...pickSnap(current?.llmsTxt ?? browser.llmsTxt, browser.llmsTxt),
-    lineCount: browser.llmsTxt.found ? browser.llmsTxt.lineCount : current?.llmsTxt.lineCount ?? 0,
+    lineCount: browser.llmsTxt.found
+      ? browser.llmsTxt.lineCount
+      : (current?.llmsTxt.lineCount ?? 0),
     hasTitle: browser.llmsTxt.hasTitle || Boolean(current?.llmsTxt.hasTitle),
-    hasDescription: browser.llmsTxt.hasDescription || Boolean(current?.llmsTxt.hasDescription),
-    hasMarkdownLinks: browser.llmsTxt.hasMarkdownLinks || Boolean(current?.llmsTxt.hasMarkdownLinks),
-    mentionsSitemap: browser.llmsTxt.mentionsSitemap || Boolean(current?.llmsTxt.mentionsSitemap),
-    sectionCount: browser.llmsTxt.sectionCount || current?.llmsTxt.sectionCount || 0,
+    hasDescription:
+      browser.llmsTxt.hasDescription ||
+      Boolean(current?.llmsTxt.hasDescription),
+    hasMarkdownLinks:
+      browser.llmsTxt.hasMarkdownLinks ||
+      Boolean(current?.llmsTxt.hasMarkdownLinks),
+    mentionsSitemap:
+      browser.llmsTxt.mentionsSitemap ||
+      Boolean(current?.llmsTxt.mentionsSitemap),
+    sectionCount:
+      browser.llmsTxt.sectionCount || current?.llmsTxt.sectionCount || 0,
   };
 
   const securityTxt = {
-    ...pickSnap(current?.securityTxt ?? browser.securityTxt, browser.securityTxt),
-    hasContact: browser.securityTxt.hasContact || Boolean(current?.securityTxt.hasContact),
-    hasPolicy: browser.securityTxt.hasPolicy || Boolean(current?.securityTxt.hasPolicy),
+    ...pickSnap(
+      current?.securityTxt ?? browser.securityTxt,
+      browser.securityTxt,
+    ),
+    hasContact:
+      browser.securityTxt.hasContact ||
+      Boolean(current?.securityTxt.hasContact),
+    hasPolicy:
+      browser.securityTxt.hasPolicy || Boolean(current?.securityTxt.hasPolicy),
   };
 
   const siteInfra = mergeSiteInfra(current?.siteInfra, browser.siteInfra);
@@ -371,7 +425,13 @@ const mergeSiteInfra = (
 };
 
 export const applyCrawlFilesToStatic = (
-  staticResult: { crawlFiles?: CrawlFilesAnalysisResult | null; hasRobotsTxt: boolean; robotsTxtStatus: number | null; hasSitemap: boolean; sitemapStatus: number | null },
+  staticResult: {
+    crawlFiles?: CrawlFilesAnalysisResult | null;
+    hasRobotsTxt: boolean;
+    robotsTxtStatus: number | null;
+    hasSitemap: boolean;
+    sitemapStatus: number | null;
+  },
   crawl: CrawlFilesAnalysisResult,
 ) => {
   staticResult.crawlFiles = crawl;
@@ -508,8 +568,10 @@ export const buildAiSeoChecklist = (params: {
   imagesWithoutAlt: number;
 }): AiSeoChecklistResult => {
   const accessLabel = (snap: CrawlFileSnapshot) => {
-    if (snap.found) return `OK · ${snap.source === "browser" ? "navegador" : snap.source === "merged" ? "fetch+navegador" : "fetch"}`;
-    if (snap.access === "blocked") return `Bloqueado (HTTP ${snap.fetchStatus ?? snap.status ?? "403"})`;
+    if (snap.found)
+      return `OK · ${snap.source === "browser" ? "navegador" : snap.source === "merged" ? "fetch+navegador" : "fetch"}`;
+    if (snap.access === "blocked")
+      return `Bloqueado (HTTP ${snap.fetchStatus ?? snap.status ?? "403"})`;
     return "No encontrado";
   };
 
@@ -533,8 +595,7 @@ export const buildAiSeoChecklist = (params: {
       label: "Open Graph para compartir",
       ok: params.openGraphComplete,
       detail: params.openGraphComplete ? "OG completo" : "OG incompleto",
-      recommendation:
-        "Completa og:title, og:description, og:image y og:url.",
+      recommendation: "Completa og:title, og:description, og:image y og:url.",
     },
     {
       id: "title-meta",
@@ -796,13 +857,20 @@ export const analyzeCrawlFiles = async (
       isSitemapContent,
     );
     if (resolved.found && resolved.content) {
-      const { text, truncated } = truncate(resolved.content, MAX_SITEMAP_PREVIEW);
+      const { text, truncated } = truncate(
+        resolved.content,
+        MAX_SITEMAP_PREVIEW,
+      );
       sitemap = {
         ...snapshotFromResolved(resolved, MAX_SITEMAP_PREVIEW),
         content: text,
         contentTruncated: truncated,
         urlCount: countSitemapUrls(resolved.content),
-        sitemapRoute: sitemapRouteFromUrl(candidate, origin, robots.sitemapUrls),
+        sitemapRoute: sitemapRouteFromUrl(
+          candidate,
+          origin,
+          robots.sitemapUrls,
+        ),
         candidatesTried: sitemapCandidates,
       };
       break;

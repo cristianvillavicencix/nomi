@@ -77,8 +77,7 @@ export const DealsChart = memo(() => {
         .reduce((acc, deal) => acc + (Number(deal.amount) || 0), 0),
       pending: dealsByMonth[month]
         .filter(
-          (deal) =>
-            !WON_STAGES.has(deal.stage) && !LOST_STAGES.has(deal.stage),
+          (deal) => !WON_STAGES.has(deal.stage) && !LOST_STAGES.has(deal.stage),
         )
         .reduce((acc, deal) => {
           const weight = STAGE_PIPELINE_WEIGHT[deal.stage] ?? 0;

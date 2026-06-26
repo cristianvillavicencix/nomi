@@ -2,10 +2,11 @@ import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 // @ts-expect-error ESM from esm.sh (Deno)
 import type Stripe from "https://esm.sh/stripe@14.25.0?target=deno&no-check";
 import { getStripe } from "./stripeClient.ts";
+import { markInstallmentPaidFromStripe } from "./proposalFlow.ts";
 import {
-  markInstallmentPaidFromStripe,
-} from "./proposalFlow.ts";
-import { applyClientInvoicePaymentUpdate, isInvoiceStripePaymentAlreadyApplied } from "./clientInvoicePayment.ts";
+  applyClientInvoicePaymentUpdate,
+  isInvoiceStripePaymentAlreadyApplied,
+} from "./clientInvoicePayment.ts";
 import { parseRemainderInstallmentNumbersFromMetadata } from "./publicClientInvoicePaymentContext.ts";
 import { notifyInvoicePaymentReceipt } from "./invoicePaymentEmails.ts";
 import { deliverTicketAfterInvoicePayment } from "./ticketDelivery.ts";
@@ -140,7 +141,9 @@ export async function resolveOrCreateInvoiceStripeCustomer(
 ) {
   if (params.existingCustomerId) {
     try {
-      const customer = await stripe.customers.retrieve(params.existingCustomerId);
+      const customer = await stripe.customers.retrieve(
+        params.existingCustomerId,
+      );
       if (!("deleted" in customer && customer.deleted)) {
         return customer as Stripe.Customer;
       }
@@ -155,7 +158,9 @@ export async function resolveOrCreateInvoiceStripeCustomer(
         params.existingPaymentIntentId,
       );
       const customerId =
-        typeof intent.customer === "string" ? intent.customer : intent.customer?.id;
+        typeof intent.customer === "string"
+          ? intent.customer
+          : intent.customer?.id;
       if (customerId) {
         const customer = await stripe.customers.retrieve(customerId);
         if (!("deleted" in customer && customer.deleted)) {
@@ -210,7 +215,10 @@ export async function applyClientInvoicePaymentFromStripe(
           orgId: params.orgId,
         });
       } catch (error) {
-        console.error("applyClientInvoicePaymentFromStripe.deliverTicket", error);
+        console.error(
+          "applyClientInvoicePaymentFromStripe.deliverTicket",
+          error,
+        );
       }
     }
     return { handled: true, skipped: true, already_paid: true };
@@ -235,9 +243,8 @@ export async function applyClientInvoicePaymentFromStripe(
     return { handled: true, skipped: true, duplicate: true, receipt };
   }
 
-  const remainderInstallmentNumbers = parseRemainderInstallmentNumbersFromMetadata(
-    params.metadata,
-  );
+  const remainderInstallmentNumbers =
+    parseRemainderInstallmentNumbersFromMetadata(params.metadata);
 
   const result = await applyClientInvoicePaymentUpdate(supabase, {
     invoice,
@@ -272,7 +279,11 @@ type StuckClientInvoiceRow = {
 
 export async function listSucceededClientInvoicePaymentIntents(
   stripe: Stripe,
-  params: { orgId: number; invoiceId: number; storedPaymentIntentId?: string | null },
+  params: {
+    orgId: number;
+    invoiceId: number;
+    storedPaymentIntentId?: string | null;
+  },
 ) {
   const intents: Stripe.PaymentIntent[] = [];
   const seen = new Set<string>();
@@ -280,7 +291,9 @@ export async function listSucceededClientInvoicePaymentIntents(
   const storedPaymentIntentId = params.storedPaymentIntentId?.trim();
   if (storedPaymentIntentId) {
     try {
-      const intent = await stripe.paymentIntents.retrieve(storedPaymentIntentId);
+      const intent = await stripe.paymentIntents.retrieve(
+        storedPaymentIntentId,
+      );
       if (intent.status === "succeeded" && intent.amount) {
         intents.push(intent);
         seen.add(intent.id);
@@ -296,8 +309,7 @@ export async function listSucceededClientInvoicePaymentIntents(
 
   try {
     const searchResult = await stripe.paymentIntents.search({
-      query:
-        `metadata['type']:'client_invoice' AND metadata['invoice_id']:'${params.invoiceId}' AND metadata['org_id']:'${params.orgId}' AND status:'succeeded'`,
+      query: `metadata['type']:'client_invoice' AND metadata['invoice_id']:'${params.invoiceId}' AND metadata['org_id']:'${params.orgId}' AND status:'succeeded'`,
       limit: 10,
     });
     for (const intent of searchResult.data) {
@@ -340,7 +352,9 @@ export async function reconcileStuckClientInvoiceFromStripe(
     const storedPaymentIntentId = invoice.stripe_payment_intent_id?.trim();
     if (storedPaymentIntentId) {
       try {
-        const intent = await stripe.paymentIntents.retrieve(storedPaymentIntentId);
+        const intent = await stripe.paymentIntents.retrieve(
+          storedPaymentIntentId,
+        );
         results.push({
           invoice_id: invoice.id,
           payment_intent_id: storedPaymentIntentId,
@@ -426,9 +440,8 @@ export async function findDepositInstallment(
     .order("installment_number", { ascending: true });
 
   return (
-    (rows ?? []).find((row) =>
-      row.label?.toLowerCase().includes("deposit")
-    ) ?? null
+    (rows ?? []).find((row) => row.label?.toLowerCase().includes("deposit")) ??
+    null
   );
 }
 
@@ -605,7 +618,11 @@ export async function tryReuseInvoiceCheckoutPaymentIntent(
       metadata: params.metadata,
     });
   } catch (error) {
-    console.warn("tryReuseInvoiceCheckoutPaymentIntent.failed", paymentIntentId, error);
+    console.warn(
+      "tryReuseInvoiceCheckoutPaymentIntent.failed",
+      paymentIntentId,
+      error,
+    );
     return null;
   }
 }
@@ -731,7 +748,7 @@ export async function finalizeInvoicePaymentFromIntent(
   const customerId =
     typeof intent.customer === "string"
       ? intent.customer
-      : intent.customer?.id ?? stripeCustomerId;
+      : (intent.customer?.id ?? stripeCustomerId);
 
   const paymentMethod = intent.payment_method;
   const paymentMethodId =
@@ -748,16 +765,17 @@ export async function finalizeInvoicePaymentFromIntent(
     paymentMethodBrand = cardInfo.brand;
     paymentMethodLast4 = cardInfo.last4;
   } else if (paymentMethod && typeof paymentMethod !== "string") {
-    paymentMethodBrand = paymentMethod.card?.brand ?? paymentMethod.type ?? null;
+    paymentMethodBrand =
+      paymentMethod.card?.brand ?? paymentMethod.type ?? null;
     paymentMethodLast4 = paymentMethod.card?.last4 ?? null;
   }
 
-  const metadataInstallments = parseRemainderInstallmentNumbersFromMetadata(
-    metadata,
-  );
-  const remainderInstallmentNumbers = metadataInstallments.length > 0
-    ? metadataInstallments
-    : params.remainderInstallmentNumbers;
+  const metadataInstallments =
+    parseRemainderInstallmentNumbersFromMetadata(metadata);
+  const remainderInstallmentNumbers =
+    metadataInstallments.length > 0
+      ? metadataInstallments
+      : params.remainderInstallmentNumbers;
 
   return {
     intent,

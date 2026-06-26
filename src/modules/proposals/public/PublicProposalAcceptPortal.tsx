@@ -24,10 +24,8 @@ import {
 
 type PortalTab = "sign" | "deposit";
 
-const lineItemTotal = (line: {
-  quantity?: number;
-  unit_price?: number;
-}) => (line.quantity ?? 1) * (line.unit_price ?? 0);
+const lineItemTotal = (line: { quantity?: number; unit_price?: number }) =>
+  (line.quantity ?? 1) * (line.unit_price ?? 0);
 
 export const PublicProposalAcceptPortal = ({
   token,
@@ -50,12 +48,12 @@ export const PublicProposalAcceptPortal = ({
   const { proposal, line_items, installments, contract } = payload;
   const currency = proposal.currency ?? "USD";
   const termsMarkdown =
-    contract?.terms_snapshot?.trim() ||
-    payload.terms_markdown?.trim() ||
-    "";
+    contract?.terms_snapshot?.trim() || payload.terms_markdown?.trim() || "";
 
   const oneTimeLines = line_items.filter((l) => l.billing_type !== "recurring");
-  const recurringLines = line_items.filter((l) => l.billing_type === "recurring");
+  const recurringLines = line_items.filter(
+    (l) => l.billing_type === "recurring",
+  );
   const oneTimeTotal =
     oneTimeLines.reduce((sum, line) => sum + lineItemTotal(line), 0) ||
     proposal.amount ||
@@ -71,7 +69,8 @@ export const PublicProposalAcceptPortal = ({
   const balanceInstallments = installments.filter(
     (row) => !row.label.toLowerCase().includes("deposit"),
   );
-  const depositAmount = depositInstallment?.amount ?? proposal.deposit_amount ?? 0;
+  const depositAmount =
+    depositInstallment?.amount ?? proposal.deposit_amount ?? 0;
   const depositFormatted = formatProposalMoney(depositAmount, currency);
   const balancePerPayment = balanceInstallments[0]?.amount ?? 0;
 
@@ -128,7 +127,6 @@ export const PublicProposalAcceptPortal = ({
     Boolean(termsMarkdown) &&
     !isSigned;
 
-
   const totalLine = useMemo(() => {
     if (recurringTotal > 0) {
       return `${formatProposalMoney(oneTimeTotal, currency)} + ${formatProposalMoney(recurringTotal, currency)}/mo`;
@@ -155,7 +153,9 @@ export const PublicProposalAcceptPortal = ({
             ? paymentCopy.paidInFullBody
             : paymentCopy.depositSuccessBody}
         </p>
-        {balanceInstallments.length > 0 && !paidInFull && !allInstallmentsPaid ? (
+        {balanceInstallments.length > 0 &&
+        !paidInFull &&
+        !allInstallmentsPaid ? (
           <div className="text-left rounded-lg border bg-muted/20 p-4 text-sm">
             <p className="font-medium">{paymentCopy.scheduleTitle}</p>
             <p className="mt-1 text-muted-foreground">
@@ -191,7 +191,9 @@ export const PublicProposalAcceptPortal = ({
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
           L
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">{copy.pageTitle}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {copy.pageTitle}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Proposal {proposalLabel} — {proposal.title}
         </p>
@@ -225,7 +227,9 @@ export const PublicProposalAcceptPortal = ({
         <CardHeader className="space-y-3 border-b bg-muted/20 pb-4">
           <div className="grid gap-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{copy.oneTimePayment}</span>
+              <span className="text-muted-foreground">
+                {copy.oneTimePayment}
+              </span>
               <span className="font-medium tabular-nums">
                 {formatProposalMoney(oneTimeTotal, currency)}
               </span>
@@ -323,13 +327,17 @@ export const PublicProposalAcceptPortal = ({
                 </div>
               ) : null}
 
-              <CardTitle className="text-base">{copy.payDepositTitle}</CardTitle>
+              <CardTitle className="text-base">
+                {copy.payDepositTitle}
+              </CardTitle>
 
               <div className="rounded-xl bg-primary px-4 py-5 text-primary-foreground">
                 <p className="text-sm opacity-90">
                   {copy.depositInitial(proposal.deposit_percent ?? 50)}
                 </p>
-                <p className="text-3xl font-bold tabular-nums">{depositFormatted}</p>
+                <p className="text-3xl font-bold tabular-nums">
+                  {depositFormatted}
+                </p>
                 {balanceInstallments.length > 0 ? (
                   <p className="mt-2 text-xs opacity-90">
                     {copy.balanceNote(
@@ -341,7 +349,9 @@ export const PublicProposalAcceptPortal = ({
               </div>
 
               {stripeMock ? (
-                <p className="text-xs text-muted-foreground">{copy.mockModeNote}</p>
+                <p className="text-xs text-muted-foreground">
+                  {copy.mockModeNote}
+                </p>
               ) : null}
 
               <PublicProposalPaymentFlow
@@ -400,7 +410,9 @@ const StepPill = ({
       "flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors",
       active && "border-primary bg-primary/10 text-primary",
       !active && !done && "text-muted-foreground",
-      done && !active && "border-emerald-500/40 text-emerald-700 dark:text-emerald-400",
+      done &&
+        !active &&
+        "border-emerald-500/40 text-emerald-700 dark:text-emerald-400",
       disabled && "cursor-not-allowed opacity-50",
     )}
   >

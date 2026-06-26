@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { Globe, Mail, MapPin, Phone } from "lucide-react";
-import type { Company, Contact, EmailAndType } from "@/components/atomic-crm/types";
+import type {
+  Company,
+  Contact,
+  EmailAndType,
+} from "@/components/atomic-crm/types";
 import { getBusinessEmailFromLinks } from "@/modules/clients/clientContextLinks";
 import type { CompanyWithPrimaryContact } from "@/modules/clients/clientProfile";
 import {
@@ -88,7 +92,9 @@ export const ProposalCrmLinkedMeta = ({
   const emailHref = email ? mailtoHref(email) : null;
 
   const contactPhone =
-    contact && getContactPhone(contact) !== "—" ? getContactPhone(contact) : null;
+    contact && getContactPhone(contact) !== "—"
+      ? getContactPhone(contact)
+      : null;
 
   if (!address && !companyPhone && !site && !email && !contactPhone) {
     return null;
@@ -105,7 +111,9 @@ export const ProposalCrmLinkedMeta = ({
         </MetaItem>
       ) : null}
       {companyPhone ? (
-        <MetaItem icon={<Phone className="size-3.5" />}>{companyPhone}</MetaItem>
+        <MetaItem icon={<Phone className="size-3.5" />}>
+          {companyPhone}
+        </MetaItem>
       ) : null}
       {site && siteUrl ? (
         <MetaItem icon={<Globe className="size-3.5" />} href={siteUrl}>

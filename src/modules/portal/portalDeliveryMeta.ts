@@ -8,7 +8,9 @@ export type PortalHostingMeta = {
 };
 
 const readRecord = (value: unknown): Record<string, unknown> | null =>
-  value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : null;
 
 export const readPortalHostingMeta = (
   delivery?: PortalDelivery | null,
@@ -19,13 +21,19 @@ export const readPortalHostingMeta = (
 
   return {
     provider:
-      typeof hosting.provider === "string" ? hosting.provider.trim() || null : null,
+      typeof hosting.provider === "string"
+        ? hosting.provider.trim() || null
+        : null,
     panel_url:
-      typeof hosting.panel_url === "string" ? hosting.panel_url.trim() || null : null,
+      typeof hosting.panel_url === "string"
+        ? hosting.panel_url.trim() || null
+        : null,
     managed_by:
       typeof hosting.managed_by === "string" ? hosting.managed_by : null,
     location:
-      typeof hosting.location === "string" ? hosting.location.trim() || null : null,
+      typeof hosting.location === "string"
+        ? hosting.location.trim() || null
+        : null,
   };
 };
 

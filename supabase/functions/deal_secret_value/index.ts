@@ -98,7 +98,9 @@ Deno.serve((req: Request) =>
       }
 
       try {
-        const body = (await req.json().catch(() => ({}))) as DealSecretValueBody;
+        const body = (await req
+          .json()
+          .catch(() => ({}))) as DealSecretValueBody;
         const action = body.action ?? "get";
 
         const secretId = body.secret_id != null ? Number(body.secret_id) : NaN;
@@ -114,7 +116,9 @@ Deno.serve((req: Request) =>
         await assertCanViewDeal(authHeader, Number(secret.deal_id));
 
         if (action === "audit") {
-          if (!hasMemberCapability(member, "deal_operations.credentials.view")) {
+          if (
+            !hasMemberCapability(member, "deal_operations.credentials.view")
+          ) {
             return createErrorResponse(403, "Permission denied");
           }
           const auditAction = body.audit_action;
@@ -141,7 +145,9 @@ Deno.serve((req: Request) =>
         }
 
         if (action === "get") {
-          if (!hasMemberCapability(member, "deal_operations.credentials.view")) {
+          if (
+            !hasMemberCapability(member, "deal_operations.credentials.view")
+          ) {
             return createErrorResponse(403, "Permission denied");
           }
           if (!secret.has_secret) {
@@ -172,12 +178,16 @@ Deno.serve((req: Request) =>
         }
 
         if (action === "set") {
-          if (!hasMemberCapability(member, "deal_operations.credentials.manage")) {
+          if (
+            !hasMemberCapability(member, "deal_operations.credentials.manage")
+          ) {
             return createErrorResponse(403, "Permission denied");
           }
           const cryptoKey = getPgcryptoKey();
           const value =
-            body.value != null && body.value.trim() !== "" ? body.value.trim() : null;
+            body.value != null && body.value.trim() !== ""
+              ? body.value.trim()
+              : null;
 
           const { error: setError } = await supabaseAdmin.rpc(
             "set_deal_secret_value",
@@ -203,10 +213,10 @@ Deno.serve((req: Request) =>
 
         return createErrorResponse(400, "Invalid action");
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Request failed";
+        const message =
+          error instanceof Error ? error.message : "Request failed";
         return createErrorResponse(400, message);
       }
     });
   }),
 );
-

@@ -12,10 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
-import type {
-  DealLaunchChecklistItem,
-  LbsDeal,
-} from "@/modules/types";
+import type { DealLaunchChecklistItem, LbsDeal } from "@/modules/types";
 import {
   generateLaunchChecklistFromTemplate,
   getLaunchChecklistCategoryLabel,
@@ -53,7 +50,9 @@ export const LaunchChecklistTab = ({ record }: { record: LbsDeal }) => {
       list.push(item);
       map.set(key, list);
     }
-    return [...map.entries()].sort(([left], [right]) => left.localeCompare(right));
+    return [...map.entries()].sort(([left], [right]) =>
+      left.localeCompare(right),
+    );
   }, [items]);
 
   const handleToggle = (item: DealLaunchChecklistItem, checked: boolean) => {
@@ -130,7 +129,9 @@ export const LaunchChecklistTab = ({ record }: { record: LbsDeal }) => {
   };
 
   if (isPending) {
-    return <div className="text-sm text-muted-foreground">Loading checklist…</div>;
+    return (
+      <div className="text-sm text-muted-foreground">Loading checklist…</div>
+    );
   }
 
   return (

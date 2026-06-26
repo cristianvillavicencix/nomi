@@ -3,7 +3,9 @@ import type { Company, Contact } from "@/components/atomic-crm/types";
 const normalizeWebsite = (raw: string) => {
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  const withProtocol = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+  const withProtocol = trimmed.startsWith("http")
+    ? trimmed
+    : `https://${trimmed}`;
   try {
     return new URL(withProtocol).toString();
   } catch {

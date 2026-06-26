@@ -2,9 +2,7 @@ import { Bell } from "lucide-react";
 import { Link } from "react-router";
 
 import { Button } from "@/components/ui/button";
-import {
-  getDesktopNotificationSupport,
-} from "@/lib/desktopNotifications";
+import { getDesktopNotificationSupport } from "@/lib/desktopNotifications";
 
 export const DesktopMessageAlertsSection = () => {
   const support = getDesktopNotificationSupport();

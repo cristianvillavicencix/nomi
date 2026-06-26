@@ -47,8 +47,9 @@ const resolveStaffChargeTarget = (
 
   const upfrontPercent = Number(invoice.upfront_percent ?? 100);
   const depositTarget =
-    Math.round(total * (Math.min(Math.max(upfrontPercent, 1), 100) / 100) * 100) /
-    100;
+    Math.round(
+      total * (Math.min(Math.max(upfrontPercent, 1), 100) / 100) * 100,
+    ) / 100;
   const depositPaid = paid >= depositTarget - 0.01;
 
   let chargeAmount = balance;
@@ -73,13 +74,17 @@ const resolveStaffChargeTarget = (
       installmentNumber = next.installment_number;
     }
   } else if (!depositPaid) {
-    chargeAmount = Math.min(Math.max(depositTarget - paid, 0), balance) || balance;
+    chargeAmount =
+      Math.min(Math.max(depositTarget - paid, 0), balance) || balance;
   }
 
   if (requestedAmount != null && Number.isFinite(Number(requestedAmount))) {
     const amount = Math.round(Number(requestedAmount) * 100) / 100;
     if (amount < 0.01) {
-      return { ok: false as const, message: "Payment amount must be at least $0.01" };
+      return {
+        ok: false as const,
+        message: "Payment amount must be at least $0.01",
+      };
     }
     if (amount > balance + 0.001) {
       return {
@@ -188,26 +193,28 @@ Deno.serve(
         const stripe = getStripe();
         const amountCents = amountToCents(target.chargeAmount);
         const today = new Date().toISOString().slice(0, 10);
-        const idempotencyKey =
-          `invoice-staff-${invoice.id}-${amountCents}-${today}-${Date.now()}`;
+        const idempotencyKey = `invoice-staff-${invoice.id}-${amountCents}-${today}-${Date.now()}`;
 
-        const paymentIntent = await createOffSessionInvoicePaymentIntent(stripe, {
-          amountCents,
-          currency: invoice.currency ?? "usd",
-          customerId,
-          paymentMethodId,
-          idempotencyKey,
-          metadata: {
-            type: "client_invoice",
-            org_id: String(invoice.org_id),
-            invoice_id: String(invoice.id),
-            remainder_installment_number: target.installmentNumber
-              ? String(target.installmentNumber)
-              : "0",
-            auto_charge: "0",
-            staff_charge: "1",
+        const paymentIntent = await createOffSessionInvoicePaymentIntent(
+          stripe,
+          {
+            amountCents,
+            currency: invoice.currency ?? "usd",
+            customerId,
+            paymentMethodId,
+            idempotencyKey,
+            metadata: {
+              type: "client_invoice",
+              org_id: String(invoice.org_id),
+              invoice_id: String(invoice.id),
+              remainder_installment_number: target.installmentNumber
+                ? String(target.installmentNumber)
+                : "0",
+              auto_charge: "0",
+              staff_charge: "1",
+            },
           },
-        });
+        );
 
         if (paymentIntent.status === "requires_action") {
           return createErrorResponse(

@@ -32,12 +32,7 @@ const DEFAULTS: WebsiteMonitorOrgSettings = {
   default_audit_score_drop_threshold: 10,
 };
 
-const clampInt = (
-  raw: unknown,
-  min: number,
-  max: number,
-  fallback: number,
-) => {
+const clampInt = (raw: unknown, min: number, max: number, fallback: number) => {
   const parsed = Number(raw);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(max, Math.max(min, Math.round(parsed)));
@@ -74,7 +69,8 @@ export const parseWebsiteMonitorSettings = (
       168,
       DEFAULTS.alert_cooldown_hours,
     ),
-    default_audit_schedule_enabled: value.default_audit_schedule_enabled === true,
+    default_audit_schedule_enabled:
+      value.default_audit_schedule_enabled === true,
     default_audit_interval_days: clampInt(
       value.default_audit_interval_days,
       1,

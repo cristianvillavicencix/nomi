@@ -69,10 +69,9 @@ Deno.serve((req: Request) =>
         return createErrorResponse(500, error.message);
       }
 
-      return new Response(
-        JSON.stringify({ ok: true, id: data.id }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ ok: true, id: data.id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     });
   }),
 );

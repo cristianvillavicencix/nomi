@@ -1,9 +1,5 @@
 import { useEffect } from "react";
-import {
-  useGetIdentity,
-  useListContext,
-  useListFilterContext,
-} from "ra-core";
+import { useGetIdentity, useListContext, useListFilterContext } from "ra-core";
 import { matchPath, useLocation } from "react-router";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { List } from "@/components/admin/list";
@@ -78,8 +74,11 @@ const DealLayout = () => {
   const matchEdit = matchPath("/deals/:id", location.pathname);
   const { view } = useDealsViewPreference();
   const { filterValues } = useListContext();
-  const { filterValues: listFilterValues, displayedFilters, setFilters } =
-    useListFilterContext();
+  const {
+    filterValues: listFilterValues,
+    displayedFilters,
+    setFilters,
+  } = useListFilterContext();
   const config = useConfigurationContext();
   const selectedPipelineId =
     (filterValues?.pipeline_id as string | undefined) ||

@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  required,
-  useGetOne,
-  type Identifier,
-} from "ra-core";
+import { required, useGetOne, type Identifier } from "ra-core";
 import { Mail, Phone } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
@@ -44,9 +40,7 @@ const toAutocompleteContact = (
   companyName: string,
   contact?: Partial<Contact> | null,
 ): Contact => {
-  const fullName = contact
-    ? getContactFullName(contact as Contact)
-    : "";
+  const fullName = contact ? getContactFullName(contact as Contact) : "";
   const parts = fullName.split(/\s+/).filter(Boolean);
   return {
     id: contactId,
@@ -67,7 +61,9 @@ export const LbsProjectClientFields = ({
   const isCreateVariant = variant === "create";
   const { setValue } = useFormContext<Deal & Record<string, unknown>>();
   const contactId = useWatch({ name: "contact_id" });
-  const selectedContactId = isValidRecordId(contactId) ? Number(contactId) : null;
+  const selectedContactId = isValidRecordId(contactId)
+    ? Number(contactId)
+    : null;
 
   const [optimisticContact, setOptimisticContact] = useState<Contact | null>(
     null,
@@ -75,14 +71,14 @@ export const LbsProjectClientFields = ({
   const skipGetOneForId = useRef<number | null>(null);
 
   const shouldFetchSelectedContact =
-    selectedContactId != null &&
-    skipGetOneForId.current !== selectedContactId;
+    selectedContactId != null && skipGetOneForId.current !== selectedContactId;
 
-  const { data: selectedContact, isError: selectedContactError } = useGetOne<Contact>(
-    "contacts",
-    { id: selectedContactId as number },
-    { enabled: shouldFetchSelectedContact, retry: false },
-  );
+  const { data: selectedContact, isError: selectedContactError } =
+    useGetOne<Contact>(
+      "contacts",
+      { id: selectedContactId as number },
+      { enabled: shouldFetchSelectedContact, retry: false },
+    );
 
   useEffect(() => {
     if (!seedContact || !isValidRecordId(seedContact.id)) return;

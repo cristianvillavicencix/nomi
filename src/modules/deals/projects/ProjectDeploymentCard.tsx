@@ -25,7 +25,8 @@ export const ProjectDeploymentCard = ({ record }: { record: LbsDeal }) => {
       },
       {
         onSuccess: () => refresh(),
-        onError: () => notify("Could not save project details", { type: "error" }),
+        onError: () =>
+          notify("Could not save project details", { type: "error" }),
       },
     );
   };

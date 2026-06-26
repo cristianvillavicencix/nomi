@@ -8,7 +8,8 @@ export const computeInvoiceDepositTarget = (
   upfrontPercent: number,
 ) =>
   Math.round(
-    total * (Math.min(Math.max(Number(upfrontPercent) || 100, 1), 100) / 100) *
+    total *
+      (Math.min(Math.max(Number(upfrontPercent) || 100, 1), 100) / 100) *
       100,
   ) / 100;
 
@@ -16,8 +17,7 @@ export const isInvoiceDepositPaid = (
   total: number,
   upfrontPercent: number,
   amountPaid: number,
-) =>
-  amountPaid >= computeInvoiceDepositTarget(total, upfrontPercent) - 0.01;
+) => amountPaid >= computeInvoiceDepositTarget(total, upfrontPercent) - 0.01;
 
 /** Scheduled remainder installments — never the upfront deposit row. */
 export const filterRemainderInstallmentRows = (
@@ -56,8 +56,9 @@ export const findNextDueInstallment = (
   );
   if (!nextPaymentNumber) return null;
   return (
-    upcomingInstallments.find((row) => row.paymentNumber === nextPaymentNumber) ??
-    null
+    upcomingInstallments.find(
+      (row) => row.paymentNumber === nextPaymentNumber,
+    ) ?? null
   );
 };
 
@@ -100,7 +101,10 @@ export const resolveEffectiveInstallmentSelection = (
 ) =>
   selectedInstallmentNumbers.length > 0
     ? selectedInstallmentNumbers
-    : resolveDefaultSelectedInstallmentNumbers(upcomingInstallments, depositPaid);
+    : resolveDefaultSelectedInstallmentNumbers(
+        upcomingInstallments,
+        depositPaid,
+      );
 
 export const isValidInvoicePaymentAmount = ({
   amount,

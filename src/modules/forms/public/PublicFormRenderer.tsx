@@ -43,7 +43,11 @@ import {
   recaptchaConfigured,
   useRecaptchaToken,
 } from "@/modules/forms/public/useRecaptcha";
-import type { FormFieldDef, FormSectionDef, PublicFormPayload } from "@/modules/forms/types";
+import type {
+  FormFieldDef,
+  FormSectionDef,
+  PublicFormPayload,
+} from "@/modules/forms/types";
 import { useFormEventRecorder } from "@/modules/forms/public/useFormEventRecorder";
 import {
   publicFormContentClassName,
@@ -185,8 +189,7 @@ const ProjectBriefPublicForm = ({
     return { ...merged, ...payload.prefill } as Record<string, unknown>;
   }, [payload.prefill]);
 
-  const [values, setValues] =
-    useState<Record<string, unknown>>(initialValues);
+  const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [honeypot, setHoneypot] = useState("");
   const [step, setStep] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -260,9 +263,12 @@ const ProjectBriefPublicForm = ({
     );
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      notify(Object.values(nextErrors)[0] ?? "Please complete the required fields", {
-        type: "warning",
-      });
+      notify(
+        Object.values(nextErrors)[0] ?? "Please complete the required fields",
+        {
+          type: "warning",
+        },
+      );
       return false;
     }
     return true;
@@ -346,9 +352,7 @@ const ProjectBriefPublicForm = ({
       <PreviewBanner isPreview={payload.is_preview} />
       <div>
         <h1 className="text-2xl font-semibold">
-          {payload.form.welcome_title ||
-            payload.form.name ||
-            "Project brief"}
+          {payload.form.welcome_title || payload.form.name || "Project brief"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {payload.form.welcome_message ||
@@ -396,7 +400,9 @@ const ProjectBriefPublicForm = ({
         {isContractorBrief && currentSection ? (
           <section className="space-y-4 rounded-lg border p-4">
             <div>
-              <h2 className="text-base font-semibold">{currentSection.title}</h2>
+              <h2 className="text-base font-semibold">
+                {currentSection.title}
+              </h2>
               {currentSection.description ? (
                 <p className="mt-1 text-sm text-muted-foreground">
                   {currentSection.description}
@@ -482,9 +488,8 @@ export const PublicFormRenderer = () => {
     preview?: boolean;
   } | null>(null);
   const [preflightComplete, setPreflightComplete] = useState(false);
-  const [projectLinkMode, setProjectLinkMode] = useState<ProjectLinkMode | null>(
-    null,
-  );
+  const [projectLinkMode, setProjectLinkMode] =
+    useState<ProjectLinkMode | null>(null);
   const [projectCode, setProjectCode] = useState("");
 
   const {
@@ -826,7 +831,8 @@ export const PublicFormRenderer = () => {
             <span>
               Step {Math.min(step + 1, wizardSteps.length || 1)} of{" "}
               {wizardSteps.length || 1}
-              {currentWizardStep?.kind === "section" && currentWizardStep.section.title
+              {currentWizardStep?.kind === "section" &&
+              currentWizardStep.section.title
                 ? `: ${currentWizardStep.section.title}`
                 : currentWizardStep?.kind === "dynamic_file_group"
                   ? `: ${currentWizardStep.groupKey}`
@@ -869,115 +875,117 @@ export const PublicFormRenderer = () => {
       ) : null}
 
       {!showPreflight ? (
-      <form
-        className="space-y-6"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (isWizard && step < wizardSteps.length - 1) {
-            if (!validateCurrentStep()) return;
-            setStep((current) => current + 1);
-            setFieldErrors({});
-            return;
-          }
-          if (!validateAllSections()) return;
-          mutate();
-        }}
-      >
-        {formPayload.form.honeypot_enabled ? (
-          <input
-            type="text"
-            name="company_website_confirm"
-            value={honeypot}
-            onChange={(event) => setHoneypot(event.target.value)}
-            className="hidden"
-            tabIndex={-1}
-            autoComplete="off"
-            aria-hidden
-          />
-        ) : null}
-
-        {isWizard && currentWizardStep?.kind === "section" && currentSection
-          ? renderFormSection({
-              section: currentSection,
-              answers,
-              fieldErrors,
-              formId: formPayload.form.id,
-              token: formPayload.token,
-              formulaAnswers,
-              onChange: setAnswer,
-            })
-          : null}
-
-        {isWizard && currentWizardStep?.kind === "dynamic_file_group" ? (
-          <section className="space-y-4 rounded-lg border p-4">
-            {currentWizardStep.section.title ? (
-              <h2 className="text-base font-semibold">
-                {currentWizardStep.section.title}
-              </h2>
-            ) : null}
-            {currentWizardStep.section.description ? (
-              <p className="text-sm text-muted-foreground">
-                {currentWizardStep.section.description}
-              </p>
-            ) : null}
-            <DynamicFileGroupsField
-              field={currentWizardStep.field}
-              groupKey={currentWizardStep.groupKey}
-              value={answers[currentWizardStep.field.key]}
-              token={formPayload.token}
-              onChange={(next) => setAnswer(currentWizardStep.field.key, next)}
-              onSkip={() => {
-                setStep((current) => current + 1);
-                setFieldErrors({});
-              }}
+        <form
+          className="space-y-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (isWizard && step < wizardSteps.length - 1) {
+              if (!validateCurrentStep()) return;
+              setStep((current) => current + 1);
+              setFieldErrors({});
+              return;
+            }
+            if (!validateAllSections()) return;
+            mutate();
+          }}
+        >
+          {formPayload.form.honeypot_enabled ? (
+            <input
+              type="text"
+              name="company_website_confirm"
+              value={honeypot}
+              onChange={(event) => setHoneypot(event.target.value)}
+              className="hidden"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden
             />
-          </section>
-        ) : null}
+          ) : null}
 
-        {isWizard && currentWizardStep?.kind === "summary" ? (
-          <WizardSummaryStep answers={answers} />
-        ) : null}
+          {isWizard && currentWizardStep?.kind === "section" && currentSection
+            ? renderFormSection({
+                section: currentSection,
+                answers,
+                fieldErrors,
+                formId: formPayload.form.id,
+                token: formPayload.token,
+                formulaAnswers,
+                onChange: setAnswer,
+              })
+            : null}
 
-        {!isWizard
-          ? sections.map((section) => (
-              <div key={section.id}>
-                {renderFormSection({
-                  section,
-                  answers,
-                  fieldErrors,
-                  formId: formPayload.form.id,
-                  token: formPayload.token,
-                  formulaAnswers,
-                  onChange: setAnswer,
-                })}
-              </div>
-            ))
-          : null}
+          {isWizard && currentWizardStep?.kind === "dynamic_file_group" ? (
+            <section className="space-y-4 rounded-lg border p-4">
+              {currentWizardStep.section.title ? (
+                <h2 className="text-base font-semibold">
+                  {currentWizardStep.section.title}
+                </h2>
+              ) : null}
+              {currentWizardStep.section.description ? (
+                <p className="text-sm text-muted-foreground">
+                  {currentWizardStep.section.description}
+                </p>
+              ) : null}
+              <DynamicFileGroupsField
+                field={currentWizardStep.field}
+                groupKey={currentWizardStep.groupKey}
+                value={answers[currentWizardStep.field.key]}
+                token={formPayload.token}
+                onChange={(next) =>
+                  setAnswer(currentWizardStep.field.key, next)
+                }
+                onSkip={() => {
+                  setStep((current) => current + 1);
+                  setFieldErrors({});
+                }}
+              />
+            </section>
+          ) : null}
 
-        <div className="flex justify-between gap-2">
-          {isWizard && step > 0 ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setStep((current) => current - 1);
-                setFieldErrors({});
-              }}
-            >
-              Previous
+          {isWizard && currentWizardStep?.kind === "summary" ? (
+            <WizardSummaryStep answers={answers} />
+          ) : null}
+
+          {!isWizard
+            ? sections.map((section) => (
+                <div key={section.id}>
+                  {renderFormSection({
+                    section,
+                    answers,
+                    fieldErrors,
+                    formId: formPayload.form.id,
+                    token: formPayload.token,
+                    formulaAnswers,
+                    onChange: setAnswer,
+                  })}
+                </div>
+              ))
+            : null}
+
+          <div className="flex justify-between gap-2">
+            {isWizard && step > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setStep((current) => current - 1);
+                  setFieldErrors({});
+                }}
+              >
+                Previous
+              </Button>
+            ) : (
+              <span />
+            )}
+            <Button type="submit" disabled={isPending}>
+              {isPending
+                ? "Submitting…"
+                : isWizard && step < wizardSteps.length - 1
+                  ? "Next"
+                  : "Submit"}
             </Button>
-          ) : (
-            <span />
-          )}
-          <Button type="submit" disabled={isPending}>
-            {isPending
-              ? "Submitting…"
-              : isWizard && step < wizardSteps.length - 1
-                ? "Next"
-                : "Submit"}
-          </Button>
-        </div>
-      </form>
+          </div>
+        </form>
       ) : null}
     </FormBrandingShell>
   );

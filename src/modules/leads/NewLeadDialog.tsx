@@ -12,10 +12,7 @@ import {
   FormGuardProvider,
   useGuardedDialogClose,
 } from "@/components/admin/form-guard";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { clearFormDraft } from "@/lib/formPersistence/formDraftStorage";
@@ -139,10 +136,9 @@ export const NewLeadDialog = ({ open, onOpenChange }: NewLeadDialogProps) => {
       await finishLeadCreate(leadValues);
     } catch (error) {
       console.error("[NewLeadDialog] create failed", error);
-      notify(
-        error instanceof Error ? error.message : "Failed to create lead",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Failed to create lead", {
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }

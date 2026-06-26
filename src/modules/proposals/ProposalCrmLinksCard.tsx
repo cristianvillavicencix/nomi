@@ -52,7 +52,9 @@ export const ProposalCrmLinksCard = () => {
             disabled={!companyIdEnabled}
           >
             <AutocompleteInput
-              optionText={(record: Contact) => proposalContactOptionText(record)}
+              optionText={(record: Contact) =>
+                proposalContactOptionText(record)
+              }
               inputText={(record: Contact) => proposalContactOptionText(record)}
               label="Contact"
               placeholder={

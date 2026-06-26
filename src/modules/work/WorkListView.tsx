@@ -186,7 +186,10 @@ export const WorkListView = ({
     [sections],
   );
 
-  const sectionLabel = (key: (typeof sections)[number]["key"], count: number) => {
+  const sectionLabel = (
+    key: (typeof sections)[number]["key"],
+    count: number,
+  ) => {
     if (key === "overdue") return `Overdue ${count}`;
     if (key === "today" && doneMode) return `Completed ${count}`;
     if (key === "today") {

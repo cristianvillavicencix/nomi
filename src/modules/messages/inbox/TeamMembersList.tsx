@@ -176,9 +176,7 @@ export const TeamMembersList = ({
                     online ? "bg-success" : "bg-muted-foreground/30",
                   )}
                 />
-                <span className="sr-only">
-                  {online ? "Online" : "Offline"}
-                </span>
+                <span className="sr-only">{online ? "Online" : "Offline"}</span>
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">

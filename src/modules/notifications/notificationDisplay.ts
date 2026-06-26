@@ -156,7 +156,6 @@ export const groupNotificationsForDisplay = (
 export const countUnreadInTab = (
   items: NotificationHistoryItem[],
   tab: NotificationFilterTab,
-) =>
-  filterNotificationsByTab(items, tab).filter((item) => !item.read).length;
+) => filterNotificationsByTab(items, tab).filter((item) => !item.read).length;
 
 export const DefaultNotificationIcon = Bell;

@@ -31,54 +31,56 @@ export const ProposalPreviewToolbar = ({
         {unsavedHint}
       </p>
     ) : null}
-  <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-    <Button variant="ghost" size="sm" asChild>
-      <Link to={`/proposals/${proposalId}/edit`}>
-        <ArrowLeft className="size-4" />
-        Back to builder
-      </Link>
-    </Button>
+    <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+      <Button variant="ghost" size="sm" asChild>
+        <Link to={`/proposals/${proposalId}/edit`}>
+          <ArrowLeft className="size-4" />
+          Back to builder
+        </Link>
+      </Button>
 
-    <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-      <span className="font-medium text-foreground">Deck:</span> {deckLabel}
-      <span className="hidden sm:inline">
-        {" "}
-        — from your builder package
-      </span>
-    </p>
+      <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">Deck:</span> {deckLabel}
+        <span className="hidden sm:inline"> — from your builder package</span>
+      </p>
 
-    {languageToggle}
+      {languageToggle}
 
-    {variablesHelp}
+      {variablesHelp}
 
-    <Button type="button" variant="outline" size="sm" asChild>
-      <Link
-        to={`/proposals/${proposalId}/client-preview`}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Button type="button" variant="outline" size="sm" asChild>
+        <Link
+          to={`/proposals/${proposalId}/client-preview`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Eye className="size-4" />
+          Preview as client
+        </Link>
+      </Button>
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onSaveTemplate}
       >
-        <Eye className="size-4" />
-        Preview as client
-      </Link>
-    </Button>
+        <FileText className="size-4" />
+        Save as template
+      </Button>
 
-    <Button type="button" variant="outline" size="sm" onClick={onSaveTemplate}>
-      <FileText className="size-4" />
-      Save as template
-    </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={isSaving}
+        onClick={onSaveContent}
+      >
+        <Save className="size-4" />
+        Save
+      </Button>
 
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={isSaving}
-      onClick={onSaveContent}
-    >
-      <Save className="size-4" />
-      Save
-    </Button>
-
-    {sendActions}
-  </div>
+      {sendActions}
+    </div>
   </div>
 );

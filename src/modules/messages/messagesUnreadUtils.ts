@@ -42,9 +42,7 @@ export const computeUnreadConversationCounts = (
   let totalUnread = 0;
 
   for (const conversation of conversations) {
-    if (
-      !isConversationUnread(conversation, participations, currentMemberId)
-    ) {
+    if (!isConversationUnread(conversation, participations, currentMemberId)) {
       continue;
     }
     unreadByConversationId[String(conversation.id)] = true;

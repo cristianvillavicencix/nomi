@@ -48,14 +48,21 @@ export const formatPublicInvoiceLineSubtext = (
 ) => {
   const parts: string[] = [];
   const address = delivery?.property_address?.trim();
-  if (address && lineDescription.toLowerCase().includes(address.toLowerCase())) {
+  if (
+    address &&
+    lineDescription.toLowerCase().includes(address.toLowerCase())
+  ) {
     parts.push(address);
   }
 
-  const supplementItem = delivery?.items?.find((item) => item.kind === "supplement");
+  const supplementItem = delivery?.items?.find(
+    (item) => item.kind === "supplement",
+  );
   if (supplementItem?.line_count != null && supplementItem.line_count > 0) {
     const lineLabel =
-      supplementItem.line_count === 1 ? "1 line" : `${supplementItem.line_count} lines`;
+      supplementItem.line_count === 1
+        ? "1 line"
+        : `${supplementItem.line_count} lines`;
     parts.push(lineLabel);
   }
 

@@ -69,9 +69,12 @@ export const attachProposalShowcaseDefaults = (
   content: ProposalDocumentContent,
 ): ProposalDocumentContent => ({
   ...content,
-  portfolio_items:
-    content.portfolio_items?.length ? content.portfolio_items : DEFAULT_PROPOSAL_PORTFOLIO,
-  team_members: content.team_members?.length ? content.team_members : DEFAULT_PROPOSAL_TEAM,
+  portfolio_items: content.portfolio_items?.length
+    ? content.portfolio_items
+    : DEFAULT_PROPOSAL_PORTFOLIO,
+  team_members: content.team_members?.length
+    ? content.team_members
+    : DEFAULT_PROPOSAL_TEAM,
   client_logos: content.client_logos ?? [],
   about_stats: content.about_stats ?? DEFAULT_ABOUT_STATS,
   timeline_bars: content.timeline_bars?.length

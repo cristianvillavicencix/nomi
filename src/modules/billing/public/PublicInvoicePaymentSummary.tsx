@@ -100,11 +100,16 @@ export const PublicInvoicePaymentSummary = ({
             formatPublicInvoiceLineSubtext(line.title, deliveryInfo);
 
           return (
-            <div key={line.key} className="flex items-start justify-between gap-3">
+            <div
+              key={line.key}
+              className="flex items-start justify-between gap-3"
+            >
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">{title}</p>
                 {subtext ? (
-                  <p className="mt-0.5 text-sm text-muted-foreground">{subtext}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {subtext}
+                  </p>
                 ) : null}
               </div>
               <p className="shrink-0 text-sm font-medium tabular-nums text-foreground">
@@ -132,7 +137,8 @@ export const PublicInvoicePaymentSummary = ({
 
         {feeAmount > 0 ? (
           <p className="text-xs text-muted-foreground">
-            Processing fee includes card processing ({STRIPE_TRANSFER_FEE_LABEL}).
+            Processing fee includes card processing ({STRIPE_TRANSFER_FEE_LABEL}
+            ).
           </p>
         ) : null}
       </section>
@@ -140,7 +146,10 @@ export const PublicInvoicePaymentSummary = ({
       {deliveryMessage ? (
         <section className="px-4 py-4 sm:px-6">
           <div className="flex gap-3 rounded-xl border border-info/30 bg-info/10 px-4 py-3 text-foreground">
-            <Package2 className="mt-0.5 size-5 shrink-0 text-info" aria-hidden />
+            <Package2
+              className="mt-0.5 size-5 shrink-0 text-info"
+              aria-hidden
+            />
             <div>
               <p className="text-sm font-semibold">Your files are ready</p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">

@@ -127,7 +127,12 @@ export const buildTicketMergeRows = (
     right: right.requesterEmail,
   },
   { key: "phone", label: "Phone", left: left.phone, right: right.phone },
-  { key: "subject", label: "Subject", left: left.subject, right: right.subject },
+  {
+    key: "subject",
+    label: "Subject",
+    left: left.subject,
+    right: right.subject,
+  },
   { key: "status", label: "Status", left: left.status, right: right.status },
   {
     key: "priority",

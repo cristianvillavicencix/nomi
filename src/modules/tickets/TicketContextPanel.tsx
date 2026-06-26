@@ -49,7 +49,12 @@ const TicketContextTabs = ({
   onCollapse?: () => void;
   className?: string;
 }) => (
-  <div className={cn("flex shrink-0 items-center gap-1 border-b px-2 py-2", className)}>
+  <div
+    className={cn(
+      "flex shrink-0 items-center gap-1 border-b px-2 py-2",
+      className,
+    )}
+  >
     <div className="flex min-w-0 flex-1 gap-1">
       {tabs.map((tab) => {
         const Icon = tab.icon;
@@ -212,7 +217,9 @@ export const TicketContextPanel = ({
   };
 
   if (collapsed) {
-    return <TicketContextCollapsedRail tabs={contextTabs} onOpenTab={openTab} />;
+    return (
+      <TicketContextCollapsedRail tabs={contextTabs} onOpenTab={openTab} />
+    );
   }
 
   return (
@@ -269,12 +276,20 @@ export const TicketContextSheet = ({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5"
+        >
           <Info className="size-3.5" />
           Context
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+      >
         <SheetHeader className="border-b px-4 py-3 text-left">
           <SheetTitle>Ticket context</SheetTitle>
         </SheetHeader>

@@ -68,7 +68,9 @@ export async function issueClientInvoiceFromInstallment(
 
   const anchorDate =
     row.due_date ||
-    (proposal?.valid_until ? String(proposal.valid_until) : new Date().toISOString().slice(0, 10));
+    (proposal?.valid_until
+      ? String(proposal.valid_until)
+      : new Date().toISOString().slice(0, 10));
   const onlinePayment = parseProposalOnlinePaymentSetup({
     paymentScheduleConfig: proposal?.payment_schedule_config,
     depositPercent: Number(proposal?.deposit_percent ?? 50),
@@ -107,7 +109,7 @@ export async function issueClientInvoiceFromInstallment(
       currency: proposal?.currency ?? "USD",
       description: row.label,
       status: invoiceStatus,
-      paid_at: row.status === "paid" ? row.paid_at ?? now : null,
+      paid_at: row.status === "paid" ? (row.paid_at ?? now) : null,
       stripe_payment_intent_id: row.stripe_payment_intent_id ?? null,
       save_card_for_future_charges: paymentFields.save_card_for_future_charges,
       upfront_percent: paymentFields.upfront_percent,
@@ -228,8 +230,7 @@ export async function issueClientInvoiceFromProposal(
     ? `#${proposal.proposal_number} — ${proposal.title}`
     : proposal.title;
   const description =
-    input.description?.trim() ||
-    `Invoice for ${proposalLabel}`;
+    input.description?.trim() || `Invoice for ${proposalLabel}`;
 
   const { data: invoiceNumber, error: numberError } = await supabase.rpc(
     "next_client_invoice_number",

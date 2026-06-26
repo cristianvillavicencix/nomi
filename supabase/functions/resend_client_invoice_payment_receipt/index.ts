@@ -48,9 +48,7 @@ Deno.serve(
 
         const { data: invoice } = await supabaseAdmin
           .from("client_invoices")
-          .select(
-            "id, org_id, amount_paid, stripe_payment_intent_id, status",
-          )
+          .select("id, org_id, amount_paid, stripe_payment_intent_id, status")
           .eq("id", invoiceId)
           .eq("org_id", member.org_id)
           .maybeSingle();
@@ -83,7 +81,8 @@ Deno.serve(
         if (!Number.isFinite(chargedAmount) || chargedAmount <= 0) {
           if (!isStripeMockMode()) {
             const stripe = getStripe();
-            const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+            const intent =
+              await stripe.paymentIntents.retrieve(paymentIntentId);
             chargedAmount = Math.round(intent.amount ?? 0) / 100;
           } else {
             chargedAmount = paid;
@@ -116,10 +115,10 @@ Deno.serve(
             receipt.reason === "no_email"
               ? "No recipient email is on file for this invoice"
               : receipt.reason === "email_not_configured"
-              ? "Email is not configured for your organization"
-              : receipt.reason === "email_skipped"
-              ? "Email delivery is disabled on the server"
-              : receipt.error ?? "Could not send payment receipt";
+                ? "Email is not configured for your organization"
+                : receipt.reason === "email_skipped"
+                  ? "Email delivery is disabled on the server"
+                  : (receipt.error ?? "Could not send payment receipt");
 
           return createErrorResponse(400, message);
         }

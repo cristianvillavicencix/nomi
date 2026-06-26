@@ -167,7 +167,9 @@ export const ContractorBriefInternalSection = ({
     });
   };
 
-  const renderDefaultField = (field: WebsiteBriefSectionDef["fields"][number]) => {
+  const renderDefaultField = (
+    field: WebsiteBriefSectionDef["fields"][number],
+  ) => {
     if (!evaluateCondition(field.visibleWhen, briefAnswers)) return null;
     if (field.fieldType === "dynamic_list") {
       if (field.key === "social_links") {
@@ -295,7 +297,11 @@ export const ContractorBriefInternalSection = ({
   }
 
   if (section.id === "visual_content") {
-    const skip = new Set(["logo_file", "has_project_photos", "has_team_photos"]);
+    const skip = new Set([
+      "logo_file",
+      "has_project_photos",
+      "has_team_photos",
+    ]);
     return (
       <div className={gridClass}>
         <BriefLogoUpload
@@ -321,7 +327,9 @@ export const ContractorBriefInternalSection = ({
         />
         <YesNoToggleField
           label="Do you have team / truck / uniform photos?"
-          value={String(briefAnswers.has_team_photos ?? "") === "Yes" ? "Yes" : "No"}
+          value={
+            String(briefAnswers.has_team_photos ?? "") === "Yes" ? "Yes" : "No"
+          }
           onChange={(next) => setField("has_team_photos", next)}
         />
         {section.fields
@@ -343,7 +351,9 @@ export const ContractorBriefInternalSection = ({
         <YesNoToggleField
           label="Do you have specific brand colors?"
           value={
-            String(briefAnswers.brand_colors_option ?? "") === "Yes" ? "Yes" : "No"
+            String(briefAnswers.brand_colors_option ?? "") === "Yes"
+              ? "Yes"
+              : "No"
           }
           onChange={(next) =>
             setField(

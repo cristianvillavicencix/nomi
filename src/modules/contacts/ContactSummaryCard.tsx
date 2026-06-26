@@ -67,10 +67,7 @@ const ProfileFadeText = ({
 
   return (
     <div className="relative min-w-0">
-      <Tag
-        ref={contentRef as never}
-        className={cn("truncate pr-6", className)}
-      >
+      <Tag ref={contentRef as never} className={cn("truncate pr-6", className)}>
         {children}
       </Tag>
       {isOverflowing ? (
@@ -155,17 +152,17 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
 
   return (
     <Card
-      className={cn(
-        "gap-0 py-0",
-        hideCompanyLink && "border-0 shadow-none",
-      )}
+      className={cn("gap-0 py-0", hideCompanyLink && "border-0 shadow-none")}
     >
       <CardContent className={hideCompanyLink ? "px-3 py-3" : "px-4 py-4"}>
         <div className="flex flex-col items-center text-center">
           <Avatar record={record} width={40} height={40} />
 
           <div className="relative mt-3 w-full min-w-0 px-1">
-            <ProfileFadeText as="h1" className="text-lg font-semibold leading-tight">
+            <ProfileFadeText
+              as="h1"
+              className="text-lg font-semibold leading-tight"
+            >
               {fullName}
             </ProfileFadeText>
           </div>

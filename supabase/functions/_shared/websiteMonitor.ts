@@ -162,7 +162,8 @@ const detectRegistrarFromNameservers = (
   }
   if (joined.includes("google")) return "Google Domains";
   if (joined.includes("namecheap")) return "Namecheap";
-  if (joined.includes("awsdns") || joined.includes("amazon")) return "AWS Route53";
+  if (joined.includes("awsdns") || joined.includes("amazon"))
+    return "AWS Route53";
   if (joined.includes("wix")) return "Wix";
   if (joined.includes("squarespace")) return "Squarespace";
   if (joined.includes("hostgator")) return "HostGator";
@@ -227,8 +228,9 @@ const fetchDnsMetadata = async (
     query(hostname, "MX"),
   ]);
 
-  const ip = aRecord?.Answer?.find((entry: { type?: number }) => entry.type === 1)
-    ?.data as string | undefined;
+  const ip = aRecord?.Answer?.find(
+    (entry: { type?: number }) => entry.type === 1,
+  )?.data as string | undefined;
 
   const nameservers =
     nsRecord?.Answer?.filter((entry: { type?: number }) => entry.type === 2)
@@ -263,7 +265,9 @@ const fetchSslExpiry = async (
       .map((row) => row.not_after)
       .filter(Boolean)
       .map((value) => new Date(String(value)))
-      .filter((date) => !Number.isNaN(date.getTime()) && date.getTime() > Date.now())
+      .filter(
+        (date) => !Number.isNaN(date.getTime()) && date.getTime() > Date.now(),
+      )
       .sort((a, b) => a.getTime() - b.getTime());
 
     if (!future.length) return { expiresAt: null, daysRemaining: null };
@@ -366,8 +370,7 @@ const fetchPageOnce = async (
       errorMessage = `HTTP ${httpStatus}`;
     }
   } catch (error) {
-    errorMessage =
-      error instanceof Error ? error.message : "Request failed";
+    errorMessage = error instanceof Error ? error.message : "Request failed";
   } finally {
     clearTimeout(timeout);
   }
@@ -425,16 +428,18 @@ const fetchPage = async (
     }
   }
 
-  return lastResult ?? {
-    httpStatus: null,
-    errorMessage: "Request failed",
-    html: "",
-    headers: new Headers(),
-    finalUrl: null,
-    responseMs: 0,
-    status: "down",
-    requestedUrl: targetUrl,
-  };
+  return (
+    lastResult ?? {
+      httpStatus: null,
+      errorMessage: "Request failed",
+      html: "",
+      headers: new Headers(),
+      finalUrl: null,
+      responseMs: 0,
+      status: "down",
+      requestedUrl: targetUrl,
+    }
+  );
 };
 
 const buildTargetUrl = (baseUrl: string, path: string) => {
@@ -452,7 +457,10 @@ export const runWebsiteMonitorCheck = async (
   options?: { includeDeepMetadata?: boolean },
 ): Promise<WebsiteCheckResult> => {
   const includeDeepMetadata = options?.includeDeepMetadata ?? true;
-  const paths = (site.check_paths?.length ? site.check_paths : ["/"]).slice(0, 6);
+  const paths = (site.check_paths?.length ? site.check_paths : ["/"]).slice(
+    0,
+    6,
+  );
 
   const pageResults: PageCheckResult[] = [];
   let primaryHtml = "";
@@ -524,7 +532,7 @@ export const runWebsiteMonitorCheck = async (
       ...metadata,
       dns: dns ?? undefined,
       httpsRedirect: site.url.startsWith("http://")
-        ? primaryFinalUrl?.startsWith("https://") ?? null
+        ? (primaryFinalUrl?.startsWith("https://") ?? null)
         : null,
     };
     sslExpiresAt = ssl.expiresAt;

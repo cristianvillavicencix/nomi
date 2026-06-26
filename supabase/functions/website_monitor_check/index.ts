@@ -69,7 +69,12 @@ Deno.serve((req: Request) =>
         });
 
         return new Response(
-          JSON.stringify({ ok: true, ad_hoc: true, url: normalized, ...result }),
+          JSON.stringify({
+            ok: true,
+            ad_hoc: true,
+            url: normalized,
+            ...result,
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
@@ -90,12 +95,9 @@ Deno.serve((req: Request) =>
       const result = await runWebsiteMonitorCheck(site, {
         includeDeepMetadata: payload.include_deep_metadata ?? true,
       });
-      await persistWebsiteCheckResult(
-        supabaseAdmin,
-        site,
-        result,
-        { appBaseUrl: appBaseUrl ?? payload.app_base_url ?? null },
-      );
+      await persistWebsiteCheckResult(supabaseAdmin, site, result, {
+        appBaseUrl: appBaseUrl ?? payload.app_base_url ?? null,
+      });
 
       return new Response(JSON.stringify({ ok: true, ...result }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

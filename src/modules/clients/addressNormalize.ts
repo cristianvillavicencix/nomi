@@ -41,7 +41,10 @@ export const parseUSComposedAddress = (line: string | null | undefined) => {
   const trimmed = firstAddressLine(line);
   if (!trimmed) return null;
 
-  const parts = trimmed.split(",").map((p) => p.trim()).filter(Boolean);
+  const parts = trimmed
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
   if (parts.length < 3) return null;
 
   let country: string | null = null;
@@ -117,7 +120,9 @@ export const normalizeCompanyAddressProposal = (
 ): AddressNormalizeProposal | null => {
   if (columnsLostSinceBackup(live, backup) && backup) {
     const parsedFromBackup = parseUSComposedAddress(backup.address);
-    const parsedFromLive = parseUSComposedAddress(firstAddressLine(live.address));
+    const parsedFromLive = parseUSComposedAddress(
+      firstAddressLine(live.address),
+    );
     return {
       method: "restore-from-backup",
       street:
@@ -221,12 +226,13 @@ export const verifyIdempotentSecondPass = (
   const firstPass = normalizeAddressPipeline(rows, backupById);
   const afterFirst = rows.map((row) => {
     const hit = firstPass.find((entry) => entry.row.id === row.id);
-    return hit
-      ? applyAddressNormalizeProposal(row, hit.proposal)
-      : row;
+    return hit ? applyAddressNormalizeProposal(row, hit.proposal) : row;
   });
   const secondPass = normalizeAddressPipeline(afterFirst, backupById);
-  return { firstPassCount: firstPass.length, secondPassCount: secondPass.length };
+  return {
+    firstPassCount: firstPass.length,
+    secondPassCount: secondPass.length,
+  };
 };
 
 export { countCityOccurrences, stripEmbeddedLocationSuffix };

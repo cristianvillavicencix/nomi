@@ -199,10 +199,7 @@ export const sendGuestBookingConfirmationSms = async (
     return { sent: false, reason: "sms_not_configured" };
   }
 
-  const hostName = await resolveHostName(
-    supabase,
-    row.organization_member_id,
-  );
+  const hostName = await resolveHostName(supabase, row.organization_member_id);
   const whenLabel = formatFollowUpWhenLabel(row.event_date, row.event_time);
   const body = buildGuestConfirmationBody({
     guestName: row.guest_name,
@@ -278,10 +275,7 @@ export const sendGuestBookingReminderSms = async (
     return { sent: false, reason: "sms_not_configured" };
   }
 
-  const hostName = await resolveHostName(
-    supabase,
-    row.organization_member_id,
-  );
+  const hostName = await resolveHostName(supabase, row.organization_member_id);
   const whenLabel = formatFollowUpWhenLabel(row.event_date, row.event_time);
   const body = buildGuestReminderBody({
     serviceName: row.service_name,

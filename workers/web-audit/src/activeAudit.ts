@@ -2,7 +2,8 @@ import fs from "node:fs";
 import type { WebsiteAuditWorkerJob } from "./types.js";
 
 const ACTIVE_AUDIT_PATH =
-  process.env.WEB_AUDIT_ACTIVE_FILE?.trim() || "/tmp/nomi-active-web-audit.json";
+  process.env.WEB_AUDIT_ACTIVE_FILE?.trim() ||
+  "/tmp/nomi-active-web-audit.json";
 
 export const markActiveAudit = (job: WebsiteAuditWorkerJob) => {
   fs.writeFileSync(ACTIVE_AUDIT_PATH, JSON.stringify(job), "utf8");

@@ -1,5 +1,12 @@
-import { newInvoiceLineKey, type InvoiceLineDraft } from "@/modules/billing/invoiceLineUtils";
-import type { ClientInvoice, ClientInvoiceLineItem, TicketDeliverable } from "@/modules/types";
+import {
+  newInvoiceLineKey,
+  type InvoiceLineDraft,
+} from "@/modules/billing/invoiceLineUtils";
+import type {
+  ClientInvoice,
+  ClientInvoiceLineItem,
+  TicketDeliverable,
+} from "@/modules/types";
 import type { SupplementPricingBreakdown } from "@/modules/tickets/supplementPricing";
 import { formatSupplementMoney } from "@/modules/tickets/supplementPricing";
 import {
@@ -63,7 +70,9 @@ const isTransferFeeLineItem = (description?: string | null) =>
   /^transfer fee$/i.test(description?.trim() ?? "");
 
 /** Ticket invoices carry the processing fee in fee_amount only — not as a table row. */
-export const filterTicketInvoiceLineItems = <T extends { description?: string | null }>(
+export const filterTicketInvoiceLineItems = <
+  T extends { description?: string | null },
+>(
   items: T[],
 ): T[] => items.filter((line) => !isTransferFeeLineItem(line.description));
 

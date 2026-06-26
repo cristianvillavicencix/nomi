@@ -54,7 +54,12 @@ export const DELIVERABLE_BILLING_OPTIONS: {
   packageId?: number | string;
 }[] = [
   { kind: "supplement", label: "Supplement", needsLineCount: true },
-  { kind: "roof", label: "Roof measurements", needsLineCount: false, flatPrice: 25 },
+  {
+    kind: "roof",
+    label: "Roof measurements",
+    needsLineCount: false,
+    flatPrice: 25,
+  },
   {
     kind: "siding",
     label: "Siding measurements",
@@ -72,8 +77,7 @@ export const DELIVERABLE_BILLING_OPTIONS: {
 
 export const buildTicketBillingOptions = (packages: TicketCatalogPackage[]) => {
   const catalogOptions = listTicketBillingPackages(packages).map((pkg) => ({
-    kind: (pkg.ticket_billing_slug ??
-      String(pkg.id)) as DeliverableBillingKind,
+    kind: (pkg.ticket_billing_slug ?? String(pkg.id)) as DeliverableBillingKind,
     label: pkg.name,
     needsLineCount: pkg.ticket_pricing_mode === "supplement_lines",
     flatPrice:
@@ -176,7 +180,11 @@ export const buildDeliverablePricingLine = (
   if (kind === "supplement") {
     const total = calculateSupplementTotalForLineCount(lineCount ?? 0);
     return {
-      description: buildDeliverableLineDescription(kind, propertyAddress, lineCount),
+      description: buildDeliverableLineDescription(
+        kind,
+        propertyAddress,
+        lineCount,
+      ),
       quantity: 1,
       unit: "ea",
       unitPrice: total,
@@ -187,7 +195,11 @@ export const buildDeliverablePricingLine = (
   const unitPrice = flatPriceForKind(kind);
 
   return {
-    description: buildDeliverableLineDescription(kind, propertyAddress, lineCount),
+    description: buildDeliverableLineDescription(
+      kind,
+      propertyAddress,
+      lineCount,
+    ),
     quantity: 1,
     unit: "ea",
     unitPrice,
@@ -195,9 +207,15 @@ export const buildDeliverablePricingLine = (
   };
 };
 
-const finalizePricing = (lines: SupplementPricingLine[]): SupplementPricingBreakdown => {
-  const subtotal = roundMoney(lines.reduce((sum, line) => sum + line.lineTotal, 0));
-  const total = roundMoney((subtotal + STRIPE_FIXED_FEE) / (1 - STRIPE_PERCENT_FEE));
+const finalizePricing = (
+  lines: SupplementPricingLine[],
+): SupplementPricingBreakdown => {
+  const subtotal = roundMoney(
+    lines.reduce((sum, line) => sum + line.lineTotal, 0),
+  );
+  const total = roundMoney(
+    (subtotal + STRIPE_FIXED_FEE) / (1 - STRIPE_PERCENT_FEE),
+  );
   const transferFee = roundMoney(total - subtotal);
   return { lines, subtotal, transferFee, total };
 };
@@ -249,7 +267,9 @@ export const calculatePricingFromTicketLegacy = (
   return finalizePricing(lines);
 };
 
-export const allDeliverablesHaveBilling = (deliverables: DeliverableBillingInput[]) =>
+export const allDeliverablesHaveBilling = (
+  deliverables: DeliverableBillingInput[],
+) =>
   deliverables.length > 0 &&
   deliverables.every(
     (item) => Boolean(item.billing_kind) || Boolean(item.service_package_id),
@@ -288,7 +308,9 @@ export const calculateTicketPricing = (
 };
 
 export type CombinedTicketPricingInput = {
-  ticket: { id: number | string } & Parameters<typeof calculateTicketPricing>[1];
+  ticket: { id: number | string } & Parameters<
+    typeof calculateTicketPricing
+  >[1];
   deliverables: DeliverableBillingInput[];
   propertyAddress: string;
 };
@@ -355,7 +377,9 @@ export const deliverableBillingSummary = (
 
   const pkg = resolveTicketCatalogPackage(deliverable, catalogPackages);
   const line = buildDeliverablePricingLine(
-    (deliverable.billing_kind ?? pkg?.ticket_billing_slug ?? "") as DeliverableBillingKind,
+    (deliverable.billing_kind ??
+      pkg?.ticket_billing_slug ??
+      "") as DeliverableBillingKind,
     propertyAddress,
     deliverable.billing_line_count,
     catalogPackages,

@@ -63,9 +63,7 @@ export const BriefSocialLinksInput = ({
               </div>
               <Input
                 value={url}
-                placeholder={
-                  field.placeholder ?? "instagram.com/yourcompany"
-                }
+                placeholder={field.placeholder ?? "instagram.com/yourcompany"}
                 className="min-w-0 flex-1"
                 onChange={(event) => updateUrl(index, event.target.value)}
               />

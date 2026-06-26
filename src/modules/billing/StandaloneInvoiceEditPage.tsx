@@ -105,10 +105,7 @@ export const StandaloneInvoiceEditPage = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const {
-    title,
-    companyLegalName,
-  } = useConfigurationContext();
+  const { title, companyLegalName } = useConfigurationContext();
 
   const organizationName = useMemo(
     () => resolveInvoiceOrganizationName({ title, companyLegalName }),
@@ -129,14 +126,15 @@ export const StandaloneInvoiceEditPage = ({
     useState<InvoicePaymentCollectionMode>("full");
   const [depositPercent, setDepositPercent] = useState(50);
   const [remainderSchedule, setRemainderSchedule] =
-    useState<InvoiceRemainderScheduleConfig>(defaultInvoiceRemainderSchedule(""));
+    useState<InvoiceRemainderScheduleConfig>(
+      defaultInvoiceRemainderSchedule(""),
+    );
   const [termsAndConditions, setTermsAndConditions] = useState("");
   const [salesPersonId, setSalesPersonId] = useState<number | null>(null);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [lines, setLines] = useState<InvoiceLineDraft[]>([]);
-  const [pendingAction, setPendingAction] = useState<InvoiceCreateAction | null>(
-    null,
-  );
+  const [pendingAction, setPendingAction] =
+    useState<InvoiceCreateAction | null>(null);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
@@ -152,7 +150,11 @@ export const StandaloneInvoiceEditPage = ({
   const [pendingResend, setPendingResend] = useState(false);
   const [sendChannel, setSendChannel] = useState<InvoiceSendChannel>("both");
 
-  const { data: invoice, isPending, error } = useGetOne<ClientInvoice>(
+  const {
+    data: invoice,
+    isPending,
+    error,
+  } = useGetOne<ClientInvoice>(
     "client_invoices",
     { id },
     { enabled: Boolean(id) },
@@ -181,7 +183,8 @@ export const StandaloneInvoiceEditPage = ({
     { enabled: Boolean(invoice?.contact_id) },
   );
 
-  const billToCompanyId = billTo?.companyId ?? billTo?.contact?.company_id ?? null;
+  const billToCompanyId =
+    billTo?.companyId ?? billTo?.contact?.company_id ?? null;
   const { data: billToCompany } = useGetOne<Company>(
     "companies",
     { id: billToCompanyId ?? "" },
@@ -660,7 +663,9 @@ export const StandaloneInvoiceEditPage = ({
   }
 
   if (!canViewClientInvoiceDetail(invoice) && !embedded) {
-    return <Navigate to={`/billing?invoice=${encodeURIComponent(id)}`} replace />;
+    return (
+      <Navigate to={`/billing?invoice=${encodeURIComponent(id)}`} replace />
+    );
   }
 
   const statusRibbon =
@@ -740,7 +745,9 @@ export const StandaloneInvoiceEditPage = ({
           <div className="flex flex-col gap-3">{headerInner}</div>
         ) : (
           <PageActions>
-            <div className="flex w-full min-w-0 flex-col gap-3">{headerInner}</div>
+            <div className="flex w-full min-w-0 flex-col gap-3">
+              {headerInner}
+            </div>
           </PageActions>
         )}
       </div>
@@ -794,42 +801,42 @@ export const StandaloneInvoiceEditPage = ({
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
             {paymentsReceivedPanel}
             <InlineInvoiceEditor
-          organizationName={organizationName}
-          organizationWebsite={companyWebsite}
-          organizationAddress={organizationAddress}
-          billTo={billTo}
-          onBillToChange={setBillTo}
-          issueDate={issueDate}
-          onIssueDateChange={setIssueDate}
-          terms={terms}
-          onTermsChange={setTerms}
-          dueDate={dueDate}
-          onDueDateChange={setDueDate}
-          salesPersonId={salesPersonId}
-          onSalesPersonChange={setSalesPersonId}
-          discountPercent={discountPercent}
-          onDiscountPercentChange={setDiscountPercent}
-          lines={lines}
-          onLinesChange={setLines}
-          saveCard={saveCard}
-          onSaveCardChange={setSaveCard}
-          paymentMode={paymentMode}
-          onPaymentModeChange={setPaymentMode}
-          depositPercent={depositPercent}
-          onDepositPercentChange={setDepositPercent}
-          remainderSchedule={remainderSchedule}
-          onRemainderScheduleChange={setRemainderSchedule}
-          termsAndConditions={termsAndConditions}
-          onTermsAndConditionsChange={setTermsAndConditions}
-          company={activeCompany}
-          contact={activeContact}
-          invoiceNumber={invoice.invoice_number}
-          amountPaid={Number(invoice.amount_paid) || 0}
-          documentRibbon={statusRibbon}
-          paymentMethodBrand={invoice.payment_method_brand}
-          paymentMethodLast4={invoice.payment_method_last4}
-          autoChargeRemainder={Boolean(invoice.auto_charge_remainder)}
-        />
+              organizationName={organizationName}
+              organizationWebsite={companyWebsite}
+              organizationAddress={organizationAddress}
+              billTo={billTo}
+              onBillToChange={setBillTo}
+              issueDate={issueDate}
+              onIssueDateChange={setIssueDate}
+              terms={terms}
+              onTermsChange={setTerms}
+              dueDate={dueDate}
+              onDueDateChange={setDueDate}
+              salesPersonId={salesPersonId}
+              onSalesPersonChange={setSalesPersonId}
+              discountPercent={discountPercent}
+              onDiscountPercentChange={setDiscountPercent}
+              lines={lines}
+              onLinesChange={setLines}
+              saveCard={saveCard}
+              onSaveCardChange={setSaveCard}
+              paymentMode={paymentMode}
+              onPaymentModeChange={setPaymentMode}
+              depositPercent={depositPercent}
+              onDepositPercentChange={setDepositPercent}
+              remainderSchedule={remainderSchedule}
+              onRemainderScheduleChange={setRemainderSchedule}
+              termsAndConditions={termsAndConditions}
+              onTermsAndConditionsChange={setTermsAndConditions}
+              company={activeCompany}
+              contact={activeContact}
+              invoiceNumber={invoice.invoice_number}
+              amountPaid={Number(invoice.amount_paid) || 0}
+              documentRibbon={statusRibbon}
+              paymentMethodBrand={invoice.payment_method_brand}
+              paymentMethodLast4={invoice.payment_method_last4}
+              autoChargeRemainder={Boolean(invoice.auto_charge_remainder)}
+            />
           </div>
         )}
       </div>

@@ -53,7 +53,11 @@ const normalizeWebsiteHref = (website?: string | null) => {
 const getCompanyListEmail = (record: CompanyWithPrimaryContact) =>
   resolveCompanyEmailForDisplay(record);
 
-export const CompaniesListPage = ({ embedded = false }: { embedded?: boolean }) => {
+export const CompaniesListPage = ({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) => {
   const { identity } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();
   const [clientDialogOpen, setClientDialogOpen] = useState(false);

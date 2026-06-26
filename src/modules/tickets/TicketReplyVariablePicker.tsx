@@ -60,7 +60,9 @@ export const TicketReplyVariablePicker = ({
                 onClick={() => onInsert(variable.token)}
                 className="w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted"
               >
-                <span className="block text-sm font-medium">{variable.label}</span>
+                <span className="block text-sm font-medium">
+                  {variable.label}
+                </span>
                 <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
                   {variable.token}
                 </span>

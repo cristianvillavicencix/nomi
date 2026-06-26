@@ -63,8 +63,7 @@ export const WebsiteBriefInlineSectionForm = ({
               notify("Section saved", { type: "info" });
               onSaved?.();
             },
-            onError: () =>
-              notify("Failed to save section", { type: "error" }),
+            onError: () => notify("Failed to save section", { type: "error" }),
           },
         );
       }}

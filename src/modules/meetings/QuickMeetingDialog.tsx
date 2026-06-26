@@ -234,7 +234,9 @@ export const QuickMeetingDialog = ({
       return;
     }
     if (!title || !meetingUrl) {
-      notify("Choose a contact to generate the video link", { type: "warning" });
+      notify("Choose a contact to generate the video link", {
+        type: "warning",
+      });
       return;
     }
 
@@ -582,7 +584,9 @@ const QuickMeetingFormBody = ({
         onOpenChange={setCreateContactOpen}
         initialName={createContactSeed}
         onCreated={(created) => {
-          setValue("contact_id", created.id as Identifier, { shouldDirty: true });
+          setValue("contact_id", created.id as Identifier, {
+            shouldDirty: true,
+          });
           setValue("meeting_url", null, { shouldDirty: true });
         }}
       />

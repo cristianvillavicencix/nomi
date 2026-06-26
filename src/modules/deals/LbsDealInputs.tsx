@@ -106,9 +106,7 @@ const FormSection = ({
   </>
 );
 
-export const LbsDealInputs = ({
-  createStep,
-}: { createStep?: 1 | 2 } = {}) => {
+export const LbsDealInputs = ({ createStep }: { createStep?: 1 | 2 } = {}) => {
   const showStep = (step: 1 | 2) => !createStep || createStep === step;
   const isMobile = useIsMobile();
   const canViewAmounts = useCanViewAmounts();
@@ -120,7 +118,10 @@ export const LbsDealInputs = ({
   const contactId = useWatch({ control, name: "contact_id" });
   const contactIds = useWatch({ control, name: "contact_ids" });
   const companyName = useWatch({ control, name: "company_name" });
-  const acceptedProposalId = useWatch({ control, name: "accepted_proposal_id" });
+  const acceptedProposalId = useWatch({
+    control,
+    name: "accepted_proposal_id",
+  });
   const stage = useWatch({ control, name: "stage" });
   const projectType = useWatch({ control, name: "project_type" });
   const category = useWatch({ control, name: "category" });
@@ -181,12 +182,7 @@ export const LbsDealInputs = ({
     return ids
       .map((id) => byId.get(id))
       .filter((member): member is OrganizationMember => member != null);
-  }, [
-    defaultCreateTeamIds,
-    isCreateFlow,
-    organizationMembers,
-    salespersonIds,
-  ]);
+  }, [defaultCreateTeamIds, isCreateFlow, organizationMembers, salespersonIds]);
 
   const stageChoices = useMemo(
     () => withCurrentCustomChoice(lbsProjectStages, String(stage ?? "")),
@@ -306,16 +302,13 @@ export const LbsDealInputs = ({
           typeof companyName === "string" && companyName.trim()
             ? companyName
             : selectedContact?.company_name,
-        contactName: selectedContact ? lbsProjectContactName(selectedContact) : "",
+        contactName: selectedContact
+          ? lbsProjectContactName(selectedContact)
+          : "",
         projectType: String(projectType ?? ""),
         proposalTitle: selectedProposal?.title,
       }),
-    [
-      companyName,
-      projectType,
-      selectedContact,
-      selectedProposal?.title,
-    ],
+    [companyName, projectType, selectedContact, selectedProposal?.title],
   );
 
   useEffect(() => {

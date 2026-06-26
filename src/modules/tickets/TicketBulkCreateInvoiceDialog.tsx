@@ -24,9 +24,7 @@ import {
   type DeliverableBillingSelection,
 } from "@/modules/tickets/TicketDeliverableBillingDialog";
 import { TicketCombinedInvoicePreviewDialog } from "@/modules/tickets/TicketCombinedInvoicePreviewDialog";
-import {
-  deliverableBillingShortLabel,
-} from "@/modules/tickets/supplementPricing";
+import { deliverableBillingShortLabel } from "@/modules/tickets/supplementPricing";
 import { useTicketCatalogPackages } from "@/modules/catalog/useTicketCatalogPackages";
 import {
   MAX_TICKET_ATTACHMENTS,
@@ -127,7 +125,9 @@ export const TicketBulkCreateInvoiceDialog = ({
   }, [allDeliverables]);
 
   const ticketsReady = sortedTickets.every((ticket) =>
-    ticketHasReadyDeliverables(deliverablesByTicketId.get(String(ticket.id)) ?? []),
+    ticketHasReadyDeliverables(
+      deliverablesByTicketId.get(String(ticket.id)) ?? [],
+    ),
   );
 
   useEffect(() => {
@@ -185,8 +185,7 @@ export const TicketBulkCreateInvoiceDialog = ({
     setBillingDialogOpen(true);
   };
 
-  const canAddMoreFiles =
-    currentDeliverables.length < MAX_TICKET_ATTACHMENTS;
+  const canAddMoreFiles = currentDeliverables.length < MAX_TICKET_ATTACHMENTS;
 
   const openFilePicker = () => {
     if (!canAddMoreFiles || uploading) return;
@@ -199,7 +198,10 @@ export const TicketBulkCreateInvoiceDialog = ({
   const queueUploads = (files: FileList | null) => {
     if (!files?.length || !currentTicket) return;
     const fileArray = Array.from(files);
-    if (currentDeliverables.length + fileArray.length > MAX_TICKET_ATTACHMENTS) {
+    if (
+      currentDeliverables.length + fileArray.length >
+      MAX_TICKET_ATTACHMENTS
+    ) {
       notify(`Maximum ${MAX_TICKET_ATTACHMENTS} files per ticket`, {
         type: "warning",
       });
@@ -230,7 +232,9 @@ export const TicketBulkCreateInvoiceDialog = ({
     }
   };
 
-  const handleBillingConfirm = async (selection: DeliverableBillingSelection) => {
+  const handleBillingConfirm = async (
+    selection: DeliverableBillingSelection,
+  ) => {
     if (!currentTicket) return;
     const file = pendingUploads[0];
     if (!file) return;
@@ -319,249 +323,253 @@ export const TicketBulkCreateInvoiceDialog = ({
           </DialogHeader>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
-          {primaryIssue ? (
-            <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-2">
-                  <p className="font-medium">{primaryIssue.message}</p>
-                  {primaryIssue.kind === "email" && primaryIssue.recipients ? (
-                    <ul className="space-y-1 text-xs sm:text-sm">
-                      {primaryIssue.recipients.map((recipient) => {
-                        const email = recipient.email?.trim();
-                        const name = recipient.name?.trim();
-                        return (
-                          <li key={String(recipient.ticketId)}>
-                            <span className="font-medium">
-                              #{recipient.ticketId}
-                            </span>
-                            {name ? (
-                              <span className="text-destructive/90">
-                                {" "}
-                                · {name}
+            {primaryIssue ? (
+              <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-2">
+                    <p className="font-medium">{primaryIssue.message}</p>
+                    {primaryIssue.kind === "email" &&
+                    primaryIssue.recipients ? (
+                      <ul className="space-y-1 text-xs sm:text-sm">
+                        {primaryIssue.recipients.map((recipient) => {
+                          const email = recipient.email?.trim();
+                          const name = recipient.name?.trim();
+                          return (
+                            <li key={String(recipient.ticketId)}>
+                              <span className="font-medium">
+                                #{recipient.ticketId}
                               </span>
-                            ) : null}
-                            {email ? (
-                              <span className="text-destructive/90">
-                                {" "}
-                                · {email}
-                              </span>
-                            ) : (
-                              <span className="text-destructive/80">
-                                {" "}
-                                · no email
-                              </span>
-                            )}
-                          </li>
+                              {name ? (
+                                <span className="text-destructive/90">
+                                  {" "}
+                                  · {name}
+                                </span>
+                              ) : null}
+                              {email ? (
+                                <span className="text-destructive/90">
+                                  {" "}
+                                  · {email}
+                                </span>
+                              ) : (
+                                <span className="text-destructive/80">
+                                  {" "}
+                                  · no email
+                                </span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : null}
+                  </div>
+                  {clientIssueTicketId != null ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        const ticket = sortedTickets.find(
+                          (row) =>
+                            String(row.id) === String(clientIssueTicketId),
                         );
-                      })}
-                    </ul>
+                        if (ticket) setTicketToEdit(ticket);
+                      }}
+                    >
+                      Edit ticket #{clientIssueTicketId}
+                    </Button>
                   ) : null}
                 </div>
-                {clientIssueTicketId != null ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
-                    onClick={() => {
-                      const ticket = sortedTickets.find(
-                        (row) => String(row.id) === String(clientIssueTicketId),
-                      );
-                      if (ticket) setTicketToEdit(ticket);
-                    }}
-                  >
-                    Edit ticket #{clientIssueTicketId}
-                  </Button>
-                ) : null}
               </div>
-            </div>
-          ) : needsRecipientChoice ? (
-            <div className="space-y-3 rounded-md border bg-muted/30 px-3 py-3 text-sm">
-              <div>
-                <p className="font-medium">Choose invoice recipient</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  These tickets have different emails. Pick one address for the
-                  combined invoice.
-                </p>
-              </div>
-              <RadioGroup
-                value={selectedRecipientEmail}
-                onValueChange={setSelectedRecipientEmail}
-                className="gap-2"
-              >
-                {recipientEmailOptions.map((option) => (
-                  <label
-                    key={option.email}
-                    htmlFor={`combined-recipient-${option.email}`}
-                    className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-md border bg-background px-3 py-2.5 transition-colors",
-                      selectedRecipientEmail === option.email &&
-                        "border-primary/50 bg-primary/5",
-                    )}
-                  >
-                    <RadioGroupItem
-                      value={option.email}
-                      id={`combined-recipient-${option.email}`}
-                      className="mt-0.5"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-medium">{option.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Tickets{" "}
-                        {option.ticketIds.map((id) => `#${id}`).join(", ")}
-                        {option.names.length
-                          ? ` · ${option.names.join(", ")}`
-                          : ""}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
-          ) : selectedRecipientEmail ? (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
-              <p className="text-muted-foreground">
-                Invoice will be sent to{" "}
-                <span className="font-medium text-foreground">
-                  {selectedRecipientEmail}
-                </span>
-              </p>
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap gap-2">
-            {sortedTickets.map((ticket, index) => {
-              const ready = ticketHasReadyDeliverables(
-                deliverablesByTicketId.get(String(ticket.id)) ?? [],
-              );
-              const hasClient = ticketHasLinkedClient(ticket);
-              const statusLabel = !hasClient
-                ? " · needs client"
-                : ready
-                  ? " · files ready"
-                  : " · needs files";
-              return (
-                <Badge
-                  key={ticket.id}
-                  variant={index === ticketIndex ? "default" : "outline"}
-                  className={cn(
-                    "cursor-pointer",
-                    !hasClient && "border-destructive/40 text-destructive",
-                  )}
-                  onClick={() => setTicketIndex(index)}
+            ) : needsRecipientChoice ? (
+              <div className="space-y-3 rounded-md border bg-muted/30 px-3 py-3 text-sm">
+                <div>
+                  <p className="font-medium">Choose invoice recipient</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    These tickets have different emails. Pick one address for
+                    the combined invoice.
+                  </p>
+                </div>
+                <RadioGroup
+                  value={selectedRecipientEmail}
+                  onValueChange={setSelectedRecipientEmail}
+                  className="gap-2"
                 >
-                  #{ticket.id}
-                  {statusLabel}
-                </Badge>
-              );
-            })}
-          </div>
-
-          {currentTicket ? (
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium">
-                  Ticket #{currentTicket.id}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {currentTicket.subject?.trim() || "No subject"}
+                  {recipientEmailOptions.map((option) => (
+                    <label
+                      key={option.email}
+                      htmlFor={`combined-recipient-${option.email}`}
+                      className={cn(
+                        "flex cursor-pointer items-start gap-3 rounded-md border bg-background px-3 py-2.5 transition-colors",
+                        selectedRecipientEmail === option.email &&
+                          "border-primary/50 bg-primary/5",
+                      )}
+                    >
+                      <RadioGroupItem
+                        value={option.email}
+                        id={`combined-recipient-${option.email}`}
+                        className="mt-0.5"
+                      />
+                      <div className="min-w-0">
+                        <p className="font-medium">{option.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Tickets{" "}
+                          {option.ticketIds.map((id) => `#${id}`).join(", ")}
+                          {option.names.length
+                            ? ` · ${option.names.join(", ")}`
+                            : ""}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+            ) : selectedRecipientEmail ? (
+              <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                <p className="text-muted-foreground">
+                  Invoice will be sent to{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedRecipientEmail}
+                  </span>
                 </p>
               </div>
+            ) : null}
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">Delivery files</p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentDeliverables.length}/{MAX_TICKET_ATTACHMENTS} · 10
-                    MB max
+            <div className="flex flex-wrap gap-2">
+              {sortedTickets.map((ticket, index) => {
+                const ready = ticketHasReadyDeliverables(
+                  deliverablesByTicketId.get(String(ticket.id)) ?? [],
+                );
+                const hasClient = ticketHasLinkedClient(ticket);
+                const statusLabel = !hasClient
+                  ? " · needs client"
+                  : ready
+                    ? " · files ready"
+                    : " · needs files";
+                return (
+                  <Badge
+                    key={ticket.id}
+                    variant={index === ticketIndex ? "default" : "outline"}
+                    className={cn(
+                      "cursor-pointer",
+                      !hasClient && "border-destructive/40 text-destructive",
+                    )}
+                    onClick={() => setTicketIndex(index)}
+                  >
+                    #{ticket.id}
+                    {statusLabel}
+                  </Badge>
+                );
+              })}
+            </div>
+
+            {currentTicket ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium">
+                    Ticket #{currentTicket.id}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {currentTicket.subject?.trim() || "No subject"}
                   </p>
                 </div>
 
-                <div className="overflow-hidden rounded-md border">
-                  {currentUnbilled.length > 0 ? (
-                    <ul className="divide-y">
-                      {currentUnbilled.map((file) => (
-                        <li
-                          key={file.id}
-                          className="flex items-center gap-2 px-3 py-2.5 text-sm"
-                        >
-                          <FileText className="size-4 shrink-0 text-muted-foreground" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium">{file.title}</p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {deliverableBillingShortLabel(
-                                file,
-                                ticketPackages,
-                              )}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                            disabled={uploading}
-                            aria-label={`Remove ${file.title}`}
-                            onClick={() => void handleDeleteDeliverable(file)}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">Delivery files</p>
+                    <p className="text-xs text-muted-foreground">
+                      {currentDeliverables.length}/{MAX_TICKET_ATTACHMENTS} · 10
+                      MB max
+                    </p>
+                  </div>
+
+                  <div className="overflow-hidden rounded-md border">
+                    {currentUnbilled.length > 0 ? (
+                      <ul className="divide-y">
+                        {currentUnbilled.map((file) => (
+                          <li
+                            key={file.id}
+                            className="flex items-center gap-2 px-3 py-2.5 text-sm"
                           >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                            <FileText className="size-4 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium">
+                                {file.title}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {deliverableBillingShortLabel(
+                                  file,
+                                  ticketPackages,
+                                )}
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                              disabled={uploading}
+                              aria-label={`Remove ${file.title}`}
+                              onClick={() => void handleDeleteDeliverable(file)}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
 
-                  {canAddMoreFiles ? (
-                    <div
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2.5",
-                        currentUnbilled.length > 0 && "border-t bg-muted/20",
-                      )}
-                    >
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="min-w-0 flex-1 justify-start gap-2"
-                        disabled={uploading}
-                        onClick={openFilePicker}
-                      >
-                        {uploading ? (
-                          <Loader2 className="size-4 shrink-0 animate-spin" />
-                        ) : (
-                          <Upload className="size-4 shrink-0" />
+                    {canAddMoreFiles ? (
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2.5",
+                          currentUnbilled.length > 0 && "border-t bg-muted/20",
                         )}
-                        Upload file
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="size-8 shrink-0"
-                        disabled={uploading}
-                        aria-label="Add another file"
-                        onClick={openFilePicker}
                       >
-                        <Plus className="size-4" />
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="min-w-0 flex-1 justify-start gap-2"
+                          disabled={uploading}
+                          onClick={openFilePicker}
+                        >
+                          {uploading ? (
+                            <Loader2 className="size-4 shrink-0 animate-spin" />
+                          ) : (
+                            <Upload className="size-4 shrink-0" />
+                          )}
+                          Upload file
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="size-8 shrink-0"
+                          disabled={uploading}
+                          aria-label="Add another file"
+                          onClick={openFilePicker}
+                        >
+                          <Plus className="size-4" />
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={(event) => {
-                    queueUploads(event.target.files);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
-                />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={(event) => {
+                      queueUploads(event.target.files);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
           </div>
 
           <DialogFooter className="shrink-0 gap-2 border-t px-6 py-4 sm:justify-between">
@@ -569,7 +577,11 @@ export const TicketBulkCreateInvoiceDialog = ({
               Step {ticketIndex + 1} of {sortedTickets.length}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+              >
                 Cancel
               </Button>
               {ticketIndex < sortedTickets.length - 1 ? (

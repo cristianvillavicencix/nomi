@@ -30,9 +30,9 @@ export const resolveCompanyEmailForDisplay = (
 ): string => {
   const ctx = parseLbsClientContextLinks(company.context_links);
   if (ctx.businessEmail?.trim()) return ctx.businessEmail.trim();
-  const fromCompanyEmails = ctx.companyEmails?.find((entry) =>
-    entry.email?.trim(),
-  )?.email?.trim();
+  const fromCompanyEmails = ctx.companyEmails
+    ?.find((entry) => entry.email?.trim())
+    ?.email?.trim();
   if (fromCompanyEmails) return fromCompanyEmails;
   const primary = pickFirstEmail(company.primary_contact_email_jsonb);
   if (primary) return primary;
@@ -54,9 +54,9 @@ export const resolveCompanyPhoneForDisplay = (
 ): string => {
   const ctx = parseLbsClientContextLinks(company.context_links);
   if (company.phone_number?.trim()) return company.phone_number.trim();
-  const fromCompanyPhones = ctx.companyPhones?.find((entry) =>
-    entry.number?.trim(),
-  )?.number?.trim();
+  const fromCompanyPhones = ctx.companyPhones
+    ?.find((entry) => entry.number?.trim())
+    ?.number?.trim();
   if (fromCompanyPhones) return fromCompanyPhones;
   const primary = pickFirstPhone(company.primary_contact_phone_jsonb);
   if (primary) return primary;

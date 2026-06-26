@@ -2,10 +2,7 @@ import http from "node:http";
 import { config, assertConfig } from "./config.js";
 import { postCallbackSafe } from "./callbackClient.js";
 import { runAuditJob } from "./runAudit.js";
-import {
-  clearActiveAudit,
-  readActiveAudit,
-} from "./activeAudit.js";
+import { clearActiveAudit, readActiveAudit } from "./activeAudit.js";
 import type { WebsiteAuditWorkerJob } from "./types.js";
 
 const readJsonBody = async (req: http.IncomingMessage) => {

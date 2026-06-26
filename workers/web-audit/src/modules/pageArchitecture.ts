@@ -75,10 +75,10 @@ const SSR_MARKERS = [
   "window.__remixContext",
   "__sveltekit",
   "data-sveltekit-hydrate",
-  "id=\"__next\"",
+  'id="__next"',
   "id='__next'",
-  "id=\"app\"",
-  "id=\"root\"",
+  'id="app"',
+  'id="root"',
   "data-reactroot",
   "data-wf-page",
   "data-wf-site",
@@ -102,7 +102,8 @@ const HTML_MARKERS: HtmlMarker[] = [
     signal: "wordpress",
   },
   {
-    test: (_h, l) => l.includes("cdn.shopify.com") || l.includes("shopify-section"),
+    test: (_h, l) =>
+      l.includes("cdn.shopify.com") || l.includes("shopify-section"),
     platform: "Shopify",
     category: "ecommerce",
     signal: "shopify",
@@ -127,7 +128,8 @@ const HTML_MARKERS: HtmlMarker[] = [
     preferRendered: true,
   },
   {
-    test: (_h, l) => l.includes("squarespace.com") || l.includes("static1.squarespace"),
+    test: (_h, l) =>
+      l.includes("squarespace.com") || l.includes("static1.squarespace"),
     platform: "Squarespace",
     category: "site_builder",
     signal: "squarespace",
@@ -182,7 +184,8 @@ const HTML_MARKERS: HtmlMarker[] = [
     preferRendered: true,
   },
   {
-    test: (_h, l) => l.includes("vue-app") || l.includes("__vue__") || l.includes("data-v-"),
+    test: (_h, l) =>
+      l.includes("vue-app") || l.includes("__vue__") || l.includes("data-v-"),
     platform: "Vue.js",
     category: "spa",
     signal: "vue",
@@ -239,8 +242,14 @@ const HTML_MARKERS: HtmlMarker[] = [
 export const isEmptyAppShell = (html: string) => {
   const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? html;
   const withoutScripts = body.replace(/<script[\s\S]*?<\/script>/gi, "");
-  const withoutNoscript = withoutScripts.replace(/<noscript[\s\S]*?<\/noscript>/gi, "");
-  const text = withoutNoscript.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const withoutNoscript = withoutScripts.replace(
+    /<noscript[\s\S]*?<\/noscript>/gi,
+    "",
+  );
+  const text = withoutNoscript
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return text.length < 80;
 };
 
@@ -250,7 +259,11 @@ const inferCategory = (
 ): PagePlatformCategory => {
   if (frameworks.some((f) => CMS_NAMES.has(f))) return "cms";
   if (frameworks.some((f) => ECOMMERCE_NAMES.has(f))) return "ecommerce";
-  if (frameworks.some((f) => ["Webflow", "Wix", "Squarespace", "Weebly"].includes(f))) {
+  if (
+    frameworks.some((f) =>
+      ["Webflow", "Wix", "Squarespace", "Weebly"].includes(f),
+    )
+  ) {
     return "site_builder";
   }
   if (frameworks.some((f) => f === "HubSpot")) return "saas";
@@ -304,10 +317,14 @@ export const detectPageArchitecture = (
   }
 
   const frameworkList = [...frameworks].sort();
-  const hasSpaFramework = frameworkList.some((name) => SPA_FRAMEWORKS.has(name));
+  const hasSpaFramework = frameworkList.some((name) =>
+    SPA_FRAMEWORKS.has(name),
+  );
   const hasInertia = frameworkList.includes("Inertia.js");
   const hasNextNuxt = frameworkList.some((name) =>
-    ["Next.js", "Nuxt.js", "Gatsby", "Remix", "SvelteKit", "Astro"].includes(name),
+    ["Next.js", "Nuxt.js", "Gatsby", "Remix", "SvelteKit", "Astro"].includes(
+      name,
+    ),
   );
   const hasCms = frameworkList.some((name) => CMS_NAMES.has(name));
   const emptyShell = isEmptyAppShell(sample);

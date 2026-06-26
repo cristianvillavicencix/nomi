@@ -130,7 +130,9 @@ export const useMessagesNotifications = () => {
         title: display?.title ?? "New message",
         body: buildMessagePreview(message),
         tag: `msg-${message.id}`,
-        href: conversation ? `/messages?conversation=${conversation.id}` : "/messages",
+        href: conversation
+          ? `/messages?conversation=${conversation.id}`
+          : "/messages",
         sound: decision.sound,
         desktop: decision.desktop,
       });

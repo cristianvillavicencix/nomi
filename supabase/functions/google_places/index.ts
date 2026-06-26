@@ -71,7 +71,9 @@ Deno.serve((req: Request) =>
         console.error("google_places.error", error);
         return createErrorResponse(
           500,
-          error instanceof Error ? error.message : "Google Places request failed",
+          error instanceof Error
+            ? error.message
+            : "Google Places request failed",
         );
       }
     });

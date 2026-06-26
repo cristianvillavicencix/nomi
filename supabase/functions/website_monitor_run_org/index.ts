@@ -24,12 +24,8 @@ const sortDueSites = (sites: WebsiteMonitorSiteRow[]) =>
     if (aMissingHosting !== bMissingHosting) {
       return aMissingHosting - bMissingHosting;
     }
-    const aLast = a.last_checked_at
-      ? new Date(a.last_checked_at).getTime()
-      : 0;
-    const bLast = b.last_checked_at
-      ? new Date(b.last_checked_at).getTime()
-      : 0;
+    const aLast = a.last_checked_at ? new Date(a.last_checked_at).getTime() : 0;
+    const bLast = b.last_checked_at ? new Date(b.last_checked_at).getTime() : 0;
     return aLast - bLast;
   });
 

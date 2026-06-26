@@ -134,10 +134,7 @@ const uploadSendGridAttachments = async (form: FormData) => {
 
     const meta = metaByKey[fieldName] ?? {};
     const title =
-      meta.filename?.trim() ||
-      meta.name?.trim() ||
-      file.name ||
-      fieldName;
+      meta.filename?.trim() || meta.name?.trim() || file.name || fieldName;
     const type = meta.type?.trim() || file.type || "application/octet-stream";
     const fileParts = title.split(".");
     const fileExt = fileParts.length > 1 ? `.${fileParts.pop()}` : "";
@@ -205,8 +202,8 @@ export const parseSendGridInbound = async (form: FormData) => {
   }
 
   const messageId =
-    Headers.find((entry) => entry.Name.toLowerCase() === "message-id")?.Value
-      ?.replace(/^<|>$/g, "")
+    Headers.find((entry) => entry.Name.toLowerCase() === "message-id")
+      ?.Value?.replace(/^<|>$/g, "")
       .trim() ?? crypto.randomUUID();
 
   const payload: PostmarkInboundPayload = {

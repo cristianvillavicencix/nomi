@@ -1,9 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import {
-  useGetList,
-  useRefresh,
-  type Identifier,
-} from "ra-core";
+import { useGetList, useRefresh, type Identifier } from "ra-core";
 import {
   Check,
   ChevronsUpDown,
@@ -178,12 +174,10 @@ const CreatePrimaryContactPicker = ({
     return contacts.find((c) => String(c.id) === String(selectedContactId));
   }, [contacts, draftPrimaryContact, optimisticContact, selectedContactId]);
 
-  const hasSelection =
-    selectedContactId != null || draftPrimaryContact != null;
+  const hasSelection = selectedContactId != null || draftPrimaryContact != null;
 
   const rowName = activeContact ? getContactFullName(activeContact) : "";
-  const rowEmail =
-    activeContact != null ? getContactEmail(activeContact) : "";
+  const rowEmail = activeContact != null ? getContactEmail(activeContact) : "";
   const rowEmailDisplay = rowEmail !== "—" ? rowEmail : "";
   const rowPhone = pickPrimaryPhone(activeContact);
 
@@ -402,14 +396,9 @@ export const PrimaryContactReferenceCard = ({
   const renderPicker = (trigger: ReactNode) => (
     <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent
-        className={entitySearchPopoverClassName}
-        align="start"
-      >
+      <PopoverContent className={entitySearchPopoverClassName} align="start">
         <Command shouldFilter={showSearch}>
-          {showSearch ? (
-            <CommandInput placeholder="Search contacts…" />
-          ) : null}
+          {showSearch ? <CommandInput placeholder="Search contacts…" /> : null}
           <CommandList>
             {isPending ? (
               <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground">
@@ -479,8 +468,7 @@ export const PrimaryContactReferenceCard = ({
                     onSelect={openNewContact}
                     className="font-medium"
                   >
-                    <UserPlus className="mr-2 size-4" />
-                    + New contact
+                    <UserPlus className="mr-2 size-4" />+ New contact
                   </CommandItem>
                 </CommandGroup>
               </>

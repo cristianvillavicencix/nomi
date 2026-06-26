@@ -162,10 +162,15 @@ export const ProposalCartPanel = ({
               <div className="mt-1 space-y-1 text-sm">
                 <div className="flex justify-between gap-2 text-muted-foreground">
                   <span>One-time subtotal</span>
-                  <MoneyText value={totals.oneTimeTotal} className="tabular-nums" />
+                  <MoneyText
+                    value={totals.oneTimeTotal}
+                    className="tabular-nums"
+                  />
                 </div>
                 <div className="flex justify-between gap-2 border-t border-border/80 pt-1.5">
-                  <span className="font-semibold text-foreground">Project total</span>
+                  <span className="font-semibold text-foreground">
+                    Project total
+                  </span>
                   <MoneyText
                     value={totals.grandTotalOneTime}
                     className="text-base font-bold tabular-nums"
@@ -193,7 +198,10 @@ export const ProposalCartPanel = ({
                 <span>Recurring subtotal</span>
                 <span className="font-semibold tabular-nums text-foreground">
                   <MoneyText value={totals.recurringSubtotal} />
-                  <span className="font-normal text-muted-foreground"> /mo</span>
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    /mo
+                  </span>
                 </span>
               </div>
             </section>

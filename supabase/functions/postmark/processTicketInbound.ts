@@ -83,30 +83,34 @@ const headerValue = (headers: PostmarkHeader[] | undefined, name: string) =>
 const findInbox = async (recipientEmails: Set<string>) => {
   const { data: inboxes, error } = await supabaseAdmin
     .from("ticket_inboxes")
-    .select("id, org_id, email, display_name, from_name, postmark_inbound_address, sendgrid_hostname, sendgrid_forward_address")
+    .select(
+      "id, org_id, email, display_name, from_name, postmark_inbound_address, sendgrid_hostname, sendgrid_forward_address",
+    )
     .eq("is_active", true);
 
   if (error) throw new Error(error.message);
 
-  return (inboxes ?? []).find((inbox) => {
-    if (recipientEmails.has(normalizeEmail(inbox.email))) return true;
-    const inbound = inbox.postmark_inbound_address?.trim();
-    if (inbound && recipientEmails.has(normalizeEmail(inbound))) return true;
-    const forward = (
-      inbox as { sendgrid_forward_address?: string | null }
-    ).sendgrid_forward_address?.trim();
-    if (forward && recipientEmails.has(normalizeEmail(forward))) return true;
-    const hostname = (
-      inbox as { sendgrid_hostname?: string | null }
-    ).sendgrid_hostname?.trim();
-    if (hostname) {
-      const suffix = `@${normalizeEmail(hostname)}`;
-      if ([...recipientEmails].some((email) => email.endsWith(suffix))) {
-        return true;
+  return (
+    (inboxes ?? []).find((inbox) => {
+      if (recipientEmails.has(normalizeEmail(inbox.email))) return true;
+      const inbound = inbox.postmark_inbound_address?.trim();
+      if (inbound && recipientEmails.has(normalizeEmail(inbound))) return true;
+      const forward = (
+        inbox as { sendgrid_forward_address?: string | null }
+      ).sendgrid_forward_address?.trim();
+      if (forward && recipientEmails.has(normalizeEmail(forward))) return true;
+      const hostname = (
+        inbox as { sendgrid_hostname?: string | null }
+      ).sendgrid_hostname?.trim();
+      if (hostname) {
+        const suffix = `@${normalizeEmail(hostname)}`;
+        if ([...recipientEmails].some((email) => email.endsWith(suffix))) {
+          return true;
+        }
       }
-    }
-    return false;
-  }) ?? null;
+      return false;
+    }) ?? null
+  );
 };
 
 const findContactByEmail = async (orgId: number, email: string) => {
@@ -118,11 +122,13 @@ const findContactByEmail = async (orgId: number, email: string) => {
   if (error) throw new Error(error.message);
 
   const normalized = normalizeEmail(email);
-  return (contacts ?? []).find((contact) =>
-    (contact.email_jsonb as Array<{ email?: string }> | null)?.some(
-      (row) => normalizeEmail(row.email ?? "") === normalized,
-    )
-  ) ?? null;
+  return (
+    (contacts ?? []).find((contact) =>
+      (contact.email_jsonb as Array<{ email?: string }> | null)?.some(
+        (row) => normalizeEmail(row.email ?? "") === normalized,
+      ),
+    ) ?? null
+  );
 };
 
 const findTicketForThread = async (
@@ -180,10 +186,7 @@ export const matchesTicketInbox = async (payload: PostmarkInboundPayload) => {
 
 /** iPhone and other clients often send photo-only mail with an empty text/plain part. */
 const escapeHtmlAttr = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;");
+  value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
 export const buildInlineImagesHtml = (attachments: Attachment[]) =>
   attachments
@@ -294,7 +297,10 @@ export const buildInboundTicketMessageBody = (
   if (images.length === attachments.length && images.length > 0) {
     const inlineHtml = buildInlineImagesHtml(attachments);
     return {
-      body: images.length === 1 ? "Photo attached" : `${images.length} photos attached`,
+      body:
+        images.length === 1
+          ? "Photo attached"
+          : `${images.length} photos attached`,
       htmlBody: inlineHtml ? `<div>${inlineHtml}</div>` : null,
     };
   }

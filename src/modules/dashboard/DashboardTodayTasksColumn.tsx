@@ -140,9 +140,7 @@ export const DashboardTodayTasksColumn = () => {
         ) : (
           <>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">
-                {dueTodayTasks.length} due today
-              </Badge>
+              <Badge variant="outline">{dueTodayTasks.length} due today</Badge>
               {overdueTasks.length > 0 ? (
                 <Badge
                   variant="outline"
@@ -170,9 +168,7 @@ export const DashboardTodayTasksColumn = () => {
                           <DashboardTodayTaskRow
                             key={String(task.id)}
                             task={task}
-                            participants={
-                              participantsByTaskId[String(task.id)]
-                            }
+                            participants={participantsByTaskId[String(task.id)]}
                           />
                         ))}
                       </ul>
@@ -191,9 +187,7 @@ export const DashboardTodayTasksColumn = () => {
                           <DashboardTodayTaskRow
                             key={String(task.id)}
                             task={task}
-                            participants={
-                              participantsByTaskId[String(task.id)]
-                            }
+                            participants={participantsByTaskId[String(task.id)]}
                           />
                         ))}
                       </ul>

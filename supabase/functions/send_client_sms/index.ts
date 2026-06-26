@@ -183,10 +183,7 @@ Deno.serve((req: Request) =>
 
             externalPhone = requestedPhone ?? phoneRow.external_phone;
 
-            if (
-              requestedPhone &&
-              requestedPhone !== phoneRow.external_phone
-            ) {
+            if (requestedPhone && requestedPhone !== phoneRow.external_phone) {
               const { error: updateError } = await supabaseAdmin
                 .from("conversations")
                 .update({ external_phone: requestedPhone })
@@ -240,64 +237,64 @@ Deno.serve((req: Request) =>
               title: requestedPhone,
             };
           } else {
-          const { data: contact, error: contactError } = await supabaseAdmin
-            .from("contacts")
-            .select("id, first_name, last_name, phone_jsonb, company_id")
-            .eq("id", contactId)
-            .eq("org_id", orgId)
-            .maybeSingle();
+            const { data: contact, error: contactError } = await supabaseAdmin
+              .from("contacts")
+              .select("id, first_name, last_name, phone_jsonb, company_id")
+              .eq("id", contactId)
+              .eq("org_id", orgId)
+              .maybeSingle();
 
-          if (contactError || !contact) {
-            throw new Error("Contact not found");
-          }
-          contactRecord = contact;
-
-          let normalizedPhone: string | null = null;
-          const requestedPhone = payload.external_phone?.trim();
-          if (requestedPhone) {
-            const normalized = normalizeUsPhoneToE164(requestedPhone);
-            if (
-              !normalized ||
-              !contactHasPhone(contact.phone_jsonb, normalized)
-            ) {
-              throw new Error(
-                "Selected phone is not registered on this contact",
-              );
+            if (contactError || !contact) {
+              throw new Error("Contact not found");
             }
-            normalizedPhone = normalized;
-          } else {
-            for (const entry of contact.phone_jsonb ?? []) {
-              const number =
-                typeof entry === "object" && entry && "number" in entry
-                  ? String((entry as { number?: string }).number ?? "")
-                  : "";
-              const normalized = normalizeUsPhoneToE164(number);
-              if (normalized) {
-                normalizedPhone = normalized;
-                break;
+            contactRecord = contact;
+
+            let normalizedPhone: string | null = null;
+            const requestedPhone = payload.external_phone?.trim();
+            if (requestedPhone) {
+              const normalized = normalizeUsPhoneToE164(requestedPhone);
+              if (
+                !normalized ||
+                !contactHasPhone(contact.phone_jsonb, normalized)
+              ) {
+                throw new Error(
+                  "Selected phone is not registered on this contact",
+                );
+              }
+              normalizedPhone = normalized;
+            } else {
+              for (const entry of contact.phone_jsonb ?? []) {
+                const number =
+                  typeof entry === "object" && entry && "number" in entry
+                    ? String((entry as { number?: string }).number ?? "")
+                    : "";
+                const normalized = normalizeUsPhoneToE164(number);
+                if (normalized) {
+                  normalizedPhone = normalized;
+                  break;
+                }
               }
             }
-          }
 
-          if (!normalizedPhone) {
-            throw new Error("This contact has no valid phone number");
-          }
+            if (!normalizedPhone) {
+              throw new Error("This contact has no valid phone number");
+            }
 
-          externalPhone = normalizedPhone;
-          pendingNewConversation = {
-            orgId,
-            externalPhone: normalizedPhone,
-            contactId: contact.id,
-            dealId:
-              payload.deal_id != null &&
-              Number.isFinite(Number(payload.deal_id))
-                ? Number(payload.deal_id)
-                : null,
-            createdByMemberId: memberId,
-            title:
-              `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
-              normalizedPhone,
-          };
+            externalPhone = normalizedPhone;
+            pendingNewConversation = {
+              orgId,
+              externalPhone: normalizedPhone,
+              contactId: contact.id,
+              dealId:
+                payload.deal_id != null &&
+                Number.isFinite(Number(payload.deal_id))
+                  ? Number(payload.deal_id)
+                  : null,
+              createdByMemberId: memberId,
+              title:
+                `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+                normalizedPhone,
+            };
           }
         }
 
@@ -344,7 +341,7 @@ Deno.serve((req: Request) =>
           });
           externalId = twilioResponse.sid ?? null;
           initialDeliveryStatus = externalId
-            ? normalizeTwilioDeliveryStatus(twilioResponse.status) ?? "queued"
+            ? (normalizeTwilioDeliveryStatus(twilioResponse.status) ?? "queued")
             : null;
         }
 

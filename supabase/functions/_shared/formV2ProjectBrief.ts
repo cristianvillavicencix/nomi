@@ -192,7 +192,10 @@ export async function syncBriefAssetsToDealResources(
     .eq("source", params.source ?? "project_brief");
 
   if (existingError) {
-    console.error("[syncBriefAssetsToDealResources] lookup failed", existingError);
+    console.error(
+      "[syncBriefAssetsToDealResources] lookup failed",
+      existingError,
+    );
     return { inserted: 0, error: existingError.message };
   }
 

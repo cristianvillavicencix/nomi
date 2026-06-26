@@ -133,8 +133,7 @@ Deno.serve(
         }
 
         const amountCents = amountToCents(chargeAmount);
-        const idempotencyKey =
-          `invoice-auto-${invoice.id}-${charge.installment_number}-${today}`;
+        const idempotencyKey = `invoice-auto-${invoice.id}-${charge.installment_number}-${today}`;
 
         try {
           const paymentIntent = await createOffSessionInvoicePaymentIntent(
@@ -183,7 +182,9 @@ Deno.serve(
           }
 
           if (paymentIntent.status !== "succeeded") {
-            throw new Error(`Unexpected payment status: ${paymentIntent.status}`);
+            throw new Error(
+              `Unexpected payment status: ${paymentIntent.status}`,
+            );
           }
 
           await applyClientInvoicePaymentUpdate(supabaseAdmin, {

@@ -59,7 +59,9 @@ export const TicketStatusChangeDialog = ({
     if (!request) return;
     const trimmed = note.trim();
     if (!trimmed) {
-      notify("Add an internal note before changing status", { type: "warning" });
+      notify("Add an internal note before changing status", {
+        type: "warning",
+      });
       return;
     }
 

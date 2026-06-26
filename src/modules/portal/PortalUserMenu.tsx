@@ -36,8 +36,12 @@ export const PortalUserMenu = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
-          <div className="text-xs text-muted-foreground">{copy.portalAccount}</div>
-          <div className="truncate text-sm font-medium text-foreground">{label}</div>
+          <div className="text-xs text-muted-foreground">
+            {copy.portalAccount}
+          </div>
+          <div className="truncate text-sm font-medium text-foreground">
+            {label}
+          </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem

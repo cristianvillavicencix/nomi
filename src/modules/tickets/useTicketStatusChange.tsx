@@ -1,9 +1,7 @@
 import { useCallback, useState } from "react";
 import { useNotify, useRefresh, useUpdate } from "ra-core";
 import type { Ticket } from "@/modules/types";
-import {
-  requiresTicketStatusNote,
-} from "@/modules/tickets/ticketStatusWorkflow";
+import { requiresTicketStatusNote } from "@/modules/tickets/ticketStatusWorkflow";
 import {
   TicketStatusChangeDialog,
   type TicketStatusChangeRequest,

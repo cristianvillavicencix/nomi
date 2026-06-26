@@ -151,7 +151,8 @@ export const ContactHeader = ({
                       record.company_id != null
                         ? Number(record.company_id)
                         : undefined,
-                    resourceName: `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim(),
+                    resourceName:
+                      `${record.first_name ?? ""} ${record.last_name ?? ""}`.trim(),
                   }}
                 />
               ) : null}
@@ -202,10 +203,7 @@ const ReferredByLine = ({ record }: { record: Contact }) => {
       <Handshake className="size-4 shrink-0" />
       <span>Referido por:</span>
       {refContact ? (
-        <Link
-          to={getPersonShowPath(refContact)}
-          className="link-action"
-        >
+        <Link to={getPersonShowPath(refContact)} className="link-action">
           {contactName}
         </Link>
       ) : null}

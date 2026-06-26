@@ -57,8 +57,8 @@ Deno.serve(
 
       const email =
         (await resolveContactEmail(supabaseAdmin, invoice.contact_id)) ??
-          invoice.recipient_email?.trim() ??
-          null;
+        invoice.recipient_email?.trim() ??
+        null;
 
       if (!email) {
         return createErrorResponse(
@@ -69,10 +69,10 @@ Deno.serve(
 
       const { data: contact } = invoice.contact_id
         ? await supabaseAdmin
-          .from("contacts")
-          .select("first_name, last_name")
-          .eq("id", invoice.contact_id)
-          .maybeSingle()
+            .from("contacts")
+            .select("first_name, last_name")
+            .eq("id", invoice.contact_id)
+            .maybeSingle()
         : { data: null };
 
       const contactName = [contact?.first_name, contact?.last_name]

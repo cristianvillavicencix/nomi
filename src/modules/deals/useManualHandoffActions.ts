@@ -1,9 +1,4 @@
-import {
-  useGetIdentity,
-  useNotify,
-  useRefresh,
-  useUpdate,
-} from "ra-core";
+import { useGetIdentity, useNotify, useRefresh, useUpdate } from "ra-core";
 import {
   buildManualHandoffBriefUpdate,
   isBriefRequirementsWaived,

@@ -5,7 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { TicketInboundSetup } from "@/modules/settings/EmailDeliverySettingsSection";
 
-const copyText = async (value: string, notify: ReturnType<typeof useNotify>) => {
+const copyText = async (
+  value: string,
+  notify: ReturnType<typeof useNotify>,
+) => {
   try {
     await navigator.clipboard.writeText(value);
     notify("Copied to clipboard", { type: "info" });
@@ -93,8 +96,9 @@ export const TicketEmailInboundSetupCard = ({
               Name: <code className="rounded bg-muted px-1">supplements</code>
             </li>
             <li>
-              Value: <code className="rounded bg-muted px-1">{setup.mx_record}</code>{" "}
-              · Priority: <code className="rounded bg-muted px-1">10</code>
+              Value:{" "}
+              <code className="rounded bg-muted px-1">{setup.mx_record}</code> ·
+              Priority: <code className="rounded bg-muted px-1">10</code>
             </li>
             <li>
               Wait 15–60 minutes, then verify MX exists for{" "}
@@ -112,8 +116,9 @@ export const TicketEmailInboundSetupCard = ({
               today.
             </li>
             <li>
-              Host name: <code className="rounded bg-muted px-1">supplements</code>{" "}
-              · Domain: <code className="rounded bg-muted px-1">lbs.bz</code>
+              Host name:{" "}
+              <code className="rounded bg-muted px-1">supplements</code> ·
+              Domain: <code className="rounded bg-muted px-1">lbs.bz</code>
             </li>
             <li>Destination URL: paste the webhook URL below</li>
             <li>Leave &quot;POST raw MIME&quot; unchecked</li>
@@ -125,35 +130,38 @@ export const TicketEmailInboundSetupCard = ({
           </span>
           <ul className="mt-2 list-disc space-y-1 pl-4">
             <li>
-              <code className="rounded bg-muted px-1">{setup.support_email}</code>{" "}
-              →{" "}
-              <code className="rounded bg-muted px-1">{forwardTo}</code>
+              <code className="rounded bg-muted px-1">
+                {setup.support_email}
+              </code>{" "}
+              → <code className="rounded bg-muted px-1">{forwardTo}</code>
             </li>
             <li>
               Hostinger sends a confirmation to{" "}
-              <code className="rounded bg-muted px-1">{forwardTo}</code> — it does
-              not go to your personal inbox. Open{" "}
-              <strong className="text-foreground">Tickets</strong> in Nomi and look
-              for a message from Hostinger with the confirm link.
+              <code className="rounded bg-muted px-1">{forwardTo}</code> — it
+              does not go to your personal inbox. Open{" "}
+              <strong className="text-foreground">Tickets</strong> in Nomi and
+              look for a message from Hostinger with the confirm link.
             </li>
           </ul>
         </li>
         <li>
           Send a test email to{" "}
-          <code className="rounded bg-muted px-1">{setup.support_email}</code> and
-          check <strong className="text-foreground">Tickets</strong>.
+          <code className="rounded bg-muted px-1">{setup.support_email}</code>{" "}
+          and check <strong className="text-foreground">Tickets</strong>.
         </li>
       </ol>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
-        <p className="font-medium">Forward stuck on &quot;Waiting confirmation&quot;?</p>
+        <p className="font-medium">
+          Forward stuck on &quot;Waiting confirmation&quot;?
+        </p>
         <p className="mt-1 text-amber-900/90 dark:text-amber-100/90">
           That happens when the MX record for{" "}
           <code className="rounded bg-muted px-1">{hostname}</code> is missing.
-          Add MX → SendGrid Inbound Parse → resend confirmation → confirm from the
-          ticket in Nomi. Or skip forwarding and use{" "}
-          <code className="rounded bg-muted px-1">{forwardTo}</code> as your public
-          support address.
+          Add MX → SendGrid Inbound Parse → resend confirmation → confirm from
+          the ticket in Nomi. Or skip forwarding and use{" "}
+          <code className="rounded bg-muted px-1">{forwardTo}</code> as your
+          public support address.
         </p>
       </div>
 
@@ -169,10 +177,7 @@ export const TicketEmailInboundSetupCard = ({
         description="All mail to *@this hostname is parsed by SendGrid."
       />
 
-      <CopyField
-        label="Hostinger forward destination"
-        value={forwardTo}
-      />
+      <CopyField label="Hostinger forward destination" value={forwardTo} />
     </div>
   );
 };

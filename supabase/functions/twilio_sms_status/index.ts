@@ -1,9 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
-import {
-  getMessagingSettingsSecrets,
-} from "../_shared/messagingSettings.ts";
+import { getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
 import { validateTwilioSignatureForStatusCallback } from "../_shared/twilio.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 
@@ -75,12 +73,11 @@ Deno.serve(async (req) => {
       return emptyResponse();
     }
 
-    const { data: conversation, error: conversationError } =
-      await supabaseAdmin
-        .from("conversations")
-        .select("org_id")
-        .eq("id", messageRow.conversation_id)
-        .maybeSingle();
+    const { data: conversation, error: conversationError } = await supabaseAdmin
+      .from("conversations")
+      .select("org_id")
+      .eq("id", messageRow.conversation_id)
+      .maybeSingle();
 
     if (conversationError || !conversation?.org_id) {
       return emptyResponse();
@@ -125,7 +122,9 @@ Deno.serve(async (req) => {
       .eq("id", messageRow.id);
 
     if (updateError) {
-      throw new Error(updateError.message ?? "Failed to update delivery status");
+      throw new Error(
+        updateError.message ?? "Failed to update delivery status",
+      );
     }
 
     return emptyResponse();

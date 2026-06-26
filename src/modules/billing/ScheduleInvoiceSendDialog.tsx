@@ -2,7 +2,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, Pencil } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { useDataProvider, useGetIdentity, useGetList, useNotify } from "ra-core";
+import {
+  useDataProvider,
+  useGetIdentity,
+  useGetList,
+  useNotify,
+} from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
@@ -106,7 +111,10 @@ export const ScheduleInvoiceSendDialog = ({
 
   const contactOptions = useMemo(() => {
     const rows = [...companyContacts];
-    if (contact?.id && !rows.some((row) => String(row.id) === String(contact.id))) {
+    if (
+      contact?.id &&
+      !rows.some((row) => String(row.id) === String(contact.id))
+    ) {
       rows.unshift(contact);
     }
     return rows
@@ -343,7 +351,9 @@ export const ScheduleInvoiceSendDialog = ({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="invoice-schedule-sms">Also send text message</Label>
+              <Label htmlFor="invoice-schedule-sms">
+                Also send text message
+              </Label>
               <Switch
                 id="invoice-schedule-sms"
                 checked={sendSms}
@@ -418,7 +428,8 @@ export const ScheduleInvoiceSendDialog = ({
             ) : (
               <div className="flex items-center gap-1.5">
                 <span>
-                  Note: Emails will be sent at {formatSendTimeDisplay(sendTime)}.
+                  Note: Emails will be sent at {formatSendTimeDisplay(sendTime)}
+                  .
                 </span>
                 <button
                   type="button"
@@ -434,7 +445,11 @@ export const ScheduleInvoiceSendDialog = ({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button

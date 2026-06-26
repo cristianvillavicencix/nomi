@@ -67,7 +67,8 @@ export const validateSectionFields = (
       const minItems = field.min_items ?? (field.required ? 1 : 0);
       const filled = items.filter(Boolean);
       if (field.required && filled.length < minItems) {
-        errors[field.key] = `${field.label ?? field.key} requires at least ${minItems} item(s)`;
+        errors[field.key] =
+          `${field.label ?? field.key} requires at least ${minItems} item(s)`;
       }
       continue;
     }
@@ -81,8 +82,7 @@ export const validateSectionFields = (
       !(field.options && field.options.length > 0)
     ) {
       if (field.required) {
-        const checked =
-          value === true || value === "true" || value === "on";
+        const checked = value === true || value === "true" || value === "on";
         if (!checked) {
           errors[field.key] = `${field.label ?? field.key} is required`;
         }
@@ -103,8 +103,7 @@ export const validateSectionFields = (
 };
 
 /** v2 public links use 64-char tokens (legacy slugs are short, e.g. project-resources). */
-export const isLikelyFormToken = (value: string) =>
-  value.trim().length === 64;
+export const isLikelyFormToken = (value: string) => value.trim().length === 64;
 
 export type WizardMode = "auto" | "on" | "off";
 

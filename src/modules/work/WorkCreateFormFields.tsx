@@ -4,7 +4,10 @@ import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { required } from "ra-core";
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import { TASK_PRIORITIES } from "@/components/atomic-crm/tasks/taskConstants";
 import { TaskDescriptionMentionInput } from "@/components/atomic-crm/tasks/TaskDescriptionMentionInput";
 import { formatOrganizationMemberName } from "@/modules/billing/billingUtils";

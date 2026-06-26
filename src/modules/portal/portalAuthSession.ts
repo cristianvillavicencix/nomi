@@ -54,7 +54,10 @@ export const touchPortalAuthSession = (
   session: StoredPortalAuthSession,
 ) => {
   const next = { ...session, last_activity_at: Date.now() };
-  sessionStorage.setItem(portalAuthStorageKey(portalToken), JSON.stringify(next));
+  sessionStorage.setItem(
+    portalAuthStorageKey(portalToken),
+    JSON.stringify(next),
+  );
   return next;
 };
 

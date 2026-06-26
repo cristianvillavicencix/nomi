@@ -72,7 +72,10 @@ export const usePortalSensitiveSession = (
         ...next,
         accountEmail: accountEmail ?? undefined,
       };
-      sessionStorage.setItem(legacyStorageKey(portalToken), JSON.stringify(stored));
+      sessionStorage.setItem(
+        legacyStorageKey(portalToken),
+        JSON.stringify(stored),
+      );
       setSession(stored);
     },
     [accountEmail, portalToken],
@@ -153,6 +156,8 @@ export const usePortalSensitiveSession = (
     requireSensitiveSession,
     clearSession,
     expiresLabel,
-    sensitiveSessionToken: isActive ? session?.sensitive_session ?? null : null,
+    sensitiveSessionToken: isActive
+      ? (session?.sensitive_session ?? null)
+      : null,
   };
 };

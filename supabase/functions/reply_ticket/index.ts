@@ -108,7 +108,10 @@ Deno.serve(
         }
 
         if (ticket.merged_into_ticket_id) {
-          return createErrorResponse(400, "This ticket was merged into another");
+          return createErrorResponse(
+            400,
+            "This ticket was merged into another",
+          );
         }
 
         const now = new Date().toISOString();
@@ -133,7 +136,9 @@ Deno.serve(
             .single();
 
           if (messageError || !message) {
-            throw new Error(messageError?.message ?? "Could not save internal note");
+            throw new Error(
+              messageError?.message ?? "Could not save internal note",
+            );
           }
 
           await supabaseAdmin
@@ -163,7 +168,10 @@ Deno.serve(
             : [];
 
         if (!recipients.length) {
-          return createErrorResponse(400, "Enter at least one valid recipient email");
+          return createErrorResponse(
+            400,
+            "Enter at least one valid recipient email",
+          );
         }
 
         if (attachments.length > 0) {
@@ -234,7 +242,10 @@ Deno.serve(
         }
 
         if (!inboxAddress) {
-          return createErrorResponse(400, "No ticket inbox configured for replies");
+          return createErrorResponse(
+            400,
+            "No ticket inbox configured for replies",
+          );
         }
 
         const { data: priorMessages } = await supabaseAdmin
@@ -270,7 +281,8 @@ Deno.serve(
         const outboundHtmlBody = htmlBody
           ? stripCidFromHtml(htmlBody)
           : undefined;
-        const emailAttachments = await loadStorageAttachmentsForEmail(attachments);
+        const emailAttachments =
+          await loadStorageAttachmentsForEmail(attachments);
 
         let emailResult;
         try {

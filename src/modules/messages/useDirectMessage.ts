@@ -1,17 +1,11 @@
 import { useCallback } from "react";
-import {
-  useCreate,
-  useDataProvider,
-  useGetIdentity,
-  type Identifier,
-} from "ra-core";
+import { useDataProvider, useGetIdentity, type Identifier } from "ra-core";
 import type { Conversation, OrganizationMember } from "@/modules/types";
-import { buildDmKey } from "@/modules/messages/conversationUtils";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 
 export const useOpenDirectMessage = () => {
-  const dataProvider = useDataProvider();
+  const dataProvider = useDataProvider<CrmDataProvider>();
   const { identity } = useGetIdentity();
-  const [create] = useCreate();
 
   const openDirectMessage = useCallback(
     async (otherMember: OrganizationMember): Promise<Conversation> => {
@@ -23,71 +17,22 @@ export const useOpenDirectMessage = () => {
         throw new Error("Cannot message yourself");
       }
 
-      const dmKey = buildDmKey(currentMemberId, otherMember.id);
-      const { data: existing = [] } = await dataProvider.getList<Conversation>(
+      const conversationId = await dataProvider.ensureTeamDmConversation({
+        otherMemberId: otherMember.id,
+      });
+
+      const { data: conversation } = await dataProvider.getOne<Conversation>(
         "conversations",
-        {
-          filter: {
-            "type@eq": "team_dm",
-            "dm_key@eq": dmKey,
-          },
-          pagination: { page: 1, perPage: 1 },
-          sort: { field: "id", order: "ASC" },
-        },
+        { id: conversationId },
       );
 
-      if (existing[0]) {
-        return existing[0];
+      if (!conversation) {
+        throw new Error("Conversation not found after creation");
       }
-
-      const title =
-        `${otherMember.first_name ?? ""} ${otherMember.last_name ?? ""}`.trim() ||
-        "Direct message";
-
-      const conversation = await new Promise<Conversation>(
-        (resolve, reject) => {
-          create(
-            "conversations",
-            {
-              data: {
-                type: "team_dm",
-                title,
-                dm_key: dmKey,
-                created_by_member_id: currentMemberId,
-              },
-            },
-            {
-              onSuccess: (record) => resolve(record as Conversation),
-              onError: reject,
-            },
-          );
-        },
-      );
-
-      await Promise.all(
-        [currentMemberId, otherMember.id].map(
-          (memberId) =>
-            new Promise<void>((resolve, reject) => {
-              create(
-                "conversation_participants",
-                {
-                  data: {
-                    conversation_id: conversation.id,
-                    member_id: memberId,
-                  },
-                },
-                {
-                  onSuccess: () => resolve(),
-                  onError: reject,
-                },
-              );
-            }),
-        ),
-      );
 
       return conversation;
     },
-    [create, dataProvider, identity?.id],
+    [dataProvider, identity?.id],
   );
 
   return { openDirectMessage };

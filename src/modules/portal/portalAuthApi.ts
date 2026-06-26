@@ -39,7 +39,9 @@ export const fetchAuthenticatedPortal = async (
     "message" in data &&
     !("account" in data)
   ) {
-    throw new Error(String((data as { message?: string }).message ?? "Could not load portal"));
+    throw new Error(
+      String((data as { message?: string }).message ?? "Could not load portal"),
+    );
   }
   return data as PortalPayload;
 };
@@ -153,7 +155,8 @@ export const verifyEmailLoginCode = async (params: {
     expires_at: String((data as { expires_at?: string })?.expires_at ?? ""),
     account: {
       email: String(
-        (data as { account?: { email?: string } })?.account?.email ?? params.email,
+        (data as { account?: { email?: string } })?.account?.email ??
+          params.email,
       ),
     },
   };

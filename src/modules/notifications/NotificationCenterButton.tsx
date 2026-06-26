@@ -1,6 +1,12 @@
 import { formatDistanceToNow } from "date-fns";
 import { Bell, ChevronDown } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+} from "react";
 import { Link } from "react-router";
 
 import { Badge } from "@/components/ui/badge";
@@ -141,11 +147,17 @@ const NotificationGroupRow = ({
           body={item.body}
           trailing={
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-normal">
+              <Badge
+                variant="secondary"
+                className="h-5 px-1.5 text-[10px] font-normal"
+              >
                 {group.count} at this address
               </Badge>
               {group.unreadCount > 0 ? (
-                <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal">
+                <Badge
+                  variant="outline"
+                  className="h-5 px-1.5 text-[10px] font-normal"
+                >
                   {group.unreadCount} unread
                 </Badge>
               ) : null}
@@ -187,7 +199,9 @@ const NotificationGroupRow = ({
                       !entry.read && "font-medium",
                     )}
                   >
-                    <span className="truncate">{ticketLabelFromHref(entry.href)}</span>
+                    <span className="truncate">
+                      {ticketLabelFromHref(entry.href)}
+                    </span>
                     <span className="shrink-0 text-[10px] text-muted-foreground">
                       {formatDistanceToNow(new Date(entry.created_at), {
                         addSuffix: true,
@@ -230,11 +244,7 @@ const NotificationGroupRow = ({
 
   if (item.href) {
     return (
-      <Link
-        to={item.href}
-        onClick={() => onNavigate(item)}
-        className="block"
-      >
+      <Link to={item.href} onClick={() => onNavigate(item)} className="block">
         {content}
       </Link>
     );

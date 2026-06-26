@@ -16,7 +16,10 @@ import {
   type PortalLocale,
 } from "@/modules/portal/portalI18n";
 import { parsePortalView } from "@/modules/portal/portalNavigation";
-import type { PortalDelivery, PortalPayload } from "@/modules/portal/portalTypes";
+import type {
+  PortalDelivery,
+  PortalPayload,
+} from "@/modules/portal/portalTypes";
 import { usePortalAuthSession } from "@/modules/portal/usePortalAuthSession";
 
 const PORTAL_TOKEN_KEY = "lbs.client_portal.token";
@@ -39,7 +42,8 @@ const isInvalidPortalLinkError = (message: string) => {
 export const ClientPortalPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [token, setToken] = useState(
-    () => searchParams.get("token") ?? localStorage.getItem(PORTAL_TOKEN_KEY) ?? "",
+    () =>
+      searchParams.get("token") ?? localStorage.getItem(PORTAL_TOKEN_KEY) ?? "",
   );
   const [locale, setLocale] = useState<PortalLocale>(() => {
     const stored = localStorage.getItem(PORTAL_LOCALE_KEY);
@@ -52,7 +56,9 @@ export const ClientPortalPage = () => {
   const [emailLoginConfirming, setEmailLoginConfirming] = useState(false);
   const [emailLoginError, setEmailLoginError] = useState<string | null>(null);
   const [emailCodeSent, setEmailCodeSent] = useState(false);
-  const [emailCodeExpiresAt, setEmailCodeExpiresAt] = useState<string | null>(null);
+  const [emailCodeExpiresAt, setEmailCodeExpiresAt] = useState<string | null>(
+    null,
+  );
 
   const portalAuth = usePortalAuthSession(token.trim());
   const selectedDealId = readProjectId(searchParams.get("project"));
@@ -87,7 +93,8 @@ export const ClientPortalPage = () => {
         setPayload(null);
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : "Could not load portal";
+        const message =
+          err instanceof Error ? err.message : "Could not load portal";
         if (isInvalidPortalLinkError(message)) {
           localStorage.removeItem(PORTAL_TOKEN_KEY);
           setToken("");
@@ -123,7 +130,8 @@ export const ClientPortalPage = () => {
         setBootstrapEmail(data.account?.email ?? null);
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : "Could not load portal";
+        const message =
+          err instanceof Error ? err.message : "Could not load portal";
         if (message.toLowerCase().includes("session")) {
           void signOutPortal();
         }
@@ -148,8 +156,9 @@ export const ClientPortalPage = () => {
     if (payload?.project) return payload.project;
     if (selectedDealId != null) {
       return (
-        (payload?.projects ?? []).find((project) => project.id === selectedDealId) ??
-        null
+        (payload?.projects ?? []).find(
+          (project) => project.id === selectedDealId,
+        ) ?? null
       );
     }
     return (payload?.projects ?? [])[0] ?? null;
@@ -256,7 +265,11 @@ export const ClientPortalPage = () => {
   const content = (() => {
     if (!isPortalAuthActive) {
       if (hasToken && loading && !bootstrapEmail) {
-        return <div className="p-6 text-sm text-muted-foreground">{copy.loading}</div>;
+        return (
+          <div className="p-6 text-sm text-muted-foreground">
+            {copy.loading}
+          </div>
+        );
       }
 
       return (
@@ -267,11 +280,13 @@ export const ClientPortalPage = () => {
           confirming={hasToken ? portalAuth.confirming : emailLoginConfirming}
           error={
             hasToken
-              ? portalAuth.confirmError ?? error
-              : emailLoginError ?? error
+              ? (portalAuth.confirmError ?? error)
+              : (emailLoginError ?? error)
           }
           codeSent={hasToken ? portalAuth.codeSent : emailCodeSent}
-          codeExpiresAt={hasToken ? portalAuth.codeExpiresAt : emailCodeExpiresAt}
+          codeExpiresAt={
+            hasToken ? portalAuth.codeExpiresAt : emailCodeExpiresAt
+          }
           idleMinutes={portalAuth.idleMinutes}
           onRequestCode={(email) => void handleRequestCode(email)}
           onVerifyCode={(email, code) => void handleVerifyCode(email, code)}
@@ -280,7 +295,9 @@ export const ClientPortalPage = () => {
     }
 
     if (loading) {
-      return <div className="p-6 text-sm text-muted-foreground">{copy.loading}</div>;
+      return (
+        <div className="p-6 text-sm text-muted-foreground">{copy.loading}</div>
+      );
     }
     if (error) {
       return (
@@ -291,7 +308,9 @@ export const ClientPortalPage = () => {
     }
     if (!activeProject) {
       return (
-        <p className="p-6 text-sm text-muted-foreground">{copy.selectProject}</p>
+        <p className="p-6 text-sm text-muted-foreground">
+          {copy.selectProject}
+        </p>
       );
     }
     if (!delivery?.delivered_at) {

@@ -48,7 +48,9 @@ const lineDrafts: ProposalLineDraft[] = [
     description: `Add-on ${i + 1}`,
     quantity: 1,
     unit_price: 150 + i * 75,
-    billing_type: (i % 2 === 0 ? "one_time" : "recurring") as "one_time" | "recurring",
+    billing_type: (i % 2 === 0 ? "one_time" : "recurring") as
+      | "one_time"
+      | "recurring",
     billing_interval: i % 2 === 0 ? null : ("monthly" as const),
     sort_order: i + 1,
   })),
@@ -86,7 +88,10 @@ const snapshot: ProposalDocumentDataSnapshot = {
   oneTimeTotal: 12500,
   recurringSubtotal: 450,
   currency: "USD",
-  company: { id: 1, name: "Acme Roofing & Very Long Company Name LLC" } as never,
+  company: {
+    id: 1,
+    name: "Acme Roofing & Very Long Company Name LLC",
+  } as never,
   contact: { id: 1, first_name: "John", last_name: "Smith" } as never,
   termsMarkdown: null,
   termsTitle: null,
@@ -113,4 +118,4 @@ const outPath = join(root, "proposal-STRESS-sample.pdf");
 const output = pdfMake.createPdf(doc);
 const buffer = await output.getBuffer();
 writeFileSync(outPath, buffer);
-console.log(`Wrote ${outPath} (${buffer.length} bytes)`);
+console.warn(`Wrote ${outPath} (${buffer.length} bytes)`);

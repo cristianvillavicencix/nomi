@@ -47,7 +47,10 @@ export const extractRenderedSeoSignals = async (
 
     const title =
       document.title?.trim() ||
-      metaContent(['meta[property="og:title"]', 'meta[name="twitter:title"]']) ||
+      metaContent([
+        'meta[property="og:title"]',
+        'meta[name="twitter:title"]',
+      ]) ||
       null;
 
     const metaDescription =

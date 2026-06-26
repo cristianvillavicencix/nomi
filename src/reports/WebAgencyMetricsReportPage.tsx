@@ -86,11 +86,7 @@ export const WebAgencyMetricsReportPage = ({
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Revenue won</div>
             <div className="text-2xl font-semibold">
-              {canViewAmounts ? (
-                <MoneyText value={totals.revenue} />
-              ) : (
-                "$ •••"
-              )}
+              {canViewAmounts ? <MoneyText value={totals.revenue} /> : "$ •••"}
             </div>
           </CardContent>
         </Card>

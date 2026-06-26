@@ -6,7 +6,10 @@ import {
   useMyProjectDealIds,
   useScopedTasks,
 } from "@/components/atomic-crm/tasks/useScopedTasks";
-import { buildTaskCalendarEvent, toDateKey } from "@/modules/calendar/calendarUtils";
+import {
+  buildTaskCalendarEvent,
+  toDateKey,
+} from "@/modules/calendar/calendarUtils";
 import { useCalendarEvents } from "@/modules/calendar/useCalendarEvents";
 import { computeTaskStats } from "@/components/atomic-crm/tasks/taskStats";
 import {
@@ -35,15 +38,17 @@ export const useWorkPageData = ({
   const includeDoneForCalendar =
     preferences.status === "done" || preferences.includeDoneTasks;
 
-  const { eventsByDate, events, isPending: isEventsPending } = useCalendarEvents(
-    {
-      anchor,
-      view: preferences.viewMode === "today" ? "week" : preferences.calendarView,
-      includeDoneTasks: includeDoneForCalendar,
-      includeCompletedReminders: preferences.includeCompletedReminders,
-      projectId: preferences.projectId,
-    },
-  );
+  const {
+    eventsByDate,
+    events,
+    isPending: isEventsPending,
+  } = useCalendarEvents({
+    anchor,
+    view: preferences.viewMode === "today" ? "week" : preferences.calendarView,
+    includeDoneTasks: includeDoneForCalendar,
+    includeCompletedReminders: preferences.includeCompletedReminders,
+    projectId: preferences.projectId,
+  });
 
   const { data: scopedTasksResult, isPending: isTasksPending } = useScopedTasks(
     {

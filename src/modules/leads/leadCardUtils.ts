@@ -12,7 +12,10 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import type { Conversation } from "@/modules/types";
 import { getInitials } from "@/modules/messages/conversationDisplay";
 import { assignedMemberIdsFromContact } from "@/modules/leads/leadAssignments";
@@ -54,8 +57,8 @@ export const getLeadPrimaryEmail = (lead: Contact) =>
   null;
 
 export const getLeadPrimaryPhone = (lead: Contact) =>
-  lead.phone_jsonb?.find((entry) => String(entry.number ?? "").trim())?.number ??
-  null;
+  lead.phone_jsonb?.find((entry) => String(entry.number ?? "").trim())
+    ?.number ?? null;
 
 export const getLeadPrimaryPhoneDisplay = (lead: Contact) => {
   const phone = getLeadPrimaryPhone(lead);
@@ -83,7 +86,8 @@ export const getLeadAssigneeMemberId = (lead: Contact) =>
 export const getMemberDisplayName = (
   member: Pick<OrganizationMember, "first_name" | "last_name">,
 ) =>
-  [member.first_name, member.last_name].filter(Boolean).join(" ") || "Team member";
+  [member.first_name, member.last_name].filter(Boolean).join(" ") ||
+  "Team member";
 
 export const getMemberInitials = (
   member: Pick<OrganizationMember, "first_name" | "last_name">,
@@ -121,8 +125,8 @@ export const getLeadSourceIcon = (
       return {
         Icon: CircleHelp,
         label:
-          LBS_LEAD_SOURCE_CHOICES.find((choice) => choice.id === source)?.name ??
-          "Lead source",
+          LBS_LEAD_SOURCE_CHOICES.find((choice) => choice.id === source)
+            ?.name ?? "Lead source",
       };
   }
 };
@@ -180,4 +184,5 @@ export const isLeadActivityStale = (activityAt?: string | null) => {
   return differenceInDays(new Date(), date) >= STALE_ACTIVITY_DAYS;
 };
 
-export const getLeadInitials = (lead: Contact) => getInitials(getLeadDisplayName(lead));
+export const getLeadInitials = (lead: Contact) =>
+  getInitials(getLeadDisplayName(lead));

@@ -1,7 +1,4 @@
-import {
-  evaluateCondition,
-  type VisibleWhen,
-} from "./conditionalLogic.ts";
+import { evaluateCondition, type VisibleWhen } from "./conditionalLogic.ts";
 import { isFlexibleUrl } from "./urlValidation.ts";
 
 export type FormFieldDef = {

@@ -26,7 +26,9 @@ const UrlRow = ({
         <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </div>
-        <div className="mt-1 truncate text-sm font-medium text-brand-navy">{url}</div>
+        <div className="mt-1 truncate text-sm font-medium text-brand-navy">
+          {url}
+        </div>
       </div>
       <Button asChild size="sm" variant="outline" className="shrink-0">
         <a href={href} target="_blank" rel="noreferrer">

@@ -7,11 +7,13 @@ import {
   type ClientsHubTab,
 } from "@/modules/clients/clientsHubTabs";
 
-const TAB_RESOURCE: Record<ClientsHubTab, { resource: string; action: string }> =
-  {
-    companies: { resource: "companies", action: "list" },
-    people: { resource: "contacts", action: "list" },
-  };
+const TAB_RESOURCE: Record<
+  ClientsHubTab,
+  { resource: string; action: string }
+> = {
+  companies: { resource: "companies", action: "list" },
+  people: { resource: "contacts", action: "list" },
+};
 
 export const canAccessClientsHubTab = (
   identity: unknown,

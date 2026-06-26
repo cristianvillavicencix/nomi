@@ -3,7 +3,10 @@ import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
 import { sendTwilioSms } from "./twilio.ts";
 import { getWebsiteMonitorSettings } from "./websiteMonitorSettings.ts";
-import type { WebsiteCheckResult, WebsiteMonitorSiteRow } from "./websiteMonitor.ts";
+import type {
+  WebsiteCheckResult,
+  WebsiteMonitorSiteRow,
+} from "./websiteMonitor.ts";
 
 const toE164 = (phone: string): string | null => {
   const trimmed = phone.trim();
@@ -115,11 +118,12 @@ export const notifyWebsiteMonitorAlert = async (
   }
 
   const label = site.display_name ?? site.url;
-  const baseUrl = (options?.appBaseUrl ?? Deno.env.get("APP_BASE_URL") ?? "")
-    .replace(/\/$/, "");
-  const monitorLink = baseUrl
-    ? `${baseUrl}/web-monitor/${site.id}/show`
-    : "";
+  const baseUrl = (
+    options?.appBaseUrl ??
+    Deno.env.get("APP_BASE_URL") ??
+    ""
+  ).replace(/\/$/, "");
+  const monitorLink = baseUrl ? `${baseUrl}/web-monitor/${site.id}/show` : "";
 
   let message = "";
   if (alertKind === "down") {

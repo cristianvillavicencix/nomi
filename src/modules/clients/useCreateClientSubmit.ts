@@ -53,10 +53,9 @@ export const useCreateClientSubmit = () => {
       refresh();
       return result;
     } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Failed to save client",
-        { type: "error" },
-      );
+      notify(error instanceof Error ? error.message : "Failed to save client", {
+        type: "error",
+      });
       return null;
     } finally {
       setIsSaving(false);

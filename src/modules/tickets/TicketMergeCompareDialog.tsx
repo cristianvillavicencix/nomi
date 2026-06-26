@@ -117,13 +117,13 @@ const MergeValueCell = ({
       <span
         className={cn(
           "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border shadow-xs",
-          selected
-            ? "border-primary bg-primary"
-            : "border-input bg-background",
+          selected ? "border-primary bg-primary" : "border-input bg-background",
         )}
         aria-hidden
       >
-        {selected ? <span className="size-1.5 rounded-full bg-primary-foreground" /> : null}
+        {selected ? (
+          <span className="size-1.5 rounded-full bg-primary-foreground" />
+        ) : null}
       </span>
       <span className="min-w-0 flex-1 break-words leading-snug">{value}</span>
     </button>
@@ -308,9 +308,7 @@ export const TicketMergeCompareDialog = ({
         <label className="flex cursor-pointer items-center gap-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
           <Checkbox
             checked={allSelected}
-            onCheckedChange={(checked) =>
-              setAllFields(side, checked === true)
-            }
+            onCheckedChange={(checked) => setAllFields(side, checked === true)}
           />
           Select all values
         </label>
@@ -417,7 +415,9 @@ export const TicketMergeCompareDialog = ({
                 </p>
                 <ul className="space-y-2 text-xs leading-relaxed text-muted-foreground">
                   <li>All messages move to the primary thread.</li>
-                  <li>Selected field values are saved on the primary ticket.</li>
+                  <li>
+                    Selected field values are saved on the primary ticket.
+                  </li>
                   <li>The secondary ticket stays linked for reference.</li>
                 </ul>
               </div>

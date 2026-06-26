@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, ExternalLink } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  ExternalLink,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,8 +52,7 @@ export const ResourceLightbox = ({
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const imageResources = useMemo(
-    () =>
-      resources.filter((entry) => isImageResource(entry.file?.type ?? "")),
+    () => resources.filter((entry) => isImageResource(entry.file?.type ?? "")),
     [resources],
   );
 
@@ -58,8 +62,7 @@ export const ResourceLightbox = ({
   }, [imageResources, resource]);
 
   const hasPrev = currentIndex > 0;
-  const hasNext =
-    currentIndex >= 0 && currentIndex < imageResources.length - 1;
+  const hasNext = currentIndex >= 0 && currentIndex < imageResources.length - 1;
 
   const goPrev = useCallback(() => {
     if (!hasPrev) return;
@@ -131,7 +134,9 @@ export const ResourceLightbox = ({
         )}
       >
         <DialogHeader className="shrink-0 space-y-3 border-b px-6 py-4 text-left">
-          <DialogTitle className="pr-10 text-base sm:text-lg">{title}</DialogTitle>
+          <DialogTitle className="pr-10 text-base sm:text-lg">
+            {title}
+          </DialogTitle>
           <div className="flex flex-wrap items-center gap-2 text-sm font-normal">
             <Badge variant="secondary">
               {getProjectResourceCategoryLabel(resource.category)}

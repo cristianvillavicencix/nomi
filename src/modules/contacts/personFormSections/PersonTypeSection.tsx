@@ -6,7 +6,10 @@ import {
   PERSON_LEAD_PROFILE_CHOICES,
   syncPersonKindFields,
 } from "@/modules/contacts/personFormLogic";
-import type { PersonFormValues, PersonKind } from "@/modules/contacts/personFormTypes";
+import type {
+  PersonFormValues,
+  PersonKind,
+} from "@/modules/contacts/personFormTypes";
 import { PersonFormSection } from "@/modules/contacts/personFormSections/PersonFormSection";
 import type { LeadType } from "@/modules/leads/leadFormConstants";
 
@@ -46,7 +49,9 @@ export const PersonTypeSection = ({
   const personKind = useWatch<PersonFormValues, "person_kind">({
     name: "person_kind",
   });
-  const leadType = useWatch<PersonFormValues, "lead_type">({ name: "lead_type" });
+  const leadType = useWatch<PersonFormValues, "lead_type">({
+    name: "lead_type",
+  });
 
   const setPersonKind = (kind: PersonKind) => {
     const synced = syncPersonKindFields(kind);

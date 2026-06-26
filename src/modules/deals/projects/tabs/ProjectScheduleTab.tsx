@@ -139,7 +139,9 @@ export const ProjectScheduleTab = ({ record }: { record: LbsDeal }) => {
   };
 
   if (isPending) {
-    return <div className="text-sm text-muted-foreground">Loading schedule…</div>;
+    return (
+      <div className="text-sm text-muted-foreground">Loading schedule…</div>
+    );
   }
 
   return (

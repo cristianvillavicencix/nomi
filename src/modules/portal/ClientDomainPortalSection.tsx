@@ -14,13 +14,7 @@ import {
   type PortalDomain,
 } from "@/modules/portal/portalTypes";
 
-const InfoRow = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) => {
+const InfoRow = ({ label, value }: { label: string; value: ReactNode }) => {
   if (value == null || value === "" || value === "—") return null;
   return (
     <div className="flex flex-col gap-1 border-b py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
@@ -66,14 +60,20 @@ export const ClientDomainPortalSection = ({
 
       {domains.length > 0 ? (
         domains.map((domain) => (
-          <section key={domain.domain} className="rounded-lg border bg-background/80">
+          <section
+            key={domain.domain}
+            className="rounded-lg border bg-background/80"
+          >
             <div className="border-b px-4 py-3">
               <h2 className="text-sm font-semibold text-foreground">
                 {domain.domain}
               </h2>
             </div>
             <dl className="px-4">
-              <InfoRow label={copy.domainRegistrar} value={domain.registrar ?? registrar} />
+              <InfoRow
+                label={copy.domainRegistrar}
+                value={domain.registrar ?? registrar}
+              />
               <InfoRow
                 label={copy.domainRegistered}
                 value={formatPortalDate(domain.registered_at, localeTag)}

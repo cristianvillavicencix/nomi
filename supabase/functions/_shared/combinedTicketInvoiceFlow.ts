@@ -6,7 +6,10 @@ import {
 } from "./clientInvoiceFlow.ts";
 import { DEFAULT_INVOICE_TERMS_AND_CONDITIONS } from "./invoiceDefaults.ts";
 import { INVOICE_ORGANIZATION_NAME } from "./invoiceOrganizationInfo.ts";
-import { isOrgTransactionalEmailConfigured, sendTransactionalEmail } from "./transactionalEmail.ts";
+import {
+  isOrgTransactionalEmailConfigured,
+  sendTransactionalEmail,
+} from "./transactionalEmail.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 import {
   allDeliverablesHaveBilling,
@@ -56,11 +59,16 @@ const addDays = (isoDate: string, days: number) => {
 };
 
 const normalizeTicketIds = (ticketIds: number[]) =>
-  [...new Set(ticketIds.map((id) => Number(id)).filter((id) => Number.isFinite(id)))].sort(
-    (a, b) => a - b,
-  );
+  [
+    ...new Set(
+      ticketIds.map((id) => Number(id)).filter((id) => Number.isFinite(id)),
+    ),
+  ].sort((a, b) => a - b);
 
-async function loadTicketCatalogPackages(supabase: SupabaseClient, orgId: number) {
+async function loadTicketCatalogPackages(
+  supabase: SupabaseClient,
+  orgId: number,
+) {
   const { data = [] } = await supabase
     .from("service_packages")
     .select(
@@ -188,7 +196,9 @@ async function loadTicketsForCombinedInvoice(
           orgId,
           Number(invoice.id),
         );
-        const linkedIds = normalizeTicketIds(links.map((link) => Number(link.ticket_id)));
+        const linkedIds = normalizeTicketIds(
+          links.map((link) => Number(link.ticket_id)),
+        );
         const sameSet =
           linkedIds.length === normalizedIds.length &&
           linkedIds.every((id, index) => id === normalizedIds[index]);
@@ -209,14 +219,17 @@ async function loadTicketsForCombinedInvoice(
     ordered.map((ticket) => resolveRecipientEmail(supabase, ticket)),
   );
   const availableEmails = [
-    ...new Set(recipientEmails.filter((email) => email && emailRegex.test(email))),
+    ...new Set(
+      recipientEmails.filter((email) => email && emailRegex.test(email)),
+    ),
   ];
 
   if (!availableEmails.length) {
     throw new Error("Add a valid recipient email before sending an invoice");
   }
 
-  const normalizedSelection = selectedRecipientEmail?.trim().toLowerCase() ?? "";
+  const normalizedSelection =
+    selectedRecipientEmail?.trim().toLowerCase() ?? "";
   let recipientEmail = "";
 
   if (normalizedSelection) {
@@ -253,7 +266,11 @@ async function buildCombinedPricing(
     tickets.map(async (ticket) => ({
       ticket,
       propertyAddress: ticket.subject?.trim() || "Property",
-      deliverables: await loadUninvoicedDeliverables(supabase, orgId, ticket.id),
+      deliverables: await loadUninvoicedDeliverables(
+        supabase,
+        orgId,
+        ticket.id,
+      ),
     })),
   );
 
@@ -428,7 +445,9 @@ export async function prepareCombinedTicketInvoiceDraft(
         .eq("id", existingDraftId)
         .eq("org_id", params.orgId);
     } else if (existing && existing.status !== "void") {
-      throw new Error("One of the selected tickets already has an active invoice");
+      throw new Error(
+        "One of the selected tickets already has an active invoice",
+      );
     } else {
       invoiceId = null;
     }
@@ -443,32 +462,36 @@ export async function prepareCombinedTicketInvoiceDraft(
       .map((ticket) => ticket.subject?.trim() || `Ticket #${ticket.id}`)
       .join(" · ");
 
-    const invoice = await createStandaloneClientInvoice(supabase, params.orgId, {
-      company_id: primaryTicket.company_id ?? null,
-      contact_id: primaryTicket.contact_id ?? null,
-      deal_id: primaryTicket.deal_id ?? null,
-      ticket_id: primaryTicket.id,
-      issue_date: today,
-      due_date: dueDate,
-      terms: "Due on receipt",
-      notes: DEFAULT_INVOICE_TERMS_AND_CONDITIONS,
-      subtotal: pricing.subtotal,
-      fee_amount: pricing.transferFee,
-      amount: pricing.total,
-      description: `Combined ticket invoice · Tickets ${ticketLabels}`,
-      reference: `Tickets ${ticketLabels} · ${propertySummary}`,
-      recipient_email: recipientEmail,
-      save_card_for_future_charges: false,
-      upfront_percent: 100,
-      auto_charge_remainder: false,
-      line_items: pricing.lines.map((line, index) => ({
-        description: line.description,
-        quantity: line.quantity,
-        unit: line.unit,
-        unit_price: line.unitPrice,
-        sort_order: index,
-      })),
-    });
+    const invoice = await createStandaloneClientInvoice(
+      supabase,
+      params.orgId,
+      {
+        company_id: primaryTicket.company_id ?? null,
+        contact_id: primaryTicket.contact_id ?? null,
+        deal_id: primaryTicket.deal_id ?? null,
+        ticket_id: primaryTicket.id,
+        issue_date: today,
+        due_date: dueDate,
+        terms: "Due on receipt",
+        notes: DEFAULT_INVOICE_TERMS_AND_CONDITIONS,
+        subtotal: pricing.subtotal,
+        fee_amount: pricing.transferFee,
+        amount: pricing.total,
+        description: `Combined ticket invoice · Tickets ${ticketLabels}`,
+        reference: `Tickets ${ticketLabels} · ${propertySummary}`,
+        recipient_email: recipientEmail,
+        save_card_for_future_charges: false,
+        upfront_percent: 100,
+        auto_charge_remainder: false,
+        line_items: pricing.lines.map((line, index) => ({
+          description: line.description,
+          quantity: line.quantity,
+          unit: line.unit,
+          unit_price: line.unitPrice,
+          sort_order: index,
+        })),
+      },
+    );
 
     invoiceId = Number(invoice.id);
     await linkTicketsToInvoice(
@@ -569,7 +592,9 @@ export async function cancelCombinedTicketInvoiceDraft(
   const now = new Date().toISOString();
   for (const ticket of rows) {
     const nextDeliveryStatus =
-      ticket.delivery_status === "invoice_sent" ? "ready" : ticket.delivery_status;
+      ticket.delivery_status === "invoice_sent"
+        ? "ready"
+        : ticket.delivery_status;
     await supabase
       .from("tickets")
       .update({
@@ -705,8 +730,7 @@ export async function sendCombinedTicketInvoicePaymentLink(
     paymentUrl: url,
     customMessage: params.message,
     subject:
-      params.subject?.trim() ||
-      buildTicketPaymentEmailSubject(propertySummary),
+      params.subject?.trim() || buildTicketPaymentEmailSubject(propertySummary),
     propertyAddress: propertySummary,
     serviceLines,
   });
@@ -799,7 +823,8 @@ export async function sendCombinedTicketInvoicePaymentLink(
     member?.email?.trim() ||
     "Team";
   const fromEmail =
-    (await getTransactionalFromEmail(params.orgId)) ?? INVOICE_ORGANIZATION_NAME;
+    (await getTransactionalFromEmail(params.orgId)) ??
+    INVOICE_ORGANIZATION_NAME;
 
   for (const ticket of tickets) {
     const noteContext = await loadTicketInvoiceSentNoteContext(supabase, {

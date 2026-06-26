@@ -155,17 +155,24 @@ export const ProposalSendExpiryDialog = ({
               max={365}
               value={validityDays}
               onChange={(event) =>
-                setValidityDays(Number(event.target.value) || DEFAULT_VALIDITY_DAYS)
+                setValidityDays(
+                  Number(event.target.value) || DEFAULT_VALIDITY_DAYS,
+                )
               }
             />
             <p className="text-xs text-muted-foreground">
-              New expiration: {formatDisplayDate(computeValidUntil(validityDays))}
+              New expiration:{" "}
+              {formatDisplayDate(computeValidUntil(validityDays))}
             </p>
           </div>
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button

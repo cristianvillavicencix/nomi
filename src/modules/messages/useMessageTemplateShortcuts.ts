@@ -2,7 +2,11 @@ import { useGetList } from "ra-core";
 import type { MessageTemplate } from "@/modules/types";
 
 export const useMessageTemplateShortcuts = (enabled = true) => {
-  const { data = [], isPending, isError } = useGetList<MessageTemplate>(
+  const {
+    data = [],
+    isPending,
+    isError,
+  } = useGetList<MessageTemplate>(
     "message_templates",
     {
       pagination: { page: 1, perPage: 24 },

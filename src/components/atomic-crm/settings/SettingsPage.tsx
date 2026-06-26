@@ -1,6 +1,13 @@
 import { RotateCcw, Save } from "lucide-react";
 import type { RaRecord } from "ra-core";
-import { EditBase, Form, useDataProvider, useGetList, useInput, useNotify } from "ra-core";
+import {
+  EditBase,
+  Form,
+  useDataProvider,
+  useGetList,
+  useInput,
+  useNotify,
+} from "ra-core";
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isTenantBrandingEditorVisible } from "./tenantBrandingFlags";
@@ -224,12 +231,7 @@ export const SettingsPage = () => <SettingsPageContent />;
 
 SettingsPage.path = "/settings";
 
-const SettingsForm = ({
-  config,
-}: {
-  config: ConfigurationContextValue;
-}) => {
-
+const SettingsForm = ({ config }: { config: ConfigurationContextValue }) => {
   const defaultValues = useMemo(
     () => ({
       title: config.title,

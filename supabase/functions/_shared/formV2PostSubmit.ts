@@ -30,8 +30,11 @@ const buildTaskTitle = (
     extractFieldValue(answers, ["name", "full_name", "submitter_name"]) ??
     "Form lead";
   const submitterEmail =
-    extractFieldValue(answers, ["email", "respondent_email", "submitter_email"]) ??
-    "";
+    extractFieldValue(answers, [
+      "email",
+      "respondent_email",
+      "submitter_email",
+    ]) ?? "";
   const template =
     instance.task_title_template ??
     "Follow up on {form_name} from {submitter_name}";
@@ -136,7 +139,9 @@ export async function handlePostSubmitActions(
 
   if (instance.auto_create_task) {
     const assigneeId =
-      instance.task_assignee_member_id ?? instance.notify_member_ids?.[0] ?? null;
+      instance.task_assignee_member_id ??
+      instance.notify_member_ids?.[0] ??
+      null;
     const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     await supabase.from("tasks").insert({
@@ -171,7 +176,9 @@ export async function handlePostSubmitActions(
       instance.org_id,
       submissionForProposal,
       answers,
-      instance.task_assignee_member_id ?? instance.notify_member_ids?.[0] ?? null,
+      instance.task_assignee_member_id ??
+        instance.notify_member_ids?.[0] ??
+        null,
     );
   }
 }

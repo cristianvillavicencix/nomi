@@ -35,7 +35,14 @@ export const groupPortalResources = (
     buckets.set(folderId, current);
   }
 
-  const order = ["logo", "service-photo", "team", "document", "backup", "other"];
+  const order = [
+    "logo",
+    "service-photo",
+    "team",
+    "document",
+    "backup",
+    "other",
+  ];
   const folders: PortalResourceFolder[] = [];
 
   for (const [folderId, items] of buckets.entries()) {
@@ -48,7 +55,9 @@ export const groupPortalResources = (
       label,
       emoji: folderEmoji(folderId),
       items: items.sort((a, b) =>
-        String(a.file_name ?? a.label).localeCompare(String(b.file_name ?? b.label)),
+        String(a.file_name ?? a.label).localeCompare(
+          String(b.file_name ?? b.label),
+        ),
       ),
     });
   }
@@ -61,7 +70,8 @@ export const groupPortalResources = (
     const leftIndex = order.indexOf(left.id);
     const rightIndex = order.indexOf(right.id);
     return (
-      (leftIndex === -1 ? 99 : leftIndex) - (rightIndex === -1 ? 99 : rightIndex)
+      (leftIndex === -1 ? 99 : leftIndex) -
+      (rightIndex === -1 ? 99 : rightIndex)
     );
   });
 };
@@ -84,6 +94,9 @@ export const parseDomainFromUrl = (siteUrl?: string | null) => {
     const href = siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`;
     return new URL(href).hostname.replace(/^www\./, "");
   } catch {
-    return siteUrl.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+    return siteUrl
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split("/")[0];
   }
 };

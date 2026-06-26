@@ -1,7 +1,10 @@
 import { ImageIcon, Loader2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { isProposalImageUrl, uploadProposalImage } from "@/modules/proposals/document/uploadProposalImage";
+import {
+  isProposalImageUrl,
+  uploadProposalImage,
+} from "@/modules/proposals/document/uploadProposalImage";
 
 export const ProposalImageDropZone = ({
   imageUrl,
@@ -116,7 +119,9 @@ export const ProposalImageDropZone = ({
                   <ImageIcon className="size-5" />
                 )}
               </div>
-              <p className="text-sm font-medium text-[#475068]">{placeholder}</p>
+              <p className="text-sm font-medium text-[#475068]">
+                {placeholder}
+              </p>
               <p className="flex items-center gap-1 text-xs text-[#9aa3b5]">
                 <Upload className="size-3.5" />
                 Click to upload

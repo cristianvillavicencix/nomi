@@ -1,35 +1,35 @@
-import { useMemo, useState } from "react";
-import { Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useMemo, useState } from "react"
+import { Download } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import {
   ImageLightbox,
   type LightboxImage,
-} from "@/components/ui/image-lightbox";
-import { cn } from "@/lib/utils";
+} from "@/components/ui/image-lightbox"
+import { cn } from "@/lib/utils"
 
 export type PhotoLightboxGridItem = {
-  id: string;
-  src: string;
-  alt?: string;
-  title?: string;
-};
+  id: string
+  src: string
+  alt?: string
+  title?: string
+}
 
 type PhotoLightboxGridProps = {
-  items: PhotoLightboxGridItem[];
+  items: PhotoLightboxGridItem[]
   /** Compact = message bubbles; gallery = ticket attachments */
-  variant?: "compact" | "gallery";
-  showCaption?: boolean;
-  className?: string;
-  onDownloadItem?: (item: PhotoLightboxGridItem) => void;
-};
+  variant?: "compact" | "gallery"
+  showCaption?: boolean
+  className?: string
+  onDownloadItem?: (item: PhotoLightboxGridItem) => void
+}
 
 const compactGridClass = (count: number) => {
-  if (count <= 1) return "grid-cols-1";
-  if (count === 2) return "grid-cols-2";
-  if (count === 3) return "grid-cols-3";
-  if (count === 4) return "grid-cols-2";
-  return "grid-cols-3";
-};
+  if (count <= 1) return "grid-cols-1"
+  if (count === 2) return "grid-cols-2"
+  if (count === 3) return "grid-cols-3"
+  if (count === 4) return "grid-cols-2"
+  return "grid-cols-3"
+}
 
 export const PhotoLightboxGrid = ({
   items,
@@ -45,19 +45,19 @@ export const PhotoLightboxGrid = ({
         alt: item.alt,
         title: item.title ?? item.alt,
       })),
-    [items],
-  );
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
+    [items]
+  )
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
-  if (!items.length) return null;
+  if (!items.length) return null
 
   const downloadCurrent = onDownloadItem
     ? () => {
-        const item = items[lightboxIndex];
-        if (item) onDownloadItem(item);
+        const item = items[lightboxIndex]
+        if (item) onDownloadItem(item)
       }
-    : undefined;
+    : undefined
 
   return (
     <>
@@ -66,7 +66,7 @@ export const PhotoLightboxGrid = ({
           variant === "compact"
             ? cn("grid gap-1.5", compactGridClass(items.length))
             : "grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4",
-          className,
+          className
         )}
       >
         {items.map((item, index) => (
@@ -76,7 +76,7 @@ export const PhotoLightboxGrid = ({
               "group relative overflow-hidden",
               variant === "gallery"
                 ? "rounded-md border bg-background"
-                : "rounded-sm",
+                : "rounded-sm"
             )}
           >
             <button
@@ -84,9 +84,9 @@ export const PhotoLightboxGrid = ({
               title={item.title ?? item.alt}
               className="block w-full text-left"
               onClick={(event) => {
-                event.stopPropagation();
-                setLightboxIndex(index);
-                setLightboxOpen(true);
+                event.stopPropagation()
+                setLightboxIndex(index)
+                setLightboxOpen(true)
               }}
             >
               <img
@@ -98,7 +98,7 @@ export const PhotoLightboxGrid = ({
                     ? "aspect-[4/3]"
                     : items.length === 1
                       ? "max-h-56 rounded-sm"
-                      : "aspect-square rounded-sm",
+                      : "aspect-square rounded-sm"
                 )}
                 loading="lazy"
               />
@@ -112,12 +112,12 @@ export const PhotoLightboxGrid = ({
                   "absolute bottom-1.5 right-1.5 size-7 rounded-full shadow-sm",
                   variant === "compact"
                     ? "bg-background/90 hover:bg-background"
-                    : "opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100",
+                    : "opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
                 )}
                 aria-label={`Download ${item.title ?? item.alt ?? "image"}`}
                 onClick={(event) => {
-                  event.stopPropagation();
-                  onDownloadItem(item);
+                  event.stopPropagation()
+                  onDownloadItem(item)
                 }}
               >
                 <Download className="size-3.5" />
@@ -140,5 +140,5 @@ export const PhotoLightboxGrid = ({
         onDownload={downloadCurrent}
       />
     </>
-  );
-};
+  )
+}

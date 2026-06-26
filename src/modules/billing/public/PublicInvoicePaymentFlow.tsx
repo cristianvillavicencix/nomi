@@ -4,22 +4,33 @@ import {
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
-import { loadStripe, type StripePaymentElementChangeEvent } from "@stripe/stripe-js";
+import {
+  loadStripe,
+  type StripePaymentElementChangeEvent,
+} from "@stripe/stripe-js";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Lock } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { isClientBillingSkipped } from "@/modules/billing/clientBillingProvider";
-import { parseInvoiceRemainderSchedule, previewRemainderScheduleAfterPayments } from "@/modules/billing/invoiceRemainderSchedule";
+import {
+  parseInvoiceRemainderSchedule,
+  previewRemainderScheduleAfterPayments,
+} from "@/modules/billing/invoiceRemainderSchedule";
 import {
   buildInvoiceAmortizationSchedule,
   buildInvoicePaymentSchedule,
   computeInvoiceUpfrontAmount,
   computeInvoiceBalanceDue,
 } from "@/modules/billing/invoicePaymentUtils";
-import {
-  InvoicePaymentAmountPicker,
-} from "@/modules/billing/public/InvoicePaymentAmountPicker";
+import { InvoicePaymentAmountPicker } from "@/modules/billing/public/InvoicePaymentAmountPicker";
 import {
   filterRemainderInstallmentRows,
   invoicePaymentConsentLabelForAmount,
@@ -160,7 +171,9 @@ type InvoicePaymentSummary = {
   isPaid: boolean;
 };
 
-const buildPaymentSummary = (payload: PublicInvoicePayload): InvoicePaymentSummary => {
+const buildPaymentSummary = (
+  payload: PublicInvoicePayload,
+): InvoicePaymentSummary => {
   const { invoice } = payload;
   const currency = invoice.currency ?? "USD";
   const total = Number(invoice.amount) || 0;
@@ -222,9 +235,8 @@ const useInvoicePaymentAmountState = (summary: InvoicePaymentSummary) => {
     [upcomingInstallments, summary.depositPaid],
   );
 
-  const [selectedInstallmentNumbers, setSelectedInstallmentNumbers] = useState<
-    number[]
-  >(defaultSelection);
+  const [selectedInstallmentNumbers, setSelectedInstallmentNumbers] =
+    useState<number[]>(defaultSelection);
 
   useEffect(() => {
     setSelectedInstallmentNumbers(defaultSelection);
@@ -237,11 +249,7 @@ const useInvoicePaymentAmountState = (summary: InvoicePaymentSummary) => {
         upcomingInstallments,
         summary.depositPaid,
       ),
-    [
-      selectedInstallmentNumbers,
-      upcomingInstallments,
-      summary.depositPaid,
-    ],
+    [selectedInstallmentNumbers, upcomingInstallments, summary.depositPaid],
   );
 
   const toggleInstallment = (paymentNumber: number) => {
@@ -320,7 +328,8 @@ const useInvoicePaymentAmountState = (summary: InvoicePaymentSummary) => {
     effectiveSelectedInstallmentNumbers,
     toggleInstallment,
     selectAllInstallments,
-    clearSelectedInstallments: () => setSelectedInstallmentNumbers(defaultSelection),
+    clearSelectedInstallments: () =>
+      setSelectedInstallmentNumbers(defaultSelection),
     selectedAmount,
     amountValid,
     upcomingInstallments,
@@ -363,53 +372,58 @@ const useStablePaymentCheckoutSession = (
     remainderInstallmentNumbers: paymentAmountState.remainderInstallmentNumbers,
   };
 
-  const runPrepare = useCallback(async (paymentIntentId?: string) => {
-    const execute = async () => {
-      const storedPaymentIntentId =
-        paymentIntentId ?? readStoredInvoicePaymentIntentId(token) ?? undefined;
+  const runPrepare = useCallback(
+    async (paymentIntentId?: string) => {
+      const execute = async () => {
+        const storedPaymentIntentId =
+          paymentIntentId ??
+          readStoredInvoicePaymentIntentId(token) ??
+          undefined;
 
-      const result = await preparePublicClientInvoicePayment({
-        token,
-        amount: paymentStateRef.current.selectedAmount,
-        remainderInstallmentNumbers:
-          paymentStateRef.current.remainderInstallmentNumbers,
-        paymentIntentId: storedPaymentIntentId,
-      });
-
-      if (result.billing_mode === "mock") {
-        clearStoredInvoicePaymentIntentId(token);
-        setSession({
-          paymentIntentId: "",
-          clientSecret: "",
-          billingMode: "mock",
+        const result = await preparePublicClientInvoicePayment({
+          token,
+          amount: paymentStateRef.current.selectedAmount,
+          remainderInstallmentNumbers:
+            paymentStateRef.current.remainderInstallmentNumbers,
+          paymentIntentId: storedPaymentIntentId,
         });
+
+        if (result.billing_mode === "mock") {
+          clearStoredInvoicePaymentIntentId(token);
+          setSession({
+            paymentIntentId: "",
+            clientSecret: "",
+            billingMode: "mock",
+          });
+          return result;
+        }
+
+        if (result.payment_intent_id && result.client_secret) {
+          writeStoredInvoicePaymentIntentId(token, result.payment_intent_id);
+          setSession({
+            paymentIntentId: result.payment_intent_id,
+            clientSecret: result.client_secret,
+            billingMode: result.billing_mode ?? "stripe",
+          });
+        }
+
         return result;
+      };
+
+      if (prepareInFlightRef.current) {
+        await prepareInFlightRef.current;
       }
 
-      if (result.payment_intent_id && result.client_secret) {
-        writeStoredInvoicePaymentIntentId(token, result.payment_intent_id);
-        setSession({
-          paymentIntentId: result.payment_intent_id,
-          clientSecret: result.client_secret,
-          billingMode: result.billing_mode ?? "stripe",
-        });
-      }
-
-      return result;
-    };
-
-    if (prepareInFlightRef.current) {
-      await prepareInFlightRef.current;
-    }
-
-    const promise = execute();
-    prepareInFlightRef.current = promise.finally(() => {
-      if (prepareInFlightRef.current === promise) {
-        prepareInFlightRef.current = null;
-      }
-    });
-    return promise;
-  }, [token]);
+      const promise = execute();
+      prepareInFlightRef.current = promise.finally(() => {
+        if (prepareInFlightRef.current === promise) {
+          prepareInFlightRef.current = null;
+        }
+      });
+      return promise;
+    },
+    [token],
+  );
 
   useEffect(() => {
     setSession(null);
@@ -537,8 +551,12 @@ const InvoicePaymentReviewActions = ({
   focusPaymentEntry?: boolean;
   sheetLayout?: boolean;
 }) => {
-  const { currency, balanceDue, autoChargeRemainder, saveCardForFutureCharges } =
-    summary;
+  const {
+    currency,
+    balanceDue,
+    autoChargeRemainder,
+    saveCardForFutureCharges,
+  } = summary;
   const {
     effectiveSelectedInstallmentNumbers,
     selectedAmount,
@@ -680,14 +698,17 @@ const InvoiceStripePaymentFormInner = ({
 
       const returnUrl = `${window.location.origin}${window.location.pathname}`;
 
-      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: { return_url: returnUrl },
-        redirect: "if_required",
-      });
+      const { error: confirmError, paymentIntent } =
+        await stripe.confirmPayment({
+          elements,
+          confirmParams: { return_url: returnUrl },
+          redirect: "if_required",
+        });
 
       if (confirmError) {
-        throw new Error(confirmError.message ?? "Payment could not be completed");
+        throw new Error(
+          confirmError.message ?? "Payment could not be completed",
+        );
       }
 
       const completedIntentId = paymentIntent?.id ?? paymentIntentId;
@@ -769,7 +790,9 @@ const InvoiceStripePaymentFormInner = ({
               sheetLayout && "pb-4",
             )}
           >
-            <p className="mb-2 text-[13px] text-muted-foreground">Payment method</p>
+            <p className="mb-2 text-[13px] text-muted-foreground">
+              Payment method
+            </p>
             <PaymentElement
               options={paymentElementOptions}
               onChange={(event: StripePaymentElementChangeEvent) => {
@@ -821,7 +844,11 @@ const InvoiceStripeCheckout = ({
     const params = new URLSearchParams(window.location.search);
     const paymentIntentId = params.get("payment_intent");
     const redirectStatus = params.get("redirect_status");
-    if (!paymentIntentId || redirectStatus !== "succeeded" || finalizingRedirect) {
+    if (
+      !paymentIntentId ||
+      redirectStatus !== "succeeded" ||
+      finalizingRedirect
+    ) {
       return;
     }
 
@@ -870,7 +897,9 @@ const InvoiceStripeCheckout = ({
           className={`flex flex-col gap-2 border-b border-border/40 ${publicInvoicePaymentSectionPadding} pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:pb-5 sm:pt-6`}
         >
           <div className="min-w-0">
-            <p className="mb-1 text-[13px] text-muted-foreground">Balance due</p>
+            <p className="mb-1 text-[13px] text-muted-foreground">
+              Balance due
+            </p>
             <p className="text-[26px] font-medium tabular-nums leading-none text-foreground sm:text-[30px]">
               {summary.balanceDueFormatted}
             </p>
@@ -902,7 +931,9 @@ const InvoiceStripeCheckout = ({
           }
           onToggleInstallment={paymentAmountState.toggleInstallment}
           onSelectAllInstallments={paymentAmountState.selectAllInstallments}
-          onClearSelectedInstallments={paymentAmountState.clearSelectedInstallments}
+          onClearSelectedInstallments={
+            paymentAmountState.clearSelectedInstallments
+          }
           previewDueDatesByInstallmentNumber={
             paymentAmountState.previewDueDatesByInstallmentNumber
           }
@@ -913,22 +944,30 @@ const InvoiceStripeCheckout = ({
         <div
           className={cn(
             "flex items-center gap-2 text-sm text-muted-foreground",
-            focusPaymentEntry ? "justify-center px-4 py-8 sm:px-6" : `${publicInvoicePaymentSectionPadding} py-4`,
+            focusPaymentEntry
+              ? "justify-center px-4 py-8 sm:px-6"
+              : `${publicInvoicePaymentSectionPadding} py-4`,
           )}
         >
           <Loader2 className="size-4 animate-spin" />
           Loading payment options…
         </div>
       ) : checkout.initialError ? (
-        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}>
+        <p
+          className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}
+        >
           {checkout.initialError.message}
         </p>
       ) : checkout.syncError ? (
-        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}>
+        <p
+          className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}
+        >
           {checkout.syncError.message}
         </p>
       ) : checkout.session?.billingMode === "mock" || !clientSecret ? (
-        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-warning`}>
+        <p
+          className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-warning`}
+        >
           Stripe is not configured on the server. Set{" "}
           <code className="text-xs">STRIPE_SECRET_KEY</code> in Supabase Edge
           Function secrets.
@@ -959,7 +998,11 @@ const InvoiceStripeCheckout = ({
           />
         </Elements>
       ) : flowError ? (
-        <p className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}>{flowError}</p>
+        <p
+          className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-destructive`}
+        >
+          {flowError}
+        </p>
       ) : null}
     </div>
   );
@@ -983,7 +1026,8 @@ const InvoiceMockPaymentForm = ({
       payPublicClientInvoice({
         token,
         amount: paymentAmountState.selectedAmount,
-        remainderInstallmentNumbers: paymentAmountState.remainderInstallmentNumbers,
+        remainderInstallmentNumbers:
+          paymentAmountState.remainderInstallmentNumbers,
       }),
     onSuccess: () => {
       setFlowError(null);
@@ -1021,7 +1065,9 @@ const InvoiceMockPaymentForm = ({
             <>
               <div className="px-4 pb-1 pt-4 sm:px-6 lg:pt-6">
                 <PublicInvoicePaymentCardHeading />
-                <p className="text-sm text-muted-foreground">Demo mode · No card required</p>
+                <p className="text-sm text-muted-foreground">
+                  Demo mode · No card required
+                </p>
               </div>
               <InvoicePaymentReviewActions
                 summary={summary}
@@ -1056,7 +1102,9 @@ const InvoiceMockPaymentForm = ({
         </div>
         <div className="min-w-0 sm:text-right">
           <p className="mb-1 text-[13px] text-muted-foreground">Invoice</p>
-          <p className="text-sm font-medium text-foreground">{invoice.invoice_number}</p>
+          <p className="text-sm font-medium text-foreground">
+            {invoice.invoice_number}
+          </p>
         </div>
       </div>
 
@@ -1077,7 +1125,9 @@ const InvoiceMockPaymentForm = ({
         }
         onToggleInstallment={paymentAmountState.toggleInstallment}
         onSelectAllInstallments={paymentAmountState.selectAllInstallments}
-        onClearSelectedInstallments={paymentAmountState.clearSelectedInstallments}
+        onClearSelectedInstallments={
+          paymentAmountState.clearSelectedInstallments
+        }
         previewDueDatesByInstallmentNumber={
           paymentAmountState.previewDueDatesByInstallmentNumber
         }
@@ -1098,9 +1148,11 @@ const InvoiceMockPaymentForm = ({
       />
 
       {!sheetLayout ? (
-      <p className={`-mt-2 pb-6 text-center text-xs text-muted-foreground ${publicInvoicePaymentSectionPadding}`}>
-        Demo mode · No card required
-      </p>
+        <p
+          className={`-mt-2 pb-6 text-center text-xs text-muted-foreground ${publicInvoicePaymentSectionPadding}`}
+        >
+          Demo mode · No card required
+        </p>
       ) : null}
     </div>
   );
@@ -1112,7 +1164,9 @@ export const PublicInvoicePaymentFlow = (props: PaymentFlowProps) => {
 
   if (!stripePromise && !billingSkipped) {
     return (
-      <div className={`mx-auto max-w-[560px] rounded-[14px] border border-amber-200 bg-amber-50 ${publicInvoicePaymentSectionPadding} py-5 text-sm text-amber-900`}>
+      <div
+        className={`mx-auto max-w-[560px] rounded-[14px] border border-amber-200 bg-amber-50 ${publicInvoicePaymentSectionPadding} py-5 text-sm text-amber-900`}
+      >
         Card payments are not configured. Add{" "}
         <code className="text-xs">VITE_STRIPE_PUBLISHABLE_KEY</code> to enable
         Stripe checkout.

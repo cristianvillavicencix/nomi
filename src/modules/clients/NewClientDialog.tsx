@@ -7,7 +7,10 @@ type NewClientDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-export const NewClientDialog = ({ open, onOpenChange }: NewClientDialogProps) => (
+export const NewClientDialog = ({
+  open,
+  onOpenChange,
+}: NewClientDialogProps) => (
   <CompanyCreateDialog
     open={open}
     onOpenChange={onOpenChange}

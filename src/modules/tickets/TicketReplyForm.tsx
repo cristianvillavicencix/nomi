@@ -1,5 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, Forward, Loader2, Lock, Paperclip, Reply, Save, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Forward,
+  Loader2,
+  Lock,
+  Paperclip,
+  Reply,
+  Save,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useDataProvider,
@@ -10,7 +20,12 @@ import {
 } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { ClientInvoice, Ticket, TicketInbox, TicketMessage } from "@/modules/types";
+import type {
+  ClientInvoice,
+  Ticket,
+  TicketInbox,
+  TicketMessage,
+} from "@/modules/types";
 import { getTicketReplyStatusActions } from "@/modules/tickets/ticketReplyStatusActions";
 import { TicketReplyComposerActions } from "@/modules/tickets/TicketReplyComposerActions";
 import type { TicketWorkflowStatus } from "@/modules/tickets/ticketStatusWorkflow";
@@ -99,7 +114,9 @@ export const TicketReplyForm = ({
   const [internalNoteText, setInternalNoteText] = useState("");
   const [toRecipients, setToRecipients] = useState("");
   const [ccRecipients, setCcRecipients] = useState("");
-  const [pendingFiles, setPendingFiles] = useState<PendingTicketAttachment[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<PendingTicketAttachment[]>(
+    [],
+  );
   const [submittingAs, setSubmittingAs] = useState<
     "internal" | "forward" | TicketWorkflowStatus | null
   >(null);
@@ -175,7 +192,8 @@ export const TicketReplyForm = ({
     return (
       ticketInboxes.find(
         (entry) => entry.email?.trim().toLowerCase() === targetEmail,
-      ) ?? ticketInboxes[0] ??
+      ) ??
+      ticketInboxes[0] ??
       null
     );
   }, [ticket.inbox_address, ticketInboxes]);
@@ -200,7 +218,8 @@ export const TicketReplyForm = ({
   const replyMinHeight = composeMode === "forward" ? 96 : 200;
   const replyMaxHeight = composeMode === "forward" ? 280 : 720;
 
-  const fromAddress = ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
+  const fromAddress =
+    ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
   const readyPendingFiles = pendingFiles.filter(
     (entry) => entry.status === "ready" && entry.uploaded,
   );
@@ -333,9 +352,7 @@ export const TicketReplyForm = ({
       setInternalNoteText("");
     } else {
       setForwardContext(
-        forwardSourceMessage
-          ? { message: forwardSourceMessage }
-          : null,
+        forwardSourceMessage ? { message: forwardSourceMessage } : null,
       );
       setToRecipients("");
       setBodyHtml(defaultReplyHtml);
@@ -380,16 +397,13 @@ export const TicketReplyForm = ({
         : uploadTicketReplyAttachmentWithProgress;
 
     try {
-      const uploaded = await upload(
-        file,
-        (progress) => {
-          setPendingFiles((current) =>
-            current.map((entry) =>
-              entry.id === id ? { ...entry, progress } : entry,
-            ),
-          );
-        },
-      );
+      const uploaded = await upload(file, (progress) => {
+        setPendingFiles((current) =>
+          current.map((entry) =>
+            entry.id === id ? { ...entry, progress } : entry,
+          ),
+        );
+      });
 
       setPendingFiles((current) =>
         current.map((entry) =>
@@ -561,20 +575,18 @@ export const TicketReplyForm = ({
         return;
       }
       if (result.email_sent) {
-        notify(
-          composeMode === "forward" ? "Message forwarded" : "Reply sent",
-          { type: "success" },
-        );
+        notify(composeMode === "forward" ? "Message forwarded" : "Reply sent", {
+          type: "success",
+        });
       } else if (result.email_skipped) {
         notify(
           "Reply saved. Email was not sent — check Communications settings.",
           { type: "warning" },
         );
       } else {
-        notify(
-          composeMode === "forward" ? "Message forwarded" : "Reply sent",
-          { type: "success" },
-        );
+        notify(composeMode === "forward" ? "Message forwarded" : "Reply sent", {
+          type: "success",
+        });
       }
     },
     onError: (error: Error, variables) => {
@@ -649,10 +661,7 @@ export const TicketReplyForm = ({
       return;
     }
 
-    if (
-      readyPendingFiles.length > 0 &&
-      !outboundAttachmentsAllowed
-    ) {
+    if (readyPendingFiles.length > 0 && !outboundAttachmentsAllowed) {
       notify(TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE, { type: "warning" });
       return;
     }
@@ -675,8 +684,10 @@ export const TicketReplyForm = ({
       return;
     }
 
-    const { textBody, htmlBody } =
-      buildReplyOutboundBodiesFromHtml(expandedHtml, inboxSignature);
+    const { textBody, htmlBody } = buildReplyOutboundBodiesFromHtml(
+      expandedHtml,
+      inboxSignature,
+    );
     setSubmittingAs(nextStatus ?? "open");
     submitMutation.mutate({
       isInternalNote: false,
@@ -825,7 +836,9 @@ export const TicketReplyForm = ({
   if (composeMode === "internal") {
     return (
       <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
-        <div className={cn("overflow-hidden bg-background", slideAnimationClass)}>
+        <div
+          className={cn("overflow-hidden bg-background", slideAnimationClass)}
+        >
           <div className="flex items-center justify-between border-b bg-muted/10 px-4 py-2 md:px-5">
             <span className="text-xs text-muted-foreground">Internal note</span>
             {minimizeButton}
@@ -913,12 +926,7 @@ export const TicketReplyForm = ({
 
   return (
     <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
-      <div
-        className={cn(
-          "overflow-hidden bg-background",
-          slideAnimationClass,
-        )}
-      >
+      <div className={cn("overflow-hidden bg-background", slideAnimationClass)}>
         <div className="border-b bg-muted/10 px-4 py-2.5 md:px-5">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1 grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 text-sm">

@@ -331,8 +331,8 @@ const NewTicketDialogBody = ({
       <DialogHeader className="relative shrink-0 space-y-1 border-b bg-background px-5 py-4 pr-12 text-left sm:px-6 sm:pr-14">
         <DialogTitle>New ticket</DialogTitle>
         <DialogDescription>
-          Create a support ticket. Subject is usually the job site address — search
-          Google or type any subject.
+          Create a support ticket. Subject is usually the job site address —
+          search Google or type any subject.
         </DialogDescription>
         <DialogClose
           className="absolute top-3.5 right-3.5 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
@@ -386,7 +386,11 @@ const NewTicketDialogBody = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <ReferenceInput source="company_id" reference="companies">
-              <AutocompleteInput optionText="name" label="Company" helperText={false} />
+              <AutocompleteInput
+                optionText="name"
+                label="Company"
+                helperText={false}
+              />
             </ReferenceInput>
             <SelectInput
               source="contact_id"
@@ -395,9 +399,7 @@ const NewTicketDialogBody = ({
               optionText="name"
               optionValue="id"
               helperText={
-                companyId
-                  ? false
-                  : "Select a company to see its contacts"
+                companyId ? false : "Select a company to see its contacts"
               }
               disabled={!companyId}
               emptyText={contactEmptyText}

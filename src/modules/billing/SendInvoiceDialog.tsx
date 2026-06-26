@@ -18,7 +18,12 @@ import {
   Clock,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useDataProvider, useGetIdentity, useGetList, useNotify } from "ra-core";
+import {
+  useDataProvider,
+  useGetIdentity,
+  useGetList,
+  useNotify,
+} from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
@@ -139,7 +144,10 @@ export const SendInvoiceDialog = ({
   const invoiceBranding = useMemo(() => getInvoiceOrganizationBranding(), []);
   const organizationAddress = invoiceBranding.address;
   const companyWebsite = invoiceBranding.website;
-  const organizationTagline = useMemo(() => buildOrganizationEmailTagline(), []);
+  const organizationTagline = useMemo(
+    () => buildOrganizationEmailTagline(),
+    [],
+  );
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
   const [bcc, setBcc] = useState("");
@@ -225,7 +233,8 @@ export const SendInvoiceDialog = ({
   }, [invoice, smsPaymentUrl, organizationName, contact, senderFirstName]);
 
   const emailHtml = useMemo(
-    () => (emailTemplateContext ? buildInvoiceEmailHtml(emailTemplateContext) : ""),
+    () =>
+      emailTemplateContext ? buildInvoiceEmailHtml(emailTemplateContext) : "",
     [emailTemplateContext],
   );
 
@@ -789,7 +798,9 @@ export const InvoiceRowActions = ({
       setShareOpen(true);
     },
     onError: (error: Error) => {
-      notify(error.message || "Could not generate share link", { type: "error" });
+      notify(error.message || "Could not generate share link", {
+        type: "error",
+      });
     },
   });
 

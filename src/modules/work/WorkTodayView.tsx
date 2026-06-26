@@ -114,10 +114,14 @@ export const WorkTodayView = ({
         <div className="space-y-3">
           {HOUR_SLOTS.map((hour) => {
             const hourEvents = timedEvents.filter(
-              (event) => parseHour("time" in event ? event.time : null) === hour,
+              (event) =>
+                parseHour("time" in event ? event.time : null) === hour,
             );
             return (
-              <div key={hour} className="grid grid-cols-[56px_minmax(0,1fr)] gap-3">
+              <div
+                key={hour}
+                className="grid grid-cols-[56px_minmax(0,1fr)] gap-3"
+              >
                 <span className="pt-1 text-xs tabular-nums text-muted-foreground">
                   {hour}:00
                 </span>
@@ -154,7 +158,9 @@ export const WorkTodayView = ({
         <section className="rounded-sm border bg-card p-4">
           <h3 className="mb-3 text-sm font-semibold">No time · today</h3>
           {untimedTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No unscheduled tasks.</p>
+            <p className="text-sm text-muted-foreground">
+              No unscheduled tasks.
+            </p>
           ) : (
             <ul className="space-y-2">
               {untimedTasks.map((item) =>
@@ -194,7 +200,9 @@ export const WorkTodayView = ({
             {activities.length > 0 ? (
               <div className="flex items-center justify-between">
                 <dt className="text-muted-foreground">Activities</dt>
-                <dd className="font-medium tabular-nums">{activities.length}</dd>
+                <dd className="font-medium tabular-nums">
+                  {activities.length}
+                </dd>
               </div>
             ) : null}
           </dl>

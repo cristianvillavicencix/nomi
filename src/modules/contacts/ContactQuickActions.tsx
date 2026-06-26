@@ -54,9 +54,7 @@ const LabeledAction = ({
   <div
     className={cn(
       "flex flex-col items-center",
-      compact
-        ? "shrink-0 gap-1"
-        : "min-w-0 flex-1 gap-1.5",
+      compact ? "shrink-0 gap-1" : "min-w-0 flex-1 gap-1.5",
     )}
   >
     {children}
@@ -126,8 +124,7 @@ export const ContactQuickActions = ({
   const emailRaw = getContactEmail(contact);
   const email = emailRaw !== "—" ? emailRaw : "";
   const phoneRaw = getContactPhone(contact);
-  const phoneLink =
-    phoneRaw !== "—" ? normalizePhoneForTel(phoneRaw) : null;
+  const phoneLink = phoneRaw !== "—" ? normalizePhoneForTel(phoneRaw) : null;
   const today = new Date().toISOString().slice(0, 10);
   const canSms =
     smsEnabled && contactHasSmsPhone(contact) && messagesQuickAccess;

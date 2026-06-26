@@ -111,14 +111,13 @@ export const persistConversationRead = async ({
   memberId: Identifier;
   readAt: string;
 }) => {
-  patchParticipantReadAtInCache(
-    queryClient,
+  patchParticipantReadAtInCache(queryClient, conversationId, memberId, readAt);
+
+  let participant = await fetchParticipant(
+    dataProvider,
     conversationId,
     memberId,
-    readAt,
   );
-
-  let participant = await fetchParticipant(dataProvider, conversationId, memberId);
 
   if (
     participant?.last_read_at &&
@@ -144,7 +143,11 @@ export const persistConversationRead = async ({
         if (!isDuplicateParticipantError(error)) {
           throw error;
         }
-        participant = await fetchParticipant(dataProvider, conversationId, memberId);
+        participant = await fetchParticipant(
+          dataProvider,
+          conversationId,
+          memberId,
+        );
         if (participant && isPersistedParticipantId(participant.id)) {
           await updateParticipantReadAt(dataProvider, participant, readAt);
         }

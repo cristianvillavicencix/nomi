@@ -27,7 +27,10 @@ import {
   type InvoiceRemainderScheduleConfig,
 } from "@/modules/billing/invoiceRemainderSchedule";
 import type { InvoiceOnlinePaymentSetup } from "@/modules/billing/onlinePaymentSetupBridge";
-export type { InvoiceOnlinePaymentSetup, OnlinePaymentSetup } from "@/modules/billing/onlinePaymentSetupBridge";
+export type {
+  InvoiceOnlinePaymentSetup,
+  OnlinePaymentSetup,
+} from "@/modules/billing/onlinePaymentSetupBridge";
 import { cn } from "@/lib/utils";
 
 const formatMoney = (value: number) =>
@@ -78,8 +81,7 @@ export const InvoiceOnlinePaymentSetupDialog = ({
   }, [open, value]);
 
   const depositPercent = Math.min(Math.max(draft.depositPercent, 1), 99);
-  const depositAmount =
-    Math.round(total * (depositPercent / 100) * 100) / 100;
+  const depositAmount = Math.round(total * (depositPercent / 100) * 100) / 100;
   const balanceAmount = Math.max(
     Math.round((total - depositAmount) * 100) / 100,
     0,
@@ -352,8 +354,7 @@ export const InvoiceOnlinePaymentSetupDialog = ({
                               ...prev,
                               remainderSchedule: {
                                 ...prev.remainderSchedule,
-                                balance_start_date:
-                                  event.target.value || null,
+                                balance_start_date: event.target.value || null,
                               },
                             }))
                           }
@@ -406,7 +407,11 @@ export const InvoiceOnlinePaymentSetupDialog = ({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={apply}>

@@ -5,7 +5,9 @@ export type PortalSensitiveSession = {
   expires_at: string;
 };
 
-export const invokePortalCredentials = async (body: Record<string, unknown>) => {
+export const invokePortalCredentials = async (
+  body: Record<string, unknown>,
+) => {
   const { data, error } = await supabase.functions.invoke(
     "client_portal_credentials",
     { body },
@@ -20,8 +22,15 @@ export const invokePortalCredentials = async (body: Record<string, unknown>) => 
         : "Request failed";
     throw new Error(message);
   }
-  if (data && typeof data === "object" && "message" in data && "status" in data) {
-    throw new Error(String((data as { message?: string }).message ?? "Request failed"));
+  if (
+    data &&
+    typeof data === "object" &&
+    "message" in data &&
+    "status" in data
+  ) {
+    throw new Error(
+      String((data as { message?: string }).message ?? "Request failed"),
+    );
   }
   return data as Record<string, unknown>;
 };

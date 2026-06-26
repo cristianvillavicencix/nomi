@@ -312,10 +312,7 @@ export async function applyClientInvoicePaymentUpdate(
           orgId: invoice.org_id,
         });
       } catch (error) {
-        console.error(
-          "applyClientInvoicePaymentUpdate.deliverTicket",
-          error,
-        );
+        console.error("applyClientInvoicePaymentUpdate.deliverTicket", error);
       }
     }
   }

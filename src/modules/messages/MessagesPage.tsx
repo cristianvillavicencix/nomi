@@ -120,8 +120,7 @@ export const MessagesPage = () => {
 
       setDraftSms({
         contact,
-        dealId:
-          selectedConversation?.deal_id ?? draftSms?.dealId ?? null,
+        dealId: selectedConversation?.deal_id ?? draftSms?.dealId ?? null,
         externalPhone: phone,
       });
       setSelectedConversation(null);
@@ -166,7 +165,9 @@ export const MessagesPage = () => {
         clientSmsDraft={draftSms}
         onSelectConversation={handleSelectConversation}
         onClientSmsSent={handleClientSmsSent}
-        onClientSmsPhoneChange={(phone) => void handleClientSmsPhoneChange(phone)}
+        onClientSmsPhoneChange={(phone) =>
+          void handleClientSmsPhoneChange(phone)
+        }
         onClientSmsContactSaved={handleClientSmsContactSaved}
         isPending={isPending}
         isMobile={isMobile}

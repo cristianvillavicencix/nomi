@@ -59,7 +59,8 @@ export async function createProposalFromQuoteRequest(
   const validUntilKey = validUntil.toISOString().slice(0, 10);
 
   const depositAmount = Math.round(suggestedPrice * 0.5 * 100) / 100;
-  const balanceAmount = Math.round((suggestedPrice - depositAmount) * 100) / 100;
+  const balanceAmount =
+    Math.round((suggestedPrice - depositAmount) * 100) / 100;
 
   const { data: proposal, error: proposalError } = await supabase
     .from("proposals")
@@ -126,8 +127,7 @@ export async function createProposalFromQuoteRequest(
     .select("id")
     .single();
 
-  const perInstallment =
-    Math.round((balanceAmount / 4) * 100) / 100;
+  const perInstallment = Math.round((balanceAmount / 4) * 100) / 100;
   let allocated = 0;
   const installments = [
     {

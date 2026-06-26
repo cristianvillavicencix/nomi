@@ -29,8 +29,7 @@ export const readShareMetaEnv = (
     env.VITE_OG_TITLE?.trim() ||
     env.VITE_OG_SITE_NAME?.trim() ||
     DEFAULT_SHARE_TITLE,
-  description:
-    env.VITE_OG_DESCRIPTION?.trim() || DEFAULT_SHARE_DESCRIPTION,
+  description: env.VITE_OG_DESCRIPTION?.trim() || DEFAULT_SHARE_DESCRIPTION,
   imagePath: env.VITE_OG_IMAGE_PATH?.trim() || DEFAULT_SHARE_IMAGE_PATH,
   publicAppOrigin:
     env.VITE_PUBLIC_APP_URL?.trim() ||

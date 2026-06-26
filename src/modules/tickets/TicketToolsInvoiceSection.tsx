@@ -68,7 +68,13 @@ export const TicketToolsInvoiceSection = ({
         </p>
       ) : null}
 
-      <Button type="button" variant="outline" size="sm" className="w-full" onClick={onView}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={onView}
+      >
         <FileText className="mr-1.5 size-3.5" />
         View invoice
       </Button>

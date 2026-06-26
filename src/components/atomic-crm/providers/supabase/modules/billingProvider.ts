@@ -29,13 +29,12 @@ export const billingProvider = {
     if (dueDate) body.due_date = dueDate;
     if (description) body.description = description;
 
-    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
-      "issue_client_invoice",
-      {
-        method: "POST",
-        body,
-      },
-    );
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+    }>("issue_client_invoice", {
+      method: "POST",
+      body,
+    });
 
     if (error || !data?.invoice) {
       console.error("issue_client_invoice.error", error);
@@ -93,19 +92,21 @@ export const billingProvider = {
       sort_order?: number;
     }>;
   }) {
-    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
-      "create_client_invoice",
-      {
-        method: "POST",
-        body,
-      },
-    );
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+    }>("create_client_invoice", {
+      method: "POST",
+      body,
+    });
 
     if (error || !data?.invoice) {
       console.error("create_client_invoice.error", error);
       throw new Error(
         error
-          ? await readEdgeFunctionErrorMessage(error, "Failed to create invoice")
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to create invoice",
+            )
           : "Failed to create invoice",
       );
     }
@@ -147,27 +148,24 @@ export const billingProvider = {
       email_skipped?: boolean;
       sms_sent?: boolean;
       sms_skipped?: boolean;
-    }>(
-      "send_client_invoice",
-      {
-        method: "POST",
-        body: {
-          invoice_id: Number(invoiceId),
-          to,
-          message,
-          html_message: htmlMessage,
-          pdf_base64: pdfBase64,
-          filename,
-          subject,
-          link_only: linkOnly === true,
-          ...(cc?.length ? { cc } : {}),
-          ...(bcc?.length ? { bcc } : {}),
-          ...(smsTo?.trim() ? { sms_to: smsTo.trim() } : {}),
-          ...(smsBody?.trim() ? { sms_body: smsBody.trim() } : {}),
-          ...(contactId != null ? { contact_id: Number(contactId) } : {}),
-        },
+    }>("send_client_invoice", {
+      method: "POST",
+      body: {
+        invoice_id: Number(invoiceId),
+        to,
+        message,
+        html_message: htmlMessage,
+        pdf_base64: pdfBase64,
+        filename,
+        subject,
+        link_only: linkOnly === true,
+        ...(cc?.length ? { cc } : {}),
+        ...(bcc?.length ? { bcc } : {}),
+        ...(smsTo?.trim() ? { sms_to: smsTo.trim() } : {}),
+        ...(smsBody?.trim() ? { sms_body: smsBody.trim() } : {}),
+        ...(contactId != null ? { contact_id: Number(contactId) } : {}),
       },
-    );
+    });
 
     if (error || !data?.invoice) {
       console.error("send_client_invoice.error", error);
@@ -359,22 +357,21 @@ export const billingProvider = {
     smsTo?: string;
     smsBody?: string;
   }) {
-    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
-      "schedule_client_invoice",
-      {
-        method: "POST",
-        body: {
-          invoice_id: Number(invoiceId),
-          to,
-          message,
-          scheduled_send_at: scheduledSendAt,
-          pdf_base64: pdfBase64,
-          filename,
-          ...(smsTo?.trim() ? { sms_to: smsTo.trim() } : {}),
-          ...(smsBody?.trim() ? { sms_body: smsBody.trim() } : {}),
-        },
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+    }>("schedule_client_invoice", {
+      method: "POST",
+      body: {
+        invoice_id: Number(invoiceId),
+        to,
+        message,
+        scheduled_send_at: scheduledSendAt,
+        pdf_base64: pdfBase64,
+        filename,
+        ...(smsTo?.trim() ? { sms_to: smsTo.trim() } : {}),
+        ...(smsBody?.trim() ? { sms_body: smsBody.trim() } : {}),
       },
-    );
+    });
 
     if (error || !data?.invoice) {
       console.error("schedule_client_invoice.error", error);
@@ -423,22 +420,24 @@ export const billingProvider = {
       }>;
     },
   ) {
-    const { data, error } = await invokeEdgeFunction<{ invoice: Record<string, unknown> }>(
-      "update_client_invoice",
-      {
-        method: "POST",
-        body: {
-          invoice_id: Number(invoiceId),
-          ...body,
-        },
+    const { data, error } = await invokeEdgeFunction<{
+      invoice: Record<string, unknown>;
+    }>("update_client_invoice", {
+      method: "POST",
+      body: {
+        invoice_id: Number(invoiceId),
+        ...body,
       },
-    );
+    });
 
     if (error || !data?.invoice) {
       console.error("update_client_invoice.error", error);
       throw new Error(
         error
-          ? await readEdgeFunctionErrorMessage(error, "Failed to update invoice")
+          ? await readEdgeFunctionErrorMessage(
+              error,
+              "Failed to update invoice",
+            )
           : "Failed to update invoice",
       );
     }

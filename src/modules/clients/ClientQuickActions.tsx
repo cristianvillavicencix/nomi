@@ -126,8 +126,7 @@ export const ClientQuickActions = ({
       ? getPrimaryContactEmailFromContact(primaryContact)
       : "";
   const phoneRaw = getPrimaryContactPhone(record);
-  const phoneLink =
-    phoneRaw !== "—" ? normalizePhoneForTel(phoneRaw) : null;
+  const phoneLink = phoneRaw !== "—" ? normalizePhoneForTel(phoneRaw) : null;
   const today = new Date().toISOString().slice(0, 10);
   const canSms =
     smsEnabled &&

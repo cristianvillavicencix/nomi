@@ -109,8 +109,7 @@ export const mapAiSeoFindings = (
       source: "static",
       source_id: "missing-hsts",
       title: "Sin header HSTS",
-      description:
-        "La respuesta HTTP no incluye Strict-Transport-Security.",
+      description: "La respuesta HTTP no incluye Strict-Transport-Security.",
       recommendation:
         "Activa HSTS en tu CDN/hosting para forzar HTTPS en visitas recurrentes.",
       display_order: order++,

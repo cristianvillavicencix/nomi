@@ -154,7 +154,11 @@ export const FormGuardProvider = ({
 };
 
 /** Blocks in-app navigation and tab close while the form has unsaved content. */
-export const FormNavigationGuard = ({ enabled = true }: { enabled?: boolean }) => {
+export const FormNavigationGuard = ({
+  enabled = true,
+}: {
+  enabled?: boolean;
+}) => {
   const guard = useOptionalFormGuard();
   const shouldBlock = enabled && (guard?.shouldConfirmLeave ?? false);
   const [confirmOpen, setConfirmOpen] = useState(false);

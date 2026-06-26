@@ -104,18 +104,20 @@ export const updateDealStage = async (
     return { stageChanged: false };
   }
 
-  const [{ data: sourceDeals }, { data: destinationDeals }] = await Promise.all([
-    dataProvider.getList("deals", {
-      sort: { field: "index", order: "ASC" },
-      pagination: { page: 1, perPage: 100 },
-      filter: { stage: source.stage, pipeline_id: pipelineId },
-    }),
-    dataProvider.getList("deals", {
-      sort: { field: "index", order: "ASC" },
-      pagination: { page: 1, perPage: 100 },
-      filter: { stage: destination.stage, pipeline_id: pipelineId },
-    }),
-  ]);
+  const [{ data: sourceDeals }, { data: destinationDeals }] = await Promise.all(
+    [
+      dataProvider.getList("deals", {
+        sort: { field: "index", order: "ASC" },
+        pagination: { page: 1, perPage: 100 },
+        filter: { stage: source.stage, pipeline_id: pipelineId },
+      }),
+      dataProvider.getList("deals", {
+        sort: { field: "index", order: "ASC" },
+        pagination: { page: 1, perPage: 100 },
+        filter: { stage: destination.stage, pipeline_id: pipelineId },
+      }),
+    ],
+  );
   const destinationIndex = destination.index ?? destinationDeals.length + 1;
 
   await Promise.all([

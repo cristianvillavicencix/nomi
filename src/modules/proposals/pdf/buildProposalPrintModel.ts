@@ -20,10 +20,7 @@ import type {
 import type { ProposalCustomSection } from "@/modules/proposals/document/proposalDocumentTypes";
 import { weekLabelFromBar } from "@/modules/proposals/document/proposalTimeline";
 
-const sectionKicker = (
-  sectionId: string,
-  locale: ProposalLocale,
-): string => {
+const sectionKicker = (sectionId: string, locale: ProposalLocale): string => {
   const copy = getProposalDocumentCopy(locale);
   const map: Record<string, string> = {
     "about-us": copy.nav.aboutUs,
@@ -38,7 +35,10 @@ const sectionKicker = (
   return map[sectionId] ?? copy.nav.custom;
 };
 
-const formatDate = (value: string | null | undefined, locale: ProposalLocale) => {
+const formatDate = (
+  value: string | null | undefined,
+  locale: ProposalLocale,
+) => {
   if (!value) return "—";
   const date = new Date(`${value.slice(0, 10)}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
@@ -150,14 +150,22 @@ export const buildProposalPrintModel = ({
   };
 }): ProposalPrintModel => {
   const copy = getProposalDocumentCopy(locale);
-  const { proposal, lineDrafts, paymentInstallments, oneTimeTotal, recurringSubtotal, currency } =
-    snapshot;
+  const {
+    proposal,
+    lineDrafts,
+    paymentInstallments,
+    oneTimeTotal,
+    recurringSubtotal,
+    currency,
+  } = snapshot;
 
   const deck = partitionProposalDeckSections(
     visibleProposalCustomSections(content.custom_sections),
   );
 
-  const toPrintSection = (section: ProposalCustomSection): ProposalPrintSection => ({
+  const toPrintSection = (
+    section: ProposalCustomSection,
+  ): ProposalPrintSection => ({
     kicker: sectionKicker(section.id, locale),
     title: section.title,
     bodyMarkdown: section.body ?? "",
@@ -202,8 +210,16 @@ export const buildProposalPrintModel = ({
         content.hero_subtitle ??
         `Prepared for ${variables.empresa ?? "your company"} by Latinos Business Support`,
       meta: [
-        { label: copy.date, value: variables.fecha ?? formatDate(new Date().toISOString().slice(0, 10), locale) },
-        { label: copy.preparedBy, value: variables.preparada_por ?? "Latinos Business Support" },
+        {
+          label: copy.date,
+          value:
+            variables.fecha ??
+            formatDate(new Date().toISOString().slice(0, 10), locale),
+        },
+        {
+          label: copy.preparedBy,
+          value: variables.preparada_por ?? "Latinos Business Support",
+        },
         {
           label: copy.validFor,
           value: `${proposal.validity_days ?? 30} ${copy.days}`,
@@ -218,8 +234,7 @@ export const buildProposalPrintModel = ({
         variables.preparada_por ||
         undefined,
       signatoryOrg:
-        content.intro_signatory_company?.trim() ||
-        "Latinos Business Support",
+        content.intro_signatory_company?.trim() || "Latinos Business Support",
     },
     sections,
     investment: {
@@ -236,7 +251,7 @@ export const buildProposalPrintModel = ({
         description: line.description,
         sublabel:
           line.billing_type === "recurring"
-            ? line.billing_interval ?? "monthly"
+            ? (line.billing_interval ?? "monthly")
             : undefined,
         amount: formatProposalMoney(lineItemTotal(line), currency),
         isRecurring: line.billing_type === "recurring",
@@ -262,7 +277,10 @@ export const buildProposalPrintModel = ({
                 badge: copy.depositBadge,
                 label: copy.depositLabel,
                 sublabel: copy.depositSub,
-                amount: formatProposalMoney(depositInstallment.amount, currency),
+                amount: formatProposalMoney(
+                  depositInstallment.amount,
+                  currency,
+                ),
               },
             ]
           : []),
@@ -274,13 +292,12 @@ export const buildProposalPrintModel = ({
         })),
       ],
       paymentNotes: content.payment_notes?.trim() || undefined,
-      warranty:
-        content.warranty_body?.trim()
-          ? {
-              title: content.warranty_title ?? copy.sections.warranty,
-              bodyMarkdown: content.warranty_body,
-            }
-          : undefined,
+      warranty: content.warranty_body?.trim()
+        ? {
+            title: content.warranty_title ?? copy.sections.warranty,
+            bodyMarkdown: content.warranty_body,
+          }
+        : undefined,
     },
     terms: termsMarkdown
       ? { title: termsTitle, markdown: termsMarkdown }

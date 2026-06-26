@@ -99,7 +99,9 @@ export async function uploadTicketAttachmentWithProgress(
     xhr.upload.onprogress = (event) => {
       if (!onProgress) return;
       if (event.lengthComputable && event.total > 0) {
-        onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        onProgress(
+          Math.min(100, Math.round((event.loaded / event.total) * 100)),
+        );
         return;
       }
       onProgress(10);

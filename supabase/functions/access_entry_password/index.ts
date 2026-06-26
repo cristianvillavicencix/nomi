@@ -112,11 +112,15 @@ Deno.serve((req: Request) =>
       }
 
       try {
-        const body = (await req.json().catch(() => ({}))) as AccessEntryPasswordBody;
+        const body = (await req
+          .json()
+          .catch(() => ({}))) as AccessEntryPasswordBody;
         const action = body.action ?? "get";
 
         if (action === "legacy_count") {
-          if (!hasMemberCapability(member, "deal_operations.credentials.manage")) {
+          if (
+            !hasMemberCapability(member, "deal_operations.credentials.manage")
+          ) {
             return createErrorResponse(403, "Permission denied");
           }
           const { count, error } = await supabaseAdmin
@@ -135,7 +139,9 @@ Deno.serve((req: Request) =>
         }
 
         if (action === "migrate_legacy") {
-          if (!hasMemberCapability(member, "deal_operations.credentials.manage")) {
+          if (
+            !hasMemberCapability(member, "deal_operations.credentials.manage")
+          ) {
             return createErrorResponse(403, "Permission denied");
           }
           const cryptoKey = getPgcryptoKey();
@@ -186,7 +192,9 @@ Deno.serve((req: Request) =>
         await assertCanViewDeal(authHeader, Number(entry.deal_id));
 
         if (action === "audit") {
-          if (!hasMemberCapability(member, "deal_operations.credentials.view")) {
+          if (
+            !hasMemberCapability(member, "deal_operations.credentials.view")
+          ) {
             return createErrorResponse(403, "Permission denied");
           }
           const auditAction = body.audit_action;
@@ -213,7 +221,9 @@ Deno.serve((req: Request) =>
         }
 
         if (action === "get") {
-          if (!hasMemberCapability(member, "deal_operations.credentials.view")) {
+          if (
+            !hasMemberCapability(member, "deal_operations.credentials.view")
+          ) {
             return createErrorResponse(403, "Permission denied");
           }
           if (!entry.has_password) {
@@ -246,7 +256,9 @@ Deno.serve((req: Request) =>
         }
 
         if (action === "set") {
-          if (!hasMemberCapability(member, "deal_operations.credentials.manage")) {
+          if (
+            !hasMemberCapability(member, "deal_operations.credentials.manage")
+          ) {
             return createErrorResponse(403, "Permission denied");
           }
           const cryptoKey = getPgcryptoKey();

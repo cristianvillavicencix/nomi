@@ -1,8 +1,6 @@
 import { config } from "./config.js";
 import { postCallback, postCallbackSafe } from "./callbackClient.js";
-import {
-  LighthouseAuditError,
-} from "./modules/lighthouseAudit.js";
+import { LighthouseAuditError } from "./modules/lighthouseAudit.js";
 import { fetchCruxFieldData } from "./modules/cruxFieldData.js";
 import { runStrategyPass } from "./modules/runStrategyPass.js";
 import {
@@ -149,10 +147,7 @@ const withMergedPageInventory = async (
     return staticResult;
   }
 
-  const merged = mergePageLinks(
-    pageOrigin,
-    staticResult.staticPageLinks ?? [],
-  );
+  const merged = mergePageLinks(pageOrigin, staticResult.staticPageLinks ?? []);
   if (merged.length === 0) {
     staticResult.pageLinks = [];
     staticResult.totalPageLinks = 0;
@@ -195,7 +190,10 @@ const mergeBrowserCrawlFilesIntoStatic = (
   browserCrawl: CrawlFilesAnalysisResult | null,
 ) => {
   if (!browserCrawl) return;
-  const merged = mergeCrawlFilesPreferBrowser(staticResult.crawlFiles, browserCrawl);
+  const merged = mergeCrawlFilesPreferBrowser(
+    staticResult.crawlFiles,
+    browserCrawl,
+  );
   applyCrawlFilesToStatic(staticResult, merged);
 };
 
@@ -431,7 +429,12 @@ export const runAuditJob = async (job: WebsiteAuditWorkerJob) => {
     ]);
   } catch (cause) {
     const failure = classifyFailure(cause);
-    console.error("web-audit failed", job.audit_id, failure.code, failure.message);
+    console.error(
+      "web-audit failed",
+      job.audit_id,
+      failure.code,
+      failure.message,
+    );
     try {
       await failAudit(failure.message);
     } catch (callbackCause) {

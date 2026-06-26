@@ -26,44 +26,44 @@ const requireAssignedMembers = (value?: unknown) => {
 };
 
 export const LeadInfoSection = () => (
-    <div className="space-y-3">
-      <SelectInput
-        source="lead_source"
-        label="Lead source"
-        choices={LBS_LEAD_SOURCE_CHOICES.map((entry) => ({
-          id: entry.id,
-          name: entry.name,
-        }))}
-        validate={required()}
-        helperText={false}
-      />
-      <LeadReferrerInputs />
+  <div className="space-y-3">
+    <SelectInput
+      source="lead_source"
+      label="Lead source"
+      choices={LBS_LEAD_SOURCE_CHOICES.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+      }))}
+      validate={required()}
+      helperText={false}
+    />
+    <LeadReferrerInputs />
 
+    <AutocompleteArrayInput
+      source="interested_services"
+      label="Service interested in"
+      choices={LBS_INTERESTED_SERVICE_CHOICES.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+      }))}
+      validate={required()}
+      helperText={false}
+      placeholder="Select one or more services"
+    />
+
+    <ReferenceArrayInput
+      source="assigned_member_ids"
+      reference="organization_members"
+      filter={{ "disabled@neq": true }}
+    >
       <AutocompleteArrayInput
-        source="interested_services"
-        label="Service interested in"
-        choices={LBS_INTERESTED_SERVICE_CHOICES.map((entry) => ({
-          id: entry.id,
-          name: entry.name,
-        }))}
-        validate={required()}
+        label="Assigned to"
+        optionText={getMemberOptionText}
+        validate={requireAssignedMembers}
         helperText={false}
-        placeholder="Select one or more services"
+        placeholder="Select one or more team members"
+        filterToQuery={(searchText) => ({ q: searchText })}
       />
-
-      <ReferenceArrayInput
-        source="assigned_member_ids"
-        reference="organization_members"
-        filter={{ "disabled@neq": true }}
-      >
-        <AutocompleteArrayInput
-          label="Assigned to"
-          optionText={getMemberOptionText}
-          validate={requireAssignedMembers}
-          helperText={false}
-          placeholder="Select one or more team members"
-          filterToQuery={(searchText) => ({ q: searchText })}
-        />
-      </ReferenceArrayInput>
-    </div>
+    </ReferenceArrayInput>
+  </div>
 );

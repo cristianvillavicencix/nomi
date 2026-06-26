@@ -20,7 +20,9 @@ const SummaryRow = ({
   emphasize?: boolean;
   className?: string;
 }) => (
-  <div className={`flex items-center justify-between gap-3 text-sm ${className ?? ""}`}>
+  <div
+    className={`flex items-center justify-between gap-3 text-sm ${className ?? ""}`}
+  >
     <span className="text-muted-foreground">{label}</span>
     <span className={emphasize ? "font-semibold" : "font-medium"}>
       <MoneyText value={value} />
@@ -72,7 +74,11 @@ export const ProfitSummaryCard = ({ record }: { record: LbsDeal }) => {
           value={summary.changeOrdersTotal}
           className="text-success"
         />
-        <SummaryRow label="Current value" value={summary.currentValue} emphasize />
+        <SummaryRow
+          label="Current value"
+          value={summary.currentValue}
+          emphasize
+        />
         <div className="my-2 border-t" />
         <SummaryRow label="Collected" value={summary.collected} />
         <SummaryRow label="Pending" value={summary.pending} />

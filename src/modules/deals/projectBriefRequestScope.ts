@@ -23,7 +23,10 @@ export const parseBriefSectionsParam = (
 export const buildBriefSectionsParam = (sections: BriefRequestSection[]) =>
   sections.join(",");
 
-export const appendBriefScopeToUrl = (url: string, scope: BriefRequestScope) => {
+export const appendBriefScopeToUrl = (
+  url: string,
+  scope: BriefRequestScope,
+) => {
   const next = new URL(url, window.location.origin);
   next.searchParams.set("sections", buildBriefSectionsParam(scope.sections));
   return next.toString();

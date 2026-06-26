@@ -146,13 +146,13 @@ export const ContactRelatedSidebar = ({
       ? "Company"
       : panel === "deals"
         ? "Deals"
-      : panel === "projects"
-        ? "Projects"
-        : panel === "tickets"
-          ? "Tickets"
-          : panel === "referrals"
-            ? "Referrals"
-            : "Referred by";
+        : panel === "projects"
+          ? "Projects"
+          : panel === "tickets"
+            ? "Tickets"
+            : panel === "referrals"
+              ? "Referrals"
+              : "Referred by";
 
   return (
     <>
@@ -240,9 +240,7 @@ export const ContactRelatedSidebar = ({
           title="Deals"
           count={counts.deals}
           onAdd={
-            contact.company_id != null
-              ? () => setNewDealOpen(true)
-              : undefined
+            contact.company_id != null ? () => setNewDealOpen(true) : undefined
           }
           onViewAll={() => setPanel("deals")}
           empty={
@@ -345,7 +343,9 @@ export const ContactRelatedSidebar = ({
                 <div className="flex items-start gap-3">
                   <Avatar record={referral} width={32} />
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">{getContactFullName(referral)}</p>
+                    <p className="font-medium">
+                      {getContactFullName(referral)}
+                    </p>
                     <p className="truncate text-sm text-muted-foreground">
                       {getContactEmail(referral)}
                     </p>
@@ -357,7 +357,10 @@ export const ContactRelatedSidebar = ({
         </RelatedSection>
       </div>
 
-      <Sheet open={panel != null} onOpenChange={(open) => !open && setPanel(null)}>
+      <Sheet
+        open={panel != null}
+        onOpenChange={(open) => !open && setPanel(null)}
+      >
         <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle>{panelTitle}</SheetTitle>

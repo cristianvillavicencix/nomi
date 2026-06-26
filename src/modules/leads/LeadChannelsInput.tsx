@@ -21,7 +21,8 @@ type LeadChannelsInputProps = {
 };
 
 const ACTION_SLOT = "size-8 shrink-0";
-const ACTION_COL = "flex h-9 w-[4.5rem] shrink-0 items-center justify-end gap-0.5";
+const ACTION_COL =
+  "flex h-9 w-[4.5rem] shrink-0 items-center justify-end gap-0.5";
 
 export const LeadChannelsInput = ({
   source,

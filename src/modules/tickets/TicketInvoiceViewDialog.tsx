@@ -9,7 +9,11 @@ import { canEditClientInvoice } from "@/modules/billing/billingUtils";
 import { computeInvoiceBalanceDue } from "@/modules/billing/invoicePaymentUtils";
 import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceEmailTemplate";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
-import type { ClientInvoice, ClientInvoiceLineItem, Ticket } from "@/modules/types";
+import type {
+  ClientInvoice,
+  ClientInvoiceLineItem,
+  Ticket,
+} from "@/modules/types";
 import { TicketInvoiceEditReasonDialog } from "@/modules/tickets/TicketInvoiceEditReasonDialog";
 import { clientInvoiceLineItemsToDrafts } from "@/modules/tickets/ticketInvoicePreview";
 import { Badge } from "@/components/ui/badge";
@@ -58,8 +62,11 @@ export const TicketInvoiceViewDialog = ({
 
   const ticketActionsEnabled = Boolean(ticket);
 
-  const { data: invoice, isPending: invoicePending, isError: invoiceError } =
-    useGetOne<ClientInvoice>(
+  const {
+    data: invoice,
+    isPending: invoicePending,
+    isError: invoiceError,
+  } = useGetOne<ClientInvoice>(
     "client_invoices",
     { id },
     { enabled: open && Boolean(invoiceId) },
@@ -133,7 +140,10 @@ export const TicketInvoiceViewDialog = ({
             <DialogTitle className="flex flex-wrap items-center gap-2">
               {mode === "edit" ? "Edit invoice" : "View invoice"}
               {invoice ? (
-                <Badge variant="outline" className="font-mono text-xs font-normal">
+                <Badge
+                  variant="outline"
+                  className="font-mono text-xs font-normal"
+                >
                   {invoice.invoice_number}
                 </Badge>
               ) : null}

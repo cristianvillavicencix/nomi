@@ -91,5 +91,7 @@ export const memberDisplayName = (
 ) => {
   if (!member) return null;
   const name = [member.first_name, member.last_name].filter(Boolean).join(" ");
-  return name || member.email || (member.id != null ? `Member #${member.id}` : null);
+  return (
+    name || member.email || (member.id != null ? `Member #${member.id}` : null)
+  );
 };

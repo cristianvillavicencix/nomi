@@ -47,7 +47,9 @@ export async function uploadFormFile(
       /\/$/,
       "",
     );
-    const apikey = import.meta.env.VITE_SB_PUBLISHABLE_KEY as string | undefined;
+    const apikey = import.meta.env.VITE_SB_PUBLISHABLE_KEY as
+      | string
+      | undefined;
     if (!supabaseUrl || !apikey) {
       throw new Error("Supabase is not configured");
     }
@@ -67,8 +69,7 @@ export async function uploadFormFile(
     };
 
     if (!response.ok || !data?.url) {
-      const message =
-        data?.error ?? data?.message ?? "Failed to upload file";
+      const message = data?.error ?? data?.message ?? "Failed to upload file";
       console.error("upload_form_file.error", message);
       throw new Error(message);
     }

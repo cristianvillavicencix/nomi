@@ -65,18 +65,18 @@ describe("personFormLogic", () => {
 
   describe("shouldShowContactIdentity", () => {
     it("hides identity for business prospect without primary contact", () => {
-      expect(
-        shouldShowContactIdentity("prospect", "business", false),
-      ).toBe(false);
+      expect(shouldShowContactIdentity("prospect", "business", false)).toBe(
+        false,
+      );
       expect(shouldShowContactIdentity("prospect", "business", true)).toBe(
         true,
       );
     });
 
     it("always shows identity for contact_only", () => {
-      expect(
-        shouldShowContactIdentity("contact_only", "business", false),
-      ).toBe(true);
+      expect(shouldShowContactIdentity("contact_only", "business", false)).toBe(
+        true,
+      );
     });
   });
 

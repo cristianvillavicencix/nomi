@@ -8,13 +8,7 @@ import {
   type PortalDelivery,
 } from "@/modules/portal/portalTypes";
 
-const InfoRow = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) => {
+const InfoRow = ({ label, value }: { label: string; value: ReactNode }) => {
   if (value == null || value === "" || value === "—") return null;
   return (
     <div className="flex flex-col gap-1 border-b py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
@@ -97,7 +91,9 @@ export const ClientOverviewSection = ({
         </dl>
       </section>
 
-      <p className="text-sm text-muted-foreground">{copy.overviewNavigationHint}</p>
+      <p className="text-sm text-muted-foreground">
+        {copy.overviewNavigationHint}
+      </p>
     </div>
   );
 };

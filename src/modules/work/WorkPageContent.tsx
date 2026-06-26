@@ -12,9 +12,7 @@ import {
 import { useGetList } from "ra-core";
 import type { Deal } from "@/components/atomic-crm/types";
 import { AddWorkDialog } from "@/modules/work/AddWorkDialog";
-import {
-  PageActionsTrailing,
-} from "@/components/atomic-crm/layout/PageActions";
+import { PageActionsTrailing } from "@/components/atomic-crm/layout/PageActions";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
 import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
 import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
@@ -102,14 +100,8 @@ export const WorkPageContent = () => {
     setSearchParams(next, { replace: true });
   };
 
-  const {
-    memberId,
-    eventsByDate,
-    workItems,
-    groupedItems,
-    stats,
-    isPending,
-  } = useWorkPageData({ preferences, anchor });
+  const { memberId, eventsByDate, workItems, groupedItems, stats, isPending } =
+    useWorkPageData({ preferences, anchor });
 
   const taskIds = useMemo(
     () =>
@@ -301,51 +293,55 @@ export const WorkPageContent = () => {
     <div className="space-y-4">
       <PageActionsTrailing>
         <div className="flex items-center gap-2">
-        <Tabs
-          value={preferences.viewMode}
-          onValueChange={(value) => setViewMode(value as WorkViewMode)}
-        >
-          <TabsList className="h-9 rounded-sm border bg-muted/20 p-1">
-            <TabsTrigger value="list" className="h-7 gap-1.5 rounded-sm px-3">
-              <List className="size-4" />
-              List
-            </TabsTrigger>
-            <TabsTrigger
-              value="calendar"
-              className="h-7 gap-1.5 rounded-sm px-3"
-            >
-              <CalendarDays className="size-4" />
-              Calendar
-            </TabsTrigger>
-            <TabsTrigger value="today" className="h-7 gap-1.5 rounded-sm px-3">
-              <Sun className="size-4" />
-              Today
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          <Tabs
+            value={preferences.viewMode}
+            onValueChange={(value) => setViewMode(value as WorkViewMode)}
+          >
+            <TabsList className="h-9 rounded-sm border bg-muted/20 p-1">
+              <TabsTrigger value="list" className="h-7 gap-1.5 rounded-sm px-3">
+                <List className="size-4" />
+                List
+              </TabsTrigger>
+              <TabsTrigger
+                value="calendar"
+                className="h-7 gap-1.5 rounded-sm px-3"
+              >
+                <CalendarDays className="size-4" />
+                Calendar
+              </TabsTrigger>
+              <TabsTrigger
+                value="today"
+                className="h-7 gap-1.5 rounded-sm px-3"
+              >
+                <Sun className="size-4" />
+                Today
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {preferences.scope === "tagged" && unreadTagNotifications.length > 0 ? (
+          {preferences.scope === "tagged" &&
+          unreadTagNotifications.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={markAllTaggedRead}
+            >
+              <CheckCheck className="size-4" />
+              Mark all read
+            </Button>
+          ) : null}
+
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            onClick={markAllTaggedRead}
+            className="h-9 gap-2"
+            onClick={() => {
+              setCreateTaskDueDate(toDateKey(new Date()));
+              setCreateTaskOpen(true);
+            }}
           >
-            <CheckCheck className="size-4" />
-            Mark all read
+            + Add
           </Button>
-        ) : null}
-
-        <Button
-          type="button"
-          className="h-9 gap-2"
-          onClick={() => {
-            setCreateTaskDueDate(toDateKey(new Date()));
-            setCreateTaskOpen(true);
-          }}
-        >
-          + Add
-        </Button>
         </div>
       </PageActionsTrailing>
 
@@ -391,116 +387,116 @@ export const WorkPageContent = () => {
           />
 
           <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="relative h-8 shrink-0 gap-2"
-            >
-              <SlidersHorizontal className="size-4" />
-              Filters
-              {hasAdvancedFilters ? (
-                <span
-                  className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary"
-                  aria-hidden
-                />
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="relative h-8 shrink-0 gap-2"
+              >
+                <SlidersHorizontal className="size-4" />
+                Filters
+                {hasAdvancedFilters ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary"
+                    aria-hidden
+                  />
+                ) : null}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 space-y-4">
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Project</Label>
+                  <Select
+                    value={
+                      preferences.projectId != null
+                        ? String(preferences.projectId)
+                        : ALL_PROJECTS
+                    }
+                    onValueChange={(value) =>
+                      setPreferences({
+                        projectId: value === ALL_PROJECTS ? null : value,
+                      })
+                    }
+                    disabled={isDealsPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All projects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_PROJECTS}>All projects</SelectItem>
+                      {deals.map((deal) => (
+                        <SelectItem key={deal.id} value={String(deal.id)}>
+                          {getDealLabel(deal)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Scope</Label>
+                  <Select
+                    value={preferences.scope}
+                    onValueChange={(value) =>
+                      setPreferences({ scope: value as TaskScopeFilter })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {scopeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={preferences.status}
+                    onValueChange={(value) =>
+                      setPreferences({
+                        status: value as WorkPreferences["status"],
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="done">Done</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {preferences.viewMode === "calendar" ? (
+                <div className="space-y-2">
+                  <Label>Calendar layout</Label>
+                  <Select
+                    value={preferences.calendarView}
+                    onValueChange={(value) =>
+                      setPreferences({ calendarView: value as CalendarView })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="month">Month</SelectItem>
+                      <SelectItem value="week">Week</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               ) : null}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 space-y-4">
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Project</Label>
-                <Select
-                  value={
-                    preferences.projectId != null
-                      ? String(preferences.projectId)
-                      : ALL_PROJECTS
-                  }
-                  onValueChange={(value) =>
-                    setPreferences({
-                      projectId: value === ALL_PROJECTS ? null : value,
-                    })
-                  }
-                  disabled={isDealsPending}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All projects" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_PROJECTS}>All projects</SelectItem>
-                    {deals.map((deal) => (
-                      <SelectItem key={deal.id} value={String(deal.id)}>
-                        {getDealLabel(deal)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Scope</Label>
-                <Select
-                  value={preferences.scope}
-                  onValueChange={(value) =>
-                    setPreferences({ scope: value as TaskScopeFilter })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {scopeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={preferences.status}
-                  onValueChange={(value) =>
-                    setPreferences({
-                      status: value as WorkPreferences["status"],
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="done">Done</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {preferences.viewMode === "calendar" ? (
-              <div className="space-y-2">
-                <Label>Calendar layout</Label>
-                <Select
-                  value={preferences.calendarView}
-                  onValueChange={(value) =>
-                    setPreferences({ calendarView: value as CalendarView })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="month">Month</SelectItem>
-                    <SelectItem value="week">Week</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-            <div className="space-y-3">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <Label htmlFor="work-show-completed-tasks">
                     Show completed tasks
@@ -514,7 +510,9 @@ export const WorkPageContent = () => {
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="work-show-done-events">Show done events</Label>
+                  <Label htmlFor="work-show-done-events">
+                    Show done events
+                  </Label>
                   <Switch
                     id="work-show-done-events"
                     checked={preferences.includeCompletedReminders}

@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
-import {
-  Globe,
-  Plus,
-  X as XIcon,
-} from "lucide-react";
+import { Globe, Plus, X as XIcon } from "lucide-react";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { NumberInput } from "@/components/admin/number-input";
@@ -89,7 +85,8 @@ const BriefAddressFields = ({ field }: { field: WebsiteBriefFieldDef }) => {
   );
 };
 
-const detectSocialIcon = (value: string) => detectSocialIconFromBriefEntry(value);
+const detectSocialIcon = (value: string) =>
+  detectSocialIconFromBriefEntry(value);
 
 export { BriefSocialLinksInput } from "@/modules/deals/BriefSocialLinksInput";
 
@@ -203,9 +200,7 @@ export const BriefFieldInput = ({
   const source = `website_brief.${field.key}`;
   const isUrlField =
     field.key === "existing_website" || field.key === "staging_url";
-  const fullSpanClass = gridClass.includes("1")
-    ? undefined
-    : "md:col-span-2";
+  const fullSpanClass = gridClass.includes("1") ? undefined : "md:col-span-2";
   const widthClass = field.fullWidth ? fullSpanClass : undefined;
 
   if (field.key === "full_address" || field.key === "business_address") {

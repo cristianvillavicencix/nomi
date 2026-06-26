@@ -90,7 +90,8 @@ export const ResourceUploadDialog = ({
           ) : null}
         </DialogHeader>
         <div className="space-y-4 py-1">
-          {parseServiceCategorySlug(category) || category === "service-photo" ? (
+          {parseServiceCategorySlug(category) ||
+          category === "service-photo" ? (
             <div className="space-y-2">
               <Label htmlFor="resource-service-label">Service name *</Label>
               <Input

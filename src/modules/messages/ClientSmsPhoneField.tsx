@@ -34,7 +34,9 @@ export const ClientSmsPhoneField = ({
     resolveClientSmsPhone(contact, value) ?? entries[0]?.e164 ?? "";
 
   const headerTextClass =
-    variant === "header" ? "text-sm text-muted-foreground" : "text-[11px] text-muted-foreground";
+    variant === "header"
+      ? "text-sm text-muted-foreground"
+      : "text-[11px] text-muted-foreground";
 
   if (entries.length === 0) {
     return (
@@ -48,7 +50,9 @@ export const ClientSmsPhoneField = ({
     return (
       <p className={cn("min-w-0 truncate", headerTextClass, className)}>
         <span className="text-muted-foreground">To </span>
-        <span className="font-medium text-foreground">{entries[0].display}</span>
+        <span className="font-medium text-foreground">
+          {entries[0].display}
+        </span>
         {entries[0].label !== "Phone" ? (
           <span className="text-muted-foreground"> · {entries[0].label}</span>
         ) : null}
@@ -58,7 +62,9 @@ export const ClientSmsPhoneField = ({
 
   if (variant === "header") {
     return (
-      <div className={cn("flex min-w-0 items-center gap-1.5 text-sm", className)}>
+      <div
+        className={cn("flex min-w-0 items-center gap-1.5 text-sm", className)}
+      >
         <span className="shrink-0 text-muted-foreground">To</span>
         <Select
           value={selectValue}

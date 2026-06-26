@@ -26,7 +26,9 @@ import { useProposalLocaleOptional } from "@/modules/proposals/document/Proposal
 
 const readStoredLocale = (): ProposalLocale => {
   if (typeof window === "undefined") return "en";
-  return window.localStorage.getItem(PROPOSAL_LOCALE_KEY) === "es" ? "es" : "en";
+  return window.localStorage.getItem(PROPOSAL_LOCALE_KEY) === "es"
+    ? "es"
+    : "en";
 };
 
 const PublicProposalDocumentBody = ({
@@ -92,9 +94,7 @@ const PublicProposalDocumentBody = ({
         publicDocumentData={publicDocumentData}
         onDownloadPdf={() => void handleDownloadPdf()}
         isExportingPdf={isExportingPdf}
-        sidebarLanguageToggle={
-          <ProposalLanguageToggle className="w-full" />
-        }
+        sidebarLanguageToggle={<ProposalLanguageToggle className="w-full" />}
       />
     </div>
   );

@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  useGetList,
-  useGetOne,
-  useRefresh,
-  useUpdate,
-} from "ra-core";
+import { useGetList, useGetOne, useRefresh, useUpdate } from "ra-core";
 import { useNavigate } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket } from "@/modules/types";
@@ -28,8 +23,11 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
   const isMobile = useIsMobile();
   const refresh = useRefresh();
   const canManage = useMemberCapability("support.tickets.manage");
-  const { lastReadAt, isLoading: isReadLoading, markRead } =
-    useTicketMemberRead(ticketId);
+  const {
+    lastReadAt,
+    isLoading: isReadLoading,
+    markRead,
+  } = useTicketMemberRead(ticketId);
   const [readCutoff, setReadCutoff] = useState<string | null | undefined>(
     undefined,
   );
@@ -110,10 +108,13 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-sm text-muted-foreground">
-          Ticket #{ticket.id} was merged into ticket #{ticket.merged_into_ticket_id}.
+          Ticket #{ticket.id} was merged into ticket #
+          {ticket.merged_into_ticket_id}.
         </p>
         {ticket.merge_note ? (
-          <p className="max-w-md text-xs text-muted-foreground">{ticket.merge_note}</p>
+          <p className="max-w-md text-xs text-muted-foreground">
+            {ticket.merge_note}
+          </p>
         ) : null}
         <button
           type="button"

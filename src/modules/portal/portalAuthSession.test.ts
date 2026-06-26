@@ -28,7 +28,10 @@ describe("portalAuthSession", () => {
   it("stays active with recent activity", () => {
     const now = Date.now();
     expect(
-      isPortalAuthSessionActive(session({ last_activity_at: now - 60_000 }), now),
+      isPortalAuthSessionActive(
+        session({ last_activity_at: now - 60_000 }),
+        now,
+      ),
     ).toBe(true);
   });
 });

@@ -55,9 +55,7 @@ Deno.serve((req: Request) =>
 
       try {
         const body = (await req.json()) as GenerateBookingLinkBody;
-        const hostMemberId = Number(
-          body.organization_member_id ?? member.id,
-        );
+        const hostMemberId = Number(body.organization_member_id ?? member.id);
         if (!Number.isFinite(hostMemberId)) {
           return createErrorResponse(400, "Invalid organization_member_id");
         }

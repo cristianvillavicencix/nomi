@@ -20,7 +20,8 @@ export const PersonFormFields = ({
   lockCompanyId,
   variant = "full",
 }: PersonFormFieldsProps) => {
-  const { personKind, leadType, addPrimaryContact } = usePersonFormWatchValues();
+  const { personKind, leadType, addPrimaryContact } =
+    usePersonFormWatchValues();
   const { expanded, setExpanded } = usePersonFormExpandedState(variant);
 
   if (variant === "create") {
@@ -63,7 +64,9 @@ export const PersonFormFields = ({
         showLeadProfileToggle={visibility.showLeadProfileToggle}
       />
       {visibility.showSalesSection ? (
-        <PersonSalesSection showLeadStageBadge={visibility.showLeadStageBadge} />
+        <PersonSalesSection
+          showLeadStageBadge={visibility.showLeadStageBadge}
+        />
       ) : null}
       {visibility.showAssignmentSection ? (
         <PersonAssignmentSection assignmentMulti={visibility.assignmentMulti} />

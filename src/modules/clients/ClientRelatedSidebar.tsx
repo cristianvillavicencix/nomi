@@ -157,13 +157,13 @@ export const ClientRelatedSidebar = ({
       ? "Contacts"
       : panel === "deals"
         ? "Deals"
-      : panel === "leads"
-        ? "Leads"
-        : panel === "projects"
-          ? "Projects"
-          : panel === "tickets"
-            ? "Tickets"
-            : "Referrals";
+        : panel === "leads"
+          ? "Leads"
+          : panel === "projects"
+            ? "Projects"
+            : panel === "tickets"
+              ? "Tickets"
+              : "Referrals";
 
   return (
     <>
@@ -264,7 +264,10 @@ export const ClientRelatedSidebar = ({
                       <span className="font-medium">
                         {getContactFullName(lead)}
                       </span>
-                      <Badge variant="outline" className="text-[10px] capitalize">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] capitalize"
+                      >
                         {getLeadStageDef(lead.lead_stage).label}
                       </Badge>
                     </div>
@@ -357,7 +360,9 @@ export const ClientRelatedSidebar = ({
                 <div className="flex items-start gap-3">
                   <Avatar record={referral} width={32} />
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">{getContactFullName(referral)}</p>
+                    <p className="font-medium">
+                      {getContactFullName(referral)}
+                    </p>
                     <p className="truncate text-sm text-muted-foreground">
                       {getContactEmail(referral)}
                     </p>
@@ -369,7 +374,10 @@ export const ClientRelatedSidebar = ({
         </RelatedSection>
       </div>
 
-      <Sheet open={panel != null} onOpenChange={(open) => !open && setPanel(null)}>
+      <Sheet
+        open={panel != null}
+        onOpenChange={(open) => !open && setPanel(null)}
+      >
         <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle>{panelTitle}</SheetTitle>

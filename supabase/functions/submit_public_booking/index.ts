@@ -134,7 +134,10 @@ Deno.serve(
           return createErrorResponse(404, "Booking not found for reschedule");
         }
 
-        const existingTime = String(existingBooking.event_time ?? "").slice(0, 5);
+        const existingTime = String(existingBooking.event_time ?? "").slice(
+          0,
+          5,
+        );
         if (
           !canRescheduleBooking(
             existingBooking.event_date,
@@ -189,35 +192,40 @@ Deno.serve(
       const { data: existingSlot } = await slotQuery.maybeSingle();
       const rescheduleEventId = rescheduleBooking?.calendar_event_id ?? null;
       if (existingSlot?.id && existingSlot.id !== rescheduleEventId) {
-        return createErrorResponse(409, "That time slot is no longer available");
+        return createErrorResponse(
+          409,
+          "That time slot is no longer available",
+        );
       }
 
-      let contactId = tokenData.contact_id ?? rescheduleBooking?.contact_id ?? null;
+      let contactId =
+        tokenData.contact_id ?? rescheduleBooking?.contact_id ?? null;
       if (!contactId) {
         const { first_name, last_name } = splitName(guestName);
-        const { data: createdContact, error: contactError } = await supabaseAdmin
-          .from("contacts")
-          .insert({
-            org_id: tokenData.org_id,
-            first_name,
-            last_name,
-            status: "lead",
-            lead_stage: "new",
-            lead_source: "Otro",
-            lead_source_other: "Book Now",
-            company_id: tokenData.company_id,
-            phone_jsonb: guestPhone
-              ? [{ number: guestPhone, type: "Mobile" }]
-              : [],
-            email_jsonb: guestEmail
-              ? [{ email: guestEmail, type: "Work" }]
-              : [],
-            organization_member_id: tokenData.organization_member_id,
-            first_seen: new Date().toISOString(),
-            last_seen: new Date().toISOString(),
-          })
-          .select("id")
-          .single();
+        const { data: createdContact, error: contactError } =
+          await supabaseAdmin
+            .from("contacts")
+            .insert({
+              org_id: tokenData.org_id,
+              first_name,
+              last_name,
+              status: "lead",
+              lead_stage: "new",
+              lead_source: "Otro",
+              lead_source_other: "Book Now",
+              company_id: tokenData.company_id,
+              phone_jsonb: guestPhone
+                ? [{ number: guestPhone, type: "Mobile" }]
+                : [],
+              email_jsonb: guestEmail
+                ? [{ email: guestEmail, type: "Work" }]
+                : [],
+              organization_member_id: tokenData.organization_member_id,
+              first_seen: new Date().toISOString(),
+              last_seen: new Date().toISOString(),
+            })
+            .select("id")
+            .single();
 
         if (contactError || !createdContact?.id) {
           console.error("[submit_public_booking] contact insert", contactError);
@@ -231,7 +239,9 @@ Deno.serve(
         guestCompany ? `Company: ${guestCompany}` : null,
         guestPhone ? `Phone: ${guestPhone}` : null,
         guestEmail ? `Email: ${guestEmail}` : null,
-        isReschedule ? "Source: Public booking (rescheduled)" : "Source: Public booking",
+        isReschedule
+          ? "Source: Public booking (rescheduled)"
+          : "Source: Public booking",
       ]
         .filter(Boolean)
         .join("\n");
@@ -265,22 +275,29 @@ Deno.serve(
           .single();
 
         if (calendarError || !updatedEvent?.id) {
-          console.error("[submit_public_booking] calendar update", calendarError);
+          console.error(
+            "[submit_public_booking] calendar update",
+            calendarError,
+          );
           return createErrorResponse(500, "Could not update calendar event");
         }
         calendarEventId = updatedEvent.id;
       } else {
-        const { data: calendarEvent, error: calendarError } = await supabaseAdmin
-          .from("calendar_events")
-          .insert({
-            org_id: tokenData.org_id,
-            ...calendarPayload,
-          })
-          .select("id")
-          .single();
+        const { data: calendarEvent, error: calendarError } =
+          await supabaseAdmin
+            .from("calendar_events")
+            .insert({
+              org_id: tokenData.org_id,
+              ...calendarPayload,
+            })
+            .select("id")
+            .single();
 
         if (calendarError || !calendarEvent?.id) {
-          console.error("[submit_public_booking] calendar insert", calendarError);
+          console.error(
+            "[submit_public_booking] calendar insert",
+            calendarError,
+          );
           return createErrorResponse(500, "Could not create calendar event");
         }
         calendarEventId = calendarEvent.id;
@@ -290,24 +307,25 @@ Deno.serve(
       let bookingId: number | null = null;
 
       if (isReschedule && rescheduleBooking) {
-        const { data: updatedBooking, error: bookingError } = await supabaseAdmin
-          .from("public_bookings")
-          .update({
-            service_package_id: Number.isFinite(packageId) ? packageId : null,
-            service_name: serviceName,
-            contact_id: contactId,
-            calendar_event_id: calendarEventId,
-            guest_name: guestName,
-            guest_company: guestCompany || null,
-            guest_phone: guestPhone || null,
-            guest_email: guestEmail || null,
-            event_date: eventDate,
-            event_time: dbTime,
-            guest_reminder_sent_at: null,
-          })
-          .eq("id", rescheduleBooking.id)
-          .select("id")
-          .single();
+        const { data: updatedBooking, error: bookingError } =
+          await supabaseAdmin
+            .from("public_bookings")
+            .update({
+              service_package_id: Number.isFinite(packageId) ? packageId : null,
+              service_name: serviceName,
+              contact_id: contactId,
+              calendar_event_id: calendarEventId,
+              guest_name: guestName,
+              guest_company: guestCompany || null,
+              guest_phone: guestPhone || null,
+              guest_email: guestEmail || null,
+              event_date: eventDate,
+              event_time: dbTime,
+              guest_reminder_sent_at: null,
+            })
+            .eq("id", rescheduleBooking.id)
+            .select("id")
+            .single();
 
         if (bookingError) {
           console.error("[submit_public_booking] booking update", bookingError);

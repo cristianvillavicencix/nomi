@@ -98,65 +98,65 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
 
   return (
     <Card className="flex h-full min-w-0 flex-1 flex-col gap-0 border-0 py-0 shadow-none">
-        <CardContent className="px-4 pt-1 sm:px-6">
-          <Tabs value={currentTab} onValueChange={handleTabChange}>
-            <StickyTabsBar className="pb-1">
-              <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-                <TabsTrigger value="overview" className="shrink-0">
-                  Activities
-                </TabsTrigger>
-                <TabsTrigger
-                  value="website-brief"
-                  className={progressTabTriggerClassName}
-                >
-                  <span>Brief</span>
-                  <BriefTabProgress percent={briefProgress.percent} />
-                </TabsTrigger>
-                <TabsTrigger
-                  value="resources"
-                  className={progressTabTriggerClassName}
-                >
-                  <span>Multimedia</span>
-                  {resourcesProgress ? (
-                    <BriefTabProgress percent={resourcesProgress.percent} />
-                  ) : null}
-                </TabsTrigger>
-                <TabsTrigger value="security" className="shrink-0">
-                  Security
-                </TabsTrigger>
-                {canViewFinancials ? (
-                  <TabsTrigger value="financials" className="shrink-0">
-                    Financials
-                  </TabsTrigger>
+      <CardContent className="px-4 pt-1 sm:px-6">
+        <Tabs value={currentTab} onValueChange={handleTabChange}>
+          <StickyTabsBar className="pb-1">
+            <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+              <TabsTrigger value="overview" className="shrink-0">
+                Activities
+              </TabsTrigger>
+              <TabsTrigger
+                value="website-brief"
+                className={progressTabTriggerClassName}
+              >
+                <span>Brief</span>
+                <BriefTabProgress percent={briefProgress.percent} />
+              </TabsTrigger>
+              <TabsTrigger
+                value="resources"
+                className={progressTabTriggerClassName}
+              >
+                <span>Multimedia</span>
+                {resourcesProgress ? (
+                  <BriefTabProgress percent={resourcesProgress.percent} />
                 ) : null}
-              </TabsList>
-            </StickyTabsBar>
-            <ScrollableContentArea>
-              <TabsContent value="overview" className="pt-4">
-                <LbsProjectOverviewTab record={record} />
-              </TabsContent>
-              <TabsContent value="website-brief" className="pt-4">
-                <WebsiteBriefTab record={record} />
-              </TabsContent>
-              <TabsContent value="resources" className="pt-4">
-                <ProjectResourcesTab record={record} />
-              </TabsContent>
-              <TabsContent value="security" className="pt-4">
-                <ProjectSecurityWorkspaceTab record={record} />
-              </TabsContent>
+              </TabsTrigger>
+              <TabsTrigger value="security" className="shrink-0">
+                Security
+              </TabsTrigger>
               {canViewFinancials ? (
-                <TabsContent value="financials" className="pt-4">
-                  {showTab("financials") ? (
-                    <Suspense fallback={<TabFallback />}>
-                      <ProjectFinancialsTab record={record} />
-                    </Suspense>
-                  ) : null}
-                </TabsContent>
+                <TabsTrigger value="financials" className="shrink-0">
+                  Financials
+                </TabsTrigger>
               ) : null}
-            </ScrollableContentArea>
-          </Tabs>
-        </CardContent>
-      </Card>
+            </TabsList>
+          </StickyTabsBar>
+          <ScrollableContentArea>
+            <TabsContent value="overview" className="pt-4">
+              <LbsProjectOverviewTab record={record} />
+            </TabsContent>
+            <TabsContent value="website-brief" className="pt-4">
+              <WebsiteBriefTab record={record} />
+            </TabsContent>
+            <TabsContent value="resources" className="pt-4">
+              <ProjectResourcesTab record={record} />
+            </TabsContent>
+            <TabsContent value="security" className="pt-4">
+              <ProjectSecurityWorkspaceTab record={record} />
+            </TabsContent>
+            {canViewFinancials ? (
+              <TabsContent value="financials" className="pt-4">
+                {showTab("financials") ? (
+                  <Suspense fallback={<TabFallback />}>
+                    <ProjectFinancialsTab record={record} />
+                  </Suspense>
+                ) : null}
+              </TabsContent>
+            ) : null}
+          </ScrollableContentArea>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -42,7 +42,9 @@ export const SensitiveSessionDialog = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{copy.sensitiveSessionTitle}</DialogTitle>
-          <DialogDescription>{copy.sensitiveSessionDescription}</DialogDescription>
+          <DialogDescription>
+            {copy.sensitiveSessionDescription}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-2 py-1">
           {!codeSent ? (

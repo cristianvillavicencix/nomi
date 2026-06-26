@@ -299,20 +299,20 @@ const ProjectsTabHeader = () => {
     : getNewDealManualCreatePath();
 
   return (
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h3 className="text-lg font-semibold">Projects</h3>
-      <p className="text-sm text-muted-foreground">
-        Projects linked to this contact.
-      </p>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 className="text-lg font-semibold">Projects</h3>
+        <p className="text-sm text-muted-foreground">
+          Projects linked to this contact.
+        </p>
+      </div>
+      <Button asChild>
+        <Link to={createHref}>
+          <FolderKanban className="size-4" />
+          Create Project
+        </Link>
+      </Button>
     </div>
-    <Button asChild>
-      <Link to={createHref}>
-        <FolderKanban className="size-4" />
-        Create Project
-      </Link>
-    </Button>
-  </div>
   );
 };
 

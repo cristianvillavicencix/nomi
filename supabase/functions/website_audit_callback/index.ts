@@ -112,7 +112,10 @@ Deno.serve((req: Request) =>
     }
 
     if (!isTerminal(nextStatus)) {
-      return createErrorResponse(400, "Callback must set running, done, or failed");
+      return createErrorResponse(
+        400,
+        "Callback must set running, done, or failed",
+      );
     }
 
     const now = new Date().toISOString();

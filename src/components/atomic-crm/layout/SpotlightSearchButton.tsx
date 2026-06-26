@@ -15,10 +15,11 @@ import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { resolveEffectiveModules } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { cn } from "@/lib/utils";
-import { LBS_CONTACT_STATUSES_FOR_FILTER, LBS_LEAD_STATUSES_FOR_FILTER } from "@/app/navigation";
 import {
-  isLeadLifecycleStatus,
-} from "@/modules/constants/contactStatus";
+  LBS_CONTACT_STATUSES_FOR_FILTER,
+  LBS_LEAD_STATUSES_FOR_FILTER,
+} from "@/app/navigation";
+import { isLeadLifecycleStatus } from "@/modules/constants/contactStatus";
 import {
   getClientShowPath,
   getContactShowPath,
@@ -92,7 +93,8 @@ const primaryEmail = (contact: Contact) =>
   contact.email_jsonb?.find((row) => row.email?.trim())?.email?.trim() ?? null;
 
 const primaryPhone = (contact: Contact) =>
-  contact.phone_jsonb?.find((row) => row.number?.trim())?.number?.trim() ?? null;
+  contact.phone_jsonb?.find((row) => row.number?.trim())?.number?.trim() ??
+  null;
 
 export const SpotlightSearchButton = ({
   placeholder = "Search name, last name, phone, or email…",
@@ -145,9 +147,7 @@ export const SpotlightSearchButton = ({
     },
     {
       enabled:
-        open &&
-        isSearching &&
-        (moduleAccess.leads || moduleAccess.contacts),
+        open && isSearching && (moduleAccess.leads || moduleAccess.contacts),
       staleTime: 15_000,
     },
   );

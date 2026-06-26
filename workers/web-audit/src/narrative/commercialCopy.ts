@@ -94,7 +94,9 @@ const formatLcpForCopy = (raw: string) => {
 const interpolate = (template: string, values: Record<string, string>) =>
   template.replace(/\{(\w+)\}/g, (_match, key: string) => values[key] ?? "");
 
-const resolveTemplate = (input: CommercialCopyInput): CommercialTemplate | null => {
+const resolveTemplate = (
+  input: CommercialCopyInput,
+): CommercialTemplate | null => {
   if (input.metric_key && COMMERCIAL_TEMPLATES[input.metric_key]) {
     return COMMERCIAL_TEMPLATES[input.metric_key];
   }
@@ -132,7 +134,9 @@ export const buildCommercialMessage = (
   }
 
   if (input.metric_key === "images_without_alt" && input.extras) {
-    values.metric_value = String(input.extras.images_without_alt ?? metricValue);
+    values.metric_value = String(
+      input.extras.images_without_alt ?? metricValue,
+    );
     values.metric_value_secondary = String(input.extras.total_images ?? "");
   }
 

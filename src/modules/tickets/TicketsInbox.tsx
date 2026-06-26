@@ -25,7 +25,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { PageActions, PageTitle } from "@/components/atomic-crm/layout/PageActions";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { CreateTicketButton } from "@/modules/tickets/CreateTicketButton";
 import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
@@ -50,7 +53,11 @@ import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealti
 import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
 import { useMarkTicketNotificationsReadOnVisit } from "@/modules/notifications/useMarkTicketNotificationsReadOnVisit";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { ClientInvoice, OrganizationMember, Ticket } from "@/modules/types";
+import type {
+  ClientInvoice,
+  OrganizationMember,
+  Ticket,
+} from "@/modules/types";
 
 export const TicketsInbox = () => {
   const { identity } = useGetIdentity();
@@ -132,32 +139,33 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
     [allTickets],
   );
 
-  const ticketIds = useMemo(() => tickets.map((ticket) => ticket.id), [tickets]);
+  const ticketIds = useMemo(
+    () => tickets.map((ticket) => ticket.id),
+    [tickets],
+  );
   const ticketIdStrings = useMemo(
     () => ticketIds.map((id) => String(id)),
     [ticketIds],
   );
   const readMap = useTicketInboxReads(ticketIdStrings);
   const companyIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          tickets
-            .map((ticket) => ticket.company_id)
-            .filter((id): id is NonNullable<typeof id> => id != null),
-        ),
-      ],
+    () => [
+      ...new Set(
+        tickets
+          .map((ticket) => ticket.company_id)
+          .filter((id): id is NonNullable<typeof id> => id != null),
+      ),
+    ],
     [tickets],
   );
   const contactIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          tickets
-            .map((ticket) => ticket.contact_id)
-            .filter((id): id is NonNullable<typeof id> => id != null),
-        ),
-      ],
+    () => [
+      ...new Set(
+        tickets
+          .map((ticket) => ticket.contact_id)
+          .filter((id): id is NonNullable<typeof id> => id != null),
+      ),
+    ],
     [tickets],
   );
   const attachmentMap = useTicketListAttachments(ticketIds);
@@ -173,13 +181,17 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const { data: companies = [] } = useGetList<Company>("companies", {
     pagination: { page: 1, perPage: Math.max(companyIds.length, 1) },
     filter:
-      companyIds.length > 0 ? { "id@in": `(${companyIds.join(",")})` } : undefined,
+      companyIds.length > 0
+        ? { "id@in": `(${companyIds.join(",")})` }
+        : undefined,
     queryOptions: { enabled: companyIds.length > 0 },
   });
   const { data: contacts = [] } = useGetList<Contact>("contacts_summary", {
     pagination: { page: 1, perPage: Math.max(contactIds.length, 1) },
     filter:
-      contactIds.length > 0 ? { "id@in": `(${contactIds.join(",")})` } : undefined,
+      contactIds.length > 0
+        ? { "id@in": `(${contactIds.join(",")})` }
+        : undefined,
     queryOptions: { enabled: contactIds.length > 0 },
   });
   const { data: members = [] } = useGetList<OrganizationMember>(
@@ -191,15 +203,14 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   );
 
   const linkedInvoiceIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          tickets
-            .map((ticket) => ticket.invoice_id)
-            .filter((id): id is number | string => id != null)
-            .map((id) => String(id)),
-        ),
-      ],
+    () => [
+      ...new Set(
+        tickets
+          .map((ticket) => ticket.invoice_id)
+          .filter((id): id is number | string => id != null)
+          .map((id) => String(id)),
+      ),
+    ],
     [tickets],
   );
 

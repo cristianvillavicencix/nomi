@@ -31,9 +31,7 @@ import type {
 import { ProposalCrmLinksCard } from "@/modules/proposals/ProposalCrmLinksCard";
 import { ProposalCartPanel } from "@/modules/proposals/ProposalCartPanel";
 import { ProposalCatalogPanel } from "@/modules/proposals/ProposalCatalogPanel";
-import {
-  DEFAULT_VALIDITY_DAYS,
-} from "@/modules/proposals/proposalCommercialConstants";
+import { DEFAULT_VALIDITY_DAYS } from "@/modules/proposals/proposalCommercialConstants";
 import {
   calculateProposalTotals,
   computeValidUntil,
@@ -92,7 +90,8 @@ const ProposalBuilderFields = ({
     }
   }, [company?.name, setValue, title]);
 
-  const depositPercent = depositPercentFromOnlinePaymentSetup(onlinePaymentSetup);
+  const depositPercent =
+    depositPercentFromOnlinePaymentSetup(onlinePaymentSetup);
   const totals = useMemo(
     () => calculateProposalTotals(lines, depositPercent),
     [lines, depositPercent],
@@ -181,9 +180,12 @@ export const ProposalBuilderForm = ({
   const orgId = Number(identity?.org_id ?? 1);
 
   const [lines, setLines] = useState<ProposalLineDraft[]>([]);
-  const [onlinePaymentSetup, setOnlinePaymentSetup] = useState<OnlinePaymentSetup>(
-    () => defaultProposalOnlinePaymentSetup(computeValidUntil(DEFAULT_VALIDITY_DAYS)),
-  );
+  const [onlinePaymentSetup, setOnlinePaymentSetup] =
+    useState<OnlinePaymentSetup>(() =>
+      defaultProposalOnlinePaymentSetup(
+        computeValidUntil(DEFAULT_VALIDITY_DAYS),
+      ),
+    );
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: proposal, isPending: isProposalPending } = useGetOne<Proposal>(
@@ -309,20 +311,20 @@ export const ProposalBuilderForm = ({
           try {
             const { proposal: saved, syncedInvoices } =
               await saveProposalCommercial(
-              dataProvider,
-              {
-                orgId,
-                proposal: {
-                  ...values,
-                  organization_member_id: identity?.id ?? null,
-                  notes: values.notes?.trim() || null,
+                dataProvider,
+                {
+                  orgId,
+                  proposal: {
+                    ...values,
+                    organization_member_id: identity?.id ?? null,
+                    notes: values.notes?.trim() || null,
+                  },
+                  lines: filledLines,
+                  onlinePaymentSetup,
+                  validityDays: values.validity_days,
                 },
-                lines: filledLines,
-                onlinePaymentSetup,
-                validityDays: values.validity_days,
-              },
-              proposalId ?? null,
-            );
+                proposalId ?? null,
+              );
             const invoiceCount = syncedInvoices?.length ?? 0;
             notify(
               invoiceCount > 0

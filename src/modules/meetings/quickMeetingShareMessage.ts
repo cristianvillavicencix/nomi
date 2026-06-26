@@ -45,10 +45,12 @@ export const buildQuickMeetingShareParts = ({
   };
 };
 
-export const getSenderFirstName = (identity?: {
-  first_name?: string | null;
-  fullName?: string | null;
-} | null) => {
+export const getSenderFirstName = (
+  identity?: {
+    first_name?: string | null;
+    fullName?: string | null;
+  } | null,
+) => {
   const fromField = identity?.first_name?.trim();
   if (fromField) return fromField;
   const full = identity?.fullName?.trim();

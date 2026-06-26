@@ -15,7 +15,9 @@ export const WORKER_UNAVAILABLE = "Worker no disponible";
 const normalizeWorkerBaseUrl = (workerUrl: string) =>
   workerUrl.trim().replace(/\/$/, "");
 
-export const wakeWebsiteAuditWorker = async (workerUrl: string): Promise<void> => {
+export const wakeWebsiteAuditWorker = async (
+  workerUrl: string,
+): Promise<void> => {
   const healthUrl = `${normalizeWorkerBaseUrl(workerUrl)}/health`;
   let lastError = "sin respuesta";
 
@@ -85,11 +87,11 @@ export type EnqueueWebsiteAuditParams = {
 export type EnqueueWebsiteAuditResult =
   | { ok: true; reused: true; audit: Record<string, unknown> }
   | {
-    ok: true;
-    reused: false;
-    audit: Record<string, unknown>;
-    worker: { pushed: true } | { pushed: false; error: string };
-  };
+      ok: true;
+      reused: false;
+      audit: Record<string, unknown>;
+      worker: { pushed: true } | { pushed: false; error: string };
+    };
 
 export const enqueueWebsiteAudit = async (
   supabase: SupabaseClient,

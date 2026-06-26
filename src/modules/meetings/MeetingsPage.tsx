@@ -146,11 +146,7 @@ export const MeetingsPage = () => {
           </TabsList>
         </Tabs>
         <div className="ml-auto flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setQuickOpen(true)}
-          >
+          <Button type="button" size="sm" onClick={() => setQuickOpen(true)}>
             <Zap className="size-4" />
             Quick call
           </Button>

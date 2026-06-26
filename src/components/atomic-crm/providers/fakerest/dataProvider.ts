@@ -47,10 +47,7 @@ import { groupTaskParticipantsByTaskId } from "../../tasks/taskUserCompletion";
 import { getCompanyAvatar } from "../commons/getCompanyAvatar";
 import { getContactAvatar } from "../commons/getContactAvatar";
 import { mergeContacts } from "../commons/mergeContacts";
-import {
-  fakeAcceptProposal,
-  fakeSendProposal,
-} from "./proposalFlow";
+import { fakeAcceptProposal, fakeSendProposal } from "./proposalFlow";
 import { canMutateCrmResource } from "../commons/crmPermissions";
 import type { CrmDataProvider } from "../types";
 import {
@@ -455,9 +452,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       groupTaskParticipantsByTaskId(participants),
     );
   },
-  getMyProjectDealIds: async (params: {
-    organizationMemberId: Identifier;
-  }) => {
+  getMyProjectDealIds: async (params: { organizationMemberId: Identifier }) => {
     const { data: deals } = await baseDataProvider.getList<Deal>("deals", {
       pagination: { page: 1, perPage: 5000 },
       sort: { field: "id", order: "ASC" },
@@ -575,20 +570,23 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         { id: installmentId },
       );
       const year = new Date().getFullYear();
-      const { data: invoice } = await baseDataProvider.create("client_invoices", {
-        data: {
-          org_id: 1,
-          invoice_number: `INV-${year}-0001`,
-          installment_id: installmentId,
-          proposal_id: installment.proposal_id,
-          issue_date: new Date().toISOString().slice(0, 10),
-          due_date: dueDate ?? installment.due_date,
-          amount: amount ?? installment.amount,
-          currency: "USD",
-          description: description ?? installment.label,
-          status: installment.status === "paid" ? "paid" : "draft",
+      const { data: invoice } = await baseDataProvider.create(
+        "client_invoices",
+        {
+          data: {
+            org_id: 1,
+            invoice_number: `INV-${year}-0001`,
+            installment_id: installmentId,
+            proposal_id: installment.proposal_id,
+            issue_date: new Date().toISOString().slice(0, 10),
+            due_date: dueDate ?? installment.due_date,
+            amount: amount ?? installment.amount,
+            currency: "USD",
+            description: description ?? installment.label,
+            status: installment.status === "paid" ? "paid" : "draft",
+          },
         },
-      });
+      );
       return invoice;
     }
 
@@ -609,15 +607,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         contact_id: proposal.contact_id,
         issue_date: new Date().toISOString().slice(0, 10),
         due_date: dueDate ?? new Date().toISOString().slice(0, 10),
-        amount:
-          amount ??
-          proposal.deposit_amount ??
-          proposal.amount ??
-          0,
+        amount: amount ?? proposal.deposit_amount ?? proposal.amount ?? 0,
         currency: proposal.currency ?? "USD",
-        description:
-          description ??
-          `Invoice for ${proposal.title}`,
+        description: description ?? `Invoice for ${proposal.title}`,
         status: "draft",
       },
     });
@@ -662,7 +654,8 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         reference: body.reference ?? null,
         recipient_email: body.recipient_email ?? null,
         sales_person_id: body.sales_person_id ?? null,
-        save_card_for_future_charges: body.save_card_for_future_charges ?? false,
+        save_card_for_future_charges:
+          body.save_card_for_future_charges ?? false,
         upfront_percent: body.upfront_percent ?? 100,
         auto_charge_remainder: body.auto_charge_remainder ?? false,
         remainder_schedule: body.remainder_schedule ?? null,
@@ -710,18 +703,22 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
         description: body.description,
         notes: body.notes ?? null,
         sales_person_id: body.sales_person_id ?? null,
-        save_card_for_future_charges: body.save_card_for_future_charges ?? false,
+        save_card_for_future_charges:
+          body.save_card_for_future_charges ?? false,
         upfront_percent: body.upfront_percent ?? 100,
         auto_charge_remainder: body.auto_charge_remainder ?? false,
         remainder_schedule: body.remainder_schedule ?? null,
       },
       previousData: { id: invoiceId },
     });
-    const existing = await baseDataProvider.getList("client_invoice_line_items", {
-      filter: { "invoice_id@eq": invoiceId },
-      pagination: { page: 1, perPage: 500 },
-      sort: { field: "sort_order", order: "ASC" },
-    });
+    const existing = await baseDataProvider.getList(
+      "client_invoice_line_items",
+      {
+        filter: { "invoice_id@eq": invoiceId },
+        pagination: { page: 1, perPage: 500 },
+        sort: { field: "sort_order", order: "ASC" },
+      },
+    );
     await Promise.all(
       existing.data.map((row) =>
         baseDataProvider.delete("client_invoice_line_items", {
@@ -769,7 +766,11 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     }
     if (action === "void") {
       return {
-        invoice: { id: invoiceId, status: "void", void_reason: voidReason ?? null },
+        invoice: {
+          id: invoiceId,
+          status: "void",
+          void_reason: voidReason ?? null,
+        },
       };
     }
     return { invoice: { id: invoiceId, status: "sent" } };
@@ -913,17 +914,15 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
                 });
               }
             }
-            const { data: movedContact } = await baseDataProvider.update<Contact>(
-              "contacts",
-              {
+            const { data: movedContact } =
+              await baseDataProvider.update<Contact>("contacts", {
                 id: contact.id,
                 data: {
                   company_id: companyId,
                   last_seen: new Date().toISOString(),
                 },
                 previousData: contact,
-              },
-            );
+              });
             contact = movedContact;
           }
         }
@@ -1376,6 +1375,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     webhook_url: null,
   }),
   ensureProjectConversation: async ({ dealId }) => dealId,
+  ensureTeamDmConversation: async ({ otherMemberId }) => otherMemberId,
   updateMessagingSettings: async (params) => ({
     org_id: 1,
     twilio_account_sid: params.twilio_account_sid ?? null,
@@ -1464,7 +1464,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
           )
         ).data;
     } else {
-      throw new Error("conversation_id, contact_id, or external_phone is required");
+      throw new Error(
+        "conversation_id, contact_id, or external_phone is required",
+      );
     }
 
     const message = await baseDataProvider.create<
@@ -1563,7 +1565,6 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     return created;
   },
 };
-
 
 async function updateCompany(
   companyId: Identifier,

@@ -27,13 +27,9 @@ const toneCycle: ProposalTimelineBar["tone"][] = [
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
-const defaultNewBar = (
-  bars: ProposalTimelineBar[],
-): ProposalTimelineBar => {
+const defaultNewBar = (bars: ProposalTimelineBar[]): ProposalTimelineBar => {
   const last = bars[bars.length - 1];
-  const left = last
-    ? clamp(last.left_percent + last.width_percent, 0, 88)
-    : 0;
+  const left = last ? clamp(last.left_percent + last.width_percent, 0, 88) : 0;
   return {
     id: newTimelineBarId(),
     label: "New phase",
@@ -115,11 +111,7 @@ export const ProposalTimelineGantt = ({
       const pct = pointerPct(event.clientX);
       if (mode === "move") {
         patchBar(index, {
-          left_percent: clamp(
-            pct - moveOffset,
-            0,
-            100 - current.width_percent,
-          ),
+          left_percent: clamp(pct - moveOffset, 0, 100 - current.width_percent),
         });
       } else {
         patchBar(index, {

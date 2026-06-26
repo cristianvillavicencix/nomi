@@ -145,14 +145,16 @@ describe("context_links save invariant", () => {
   it("preserves context_links when saving two company-owned emails unchanged", () => {
     const existingLinks = [
       'lbs:company_emails=[{"email":"billing@test.co","type":"Billing"},{"email":"info@test.co","type":"Work"}]',
-      "lbs:company_phones=[{\"number\":\"+15551234567\",\"type\":\"Work\"}]",
+      'lbs:company_phones=[{"number":"+15551234567","type":"Work"}]',
       "lbs:billing_same_as_business=true",
       "lbs:invoice_same_as_primary=true",
       "lbs:invoice_email=info@test.co",
       "lbs:invoice_phone=+15551234567",
     ];
 
-    const formValues = companyToClientFormValues(companyWithLinks(existingLinks));
+    const formValues = companyToClientFormValues(
+      companyWithLinks(existingLinks),
+    );
     const payload = buildCompanyPayloadFromUpsert(
       {
         ...clientCreateFormValuesToUpsertInput(formValues, 1),
@@ -168,7 +170,7 @@ describe("context_links save invariant", () => {
 
   it("preserves invoice-only context_links on unchanged save", () => {
     const existingLinks = [
-      "lbs:company_phones=[{\"number\":\"+1-5188675186\",\"type\":\"Work\"}]",
+      'lbs:company_phones=[{"number":"+1-5188675186","type":"Work"}]',
       "lbs:billing_same_as_business=true",
       "lbs:invoice_same_as_primary=true",
       "lbs:invoice_contact_name=Jose Lema",
@@ -176,7 +178,9 @@ describe("context_links save invariant", () => {
       "lbs:invoice_phone=+1-5188675186",
     ];
 
-    const formValues = companyToClientFormValues(companyWithLinks(existingLinks));
+    const formValues = companyToClientFormValues(
+      companyWithLinks(existingLinks),
+    );
     const payload = buildCompanyPayloadFromUpsert(
       {
         ...clientCreateFormValuesToUpsertInput(formValues, 1),

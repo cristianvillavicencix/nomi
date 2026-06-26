@@ -24,7 +24,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { ClientInvoice, OrganizationMember, Ticket } from "@/modules/types";
+import type {
+  ClientInvoice,
+  OrganizationMember,
+  Ticket,
+} from "@/modules/types";
 import { isTicketUnread } from "@/modules/tickets/ticketReadState";
 
 type TicketListItemProps = {
@@ -86,11 +90,9 @@ export const TicketListItem = ({
     return ticket.requester_name?.trim() || null;
   })();
 
-  const identityParts = [
-    `#${ticket.id}`,
-    companyName,
-    contactName,
-  ].filter(Boolean);
+  const identityParts = [`#${ticket.id}`, companyName, contactName].filter(
+    Boolean,
+  );
 
   const emailPreview = meta.email ?? meta.phone ?? meta.website ?? null;
 
@@ -176,7 +178,10 @@ export const TicketListItem = ({
                       {waitingLabel}
                     </Badge>
                   ) : null}
-                  <TicketListInvoiceBadges ticket={ticket} invoices={invoices} />
+                  <TicketListInvoiceBadges
+                    ticket={ticket}
+                    invoices={invoices}
+                  />
                   {hasAttachments ? (
                     <Paperclip
                       className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
@@ -196,7 +201,11 @@ export const TicketListItem = ({
                 {identityParts.map((part, index) => (
                   <span key={`${part}-${index}`}>
                     {index > 0 ? <TicketMetaSep /> : null}
-                    <span className={index === 0 ? "font-mono text-foreground/80" : undefined}>
+                    <span
+                      className={
+                        index === 0 ? "font-mono text-foreground/80" : undefined
+                      }
+                    >
                       {part}
                     </span>
                   </span>

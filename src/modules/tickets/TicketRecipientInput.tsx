@@ -2,7 +2,10 @@ import { Building2, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useGetList } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import { getContactEmail, getContactFullName } from "@/modules/clients/clientShowUtils";
+import {
+  getContactEmail,
+  getContactFullName,
+} from "@/modules/clients/clientShowUtils";
 import { parseEmailList } from "@/modules/tickets/ticketReplySignature";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,7 +26,9 @@ const splitRecipientToken = (value: string) => {
   const lastComma = value.lastIndexOf(",");
   const token = (lastComma === -1 ? value : value.slice(lastComma + 1)).trim();
   const base =
-    lastComma === -1 ? "" : value.slice(0, lastComma).trim().replace(/,\s*$/, "");
+    lastComma === -1
+      ? ""
+      : value.slice(0, lastComma).trim().replace(/,\s*$/, "");
   return { token, base };
 };
 
@@ -192,7 +197,9 @@ export const TicketRecipientInput = ({
                     <UserRound className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   )}
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{suggestion.label}</span>
+                    <span className="block truncate font-medium">
+                      {suggestion.label}
+                    </span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {suggestion.email}
                     </span>

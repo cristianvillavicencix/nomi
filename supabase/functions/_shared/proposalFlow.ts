@@ -51,7 +51,9 @@ export const mergeContractTerms = (
   body.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => variables[key] ?? "");
 
 export const formatMoney = (amount: number, currency = "USD") =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(
+    amount,
+  );
 
 export const buildLineItemsText = (lines: LineItemRow[]) =>
   lines
@@ -355,8 +357,7 @@ export async function createContractFromProposal(
       proposal_id: proposal.id,
       deal_id: dealId,
       organization_member_id: proposal.organization_member_id,
-      title:
-        resolvedTerms.title ?? `Contract — ${proposal.title}`,
+      title: resolvedTerms.title ?? `Contract — ${proposal.title}`,
       status: "pending_signature",
       terms_version: termsVersion,
       terms_snapshot: termsSnapshot,

@@ -19,7 +19,10 @@ export const parseFollowUpDateTime = (
   if (value.includes("T")) {
     const [dateKey, timePart = ""] = value.split("T");
     const timeKey = timePart.slice(0, 5);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !/^\d{2}:\d{2}$/.test(timeKey)) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(dateKey) ||
+      !/^\d{2}:\d{2}$/.test(timeKey)
+    ) {
       return null;
     }
 

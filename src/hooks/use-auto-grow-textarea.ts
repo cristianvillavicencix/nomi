@@ -10,7 +10,11 @@ type UseAutoGrowTextareaOptions = {
 export const useAutoGrowTextarea = (
   ref: RefObject<HTMLElement | null>,
   value: string,
-  { minHeight = 160, maxHeight = 720, resizeTrigger }: UseAutoGrowTextareaOptions = {},
+  {
+    minHeight = 160,
+    maxHeight = 720,
+    resizeTrigger,
+  }: UseAutoGrowTextareaOptions = {},
 ) => {
   useLayoutEffect(() => {
     const el = ref.current;

@@ -33,7 +33,10 @@ export const useAutoLinkTicketRequester = (ticket: Ticket | undefined) => {
     if (!ticket?.id || ticket.contact_id || !requesterEmail) return;
     if (linkedRef.current === String(ticket.id)) return;
 
-    const matches = findContactsByExactEmail(emailSearchResults, requesterEmail);
+    const matches = findContactsByExactEmail(
+      emailSearchResults,
+      requesterEmail,
+    );
     if (matches.length !== 1) return;
 
     const contact = matches[0];

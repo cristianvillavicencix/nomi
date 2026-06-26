@@ -39,7 +39,8 @@ export const parseStorageObjectReference = (
 export const isResolvableStorageReference = (
   reference: string | null | undefined,
   defaultBucket?: string,
-) => Boolean(reference && parseStorageObjectReference(reference, defaultBucket));
+) =>
+  Boolean(reference && parseStorageObjectReference(reference, defaultBucket));
 
 export const buildStorageObjectReference = (
   supabaseUrl: string,
@@ -64,7 +65,12 @@ export const createStorageSignedUrl = async (
     .from(bucket)
     .createSignedUrl(path, expiresIn);
   if (error || !data?.signedUrl) {
-    console.error("[storageObjectUrl] createSignedUrl failed", bucket, path, error);
+    console.error(
+      "[storageObjectUrl] createSignedUrl failed",
+      bucket,
+      path,
+      error,
+    );
     return null;
   }
   return data.signedUrl;
@@ -81,9 +87,9 @@ export const resolveStorageDisplayUrl = async (
   const parsed = parseStorageObjectReference(trimmed, options?.defaultBucket);
   if (!parsed) {
     return trimmed.startsWith("http://") ||
-        trimmed.startsWith("https://") ||
-        trimmed.startsWith("blob:") ||
-        trimmed.startsWith("data:")
+      trimmed.startsWith("https://") ||
+      trimmed.startsWith("blob:") ||
+      trimmed.startsWith("data:")
       ? trimmed
       : null;
   }

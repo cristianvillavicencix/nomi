@@ -58,15 +58,15 @@ export const DeliverProjectDialog = ({
         <DialogHeader>
           <DialogTitle>Deliver project to client</DialogTitle>
           <DialogDescription>
-            Unlocks <strong>Mi Sitio Web</strong> in the client portal and records
-            the handoff checklist for {record.name}.
+            Unlocks <strong>Mi Sitio Web</strong> in the client portal and
+            records the handoff checklist for {record.name}.
           </DialogDescription>
         </DialogHeader>
 
         {form.alreadyDelivered ? (
           <div className="rounded-lg border border-warning/40 bg-warning/15 p-4 text-sm text-warning-foreground">
-            This project was already delivered. Revoke the current delivery before
-            sending again.
+            This project was already delivered. Revoke the current delivery
+            before sending again.
           </div>
         ) : null}
 
@@ -130,13 +130,13 @@ export const DeliverProjectDialog = ({
           </Button>
           <Button
             type="button"
-            disabled={
-              !form.canSubmit || form.deliverMutation.isPending
-            }
+            disabled={!form.canSubmit || form.deliverMutation.isPending}
             onClick={() => void handleDeliver()}
           >
             <Rocket className="size-4" />
-            {form.deliverMutation.isPending ? "Delivering…" : "Confirm delivery"}
+            {form.deliverMutation.isPending
+              ? "Delivering…"
+              : "Confirm delivery"}
           </Button>
         </DialogFooter>
       </DialogContent>

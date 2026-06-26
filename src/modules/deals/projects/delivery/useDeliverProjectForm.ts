@@ -2,11 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useDataProvider, useGetList } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { DEFAULT_INCLUDED_PAGES, DEFAULT_PORTAL_ENABLED_SECTIONS } from "@/modules/portal/portalTypes";
+import {
+  DEFAULT_INCLUDED_PAGES,
+  DEFAULT_PORTAL_ENABLED_SECTIONS,
+} from "@/modules/portal/portalTypes";
 import { buildPortalHostingMetaPayload } from "@/modules/portal/portalDeliveryMeta";
 import { parseDomainFromUrl } from "@/modules/portal/portalResourceUtils";
 import { resolveProjectDeploymentUrls } from "@/modules/deals/projects/projectDeploymentUrls";
-import type { DealAccessEntry, LbsDeal, ProjectDelivery } from "@/modules/types";
+import type {
+  DealAccessEntry,
+  LbsDeal,
+  ProjectDelivery,
+} from "@/modules/types";
 
 export type DeliverProjectManualOverride = {
   reason: string;
@@ -44,7 +51,9 @@ export const useDeliverProjectForm = ({
   const [hostingProvider, setHostingProvider] = useState("");
   const [hostingPanelUrl, setHostingPanelUrl] = useState("");
   const [hostingLocation, setHostingLocation] = useState("");
-  const [hostingManagedBy, setHostingManagedBy] = useState<"lbs" | "client">("lbs");
+  const [hostingManagedBy, setHostingManagedBy] = useState<"lbs" | "client">(
+    "lbs",
+  );
   const [includedPages, setIncludedPages] = useState<string[]>(
     DEFAULT_INCLUDED_PAGES,
   );
@@ -127,9 +136,7 @@ export const useDeliverProjectForm = ({
 
   useEffect(() => {
     if (!enabled || !credentialIdKey) return;
-    setShareCredentialIds(
-      credentialIdKey.split(",").map((id) => Number(id)),
-    );
+    setShareCredentialIds(credentialIdKey.split(",").map((id) => Number(id)));
   }, [credentialIdKey, enabled]);
 
   const deliverMutation = useMutation({
@@ -206,8 +213,7 @@ export const useDeliverProjectForm = ({
   };
 
   const alreadyDelivered = Boolean(existingDeliveries[0]);
-  const canSubmit =
-    confirmed && siteUrl.trim().length > 0 && !alreadyDelivered;
+  const canSubmit = confirmed && siteUrl.trim().length > 0 && !alreadyDelivered;
 
   const submitBlockers = useMemo(() => {
     const blockers: string[] = [];

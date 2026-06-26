@@ -1,6 +1,4 @@
-import {
-  TICKET_REPLY_ATTACHMENT_LIMIT_LABEL,
-} from "@/modules/tickets/ticketReplyAttachmentLimits";
+import { TICKET_REPLY_ATTACHMENT_LIMIT_LABEL } from "@/modules/tickets/ticketReplyAttachmentLimits";
 import {
   buildReplySignatureEditorHtml,
   includesReplySignatureHtml,
@@ -41,7 +39,10 @@ ${fileLine}
 </div>`;
 };
 
-export const insertHtmlAboveSignatureHtml = (html: string, insertionHtml: string) => {
+export const insertHtmlAboveSignatureHtml = (
+  html: string,
+  insertionHtml: string,
+) => {
   const insertion = insertionHtml.trim();
   if (!insertion) return html;
 

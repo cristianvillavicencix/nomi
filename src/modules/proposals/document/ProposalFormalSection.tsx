@@ -35,7 +35,10 @@ type ProcessStep = { title: string; body: string };
 
 const parseProcessSteps = (body: string): ProcessStep[] => {
   if (!body.trim()) return [];
-  const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = body
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   return lines.map((line) => {
     const match = line.match(/^(\d+)\.\s*(.*)$/);
     if (match) {
@@ -73,10 +76,7 @@ const parseDeliverableItems = (body: string): DeliverableItem[] => {
   const bulletLines = lines.filter(
     (line) => line.startsWith("-") || line === "-",
   );
-  const source =
-    bulletLines.length > 0
-      ? bulletLines
-      : lines.filter(Boolean);
+  const source = bulletLines.length > 0 ? bulletLines : lines.filter(Boolean);
   return source.map((line) => {
     const text = line.replace(/^-+\s*/, "");
     if (!text) return { title: "", detail: "" };
@@ -185,7 +185,10 @@ export const ProposalFormalSection = ({
   const clientLogos = content.client_logos ?? [];
   const stats = content.about_stats ?? {};
 
-  const patchPortfolio = (index: number, partial: Partial<ProposalPortfolioItem>) => {
+  const patchPortfolio = (
+    index: number,
+    partial: Partial<ProposalPortfolioItem>,
+  ) => {
     const next = portfolio.map((item, i) =>
       i === index ? { ...item, ...partial } : item,
     );
@@ -193,11 +196,16 @@ export const ProposalFormalSection = ({
   };
 
   const patchTeam = (index: number, partial: Partial<ProposalTeamMember>) => {
-    const next = team.map((item, i) => (i === index ? { ...item, ...partial } : item));
+    const next = team.map((item, i) =>
+      i === index ? { ...item, ...partial } : item,
+    );
     onPatchContent({ team_members: next });
   };
 
-  const patchClientLogo = (index: number, partial: Partial<ProposalClientLogo>) => {
+  const patchClientLogo = (
+    index: number,
+    partial: Partial<ProposalClientLogo>,
+  ) => {
     const next = clientLogos.map((item, i) =>
       i === index ? { ...item, ...partial } : item,
     );
@@ -252,7 +260,10 @@ export const ProposalFormalSection = ({
 
   if (section.id === "about-us") {
     return (
-      <section id={`custom-${section.id}`} className="pf-section proposal-pdf-page scroll-mt-6">
+      <section
+        id={`custom-${section.id}`}
+        className="pf-section proposal-pdf-page scroll-mt-6"
+      >
         <SectionHeader
           sectionId={section.id}
           title={copy.sections.aboutUs}
@@ -297,7 +308,9 @@ export const ProposalFormalSection = ({
               ) : (
                 <div className="pf-stat-n">{value}</div>
               )}
-              <div className="mt-2 text-xs font-medium text-[#475068]">{label}</div>
+              <div className="mt-2 text-xs font-medium text-[#475068]">
+                {label}
+              </div>
             </div>
           ))}
         </div>
@@ -306,14 +319,21 @@ export const ProposalFormalSection = ({
             {copy.teamSectionTitle}
           </h3>
           {editable ? (
-            <Button type="button" variant="outline" size="sm" onClick={addTeamMember}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addTeamMember}
+            >
               <Plus className="size-4" />
               Add member
             </Button>
           ) : null}
         </div>
         {team.length === 0 && !editable ? (
-          <p className="text-sm text-muted-foreground">Team members will appear here.</p>
+          <p className="text-sm text-muted-foreground">
+            Team members will appear here.
+          </p>
         ) : null}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {team.map((member, index) => (
@@ -367,7 +387,9 @@ export const ProposalFormalSection = ({
               ) : (
                 <>
                   <p className="mt-3 text-sm font-bold">{member.name}</p>
-                  <p className="text-xs font-medium text-[#1E5FA8]">{member.role}</p>
+                  <p className="text-xs font-medium text-[#1E5FA8]">
+                    {member.role}
+                  </p>
                   {member.bio?.trim() ? (
                     <p className="mt-2 text-left text-xs leading-relaxed text-[#475068]">
                       {member.bio}
@@ -385,7 +407,10 @@ export const ProposalFormalSection = ({
   if (section.id === "work-reviews") {
     const reviews = reviewsData?.reviews?.slice(0, 2) ?? [];
     return (
-      <section id={`custom-${section.id}`} className="pf-section proposal-pdf-page scroll-mt-6">
+      <section
+        id={`custom-${section.id}`}
+        className="pf-section proposal-pdf-page scroll-mt-6"
+      >
         <SectionHeader
           sectionId={section.id}
           title={copy.sections.workReviews}
@@ -412,9 +437,16 @@ export const ProposalFormalSection = ({
         {editable || clientLogos.length > 0 ? (
           <div className="pf-client-logos">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="pf-client-logos-title mb-0">{copy.trustedByTitle}</p>
+              <p className="pf-client-logos-title mb-0">
+                {copy.trustedByTitle}
+              </p>
               {editable ? (
-                <Button type="button" variant="outline" size="sm" onClick={addClientLogo}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addClientLogo}
+                >
                   <Plus className="mr-1 size-3.5" />
                   {copy.addClientLogo}
                 </Button>
@@ -445,7 +477,9 @@ export const ProposalFormalSection = ({
                     ) : null}
                     <ProposalImageDropZone
                       imageUrl={logo.image_url}
-                      onChange={(url) => patchClientLogo(index, { image_url: url })}
+                      onChange={(url) =>
+                        patchClientLogo(index, { image_url: url })
+                      }
                       orgId={orgId}
                       proposalId={proposalId}
                       editable={editable}
@@ -516,9 +550,16 @@ export const ProposalFormalSection = ({
             <p className="text-sm text-[#9aa3b5]">Loading Google reviews…</p>
           ) : reviews.length ? (
             reviews.map((review) => (
-              <div key={`${review.authorName}-${review.text.slice(0, 20)}`} className="pf-review">
-                <div className="pf-stars">{"★".repeat(Math.min(5, review.rating))}</div>
-                <p className="text-sm leading-relaxed text-[#0f1729]">{review.text}</p>
+              <div
+                key={`${review.authorName}-${review.text.slice(0, 20)}`}
+                className="pf-review"
+              >
+                <div className="pf-stars">
+                  {"★".repeat(Math.min(5, review.rating))}
+                </div>
+                <p className="text-sm leading-relaxed text-[#0f1729]">
+                  {review.text}
+                </p>
                 <div className="mt-4 flex items-center gap-2.5 border-t border-[#eceef2] pt-3">
                   <div className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-[#1E5FA8] to-[#0D3B6E] text-xs font-bold text-white">
                     {initials(review.authorName)}
@@ -563,7 +604,10 @@ export const ProposalFormalSection = ({
     };
 
     return (
-      <section id={`custom-${section.id}`} className="pf-section proposal-pdf-page scroll-mt-6">
+      <section
+        id={`custom-${section.id}`}
+        className="pf-section proposal-pdf-page scroll-mt-6"
+      >
         <div className="pf-kicker">{copy.sections.whatWeDeliver}</div>
         <EditableBlock
           as="h2"
@@ -655,7 +699,10 @@ export const ProposalFormalSection = ({
     };
 
     return (
-      <section id={`custom-${section.id}`} className="pf-section proposal-pdf-page scroll-mt-6">
+      <section
+        id={`custom-${section.id}`}
+        className="pf-section proposal-pdf-page scroll-mt-6"
+      >
         <div className="pf-kicker">{copy.sections.websiteFeatures}</div>
         <EditableBlock
           as="h2"
@@ -739,10 +786,7 @@ export const ProposalFormalSection = ({
       onPatchSection(section.id, { body: serializeProcessSteps(next) });
     };
 
-    const updateStep = (
-      index: number,
-      partial: Partial<ProcessStep>,
-    ) => {
+    const updateStep = (index: number, partial: Partial<ProcessStep>) => {
       const next = steps.map((step, i) =>
         i === index ? { ...step, ...partial } : step,
       );
@@ -750,7 +794,10 @@ export const ProposalFormalSection = ({
     };
 
     return (
-      <section id={`custom-${section.id}`} className="pf-section proposal-pdf-page scroll-mt-6">
+      <section
+        id={`custom-${section.id}`}
+        className="pf-section proposal-pdf-page scroll-mt-6"
+      >
         <div className="pf-kicker">{copy.sections.process}</div>
         <EditableBlock
           as="h2"
@@ -817,7 +864,10 @@ export const ProposalFormalSection = ({
 
   if (section.id === "content-management") {
     return (
-      <section id={`custom-${section.id}`} className="pf-section proposal-pdf-page scroll-mt-6">
+      <section
+        id={`custom-${section.id}`}
+        className="pf-section proposal-pdf-page scroll-mt-6"
+      >
         <div className="pf-kicker">{copy.sections.contentManagement}</div>
         <EditableBlock
           as="h2"
@@ -844,7 +894,10 @@ export const ProposalFormalSection = ({
 
   if (section.id === "timeline" || section.id === "project-timeline") {
     return (
-      <section id={`custom-${section.id}`} className="pf-section proposal-pdf-page scroll-mt-6">
+      <section
+        id={`custom-${section.id}`}
+        className="pf-section proposal-pdf-page scroll-mt-6"
+      >
         <div className="pf-kicker">{copy.sections.timeline}</div>
         <EditableBlock
           as="h2"
@@ -866,7 +919,10 @@ export const ProposalFormalSection = ({
   }
 
   return (
-    <section id={`custom-${section.id}`} className="pf-section proposal-pdf-page scroll-mt-6">
+    <section
+      id={`custom-${section.id}`}
+      className="pf-section proposal-pdf-page scroll-mt-6"
+    >
       <div className="pf-kicker">{copy.sections.custom}</div>
       <EditableBlock
         as="h2"

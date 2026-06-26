@@ -124,14 +124,15 @@ export const signPublicProposalContract = ({
   token: string;
   signatoryName: string;
 }) =>
-  invokePublicFunction<{ contract_id: number; signed_at: string; deal_id: number }>(
-    "sign_proposal_contract",
-    {
-      proposal_id: proposalId,
-      public_token: token,
-      signatory_name: signatoryName,
-    },
-  );
+  invokePublicFunction<{
+    contract_id: number;
+    signed_at: string;
+    deal_id: number;
+  }>("sign_proposal_contract", {
+    proposal_id: proposalId,
+    public_token: token,
+    signatory_name: signatoryName,
+  });
 
 export const payPublicProposalDeposit = ({
   proposalId,

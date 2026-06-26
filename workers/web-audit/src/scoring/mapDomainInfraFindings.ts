@@ -23,7 +23,8 @@ export const mapDomainInfraFindings = (
       description: infra.ssl.expiresAt
         ? `Expira ${infra.ssl.expiresAt.slice(0, 10)} (${infra.ssl.daysRemaining} días)`
         : `Quedan ${infra.ssl.daysRemaining} días`,
-      recommendation: "Renueva el certificado SSL antes de que los visitantes vean avisos de seguridad.",
+      recommendation:
+        "Renueva el certificado SSL antes de que los visitantes vean avisos de seguridad.",
       display_order: order++,
     });
   }
@@ -80,7 +81,8 @@ export const mapDomainInfraFindings = (
       source: "static",
       source_id: "missing-privacy-link",
       title: "Sin enlace a política de privacidad",
-      description: "No se detectó enlace visible a privacidad en el HTML analizado.",
+      description:
+        "No se detectó enlace visible a privacidad en el HTML analizado.",
       recommendation:
         "Agrega enlace a política de privacidad en footer o menú legal.",
       display_order: order++,
@@ -88,10 +90,15 @@ export const mapDomainInfraFindings = (
   }
 
   const extended = staticResult.crawlFiles?.extended;
-  if (extended && !extended.rssFeed.found && extended.rssFeed.access !== "blocked") {
+  if (
+    extended &&
+    !extended.rssFeed.found &&
+    extended.rssFeed.access !== "blocked"
+  ) {
     const hasBlogSignals =
-      /blog|news|articles|post/i.test(staticResult.finalUrl ?? staticResult.url) ||
-      /wp-content|wordpress/i.test(staticResult.sourceHtml ?? "");
+      /blog|news|articles|post/i.test(
+        staticResult.finalUrl ?? staticResult.url,
+      ) || /wp-content|wordpress/i.test(staticResult.sourceHtml ?? "");
     if (hasBlogSignals) {
       findings.push({
         category: "seo",
@@ -99,7 +106,8 @@ export const mapDomainInfraFindings = (
         source: "static",
         source_id: "missing-rss-feed",
         title: "Feed RSS/Atom no encontrado",
-        description: "Sitio con señales de blog pero sin /feed/ ni RSS detectado.",
+        description:
+          "Sitio con señales de blog pero sin /feed/ ni RSS detectado.",
         recommendation: "Expón un feed RSS para suscriptores y agregadores.",
         display_order: order++,
       });

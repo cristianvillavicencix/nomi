@@ -171,7 +171,10 @@ Deno.serve(
 
         await supabaseAdmin
           .from("proposal_payment_installments")
-          .update({ status: "processing", updated_at: new Date().toISOString() })
+          .update({
+            status: "processing",
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", row.id)
           .eq("status", "pending");
 

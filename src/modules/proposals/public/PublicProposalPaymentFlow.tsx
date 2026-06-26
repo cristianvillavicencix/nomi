@@ -1,5 +1,13 @@
-import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
-import { loadStripe, type StripeCardElementChangeEvent } from "@stripe/stripe-js";
+import {
+  CardElement,
+  Elements,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import {
+  loadStripe,
+  type StripeCardElementChangeEvent,
+} from "@stripe/stripe-js";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Lock, Wallet } from "lucide-react";
 import { useState } from "react";
@@ -72,7 +80,8 @@ const DepositPaymentForm = ({
   const balanceInstallments = installments.filter(
     (row) => !row.label.toLowerCase().includes("deposit"),
   );
-  const depositAmount = depositInstallment?.amount ?? proposal.deposit_amount ?? 0;
+  const depositAmount =
+    depositInstallment?.amount ?? proposal.deposit_amount ?? 0;
   const depositFormatted = formatProposalMoney(depositAmount, currency);
 
   const payMutation = useMutation({
@@ -152,7 +161,10 @@ const DepositPaymentForm = ({
             Card details
           </Label>
           <div className="rounded-md border bg-background px-3 py-3">
-            <CardElement options={cardElementOptions} onChange={handleCardChange} />
+            <CardElement
+              options={cardElementOptions}
+              onChange={handleCardChange}
+            />
           </div>
           {cardError ? (
             <p className="text-sm text-destructive">{cardError}</p>
@@ -231,8 +243,7 @@ const ScheduleList = ({
 export const PublicProposalPaymentFlow = (props: PaymentFlowProps) => {
   const stripeMock = isClientBillingSkipped();
   const billingMode = props.payload.client_billing_mode ?? "manual";
-  const useElements =
-    !stripeMock && billingMode === "stripe" && stripePromise;
+  const useElements = !stripeMock && billingMode === "stripe" && stripePromise;
 
   if (!useElements) {
     return <DepositPaymentForm {...props} />;

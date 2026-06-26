@@ -1,7 +1,8 @@
 import { LBS_SUPPORT_SIGNATURE } from "@/modules/tickets/ticketReplyTemplates";
 import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
 
-export const TICKET_REPLY_SIGNATURE_SELECTOR = '[data-ticket-reply-signature="true"]';
+export const TICKET_REPLY_SIGNATURE_SELECTOR =
+  '[data-ticket-reply-signature="true"]';
 
 const escapeHtml = (value: string) =>
   value
@@ -13,7 +14,10 @@ const escapeHtml = (value: string) =>
 export const htmlToPlainText = (html: string) => {
   if (!html.trim()) return "";
   if (typeof document === "undefined") {
-    return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return html
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   const container = document.createElement("div");
@@ -37,7 +41,9 @@ export const plainTextToEditorHtml = (text: string) => {
     .join("");
 };
 
-export const buildReplySignatureEditorHtml = (signatureHtml?: string | null) => {
+export const buildReplySignatureEditorHtml = (
+  signatureHtml?: string | null,
+) => {
   if (signatureHtml?.trim()) {
     const trimmed = signatureHtml.trim();
     if (trimmed.includes("<")) {
@@ -180,9 +186,11 @@ export const sanitizeComposerHtml = (html: string) => {
   const container = document.createElement("div");
   container.innerHTML = html;
 
-  container.querySelectorAll("script,style,iframe,object,embed").forEach((node) => {
-    node.remove();
-  });
+  container
+    .querySelectorAll("script,style,iframe,object,embed")
+    .forEach((node) => {
+      node.remove();
+    });
 
   container.querySelectorAll("img").forEach((node) => {
     const src = node.getAttribute("src")?.trim().toLowerCase() ?? "";

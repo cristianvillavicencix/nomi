@@ -72,7 +72,8 @@ const en: ProposalAcceptPortalCopy = {
     "Thank you. Your deposit was recorded and your project will be activated shortly.",
   termsRequired:
     "Contract terms are not available yet. Please contact your LBS representative.",
-  previewDisabled: "Preview only — signing and payment work on your shared link.",
+  previewDisabled:
+    "Preview only — signing and payment work on your shared link.",
   mockModeNote:
     "Development mode: payment is simulated. Connect Stripe to charge cards in production.",
 };
@@ -114,7 +115,8 @@ const es: ProposalAcceptPortalCopy = {
     "Thank you. Your deposit was recorded and your project will be activated shortly.",
   termsRequired:
     "Contract terms are not available yet. Please contact your LBS representative.",
-  previewDisabled: "Preview only — signing and payment work on your shared link.",
+  previewDisabled:
+    "Preview only — signing and payment work on your shared link.",
   mockModeNote:
     "Development mode: payment is simulated. Connect Stripe to charge cards in production.",
 };

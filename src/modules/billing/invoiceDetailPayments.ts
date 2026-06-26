@@ -3,7 +3,10 @@ import {
   getInvoicePaymentReference,
   invoiceHasRecordedPayment,
 } from "@/modules/clients/clientFinancialPayments";
-import type { ClientInvoice, ClientInvoiceAutoChargeLog } from "@/modules/types";
+import type {
+  ClientInvoice,
+  ClientInvoiceAutoChargeLog,
+} from "@/modules/types";
 
 export type InvoiceDetailPaymentRow = {
   id: string;
@@ -37,7 +40,7 @@ const formatStripeReference = (value?: string | null) => {
 };
 
 const logAmount = (log: ClientInvoiceAutoChargeLog) =>
-  Math.round((Number(log.amount_cents) || 0) / 100 * 100) / 100;
+  Math.round(((Number(log.amount_cents) || 0) / 100) * 100) / 100;
 
 export const buildInvoiceDetailPaymentRows = (
   invoice: ClientInvoice,
@@ -48,7 +51,9 @@ export const buildInvoiceDetailPaymentRows = (
   const succeededLogs = chargeLogs
     .filter((log) => log.status === "succeeded")
     .sort((left, right) =>
-      String(left.attempted_at ?? "").localeCompare(String(right.attempted_at ?? "")),
+      String(left.attempted_at ?? "").localeCompare(
+        String(right.attempted_at ?? ""),
+      ),
     );
 
   const rows: InvoiceDetailPaymentRow[] = succeededLogs.map((log) => ({
@@ -83,7 +88,8 @@ export const buildInvoiceDetailPaymentRows = (
       cardBrand: invoice.payment_method_brand,
       cardLast4: invoice.payment_method_last4,
       amount: remainder,
-      sortKey: invoice.paid_at ?? invoice.updated_at ?? invoice.issue_date ?? "",
+      sortKey:
+        invoice.paid_at ?? invoice.updated_at ?? invoice.issue_date ?? "",
     });
   }
 
@@ -100,7 +106,8 @@ export const buildInvoiceDetailPaymentRows = (
       cardBrand: invoice.payment_method_brand,
       cardLast4: invoice.payment_method_last4,
       amount: totalPaid,
-      sortKey: invoice.paid_at ?? invoice.updated_at ?? invoice.issue_date ?? "",
+      sortKey:
+        invoice.paid_at ?? invoice.updated_at ?? invoice.issue_date ?? "",
     });
   }
 

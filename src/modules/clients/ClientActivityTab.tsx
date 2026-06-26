@@ -3,7 +3,10 @@ import { useSearchParams } from "react-router";
 import { ActivityLog } from "@/components/atomic-crm/activity/ActivityLog";
 import type { Company } from "@/components/atomic-crm/types";
 import type { Identifier } from "ra-core";
-import { ClientNotesTab, ClientTasksTab } from "@/modules/clients/ClientTabPanels";
+import {
+  ClientNotesTab,
+  ClientTasksTab,
+} from "@/modules/clients/ClientTabPanels";
 import {
   ClientTabAccordion,
   ClientTabAccordionSection,
@@ -69,7 +72,10 @@ export const ClientActivityTab = ({
   };
 
   return (
-    <ClientTabAccordion value={openSections} onValueChange={handleAccordionChange}>
+    <ClientTabAccordion
+      value={openSections}
+      onValueChange={handleAccordionChange}
+    >
       <ClientTabAccordionSection value="feed" title="Activity feed">
         <ClientTabSectionCard title="Recent activity">
           {companyId ? (

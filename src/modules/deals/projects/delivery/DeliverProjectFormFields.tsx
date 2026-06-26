@@ -119,7 +119,9 @@ export const DeliverProjectFormFields = ({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-hosting-provider`}>Hosting provider</Label>
+          <Label htmlFor={`${idPrefix}-hosting-provider`}>
+            Hosting provider
+          </Label>
           <Input
             id={`${idPrefix}-hosting-provider`}
             value={hostingProvider}
@@ -128,7 +130,9 @@ export const DeliverProjectFormFields = ({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-hosting-location`}>Server location</Label>
+          <Label htmlFor={`${idPrefix}-hosting-location`}>
+            Server location
+          </Label>
           <Input
             id={`${idPrefix}-hosting-location`}
             value={hostingLocation}
@@ -272,8 +276,8 @@ export const DeliverProjectFormFields = ({
       </div>
     ) : (
       <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-        No credentials on file yet. Add them under Security before delivering, or
-        deliver now and share credentials later from the project.
+        No credentials on file yet. Add them under Security before delivering,
+        or deliver now and share credentials later from the project.
       </p>
     )}
 

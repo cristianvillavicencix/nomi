@@ -17,9 +17,7 @@ const BOOL_KEYS = Object.keys(
   DEFAULT_NOTIFICATION_PREFS,
 ) as (keyof NotificationPrefs)[];
 
-export const parseNotificationPrefs = (
-  value: unknown,
-): NotificationPrefs => {
+export const parseNotificationPrefs = (value: unknown): NotificationPrefs => {
   if (!value || typeof value !== "object") {
     return { ...DEFAULT_NOTIFICATION_PREFS };
   }

@@ -100,14 +100,7 @@ export const TicketDeliverableBillingDialog = ({
         ticketPackages,
         packageId || selectedOption?.packageId,
       ),
-    [
-      kind,
-      address,
-      parsedLineCount,
-      ticketPackages,
-      packageId,
-      selectedOption,
-    ],
+    [kind, address, parsedLineCount, ticketPackages, packageId, selectedOption],
   );
 
   const canConfirm =
@@ -124,7 +117,9 @@ export const TicketDeliverableBillingDialog = ({
     if (!canConfirm) return;
     onConfirm({
       billing_kind: kind,
-      billing_line_count: selectedOption?.needsLineCount ? parsedLineCount : null,
+      billing_line_count: selectedOption?.needsLineCount
+        ? parsedLineCount
+        : null,
       service_package_id: packageId || selectedOption?.packageId || null,
     });
   };
@@ -155,7 +150,10 @@ export const TicketDeliverableBillingDialog = ({
               </SelectTrigger>
               <SelectContent>
                 {billingOptions.map((option) => (
-                  <SelectItem key={String(option.packageId ?? option.kind)} value={option.kind}>
+                  <SelectItem
+                    key={String(option.packageId ?? option.kind)}
+                    value={option.kind}
+                  >
                     {option.label}
                     {option.flatPrice != null
                       ? ` · ${formatSupplementMoney(option.flatPrice)}`
@@ -193,7 +191,11 @@ export const TicketDeliverableBillingDialog = ({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="button" disabled={!canConfirm} onClick={handleConfirm}>

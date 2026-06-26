@@ -83,7 +83,11 @@ export const ConversationThread = ({
   useEffect(() => {
     setBody("");
     setReplyToMessageId(null);
-  }, [conversation?.id, clientSmsDraft?.contact?.id, clientSmsDraft?.externalPhone]);
+  }, [
+    conversation?.id,
+    clientSmsDraft?.contact?.id,
+    clientSmsDraft?.externalPhone,
+  ]);
 
   useLayoutEffect(() => {
     if (!conversation && !clientSmsDraft) return;

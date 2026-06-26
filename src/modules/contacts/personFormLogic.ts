@@ -59,7 +59,8 @@ export const defaultPersonFormValues = (
   mode: PersonFormMode = "directory",
   organizationMemberId?: Identifier,
 ): PersonFormValues => {
-  const personKind: PersonKind = mode === "pipeline" ? "prospect" : "contact_only";
+  const personKind: PersonKind =
+    mode === "pipeline" ? "prospect" : "contact_only";
   const kindFields = syncPersonKindFields(personKind);
 
   return {
@@ -146,14 +147,15 @@ export const resolvePersonFormVisibility = (
     input.leadType,
     input.addPrimaryContact,
   );
-  const compactCollapsed =
-    input.mode === "compact" && input.expanded !== true;
+  const compactCollapsed = input.mode === "compact" && input.expanded !== true;
 
   if (compactCollapsed) {
     return {
       showIdentitySection: true,
       showContactSection: true,
-      companySection: isCompanyLocked(input.lockCompanyId) ? "hidden" : "picker",
+      companySection: isCompanyLocked(input.lockCompanyId)
+        ? "hidden"
+        : "picker",
       showTypeSelector: false,
       showLeadProfileToggle: false,
       showSalesSection: false,

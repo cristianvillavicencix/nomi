@@ -145,14 +145,22 @@ export const MessagesQuickAccessProvider = ({
         setIsOpening(false);
       }
     },
-    [findClientConversation, location.pathname, navigate, notify, viewConversation],
+    [
+      findClientConversation,
+      location.pathname,
+      navigate,
+      notify,
+      viewConversation,
+    ],
   );
 
   const openSmsToPhone = useCallback(
     async (phoneRaw: string) => {
       const normalized = normalizeUsPhoneToE164(phoneRaw);
       if (!normalized) {
-        notify("Enter a valid US phone number (10 digits)", { type: "warning" });
+        notify("Enter a valid US phone number (10 digits)", {
+          type: "warning",
+        });
         return;
       }
 

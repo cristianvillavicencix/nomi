@@ -37,7 +37,13 @@ export type ExpandedSeoAnalysis = {
   auditNote?: string | null;
 };
 
-const OG_REQUIRED = ["og:title", "og:description", "og:image", "og:url", "og:type"];
+const OG_REQUIRED = [
+  "og:title",
+  "og:description",
+  "og:image",
+  "og:url",
+  "og:type",
+];
 const TWITTER_RECOMMENDED = [
   "twitter:card",
   "twitter:title",

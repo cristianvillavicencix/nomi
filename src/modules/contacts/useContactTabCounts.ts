@@ -1,7 +1,12 @@
 import { useGetList, type Identifier } from "ra-core";
 import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 import type { Contact, Deal } from "@/components/atomic-crm/types";
-import type { ClientInvoice, Contract, Proposal, Ticket } from "@/modules/types";
+import type {
+  ClientInvoice,
+  Contract,
+  Proposal,
+  Ticket,
+} from "@/modules/types";
 import {
   CONTACT_STATUS_FILTER,
   LEAD_STATUS_FILTER,

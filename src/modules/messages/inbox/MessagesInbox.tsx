@@ -358,32 +358,34 @@ export const MessagesInbox = (props: {
 
           {isSearchingContacts || newSmsContacts.length > 0 ? (
             <>
-          <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <UserPlus className="size-3.5" />
-            Start SMS with a contact
-          </div>
-          {isSearchingContacts ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">
-              Searching contacts…
-            </p>
-          ) : newSmsContacts.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">
-              {searchedPhoneE164
-                ? "No matching contacts with phone numbers."
-                : "No new contacts with phone numbers match this search."}
-            </p>
-          ) : (
-            <div className="space-y-0.5">
-              {newSmsContacts.map((contact) => (
-                <MessageSearchContactItem
-                  key={String(contact.id)}
-                  contact={contact}
-                  disabled={String(startingContactId) === String(contact.id)}
-                  onSelect={(entry) => void handleStartClientSms(entry)}
-                />
-              ))}
-            </div>
-          )}
+              <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <UserPlus className="size-3.5" />
+                Start SMS with a contact
+              </div>
+              {isSearchingContacts ? (
+                <p className="px-3 py-2 text-sm text-muted-foreground">
+                  Searching contacts…
+                </p>
+              ) : newSmsContacts.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-muted-foreground">
+                  {searchedPhoneE164
+                    ? "No matching contacts with phone numbers."
+                    : "No new contacts with phone numbers match this search."}
+                </p>
+              ) : (
+                <div className="space-y-0.5">
+                  {newSmsContacts.map((contact) => (
+                    <MessageSearchContactItem
+                      key={String(contact.id)}
+                      contact={contact}
+                      disabled={
+                        String(startingContactId) === String(contact.id)
+                      }
+                      onSelect={(entry) => void handleStartClientSms(entry)}
+                    />
+                  ))}
+                </div>
+              )}
             </>
           ) : null}
         </div>

@@ -35,7 +35,9 @@ export const hasCompactContactName = (values: Record<string, unknown>) =>
   String(values.first_name ?? "").trim().length > 0;
 
 /** Map dialog fields to a Contact create/update payload fragment. */
-export const compactContactFieldsToPayload = (values: Record<string, unknown>) => {
+export const compactContactFieldsToPayload = (
+  values: Record<string, unknown>,
+) => {
   const firstName = String(values.first_name ?? "").trim();
   const lastName = String(values.last_name ?? "").trim() || firstName;
   const emailRows = values.email_jsonb as

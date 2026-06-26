@@ -19,11 +19,7 @@ export const resolveNextMaintenanceDate = (
   }
 
   const freeMonths = Number(readMaintenancePlanField(delivery, "free_months"));
-  if (
-    delivery.delivered_at &&
-    Number.isFinite(freeMonths) &&
-    freeMonths > 0
-  ) {
+  if (delivery.delivered_at && Number.isFinite(freeMonths) && freeMonths > 0) {
     return computeAutoMaintenanceReviewDate(
       freeMonths,
       new Date(delivery.delivered_at),

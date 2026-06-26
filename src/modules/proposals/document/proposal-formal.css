@@ -281,7 +281,9 @@
   border-radius: 9999px;
   overflow: hidden;
   border: 3px solid #ffffff;
-  box-shadow: 0 0 0 1px var(--pf-line), 0 4px 14px rgba(13, 59, 110, 0.12);
+  box-shadow:
+    0 0 0 1px var(--pf-line),
+    0 4px 14px rgba(13, 59, 110, 0.12);
 }
 
 .proposal-formal .pf-avatar-fallback {
@@ -386,7 +388,9 @@
   border: 1px solid var(--pf-line);
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(15, 23, 41, 0.03), 0 8px 24px rgba(13, 59, 110, 0.05);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 41, 0.03),
+    0 8px 24px rgba(13, 59, 110, 0.05);
 }
 
 .proposal-formal .pf-inv-grand {

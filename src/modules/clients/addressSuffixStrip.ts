@@ -52,10 +52,7 @@ export const stripEmbeddedLocationSuffix = (
       ),
     );
     suffixPatterns.push(
-      new RegExp(
-        `,\\s*${cityEsc}\\s*,\\s*${stateEsc}\\s+${zipEsc}\\s*$`,
-        "i",
-      ),
+      new RegExp(`,\\s*${cityEsc}\\s*,\\s*${stateEsc}\\s+${zipEsc}\\s*$`, "i"),
     );
   }
   if (stateEsc) {

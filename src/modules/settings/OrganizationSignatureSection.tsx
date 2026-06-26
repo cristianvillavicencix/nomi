@@ -64,7 +64,8 @@ export const OrganizationSignatureSection = () => {
       const { data, error } = await supabase
         .from("organizations")
         .update({
-          sms_signature_template: template.trim() || DEFAULT_SMS_SIGNATURE_TEMPLATE,
+          sms_signature_template:
+            template.trim() || DEFAULT_SMS_SIGNATURE_TEMPLATE,
           sms_signature_enabled: enabled,
         })
         .eq("id", org.id)

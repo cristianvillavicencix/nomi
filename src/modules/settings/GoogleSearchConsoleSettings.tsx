@@ -30,7 +30,11 @@ export const GoogleSearchConsoleSettings = () => {
     message: string;
   } | null>(null);
 
-  const { data: status, isPending, refetch } = useQuery({
+  const {
+    data: status,
+    isPending,
+    refetch,
+  } = useQuery({
     queryKey: ["google-gsc-status"],
     queryFn: () => dataProvider.googleGscStatus(),
     enabled: isAdmin,
@@ -45,7 +49,8 @@ export const GoogleSearchConsoleSettings = () => {
     if (connected === "1") {
       setBanner({
         tone: "success",
-        message: "Search Console conectado. Los sitios con propiedad GSC sincronizarán datos.",
+        message:
+          "Search Console conectado. Los sitios con propiedad GSC sincronizarán datos.",
       });
       void refetch();
     } else if (error) {
@@ -104,10 +109,9 @@ export const GoogleSearchConsoleSettings = () => {
       void queryClient.invalidateQueries({ queryKey: ["gsc-snapshot"] });
     },
     onError: (cause) => {
-      notify(
-        cause instanceof Error ? cause.message : "Sync falló",
-        { type: "error" },
-      );
+      notify(cause instanceof Error ? cause.message : "Sync falló", {
+        type: "error",
+      });
     },
   });
 
@@ -204,8 +208,8 @@ export const GoogleSearchConsoleSettings = () => {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Requiere OAuth en Google Cloud (Search Console API) y que la cuenta
-              tenga acceso a las propiedades de tus clientes.
+              Requiere OAuth en Google Cloud (Search Console API) y que la
+              cuenta tenga acceso a las propiedades de tus clientes.
             </p>
             <Button
               type="button"

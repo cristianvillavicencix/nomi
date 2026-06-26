@@ -143,9 +143,7 @@ export const WorkSidebarPanel = ({
   return (
     <aside className="flex h-full min-h-0 flex-col gap-4 rounded-sm border bg-card p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">
-          {formatMonthLabel(anchor)}
-        </h2>
+        <h2 className="text-sm font-semibold">{formatMonthLabel(anchor)}</h2>
         <div className="flex items-center gap-1">
           <Button
             type="button"
@@ -178,7 +176,9 @@ export const WorkSidebarPanel = ({
       />
 
       <div className="min-h-0 flex-1 space-y-2">
-        <h3 className="text-sm font-semibold">{formatDayLabel(selectedDateKey)}</h3>
+        <h3 className="text-sm font-semibold">
+          {formatDayLabel(selectedDateKey)}
+        </h3>
         {selectedEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing scheduled.</p>
         ) : (
@@ -201,11 +201,15 @@ export const WorkSidebarPanel = ({
       <div className="space-y-1 border-t pt-3 text-sm">
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Overdue</span>
-          <span className="font-medium tabular-nums">{groupedCounts.overdue}</span>
+          <span className="font-medium tabular-nums">
+            {groupedCounts.overdue}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Today</span>
-          <span className="font-medium tabular-nums">{groupedCounts.today}</span>
+          <span className="font-medium tabular-nums">
+            {groupedCounts.today}
+          </span>
         </div>
       </div>
     </aside>

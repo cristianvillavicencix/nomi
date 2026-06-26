@@ -11,7 +11,10 @@ import {
   resolveBillToDisplay,
 } from "@/modules/billing/billingUtils";
 import type { InvoicePaymentCollectionMode } from "@/modules/billing/invoicePaymentUtils";
-import { computeInvoiceBalanceDue, formatInvoicePaymentMethod } from "@/modules/billing/invoicePaymentUtils";
+import {
+  computeInvoiceBalanceDue,
+  formatInvoicePaymentMethod,
+} from "@/modules/billing/invoicePaymentUtils";
 import {
   describeInvoiceOnlinePaymentSummary,
   type InvoiceRemainderScheduleConfig,
@@ -25,7 +28,11 @@ import {
   DRAFT_INVOICE_NUMBER_LABEL,
   type InvoiceLineDraft,
 } from "@/modules/billing/invoiceLineUtils";
-import type { Company, Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Company,
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -349,10 +356,14 @@ export const InlineInvoiceEditor = ({
               </colgroup>
               <thead>
                 <tr className="bg-slate-700 text-left text-[11px] uppercase tracking-wide text-white">
-                  <th className="px-3 py-2.5 font-medium">Item & Description</th>
+                  <th className="px-3 py-2.5 font-medium">
+                    Item & Description
+                  </th>
                   <th className="px-1 py-2.5 font-medium text-center">Qty</th>
                   <th className="px-1 py-2.5 font-medium text-center">Rate</th>
-                  <th className="px-1 py-2.5 font-medium text-center">Amount</th>
+                  <th className="px-1 py-2.5 font-medium text-center">
+                    Amount
+                  </th>
                   <th className="w-9" />
                 </tr>
               </thead>
@@ -437,7 +448,9 @@ export const InlineInvoiceEditor = ({
             <div className="w-full max-w-[18rem] text-sm">
               <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-x-4">
                 <span className={totalsLabelClass}>Sub Total</span>
-                <span className={totalsValueClass}>{formatMoney(subtotal)}</span>
+                <span className={totalsValueClass}>
+                  {formatMoney(subtotal)}
+                </span>
 
                 <span className={totalsLabelClass}>Discount</span>
                 <div className={totalsValueClass}>
@@ -462,11 +475,18 @@ export const InlineInvoiceEditor = ({
                     ({STRIPE_TRANSFER_FEE_LABEL})
                   </span>
                 </span>
-                <span className={totalsValueClass}>{formatMoney(feeAmount)}</span>
+                <span className={totalsValueClass}>
+                  {formatMoney(feeAmount)}
+                </span>
 
                 <div className="col-span-2 my-1 border-t border-slate-200" />
 
-                <span className={cn(totalsLabelClass, "font-semibold text-slate-900")}>
+                <span
+                  className={cn(
+                    totalsLabelClass,
+                    "font-semibold text-slate-900",
+                  )}
+                >
                   Total
                 </span>
                 <span className={cn(totalsValueClass, "font-semibold")}>
@@ -482,7 +502,12 @@ export const InlineInvoiceEditor = ({
                   </>
                 ) : null}
 
-                <span className={cn(totalsLabelClass, "font-semibold text-slate-900")}>
+                <span
+                  className={cn(
+                    totalsLabelClass,
+                    "font-semibold text-slate-900",
+                  )}
+                >
                   Balance Due
                 </span>
                 <span className={cn(totalsValueClass, "font-semibold")}>

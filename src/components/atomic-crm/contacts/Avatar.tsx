@@ -30,7 +30,10 @@ export const Avatar = (props: {
 
   return (
     <ShadcnAvatar className={sizeClass} title={props.title}>
-      <FaviconAvatarImage sources={avatarSources} alt={record.first_name ?? "Contact"} />
+      <FaviconAvatarImage
+        sources={avatarSources}
+        alt={record.first_name ?? "Contact"}
+      />
       <AvatarFallback className={size && size < 40 ? "text-[10px]" : "text-sm"}>
         {record.first_name?.charAt(0).toUpperCase()}
         {record.last_name?.charAt(0).toUpperCase()}

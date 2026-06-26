@@ -19,7 +19,10 @@ export const InternalNoteToggle = ({
       onCheckedChange={(value) => onCheckedChange(value === true)}
       disabled={disabled}
     />
-    <Label htmlFor={internalNoteToggleId} className="cursor-pointer font-normal">
+    <Label
+      htmlFor={internalNoteToggleId}
+      className="cursor-pointer font-normal"
+    >
       Internal note — client cannot see this
     </Label>
   </div>

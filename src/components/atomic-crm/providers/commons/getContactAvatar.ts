@@ -47,12 +47,11 @@ async function getFaviconUrl(domain: string): Promise<string | null> {
  * the email domain favicon (Google S2) keeps the avatar component fully
  * synchronous while still showing something meaningful for imported records.
  */
-export const getContactAvatarSources = (
-  record: Partial<Contact>,
-): string[] => {
+export const getContactAvatarSources = (record: Partial<Contact>): string[] => {
   const avatarSrc = record.avatar?.src?.trim();
   const firstEmail = record.email_jsonb?.find(
-    (entry) => typeof entry?.email === "string" && entry.email.trim().length > 0,
+    (entry) =>
+      typeof entry?.email === "string" && entry.email.trim().length > 0,
   )?.email;
 
   if (avatarSrc) {

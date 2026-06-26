@@ -11,7 +11,10 @@ import {
   INVOICE_ORGANIZATION_PHONE,
   INVOICE_ORGANIZATION_WEBSITE,
 } from "./invoiceOrganizationInfo.ts";
-import { isStripeMockMode, resolveContactEmail } from "./clientProposalBilling.ts";
+import {
+  isStripeMockMode,
+  resolveContactEmail,
+} from "./clientProposalBilling.ts";
 import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
@@ -93,10 +96,11 @@ async function resolveInvoiceBillToName(
       .select("first_name, last_name")
       .eq("id", invoice.contact_id)
       .maybeSingle();
-    contactName = [contact?.first_name, contact?.last_name]
-      .filter(Boolean)
-      .join(" ")
-      .trim() || null;
+    contactName =
+      [contact?.first_name, contact?.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || null;
   }
 
   return companyName ?? contactName ?? "Client";
@@ -308,7 +312,11 @@ export async function sendClientInvoicePaymentReceipt(
       deliveryStatus: "skipped",
       errorMessage: "email_not_configured",
     });
-    return { sent: false, skipped: true, reason: "email_not_configured" as const };
+    return {
+      sent: false,
+      skipped: true,
+      reason: "email_not_configured" as const,
+    };
   }
 
   const currency = params.invoice.currency ?? "USD";
@@ -320,16 +328,18 @@ export async function sendClientInvoicePaymentReceipt(
   );
   const chargedFormatted = formatMoney(params.chargedAmount, currency);
   const balanceFormatted = formatMoney(params.balanceDue, currency);
-  const totalFormatted = formatMoney(Number(params.invoice.amount) || 0, currency);
+  const totalFormatted = formatMoney(
+    Number(params.invoice.amount) || 0,
+    currency,
+  );
   const paidFormatted = formatMoney(
     Number(params.invoice.amount_paid) || 0,
     currency,
   );
 
-  const cardHint =
-    params.invoice.payment_method_last4
-      ? ` (${params.invoice.payment_method_brand ?? "Card"} ····${params.invoice.payment_method_last4})`
-      : "";
+  const cardHint = params.invoice.payment_method_last4
+    ? ` (${params.invoice.payment_method_brand ?? "Card"} ····${params.invoice.payment_method_last4})`
+    : "";
 
   const billToName = await resolveInvoiceBillToName(supabase, params.invoice);
   const paymentDate = await resolvePaymentReceiptDate(
@@ -397,10 +407,10 @@ export async function sendClientInvoicePaymentReceipt(
         <tr><td style="padding:4px 0;color:#64748b;">${params.paidInFull ? "Status" : "Balance due"}</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(params.paidInFull ? "Paid in full" : balanceFormatted)}</td></tr>
       </table>
       ${
-    params.paidInFull
-      ? "<p>Your invoice is paid in full. No further action is required.</p>"
-      : `<p style="margin:20px 0;"><a href="${escapeHtml(paymentUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">View invoice</a></p>`
-  }
+        params.paidInFull
+          ? "<p>Your invoice is paid in full. No further action is required.</p>"
+          : `<p style="margin:20px 0;"><a href="${escapeHtml(paymentUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">View invoice</a></p>`
+      }
       <p style="color:#64748b;font-size:13px;">Questions? Reply to this email · ${escapeHtml(INVOICE_ORGANIZATION_PHONE)} · ${escapeHtml(INVOICE_ORGANIZATION_EMAIL)}</p>
       <p style="color:#64748b;font-size:13px;">${escapeHtml(INVOICE_ORGANIZATION_NAME)}</p>
     </div>`;
@@ -550,7 +560,11 @@ export const resolveNextInvoicePaymentTarget = (
   };
 };
 
-export type ReminderKind = "upcoming_3d" | "upcoming_1d" | "due_today" | "overdue";
+export type ReminderKind =
+  | "upcoming_3d"
+  | "upcoming_1d"
+  | "due_today"
+  | "overdue";
 
 export const resolveReminderKind = (
   daysUntilDue: number,
@@ -576,7 +590,9 @@ export async function sendClientInvoicePaymentReminder(
   }
 
   if (params.reminderKind === "overdue") {
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const weekAgo = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const { data: recentOverdue } = await supabase
       .from("client_invoice_email_logs")
       .select("id")
@@ -587,7 +603,11 @@ export async function sendClientInvoicePaymentReminder(
       .limit(1)
       .maybeSingle();
     if (recentOverdue?.id) {
-      return { sent: false, skipped: true, reason: "overdue_cooldown" as const };
+      return {
+        sent: false,
+        skipped: true,
+        reason: "overdue_cooldown" as const,
+      };
     }
   }
 
@@ -597,7 +617,11 @@ export async function sendClientInvoicePaymentReminder(
   }
 
   if (!(await isOrgTransactionalEmailConfigured(params.invoice.org_id))) {
-    return { sent: false, skipped: true, reason: "email_not_configured" as const };
+    return {
+      sent: false,
+      skipped: true,
+      reason: "email_not_configured" as const,
+    };
   }
 
   const currency = params.invoice.currency ?? "USD";
@@ -609,8 +633,11 @@ export async function sendClientInvoicePaymentReminder(
   );
   const dueFormatted = formatDate(params.target.dueDate);
   const totalBalance = Math.max(
-    Math.round((Number(params.invoice.amount) - Number(params.invoice.amount_paid || 0)) * 100) /
-      100,
+    Math.round(
+      (Number(params.invoice.amount) -
+        Number(params.invoice.amount_paid || 0)) *
+        100,
+    ) / 100,
     0,
   );
   const balanceFormatted = formatMoney(totalBalance, currency);
@@ -620,8 +647,8 @@ export async function sendClientInvoicePaymentReminder(
     params.reminderKind === "overdue"
       ? `Payment overdue · ${params.invoice.invoice_number}`
       : params.reminderKind === "due_today"
-      ? `Payment due today · ${params.invoice.invoice_number}`
-      : `Upcoming payment · ${params.invoice.invoice_number}`;
+        ? `Payment due today · ${params.invoice.invoice_number}`
+        : `Upcoming payment · ${params.invoice.invoice_number}`;
 
   const subject = `${INVOICE_ORGANIZATION_NAME}: ${headline}`;
 
@@ -629,13 +656,13 @@ export async function sendClientInvoicePaymentReminder(
     ? params.reminderKind === "overdue"
       ? `Your scheduled payment of ${amountFormatted} for ${params.target.label} was due on ${dueFormatted}. We could not complete the automatic charge — please pay manually.`
       : params.reminderKind === "due_today"
-      ? `Your card on file will be charged ${amountFormatted} today for ${params.target.label}, unless you pay manually first.`
-      : `Reminder: ${amountFormatted} for ${params.target.label} is scheduled on ${dueFormatted}. Your card on file will be charged automatically unless you pay early.`
+        ? `Your card on file will be charged ${amountFormatted} today for ${params.target.label}, unless you pay manually first.`
+        : `Reminder: ${amountFormatted} for ${params.target.label} is scheduled on ${dueFormatted}. Your card on file will be charged automatically unless you pay early.`
     : params.reminderKind === "overdue"
-    ? `Your payment of ${amountFormatted} for ${params.target.label} was due on ${dueFormatted}. Please pay at your earliest convenience.`
-    : params.reminderKind === "due_today"
-    ? `Your payment of ${amountFormatted} for ${params.target.label} is due today.`
-    : `Reminder: ${amountFormatted} for ${params.target.label} is due on ${dueFormatted}.`;
+      ? `Your payment of ${amountFormatted} for ${params.target.label} was due on ${dueFormatted}. Please pay at your earliest convenience.`
+      : params.reminderKind === "due_today"
+        ? `Your payment of ${amountFormatted} for ${params.target.label} is due today.`
+        : `Reminder: ${amountFormatted} for ${params.target.label} is due on ${dueFormatted}.`;
 
   const textBody = [
     bodyIntro,

@@ -13,10 +13,12 @@ export async function uploadProposalImage(
     ? optimized.name.slice(optimized.name.lastIndexOf("."))
     : ".webp";
   const path = `proposals/${orgId}/${proposalId}/${crypto.randomUUID()}${ext}`;
-  const { error } = await supabase.storage.from("attachments").upload(path, optimized, {
-    contentType: optimized.type || "image/webp",
-    upsert: false,
-  });
+  const { error } = await supabase.storage
+    .from("attachments")
+    .upload(path, optimized, {
+      contentType: optimized.type || "image/webp",
+      upsert: false,
+    });
   if (error) throw error;
   return buildStorageObjectReference("attachments", path);
 }

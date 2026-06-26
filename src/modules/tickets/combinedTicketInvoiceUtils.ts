@@ -44,7 +44,11 @@ export const validateTicketsForCombinedInvoice = (
   companyById: Map<string, Company>,
   contactById: Map<string, Contact>,
 ): string | null => {
-  const issues = getCombinedTicketInvoiceIssues(tickets, companyById, contactById);
+  const issues = getCombinedTicketInvoiceIssues(
+    tickets,
+    companyById,
+    contactById,
+  );
   return issues[0]?.message ?? null;
 };
 
@@ -75,7 +79,11 @@ export const getCombinedTicketInvoiceIssues = (
 
   const sorted = sortTicketsForCombinedInvoice(tickets);
   const issues: CombinedTicketInvoiceIssue[] = [];
-  const recipients = getCombinedTicketRecipients(sorted, companyById, contactById);
+  const recipients = getCombinedTicketRecipients(
+    sorted,
+    companyById,
+    contactById,
+  );
 
   for (const ticket of sorted) {
     if (!ticketHasLinkedClient(ticket)) {
@@ -87,12 +95,14 @@ export const getCombinedTicketInvoiceIssues = (
     }
   }
 
-  const emails = recipients.map((recipient) =>
-    recipient.email?.trim().toLowerCase() ?? null,
+  const emails = recipients.map(
+    (recipient) => recipient.email?.trim().toLowerCase() ?? null,
   );
 
   if (emails.some((email) => !email)) {
-    const missingRecipient = recipients.find((recipient) => !recipient.email?.trim());
+    const missingRecipient = recipients.find(
+      (recipient) => !recipient.email?.trim(),
+    );
     issues.push({
       ticketId: missingRecipient?.ticketId ?? sorted[0]!.id,
       kind: "email",
@@ -145,7 +155,9 @@ export const getCombinedRecipientEmailOptions = (
   );
 };
 
-export const ticketHasReadyDeliverables = (deliverables: TicketDeliverable[]) => {
+export const ticketHasReadyDeliverables = (
+  deliverables: TicketDeliverable[],
+) => {
   const unbilled = deliverables.filter((file) => !file.invoiced_invoice_id);
   return unbilled.length > 0 && allDeliverablesHaveBilling(unbilled);
 };

@@ -4,7 +4,11 @@ import { useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import type { Contact, Conversation, ConversationMessage } from "@/modules/types";
+import type {
+  Contact,
+  Conversation,
+  ConversationMessage,
+} from "@/modules/types";
 import { cn } from "@/lib/utils";
 import { uploadSmsMedia } from "@/modules/messages/smsMediaUpload";
 import { SmsComposerActionsMenu } from "@/modules/messages/composer/SmsComposerActionsMenu";
@@ -55,7 +59,9 @@ export const ClientSmsComposer = ({
 }) => {
   const notify = useNotify();
   const { identity } = useGetIdentity();
-  const isStandardUser = isScopedWorkspaceUser(identity as AccessIdentity | undefined);
+  const isStandardUser = isScopedWorkspaceUser(
+    identity as AccessIdentity | undefined,
+  );
   const sendClientSms = useSendClientSms();
   const {
     signature,
@@ -202,9 +208,7 @@ export const ClientSmsComposer = ({
 
       let finalBody = body.trim();
       const shouldIncludeSignature =
-        !isInternalNote &&
-        signature &&
-        (signatureRequired || includeSignature);
+        !isInternalNote && signature && (signatureRequired || includeSignature);
       if (shouldIncludeSignature && finalBody.length > 0) {
         finalBody = `${finalBody}\n${signature}`;
       }
@@ -296,9 +300,7 @@ export const ClientSmsComposer = ({
               <Checkbox
                 id="sms-include-signature"
                 checked={includeSignature}
-                onCheckedChange={(value) =>
-                  setIncludeSignature(value === true)
-                }
+                onCheckedChange={(value) => setIncludeSignature(value === true)}
                 disabled={disabled || isSending}
                 className="size-3.5 rounded-[3px]"
                 aria-label="Include signature"
@@ -355,7 +357,9 @@ export const ClientSmsComposer = ({
               ) : (
                 <Paperclip className="size-3.5 text-muted-foreground" />
               )}
-              <span className="max-w-[140px] truncate">{pending.file.name}</span>
+              <span className="max-w-[140px] truncate">
+                {pending.file.name}
+              </span>
               <button
                 type="button"
                 className="rounded-full p-0.5 hover:bg-muted"
@@ -440,7 +444,10 @@ export const ClientSmsComposer = ({
           disabled={!canSend}
           aria-label={isInternalNote ? "Add internal note" : "Send SMS"}
         >
-          <ArrowUp className={compact ? "size-4" : "size-[18px]"} strokeWidth={2.5} />
+          <ArrowUp
+            className={compact ? "size-4" : "size-[18px]"}
+            strokeWidth={2.5}
+          />
         </Button>
       </div>
     </form>

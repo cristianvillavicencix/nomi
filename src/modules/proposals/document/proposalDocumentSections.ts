@@ -15,7 +15,9 @@ const HIDDEN_CUSTOM_SECTION_IDS = new Set(["terms"]);
 export const visibleProposalCustomSections = (
   sections: ProposalCustomSection[] | undefined,
 ): ProposalCustomSection[] =>
-  (sections ?? []).filter((section) => !HIDDEN_CUSTOM_SECTION_IDS.has(section.id));
+  (sections ?? []).filter(
+    (section) => !HIDDEN_CUSTOM_SECTION_IDS.has(section.id),
+  );
 
 export type ProposalDocumentNavSection = {
   id: string;
@@ -60,5 +62,4 @@ export const buildProposalDocumentSections = (
   ];
 };
 
-export const newCustomSectionId = () =>
-  `section-${Date.now().toString(36)}`;
+export const newCustomSectionId = () => `section-${Date.now().toString(36)}`;

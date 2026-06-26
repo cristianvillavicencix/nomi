@@ -13,10 +13,7 @@ import {
 import { getCompanyAvatarFallback } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { getCompanyFaviconSources } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
 import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
-import {
-  AvatarFallback,
-  Avatar as UiAvatar,
-} from "@/components/ui/avatar";
+import { AvatarFallback, Avatar as UiAvatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { Contact } from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
@@ -93,10 +90,7 @@ const ProfileFadeText = ({
 
   return (
     <div className="relative min-w-0">
-      <Tag
-        ref={contentRef as never}
-        className={cn("truncate pr-6", className)}
-      >
+      <Tag ref={contentRef as never} className={cn("truncate pr-6", className)}>
         {children}
       </Tag>
       {isOverflowing ? (
@@ -264,8 +258,9 @@ export const ClientSummaryCard = ({
 
   const primaryName = getPrimaryContactFullName(record);
   const contactTitle = primaryContact?.title?.trim();
-  const canOpenPrimary =
-    Boolean(onOpenPrimaryContact && record.primary_contact_id);
+  const canOpenPrimary = Boolean(
+    onOpenPrimaryContact && record.primary_contact_id,
+  );
 
   const serviceTypeLabels = useMemo(
     () => getServiceTypeBadgeLabels(serviceType),
@@ -290,7 +285,10 @@ export const ClientSummaryCard = ({
           </UiAvatar>
 
           <div className="relative mt-3 w-full min-w-0 px-1">
-            <ProfileFadeText as="h1" className="text-lg font-semibold leading-tight">
+            <ProfileFadeText
+              as="h1"
+              className="text-lg font-semibold leading-tight"
+            >
               {businessName}
             </ProfileFadeText>
           </div>
@@ -344,9 +342,15 @@ export const ClientSummaryCard = ({
           {contactTitle ? (
             <ProfileInfoRow label="Cargo" value={contactTitle} />
           ) : null}
-          <ProfileInfoRow label="Teléfono" value={getPrimaryContactPhone(record)} />
+          <ProfileInfoRow
+            label="Teléfono"
+            value={getPrimaryContactPhone(record)}
+          />
           <ProfileInfoRow label="Ciudad" value={record.city?.trim() || "—"} />
-          <ProfileInfoRow label="Estado" value={record.state_abbr?.trim() || "—"} />
+          <ProfileInfoRow
+            label="Estado"
+            value={record.state_abbr?.trim() || "—"}
+          />
           <ProfileInfoRow label="País" value={record.country?.trim() || "—"} />
           <ProfileInfoRow label="Sector" value={sectorLabel} />
           <ProfileInfoRow
@@ -385,7 +389,9 @@ export const ClientSummaryCard = ({
               </div>
             </TooltipProvider>
           ) : (
-            <p className="text-sm text-muted-foreground">Sin redes registradas</p>
+            <p className="text-sm text-muted-foreground">
+              Sin redes registradas
+            </p>
           )}
         </div>
       </CardContent>

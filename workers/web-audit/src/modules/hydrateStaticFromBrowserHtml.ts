@@ -5,7 +5,10 @@ import { analyzeExpandedSeo } from "./expandedSeoAnalysis.js";
 import { detectTechnologies } from "./detectTechnologies.js";
 import { extractSocialLinks } from "./extractSocialLinks.js";
 import { extractPageLinks } from "./extractPageLinks.js";
-import { analyzeCrawlFiles, buildAiSeoChecklist } from "./crawlFilesAnalysis.js";
+import {
+  analyzeCrawlFiles,
+  buildAiSeoChecklist,
+} from "./crawlFilesAnalysis.js";
 import { analyzeComplianceSignals } from "./complianceAnalysis.js";
 import {
   analyzeExtendedCrawlFiles,
@@ -40,8 +43,10 @@ export const hydrateStaticFromBrowserHtml = async (
     $('meta[name="description"]').attr("content")?.trim() || null;
   staticResult.h1Count = $("h1").length;
   staticResult.h1Text = $("h1").first().text().trim() || null;
-  staticResult.canonical = $('link[rel="canonical"]').attr("href")?.trim() || null;
-  staticResult.viewport = $('meta[name="viewport"]').attr("content")?.trim() || null;
+  staticResult.canonical =
+    $('link[rel="canonical"]').attr("href")?.trim() || null;
+  staticResult.viewport =
+    $('meta[name="viewport"]').attr("content")?.trim() || null;
 
   staticResult.og = {};
   $('meta[property^="og:"]').each((_index, element) => {
@@ -78,7 +83,7 @@ export const hydrateStaticFromBrowserHtml = async (
           }
         }
         const filename = rawSrc
-          ? rawSrc.split("/").pop()?.split("?")[0] ?? null
+          ? (rawSrc.split("/").pop()?.split("?")[0] ?? null)
           : null;
         staticResult.imagesMissingAlt.push({ src: resolvedSrc, filename });
       }
@@ -146,9 +151,9 @@ export const hydrateStaticFromBrowserHtml = async (
     extended: staticResult.crawlFiles.extended,
     complianceSignals: staticResult.complianceSignals,
     hasStructuredData: Boolean(staticResult.expandedSeo?.hasStructuredData),
-    hasLocalBusinessSchema: (staticResult.expandedSeo?.structuredData ?? []).some(
-      (item) => /localbusiness|organization|website/i.test(item.type),
-    ),
+    hasLocalBusinessSchema: (
+      staticResult.expandedSeo?.structuredData ?? []
+    ).some((item) => /localbusiness|organization|website/i.test(item.type)),
     openGraphComplete: Boolean(staticResult.expandedSeo?.openGraph.complete),
     titleOk: staticResult.expandedSeo?.titleLengthStatus === "ok",
     metaOk: staticResult.expandedSeo?.metaDescriptionLengthStatus === "ok",

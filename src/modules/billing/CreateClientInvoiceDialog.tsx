@@ -130,15 +130,12 @@ export const CreateClientInvoiceDialog = ({
 
   const availableInstallments = useMemo(
     () =>
-      installments.filter(
-        (row) => !invoicedInstallmentIds.has(String(row.id)),
-      ),
+      installments.filter((row) => !invoicedInstallmentIds.has(String(row.id))),
     [installments, invoicedInstallmentIds],
   );
 
   const companyIds = useMemo(
-    () =>
-      proposal?.company_id != null ? [proposal.company_id] : [],
+    () => (proposal?.company_id != null ? [proposal.company_id] : []),
     [proposal?.company_id],
   );
 
@@ -176,7 +173,7 @@ export const CreateClientInvoiceDialog = ({
     const defaultAmount =
       Number(proposal.deposit_amount) > 0
         ? proposal.deposit_amount
-        : proposal.amount ?? proposal.one_time_total ?? 0;
+        : (proposal.amount ?? proposal.one_time_total ?? 0);
     setAmount(String(defaultAmount ?? ""));
     const defaultDue =
       proposal.valid_until && proposal.valid_until >= today
@@ -187,12 +184,7 @@ export const CreateClientInvoiceDialog = ({
       ? `#${proposal.proposal_number} — ${proposal.title}`
       : proposal.title;
     setDescription(`Invoice for ${label}`);
-  }, [
-    proposal,
-    availableInstallments,
-    installmentId,
-    today,
-  ]);
+  }, [proposal, availableInstallments, installmentId, today]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -302,7 +294,9 @@ export const CreateClientInvoiceDialog = ({
             </div>
           ) : null}
 
-          {proposal && installments.length > 0 && availableInstallments.length === 0 ? (
+          {proposal &&
+          installments.length > 0 &&
+          availableInstallments.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               All installments on this proposal already have invoices.
             </p>

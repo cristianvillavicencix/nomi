@@ -3,7 +3,11 @@ import type { Ticket } from "@/modules/types";
 export const matchesTicketSearch = (
   ticket: Ticket,
   query: string,
-  meta?: { email?: string | null; phone?: string | null; contactName?: string | null },
+  meta?: {
+    email?: string | null;
+    phone?: string | null;
+    contactName?: string | null;
+  },
 ) => {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) return true;

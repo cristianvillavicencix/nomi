@@ -56,7 +56,9 @@ export const TicketBulkMergeMultiDialog = ({
 
   const [primaryId, setPrimaryId] = useState(defaultPrimaryId);
 
-  const primaryTicket = tickets.find((ticket) => String(ticket.id) === primaryId);
+  const primaryTicket = tickets.find(
+    (ticket) => String(ticket.id) === primaryId,
+  );
   const secondaryTickets = tickets.filter(
     (ticket) => String(ticket.id) !== primaryId,
   );
@@ -117,7 +119,10 @@ export const TicketBulkMergeMultiDialog = ({
                 </SelectTrigger>
                 <SelectContent>
                   {tickets.map((ticket) => (
-                    <SelectItem key={String(ticket.id)} value={String(ticket.id)}>
+                    <SelectItem
+                      key={String(ticket.id)}
+                      value={String(ticket.id)}
+                    >
                       #{ticket.id} · {ticket.subject}
                     </SelectItem>
                   ))}
@@ -130,7 +135,9 @@ export const TicketBulkMergeMultiDialog = ({
                 <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   Primary ticket
                 </p>
-                <p className="mt-2 text-sm font-semibold">{primaryTicket.subject}</p>
+                <p className="mt-2 text-sm font-semibold">
+                  {primaryTicket.subject}
+                </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge variant="secondary" className="text-[10px]">
                     #{primaryTicket.id}
@@ -155,7 +162,9 @@ export const TicketBulkMergeMultiDialog = ({
                     <span className="font-mono text-xs text-muted-foreground">
                       #{ticket.id}
                     </span>
-                    <span className="min-w-0 flex-1 truncate">{ticket.subject}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {ticket.subject}
+                    </span>
                     <Badge variant="outline" className="text-[10px] capitalize">
                       {ticketStatusLabel(ticket.status)}
                     </Badge>
@@ -179,8 +188,8 @@ export const TicketBulkMergeMultiDialog = ({
                     Merge {secondaryTickets.length} ticket(s) into #{primaryId}?
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Secondary tickets will be marked resolved and hidden from the
-                    inbox.
+                    Secondary tickets will be marked resolved and hidden from
+                    the inbox.
                   </p>
                 </div>
               </div>

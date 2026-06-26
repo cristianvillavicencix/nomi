@@ -135,12 +135,7 @@ export const TicketReplyTemplatePicker = ({
         onOpenChange={setCreateOpen}
         onCreated={(template) => {
           onInsert(
-            expandTicketReplyTemplate(
-              template.body,
-              ticket,
-              contact,
-              company,
-            ),
+            expandTicketReplyTemplate(template.body, ticket, contact, company),
           );
         }}
       />

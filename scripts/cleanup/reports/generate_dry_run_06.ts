@@ -24,10 +24,13 @@ function loadBackupCompanies(): CompanyAddressRow[] {
 }
 
 function query(sql: string): CompanyAddressRow[] {
-  const out = execSync(`supabase db query --linked ${JSON.stringify(sql)} -o json`, {
-    encoding: "utf8",
-    maxBuffer: 20 * 1024 * 1024,
-  });
+  const out = execSync(
+    `supabase db query --linked ${JSON.stringify(sql)} -o json`,
+    {
+      encoding: "utf8",
+      maxBuffer: 20 * 1024 * 1024,
+    },
+  );
   return JSON.parse(out).rows ?? [];
 }
 
@@ -41,7 +44,9 @@ const allCompanies = query(
 const pipeline = normalizeAddressPipeline(allCompanies, backupById);
 const buckets = {
   multiline: pipeline.filter((e) => e.bucket === "multiline"),
-  singleLineComposed: pipeline.filter((e) => e.bucket === "single-line-composed"),
+  singleLineComposed: pipeline.filter(
+    (e) => e.bucket === "single-line-composed",
+  ),
   embeddedCity: pipeline.filter((e) => e.bucket === "embedded-city"),
   backupRestore: pipeline.filter((e) => e.bucket === "backup-restore"),
 };
@@ -72,7 +77,9 @@ const fmt = (value: unknown) =>
 const reviewSection = review15
   .map((entry) => {
     const flags = [
-      entry.shortStreet ? `short street (${entry.proposal.street.length} chars)` : null,
+      entry.shortStreet
+        ? `short street (${entry.proposal.street.length} chars)`
+        : null,
       entry.duplicateCity ? `city×${entry.cityCount} in address` : null,
     ]
       .filter(Boolean)
@@ -130,22 +137,21 @@ ${reviewSection}
 
 | ID | Name | Street len | City occurrences | Flag |
 |----|------|----------:|-----------------:|------|
-${embeddedFlagged
-  .filter((e) => e.flagged)
-  .map(
-    (e) =>
-      `| ${e.row.id} | ${e.row.name} | ${e.proposal.street.length} | ${e.cityCount} | ${e.shortStreet ? "short" : ""}${e.shortStreet && e.duplicateCity ? "+" : ""}${e.duplicateCity ? "dup-city" : ""} |`,
-  )
-  .join("\n") || "| — | — | — | — | none |"}
+${
+  embeddedFlagged
+    .filter((e) => e.flagged)
+    .map(
+      (e) =>
+        `| ${e.row.id} | ${e.row.name} | ${e.proposal.street.length} | ${e.cityCount} | ${e.shortStreet ? "short" : ""}${e.shortStreet && e.duplicateCity ? "+" : ""}${e.duplicateCity ? "dup-city" : ""} |`,
+    )
+    .join("\n") || "| — | — | — | — | none |"
+}
 
 **Do not apply embedded-city bucket until approved.**
 `;
 
 fs.writeFileSync("scripts/cleanup/reports/DRY_RUN_06_2026-06-02.md", report);
-fs.writeFileSync(
-  "scripts/cleanup/reports/EMBEDDED_CITY_REVIEW_06.md",
-  report,
-);
+fs.writeFileSync("scripts/cleanup/reports/EMBEDDED_CITY_REVIEW_06.md", report);
 
 console.log(
   JSON.stringify(

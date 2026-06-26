@@ -137,87 +137,91 @@ export const QuickMeetingContactCreateDialog = ({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-        <Form
-          key={`${formKey}-${nameSeed}`}
-          defaultValues={seededDefaults}
-          onSubmit={handleSubmit}
-        >
-          <DialogHeader className="border-b px-6 py-4 text-left">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
-                <UserPlus className="size-4" />
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+          <Form
+            key={`${formKey}-${nameSeed}`}
+            defaultValues={seededDefaults}
+            onSubmit={handleSubmit}
+          >
+            <DialogHeader className="border-b px-6 py-4 text-left">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
+                  <UserPlus className="size-4" />
+                </div>
+                <div>
+                  <DialogTitle>New contact</DialogTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Save and use them for this call
+                  </p>
+                </div>
               </div>
-              <div>
-                <DialogTitle>New contact</DialogTitle>
-                <p className="text-sm text-muted-foreground">
-                  Save and use them for this call
-                </p>
-              </div>
-            </div>
-          </DialogHeader>
+            </DialogHeader>
 
-          <div className="space-y-4 px-6 py-5">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-4 px-6 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="quick-contact-first-name">First name</Label>
+                  <TextInput
+                    source="first_name"
+                    label={false}
+                    helperText={false}
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quick-contact-last-name">Last name</Label>
+                  <TextInput
+                    source="last_name"
+                    label={false}
+                    helperText={false}
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
-                <Label htmlFor="quick-contact-first-name">First name</Label>
-                <TextInput
-                  source="first_name"
+                <Label>Email</Label>
+                <EmailInput
+                  source="email"
                   label={false}
                   helperText={false}
-                  autoFocus
+                  placeholder="name@company.com"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="quick-contact-last-name">Last name</Label>
-                <TextInput source="last_name" label={false} helperText={false} />
+                <Label>Phone</Label>
+                <PhoneInput
+                  source="phone"
+                  label={false}
+                  helperText={false}
+                  placeholder="(555) 555-0100"
+                />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Add at least an email or phone number so you can share the video
+                link.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <EmailInput
-                source="email"
-                label={false}
-                helperText={false}
-                placeholder="name@company.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <PhoneInput
-                source="phone"
-                label={false}
-                helperText={false}
-                placeholder="(555) 555-0100"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Add at least an email or phone number so you can share the video
-              link.
-            </p>
-          </div>
 
-          <DialogFooter className="border-t px-6 py-4 sm:justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <UserPlus className="size-4" />
-              )}
-              Save contact
-            </Button>
-          </DialogFooter>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter className="border-t px-6 py-4 sm:justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <UserPlus className="size-4" />
+                )}
+                Save contact
+              </Button>
+            </DialogFooter>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <ContactDuplicateResolveDialog
         open={duplicatePromptOpen}

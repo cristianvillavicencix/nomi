@@ -17,5 +17,7 @@ declare module "simple-wappalyzer" {
     }>;
   };
 
-  export default function wappalyzer(input: WappalyzerInput): Promise<WappalyzerResult>;
+  export default function wappalyzer(
+    input: WappalyzerInput,
+  ): Promise<WappalyzerResult>;
 }

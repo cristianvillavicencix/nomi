@@ -1,7 +1,5 @@
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  computeInvoiceBalanceDue,
-} from "@/modules/billing/invoicePaymentUtils";
+import { computeInvoiceBalanceDue } from "@/modules/billing/invoicePaymentUtils";
 import {
   formatInvoiceDueDate,
   formatInvoiceMoney,

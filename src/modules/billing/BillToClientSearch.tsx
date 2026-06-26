@@ -142,7 +142,10 @@ export const BillToClientSearch = ({
           </Button>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Company or client name…"
@@ -183,7 +186,9 @@ export const BillToClientSearch = ({
                     <Check
                       className={cn(
                         "mr-2 size-4",
-                        value?.contactId === contact.id ? "opacity-100" : "opacity-0",
+                        value?.contactId === contact.id
+                          ? "opacity-100"
+                          : "opacity-0",
                       )}
                     />
                     {contactDisplayName(contact)}

@@ -59,7 +59,11 @@ export const ContactCompanyPickerField = ({
   const { field } = useInput({
     source: "company_id",
     validate: (value, values) =>
-      validateCompanySelection(value, values as Record<string, unknown>, optional),
+      validateCompanySelection(
+        value,
+        values as Record<string, unknown>,
+        optional,
+      ),
   });
 
   const moveConfirmed = useWatch({ name: PRIMARY_MOVE_CONFIRMED_FIELD }) as
@@ -105,7 +109,12 @@ export const ContactCompanyPickerField = ({
       return optimisticCompany;
     }
     return fetchedCompany ?? null;
-  }, [fetchedCompany, hasSelectedCompany, optimisticCompany, selectedCompanyId]);
+  }, [
+    fetchedCompany,
+    hasSelectedCompany,
+    optimisticCompany,
+    selectedCompanyId,
+  ]);
 
   const originalCompanyId = record?.company_id ?? null;
   const { data: originalCompany } = useGetOne<Company>(

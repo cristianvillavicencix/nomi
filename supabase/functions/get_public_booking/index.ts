@@ -112,10 +112,7 @@ const loadBookedSlots = async (
 
 const isUpcomingBookingLocal = isUpcomingBooking;
 
-const loadExistingBooking = async (
-  tokenId: number,
-  cutoffMinutes: number,
-) => {
+const loadExistingBooking = async (tokenId: number, cutoffMinutes: number) => {
   const { data } = await supabaseAdmin
     .from("public_bookings")
     .select(

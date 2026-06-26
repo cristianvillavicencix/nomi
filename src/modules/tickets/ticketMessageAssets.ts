@@ -101,7 +101,9 @@ const isVideoFile = (file: FileAttachment) => {
 const isPhotoFile = (file: FileAttachment) =>
   getFileKind(file) === "image" && Boolean(file.src?.trim());
 
-export const fileAttachmentToAsset = (file: FileAttachment): MessageAsset | null => {
+export const fileAttachmentToAsset = (
+  file: FileAttachment,
+): MessageAsset | null => {
   const href = file.src?.trim();
   if (!href) return null;
 
@@ -181,8 +183,7 @@ const parsePlainTextForLinks = (text: string): MessageAsset[] => {
         label,
         category: classifyLink(clean, label),
         source: "link" as const,
-        previewSrc:
-          classifyLink(clean, label) === "photo" ? clean : undefined,
+        previewSrc: classifyLink(clean, label) === "photo" ? clean : undefined,
       };
     })
     .filter((asset): asset is MessageAsset => asset != null);

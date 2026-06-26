@@ -33,7 +33,8 @@ const iconToneClass: Record<
   string
 > = {
   blue: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
-  violet: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  violet:
+    "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
   amber: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
   slate: "bg-muted text-muted-foreground",
 };

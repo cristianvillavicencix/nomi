@@ -1,9 +1,4 @@
-import {
-  required,
-  useGetIdentity,
-  useGetList,
-  useGetOne,
-} from "ra-core";
+import { required, useGetIdentity, useGetList, useGetOne } from "ra-core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
@@ -89,7 +84,9 @@ export const LbsDealCreateFields = ({
 } = {}) => {
   const { identity } = useGetIdentity();
   const canViewAmounts = useCanViewAmounts();
-  const { control, setValue } = useFormContext<Deal & Record<string, unknown>>();
+  const { control, setValue } = useFormContext<
+    Deal & Record<string, unknown>
+  >();
   const contactId = useWatch({ control, name: "contact_id" });
   const companyIdOnForm = useWatch({ control, name: "company_id" });
   const companyName = useWatch({ control, name: "company_name" });
@@ -104,18 +101,18 @@ export const LbsDealCreateFields = ({
   const selectedContactId = toNumber(contactId);
   const hasSelectedContact = isValidRecordId(selectedContactId);
   const hasCompanyOnForm = isValidRecordId(companyIdOnForm);
-  const shouldFetchSelectedContact =
-    hasSelectedContact && !hasCompanyOnForm;
+  const shouldFetchSelectedContact = hasSelectedContact && !hasCompanyOnForm;
   const previousContactId = useRef<number | null>(null);
   const lastPrefilledContactId = useRef<number | null>(null);
   const teamAssignedRef = useRef(false);
   const [priorDealTitle, setPriorDealTitle] = useState<string | null>(null);
 
-  const { data: selectedContact, isError: selectedContactError } = useGetOne<Contact>(
-    "contacts",
-    { id: selectedContactId as number },
-    { enabled: shouldFetchSelectedContact, retry: false },
-  );
+  const { data: selectedContact, isError: selectedContactError } =
+    useGetOne<Contact>(
+      "contacts",
+      { id: selectedContactId as number },
+      { enabled: shouldFetchSelectedContact, retry: false },
+    );
 
   useEffect(() => {
     if (!selectedContactError) return;
@@ -302,7 +299,9 @@ export const LbsDealCreateFields = ({
           typeof companyName === "string" && companyName.trim()
             ? companyName
             : selectedContact?.company_name,
-        contactName: selectedContact ? lbsProjectContactName(selectedContact) : "",
+        contactName: selectedContact
+          ? lbsProjectContactName(selectedContact)
+          : "",
         projectType: String(projectType ?? ""),
       }),
     [companyName, projectType, selectedContact],
@@ -320,7 +319,8 @@ export const LbsDealCreateFields = ({
         <LbsProjectClientFields variant="create" seedContact={seedContact} />
         {priorDealTitle ? (
           <CreateFormFieldHint>
-            Values copied from the client&apos;s previous project ({priorDealTitle}
+            Values copied from the client&apos;s previous project (
+            {priorDealTitle}
             ).
           </CreateFormFieldHint>
         ) : null}

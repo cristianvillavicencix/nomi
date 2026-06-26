@@ -64,7 +64,11 @@ const extractFieldMetrics = (
 const queryCrux = async (
   body: Record<string, unknown>,
   signal: AbortSignal,
-): Promise<{ status: number; data: CruxQueryResponse | null; rateLimited: boolean }> => {
+): Promise<{
+  status: number;
+  data: CruxQueryResponse | null;
+  rateLimited: boolean;
+}> => {
   if (!config.cruxApiKey) {
     return { status: 0, data: null, rateLimited: false };
   }
@@ -93,8 +97,7 @@ const queryCrux = async (
       payload = null;
     }
     throw new Error(
-      payload?.error?.message ??
-        `CrUX API error ${response.status}`,
+      payload?.error?.message ?? `CrUX API error ${response.status}`,
     );
   }
 
@@ -134,10 +137,7 @@ export const fetchCruxFieldData = async (
   const origin = parseOrigin(pageUrl);
 
   try {
-    const urlAttempt = await queryCrux(
-      { url: pageUrl, formFactor },
-      signal,
-    );
+    const urlAttempt = await queryCrux({ url: pageUrl, formFactor }, signal);
 
     if (urlAttempt.rateLimited) {
       return noDataResult({

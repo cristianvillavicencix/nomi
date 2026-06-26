@@ -65,7 +65,10 @@ export const ProjectTasksRail = ({
     return (
       <aside
         className="sticky top-4 flex shrink-0 flex-col items-center self-stretch border-l bg-muted/20 py-3 print:hidden"
-        style={{ width: COLLAPSED_RAIL_WIDTH_PX, minHeight: "calc(100vh - 8rem)" }}
+        style={{
+          width: COLLAPSED_RAIL_WIDTH_PX,
+          minHeight: "calc(100vh - 8rem)",
+        }}
       >
         <Tooltip>
           <TooltipTrigger asChild>

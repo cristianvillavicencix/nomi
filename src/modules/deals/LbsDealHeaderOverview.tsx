@@ -8,7 +8,10 @@ import {
   getContactFullName,
   getContactPhone,
 } from "@/modules/clients/clientShowUtils";
-import { getGithubRepoLabel, getGithubRepoUrl } from "@/modules/deals/githubRepo";
+import {
+  getGithubRepoLabel,
+  getGithubRepoUrl,
+} from "@/modules/deals/githubRepo";
 import { ProjectPortalLinkButton } from "@/modules/portal/ProjectPortalLinkButton";
 import { getClientShowPath } from "@/app/routing";
 import type { LbsDeal } from "@/modules/types";
@@ -60,9 +63,7 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
   const contactName = mainContact ? getContactFullName(mainContact) : null;
   const contactEmail = mainContact ? getContactEmail(mainContact) : null;
   const rawPhone = mainContact ? getContactPhone(mainContact) : null;
-  const contactPhone = rawPhone
-    ? formatUsPhoneDisplayFromAny(rawPhone)
-    : null;
+  const contactPhone = rawPhone ? formatUsPhoneDisplayFromAny(rawPhone) : null;
   const companyName =
     record.company_name ??
     (record.company_id ? `Company #${record.company_id}` : null);
@@ -126,7 +127,10 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
           {
             key: "email",
             node: contactEmail ? (
-              <a href={`mailto:${contactEmail}`} className="link-action truncate">
+              <a
+                href={`mailto:${contactEmail}`}
+                className="link-action truncate"
+              >
                 {contactEmail}
               </a>
             ) : null,

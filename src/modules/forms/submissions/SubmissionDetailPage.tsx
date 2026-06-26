@@ -146,8 +146,12 @@ export const SubmissionDetailPage = () => {
     ...(submission.submitter_name
       ? { first_name: submission.submitter_name.split(" ")[0] ?? "" }
       : {}),
-    ...(submission.submitter_email ? { email: submission.submitter_email } : {}),
-    ...(submission.submitter_phone ? { phone: submission.submitter_phone } : {}),
+    ...(submission.submitter_email
+      ? { email: submission.submitter_email }
+      : {}),
+    ...(submission.submitter_phone
+      ? { phone: submission.submitter_phone }
+      : {}),
   });
 
   return (

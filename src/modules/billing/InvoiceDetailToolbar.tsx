@@ -80,7 +80,10 @@ const ToolbarButton = ({
     type="button"
     variant="ghost"
     size="sm"
-    className={cn("h-8 gap-1.5 rounded-none px-2.5 text-xs font-medium", className)}
+    className={cn(
+      "h-8 gap-1.5 rounded-none px-2.5 text-xs font-medium",
+      className,
+    )}
     {...props}
   >
     {children}
@@ -178,7 +181,12 @@ export const InvoiceOverdueWhatsNextBanner = ({
           </Button>
         ) : null}
         {onCharge ? (
-          <Button type="button" size="sm" disabled={isPending} onClick={onCharge}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isPending}
+            onClick={onCharge}
+          >
             <CreditCard className="size-4" />
             Record payment
           </Button>
@@ -225,7 +233,12 @@ export const InvoiceSentWhatsNextBanner = ({
   const showBalanceDue = balanceDue > 0.01;
   const showPaymentGateway = Boolean(onConfigurePayment);
 
-  if (!pendingResend && !scheduledSendAt && !showBalanceDue && !showPaymentGateway) {
+  if (
+    !pendingResend &&
+    !scheduledSendAt &&
+    !showBalanceDue &&
+    !showPaymentGateway
+  ) {
     return null;
   }
 
@@ -234,9 +247,11 @@ export const InvoiceSentWhatsNextBanner = ({
       {pendingResend ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">What&apos;s next?</span>{" "}
-            You updated this invoice — resend it so your customer sees the latest
-            version.
+            <span className="font-medium text-foreground">
+              What&apos;s next?
+            </span>{" "}
+            You updated this invoice — resend it so your customer sees the
+            latest version.
           </p>
           <Button type="button" size="sm" disabled={isPending} onClick={onSend}>
             <Send className="size-4" />
@@ -261,7 +276,9 @@ export const InvoiceSentWhatsNextBanner = ({
           <p className="text-sm text-muted-foreground">
             {pendingResend || scheduledSendAt ? null : (
               <>
-                <span className="font-medium text-foreground">What&apos;s next?</span>{" "}
+                <span className="font-medium text-foreground">
+                  What&apos;s next?
+                </span>{" "}
               </>
             )}
             Waiting for payment
@@ -279,7 +296,9 @@ export const InvoiceSentWhatsNextBanner = ({
           </p>
           {onCharge ? (
             <div className="flex shrink-0 items-center gap-2">
-              <span className="text-sm text-muted-foreground">Received payment?</span>
+              <span className="text-sm text-muted-foreground">
+                Received payment?
+              </span>
               <Button
                 type="button"
                 size="sm"
@@ -558,55 +577,55 @@ export const InvoiceDetailToolbar = ({
         ) : null}
 
         {showMoreActions ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <ToolbarButton disabled={busy} aria-label="More invoice actions">
-              <MoreHorizontal className="size-3.5" />
-            </ToolbarButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {showMarkSent ? (
-              <DropdownMenuItem onSelect={() => handleManage("mark_sent")}>
-                <CheckCircle2 className="size-4" />
-                Mark as sent
-              </DropdownMenuItem>
-            ) : null}
-            {onConfigurePayment ? (
-              <DropdownMenuItem onSelect={onConfigurePayment}>
-                <Settings2 className="size-4" />
-                Payment settings
-              </DropdownMenuItem>
-            ) : null}
-            {showResendReceipt && onResendReceipt ? (
-              <DropdownMenuItem onSelect={onResendReceipt}>
-                <Receipt className="size-4" />
-                Resend receipt
-              </DropdownMenuItem>
-            ) : null}
-            {(showVoid || showDelete) &&
-            (showMarkSent || onConfigurePayment || showResendReceipt) ? (
-              <DropdownMenuSeparator />
-            ) : null}
-            {showVoid ? (
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => handleManage("void")}
-              >
-                <Ban className="size-4" />
-                Void
-              </DropdownMenuItem>
-            ) : null}
-            {showDelete ? (
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => handleManage("delete")}
-              >
-                <Trash2 className="size-4" />
-                Delete
-              </DropdownMenuItem>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <ToolbarButton disabled={busy} aria-label="More invoice actions">
+                <MoreHorizontal className="size-3.5" />
+              </ToolbarButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {showMarkSent ? (
+                <DropdownMenuItem onSelect={() => handleManage("mark_sent")}>
+                  <CheckCircle2 className="size-4" />
+                  Mark as sent
+                </DropdownMenuItem>
+              ) : null}
+              {onConfigurePayment ? (
+                <DropdownMenuItem onSelect={onConfigurePayment}>
+                  <Settings2 className="size-4" />
+                  Payment settings
+                </DropdownMenuItem>
+              ) : null}
+              {showResendReceipt && onResendReceipt ? (
+                <DropdownMenuItem onSelect={onResendReceipt}>
+                  <Receipt className="size-4" />
+                  Resend receipt
+                </DropdownMenuItem>
+              ) : null}
+              {(showVoid || showDelete) &&
+              (showMarkSent || onConfigurePayment || showResendReceipt) ? (
+                <DropdownMenuSeparator />
+              ) : null}
+              {showVoid ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => handleManage("void")}
+                >
+                  <Ban className="size-4" />
+                  Void
+                </DropdownMenuItem>
+              ) : null}
+              {showDelete ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => handleManage("delete")}
+                >
+                  <Trash2 className="size-4" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
 
         {showCancel ? (

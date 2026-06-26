@@ -26,9 +26,7 @@ const invokePublicFunction = async <T>(
   };
   if (!response.ok) {
     const detail =
-      payload.message ??
-      payload.error ??
-      `Request failed (${response.status})`;
+      payload.message ?? payload.error ?? `Request failed (${response.status})`;
     throw new Error(detail);
   }
   return payload;
@@ -56,7 +54,9 @@ export type PublicInvoicePayload = {
     upfront_percent?: number | null;
     auto_charge_remainder?: boolean | null;
     amount_paid?: number | null;
-    remainder_schedule?: import("@/modules/billing/invoiceRemainderSchedule").InvoiceRemainderScheduleConfig | null;
+    remainder_schedule?:
+      | import("@/modules/billing/invoiceRemainderSchedule").InvoiceRemainderScheduleConfig
+      | null;
   };
   line_items: Array<{
     description: string;

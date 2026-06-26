@@ -50,13 +50,16 @@ Deno.serve(
           return createErrorResponse(400, "Invalid ticket_id");
         }
 
-        const result = await createTicketInvoiceAndSendPaymentLink(supabaseAdmin, {
-          orgId: member.org_id,
-          memberId: member.id,
-          ticketId,
-          baseUrl: body.base_url,
-          message: body.message,
-        });
+        const result = await createTicketInvoiceAndSendPaymentLink(
+          supabaseAdmin,
+          {
+            orgId: member.org_id,
+            memberId: member.id,
+            ticketId,
+            baseUrl: body.base_url,
+            message: body.message,
+          },
+        );
 
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

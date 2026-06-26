@@ -52,7 +52,7 @@ export const buildContactCreatePayload = (
       email_jsonb: [],
       phone_jsonb: [],
       lead_source: values.lead_source,
-      lead_source_other: isOther ? values.lead_source_other ?? null : null,
+      lead_source_other: isOther ? (values.lead_source_other ?? null) : null,
       referred_by_contact_id: isReferral
         ? (values.referred_by_contact_id ?? null)
         : null,
@@ -85,7 +85,7 @@ export const buildContactCreatePayload = (
     email_jsonb: cleanEmailJsonb(values.email_jsonb),
     phone_jsonb: cleanPhoneJsonb(values.phone_jsonb),
     lead_source: values.lead_source,
-    lead_source_other: isOther ? values.lead_source_other ?? null : null,
+    lead_source_other: isOther ? (values.lead_source_other ?? null) : null,
     referred_by_contact_id: isReferral
       ? (values.referred_by_contact_id ?? null)
       : null,

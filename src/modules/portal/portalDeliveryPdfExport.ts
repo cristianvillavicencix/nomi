@@ -1,7 +1,11 @@
 import { jsPDF } from "jspdf";
 import { getPortalHandoffExpectations } from "@/modules/portal/portalHandoffExpectations";
 import type { PortalLocale } from "@/modules/portal/portalI18n";
-import { formatPortalDate, type PortalCredential, type PortalDelivery } from "@/modules/portal/portalTypes";
+import {
+  formatPortalDate,
+  type PortalCredential,
+  type PortalDelivery,
+} from "@/modules/portal/portalTypes";
 
 const slugify = (value: string) =>
   value

@@ -42,9 +42,7 @@ import {
   defaultInvoiceRemainderSchedule,
   type InvoiceRemainderScheduleConfig,
 } from "@/modules/billing/invoiceRemainderSchedule";
-import {
-  resolveInvoiceOrganizationName,
-} from "@/modules/billing/invoiceEmailTemplate";
+import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceEmailTemplate";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
 
@@ -53,10 +51,7 @@ export const StandaloneInvoiceCreatePage = () => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const { data: identity } = useGetIdentity();
-  const {
-    title,
-    companyLegalName,
-  } = useConfigurationContext();
+  const { title, companyLegalName } = useConfigurationContext();
 
   const organizationName = useMemo(
     () => resolveInvoiceOrganizationName({ title, companyLegalName }),
@@ -97,9 +92,8 @@ export const StandaloneInvoiceCreatePage = () => {
       sort_order: 0,
     },
   ]);
-  const [pendingAction, setPendingAction] = useState<InvoiceCreateAction | null>(
-    null,
-  );
+  const [pendingAction, setPendingAction] =
+    useState<InvoiceCreateAction | null>(null);
   const [createdInvoice, setCreatedInvoice] = useState<ClientInvoice | null>(
     null,
   );
@@ -133,7 +127,8 @@ export const StandaloneInvoiceCreatePage = () => {
     setDueDate(dueDateFromTerms(issueDate, terms));
     setRemainderSchedule((prev) => ({
       ...prev,
-      project_end_date: prev.project_end_date ?? dueDateFromTerms(issueDate, terms),
+      project_end_date:
+        prev.project_end_date ?? dueDateFromTerms(issueDate, terms),
     }));
   }, [issueDate, terms]);
 

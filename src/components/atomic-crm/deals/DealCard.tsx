@@ -34,11 +34,7 @@ export const DealCard = ({ deal, index }: { deal: Deal; index: number }) => {
   return (
     <Draggable draggableId={String(deal.id)} index={index}>
       {(provided, snapshot) => (
-        <DealCardContent
-          provided={provided}
-          snapshot={snapshot}
-          deal={deal}
-        />
+        <DealCardContent provided={provided} snapshot={snapshot} deal={deal} />
       )}
     </Draggable>
   );

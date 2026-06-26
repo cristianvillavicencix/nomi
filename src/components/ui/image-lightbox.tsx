@@ -1,41 +1,48 @@
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, Download, XIcon, ZoomIn, ZoomOut } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  XIcon,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react"
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
-} from "react";
-import { Button } from "@/components/ui/button";
+} from "react"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogOverlay,
   DialogPortal,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+} from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 
 export type LightboxImage = {
-  src: string;
-  alt?: string;
-  title?: string;
-};
+  src: string
+  alt?: string
+  title?: string
+}
 
-const MIN_SCALE = 1;
-const MAX_SCALE = 6;
+const MIN_SCALE = 1
+const MAX_SCALE = 6
 
 const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
+  Math.min(max, Math.max(min, value))
 
 type ImageLightboxProps = {
-  images: LightboxImage[];
-  open: boolean;
-  index: number;
-  onOpenChange: (open: boolean) => void;
-  onIndexChange: (index: number) => void;
-  onDownload?: () => void;
-};
+  images: LightboxImage[]
+  open: boolean
+  index: number
+  onOpenChange: (open: boolean) => void
+  onIndexChange: (index: number) => void
+  onDownload?: () => void
+}
 
 export const ImageLightbox = ({
   images,
@@ -45,126 +52,136 @@ export const ImageLightbox = ({
   onIndexChange,
   onDownload,
 }: ImageLightboxProps) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(
-    null,
-  );
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const dragRef = useRef<{
+    x: number
+    y: number
+    panX: number
+    panY: number
+  } | null>(null)
 
-  const current = images[index];
-  const hasMultiple = images.length > 1;
+  const current = images[index]
+  const hasMultiple = images.length > 1
 
   const resetView = useCallback(() => {
-    setScale(1);
-    setPan({ x: 0, y: 0 });
-    dragRef.current = null;
-  }, []);
+    setScale(1)
+    setPan({ x: 0, y: 0 })
+    dragRef.current = null
+  }, [])
 
   useEffect(() => {
     if (!open) {
-      resetView();
+      resetView()
     }
-  }, [open, resetView]);
+  }, [open, resetView])
 
   useEffect(() => {
-    resetView();
-  }, [index, resetView]);
+    resetView()
+  }, [index, resetView])
 
   const goPrev = useCallback(() => {
-    if (!hasMultiple) return;
-    onIndexChange((index - 1 + images.length) % images.length);
-  }, [hasMultiple, images.length, index, onIndexChange]);
+    if (!hasMultiple) return
+    onIndexChange((index - 1 + images.length) % images.length)
+  }, [hasMultiple, images.length, index, onIndexChange])
 
   const goNext = useCallback(() => {
-    if (!hasMultiple) return;
-    onIndexChange((index + 1) % images.length);
-  }, [hasMultiple, images.length, index, onIndexChange]);
+    if (!hasMultiple) return
+    onIndexChange((index + 1) % images.length)
+  }, [hasMultiple, images.length, index, onIndexChange])
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        goPrev();
+        event.preventDefault()
+        goPrev()
       } else if (event.key === "ArrowRight") {
-        event.preventDefault();
-        goNext();
+        event.preventDefault()
+        goNext()
       }
-    };
+    }
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, goPrev, goNext]);
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [open, goPrev, goNext])
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
 
     const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const direction = event.deltaY < 0 ? 1 : -1;
-      const step = event.ctrlKey ? 0.08 : 0.14;
+      event.preventDefault()
+      event.stopPropagation()
+      const direction = event.deltaY < 0 ? 1 : -1
+      const step = event.ctrlKey ? 0.08 : 0.14
       setScale((currentScale) => {
-        const next = clamp(currentScale + direction * step, MIN_SCALE, MAX_SCALE);
+        const next = clamp(
+          currentScale + direction * step,
+          MIN_SCALE,
+          MAX_SCALE
+        )
         if (next <= 1) {
-          setPan({ x: 0, y: 0 });
+          setPan({ x: 0, y: 0 })
         }
-        return next;
-      });
-    };
+        return next
+      })
+    }
 
-    const node = contentRef.current;
+    const node = contentRef.current
     if (node) {
-      node.addEventListener("wheel", onWheel, { passive: false });
+      node.addEventListener("wheel", onWheel, { passive: false })
     }
 
     // Capture wheel anywhere while open so the thread behind does not scroll.
-    document.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    document.addEventListener("wheel", onWheel, {
+      passive: false,
+      capture: true,
+    })
 
     return () => {
-      node?.removeEventListener("wheel", onWheel);
-      document.removeEventListener("wheel", onWheel, { capture: true });
-    };
-  }, [open, index]);
+      node?.removeEventListener("wheel", onWheel)
+      document.removeEventListener("wheel", onWheel, { capture: true })
+    }
+  }, [open, index])
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (scale <= 1) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    if (scale <= 1) return
+    event.currentTarget.setPointerCapture(event.pointerId)
     dragRef.current = {
       x: event.clientX,
       y: event.clientY,
       panX: pan.x,
       panY: pan.y,
-    };
-  };
+    }
+  }
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragRef.current) return;
+    if (!dragRef.current) return
     setPan({
       x: dragRef.current.panX + (event.clientX - dragRef.current.x),
       y: dragRef.current.panY + (event.clientY - dragRef.current.y),
-    });
-  };
+    })
+  }
 
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (dragRef.current) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-      dragRef.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId)
+      dragRef.current = null
     }
-  };
+  }
 
   const zoomIn = () =>
-    setScale((currentScale) => clamp(currentScale + 0.35, MIN_SCALE, MAX_SCALE));
+    setScale((currentScale) => clamp(currentScale + 0.35, MIN_SCALE, MAX_SCALE))
   const zoomOut = () =>
     setScale((currentScale) => {
-      const next = clamp(currentScale - 0.35, MIN_SCALE, MAX_SCALE);
-      if (next <= 1) setPan({ x: 0, y: 0 });
-      return next;
-    });
+      const next = clamp(currentScale - 0.35, MIN_SCALE, MAX_SCALE)
+      if (next <= 1) setPan({ x: 0, y: 0 })
+      return next
+    })
 
-  if (!current) return null;
+  if (!current) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -175,7 +192,7 @@ export const ImageLightbox = ({
           className={cn(
             "fixed inset-0 z-50 flex flex-col outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
           )}
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
@@ -257,7 +274,9 @@ export const ImageLightbox = ({
             <div
               className={cn(
                 "flex h-full w-full touch-none items-center justify-center overflow-hidden",
-                scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in",
+                scale > 1
+                  ? "cursor-grab active:cursor-grabbing"
+                  : "cursor-zoom-in"
               )}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
@@ -292,22 +311,23 @@ export const ImageLightbox = ({
           </div>
 
           <p className="pointer-events-none shrink-0 pb-4 text-center text-xs text-white/60">
-            Scroll to zoom · Drag to pan · Arrow keys to browse · Double-click to reset
+            Scroll to zoom · Drag to pan · Arrow keys to browse · Double-click
+            to reset
           </p>
         </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
-  );
-};
+  )
+}
 
 export const useImageLightbox = (images: LightboxImage[]) => {
-  const [open, setOpen] = useState(false);
-  const [index, setIndex] = useState(0);
+  const [open, setOpen] = useState(false)
+  const [index, setIndex] = useState(0)
 
   const openAt = (nextIndex: number) => {
-    setIndex(nextIndex);
-    setOpen(true);
-  };
+    setIndex(nextIndex)
+    setOpen(true)
+  }
 
   return {
     open,
@@ -324,5 +344,5 @@ export const useImageLightbox = (images: LightboxImage[]) => {
         onIndexChange={setIndex}
       />
     ),
-  };
-};
+  }
+}

@@ -47,7 +47,12 @@ export const resolveCrawlResource = async (
   if (fetchers.datacenter) {
     const res = await fetchers.datacenter(url, signal);
     fetchStatus = res?.status ?? null;
-    if (res && res.status >= 200 && res.status < 400 && isValidContent(res.text)) {
+    if (
+      res &&
+      res.status >= 200 &&
+      res.status < 400 &&
+      isValidContent(res.text)
+    ) {
       fetchContent = res.text;
     } else if (res && BLOCK_STATUSES.has(res.status)) {
       fetchBlocked = true;
@@ -71,7 +76,12 @@ export const resolveCrawlResource = async (
   if (fetchers.browser) {
     const res = await fetchers.browser(url, signal);
     browserStatus = res?.status ?? null;
-    if (res && res.status >= 200 && res.status < 400 && isValidContent(res.text)) {
+    if (
+      res &&
+      res.status >= 200 &&
+      res.status < 400 &&
+      isValidContent(res.text)
+    ) {
       browserContent = res.text;
     }
   }
@@ -83,7 +93,10 @@ export const resolveCrawlResource = async (
       fetchStatus,
       browserStatus,
       access: "found",
-      source: fetchBlocked || (fetchStatus != null && fetchStatus >= 400) ? "browser" : "browser",
+      source:
+        fetchBlocked || (fetchStatus != null && fetchStatus >= 400)
+          ? "browser"
+          : "browser",
       content: browserContent,
       found: true,
     };
@@ -133,7 +146,17 @@ export const mergeResolvedResource = (
   datacenter: ResolvedCrawlResource,
   browser: ResolvedCrawlResource,
 ): ResolvedCrawlResource => {
-  const pick = browser.found ? browser : datacenter.found ? datacenter : browser.access === "blocked" && !datacenter.found ? browser : datacenter.access === "blocked" ? datacenter : browser.status != null ? browser : datacenter;
+  const pick = browser.found
+    ? browser
+    : datacenter.found
+      ? datacenter
+      : browser.access === "blocked" && !datacenter.found
+        ? browser
+        : datacenter.access === "blocked"
+          ? datacenter
+          : browser.status != null
+            ? browser
+            : datacenter;
 
   if (datacenter.found && browser.found) {
     return {

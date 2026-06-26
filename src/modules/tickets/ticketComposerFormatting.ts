@@ -32,7 +32,8 @@ export const applyTextareaLinePrefix = (
   const prefixed = lines
     .map((line, index) => {
       if (!line.trim()) return line;
-      if (prefix === "1. ") return `${index + 1}. ${line.replace(/^\d+\.\s*/, "")}`;
+      if (prefix === "1. ")
+        return `${index + 1}. ${line.replace(/^\d+\.\s*/, "")}`;
       if (line.startsWith(prefix)) return line;
       return `${prefix}${line}`;
     })

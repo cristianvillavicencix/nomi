@@ -7,7 +7,11 @@ import {
 } from "@/modules/deals/projects/delivery/projectMaintenanceReview";
 import type { DealMilestone, LbsDeal } from "@/modules/types";
 
-export const ProjectNextMaintenanceBadge = ({ record }: { record: LbsDeal }) => {
+export const ProjectNextMaintenanceBadge = ({
+  record,
+}: {
+  record: LbsDeal;
+}) => {
   const { data: milestones = [] } = useGetList<DealMilestone>(
     "deal_milestones",
     {

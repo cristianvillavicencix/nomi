@@ -82,7 +82,9 @@ const buildNotificationMessage = (
 ) => {
   if (instance.slug === "project-resources" && answers) {
     const logoCount = Array.isArray(answers.logos) ? answers.logos.length : 0;
-    const services = Array.isArray(answers.services) ? answers.services.length : 0;
+    const services = Array.isArray(answers.services)
+      ? answers.services.length
+      : 0;
     const servicePhotos =
       answers.service_photos &&
       typeof answers.service_photos === "object" &&
@@ -94,8 +96,9 @@ const buildNotificationMessage = (
       0,
     );
     const companyName =
-      String(answers.company_name ?? submission.submitter_name ?? "Client").trim() ||
-      "Client";
+      String(
+        answers.company_name ?? submission.submitter_name ?? "Client",
+      ).trim() || "Client";
     const dealPath =
       submission.deal_id != null && baseUrl
         ? `${baseUrl}/projects/${submission.deal_id}/show`

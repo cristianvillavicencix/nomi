@@ -19,7 +19,10 @@ export const useTicketListAttachments = (ticketIds: Array<string | number>) => {
     const map = new Map<string, unknown[]>();
 
     for (const message of messages) {
-      if (!Array.isArray(message.attachments) || message.attachments.length === 0) {
+      if (
+        !Array.isArray(message.attachments) ||
+        message.attachments.length === 0
+      ) {
         continue;
       }
       const ticketId = String(message.ticket_id);

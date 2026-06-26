@@ -19,9 +19,7 @@ export const GlobalMessagesBadge = ({ className }: { className?: string }) => {
         className,
       )}
       aria-label={
-        totalUnread > 0
-          ? `${totalUnread} unread messages`
-          : "Open messages"
+        totalUnread > 0 ? `${totalUnread} unread messages` : "Open messages"
       }
     >
       <MessageSquare className="size-5" />

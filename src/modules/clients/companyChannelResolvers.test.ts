@@ -14,7 +14,9 @@ describe("resolveCompanyEmailForDisplay", () => {
           "lbs:business_email=info@company.com",
           "lbs:invoice_email=invoice@company.com",
         ],
-        primary_contact_email_jsonb: [{ email: "person@company.com", type: "Work" }],
+        primary_contact_email_jsonb: [
+          { email: "person@company.com", type: "Work" },
+        ],
       }),
     ).toBe("info@company.com");
   });
@@ -34,9 +36,7 @@ describe("resolveCompanyEmailForDisplay", () => {
 describe("resolveCompanyOwnEmails", () => {
   it("never hydrates from contact or invoice keys", () => {
     expect(
-      resolveCompanyOwnEmails([
-        "lbs:invoice_email=invoice@company.com",
-      ]),
+      resolveCompanyOwnEmails(["lbs:invoice_email=invoice@company.com"]),
     ).toEqual([{ value: "", type: "Work", isPrimary: true }]);
   });
 });

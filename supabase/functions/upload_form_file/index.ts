@@ -47,7 +47,9 @@ Deno.serve(
     try {
       const formData = await req.formData();
       const token = String(formData.get("token") ?? "").trim();
-      const fieldKey = sanitizeSegment(String(formData.get("field_key") ?? "file"));
+      const fieldKey = sanitizeSegment(
+        String(formData.get("field_key") ?? "file"),
+      );
       const groupKeyRaw = String(formData.get("group_key") ?? "").trim();
       const groupKey = groupKeyRaw ? sanitizeSegment(groupKeyRaw) : "";
       const file = formData.get("file");
@@ -69,7 +71,9 @@ Deno.serve(
 
       const { data: tokenData, error: tokenError } = await supabaseAdmin
         .from("public_form_tokens")
-        .select("token, org_id, deal_id, expires_at, form_instance:form_instances(id, is_active)")
+        .select(
+          "token, org_id, deal_id, expires_at, form_instance:form_instances(id, is_active)",
+        )
         .eq("token", token)
         .single();
 

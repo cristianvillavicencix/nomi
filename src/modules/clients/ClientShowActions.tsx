@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, MoreHorizontal, Pencil, Trash } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
-import {
-  RecordContextProvider,
-  useDelete,
-  useNotify,
-} from "ra-core";
+import { RecordContextProvider, useDelete, useNotify } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Confirm } from "@/components/admin/confirm";
 import {

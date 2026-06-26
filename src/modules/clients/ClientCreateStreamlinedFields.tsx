@@ -25,7 +25,10 @@ import {
   CreateFormFieldRow,
 } from "@/modules/shared/createForm/CreateFormLayout";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 
 const requiredName = (value?: string) =>
   value?.trim() ? undefined : "Required";
@@ -71,9 +74,11 @@ export const ClientCreateStreamlinedFields = ({
     ClientCreateFormValues,
     "selected_primary_contact_id"
   >({ name: "selected_primary_contact_id" });
-  const primaryFullName = useWatch<ClientCreateFormValues, "primary_full_name">({
-    name: "primary_full_name",
-  });
+  const primaryFullName = useWatch<ClientCreateFormValues, "primary_full_name">(
+    {
+      name: "primary_full_name",
+    },
+  );
   const primaryEmail = useWatch<ClientCreateFormValues, "primary_email">({
     name: "primary_email",
   });
@@ -240,7 +245,11 @@ export const ClientCreateStreamlinedFields = ({
             helperText={false}
             emptyText="Select size"
           />
-          <TextInput source="company_revenue" label="Revenue" helperText={false} />
+          <TextInput
+            source="company_revenue"
+            label="Revenue"
+            helperText={false}
+          />
         </CreateFormFieldRow>
         <CreateFormFieldRow columns={2}>
           <TextInput

@@ -179,9 +179,7 @@ Deno.serve((req: Request) =>
           plan_name: body.plan_name?.trim() || null,
           project_start_date:
             body.project_start_date?.trim() ||
-            (deal.created_at
-              ? String(deal.created_at).slice(0, 10)
-              : null),
+            (deal.created_at ? String(deal.created_at).slice(0, 10) : null),
           delivery_date: deliveryDate,
           hosting_renewal_date: body.hosting_renewal_date?.trim() || null,
           hosting_status: body.hosting_status?.trim() || "active",
@@ -212,7 +210,9 @@ Deno.serve((req: Request) =>
           .single();
 
         if (deliveryError || !delivery) {
-          throw new Error(deliveryError?.message ?? "Failed to create delivery");
+          throw new Error(
+            deliveryError?.message ?? "Failed to create delivery",
+          );
         }
 
         await supabaseAdmin
@@ -224,8 +224,8 @@ Deno.serve((req: Request) =>
           })
           .eq("id", dealId);
 
-        const shareIds = (body.share_credential_entry_ids ?? []).filter(
-          (id) => Number.isFinite(Number(id)),
+        const shareIds = (body.share_credential_entry_ids ?? []).filter((id) =>
+          Number.isFinite(Number(id)),
         );
         if (shareIds.length > 0) {
           await supabaseAdmin
@@ -238,9 +238,7 @@ Deno.serve((req: Request) =>
 
         const domainInput = body.domain ?? {};
         const domainName =
-          domainInput.domain?.trim() ||
-          parseDomainFromUrl(siteUrl) ||
-          null;
+          domainInput.domain?.trim() || parseDomainFromUrl(siteUrl) || null;
         if (domainName) {
           await supabaseAdmin.from("project_delivery_domains").insert({
             org_id: member.org_id,

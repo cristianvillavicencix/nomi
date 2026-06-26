@@ -12,7 +12,10 @@ import { useNavigate } from "react-router";
 import { Sparkles } from "lucide-react";
 
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import type { Conversation } from "@/modules/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -145,9 +148,7 @@ export const LeadsKanban = () => {
     if (!board || board.scrollWidth <= board.clientWidth) return;
 
     const target = event.target as HTMLElement;
-    const cards = target.closest(
-      "[data-kanban-cards]",
-    ) as HTMLElement | null;
+    const cards = target.closest("[data-kanban-cards]") as HTMLElement | null;
     const absX = Math.abs(event.deltaX);
     const absY = Math.abs(event.deltaY);
     const isHorizontalGesture = absX > absY;

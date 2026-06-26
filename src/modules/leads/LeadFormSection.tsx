@@ -46,7 +46,9 @@ export const LeadFormSection = ({
           )}
         />
       </Button>
-      {open ? <div className="space-y-3 border-t px-3 pb-3 pt-2">{children}</div> : null}
+      {open ? (
+        <div className="space-y-3 border-t px-3 pb-3 pt-2">{children}</div>
+      ) : null}
     </section>
   );
 };

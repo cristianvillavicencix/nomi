@@ -1,5 +1,9 @@
 import { evaluateCondition } from "./conditionalLogic.ts";
-import type { FormFieldDef, FormSchema, FormSectionDef } from "./formV2Schema.ts";
+import type {
+  FormFieldDef,
+  FormSchema,
+  FormSectionDef,
+} from "./formV2Schema.ts";
 
 type BriefApproval = {
   section_id: string;
@@ -39,8 +43,7 @@ const isSectionComplete = (
 
   const fields = (section.fields ?? []).filter(
     (field) =>
-      field.type !== "formula" &&
-      evaluateCondition(field.visible_when, brief),
+      field.type !== "formula" && evaluateCondition(field.visible_when, brief),
   );
   if (fields.length === 0) return false;
   return fields.every((field) => isFieldFilled(field, brief));

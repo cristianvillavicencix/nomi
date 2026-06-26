@@ -63,18 +63,16 @@ describe("getAccessibleClientsHubTabs", () => {
 
 describe("resolveDefaultClientsHubTab", () => {
   it("returns the requested tab when it is accessible", () => {
-    expect(
-      resolveDefaultClientsHubTab(administrator, "people"),
-    ).toBe("people");
+    expect(resolveDefaultClientsHubTab(administrator, "people")).toBe("people");
   });
 
   it("falls back to the first accessible tab when the request is denied", () => {
-    expect(
-      resolveDefaultClientsHubTab(contactsOnly, "companies"),
-    ).toBe("people");
-    expect(
-      resolveDefaultClientsHubTab(companiesOnly, "people"),
-    ).toBe("companies");
+    expect(resolveDefaultClientsHubTab(contactsOnly, "companies")).toBe(
+      "people",
+    );
+    expect(resolveDefaultClientsHubTab(companiesOnly, "people")).toBe(
+      "companies",
+    );
   });
 
   it("defaults to the first accessible tab when no tab is requested", () => {

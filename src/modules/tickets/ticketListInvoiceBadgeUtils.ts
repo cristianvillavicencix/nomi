@@ -93,7 +93,11 @@ export const getTicketInvoiceBadges = (
   if (summary.pending > 0) {
     badges.push({
       key: "pending",
-      label: countLabel(summary.pending, "Awaiting payment", "awaiting payment"),
+      label: countLabel(
+        summary.pending,
+        "Awaiting payment",
+        "awaiting payment",
+      ),
       className:
         "rounded-none border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-100",
     });
@@ -112,8 +116,7 @@ export const getTicketInvoiceBadges = (
     badges.push({
       key: "draft",
       label: countLabel(summary.draft, "Draft", "drafts"),
-      className:
-        "rounded-none border-border bg-muted text-muted-foreground",
+      className: "rounded-none border-border bg-muted text-muted-foreground",
     });
   }
 
@@ -164,5 +167,7 @@ export const ticketHasUnpaidInvoice = (
     const summary = summarizeTicketInvoices(invoices);
     return summary.pending > 0 || summary.overdue > 0;
   }
-  return Boolean(ticket.invoice_id) && ticket.delivery_status === "invoice_sent";
+  return (
+    Boolean(ticket.invoice_id) && ticket.delivery_status === "invoice_sent"
+  );
 };

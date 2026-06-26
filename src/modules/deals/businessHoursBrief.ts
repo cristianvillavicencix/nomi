@@ -30,7 +30,9 @@ export type BusinessHourEntry = {
   close: string;
 };
 
-export const parseBusinessHoursBrief = (value: unknown): BusinessHourEntry[] => {
+export const parseBusinessHoursBrief = (
+  value: unknown,
+): BusinessHourEntry[] => {
   if (Array.isArray(value)) {
     return value.filter(
       (entry): entry is BusinessHourEntry =>

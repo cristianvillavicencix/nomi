@@ -4,9 +4,7 @@ import { getLbsProjectScopeMode } from "@/modules/deals/lbsProjectConstants";
 import { ProjectScopeChecklist } from "@/modules/deals/ProjectScopeChecklist";
 import { usesContractorBriefForm } from "@/modules/deals/contractorBriefSchema";
 import { ContractorBriefInternalSection } from "@/modules/deals/contractorBrief/ContractorBriefInternalSection";
-import {
-  getVisibleBriefSections,
-} from "@/modules/deals/websiteBriefSchema";
+import { getVisibleBriefSections } from "@/modules/deals/websiteBriefSchema";
 import { evaluateCondition } from "@/lib/forms-v2/conditionalLogic";
 import type { LbsDeal } from "@/modules/types";
 import {

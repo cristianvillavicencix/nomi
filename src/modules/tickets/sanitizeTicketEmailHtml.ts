@@ -60,7 +60,7 @@ const stripDuplicateAttachmentNodes = (
         ? node.href
         : node instanceof HTMLImageElement
           ? node.src
-          : node.getAttribute("src") ?? node.getAttribute("data") ?? "";
+          : (node.getAttribute("src") ?? node.getAttribute("data") ?? "");
 
     if (href) {
       const normalized = normalizeAttachmentUrl(href);
@@ -142,7 +142,15 @@ const runSanitize = (
   installEmailSanitizeHooks();
 
   const sanitized = DOMPurify.sanitize(html, {
-    ADD_ATTR: ["target", "style", "align", "valign", "width", "height", "bgcolor"],
+    ADD_ATTR: [
+      "target",
+      "style",
+      "align",
+      "valign",
+      "width",
+      "height",
+      "bgcolor",
+    ],
     FORBID_TAGS: ["form", "script", "iframe", "object", "embed"],
   });
 

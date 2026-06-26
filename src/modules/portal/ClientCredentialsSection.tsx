@@ -22,7 +22,10 @@ import {
 } from "@/modules/portal/portalCredentialsApi";
 import { SensitiveSessionDialog } from "@/modules/portal/SensitiveSessionDialog";
 import { usePortalSensitiveSession } from "@/modules/portal/usePortalSensitiveSession";
-import { formatPortalDate, type PortalCredential } from "@/modules/portal/portalTypes";
+import {
+  formatPortalDate,
+  type PortalCredential,
+} from "@/modules/portal/portalTypes";
 
 const maskPassword = () => "••••••••••";
 
@@ -88,7 +91,9 @@ const CredentialRows = ({
                     size="icon"
                     className="size-8"
                     disabled={busyId === entry.id}
-                    aria-label={isVisible ? copy.hidePassword : copy.viewPassword}
+                    aria-label={
+                      isVisible ? copy.hidePassword : copy.viewPassword
+                    }
                     onClick={() => onView(entry.id)}
                   >
                     {isVisible ? (
@@ -282,7 +287,9 @@ export const ClientCredentialsSection = ({
                   <TableHead>{copy.serviceColumn}</TableHead>
                   <TableHead>{copy.usernameColumn}</TableHead>
                   <TableHead>{copy.passwordColumn}</TableHead>
-                  <TableHead className="text-right">{copy.actionsColumn}</TableHead>
+                  <TableHead className="text-right">
+                    {copy.actionsColumn}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -178,7 +178,6 @@ const ProjectShowContent = () => {
               previousStage,
               organizationMemberId: identity.id,
             });
-
           } catch {
             notify("Stage updated, but automations could not run", {
               type: "warning",
@@ -194,55 +193,55 @@ const ProjectShowContent = () => {
   return (
     <ProjectBriefActionsProvider record={record}>
       <div className="relative space-y-2">
-      <ProjectDeliveredStamp record={record} />
-      {record.archived_at ? <ArchivedTitle /> : null}
+        <ProjectDeliveredStamp record={record} />
+        {record.archived_at ? <ArchivedTitle /> : null}
 
-      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <LbsDealHeaderOverview record={record} />
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <LbsDealHeaderOverview record={record} />
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
+            <ProjectNextMaintenanceBadge record={record} />
+            <LbsProjectDeliveryUrgency record={record} />
+            <ProjectDeliverButton record={record} />
+            <ProjectActionsMenu
+              record={record}
+              onOpenTasks={() => setTasksDialogOpen(true)}
+              onOpenPortal={() => setPortalDialogOpen(true)}
+            />
+          </div>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
-          <ProjectNextMaintenanceBadge record={record} />
-          <LbsProjectDeliveryUrgency record={record} />
-          <ProjectDeliverButton record={record} />
-          <ProjectActionsMenu
-            record={record}
-            onOpenTasks={() => setTasksDialogOpen(true)}
-            onOpenPortal={() => setPortalDialogOpen(true)}
-          />
-        </div>
-      </div>
 
-      <ProjectStageFlow
-        stages={displayStages}
-        currentStage={displayCurrentStage}
-        onStageChange={handleStageChange}
-        className="mb-1.5 rounded-b-none pb-2"
-      />
+        <ProjectStageFlow
+          stages={displayStages}
+          currentStage={displayCurrentStage}
+          onStageChange={handleStageChange}
+          className="mb-1.5 rounded-b-none pb-2"
+        />
 
-      <div className="flex flex-col lg:flex-row lg:items-stretch">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <ProjectWorkspaceTabs record={record} />
+        <div className="flex flex-col lg:flex-row lg:items-stretch">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ProjectWorkspaceTabs record={record} />
+          </div>
+          <div className="hidden lg:flex">
+            <ProjectTasksRail
+              record={record}
+              collapsed={tasksRailCollapsed}
+              onToggleCollapsed={handleToggleRail}
+            />
+          </div>
         </div>
-        <div className="hidden lg:flex">
-          <ProjectTasksRail
-            record={record}
-            collapsed={tasksRailCollapsed}
-            onToggleCollapsed={handleToggleRail}
-          />
-        </div>
-      </div>
 
-      <ProjectTasksDialog
-        record={record}
-        open={tasksDialogOpen}
-        onOpenChange={setTasksDialogOpen}
-      />
-      <ClientPortalDialog
-        record={record}
-        open={portalDialogOpen}
-        onOpenChange={setPortalDialogOpen}
-      />
+        <ProjectTasksDialog
+          record={record}
+          open={tasksDialogOpen}
+          onOpenChange={setTasksDialogOpen}
+        />
+        <ClientPortalDialog
+          record={record}
+          open={portalDialogOpen}
+          onOpenChange={setPortalDialogOpen}
+        />
       </div>
     </ProjectBriefActionsProvider>
   );

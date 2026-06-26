@@ -52,7 +52,10 @@ export type LbsProjectDisplayStageId =
 
 const displayStageById = Object.fromEntries(
   LBS_PROJECT_DISPLAY_STAGES.map((stage) => [stage.id, stage]),
-) as Record<LbsProjectDisplayStageId, (typeof LBS_PROJECT_DISPLAY_STAGES)[number]>;
+) as Record<
+  LbsProjectDisplayStageId,
+  (typeof LBS_PROJECT_DISPLAY_STAGES)[number]
+>;
 
 export const getProjectDisplayPipelineStages = (): DealPipelineStage[] =>
   LBS_PROJECT_DISPLAY_STAGES.map((stage, index) => ({

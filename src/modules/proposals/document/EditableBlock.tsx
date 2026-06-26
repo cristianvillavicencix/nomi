@@ -30,7 +30,9 @@ export const EditableBlock = ({
       <StaticTag
         className={cn(
           "whitespace-pre-wrap leading-relaxed",
-          Tag === "h2" ? "text-2xl font-semibold tracking-tight" : "text-sm text-muted-foreground",
+          Tag === "h2"
+            ? "text-2xl font-semibold tracking-tight"
+            : "text-sm text-muted-foreground",
           className,
         )}
       >

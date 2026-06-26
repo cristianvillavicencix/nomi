@@ -118,7 +118,8 @@ export const buildTicketDeliveredInternalNoteBody = (params: {
   fileCount: number;
   recipientEmail: string;
 }) => {
-  const fileLabel = params.fileCount === 1 ? "1 file" : `${params.fileCount} files`;
+  const fileLabel =
+    params.fileCount === 1 ? "1 file" : `${params.fileCount} files`;
 
   return [
     "**Supplement files delivered**",
@@ -205,12 +206,13 @@ export const buildTicketPaymentEmailBodies = (params: {
 export async function sendTicketInvoiceSms(
   supabase: SupabaseClient,
   params: {
-  orgId: number;
-  memberId: number;
-  phoneRaw: string;
-  body: string;
-  contactId?: number | null;
-}) {
+    orgId: number;
+    memberId: number;
+    phoneRaw: string;
+    body: string;
+    contactId?: number | null;
+  },
+) {
   const normalizedPhone = normalizeUsPhoneToE164(params.phoneRaw);
   if (!normalizedPhone) {
     throw new Error("Enter a valid US mobile number for text delivery");
@@ -225,7 +227,11 @@ export async function sendTicketInvoiceSms(
   const authToken = settings.twilio_auth_token?.trim();
   const fromNumber = settings.twilio_phone_number?.trim();
   if (!accountSid || !authToken || !fromNumber) {
-    return { sent: false, skipped: true, reason: "sms_not_configured" as const };
+    return {
+      sent: false,
+      skipped: true,
+      reason: "sms_not_configured" as const,
+    };
   }
 
   const body = sanitizeMessageBody(params.body.trim());
@@ -280,7 +286,7 @@ export async function sendTicketInvoiceSms(
   }
 
   return { sent: true, skipped: false, reason: null };
-};
+}
 
 export const ensureShareLink = async (
   supabase: SupabaseClient,
@@ -318,7 +324,9 @@ export const ensureShareLink = async (
       .maybeSingle();
     return Boolean(hit?.id);
   });
-  const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(
+    Date.now() + 90 * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   const { error } = await supabase.from("public_client_invoice_tokens").insert({
     org_id: orgId,
@@ -466,10 +474,8 @@ async function buildPricingForTicket(
   if (pricingOverride) {
     return calculatePricingFromTicketLegacy(
       {
-        itemCount:
-          pricingOverride.itemCount ?? ticket.billing_item_count ?? 0,
-        hasRoof:
-          pricingOverride.hasRoof ?? Boolean(ticket.billing_has_roof),
+        itemCount: pricingOverride.itemCount ?? ticket.billing_item_count ?? 0,
+        hasRoof: pricingOverride.hasRoof ?? Boolean(ticket.billing_has_roof),
         hasSiding:
           pricingOverride.hasSiding ?? Boolean(ticket.billing_has_siding),
         hasEsx: pricingOverride.hasEsx ?? Boolean(ticket.billing_has_esx),
@@ -715,8 +721,9 @@ export async function prepareTicketInvoiceDraft(
         invoiceWithNotes.notes,
       );
 
-      const baseUrl = (params.baseUrl?.trim() || resolvePublicAppBaseUrl())
-        .replace(/\/$/, "");
+      const baseUrl = (
+        params.baseUrl?.trim() || resolvePublicAppBaseUrl()
+      ).replace(/\/$/, "");
       const { url } = await ensureShareLink(
         supabase,
         Number(existing.id),
@@ -822,7 +829,11 @@ export async function cancelTicketInvoiceDraft(
       ? combinedLinks.map((link) => Number(link.ticket_id))
       : [ticket.id];
 
-  await deleteStandaloneClientInvoice(supabase, Number(invoice.id), params.orgId);
+  await deleteStandaloneClientInvoice(
+    supabase,
+    Number(invoice.id),
+    params.orgId,
+  );
 
   const now = new Date().toISOString();
   for (const ticketId of ticketIdsToClear) {

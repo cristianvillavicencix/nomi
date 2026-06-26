@@ -1,8 +1,6 @@
 import { ServiceCatalogSettings } from "@/modules/settings/ServiceCatalogSettings";
 import { ContractTermsSettings } from "@/modules/settings/ContractTermsSettings";
-import {
-  CLIENT_BILLING_MODES,
-} from "@/modules/proposals/proposalCommercialConstants";
+import { CLIENT_BILLING_MODES } from "@/modules/proposals/proposalCommercialConstants";
 import { isClientBillingSkipped } from "@/modules/billing/clientBillingProvider";
 import {
   Card,

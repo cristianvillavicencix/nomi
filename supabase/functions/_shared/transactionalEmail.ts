@@ -75,7 +75,9 @@ const textToHtml = (textBody: string) => {
   const normalized = textBody.trim().replace(/\n{3,}/g, "\n\n");
   if (!normalized) return "";
 
-  const paragraphs = normalized.split(/\n{2,}/).filter((paragraph) => paragraph.trim());
+  const paragraphs = normalized
+    .split(/\n{2,}/)
+    .filter((paragraph) => paragraph.trim());
 
   return paragraphs
     .map((paragraph, index) => {
@@ -116,9 +118,7 @@ const formatEmailSendFailure = (message: string) => {
   }
 
   if (lower.includes("twilio is not configured")) {
-    return (
-      "Twilio is not configured for email. Add your Account SID and Auth Token under Settings → Communications (same as SMS)."
-    );
+    return "Twilio is not configured for email. Add your Account SID and Auth Token under Settings → Communications (same as SMS).";
   }
 
   return message;
@@ -132,10 +132,7 @@ const resolveOrgTwilioCredentials = async (orgId: number) => {
   return { accountSid, authToken };
 };
 
-const resolveFromAddress = async (
-  orgId: number,
-  orgName?: string | null,
-) => {
+const resolveFromAddress = async (orgId: number, orgName?: string | null) => {
   const override = getTwilioEmailFromOverride();
   if (override) return parseEmailAddress(override);
 
@@ -145,7 +142,8 @@ const resolveFromAddress = async (
     .eq("id", orgId)
     .maybeSingle();
 
-  const name = orgName?.trim() || org?.name?.trim() || DEFAULT_ORGANIZATION_NAME;
+  const name =
+    orgName?.trim() || org?.name?.trim() || DEFAULT_ORGANIZATION_NAME;
   const address = org?.email?.trim() || "billing@lbs.bz";
   return { email: address, name };
 };
@@ -182,8 +180,8 @@ export async function getOrgTransactionalEmailStatus(orgId: number) {
   };
 }
 
-export const getTransactionalEmailProvider = (): TransactionalEmailProvider | null =>
-  "twilio";
+export const getTransactionalEmailProvider =
+  (): TransactionalEmailProvider | null => "twilio";
 
 export async function getTransactionalFromEmail(orgId: number) {
   const status = await getOrgTransactionalEmailStatus(orgId);

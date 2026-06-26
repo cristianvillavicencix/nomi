@@ -45,9 +45,13 @@ export const PROPOSAL_DECK_NARRATIVE_IDS = [
 /** Legacy section kept for older proposals; not in default deck. */
 export const PROPOSAL_GUIDELINES_SECTION_ID = "guidelines";
 
-export type ProposalDeckNarrativeId = (typeof PROPOSAL_DECK_NARRATIVE_IDS)[number];
+export type ProposalDeckNarrativeId =
+  (typeof PROPOSAL_DECK_NARRATIVE_IDS)[number];
 
-export const PROPOSAL_TIMELINE_SECTION_IDS = new Set(["timeline", "project-timeline"]);
+export const PROPOSAL_TIMELINE_SECTION_IDS = new Set([
+  "timeline",
+  "project-timeline",
+]);
 
 const NARRATIVE_SORT_INDEX: Record<string, number> = Object.fromEntries(
   PROPOSAL_DECK_NARRATIVE_IDS.map((id, index) => [id, index]),
@@ -77,7 +81,8 @@ export const sortProposalNarrativeSections = (
   sections: ProposalCustomSection[],
 ): ProposalCustomSection[] =>
   [...sections].sort(
-    (a, b) => narrativeSortKey(a) - narrativeSortKey(b) || a.id.localeCompare(b.id),
+    (a, b) =>
+      narrativeSortKey(a) - narrativeSortKey(b) || a.id.localeCompare(b.id),
   );
 
 export const partitionProposalDeckSections = (
@@ -90,7 +95,9 @@ export const partitionProposalDeckSections = (
     sections.find((section) => PROPOSAL_TIMELINE_SECTION_IDS.has(section.id)) ??
     null;
   const narrative = sortProposalNarrativeSections(
-    sections.filter((section) => !PROPOSAL_TIMELINE_SECTION_IDS.has(section.id)),
+    sections.filter(
+      (section) => !PROPOSAL_TIMELINE_SECTION_IDS.has(section.id),
+    ),
   );
   return { narrative, timeline };
 };

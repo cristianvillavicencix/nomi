@@ -2,9 +2,7 @@
  * Vercel cron (every 2h) → Supabase process_scheduled_payments.
  * Env: CRON_SECRET, VITE_SUPABASE_URL or SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
-export default async function handler(
-  request: Request,
-): Promise<Response> {
+export default async function handler(request: Request): Promise<Response> {
   const cronSecret = process.env.CRON_SECRET?.trim();
   const authHeader = request.headers.get("authorization")?.trim();
 

@@ -10,9 +10,7 @@ import { TicketMergeLauncher } from "@/modules/tickets/TicketMergeLauncher";
 import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
 import { resolveTicketRequesterName } from "@/modules/tickets/ticketRequester";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
-import {
-  TicketListStatusControl,
-} from "@/modules/tickets/TicketListCardControls";
+import { TicketListStatusControl } from "@/modules/tickets/TicketListCardControls";
 import {
   isElevatedTicketPriority,
   ticketPriorityClassName,
@@ -22,7 +20,10 @@ import {
   getTicketWaitingDurationLabel,
   ticketWaitingSlaClassName,
 } from "@/modules/tickets/ticketSlaUtils";
-import { ticketStatusLabel, ticketStatusVariant } from "@/modules/tickets/ticketInboxConfig";
+import {
+  ticketStatusLabel,
+  ticketStatusVariant,
+} from "@/modules/tickets/ticketInboxConfig";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
 

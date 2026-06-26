@@ -23,7 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import { formatOrganizationMemberName } from "@/modules/billing/billingUtils";
 import { prepareCalendarEventWriteData } from "@/modules/calendar/calendarEventWriteData";
 import { CalendarTimeInput } from "@/modules/calendar/CalendarTimeInput";

@@ -23,8 +23,9 @@ export const writeNewInvoiceCycleActive = (
   }
 };
 
-export const invoiceTabKey = (invoiceId: string | number): TicketInvoiceTabKey =>
-  `invoice-${String(invoiceId)}`;
+export const invoiceTabKey = (
+  invoiceId: string | number,
+): TicketInvoiceTabKey => `invoice-${String(invoiceId)}`;
 
 export const getTicketInvoiceHistoryIds = (
   ticket: Ticket,

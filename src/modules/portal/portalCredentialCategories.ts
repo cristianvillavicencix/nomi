@@ -125,12 +125,7 @@ export const resolvePortalCredentialCategory = (
     return serviceKind as PortalCredentialCategory;
   }
 
-  const haystack = [
-    entry.label,
-    entry.url,
-    entry.secret_label,
-    entry.username,
-  ]
+  const haystack = [entry.label, entry.url, entry.secret_label, entry.username]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();

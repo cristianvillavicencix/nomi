@@ -116,7 +116,10 @@ export const ServiceCatalogItemDialog = ({
               id="catalog-name"
               value={draft.name}
               onChange={(event) =>
-                setDraft((current) => ({ ...current, name: event.target.value }))
+                setDraft((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
               }
             />
           </div>
@@ -255,7 +258,8 @@ export const ServiceCatalogItemDialog = ({
                     setDraft((current) => ({
                       ...current,
                       ticket_billing_enabled: checked,
-                      ticket_pricing_mode: current.ticket_pricing_mode ?? "flat",
+                      ticket_pricing_mode:
+                        current.ticket_pricing_mode ?? "flat",
                       ticket_billing_slug:
                         current.ticket_billing_slug ||
                         slugifyTicketBillingSlug(current.name),
@@ -299,7 +303,9 @@ export const ServiceCatalogItemDialog = ({
                           ticket_billing_slug: event.target.value,
                         }))
                       }
-                      placeholder={slugifyTicketBillingSlug(draft.name || "product")}
+                      placeholder={slugifyTicketBillingSlug(
+                        draft.name || "product",
+                      )}
                     />
                   </div>
                 </div>
@@ -314,7 +320,10 @@ export const ServiceCatalogItemDialog = ({
                 <Switch
                   checked={Boolean(draft.booking_enabled)}
                   onCheckedChange={(checked) =>
-                    setDraft((current) => ({ ...current, booking_enabled: checked }))
+                    setDraft((current) => ({
+                      ...current,
+                      booking_enabled: checked,
+                    }))
                   }
                 />
               </div>

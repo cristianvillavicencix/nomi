@@ -43,9 +43,9 @@ export const parseProposalOnlinePaymentSetup = ({
           row.paymentMode === "full"
             ? 100
             : Math.min(
-              99,
-              Math.max(1, Number(row.depositPercent) || depositPercent),
-            ),
+                99,
+                Math.max(1, Number(row.depositPercent) || depositPercent),
+              ),
         saveCard: Boolean(row.saveCard),
         remainderSchedule: parseInvoiceRemainderSchedule(
           row.remainderSchedule,
@@ -55,7 +55,9 @@ export const parseProposalOnlinePaymentSetup = ({
     }
   }
 
-  const legacy = paymentScheduleConfig as LegacyPaymentScheduleConfig | undefined;
+  const legacy = paymentScheduleConfig as
+    | LegacyPaymentScheduleConfig
+    | undefined;
   if (depositPercent >= 100) {
     return {
       paymentMode: "full",
@@ -68,8 +70,9 @@ export const parseProposalOnlinePaymentSetup = ({
   const frequency = legacy?.installment_frequency ?? "weekly";
   const count = legacy?.installment_count ?? 4;
   const recurringFrequency =
-    frequency === "weekly" || frequency === "biweekly" ||
-      frequency === "monthly"
+    frequency === "weekly" ||
+    frequency === "biweekly" ||
+    frequency === "monthly"
       ? frequency
       : "monthly";
 

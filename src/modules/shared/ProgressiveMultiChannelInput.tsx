@@ -185,7 +185,11 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
   useEffect(() => {
     if (fields.length === 0) {
       append(
-        createEmptyRow(valueKey, defaultType(typeChoices), valueKey === "value") as never,
+        createEmptyRow(
+          valueKey,
+          defaultType(typeChoices),
+          valueKey === "value",
+        ) as never,
       );
     }
   }, [append, fields.length, typeChoices, valueKey]);
@@ -251,7 +255,9 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
                   label={false}
                   grouped
                   onFirstEmailBlur={index === 0 ? onFirstEmailBlur : undefined}
-                  onFirstEmailPaste={index === 0 ? onFirstEmailPaste : undefined}
+                  onFirstEmailPaste={
+                    index === 0 ? onFirstEmailPaste : undefined
+                  }
                 />
                 <ChannelTypeSelect source={typeSource} choices={typeChoices} />
               </div>

@@ -3,7 +3,11 @@ import type { ProposalDocumentContent } from "@/modules/proposals/document/propo
 
 type CommercialFields = Pick<
   ProposalDocumentContent,
-  "investment_title" | "investment_notes" | "payment_notes" | "warranty_title" | "warranty_body"
+  | "investment_title"
+  | "investment_notes"
+  | "payment_notes"
+  | "warranty_title"
+  | "warranty_body"
 > & {
   locales?: {
     es?: Pick<

@@ -83,7 +83,9 @@ const FileAssetRow = ({ asset }: { asset: MessageAsset }) => {
             event.preventDefault();
             event.stopPropagation();
             setIsDownloading(true);
-            void downloadTicketAsset(asset).finally(() => setIsDownloading(false));
+            void downloadTicketAsset(asset).finally(() =>
+              setIsDownloading(false),
+            );
           }}
         >
           <Download className="size-3.5" />
@@ -158,10 +160,7 @@ export const TicketMessageAttachments = ({
   return (
     <section
       aria-label="Message attachments"
-      className={cn(
-        "mt-4 space-y-4 border-t border-border/70 pt-4",
-        className,
-      )}
+      className={cn("mt-4 space-y-4 border-t border-border/70 pt-4", className)}
     >
       {showSectionDownloadAll && downloadableCount > 1 ? (
         <div className="flex justify-end">
@@ -199,7 +198,9 @@ export const TicketMessageAttachments = ({
           <PhotoGrid
             assets={photos}
             onDownload={
-              photos.some(isDownloadableFileAsset) ? handlePhotoDownload : undefined
+              photos.some(isDownloadableFileAsset)
+                ? handlePhotoDownload
+                : undefined
             }
           />
         </AssetSection>

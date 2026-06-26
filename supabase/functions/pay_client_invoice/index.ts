@@ -36,7 +36,9 @@ Deno.serve(
     try {
       const body = (await req.json()) as PayBody;
       const paymentMethodId = String(body.payment_method_id ?? "").trim();
-      const completedPaymentIntentId = String(body.payment_intent_id ?? "").trim();
+      const completedPaymentIntentId = String(
+        body.payment_intent_id ?? "",
+      ).trim();
 
       const resolved = await resolvePublicClientInvoicePayment(
         supabaseAdmin,
@@ -64,7 +66,12 @@ Deno.serve(
                   already_paid: invoice.status === "paid",
                   amount_paid: invoice.amount_paid,
                 }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+                {
+                  headers: {
+                    ...corsHeaders,
+                    "Content-Type": "application/json",
+                  },
+                },
               );
             }
           }
@@ -76,7 +83,8 @@ Deno.serve(
         resolved.data;
 
       const mock = isStripeMockMode();
-      let paymentIntentId: string | null = invoice.stripe_payment_intent_id ?? null;
+      let paymentIntentId: string | null =
+        invoice.stripe_payment_intent_id ?? null;
       let stripeCustomerId: string | null = invoice.stripe_customer_id ?? null;
       let savedPaymentMethodId: string | null =
         invoice.stripe_payment_method_id ?? null;
@@ -110,8 +118,8 @@ Deno.serve(
 
           const email =
             (await resolveContactEmail(supabaseAdmin, invoice.contact_id)) ??
-              invoice.recipient_email?.trim() ??
-              null;
+            invoice.recipient_email?.trim() ??
+            null;
 
           if (!email) {
             return createErrorResponse(
@@ -122,10 +130,10 @@ Deno.serve(
 
           const { data: contact } = invoice.contact_id
             ? await supabaseAdmin
-              .from("contacts")
-              .select("first_name, last_name")
-              .eq("id", invoice.contact_id)
-              .maybeSingle()
+                .from("contacts")
+                .select("first_name, last_name")
+                .eq("id", invoice.contact_id)
+                .maybeSingle()
             : { data: null };
 
           const contactName = [contact?.first_name, contact?.last_name]
@@ -133,7 +141,8 @@ Deno.serve(
             .join(" ");
 
           const shouldSaveCard = Boolean(
-            invoice.save_card_for_future_charges || invoice.auto_charge_remainder,
+            invoice.save_card_for_future_charges ||
+              invoice.auto_charge_remainder,
           );
 
           const customer = await resolveOrCreateInvoiceStripeCustomer(stripe, {
@@ -180,7 +189,9 @@ Deno.serve(
                 client_secret: intent.client_secret,
                 payment_intent_id: intent.id,
               }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+              {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
             );
           }
 
@@ -194,7 +205,8 @@ Deno.serve(
       const result = await applyClientInvoicePaymentUpdate(supabaseAdmin, {
         invoice,
         chargeAmount,
-        stripePaymentIntentId: paymentIntentId ?? `mock-${invoice.id}-${Date.now()}`,
+        stripePaymentIntentId:
+          paymentIntentId ?? `mock-${invoice.id}-${Date.now()}`,
         newlyPaidInstallmentNumbers: paidInstallmentNumbers,
         stripeCustomerId,
         stripePaymentMethodId: savedPaymentMethodId,
@@ -204,8 +216,9 @@ Deno.serve(
       });
 
       const chargedAmount = result.charged_amount ?? chargeAmount;
-      let receipt: Awaited<ReturnType<typeof notifyInvoicePaymentReceipt>> | null =
-        null;
+      let receipt: Awaited<
+        ReturnType<typeof notifyInvoicePaymentReceipt>
+      > | null = null;
       if (paymentIntentId && !mock) {
         receipt = await notifyInvoicePaymentReceipt(supabaseAdmin, {
           orgId: invoice.org_id,
@@ -227,8 +240,10 @@ Deno.serve(
           paid_in_full: result.paid_in_full,
           billing_mode: mock ? "mock" : "stripe",
           receipt_sent: receipt?.sent ?? false,
-          receipt_skipped_reason: receipt?.sent ? null : receipt?.reason ?? null,
-          receipt_error: receipt?.sent ? null : receipt?.error ?? null,
+          receipt_skipped_reason: receipt?.sent
+            ? null
+            : (receipt?.reason ?? null),
+          receipt_error: receipt?.sent ? null : (receipt?.error ?? null),
           auto_charge_scheduled:
             Boolean(invoice.auto_charge_remainder) &&
             Boolean(invoice.save_card_for_future_charges) &&

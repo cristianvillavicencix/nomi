@@ -24,7 +24,8 @@ export async function sendTwilioSms(params: {
     Body: params.body.trim() || " ",
   });
 
-  const statusCallback = params.statusCallback ?? getTwilioSmsStatusCallbackUrl();
+  const statusCallback =
+    params.statusCallback ?? getTwilioSmsStatusCallbackUrl();
   if (statusCallback) {
     form.append("StatusCallback", statusCallback);
   }

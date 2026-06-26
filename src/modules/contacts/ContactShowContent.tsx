@@ -90,9 +90,7 @@ export const ContactShowContent = ({
   const activityCount = counts.notes + counts.tasks;
 
   const centerTabs = (
-    <Card
-      className={cn("gap-0 py-0", embedded && "border-0 shadow-none")}
-    >
+    <Card className={cn("gap-0 py-0", embedded && "border-0 shadow-none")}>
       <CardContent className="px-4 py-4">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
           <TabsList className="mb-4 inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
@@ -108,7 +106,11 @@ export const ContactShowContent = ({
           </TabsList>
 
           <TabsContent value="projects" className="mt-0">
-            <ClientTabSectionCard title="Projects" count={counts.projects} flush>
+            <ClientTabSectionCard
+              title="Projects"
+              count={counts.projects}
+              flush
+            >
               <ClientProjectsTab contactId={record.id} />
             </ClientTabSectionCard>
           </TabsContent>
@@ -178,7 +180,10 @@ export const ContactShowContent = ({
 
   return (
     <div className="mt-2 pb-4">
-      <ContactShowActions record={record} onContactUpdated={() => void refetch()} />
+      <ContactShowActions
+        record={record}
+        onContactUpdated={() => void refetch()}
+      />
 
       {isMobile ? (
         <div className="space-y-4">

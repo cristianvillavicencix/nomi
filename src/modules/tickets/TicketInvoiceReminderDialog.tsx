@@ -195,9 +195,12 @@ export const TicketInvoiceReminderDialog = ({
       }),
     onSuccess: (result) => {
       if (result.sms_skipped && sendSms) {
-        notify("Reminder email sent · text message was not sent (SMS not configured)", {
-          type: "warning",
-        });
+        notify(
+          "Reminder email sent · text message was not sent (SMS not configured)",
+          {
+            type: "warning",
+          },
+        );
       } else if (result.sms_sent) {
         notify("Payment reminder sent by email and text", { type: "success" });
       } else {
@@ -280,7 +283,10 @@ export const TicketInvoiceReminderDialog = ({
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="ticket-reminder-send-sms" className="cursor-pointer">
+                  <Label
+                    htmlFor="ticket-reminder-send-sms"
+                    className="cursor-pointer"
+                  >
                     Also send text message
                   </Label>
                   <Switch

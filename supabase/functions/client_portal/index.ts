@@ -130,9 +130,7 @@ const signResourceUrls = async (file: ResourceFile) => {
 
 const sanitizePortalResource = async (row: Record<string, unknown>) => {
   const file =
-    row.file && typeof row.file === "object"
-      ? (row.file as ResourceFile)
-      : {};
+    row.file && typeof row.file === "object" ? (row.file as ResourceFile) : {};
   const signed = await signResourceUrls(file);
   return {
     id: row.id,
@@ -250,7 +248,10 @@ Deno.serve(
           .maybeSingle();
 
         if (!access?.deal_id) {
-          return createErrorResponse(403, "Project not shared with this client");
+          return createErrorResponse(
+            403,
+            "Project not shared with this client",
+          );
         }
 
         const { data: deal, error: dealError } = await supabaseAdmin

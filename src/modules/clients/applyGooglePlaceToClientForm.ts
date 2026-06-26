@@ -6,9 +6,12 @@ const streetFromFormattedAddress = (
   formattedAddress: string,
   details: GooglePlaceDetails,
 ) => {
-  const firstLine = formattedAddress.split("\n")[0]?.trim() ?? formattedAddress.trim();
+  const firstLine =
+    formattedAddress.split("\n")[0]?.trim() ?? formattedAddress.trim();
   if (!details.city?.trim()) return firstLine;
-  const cityIndex = firstLine.toLowerCase().indexOf(details.city.trim().toLowerCase());
+  const cityIndex = firstLine
+    .toLowerCase()
+    .indexOf(details.city.trim().toLowerCase());
   if (cityIndex > 0) {
     return firstLine.slice(0, cityIndex).replace(/,\s*$/, "").trim();
   }

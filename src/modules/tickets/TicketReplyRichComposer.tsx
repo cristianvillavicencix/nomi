@@ -1,7 +1,15 @@
-import { useLayoutEffect, useRef, type ClipboardEvent, type RefObject } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  type ClipboardEvent,
+  type RefObject,
+} from "react";
 import { useAutoGrowTextarea } from "@/hooks/use-auto-grow-textarea";
 import { cn } from "@/lib/utils";
-import { sanitizeComposerHtml, hasReplyContentHtml } from "@/modules/tickets/ticketReplyRichText";
+import {
+  sanitizeComposerHtml,
+  hasReplyContentHtml,
+} from "@/modules/tickets/ticketReplyRichText";
 
 type TicketReplyRichComposerProps = {
   editorRef: RefObject<HTMLDivElement | null>;
@@ -33,9 +41,8 @@ export const TicketReplyRichComposer = ({
   const setRef = (node: HTMLDivElement | null) => {
     localRef.current = node;
     if (editorRef) {
-      (
-        editorRef as React.MutableRefObject<HTMLDivElement | null>
-      ).current = node;
+      (editorRef as React.MutableRefObject<HTMLDivElement | null>).current =
+        node;
     }
   };
 

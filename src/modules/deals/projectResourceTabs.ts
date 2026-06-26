@@ -127,10 +127,7 @@ export const writePendingServiceSlugs = (
   slugs: string[],
 ) => {
   try {
-    localStorage.setItem(
-      pendingTabsStorageKey(dealId),
-      JSON.stringify(slugs),
-    );
+    localStorage.setItem(pendingTabsStorageKey(dealId), JSON.stringify(slugs));
   } catch {
     // ignore quota errors
   }

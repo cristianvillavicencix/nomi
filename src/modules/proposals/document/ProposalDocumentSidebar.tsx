@@ -99,9 +99,7 @@ export const ProposalDocumentSidebar = ({
       </div>
 
       <div className="shrink-0 space-y-3 border-t border-border bg-background px-4 py-3">
-        {languageToggle ? (
-          <div className="w-full">{languageToggle}</div>
-        ) : null}
+        {languageToggle ? <div className="w-full">{languageToggle}</div> : null}
         {onDownloadPdf ? (
           <Button
             type="button"

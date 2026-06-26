@@ -12,7 +12,9 @@ export const CompanyNameDuplicateAlert = ({
   onUseExisting,
 }: CompanyNameDuplicateAlertProps) => (
   <p className="text-sm">
-    <span className="font-medium text-destructive">Company already exists.</span>
+    <span className="font-medium text-destructive">
+      Company already exists.
+    </span>
     {onUseExisting ? (
       <>
         {" "}

@@ -46,7 +46,10 @@ export async function optimizeImageForUpload(file: File): Promise<File> {
 
   try {
     const img = await loadImage(file);
-    const { width, height } = scaleDimensions(img.naturalWidth, img.naturalHeight);
+    const { width, height } = scaleDimensions(
+      img.naturalWidth,
+      img.naturalHeight,
+    );
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;

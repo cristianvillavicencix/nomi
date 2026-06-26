@@ -33,7 +33,10 @@ import {
 } from "@/components/ui/dialog";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { getContactEmail, getContactFullName } from "@/modules/clients/clientShowUtils";
+import {
+  getContactEmail,
+  getContactFullName,
+} from "@/modules/clients/clientShowUtils";
 import {
   buildContactCreateDefaultsFromTicket,
   contactMatchesId,
@@ -140,8 +143,7 @@ export const EditTicketDialog = ({
     const resolved = resolveRequesterFromContactAndCompany(contact, company);
     const requesterEmail =
       values.requester_email.trim() || resolved.email || null;
-    const requesterName =
-      values.requester_name.trim() || resolved.name || null;
+    const requesterName = values.requester_name.trim() || resolved.name || null;
 
     await update(
       "tickets",
@@ -205,62 +207,62 @@ export const EditTicketDialog = ({
 
   return (
     <>
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className={cn(
-          "flex max-h-[min(92vh,44rem)] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0",
-          "sm:max-w-2xl",
-          isMobile &&
-            "top-auto bottom-0 left-1/2 max-h-[92vh] translate-x-[-50%] translate-y-0 rounded-b-none rounded-t-2xl",
-        )}
-      >
-        <Form
-          id={EDIT_TICKET_FORM_ID}
-          key={ticket.id}
-          className="flex min-h-0 flex-1 flex-col"
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
+      <Dialog open onOpenChange={onOpenChange}>
+        <DialogContent
+          showCloseButton={false}
+          className={cn(
+            "flex max-h-[min(92vh,44rem)] w-full max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0",
+            "sm:max-w-2xl",
+            isMobile &&
+              "top-auto bottom-0 left-1/2 max-h-[92vh] translate-x-[-50%] translate-y-0 rounded-b-none rounded-t-2xl",
+          )}
         >
-          <FormGuardProvider enabled={false}>
-            <EditTicketDialogBody
-              ticket={ticket}
-              isMobile={isMobile}
-              isSaving={isSaving}
-              onOpenChange={onOpenChange}
-            />
-          </FormGuardProvider>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <Form
+            id={EDIT_TICKET_FORM_ID}
+            key={ticket.id}
+            className="flex min-h-0 flex-1 flex-col"
+            defaultValues={defaultValues}
+            onSubmit={handleSubmit}
+          >
+            <FormGuardProvider enabled={false}>
+              <EditTicketDialogBody
+                ticket={ticket}
+                isMobile={isMobile}
+                isSaving={isSaving}
+                onOpenChange={onOpenChange}
+              />
+            </FormGuardProvider>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
-    <TicketStatusChangeDialog
-      request={statusChangeRequest}
-      onClose={() => {
-        setStatusChangeRequest(null);
-        pendingFormSaveRef.current = null;
-      }}
-      onSuccess={() => {
-        void (async () => {
-          const pending = pendingFormSaveRef.current;
+      <TicketStatusChangeDialog
+        request={statusChangeRequest}
+        onClose={() => {
+          setStatusChangeRequest(null);
           pendingFormSaveRef.current = null;
-          if (!pending) return;
-          setIsSaving(true);
-          try {
-            await saveTicketFields(pending);
-          } catch (error) {
-            notify(
-              error instanceof Error
-                ? error.message
-                : "Failed to update ticket",
-              { type: "error" },
-            );
-          } finally {
-            setIsSaving(false);
-          }
-        })();
-      }}
-    />
+        }}
+        onSuccess={() => {
+          void (async () => {
+            const pending = pendingFormSaveRef.current;
+            pendingFormSaveRef.current = null;
+            if (!pending) return;
+            setIsSaving(true);
+            try {
+              await saveTicketFields(pending);
+            } catch (error) {
+              notify(
+                error instanceof Error
+                  ? error.message
+                  : "Failed to update ticket",
+                { type: "error" },
+              );
+            } finally {
+              setIsSaving(false);
+            }
+          })();
+        }}
+      />
     </>
   );
 };
@@ -311,7 +313,8 @@ const EditTicketDialogBody = ({
   );
 
   const emailMatchedContacts = useMemo(
-    () => findContactsByExactEmail(emailSearchResults, normalizedRequesterEmail),
+    () =>
+      findContactsByExactEmail(emailSearchResults, normalizedRequesterEmail),
     [emailSearchResults, normalizedRequesterEmail],
   );
 
@@ -325,11 +328,16 @@ const EditTicketDialogBody = ({
     if (!autoMatchedContact || autoLinkedRef.current) return;
 
     if (autoMatchedContact.company_id != null) {
-      setValue("company_id", autoMatchedContact.company_id, { shouldDirty: false });
+      setValue("company_id", autoMatchedContact.company_id, {
+        shouldDirty: false,
+      });
     }
     setValue("contact_id", autoMatchedContact.id, { shouldDirty: false });
 
-    const resolved = resolveRequesterFromContactAndCompany(autoMatchedContact, null);
+    const resolved = resolveRequesterFromContactAndCompany(
+      autoMatchedContact,
+      null,
+    );
     if (resolved.email) {
       setValue("requester_email", resolved.email, { shouldDirty: false });
     }
@@ -440,7 +448,11 @@ const EditTicketDialogBody = ({
     Boolean(requesterEmail?.trim() || requesterName?.trim());
 
   const contactCreateDefaults = useMemo(
-    () => buildContactCreateDefaultsFromTicket(ticket, companyId ?? ticket.company_id),
+    () =>
+      buildContactCreateDefaultsFromTicket(
+        ticket,
+        companyId ?? ticket.company_id,
+      ),
     [ticket, companyId],
   );
 
@@ -463,7 +475,8 @@ const EditTicketDialogBody = ({
         id: ticket.id,
         data: {
           contact_id: contact.id,
-          company_id: contact.company_id ?? companyId ?? ticket.company_id ?? null,
+          company_id:
+            contact.company_id ?? companyId ?? ticket.company_id ?? null,
           requester_email:
             resolved.email ||
             getContactEmail(contact) ||
@@ -541,7 +554,11 @@ const EditTicketDialogBody = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <ReferenceInput source="company_id" reference="companies">
-              <AutocompleteInput optionText="name" label="Company" helperText={false} />
+              <AutocompleteInput
+                optionText="name"
+                label="Company"
+                helperText={false}
+              />
             </ReferenceInput>
             <SelectInput
               source="contact_id"
@@ -560,7 +577,9 @@ const EditTicketDialogBody = ({
               ticket={ticket}
               company={company}
               contact={activeContact}
-              matchedFromEmail={!ticket.contact_id && Boolean(autoMatchedContact)}
+              matchedFromEmail={
+                !ticket.contact_id && Boolean(autoMatchedContact)
+              }
             />
           ) : null}
 

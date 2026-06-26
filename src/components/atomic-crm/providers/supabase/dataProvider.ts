@@ -83,7 +83,8 @@ const dataProviderWithCustomMethods = {
 
     if (resource === "contacts") {
       const data = params.data as Record<string, unknown>;
-      const { companyId, companyDraft } = resolveContactCompanyFromPayload(data);
+      const { companyId, companyDraft } =
+        resolveContactCompanyFromPayload(data);
 
       if (companyDraft || (companyId != null && companyId !== "")) {
         const memberId = await resolveOrganizationMemberId(
@@ -123,7 +124,8 @@ const dataProviderWithCustomMethods = {
         ...previous,
         ...(params.data as Record<string, unknown>),
       };
-      const { companyId, companyDraft } = resolveContactCompanyFromPayload(merged);
+      const { companyId, companyDraft } =
+        resolveContactCompanyFromPayload(merged);
       const data = prepareContactWriteData(merged);
       const previousCompanyId = previous.company_id as
         | Identifier
@@ -386,10 +388,7 @@ const taskUpdateContextById = new Map<
   }
 >();
 
-const dealBriefSyncContextById = new Map<
-  string,
-  { previousBrief: unknown }
->();
+const dealBriefSyncContextById = new Map<string, { previousBrief: unknown }>();
 
 const lifeCycleCallbacks: ResourceCallbacks[] = [
   {
@@ -489,7 +488,9 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
     resource: "contacts",
     beforeGetList: async (params) => applyContactListSearch(params),
     beforeCreate: async (params) => {
-      const data = prepareContactWriteData(params.data as Record<string, unknown>);
+      const data = prepareContactWriteData(
+        params.data as Record<string, unknown>,
+      );
       stripContactFormMetaFields(data);
       return { ...params, data };
     },

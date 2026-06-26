@@ -48,7 +48,9 @@ export const enrichBriefAnswers = (
   }
 
   if (Array.isArray(next.service_categories)) {
-    next.service_categories = (next.service_categories as unknown[]).filter(Boolean);
+    next.service_categories = (next.service_categories as unknown[]).filter(
+      Boolean,
+    );
   }
 
   if (Array.isArray(next.social_links)) {

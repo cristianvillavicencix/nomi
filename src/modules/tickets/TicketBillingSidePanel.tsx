@@ -26,18 +26,13 @@ import {
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { FinancialAccessDenied } from "@/lib/permissions/FinancialAccessDenied";
 import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
-import type {
-  ClientInvoice,
-  Ticket,
-  TicketDeliverable,
-} from "@/modules/types";
+import type { ClientInvoice, Ticket, TicketDeliverable } from "@/modules/types";
 import {
   allDeliverablesHaveBilling,
   calculateTicketPricing,
   deliverableBillingLineTotal,
   deliverableBillingShortLabel,
   formatSupplementMoney,
-
 } from "@/modules/tickets/supplementPricing";
 import {
   TicketDeliverableBillingDialog,
@@ -146,7 +141,9 @@ const TicketInvoicePaymentLink = ({
 
   return (
     <div className="space-y-2 rounded-none border px-3 py-2.5">
-      <p className="text-xs font-medium text-muted-foreground">Payment link sent</p>
+      <p className="text-xs font-medium text-muted-foreground">
+        Payment link sent
+      </p>
       {isPending ? (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
@@ -233,8 +230,9 @@ export const TicketBillingSidePanel = ({
   const [invoiceDialogMode, setInvoiceDialogMode] =
     useState<TicketInvoiceViewMode>("view");
   const [dialogInvoiceId, setDialogInvoiceId] = useState<number | null>(null);
-  const [selectedInvoiceTab, setSelectedInvoiceTab] =
-    useState<TicketInvoiceTabKey | "">("");
+  const [selectedInvoiceTab, setSelectedInvoiceTab] = useState<
+    TicketInvoiceTabKey | ""
+  >("");
   const [newCycleActive, setNewCycleActive] = useState(() =>
     readNewInvoiceCycleActive(ticket.id),
   );
@@ -499,9 +497,12 @@ export const TicketBillingSidePanel = ({
 
   const openInvoicePreview = async () => {
     if (!unbilledDeliverables.length) {
-      notify("Upload at least one new delivery file before sending an invoice", {
-        type: "warning",
-      });
+      notify(
+        "Upload at least one new delivery file before sending an invoice",
+        {
+          type: "warning",
+        },
+      );
       return;
     }
     if (!deliverablesReadyForInvoice) {
@@ -588,7 +589,9 @@ export const TicketBillingSidePanel = ({
     }
   };
 
-  const handleBillingConfirm = async (selection: DeliverableBillingSelection) => {
+  const handleBillingConfirm = async (
+    selection: DeliverableBillingSelection,
+  ) => {
     if (editingDeliverable) {
       try {
         await update(
@@ -608,9 +611,12 @@ export const TicketBillingSidePanel = ({
         handleBillingDialogOpenChange(false);
         refresh();
       } catch (error) {
-        notify(error instanceof Error ? error.message : "Could not save billing", {
-          type: "error",
-        });
+        notify(
+          error instanceof Error ? error.message : "Could not save billing",
+          {
+            type: "error",
+          },
+        );
       }
       return;
     }
@@ -934,10 +940,9 @@ export const TicketBillingSidePanel = ({
       return;
     }
 
-    notify(
-      "Send the current invoice before starting a new billing cycle",
-      { type: "warning" },
-    );
+    notify("Send the current invoice before starting a new billing cycle", {
+      type: "warning",
+    });
   };
 
   const renderInvoiceTabContent = (invoiceId: string) => {
@@ -951,7 +956,8 @@ export const TicketBillingSidePanel = ({
     const allFilesDelivered =
       invoiceFiles.length > 0 &&
       invoiceFiles.every((file) => Boolean(file.delivered_at));
-    const deliveryPending = isPaid && invoiceFiles.length > 0 && !allFilesDelivered;
+    const deliveryPending =
+      isPaid && invoiceFiles.length > 0 && !allFilesDelivered;
     const amountLabel = formatSupplementMoney(
       Number(tabInvoice?.amount) || pricing.total,
     );
@@ -981,7 +987,10 @@ export const TicketBillingSidePanel = ({
                     {tabInvoice.invoice_number || `Invoice #${tabInvoice.id}`}
                   </span>
                   {!isPaid && !isSent ? (
-                    <Badge variant="outline" className="rounded-none text-[10px]">
+                    <Badge
+                      variant="outline"
+                      className="rounded-none text-[10px]"
+                    >
                       Draft
                     </Badge>
                   ) : null}
@@ -1012,10 +1021,10 @@ export const TicketBillingSidePanel = ({
 
         {tabInvoice &&
         (tabInvoice.status === "sent" || tabInvoice.status === "paid") ? (
-        <TicketInvoicePaymentLink
-          invoiceId={Number(invoiceId)}
-          status={tabInvoice.status}
-        />
+          <TicketInvoicePaymentLink
+            invoiceId={Number(invoiceId)}
+            status={tabInvoice.status}
+          />
         ) : null}
 
         <div className="space-y-2">
@@ -1057,69 +1066,66 @@ export const TicketBillingSidePanel = ({
       }
       className="gap-3"
     >
-        {invoiceHistoryIds.length > 0 ? (
-          <TabsList className="h-auto w-full flex-wrap justify-start rounded-none p-1">
-            {invoiceHistoryIds.map((invoiceId) => {
-              const tabInvoice = invoicesById.get(invoiceId);
-              return (
-                <TabsTrigger
-                  key={invoiceId}
-                  value={invoiceTabKey(invoiceId)}
-                  className="rounded-none text-xs"
-                >
-                  {formatInvoiceTabLabel(tabInvoice, invoiceId)}
-                </TabsTrigger>
-              );
-            })}
-            {showNewInvoiceTab ? (
+      {invoiceHistoryIds.length > 0 ? (
+        <TabsList className="h-auto w-full flex-wrap justify-start rounded-none p-1">
+          {invoiceHistoryIds.map((invoiceId) => {
+            const tabInvoice = invoicesById.get(invoiceId);
+            return (
               <TabsTrigger
-                value="new"
+                key={invoiceId}
+                value={invoiceTabKey(invoiceId)}
                 className="rounded-none text-xs"
               >
-                <span className="inline-flex items-center gap-1">
-                  New
-                  {canDismissNewTab ? (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      aria-label="Cancel new invoice"
-                      className="inline-flex rounded-sm p-0.5 hover:bg-muted"
-                      onClick={(event) => {
+                {formatInvoiceTabLabel(tabInvoice, invoiceId)}
+              </TabsTrigger>
+            );
+          })}
+          {showNewInvoiceTab ? (
+            <TabsTrigger value="new" className="rounded-none text-xs">
+              <span className="inline-flex items-center gap-1">
+                New
+                {canDismissNewTab ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Cancel new invoice"
+                    className="inline-flex rounded-sm p-0.5 hover:bg-muted"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleCancelNewCycle();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
                         event.stopPropagation();
                         handleCancelNewCycle();
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          handleCancelNewCycle();
-                        }
-                      }}
-                    >
-                      <X className="size-3" />
-                    </span>
-                  ) : null}
-                </span>
-              </TabsTrigger>
-            ) : null}
-          </TabsList>
-        ) : null}
+                      }
+                    }}
+                  >
+                    <X className="size-3" />
+                  </span>
+                ) : null}
+              </span>
+            </TabsTrigger>
+          ) : null}
+        </TabsList>
+      ) : null}
 
-        {invoiceHistoryIds.map((invoiceId) => (
-          <TabsContent
-            key={invoiceId}
-            value={invoiceTabKey(invoiceId)}
-            className="mt-0"
-          >
-            {renderInvoiceTabContent(invoiceId)}
-          </TabsContent>
-        ))}
+      {invoiceHistoryIds.map((invoiceId) => (
+        <TabsContent
+          key={invoiceId}
+          value={invoiceTabKey(invoiceId)}
+          className="mt-0"
+        >
+          {renderInvoiceTabContent(invoiceId)}
+        </TabsContent>
+      ))}
 
-        {showNewInvoiceTab ? (
-          <TabsContent value="new" className="mt-0">
-            {renderNewInvoiceTabContent()}
-          </TabsContent>
-        ) : null}
+      {showNewInvoiceTab ? (
+        <TabsContent value="new" className="mt-0">
+          {renderNewInvoiceTabContent()}
+        </TabsContent>
+      ) : null}
     </Tabs>
   );
 
@@ -1184,18 +1190,18 @@ export const TicketBillingSidePanel = ({
                     aria-label="Open invoice tools"
                     onClick={() => openPanel("invoice")}
                   >
-                  <FileText className="size-4" />
-                  {deliverables.length > 0 ? (
-                    <span className="text-[9px] font-medium tabular-nums leading-none">
-                      {deliverables.length}
-                    </span>
-                  ) : null}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                Invoice ({deliverables.length} files)
-              </TooltipContent>
-            </Tooltip>
+                    <FileText className="size-4" />
+                    {deliverables.length > 0 ? (
+                      <span className="text-[9px] font-medium tabular-nums leading-none">
+                        {deliverables.length}
+                      </span>
+                    ) : null}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  Invoice ({deliverables.length} files)
+                </TooltipContent>
+              </Tooltip>
             ) : null}
 
             <Tooltip>
@@ -1247,69 +1253,73 @@ export const TicketBillingSidePanel = ({
         )}
       >
         {!embedMode ? (
-        <div className="flex items-center gap-1 border-b px-2 py-2">
-          {canViewAmounts ? (
+          <div className="flex items-center gap-1 border-b px-2 py-2">
+            {canViewAmounts ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={panelTabClass("invoice")}
+                onClick={() => setActiveView("invoice")}
+              >
+                <FileText className="size-3.5" />
+                Invoice
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className={panelTabClass("invoice")}
-              onClick={() => setActiveView("invoice")}
+              className={panelTabClass("sms")}
+              onClick={() => setActiveView("sms")}
             >
-              <FileText className="size-3.5" />
-              Invoice
+              <MessageSquare className="size-3.5" />
+              Text
             </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={panelTabClass("sms")}
-            onClick={() => setActiveView("sms")}
-          >
-            <MessageSquare className="size-3.5" />
-            Text
-          </Button>
-          <div className="flex-1" />
-          {activeView === "invoice" && canViewAmounts && showNewInvoiceButton ? (
+            <div className="flex-1" />
+            {activeView === "invoice" &&
+            canViewAmounts &&
+            showNewInvoiceButton ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8 shrink-0 rounded-none"
+                    disabled={newInvoiceMutation.isPending}
+                    aria-label="New invoice"
+                    onClick={handleNewInvoiceClick}
+                  >
+                    {newInvoiceMutation.isPending ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="size-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">New invoice</TooltipContent>
+              </Tooltip>
+            ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
-                  className="size-8 shrink-0 rounded-none"
-                  disabled={newInvoiceMutation.isPending}
-                  aria-label="New invoice"
-                  onClick={handleNewInvoiceClick}
+                  className="size-8 shrink-0"
+                  aria-label="Hide tools panel"
+                  onClick={() => setCollapsed(true)}
                 >
-                  {newInvoiceMutation.isPending ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="size-3.5" />
-                  )}
+                  <PanelRightClose className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="left">New invoice</TooltipContent>
+              <TooltipContent side="left">Hide panel</TooltipContent>
             </Tooltip>
-          ) : null}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 shrink-0"
-                aria-label="Hide tools panel"
-                onClick={() => setCollapsed(true)}
-              >
-                <PanelRightClose className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">Hide panel</TooltipContent>
-          </Tooltip>
-        </div>
-        ) : embedView === "invoice" && canViewAmounts && showNewInvoiceButton ? (
+          </div>
+        ) : embedView === "invoice" &&
+          canViewAmounts &&
+          showNewInvoiceButton ? (
           <div className="flex justify-end border-b px-2 py-2">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1363,7 +1373,9 @@ export const TicketBillingSidePanel = ({
             type="file"
             multiple
             className="hidden"
-            onChange={(event) => void queueDeliverableUploads(event.target.files)}
+            onChange={(event) =>
+              void queueDeliverableUploads(event.target.files)
+            }
           />
 
           {resolvedView === "invoice" ? (

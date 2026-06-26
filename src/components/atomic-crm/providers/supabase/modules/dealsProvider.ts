@@ -1,9 +1,5 @@
 import type { Identifier } from "ra-core";
-import type {
-  Deal,
-  TaskParticipant,
-  Task,
-} from "../../../types";
+import type { Deal, TaskParticipant, Task } from "../../../types";
 import type { GetScopedTasksParams } from "../../../tasks/scopedTasks";
 import {
   collectMyProjectDealIds,
@@ -702,9 +698,7 @@ export const dealsProvider = {
       total: count ?? tasks.length,
     };
   },
-  async getMyProjectDealIds(params: {
-    organizationMemberId: Identifier;
-  }) {
+  async getMyProjectDealIds(params: { organizationMemberId: Identifier }) {
     const { data: deals, error } = await supabase
       .from("deals")
       .select("id, organization_member_id, salesperson_ids");

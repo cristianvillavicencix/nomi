@@ -193,7 +193,8 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         help_text: "Add 3–5 bullet points.",
         min_items: 0,
         add_button_label: "Add differentiator",
-        item_placeholder: "e.g. Family-owned since 1998, lifetime workmanship guarantee…",
+        item_placeholder:
+          "e.g. Family-owned since 1998, lifetime workmanship guarantee…",
       }),
       field({
         key: "emergency_services",
@@ -256,12 +257,7 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         key: "free_offers",
         type: "multi_select",
         label: "Do you offer free inspections or estimates?",
-        options: [
-          "Free inspection",
-          "Free estimate",
-          "Both",
-          "Neither",
-        ],
+        options: ["Free inspection", "Free estimate", "Both", "Neither"],
       }),
       field({
         key: "insurance_claims",
@@ -301,8 +297,16 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         visible_when: {
           operator: "or",
           conditions: [
-            { field: "preferred_contact_methods", op: "contains", value: "Website form" },
-            { field: "preferred_contact_methods", op: "contains", value: "Email" },
+            {
+              field: "preferred_contact_methods",
+              op: "contains",
+              value: "Website form",
+            },
+            {
+              field: "preferred_contact_methods",
+              op: "contains",
+              value: "Email",
+            },
           ],
         },
       }),
@@ -339,10 +343,7 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         key: "has_project_photos",
         type: "radio",
         label: "Do you have photos of completed projects?",
-        options: [
-          "Yes, I'll upload now",
-          "No, use professional stock photos",
-        ],
+        options: ["Yes, I'll upload now", "No, use professional stock photos"],
       }),
       field({
         key: "before_after_photos",
@@ -451,11 +452,7 @@ export const CONTRACTOR_BRIEF_SECTIONS: FormSectionDef[] = [
         key: "typography_preference",
         type: "radio",
         label: "Font preference",
-        options: [
-          "Modern (sans-serif)",
-          "Classic (serif)",
-          "Bold / Display",
-        ],
+        options: ["Modern (sans-serif)", "Classic (serif)", "Bold / Display"],
       }),
       field({
         key: "reference_sites",

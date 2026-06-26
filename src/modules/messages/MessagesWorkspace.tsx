@@ -113,8 +113,9 @@ export const MessagesWorkspace = ({
   const unsavedSmsPhone =
     activeSmsPhone &&
     !activeContact &&
-    (clientSmsDraft || (activeConversation?.type === "client" &&
-      !activeConversation.contact_id));
+    (clientSmsDraft ||
+      (activeConversation?.type === "client" &&
+        !activeConversation.contact_id));
 
   const handleContactSaved = (contact: Contact) => {
     if (clientSmsDraft) {
@@ -244,7 +245,8 @@ export const MessagesWorkspace = ({
             <MessageSquare className="size-9 text-muted-foreground/50" />
             <p className="mt-4 text-base font-medium">Select a conversation</p>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              Pick a chat on the left or search for a client or phone number to start an SMS.
+              Pick a chat on the left or search for a client or phone number to
+              start an SMS.
             </p>
           </div>
         )}

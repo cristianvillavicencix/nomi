@@ -1,4 +1,9 @@
-import type { Company, Contact, Deal, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Company,
+  Contact,
+  Deal,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import type { PublicProposalPayload } from "@/modules/proposals/public/publicProposalApi";
 
 const mapPublicContact = (
@@ -79,13 +84,19 @@ export const mapPublicProposalDocumentData = (
     sort_order: index,
   }));
 
-  const oneTimeLines = lineDrafts.filter((line) => line.billing_type === "one_time");
-  const recurringLines = lineDrafts.filter((line) => line.billing_type === "recurring");
+  const oneTimeLines = lineDrafts.filter(
+    (line) => line.billing_type === "one_time",
+  );
+  const recurringLines = lineDrafts.filter(
+    (line) => line.billing_type === "recurring",
+  );
   const oneTimeTotal =
     oneTimeLines.reduce(
       (sum, line) => sum + (line.quantity ?? 1) * (line.unit_price ?? 0),
       0,
-    ) || raw.amount || 0;
+    ) ||
+    raw.amount ||
+    0;
   const recurringSubtotal = recurringLines.reduce(
     (sum, line) => sum + (line.quantity ?? 1) * (line.unit_price ?? 0),
     0,
@@ -121,7 +132,8 @@ export const mapPublicProposalDocumentData = (
       label: row.label,
       due_date: row.due_date,
       amount: row.amount,
-      billing_type: (row.billing_type as "one_time" | "recurring") ?? "one_time",
+      billing_type:
+        (row.billing_type as "one_time" | "recurring") ?? "one_time",
       status: (row.status as ProposalPaymentInstallment["status"]) ?? "pending",
     }),
   );

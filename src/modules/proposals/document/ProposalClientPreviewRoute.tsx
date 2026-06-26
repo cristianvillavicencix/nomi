@@ -110,41 +110,44 @@ const ProposalClientPreviewBody = () => {
 
       <div className="min-h-0 flex-1 overflow-hidden">
         <ProposalDocumentView
-        proposalId={proposalId}
-        content={content}
-        documentData={documentData}
-        editable={false}
-        clientView
-        showSectionNav
-        showAcceptPlaceholder
-        acceptMode="preview"
-        contractSnapshot={contractSnapshot}
-        onDownloadPdf={() => {
-          void (async () => {
-            if (!bundle.proposal) return;
-            setIsExportingPdf(true);
-            try {
-              const variables = buildProposalVariableContext({
-                proposal: bundle.proposal,
-                company: bundle.company,
-                contact: bundle.contact,
-                deal: bundle.deal,
-                member: bundle.member,
-              });
-              const merged = mergeProposalDocumentContent(content, variables);
-              const localized = resolveProposalDocumentContent(merged, locale);
-              await exportProposalPdf({
-                proposal: bundle.proposal,
-                content: localized,
-                snapshot: documentData,
-                locale,
-              });
-            } finally {
-              setIsExportingPdf(false);
-            }
-          })();
-        }}
-        isExportingPdf={isExportingPdf}
+          proposalId={proposalId}
+          content={content}
+          documentData={documentData}
+          editable={false}
+          clientView
+          showSectionNav
+          showAcceptPlaceholder
+          acceptMode="preview"
+          contractSnapshot={contractSnapshot}
+          onDownloadPdf={() => {
+            void (async () => {
+              if (!bundle.proposal) return;
+              setIsExportingPdf(true);
+              try {
+                const variables = buildProposalVariableContext({
+                  proposal: bundle.proposal,
+                  company: bundle.company,
+                  contact: bundle.contact,
+                  deal: bundle.deal,
+                  member: bundle.member,
+                });
+                const merged = mergeProposalDocumentContent(content, variables);
+                const localized = resolveProposalDocumentContent(
+                  merged,
+                  locale,
+                );
+                await exportProposalPdf({
+                  proposal: bundle.proposal,
+                  content: localized,
+                  snapshot: documentData,
+                  locale,
+                });
+              } finally {
+                setIsExportingPdf(false);
+              }
+            })();
+          }}
+          isExportingPdf={isExportingPdf}
         />
       </div>
     </div>

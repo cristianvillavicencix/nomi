@@ -98,14 +98,14 @@ export const SendProjectWebFormDialog = ({
   );
 
   const [selectedFormId, setSelectedFormId] = useState("");
-  const [briefProjectType, setBriefProjectType] = useState<WebsiteBriefSendType>(
-    normalizeBriefSendType(projectType),
-  );
+  const [briefProjectType, setBriefProjectType] =
+    useState<WebsiteBriefSendType>(normalizeBriefSendType(projectType));
   const [copied, setCopied] = useState(false);
   const [formUrl, setFormUrl] = useState("");
 
   const scopeSummary = useMemo(
-    () => (requestScope ? getBriefScopeSummary(requestScope) : "Full project brief"),
+    () =>
+      requestScope ? getBriefScopeSummary(requestScope) : "Full project brief",
     [requestScope],
   );
 
@@ -127,7 +127,9 @@ export const SendProjectWebFormDialog = ({
   const selectedForm =
     (briefForms.length > 0 ? briefForms : forms).find(
       (form) => String(form.id) === selectedFormId,
-    ) ?? briefForms[0] ?? forms[0];
+    ) ??
+    briefForms[0] ??
+    forms[0];
 
   const persistBriefType = async () => {
     if (!dealId || !dealRecord || briefProjectType === projectType) return;
@@ -199,21 +201,13 @@ export const SendProjectWebFormDialog = ({
     const trimmed = clientEmail.trim().toLowerCase();
     if (!mailtoHref(trimmed)) return "";
     const subject = encodeURIComponent(
-      projectName
-        ? `${scopeSummary} — ${projectName}`
-        : `${scopeSummary} form`,
+      projectName ? `${scopeSummary} — ${projectName}` : `${scopeSummary} form`,
     );
     const body = encodeURIComponent(
       `Hi${clientName ? ` ${clientName}` : ""},\n\nPlease complete this brief section for your project${projectName ? ` (${projectName})` : ""}:\n\n${scopeSummary}\n\n${formUrl}\n\nFields we already have will appear pre-filled — just confirm or update them.\n\nThank you!`,
     );
     return `mailto:${trimmed}?subject=${subject}&body=${body}`;
-  }, [
-    formUrl,
-    clientEmail,
-    clientName,
-    projectName,
-    scopeSummary,
-  ]);
+  }, [formUrl, clientEmail, clientName, projectName, scopeSummary]);
 
   const formPool = briefForms.length > 0 ? briefForms : forms;
   const isPartialRequest = Boolean(requestScope?.sections.length);
@@ -250,7 +244,9 @@ export const SendProjectWebFormDialog = ({
                     {formPool.map((form) => (
                       <SelectItem key={form.id} value={String(form.id)}>
                         {form.name}
-                        {form.slug === "project_brief" ? " · Project brief" : ""}
+                        {form.slug === "project_brief"
+                          ? " · Project brief"
+                          : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -36,12 +36,7 @@ import { cn } from "@/lib/utils";
 import { ProjectDeliveryCountdownText } from "@/modules/deals/ProjectDeliveryCountdownText";
 import { getNewDealManualCreatePath } from "@/modules/deals/projectCreatePaths";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import type {
-  Company,
-  Contact,
-  Deal,
-  OrganizationMember,
-} from "../types";
+import type { Company, Contact, Deal, OrganizationMember } from "../types";
 import { ProjectAssignedAvatars } from "@/modules/deals/ProjectAssignedAvatars";
 import { getStageColor, getStageLabel } from "./pipelines";
 

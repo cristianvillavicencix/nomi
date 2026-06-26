@@ -26,10 +26,7 @@ export const sidebarNavIconClass = (active: boolean) =>
   );
 
 export const sidebarNavSubLinkClass = (active: boolean) =>
-  cn(
-    active &&
-      "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
-  );
+  cn(active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground");
 
 export const sidebarNavDropdownItemClass = (active: boolean) =>
   cn(active && "font-medium text-foreground");

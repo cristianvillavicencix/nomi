@@ -8,12 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  useDataProvider,
-  useGetList,
-  useNotify,
-  useRefresh,
-} from "ra-core";
+import { useDataProvider, useGetList, useNotify, useRefresh } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
@@ -22,9 +17,7 @@ import {
   formatInvoiceDueDate,
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
-import {
-  resolveInvoiceRecipientPhone,
-} from "@/modules/billing/billingUtils";
+import { resolveInvoiceRecipientPhone } from "@/modules/billing/billingUtils";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
 import type {
   ClientInvoice,
@@ -337,9 +330,14 @@ export const TicketCombinedInvoicePreviewDialog = ({
       >
         <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle className="flex flex-wrap items-center gap-2">
-            {step === "invoice" ? "Review combined invoice" : "Send combined invoice"}
+            {step === "invoice"
+              ? "Review combined invoice"
+              : "Send combined invoice"}
             {draftInvoice ? (
-              <Badge variant="outline" className="font-mono text-xs font-normal">
+              <Badge
+                variant="outline"
+                className="font-mono text-xs font-normal"
+              >
                 {draftInvoice.invoice_number}
               </Badge>
             ) : null}
@@ -423,7 +421,9 @@ export const TicketCombinedInvoicePreviewDialog = ({
                         id="combined-invoice-send-to"
                         type="email"
                         value={recipientEmail}
-                        onChange={(event) => setRecipientEmail(event.target.value)}
+                        onChange={(event) =>
+                          setRecipientEmail(event.target.value)
+                        }
                         onBlur={() => setEditingTo(false)}
                         className="h-8 border-0 px-1 shadow-none focus-visible:ring-0"
                         placeholder="Recipient email"
@@ -443,7 +443,9 @@ export const TicketCombinedInvoicePreviewDialog = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="combined-invoice-email-message">Message</Label>
+                  <Label htmlFor="combined-invoice-email-message">
+                    Message
+                  </Label>
                   <Textarea
                     id="combined-invoice-email-message"
                     value={emailMessage}
@@ -469,7 +471,10 @@ export const TicketCombinedInvoicePreviewDialog = ({
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="combined-invoice-send-sms" className="cursor-pointer">
+                    <Label
+                      htmlFor="combined-invoice-send-sms"
+                      className="cursor-pointer"
+                    >
                       Also send text message
                     </Label>
                     <Switch
@@ -517,7 +522,11 @@ export const TicketCombinedInvoicePreviewDialog = ({
         <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-between">
           {step === "invoice" ? (
             <>
-              <Button type="button" variant="outline" onClick={() => handleClose(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleClose(false)}
+              >
                 Cancel
               </Button>
               <Button type="button" onClick={() => setStep("email")}>
@@ -531,7 +540,11 @@ export const TicketCombinedInvoicePreviewDialog = ({
                 {footerSummary || null}
               </p>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setStep("invoice")}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep("invoice")}
+                >
                   <ChevronLeft className="size-4" />
                   Back
                 </Button>

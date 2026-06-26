@@ -36,9 +36,7 @@ export async function getTicketInboundSetup(
 ): Promise<TicketInboundSetup | null> {
   const { data: inbox, error } = await supabaseAdmin
     .from("ticket_inboxes")
-    .select(
-      "email, sendgrid_hostname, sendgrid_forward_address, is_active",
-    )
+    .select("email, sendgrid_hostname, sendgrid_forward_address, is_active")
     .eq("org_id", orgId)
     .eq("is_active", true)
     .order("id", { ascending: true })

@@ -6,7 +6,9 @@ import type { NewLeadFormValues } from "./newLeadFormTypes";
 
 export const LeadTypeToggle = () => {
   const { setValue } = useFormContext<NewLeadFormValues>();
-  const leadType = useWatch<NewLeadFormValues, "lead_type">({ name: "lead_type" });
+  const leadType = useWatch<NewLeadFormValues, "lead_type">({
+    name: "lead_type",
+  });
 
   const setType = (type: LeadType) => {
     setValue("lead_type", type, { shouldDirty: true });

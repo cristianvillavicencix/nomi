@@ -4,9 +4,7 @@ export const MAX_INBOUND_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 export const assertInboundAttachmentCount = (count: number) => {
   if (count > MAX_INBOUND_ATTACHMENTS) {
-    throw new Error(
-      `Too many attachments (max ${MAX_INBOUND_ATTACHMENTS})`,
-    );
+    throw new Error(`Too many attachments (max ${MAX_INBOUND_ATTACHMENTS})`);
   }
 };
 

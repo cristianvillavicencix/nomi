@@ -162,7 +162,9 @@ export const EmailDeliverySettingsSection = () => {
         {data?.from_email ? (
           <p className="text-sm text-muted-foreground">
             From address:{" "}
-            <span className="font-medium text-foreground">{data.from_email}</span>
+            <span className="font-medium text-foreground">
+              {data.from_email}
+            </span>
           </p>
         ) : null}
 

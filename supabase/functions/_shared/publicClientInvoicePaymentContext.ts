@@ -76,7 +76,11 @@ export async function resolvePublicClientInvoicePayment(
   }
 
   if (invoice.status === "void" || invoice.status === "paid") {
-    return { ok: false, status: 409, message: "This invoice is already paid or void" };
+    return {
+      ok: false,
+      status: 409,
+      message: "This invoice is already paid or void",
+    };
   }
 
   const total = Number(invoice.amount) || 0;
@@ -90,12 +94,14 @@ export async function resolvePublicClientInvoicePayment(
 
   const upfrontPercent = Number(invoice.upfront_percent ?? 100);
   const targetUpfront =
-    Math.round(total * (Math.min(Math.max(upfrontPercent, 1), 100) / 100) * 100) /
-    100;
-  const defaultChargeAmount = Math.min(
-    Math.max(Math.round((targetUpfront - paid) * 100) / 100, 0),
-    balance,
-  ) || balance;
+    Math.round(
+      total * (Math.min(Math.max(upfrontPercent, 1), 100) / 100) * 100,
+    ) / 100;
+  const defaultChargeAmount =
+    Math.min(
+      Math.max(Math.round((targetUpfront - paid) * 100) / 100, 0),
+      balance,
+    ) || balance;
 
   const requestedAmount =
     body.amount != null && Number.isFinite(Number(body.amount))
@@ -105,7 +111,11 @@ export async function resolvePublicClientInvoicePayment(
   let chargeAmount = defaultChargeAmount;
   if (requestedAmount != null) {
     if (requestedAmount < 0.01) {
-      return { ok: false, status: 400, message: "Payment amount must be at least $0.01" };
+      return {
+        ok: false,
+        status: 400,
+        message: "Payment amount must be at least $0.01",
+      };
     }
     if (requestedAmount > balance + 0.001) {
       return {
@@ -134,8 +144,8 @@ export async function resolvePublicClientInvoicePayment(
     body.remainder_installment_numbers,
   )
     ? body.remainder_installment_numbers
-      .map((value) => Number(value))
-      .filter((value) => Number.isFinite(value) && value > 0)
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0)
     : [];
 
   return {
@@ -158,8 +168,8 @@ export const buildInvoicePaymentIntentMetadata = (
   invoice_id: String(invoice.id),
   ...(remainderInstallmentNumbers.length > 0
     ? {
-      remainder_installment_numbers: remainderInstallmentNumbers.join(","),
-    }
+        remainder_installment_numbers: remainderInstallmentNumbers.join(","),
+      }
     : {}),
 });
 

@@ -3,7 +3,9 @@ import { createErrorResponse } from "./utils.ts";
 export const getWebsiteAuditWorkerSecret = () =>
   Deno.env.get("WEB_AUDIT_WORKER_SECRET")?.trim() ?? "";
 
-export const verifyWebsiteAuditWorkerSecret = (req: Request): Response | null => {
+export const verifyWebsiteAuditWorkerSecret = (
+  req: Request,
+): Response | null => {
   const expected = getWebsiteAuditWorkerSecret();
   if (!expected) {
     return createErrorResponse(

@@ -39,7 +39,11 @@ const getPrimaryPhone = (contact: Contact) =>
 const getPrimaryEmail = (contact: Contact) =>
   contact.email_jsonb?.find((email) => email.email?.trim())?.email ?? "—";
 
-export const ContactsListPage = ({ embedded = false }: { embedded?: boolean }) => {
+export const ContactsListPage = ({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) => {
   const { identity } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();
   const [contactDialogOpen, setContactDialogOpen] = useState(false);

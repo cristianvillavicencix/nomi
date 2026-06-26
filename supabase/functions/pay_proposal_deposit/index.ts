@@ -60,7 +60,11 @@ Deno.serve(
         .eq("org_id", tokenRow.org_id)
         .maybeSingle();
 
-      if (!proposal?.accepted_at || !proposal.contract_id || !proposal.deal_id) {
+      if (
+        !proposal?.accepted_at ||
+        !proposal.contract_id ||
+        !proposal.deal_id
+      ) {
         return createErrorResponse(
           400,
           "Proposal must be accepted and signed before paying the deposit",
@@ -164,10 +168,10 @@ Deno.serve(
 
       const { data: contact } = proposal.contact_id
         ? await supabaseAdmin
-          .from("contacts")
-          .select("first_name, last_name")
-          .eq("id", proposal.contact_id)
-          .maybeSingle()
+            .from("contacts")
+            .select("first_name, last_name")
+            .eq("id", proposal.contact_id)
+            .maybeSingle()
         : { data: null };
 
       const contactName = [contact?.first_name, contact?.last_name]

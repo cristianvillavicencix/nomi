@@ -55,7 +55,10 @@ export const buildDefaultInvoiceEmailSubject = (
 ) => `${organizationName}: Invoice ${invoice.invoice_number}`;
 
 const splitLineDescription = (description: string) => {
-  const parts = description.split("\n").map((part) => part.trim()).filter(Boolean);
+  const parts = description
+    .split("\n")
+    .map((part) => part.trim())
+    .filter(Boolean);
   return {
     title: parts[0] ?? description,
     detail: parts.length > 1 ? parts.slice(1).join(" ") : null,
@@ -282,7 +285,8 @@ export const buildInvoiceEmailHtml = ({
     : "";
 
   const payLabel = formatInvoiceMoney(balanceDue, currency);
-  const tagline = organizationTagline?.trim() || buildInvoiceOrganizationEmailTagline();
+  const tagline =
+    organizationTagline?.trim() || buildInvoiceOrganizationEmailTagline();
 
   return `<!DOCTYPE html>
 <html lang="en">

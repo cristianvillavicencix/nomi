@@ -99,100 +99,100 @@ export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => {
   });
 
   return (
-  <div className="space-y-6">
-    <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h3 className="text-base font-semibold">Client handoff</h3>
-        <p className="text-sm text-muted-foreground">
-          Deliver the project to unlock <strong>Mi Sitio Web</strong> in the
-          client portal with URLs, files, and credentials.
-        </p>
-        {hasPendingRequired ? (
-          <p className="text-warning-foreground bg-warning/15 mt-1.5 inline-block rounded px-1.5 py-0.5 text-xs font-medium">
-            {pendingRequiredCount} required launch checklist item
-            {pendingRequiredCount === 1 ? "" : "s"} still pending.
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-base font-semibold">Client handoff</h3>
+          <p className="text-sm text-muted-foreground">
+            Deliver the project to unlock <strong>Mi Sitio Web</strong> in the
+            client portal with URLs, files, and credentials.
           </p>
-        ) : null}
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Button type="button" onClick={() => setDeliverOpen(true)}>
-          <Rocket className="size-4" />
-          Deliver project
-        </Button>
-        {hasPendingRequired ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="border-warning/50 hover:bg-warning/10"
-            onClick={() => setOverrideOpen(true)}
-          >
-            <AlertTriangle className="size-4" />
-            Deliver anyway
+          {hasPendingRequired ? (
+            <p className="text-warning-foreground bg-warning/15 mt-1.5 inline-block rounded px-1.5 py-0.5 text-xs font-medium">
+              {pendingRequiredCount} required launch checklist item
+              {pendingRequiredCount === 1 ? "" : "s"} still pending.
+            </p>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button type="button" onClick={() => setDeliverOpen(true)}>
+            <Rocket className="size-4" />
+            Deliver project
           </Button>
-        ) : null}
+          {hasPendingRequired ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="border-warning/50 hover:bg-warning/10"
+              onClick={() => setOverrideOpen(true)}
+            >
+              <AlertTriangle className="size-4" />
+              Deliver anyway
+            </Button>
+          ) : null}
+        </div>
       </div>
+
+      <div>
+        <h3 className="text-base font-semibold">Delivery</h3>
+        <p className="text-sm text-muted-foreground">
+          Portal invite, handoff, schedule, launch checklist, maintenance, and
+          deployment URLs.
+        </p>
+      </div>
+
+      <Tabs defaultValue="schedule">
+        <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+          <TabsTrigger value="schedule" className="shrink-0">
+            Schedule
+          </TabsTrigger>
+          <TabsTrigger value="launch" className="shrink-0">
+            Launch
+          </TabsTrigger>
+          <TabsTrigger value="maintenance" className="shrink-0">
+            Maintenance
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="schedule" className="pt-4">
+          <Suspense fallback={<TabFallback />}>
+            <ProjectScheduleTab record={record} />
+          </Suspense>
+        </TabsContent>
+        <TabsContent value="launch" className="pt-4">
+          <Suspense fallback={<TabFallback />}>
+            <LaunchChecklistTab record={record} />
+          </Suspense>
+        </TabsContent>
+        <TabsContent value="maintenance" className="pt-4">
+          <Suspense fallback={<TabFallback />}>
+            <MaintenanceTab record={record} />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
+
+      <ProjectDeploymentCard record={record} />
+      <ProjectGithubLink record={record} showEditLink />
+
+      {deliverOpen ? (
+        <DeliverProjectDialog
+          open={deliverOpen}
+          onClose={() => setDeliverOpen(false)}
+          record={record}
+        />
+      ) : null}
+      {overrideOpen ? (
+        <ManualDeliveryOverrideDialog
+          open={overrideOpen}
+          onClose={() => {
+            if (!manualDeliverMutation.isPending) setOverrideOpen(false);
+          }}
+          dealId={record.id}
+          defaultSiteUrl={record.production_url}
+          isSubmitting={manualDeliverMutation.isPending}
+          onConfirm={(payload) => manualDeliverMutation.mutate(payload)}
+        />
+      ) : null}
     </div>
-
-    <div>
-      <h3 className="text-base font-semibold">Delivery</h3>
-      <p className="text-sm text-muted-foreground">
-        Portal invite, handoff, schedule, launch checklist, maintenance, and
-        deployment URLs.
-      </p>
-    </div>
-
-    <Tabs defaultValue="schedule">
-      <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-        <TabsTrigger value="schedule" className="shrink-0">
-          Schedule
-        </TabsTrigger>
-        <TabsTrigger value="launch" className="shrink-0">
-          Launch
-        </TabsTrigger>
-        <TabsTrigger value="maintenance" className="shrink-0">
-          Maintenance
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="schedule" className="pt-4">
-        <Suspense fallback={<TabFallback />}>
-          <ProjectScheduleTab record={record} />
-        </Suspense>
-      </TabsContent>
-      <TabsContent value="launch" className="pt-4">
-        <Suspense fallback={<TabFallback />}>
-          <LaunchChecklistTab record={record} />
-        </Suspense>
-      </TabsContent>
-      <TabsContent value="maintenance" className="pt-4">
-        <Suspense fallback={<TabFallback />}>
-          <MaintenanceTab record={record} />
-        </Suspense>
-      </TabsContent>
-    </Tabs>
-
-    <ProjectDeploymentCard record={record} />
-    <ProjectGithubLink record={record} showEditLink />
-
-    {deliverOpen ? (
-      <DeliverProjectDialog
-        open={deliverOpen}
-        onClose={() => setDeliverOpen(false)}
-        record={record}
-      />
-    ) : null}
-    {overrideOpen ? (
-      <ManualDeliveryOverrideDialog
-        open={overrideOpen}
-        onClose={() => {
-          if (!manualDeliverMutation.isPending) setOverrideOpen(false);
-        }}
-        dealId={record.id}
-        defaultSiteUrl={record.production_url}
-        isSubmitting={manualDeliverMutation.isPending}
-        onConfirm={(payload) => manualDeliverMutation.mutate(payload)}
-      />
-    ) : null}
-  </div>
   );
 };

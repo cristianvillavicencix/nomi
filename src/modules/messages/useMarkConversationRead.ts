@@ -6,7 +6,10 @@ import {
   type Identifier,
 } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ConversationParticipant, ConversationType } from "@/modules/types";
+import type {
+  ConversationParticipant,
+  ConversationType,
+} from "@/modules/types";
 import {
   isReadThrough,
   persistConversationRead,
@@ -73,9 +76,7 @@ export const useMarkConversationRead = (
 
     let effectiveReadAt = readAt ?? undefined;
     if (!effectiveReadAt) {
-      if (
-        fallbackReadAtRef.current?.conversationId === conversationId
-      ) {
+      if (fallbackReadAtRef.current?.conversationId === conversationId) {
         effectiveReadAt = fallbackReadAtRef.current.readAt;
       } else {
         effectiveReadAt = new Date().toISOString();

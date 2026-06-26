@@ -2,12 +2,7 @@ import { Loader2, Plus } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  useCreate,
-  useGetIdentity,
-  useGetList,
-  useNotify,
-} from "ra-core";
+import { useCreate, useGetIdentity, useGetList, useNotify } from "ra-core";
 import type { InvoiceLineDraft } from "@/modules/billing/invoiceLineUtils";
 import {
   ServiceCatalogItemDialog,
@@ -99,7 +94,10 @@ export const CatalogLineItemField = ({
     );
     setPosition({
       top: rect.bottom + 4,
-      left: Math.min(cellRect?.left ?? rect.left, window.innerWidth - width - 12),
+      left: Math.min(
+        cellRect?.left ?? rect.left,
+        window.innerWidth - width - 12,
+      ),
       width,
     });
   };
@@ -351,7 +349,9 @@ export const CatalogLineItemField = ({
                   )}
                   <span>
                     Create{" "}
-                    <span className="font-medium">&quot;{trimmedQuery}&quot;</span>{" "}
+                    <span className="font-medium">
+                      &quot;{trimmedQuery}&quot;
+                    </span>{" "}
                     in catalog
                   </span>
                 </button>
@@ -394,7 +394,7 @@ export const CatalogLineItemField = ({
           value={line.item_detail ?? ""}
           onChange={(event) => onChange({ item_detail: event.target.value })}
           placeholder="Description (optional)"
-          rows={Math.max(2, (line.item_detail?.split("\n").length ?? 1))}
+          rows={Math.max(2, line.item_detail?.split("\n").length ?? 1)}
           className="min-h-[2.75rem] resize-y border-0 bg-transparent px-2 py-1.5 text-xs leading-relaxed whitespace-pre-wrap text-slate-600 shadow-none focus-visible:ring-1 focus-visible:ring-slate-200 rounded-sm"
         />
       </div>

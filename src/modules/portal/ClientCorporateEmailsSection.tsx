@@ -19,7 +19,9 @@ export const ClientCorporateEmailsSection = ({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{copy.corporateEmailsIntro}</p>
+      <p className="text-sm text-muted-foreground">
+        {copy.corporateEmailsIntro}
+      </p>
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-left">

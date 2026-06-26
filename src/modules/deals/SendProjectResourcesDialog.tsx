@@ -75,7 +75,8 @@ export const SendProjectResourcesDialog = ({
 
   const generateLink = useMutation({
     mutationFn: async () => {
-      if (!formInstance) throw new Error("Project Resources form is not configured");
+      if (!formInstance)
+        throw new Error("Project Resources form is not configured");
       return dataProvider.generateFormToken({
         formInstanceId: Number(formInstance.id),
         dealId: Number(dealId),

@@ -115,7 +115,10 @@ export const ClientFinancialTab = ({
   }, [syncUrl, searchParams, setSearchParams]);
 
   return (
-    <ClientTabAccordion value={openSections} onValueChange={handleAccordionChange}>
+    <ClientTabAccordion
+      value={openSections}
+      onValueChange={handleAccordionChange}
+    >
       <ClientTabAccordionSection value="summary" title="Summary">
         <ClientTabContentCard>
           <ClientFinancialSummary companyId={companyId} />
@@ -428,7 +431,9 @@ const ClientPaymentsSection = ({ companyId }: { companyId: Company["id"] }) => {
               <TableHead>Invoice</TableHead>
               <TableHead className="hidden md:table-cell">Reference</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="hidden sm:table-cell">Payment mode</TableHead>
+              <TableHead className="hidden sm:table-cell">
+                Payment mode
+              </TableHead>
               <TableHead className="text-right">Amount</TableHead>
             </TableRow>
           </TableHeader>

@@ -63,7 +63,9 @@ export const applyContactListSearch = (params: GetListParams) => {
       filter: {
         ...filter,
         "first_name@ilike": normalizePostgrestIlikeQuery(words[0] ?? ""),
-        "last_name@ilike": normalizePostgrestIlikeQuery(words.slice(1).join(" ")),
+        "last_name@ilike": normalizePostgrestIlikeQuery(
+          words.slice(1).join(" "),
+        ),
       },
     };
   }

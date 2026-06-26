@@ -28,9 +28,7 @@ export const formatStructuredAddressDisplay = ({
   country?: string | null;
 }) => {
   const street = address?.trim() ?? "";
-  const cityLine = [city?.trim(), stateAbbr?.trim()]
-    .filter(Boolean)
-    .join(", ");
+  const cityLine = [city?.trim(), stateAbbr?.trim()].filter(Boolean).join(", ");
   const zip = zipcode?.trim() ?? "";
   const countryValue = country?.trim() ?? "";
 

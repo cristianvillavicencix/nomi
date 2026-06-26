@@ -5,7 +5,11 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
-import { issueClientInvoiceFromInstallment, issueClientInvoiceFromProposal, syncProposalInstallmentInvoices } from "../_shared/clientInvoiceFlow.ts";
+import {
+  issueClientInvoiceFromInstallment,
+  issueClientInvoiceFromProposal,
+  syncProposalInstallmentInvoices,
+} from "../_shared/clientInvoiceFlow.ts";
 
 type IssueBody = {
   installment_id?: number;
@@ -76,8 +80,7 @@ Deno.serve(
             member.org_id,
             {
               proposalId,
-              amount:
-                body.amount != null ? Number(body.amount) : undefined,
+              amount: body.amount != null ? Number(body.amount) : undefined,
               dueDate: body.due_date,
               description: body.description,
             },

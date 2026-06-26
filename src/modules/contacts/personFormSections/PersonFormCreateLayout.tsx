@@ -56,19 +56,25 @@ const PrimaryContactToggle = () => {
 
   return (
     <div className="space-y-2 rounded-md border border-dashed bg-muted/20 p-3">
-      <p className="text-sm font-medium">Add a primary contact for this company?</p>
+      <p className="text-sm font-medium">
+        Add a primary contact for this company?
+      </p>
       <CreateFormFieldRow columns={2}>
         <CreateFormStatusCard
           active={Boolean(addPrimaryContact)}
           label="Yes"
           description="Create a person linked to the company"
-          onClick={() => setValue("add_primary_contact", true, { shouldDirty: true })}
+          onClick={() =>
+            setValue("add_primary_contact", true, { shouldDirty: true })
+          }
         />
         <CreateFormStatusCard
           active={!addPrimaryContact}
           label="No"
           description="Company-only lead record"
-          onClick={() => setValue("add_primary_contact", false, { shouldDirty: true })}
+          onClick={() =>
+            setValue("add_primary_contact", false, { shouldDirty: true })
+          }
         />
       </CreateFormFieldRow>
     </div>
@@ -197,7 +203,9 @@ export const PersonFormCreateLayout = ({
   const personKind = useWatch<PersonFormValues, "person_kind">({
     name: "person_kind",
   });
-  const leadType = useWatch<PersonFormValues, "lead_type">({ name: "lead_type" });
+  const leadType = useWatch<PersonFormValues, "lead_type">({
+    name: "lead_type",
+  });
   const addPrimaryContact = useWatch<PersonFormValues, "add_primary_contact">({
     name: "add_primary_contact",
   });
@@ -297,8 +305,8 @@ export const PersonFormCreateLayout = ({
           <div className="space-y-2">
             <ContactCompanyPickerField optional />
             <CreateFormFieldHint>
-              Many leads do not have a company yet. You can link one now or add it
-              when you convert.
+              Many leads do not have a company yet. You can link one now or add
+              it when you convert.
             </CreateFormFieldHint>
           </div>
         ) : null}

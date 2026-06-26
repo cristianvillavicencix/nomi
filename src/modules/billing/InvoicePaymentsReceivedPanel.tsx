@@ -52,7 +52,9 @@ const PaymentModeCell = ({
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs">
       {brand ? <span className="font-medium capitalize">{brand}</span> : null}
-      {last4 ? <span className="text-muted-foreground">····{last4}</span> : null}
+      {last4 ? (
+        <span className="text-muted-foreground">····{last4}</span>
+      ) : null}
       <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         stripe
       </span>

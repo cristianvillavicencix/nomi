@@ -9,7 +9,10 @@ import {
 const readsQueryKey = (memberId?: string | number | null) =>
   ["ticket_member_reads", memberId] as const;
 
-const isMissingReadsTableError = (error: { code?: string; message?: string }) => {
+const isMissingReadsTableError = (error: {
+  code?: string;
+  message?: string;
+}) => {
   const code = error.code ?? "";
   const message = error.message?.toLowerCase() ?? "";
   return (

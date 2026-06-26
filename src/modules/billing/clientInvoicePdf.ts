@@ -54,7 +54,9 @@ export const buildClientInvoicePdfContext = ({
 };
 
 const formatMoney = (amount: number, currency = "USD") =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(
+    amount,
+  );
 
 const formatDate = (value?: string | null) => {
   if (!value) return "—";
@@ -128,21 +130,26 @@ const buildLineItemsTable = (
           return [
             String(index + 1),
             detail
-              ? { stack: [{ text: title, bold: true }, { text: detail, fontSize: 9, color: "#64748b" }] }
+              ? {
+                  stack: [
+                    { text: title, bold: true },
+                    { text: detail, fontSize: 9, color: "#64748b" },
+                  ],
+                }
               : title,
-          {
-            text: Number(line.quantity).toFixed(2),
-            alignment: "right",
-          },
-          {
-            text: Number(line.unit_price).toFixed(2),
-            alignment: "right",
-          },
-          {
-            text: formatMoney(Number(line.line_total) || 0, currency),
-            alignment: "right",
-          },
-        ];
+            {
+              text: Number(line.quantity).toFixed(2),
+              alignment: "right",
+            },
+            {
+              text: Number(line.unit_price).toFixed(2),
+              alignment: "right",
+            },
+            {
+              text: formatMoney(Number(line.line_total) || 0, currency),
+              alignment: "right",
+            },
+          ];
         }),
       ],
     },
@@ -305,12 +312,7 @@ const buildDocDefinition = (
         ],
       },
       { text: " ", margin: [0, 20] },
-      buildLineItemsTable(
-        lineItems,
-        invoice.description,
-        total,
-        currency,
-      ),
+      buildLineItemsTable(lineItems, invoice.description, total, currency),
       { text: " ", margin: [0, 12] },
       {
         columns: [

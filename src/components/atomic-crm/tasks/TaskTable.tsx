@@ -291,11 +291,7 @@ const TaskTableRow = ({
       </TableRow>
 
       {isMobile ? (
-        <TaskEdit
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          taskId={task.id}
-        />
+        <TaskEdit open={editOpen} onOpenChange={setEditOpen} taskId={task.id} />
       ) : (
         <TaskEditSheet
           open={editOpen}

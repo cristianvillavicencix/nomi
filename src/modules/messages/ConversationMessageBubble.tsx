@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import type { ConversationMessage } from "@/modules/types";
 import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
-import { formatMessageTime, getMessageMediaUrls, isMediaPlaceholderBody } from "@/modules/messages/conversationUtils";
+import {
+  formatMessageTime,
+  getMessageMediaUrls,
+  isMediaPlaceholderBody,
+} from "@/modules/messages/conversationUtils";
 import { SmsMessageMedia } from "@/modules/messages/SmsMessageMedia";
 import { parseMessageBodyWithSignature } from "@/lib/signatures/signatureExpansion";
 import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
@@ -53,7 +57,8 @@ export const ConversationMessageBubble = ({
   );
 
   const mediaUrls = useMemo(() => getMessageMediaUrls(message), [message]);
-  const showBody = content && !isMediaPlaceholderBody(content, mediaUrls.length);
+  const showBody =
+    content && !isMediaPlaceholderBody(content, mediaUrls.length);
   const hasMultiplePhotos = mediaUrls.length > 1;
 
   return (
@@ -86,7 +91,10 @@ export const ConversationMessageBubble = ({
           </div>
         ) : null}
         {mediaUrls.length > 0 ? (
-          <SmsMessageMedia urls={mediaUrls} alt={message.body || "Attachment"} />
+          <SmsMessageMedia
+            urls={mediaUrls}
+            alt={message.body || "Attachment"}
+          />
         ) : null}
         {showBody ? (
           <div className="whitespace-pre-wrap break-words">{content}</div>

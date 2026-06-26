@@ -7,11 +7,7 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 import { useMemo } from "react";
-import {
-  ResourceContextProvider,
-  useGetList,
-  type Identifier,
-} from "ra-core";
+import { ResourceContextProvider, useGetList, type Identifier } from "ra-core";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RelativeDate } from "@/components/atomic-crm/misc/RelativeDate";
@@ -279,9 +275,7 @@ export const ContactActivityFeed = ({
   }, [calendarEvents, createdAt, notes, resolvedContactId, tasks]);
 
   if (resolvedContactId == null) {
-    return (
-      <FeedEmpty label="Select a contact to view activity." />
-    );
+    return <FeedEmpty label="Select a contact to view activity." />;
   }
 
   if (notesPending || tasksPending || calendarEventsPending) {

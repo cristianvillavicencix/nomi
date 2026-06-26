@@ -126,46 +126,48 @@ export const Note = ({
         <span
           className={cn(
             "inline-flex items-center gap-0.5 transition-opacity",
-            isHover ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover/note:opacity-100",
+            isHover
+              ? "opacity-100"
+              : "opacity-100 sm:opacity-0 sm:group-hover/note:opacity-100",
           )}
         >
           {canEdit ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleEnterEditMode}
-                  className="p-1 h-auto cursor-pointer"
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit note</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleEnterEditMode}
+                    className="p-1 h-auto cursor-pointer"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit note</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : null}
           {canDelete ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDelete}
-                  className="p-1 h-auto cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete note</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDelete}
+                    className="p-1 h-auto cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete note</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : null}
         </span>
         <div className="flex-1"></div>

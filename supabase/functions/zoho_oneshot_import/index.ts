@@ -34,13 +34,25 @@ const ZOHO_REGION_DOMAINS: Record<
   ZohoRegion,
   { accounts: string; api: string }
 > = {
-  com: { accounts: "https://accounts.zoho.com", api: "https://www.zohoapis.com" },
-  eu:  { accounts: "https://accounts.zoho.eu",  api: "https://www.zohoapis.eu"  },
-  in:  { accounts: "https://accounts.zoho.in",  api: "https://www.zohoapis.in"  },
-  au:  { accounts: "https://accounts.zoho.com.au", api: "https://www.zohoapis.com.au" },
-  jp:  { accounts: "https://accounts.zoho.jp",  api: "https://www.zohoapis.jp"  },
-  cn:  { accounts: "https://accounts.zoho.com.cn", api: "https://www.zohoapis.com.cn" },
-  ca:  { accounts: "https://accounts.zohocloud.ca", api: "https://www.zohoapis.ca" },
+  com: {
+    accounts: "https://accounts.zoho.com",
+    api: "https://www.zohoapis.com",
+  },
+  eu: { accounts: "https://accounts.zoho.eu", api: "https://www.zohoapis.eu" },
+  in: { accounts: "https://accounts.zoho.in", api: "https://www.zohoapis.in" },
+  au: {
+    accounts: "https://accounts.zoho.com.au",
+    api: "https://www.zohoapis.com.au",
+  },
+  jp: { accounts: "https://accounts.zoho.jp", api: "https://www.zohoapis.jp" },
+  cn: {
+    accounts: "https://accounts.zoho.com.cn",
+    api: "https://www.zohoapis.com.cn",
+  },
+  ca: {
+    accounts: "https://accounts.zohocloud.ca",
+    api: "https://www.zohoapis.ca",
+  },
 };
 
 type Member = {
@@ -106,16 +118,16 @@ async function exchangeGrantToken(
 ) {
   const { accounts } = getRegionDomains(region);
   const body = new URLSearchParams({
-    grant_type:    "authorization_code",
-    client_id:     ZOHO_CLIENT_ID,
+    grant_type: "authorization_code",
+    client_id: ZOHO_CLIENT_ID,
     client_secret: ZOHO_CLIENT_SECRET,
-    code:          grantToken,
-    redirect_uri:  redirectUri,
+    code: grantToken,
+    redirect_uri: redirectUri,
   });
   const res = await fetch(`${accounts}/oauth/v2/token`, {
-    method:  "POST",
+    method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body:    body.toString(),
+    body: body.toString(),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error || !data.refresh_token) {
@@ -136,15 +148,15 @@ async function exchangeGrantToken(
 async function refreshAccessToken(refreshToken: string, region: string) {
   const { accounts } = getRegionDomains(region);
   const body = new URLSearchParams({
-    grant_type:    "refresh_token",
-    client_id:     ZOHO_CLIENT_ID,
+    grant_type: "refresh_token",
+    client_id: ZOHO_CLIENT_ID,
     client_secret: ZOHO_CLIENT_SECRET,
     refresh_token: refreshToken,
   });
   const res = await fetch(`${accounts}/oauth/v2/token`, {
-    method:  "POST",
+    method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body:    body.toString(),
+    body: body.toString(),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error || !data.access_token) {
@@ -180,14 +192,16 @@ async function getFreshAccessToken(orgId: number) {
   if (cred.access_token && expiresAt > Date.now() + safetyMs) {
     return {
       accessToken: cred.access_token as string,
-      apiDomain:   cred.api_domain as string,
-      region:      cred.region as string,
+      apiDomain: cred.api_domain as string,
+      region: cred.region as string,
     };
   }
 
   const refreshed = await refreshAccessToken(cred.refresh_token, cred.region);
   const apiDomain =
-    refreshed.api_domain ?? cred.api_domain ?? getRegionDomains(cred.region).api;
+    refreshed.api_domain ??
+    cred.api_domain ??
+    getRegionDomains(cred.region).api;
   const newExpiresAt = new Date(
     Date.now() + refreshed.expires_in * 1000,
   ).toISOString();
@@ -195,18 +209,18 @@ async function getFreshAccessToken(orgId: number) {
   await supabaseAdmin
     .from("zoho_oauth_credentials")
     .update({
-      access_token:            refreshed.access_token,
+      access_token: refreshed.access_token,
       access_token_expires_at: newExpiresAt,
-      api_domain:              apiDomain,
-      last_refreshed_at:       new Date().toISOString(),
-      scope:                   refreshed.scope ?? cred.scope,
+      api_domain: apiDomain,
+      last_refreshed_at: new Date().toISOString(),
+      scope: refreshed.scope ?? cred.scope,
     })
     .eq("org_id", orgId);
 
   return {
     accessToken: refreshed.access_token,
     apiDomain,
-    region:      cred.region as string,
+    region: cred.region as string,
   };
 }
 
@@ -231,9 +245,7 @@ async function zohoFetch(
     body = { raw: text };
   }
   if (!res.ok) {
-    throw new Error(
-      `Zoho API ${res.status} ${url}: ${text.slice(0, 500)}`,
-    );
+    throw new Error(`Zoho API ${res.status} ${url}: ${text.slice(0, 500)}`);
   }
   return body as { data?: unknown[]; info?: { more_records?: boolean } };
 }
@@ -246,9 +258,9 @@ function handleHealth() {
     function: "zoho_oneshot_import",
     version: VERSION,
     env: {
-      has_client_id:        ZOHO_CLIENT_ID.length > 0,
-      has_client_secret:    ZOHO_CLIENT_SECRET.length > 0,
-      has_supabase_url:     !!Deno.env.get("SUPABASE_URL"),
+      has_client_id: ZOHO_CLIENT_ID.length > 0,
+      has_client_secret: ZOHO_CLIENT_SECRET.length > 0,
+      has_supabase_url: !!Deno.env.get("SUPABASE_URL"),
       has_service_role_key:
         !!Deno.env.get("SB_SECRET_KEY") ||
         !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
@@ -314,30 +326,30 @@ async function handleStatus(member: Member) {
     org_id: orgId,
     credentials: cred
       ? {
-          configured:              true,
-          region:                  cred.region,
-          api_domain:              cred.api_domain,
-          scope:                   cred.scope,
+          configured: true,
+          region: cred.region,
+          api_domain: cred.api_domain,
+          scope: cred.scope,
           access_token_expires_at: cred.access_token_expires_at,
-          last_refreshed_at:       cred.last_refreshed_at,
-          created_at:              cred.created_at,
+          last_refreshed_at: cred.last_refreshed_at,
+          created_at: cred.created_at,
         }
       : { configured: false },
     staging: {
       contacts_raw: {
-        total:    counts[0].count ?? 0,
+        total: counts[0].count ?? 0,
         promoted: counts[3].count ?? 0,
       },
       accounts_raw: {
-        total:    counts[1].count ?? 0,
+        total: counts[1].count ?? 0,
         promoted: counts[4].count ?? 0,
       },
       deals_raw: {
-        total:    counts[2].count ?? 0,
+        total: counts[2].count ?? 0,
         promoted: counts[5].count ?? 0,
       },
       leads_raw: {
-        total:    counts[6].count ?? 0,
+        total: counts[6].count ?? 0,
         promoted: counts[7].count ?? 0,
       },
     },
@@ -351,13 +363,11 @@ async function handleSetupCredentials(req: Request, member: Member) {
       "Server missing ZOHO_CLIENT_ID or ZOHO_CLIENT_SECRET environment variables",
     );
   }
-  const body = (await req.json().catch(() => null)) as
-    | {
-        grant_token?: string;
-        region?: string;
-        redirect_uri?: string;
-      }
-    | null;
+  const body = (await req.json().catch(() => null)) as {
+    grant_token?: string;
+    region?: string;
+    redirect_uri?: string;
+  } | null;
   if (!body?.grant_token || typeof body.grant_token !== "string") {
     return createErrorResponse(400, "Missing required field: grant_token");
   }
@@ -381,14 +391,14 @@ async function handleSetupCredentials(req: Request, member: Member) {
       .from("zoho_oauth_credentials")
       .upsert(
         {
-          org_id:                  member.org_id,
+          org_id: member.org_id,
           region,
-          access_token:            exchanged.access_token,
-          refresh_token:           exchanged.refresh_token,
+          access_token: exchanged.access_token,
+          refresh_token: exchanged.refresh_token,
           access_token_expires_at: expiresAt,
-          api_domain:              exchanged.api_domain,
-          scope:                   exchanged.scope ?? null,
-          last_refreshed_at:       new Date().toISOString(),
+          api_domain: exchanged.api_domain,
+          scope: exchanged.scope ?? null,
+          last_refreshed_at: new Date().toISOString(),
         },
         { onConflict: "org_id" },
       );
@@ -398,10 +408,10 @@ async function handleSetupCredentials(req: Request, member: Member) {
     return json({
       ok: true,
       region,
-      api_domain:              exchanged.api_domain,
-      scope:                   exchanged.scope ?? null,
+      api_domain: exchanged.api_domain,
+      scope: exchanged.scope ?? null,
       access_token_expires_at: expiresAt,
-      refresh_token_stored:    true,
+      refresh_token_stored: true,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
@@ -422,12 +432,12 @@ async function handleTestConnection(member: Member) {
       api_domain: apiDomain,
       total_in_response: records.length,
       sample: records.map((c) => ({
-        id:        c.id,
+        id: c.id,
         full_name: c.Full_Name,
-        email:     c.Email,
+        email: c.Email,
         account:
           c.Account_Name && typeof c.Account_Name === "object"
-            ? (c.Account_Name as { name?: string }).name ?? null
+            ? ((c.Account_Name as { name?: string }).name ?? null)
             : null,
       })),
     });
@@ -472,10 +482,10 @@ async function pageThroughModule(
 
     if (records.length > 0) {
       const rows = records.map((r) => ({
-        org_id:          orgId,
-        zoho_id:         String(r.id),
-        payload:         r,
-        promoted_at:     null,
+        org_id: orgId,
+        zoho_id: String(r.id),
+        payload: r,
+        promoted_at: null,
         promotion_error: null,
       }));
       const { error: upsertError } = await supabaseAdmin
@@ -515,7 +525,9 @@ async function handleSyncAll(req: Request, member: Member) {
       ? body.max_pages
       : 1000;
   const perPage =
-    typeof body.per_page === "number" && body.per_page > 0 && body.per_page <= 200
+    typeof body.per_page === "number" &&
+    body.per_page > 0 &&
+    body.per_page <= 200
       ? body.per_page
       : 200;
 
@@ -617,7 +629,9 @@ const pickRefId = (value: unknown): string | null => {
 };
 
 const buildAddress = (...parts: Array<unknown>): string | null => {
-  const filtered = parts.map((p) => pickString(p)).filter((p): p is string => !!p);
+  const filtered = parts
+    .map((p) => pickString(p))
+    .filter((p): p is string => !!p);
   return filtered.length > 0 ? filtered.join(", ") : null;
 };
 
@@ -657,12 +671,16 @@ const mapZohoStage = (zohoStage: string | null, info: StageInfo) => {
     }
   }
   // Heuristic mapping
-  if (lower.includes("design")) return { stage: "design", lifecycle_phase: "delivery" };
+  if (lower.includes("design"))
+    return { stage: "design", lifecycle_phase: "delivery" };
   if (lower.includes("development") || lower.includes("dev"))
     return { stage: "development", lifecycle_phase: "delivery" };
-  if (lower.includes("review")) return { stage: "review", lifecycle_phase: "delivery" };
-  if (lower.includes("launch")) return { stage: "launch", lifecycle_phase: "delivery" };
-  if (lower.includes("maintenance")) return { stage: "maintenance", lifecycle_phase: "delivery" };
+  if (lower.includes("review"))
+    return { stage: "review", lifecycle_phase: "delivery" };
+  if (lower.includes("launch"))
+    return { stage: "launch", lifecycle_phase: "delivery" };
+  if (lower.includes("maintenance"))
+    return { stage: "maintenance", lifecycle_phase: "delivery" };
   if (lower.includes("proposal") || lower.includes("quote"))
     return { stage: "proposal_sent", lifecycle_phase: "opportunity" };
   if (lower.includes("discovery") || lower.includes("analysis"))
@@ -695,9 +713,13 @@ async function loadStageInfo(orgId: number): Promise<StageInfo> {
   };
 }
 
-function parseModulesParam(body: Record<string, unknown>): Array<"Accounts" | "Contacts" | "Deals" | "Leads"> {
+function parseModulesParam(
+  body: Record<string, unknown>,
+): Array<"Accounts" | "Contacts" | "Deals" | "Leads"> {
   const requested = Array.isArray(body.modules)
-    ? (body.modules as unknown[]).filter((m): m is string => typeof m === "string")
+    ? (body.modules as unknown[]).filter(
+        (m): m is string => typeof m === "string",
+      )
     : ["Accounts", "Contacts", "Deals", "Leads"];
   // FK order: Accounts -> Contacts -> Deals (deals link to companies+contacts).
   // Leads is independent; insert it last so its company-name lookup can match
@@ -904,7 +926,8 @@ async function promoteAccount(
         .from("companies")
         .update(writable)
         .eq("id", existing.id);
-      if (updateError) throw new Error(`update company: ${updateError.message}`);
+      if (updateError)
+        throw new Error(`update company: ${updateError.message}`);
       await supabaseAdmin
         .from("zoho_accounts_raw")
         .update({
@@ -946,7 +969,10 @@ async function promoteContact(
   counters: PromoteCounters,
 ) {
   const firstName = pickString(payload.First_Name);
-  const lastName = pickString(payload.Last_Name) ?? pickString(payload.Full_Name) ?? "(no name)";
+  const lastName =
+    pickString(payload.Last_Name) ??
+    pickString(payload.Full_Name) ??
+    "(no name)";
 
   // Resolve company via Account reference
   const accountZohoId = pickRefId(payload.Account_Name);
@@ -1005,7 +1031,8 @@ async function promoteContact(
         .from("contacts")
         .update(writable)
         .eq("id", existing.id);
-      if (updateError) throw new Error(`update contact: ${updateError.message}`);
+      if (updateError)
+        throw new Error(`update contact: ${updateError.message}`);
       await supabaseAdmin
         .from("zoho_contacts_raw")
         .update({
@@ -1074,7 +1101,10 @@ async function promoteDeal(
   }
 
   const amount = safeNumber(payload.Amount);
-  const { stage, lifecycle_phase } = mapZohoStage(pickString(payload.Stage), stageInfo);
+  const { stage, lifecycle_phase } = mapZohoStage(
+    pickString(payload.Stage),
+    stageInfo,
+  );
 
   const closingRaw = pickString(payload.Closing_Date);
   let expectedClosing: string | null = null;
@@ -1233,7 +1263,9 @@ async function runPromote(
           await promoteLead(orgId, rawId, zohoId, payload, dryRun, counters);
         }
       } catch (e: unknown) {
-        counters.errors.push(`${row.zoho_id}: ${e instanceof Error ? e.message : String(e)}`);
+        counters.errors.push(
+          `${row.zoho_id}: ${e instanceof Error ? e.message : String(e)}`,
+        );
       }
     }
   }

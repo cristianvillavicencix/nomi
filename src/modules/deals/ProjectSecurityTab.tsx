@@ -220,9 +220,7 @@ const AccessEntryRow = ({
         {hasPassword ? (
           <div className="flex items-center gap-1">
             <code className="truncate text-xs">
-              {showPassword && revealedPassword
-                ? revealedPassword
-                : "••••••••"}
+              {showPassword && revealedPassword ? revealedPassword : "••••••••"}
             </code>
             <Button
               type="button"
@@ -347,7 +345,9 @@ const AccessEntryDialog = ({
             <Input
               id="access-url"
               value={values.url}
-              onChange={(event) => onChange({ ...values, url: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...values, url: event.target.value })
+              }
               placeholder="https://example.com/wp-admin"
             />
           </div>
@@ -428,7 +428,9 @@ const SecretDialog = ({
           <Input
             id="secret-label"
             value={values.label}
-            onChange={(event) => onChange({ ...values, label: event.target.value })}
+            onChange={(event) =>
+              onChange({ ...values, label: event.target.value })
+            }
             placeholder="Place API key"
           />
         </div>
@@ -439,8 +441,12 @@ const SecretDialog = ({
             type="password"
             autoComplete="new-password"
             value={values.value}
-            onChange={(event) => onChange({ ...values, value: event.target.value })}
-            placeholder={isEditing ? "Leave blank to keep unchanged" : "Paste value"}
+            onChange={(event) =>
+              onChange({ ...values, value: event.target.value })
+            }
+            placeholder={
+              isEditing ? "Leave blank to keep unchanged" : "Paste value"
+            }
           />
         </div>
       </div>
@@ -524,7 +530,9 @@ const SecretRow = ({
 
   return (
     <TableRow>
-      <TableCell className="font-medium whitespace-nowrap">{secret.label}</TableCell>
+      <TableCell className="font-medium whitespace-nowrap">
+        {secret.label}
+      </TableCell>
       <TableCell className="max-w-[240px]">
         {hasSecret ? (
           <div className="flex items-center gap-1">
@@ -568,7 +576,13 @@ const SecretRow = ({
       </TableCell>
       <TableCell className="w-[88px] text-right">
         <div className="flex justify-end gap-1">
-          <Button type="button" variant="ghost" size="icon" className="size-8" onClick={onEdit}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={onEdit}
+          >
             <Pencil className="size-4" />
             <span className="sr-only">Edit</span>
           </Button>
@@ -580,7 +594,11 @@ const SecretRow = ({
             onClick={onDelete}
             disabled={isDeleting}
           >
-            {isDeleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+            {isDeleting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
             <span className="sr-only">Delete</span>
           </Button>
         </div>
@@ -605,10 +623,16 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
     emptyDealAccessFormValues(),
   );
   const [secretDialogOpen, setSecretDialogOpen] = useState(false);
-  const [editingSecretId, setEditingSecretId] = useState<Identifier | null>(null);
-  const [secretValues, setSecretValues] = useState(() => emptySecretFormValues());
+  const [editingSecretId, setEditingSecretId] = useState<Identifier | null>(
+    null,
+  );
+  const [secretValues, setSecretValues] = useState(() =>
+    emptySecretFormValues(),
+  );
   const [deletingId, setDeletingId] = useState<Identifier | null>(null);
-  const [deletingSecretId, setDeletingSecretId] = useState<Identifier | null>(null);
+  const [deletingSecretId, setDeletingSecretId] = useState<Identifier | null>(
+    null,
+  );
   const [isMigratingLegacy, setIsMigratingLegacy] = useState(false);
 
   const {
@@ -984,7 +1008,9 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
                   secret={secret}
                   onEdit={() => openEditSecret(secret)}
                   onDelete={() => void handleDeleteSecret(secret)}
-                  isDeleting={isDeletingSecret && deletingSecretId === secret.id}
+                  isDeleting={
+                    isDeletingSecret && deletingSecretId === secret.id
+                  }
                 />
               ))}
             </TableBody>

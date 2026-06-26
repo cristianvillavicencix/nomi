@@ -42,7 +42,9 @@ export const ClientFilesSection = ({
   copy: PortalCopy;
 }) => {
   const [query, setQuery] = useState("");
-  const [downloadingFolder, setDownloadingFolder] = useState<string | null>(null);
+  const [downloadingFolder, setDownloadingFolder] = useState<string | null>(
+    null,
+  );
   const [preview, setPreview] = useState<DealResource | null>(null);
   const [gallery, setGallery] = useState<DealResource[]>([]);
 
@@ -61,7 +63,10 @@ export const ClientFilesSection = ({
     resources.reduce((total, entry) => total + (entry.size_bytes ?? 0), 0),
   );
 
-  const downloadFolderZip = async (folderId: string, items: PortalResource[]) => {
+  const downloadFolderZip = async (
+    folderId: string,
+    items: PortalResource[],
+  ) => {
     setDownloadingFolder(folderId);
     try {
       const zipEntries: Record<string, Uint8Array> = {};
@@ -168,7 +173,9 @@ export const ClientFilesSection = ({
             <AccordionContent className="pb-4">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {folder.items.map((entry) => {
-                  const imageItems = folder.items.filter((item) => item.is_image);
+                  const imageItems = folder.items.filter(
+                    (item) => item.is_image,
+                  );
                   return (
                     <div
                       key={entry.id}
@@ -203,7 +210,12 @@ export const ClientFilesSection = ({
                             className="w-full"
                             asChild
                           >
-                            <a href={entry.download_url} download target="_blank" rel="noreferrer">
+                            <a
+                              href={entry.download_url}
+                              download
+                              target="_blank"
+                              rel="noreferrer"
+                            >
                               <Download className="size-4" />
                               {copy.downloadFile}
                             </a>

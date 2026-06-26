@@ -1,15 +1,14 @@
 import { useMemo, useState } from "react";
-import {
-  useCreate,
-  useGetList,
-  useNotify,
-  useRefresh,
-} from "ra-core";
+import { useCreate, useGetList, useNotify, useRefresh } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { MoneyText } from "@/lib/permissions/MoneyText";
-import type { LbsDeal, MaintenanceHoursLog, MaintenanceRetainer } from "@/modules/types";
+import type {
+  LbsDeal,
+  MaintenanceHoursLog,
+  MaintenanceRetainer,
+} from "@/modules/types";
 
 const currentBillingPeriod = () => {
   const now = new Date();
@@ -61,10 +60,7 @@ export const MaintenanceTab = ({ record }: { record: LbsDeal }) => {
 
   const hoursUsed = useMemo(
     () =>
-      hoursLog.reduce(
-        (sum, entry) => sum + Number(entry.hours_worked ?? 0),
-        0,
-      ),
+      hoursLog.reduce((sum, entry) => sum + Number(entry.hours_worked ?? 0), 0),
     [hoursLog],
   );
 
@@ -150,7 +146,9 @@ export const MaintenanceTab = ({ record }: { record: LbsDeal }) => {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border p-4">
-        <div className="text-sm text-muted-foreground">Next maintenance cycle</div>
+        <div className="text-sm text-muted-foreground">
+          Next maintenance cycle
+        </div>
         <div className="mt-1 text-2xl font-semibold">
           {nextMaintenanceDate.toLocaleDateString(undefined, {
             month: "long",
@@ -159,9 +157,8 @@ export const MaintenanceTab = ({ record }: { record: LbsDeal }) => {
           })}
         </div>
         <div className="mt-2 text-sm text-muted-foreground">
-          Billing day {retainer.billing_day} ·{" "}
-          {included.toFixed(1)} hours included ·{" "}
-          <MoneyText value={Number(retainer.monthly_amount ?? 0)} />
+          Billing day {retainer.billing_day} · {included.toFixed(1)} hours
+          included · <MoneyText value={Number(retainer.monthly_amount ?? 0)} />
         </div>
       </div>
 

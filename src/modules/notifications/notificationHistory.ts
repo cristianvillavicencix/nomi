@@ -25,8 +25,9 @@ const writeHistory = (items: NotificationHistoryItem[]) => {
 
 export const getNotificationHistory = () => readHistory();
 
-const dedupeKey = (item: Pick<NotificationHistoryItem, "category" | "tag" | "href">) =>
-  item.tag ?? (item.href ? `${item.category}::${item.href}` : null);
+const dedupeKey = (
+  item: Pick<NotificationHistoryItem, "category" | "tag" | "href">,
+) => item.tag ?? (item.href ? `${item.category}::${item.href}` : null);
 
 export const pushNotificationHistory = (
   item: Omit<NotificationHistoryItem, "id" | "created_at" | "read"> & {
@@ -49,9 +50,7 @@ export const pushNotificationHistory = (
   const key = dedupeKey(entry);
   const history = readHistory();
   const duplicateIndex =
-    key == null
-      ? -1
-      : history.findIndex((row) => dedupeKey(row) === key);
+    key == null ? -1 : history.findIndex((row) => dedupeKey(row) === key);
 
   const next =
     duplicateIndex === -1

@@ -125,7 +125,9 @@ export const LbsSidebarNav = ({
   }, [identity]);
 
   const navGroups = useMemo(() => {
-    const groups = filterLbsNavGroups(LBS_NAV_GROUPS, { websiteMonitorEnabled });
+    const groups = filterLbsNavGroups(LBS_NAV_GROUPS, {
+      websiteMonitorEnabled,
+    });
     return groups
       .map((group) => ({
         ...group,
@@ -203,33 +205,33 @@ export const LbsSidebarNav = ({
           afterClientsItems.length > 0 ||
           index > 0;
         return (
-        <div
-          key={group.id}
-          className={cn(
-            hasItemsAbove &&
-              "group-data-[collapsible=icon]:mt-2 group-data-[collapsible=icon]:border-t group-data-[collapsible=icon]:border-sidebar-border/60 group-data-[collapsible=icon]:pt-2",
-          )}
-        >
-          <SidebarGroupLabel
+          <div
+            key={group.id}
             className={cn(
-              "h-auto px-0.5 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
-              "group-data-[collapsible=icon]:pointer-events-none",
-              index === 0 && !hasPrimaryNav ? "mt-0" : "mt-2",
+              hasItemsAbove &&
+                "group-data-[collapsible=icon]:mt-2 group-data-[collapsible=icon]:border-t group-data-[collapsible=icon]:border-sidebar-border/60 group-data-[collapsible=icon]:pt-2",
             )}
           >
-            {group.label}
-          </SidebarGroupLabel>
-          <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
-            {group.items.map((item) => (
-              <SidebarNavLink
-                key={item.to}
-                item={item}
-                active={isActive(item.activePattern)}
-                collapsed={sidebarState === "collapsed"}
-              />
-            ))}
-          </SidebarMenu>
-        </div>
+            <SidebarGroupLabel
+              className={cn(
+                "h-auto px-0.5 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
+                "group-data-[collapsible=icon]:pointer-events-none",
+                index === 0 && !hasPrimaryNav ? "mt-0" : "mt-2",
+              )}
+            >
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
+              {group.items.map((item) => (
+                <SidebarNavLink
+                  key={item.to}
+                  item={item}
+                  active={isActive(item.activePattern)}
+                  collapsed={sidebarState === "collapsed"}
+                />
+              ))}
+            </SidebarMenu>
+          </div>
         );
       })}
 
@@ -296,7 +298,11 @@ const MoreCollapsibleNav = ({
             >
               <ParentIcon className={sidebarNavIconClass(sectionActive)} />
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" className="min-w-44">
+            <DropdownMenuContent
+              side="right"
+              align="start"
+              className="min-w-44"
+            >
               {groups.map((group, groupIndex) => (
                 <div key={group.id}>
                   {groupIndex > 0 ? (
@@ -430,7 +436,9 @@ const SidebarNavLink = ({
       >
         <Icon className={sidebarNavIconClass(active)} />
         <span className="truncate">{item.label}</span>
-        {badgeCount > 0 ? <NavBadge count={badgeCount} className="ml-auto" /> : null}
+        {badgeCount > 0 ? (
+          <NavBadge count={badgeCount} className="ml-auto" />
+        ) : null}
       </Link>
     </SidebarMenuItem>
   );
@@ -445,10 +453,7 @@ const NavBadge = ({
 }) => (
   <Badge
     variant="default"
-    className={cn(
-      "rounded-sm border-0 px-1.5 py-0 text-[10px]",
-      className,
-    )}
+    className={cn("rounded-sm border-0 px-1.5 py-0 text-[10px]", className)}
   >
     {formatUnreadBadgeCount(count)}
   </Badge>

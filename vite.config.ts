@@ -16,80 +16,80 @@ export default defineConfig(({ mode }) => {
   const shareMeta = buildDefaultShareMeta(readShareMetaEnv(env));
 
   return {
-  plugins: [
-    react(),
-    tailwindcss(),
-    visualizer({
-      open: process.env.NODE_ENV !== "CI",
-      filename: "./dist/stats.html",
-    }),
-    createHtmlPlugin({
-      minify: true,
-      inject: {
-        data: {
-          mainScript: `src/main.tsx`,
-          shareTitle: shareMeta.title,
-          shareDescription: shareMeta.description,
-          shareSiteName: shareMeta.siteName,
-          shareImageUrl: shareMeta.imageUrl,
+    plugins: [
+      react(),
+      tailwindcss(),
+      visualizer({
+        open: process.env.NODE_ENV !== "CI",
+        filename: "./dist/stats.html",
+      }),
+      createHtmlPlugin({
+        minify: true,
+        inject: {
+          data: {
+            mainScript: `src/main.tsx`,
+            shareTitle: shareMeta.title,
+            shareDescription: shareMeta.description,
+            shareSiteName: shareMeta.siteName,
+            shareImageUrl: shareMeta.imageUrl,
+          },
         },
-      },
-    }),
-    VitePWA({
-      registerType: "autoUpdate",
-      workbox: {
-        // Do not precache index.html: after a deploy, an old service worker
-        // could still serve a cached index that points at removed hashed chunks (404
-        // on e.g. DealList-*.js). HTML should load from the network to pick up
-        // the current import map. JS/CSS stay precached for speed.
-        globPatterns: ["**/*.{js,css,ico,png,svg,woff,woff2}"],
-        // Sin index.html en precache, un navigateFallback a index.html dispara
-        // "non-precached-url" en Workbox. Desactivar fallback; la app sigue en línea.
-        navigateFallback: null,
-        cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
-        // Main bundle is ~7.4 MB (pdfmake, jsPDF, CRM). Workbox default is 2 MiB.
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-      },
-      manifest: false, // Use existing manifest.json from public/
-    }),
-  ],
-  define:
-    process.env.NODE_ENV === "production" && process.env.VITE_SUPABASE_URL
-      ? {
-          "import.meta.env.VITE_IS_DEMO": JSON.stringify(
-            process.env.VITE_IS_DEMO,
-          ),
-          "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
-            process.env.VITE_SUPABASE_URL,
-          ),
-          "import.meta.env.VITE_SB_PUBLISHABLE_KEY": JSON.stringify(
-            process.env.VITE_SB_PUBLISHABLE_KEY,
-          ),
-          "import.meta.env.VITE_INBOUND_EMAIL": JSON.stringify(
-            process.env.VITE_INBOUND_EMAIL,
-          ),
-        }
-      : undefined,
-  base: process.env.VITE_BASE_PATH || "/",
-  esbuild: {
-    keepNames: true,
-  },
-  build: {
-    chunkSizeWarningLimit: 3000,
-    sourcemap: true,
-  },
-  resolve: {
-    preserveSymlinks: true,
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+      }),
+      VitePWA({
+        registerType: "autoUpdate",
+        workbox: {
+          // Do not precache index.html: after a deploy, an old service worker
+          // could still serve a cached index that points at removed hashed chunks (404
+          // on e.g. DealList-*.js). HTML should load from the network to pick up
+          // the current import map. JS/CSS stay precached for speed.
+          globPatterns: ["**/*.{js,css,ico,png,svg,woff,woff2}"],
+          // Sin index.html en precache, un navigateFallback a index.html dispara
+          // "non-precached-url" en Workbox. Desactivar fallback; la app sigue en línea.
+          navigateFallback: null,
+          cleanupOutdatedCaches: true,
+          skipWaiting: true,
+          clientsClaim: true,
+          // Main bundle is ~7.4 MB (pdfmake, jsPDF, CRM). Workbox default is 2 MiB.
+          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        },
+        manifest: false, // Use existing manifest.json from public/
+      }),
+    ],
+    define:
+      process.env.NODE_ENV === "production" && process.env.VITE_SUPABASE_URL
+        ? {
+            "import.meta.env.VITE_IS_DEMO": JSON.stringify(
+              process.env.VITE_IS_DEMO,
+            ),
+            "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
+              process.env.VITE_SUPABASE_URL,
+            ),
+            "import.meta.env.VITE_SB_PUBLISHABLE_KEY": JSON.stringify(
+              process.env.VITE_SB_PUBLISHABLE_KEY,
+            ),
+            "import.meta.env.VITE_INBOUND_EMAIL": JSON.stringify(
+              process.env.VITE_INBOUND_EMAIL,
+            ),
+          }
+        : undefined,
+    base: process.env.VITE_BASE_PATH || "/",
+    esbuild: {
+      keepNames: true,
     },
-  },
-  server: {
-    // Avoid clashing with other local Vite apps (default 5173).
-    port: 5174,
-    strictPort: true,
-  },
-};
+    build: {
+      chunkSizeWarningLimit: 3000,
+      sourcemap: true,
+    },
+    resolve: {
+      preserveSymlinks: true,
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    server: {
+      // Avoid clashing with other local Vite apps (default 5173).
+      port: 5174,
+      strictPort: true,
+    },
+  };
 });

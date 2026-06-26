@@ -56,7 +56,7 @@ export const RelatedSection = ({
       ) : null}
     </div>
     <div>
-      {(count > 0 || forceShow) ? children : (empty ?? null)}
+      {count > 0 || forceShow ? children : (empty ?? null)}
       {count > 0 && onViewAll ? (
         <Button
           type="button"

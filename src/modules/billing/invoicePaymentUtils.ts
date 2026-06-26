@@ -160,12 +160,15 @@ export const buildInvoicePaymentSchedule = ({
     ];
   }
 
-  const depositTarget =
-    Math.round(total * (percent / 100) * 100) / 100;
-  const remainderTarget =
-    Math.max(Math.round((total - depositTarget) * 100) / 100, 0);
-  const depositDue =
-    Math.max(Math.round((depositTarget - paid) * 100) / 100, 0);
+  const depositTarget = Math.round(total * (percent / 100) * 100) / 100;
+  const remainderTarget = Math.max(
+    Math.round((total - depositTarget) * 100) / 100,
+    0,
+  );
+  const depositDue = Math.max(
+    Math.round((depositTarget - paid) * 100) / 100,
+    0,
+  );
   const depositPaid = paid >= depositTarget - 0.01;
   const autoDebit = Boolean(autoChargeRemainder && saveCard);
   const rows: InvoicePaymentScheduleRow[] = [];
@@ -214,7 +217,10 @@ export const buildInvoicePaymentSchedule = ({
     );
 
     if (depositPaid && unpaidCharges.length > 0) {
-      const unpaidTotal = unpaidCharges.reduce((sum, row) => sum + row.amount, 0);
+      const unpaidTotal = unpaidCharges.reduce(
+        (sum, row) => sum + row.amount,
+        0,
+      );
       const delta = Math.round((balance - unpaidTotal) * 100) / 100;
       if (Math.abs(delta) >= 0.01) {
         const last = unpaidCharges[unpaidCharges.length - 1];
@@ -233,9 +239,7 @@ export const buildInvoicePaymentSchedule = ({
         );
         rows.push({
           key: `remainder-${charge.installment_number}`,
-          label: autoDebit
-            ? `${charge.label} (auto-debit)`
-            : charge.label,
+          label: autoDebit ? `${charge.label} (auto-debit)` : charge.label,
           amount: installmentPaid
             ? charge.amount
             : (unpaidAmountByNumber.get(charge.installment_number) ??

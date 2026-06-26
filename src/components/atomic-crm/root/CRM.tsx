@@ -451,10 +451,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
           <Route path={OAuthConsentPage.path} element={<OAuthConsentPage />} />
           <>
             <Route path="/platafform" element={<Navigate to="/" replace />} />
-            <Route
-              path="/platafform/*"
-              element={<Navigate to="/" replace />}
-            />
+            <Route path="/platafform/*" element={<Navigate to="/" replace />} />
             <Route path="/platform" element={<Navigate to="/" replace />} />
             <Route path="/platform/*" element={<Navigate to="/" replace />} />
             <Route path="/sas" element={<Navigate to="/" replace />} />
@@ -464,9 +461,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
             {renderLbsPublicPortalRoutes()}
           </>
         </CustomRoutes>
-        <CustomRoutes>
-          {renderLbsCustomRoutes({ ProtectedRoute })}
-        </CustomRoutes>
+        <CustomRoutes>{renderLbsCustomRoutes({ ProtectedRoute })}</CustomRoutes>
         <Resource
           name="contacts"
           list={ContactListMobile}

@@ -156,7 +156,11 @@ export type TicketInvoiceSentNoteContext = {
     billing_line_count?: number | null;
     created_at?: string | null;
   }>;
-  messages: Array<{ body: string; created_at: string; direction?: string | null }>;
+  messages: Array<{
+    body: string;
+    created_at: string;
+    direction?: string | null;
+  }>;
 };
 
 export const buildTicketInvoiceSentInternalNoteBody = (
@@ -171,13 +175,9 @@ export const buildTicketInvoiceSentInternalNoteBody = (
     .map((item) => item.created_at)
     .filter(Boolean) as string[];
   const messageTimes = params.messages.map((item) => item.created_at);
-  const firstActivityCandidates = [
-    ...deliverableTimes,
-    ...messageTimes,
-  ].sort();
+  const firstActivityCandidates = [...deliverableTimes, ...messageTimes].sort();
   const firstActivityAt = firstActivityCandidates[0] ?? null;
-  const lastDeliverableAt =
-    deliverableTimes.sort().at(-1) ?? firstActivityAt;
+  const lastDeliverableAt = deliverableTimes.sort().at(-1) ?? firstActivityAt;
 
   const statusSegments = computeStatusSegments({
     ticketCreatedAt: params.ticketCreatedAt,
@@ -188,7 +188,8 @@ export const buildTicketInvoiceSentInternalNoteBody = (
 
   const statusLines = ["new", "open", "waiting"].map((status) => {
     const segment = statusSegments.find((row) => row.status === status);
-    if (!segment) return `- **${status.charAt(0).toUpperCase()}${status.slice(1)}:** —`;
+    if (!segment)
+      return `- **${status.charAt(0).toUpperCase()}${status.slice(1)}:** —`;
     return `- **${status.charAt(0).toUpperCase()}${status.slice(1)}:** ${formatDuration(segment.endMs - segment.startMs)}`;
   });
 
@@ -208,8 +209,7 @@ export const buildTicketInvoiceSentInternalNoteBody = (
             )
           : null;
 
-    const price =
-      line != null ? formatMoney(line.lineTotal) : null;
+    const price = line != null ? formatMoney(line.lineTotal) : null;
     const label = deliverableShortLabel(item);
     const priceSuffix = price ? ` · ${price}` : "";
     return `- ${item.title} · ${label}${priceSuffix}`;

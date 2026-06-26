@@ -49,9 +49,7 @@ export const GlobalQuickCreateMenu = () => {
       section: "create" | "share";
     }> = [];
 
-    if (
-      canAccess(identity, { resource: "contacts", action: "create" })
-    ) {
+    if (canAccess(identity, { resource: "contacts", action: "create" })) {
       items.push({
         id: "contact",
         label: "New contact",
@@ -61,9 +59,7 @@ export const GlobalQuickCreateMenu = () => {
       });
     }
 
-    if (
-      canAccess(identity, { resource: "companies", action: "create" })
-    ) {
+    if (canAccess(identity, { resource: "companies", action: "create" })) {
       items.push({
         id: "company",
         label: "New company",

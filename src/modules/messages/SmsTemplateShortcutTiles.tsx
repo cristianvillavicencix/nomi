@@ -61,39 +61,39 @@ export const SmsTemplateShortcutTiles = ({
         aria-label="Message shortcuts"
       >
         {templates.map((template, index) => {
-        const label = templateTileLabel(
-          template.name,
-          template.shortcut_label,
-        );
-        const color = shortcutTileColor(template.tile_color, index);
+          const label = templateTileLabel(
+            template.name,
+            template.shortcut_label,
+          );
+          const color = shortcutTileColor(template.tile_color, index);
 
-        return (
-          <Tooltip key={String(template.id)}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => handleInsert(template)}
-                className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-md text-[10px] font-bold uppercase tracking-tight text-white shadow-sm transition-transform hover:scale-[1.03] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50",
-                )}
-                style={{ backgroundColor: color }}
-                aria-label={`Insert template: ${template.name}`}
-              >
-                {label}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs text-xs">
-              <p className="font-medium">{template.name}</p>
-              <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
-                {template.body.length > 120
-                  ? `${template.body.slice(0, 120)}…`
-                  : template.body}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        );
-      })}
+          return (
+            <Tooltip key={String(template.id)}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => handleInsert(template)}
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-md text-[10px] font-bold uppercase tracking-tight text-white shadow-sm transition-transform hover:scale-[1.03] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50",
+                  )}
+                  style={{ backgroundColor: color }}
+                  aria-label={`Insert template: ${template.name}`}
+                >
+                  {label}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs">
+                <p className="font-medium">{template.name}</p>
+                <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                  {template.body.length > 120
+                    ? `${template.body.slice(0, 120)}…`
+                    : template.body}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
       </div>
     </TooltipProvider>
   );

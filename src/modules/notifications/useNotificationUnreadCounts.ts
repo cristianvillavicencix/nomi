@@ -22,7 +22,9 @@ const buildCounts = (): NotificationUnreadCounts => {
 };
 
 export const useNotificationUnreadCounts = () => {
-  const [counts, setCounts] = useState<NotificationUnreadCounts>(() => buildCounts());
+  const [counts, setCounts] = useState<NotificationUnreadCounts>(() =>
+    buildCounts(),
+  );
 
   const refresh = useCallback(() => {
     setCounts(buildCounts());
@@ -32,7 +34,8 @@ export const useNotificationUnreadCounts = () => {
     refresh();
     const handler = () => refresh();
     window.addEventListener("nomi:notifications-updated", handler);
-    return () => window.removeEventListener("nomi:notifications-updated", handler);
+    return () =>
+      window.removeEventListener("nomi:notifications-updated", handler);
   }, [refresh]);
 
   return counts;

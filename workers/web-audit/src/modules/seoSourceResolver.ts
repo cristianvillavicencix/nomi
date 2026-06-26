@@ -99,7 +99,11 @@ export const resolveSeoAuditStrategy = (params: {
     };
   }
 
-  if (embedded && embeddedScore > staticScore && embeddedScore >= renderedScore) {
+  if (
+    embedded &&
+    embeddedScore > staticScore &&
+    embeddedScore >= renderedScore
+  ) {
     return {
       preferRendered: false,
       analysisMode: "embedded",
@@ -140,25 +144,33 @@ export const mergeSeoBasics = (params: {
     staticVal: string | null | undefined,
   ) => {
     if (preferRendered) {
-      return renderedVal?.trim() || embeddedVal?.trim() || staticVal?.trim() || null;
+      return (
+        renderedVal?.trim() || embeddedVal?.trim() || staticVal?.trim() || null
+      );
     }
     if (strategy.analysisMode === "embedded") {
-      return embeddedVal?.trim() || staticVal?.trim() || renderedVal?.trim() || null;
+      return (
+        embeddedVal?.trim() || staticVal?.trim() || renderedVal?.trim() || null
+      );
     }
-    return staticVal?.trim() || embeddedVal?.trim() || renderedVal?.trim() || null;
+    return (
+      staticVal?.trim() || embeddedVal?.trim() || renderedVal?.trim() || null
+    );
   };
 
-  const h1Count = preferRendered && rendered
-    ? rendered.h1Count
-    : Math.max(
-        staticBasics.h1Count,
-        embedded?.h1Count ?? 0,
-        rendered?.h1Count ?? 0,
-      );
+  const h1Count =
+    preferRendered && rendered
+      ? rendered.h1Count
+      : Math.max(
+          staticBasics.h1Count,
+          embedded?.h1Count ?? 0,
+          rendered?.h1Count ?? 0,
+        );
 
-  const h1Text = preferRendered && rendered?.h1Text
-    ? rendered.h1Text
-    : staticBasics.h1Text ?? embedded?.h1Text ?? rendered?.h1Text ?? null;
+  const h1Text =
+    preferRendered && rendered?.h1Text
+      ? rendered.h1Text
+      : (staticBasics.h1Text ?? embedded?.h1Text ?? rendered?.h1Text ?? null);
 
   return {
     title: pick(rendered?.title, embedded?.title, staticBasics.title),
@@ -169,6 +181,10 @@ export const mergeSeoBasics = (params: {
     ),
     h1Count,
     h1Text,
-    canonical: pick(rendered?.canonical, embedded?.canonical, staticBasics.canonical),
+    canonical: pick(
+      rendered?.canonical,
+      embedded?.canonical,
+      staticBasics.canonical,
+    ),
   };
 };

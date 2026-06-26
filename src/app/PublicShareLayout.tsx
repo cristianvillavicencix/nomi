@@ -6,7 +6,9 @@ import {
   resolvePublicShareMeta,
 } from "@/lib/publicShareMeta";
 
-const shareEnv = readShareMetaEnv(import.meta.env as Record<string, string | undefined>);
+const shareEnv = readShareMetaEnv(
+  import.meta.env as Record<string, string | undefined>,
+);
 
 export const PublicShareLayout = () => {
   const location = useLocation();

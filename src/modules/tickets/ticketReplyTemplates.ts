@@ -79,7 +79,8 @@ export const TICKET_REPLY_TEMPLATES: TicketReplyTemplate[] = [
   {
     id: "updated_estimate_es",
     label: "Updated estimate (ES)",
-    description: "Share an updated estimate based on new files from the client.",
+    description:
+      "Share an updated estimate based on new files from the client.",
     body: `Hola {{clientName}},
 
 Le compartimos una versión actualizada del estimado correspondiente al caso {{subject}}. Esta actualización fue realizada en base a los nuevos datos o archivos que nos compartió.

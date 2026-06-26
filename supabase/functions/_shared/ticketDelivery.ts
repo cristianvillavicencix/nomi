@@ -30,7 +30,11 @@ async function deliverOneTicketForInvoicePayment(
     .maybeSingle();
 
   if (!ticket?.id || ticket.merged_into_ticket_id) {
-    return { delivered: false, skipped: true, reason: "ticket_missing_or_merged" };
+    return {
+      delivered: false,
+      skipped: true,
+      reason: "ticket_missing_or_merged",
+    };
   }
 
   if (ticket.delivery_status === "delivered") {
@@ -43,7 +47,12 @@ async function deliverOneTicketForInvoicePayment(
       .is("delivered_at", null);
 
     if (!pendingForInvoice) {
-      return { delivered: true, skipped: true, duplicate: true, ticket_id: ticket.id };
+      return {
+        delivered: true,
+        skipped: true,
+        duplicate: true,
+        ticket_id: ticket.id,
+      };
     }
   }
 
@@ -57,12 +66,22 @@ async function deliverOneTicketForInvoicePayment(
     .order("sort_order", { ascending: true });
 
   if (!deliverables?.length) {
-    return { delivered: false, skipped: true, reason: "no_deliverables", ticket_id: ticket.id };
+    return {
+      delivered: false,
+      skipped: true,
+      reason: "no_deliverables",
+      ticket_id: ticket.id,
+    };
   }
 
   const recipient = ticket.requester_email?.trim().toLowerCase() ?? "";
   if (!recipient) {
-    return { delivered: false, skipped: true, reason: "missing_recipient", ticket_id: ticket.id };
+    return {
+      delivered: false,
+      skipped: true,
+      reason: "missing_recipient",
+      ticket_id: ticket.id,
+    };
   }
 
   let inboxAddress = ticket.inbox_address?.trim().toLowerCase() ?? "";
@@ -87,11 +106,17 @@ async function deliverOneTicketForInvoicePayment(
       .limit(1)
       .maybeSingle();
     inboxAddress = defaultInbox?.email?.trim().toLowerCase() ?? "";
-    if (defaultInbox?.from_name?.trim()) fromName = defaultInbox.from_name.trim();
+    if (defaultInbox?.from_name?.trim())
+      fromName = defaultInbox.from_name.trim();
   }
 
   if (!inboxAddress) {
-    return { delivered: false, skipped: true, reason: "missing_inbox", ticket_id: ticket.id };
+    return {
+      delivered: false,
+      skipped: true,
+      reason: "missing_inbox",
+      ticket_id: ticket.id,
+    };
   }
 
   const now = new Date().toISOString();

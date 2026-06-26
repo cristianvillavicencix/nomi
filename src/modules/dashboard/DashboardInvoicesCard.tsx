@@ -44,10 +44,7 @@ export const DashboardInvoicesCard = () => {
 
   const totalUnpaid = useMemo(
     () =>
-      invoices.reduce(
-        (sum, invoice) => sum + (Number(invoice.amount) || 0),
-        0,
-      ),
+      invoices.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0),
     [invoices],
   );
 
@@ -59,7 +56,8 @@ export const DashboardInvoicesCard = () => {
           const rightOverdue = isInvoiceOverdue(right) ? 0 : 1;
           if (leftOverdue !== rightOverdue) return leftOverdue - rightOverdue;
           return (
-            new Date(left.due_date).getTime() - new Date(right.due_date).getTime()
+            new Date(left.due_date).getTime() -
+            new Date(right.due_date).getTime()
           );
         })
         .slice(0, 5),

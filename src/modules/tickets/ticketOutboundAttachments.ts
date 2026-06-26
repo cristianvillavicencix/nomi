@@ -2,8 +2,7 @@ import type { ClientInvoice, Ticket } from "@/modules/types";
 
 export const isTicketAwaitingPayment = (
   ticket: Pick<Ticket, "invoice_id" | "delivery_status">,
-) =>
-  Boolean(ticket.invoice_id) && ticket.delivery_status === "invoice_sent";
+) => Boolean(ticket.invoice_id) && ticket.delivery_status === "invoice_sent";
 
 /**
  * True when the initial supplement delivery is tied to an unpaid sent invoice.

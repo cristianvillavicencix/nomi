@@ -26,9 +26,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessHoursBriefField } from "@/modules/deals/BusinessHoursBriefField";
 import type { WebsiteBriefSectionDef } from "@/modules/deals/websiteBriefSchema";
-import {
-  computeYearsExperience,
-} from "@/modules/deals/briefFormUtils";
+import { computeYearsExperience } from "@/modules/deals/briefFormUtils";
 import {
   getBriefSocialDisplay,
   parseBriefSocialUrls,
@@ -58,7 +56,9 @@ const readUploadedFiles = (value: unknown): UploadedFormFile[] => {
   return [];
 };
 
-const readServicePhotoMap = (value: unknown): Record<string, UploadedFormFile[]> =>
+const readServicePhotoMap = (
+  value: unknown,
+): Record<string, UploadedFormFile[]> =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, UploadedFormFile[]>)
     : {};
@@ -175,9 +175,12 @@ const ServiceTabsPhotoUpload = ({
 
   const activeService = services.includes(activeTab)
     ? activeTab
-    : services[0] ?? "";
+    : (services[0] ?? "");
 
-  const uploadForService = async (service: string, fileList: FileList | null) => {
+  const uploadForService = async (
+    service: string,
+    fileList: FileList | null,
+  ) => {
     if (!fileList?.length) return;
     const uploaded = await Promise.all(
       Array.from(fileList).map((file) =>
@@ -213,7 +216,11 @@ const ServiceTabsPhotoUpload = ({
     >
       <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
         {services.map((service) => (
-          <TabsTrigger key={service} value={service} className="text-xs sm:text-sm">
+          <TabsTrigger
+            key={service}
+            value={service}
+            className="text-xs sm:text-sm"
+          >
             {tabLabel(service)}
             {(photos[service] ?? []).length > 0
               ? ` (${(photos[service] ?? []).length})`
@@ -230,7 +237,9 @@ const ServiceTabsPhotoUpload = ({
               multiple
               accept=".jpg,.jpeg,.png,.webp,.heic"
               className="mt-2"
-              onChange={(event) => void uploadForService(service, event.target.files)}
+              onChange={(event) =>
+                void uploadForService(service, event.target.files)
+              }
             />
           </div>
           <FilePreviewGrid
@@ -344,7 +353,8 @@ const SocialLinksField = ({
     <div className="space-y-3">
       <Label>Social media (optional)</Label>
       <p className="text-xs text-muted-foreground">
-        Paste each profile link — we detect the network name and icon automatically.
+        Paste each profile link — we detect the network name and icon
+        automatically.
       </p>
       {urls.map((url, index) => {
         const { label, Icon } = getBriefSocialDisplay(url);
@@ -467,7 +477,10 @@ type CertificationEntry = {
 const parseCertifications = (value: unknown): CertificationEntry[] => {
   if (!Array.isArray(value)) return [];
   return value
-    .filter((entry): entry is Record<string, unknown> => entry !== null && typeof entry === "object")
+    .filter(
+      (entry): entry is Record<string, unknown> =>
+        entry !== null && typeof entry === "object",
+    )
     .map((entry) => ({
       label: String(entry.label ?? ""),
       url: String(entry.url ?? ""),
@@ -475,7 +488,12 @@ const parseCertifications = (value: unknown): CertificationEntry[] => {
       images: Array.isArray(entry.images)
         ? (entry.images as CertificationImage[])
         : entry.image_url
-          ? [{ url: String(entry.image_url), name: String(entry.image_name ?? "") }]
+          ? [
+              {
+                url: String(entry.image_url),
+                name: String(entry.image_name ?? ""),
+              },
+            ]
           : [],
     }));
 };
@@ -502,14 +520,21 @@ const CertificationsField = ({
   const removeRow = (index: number) =>
     onChange(rows.filter((_, i) => i !== index));
 
-  const handleImageUpload = async (index: number, fileList: FileList | null) => {
+  const handleImageUpload = async (
+    index: number,
+    fileList: FileList | null,
+  ) => {
     const file = fileList?.[0];
     if (!file) return;
-    const uploaded = await uploadFormFile(file, { token, fieldKey: "certifications" });
+    const uploaded = await uploadFormFile(file, {
+      token,
+      fieldKey: "certifications",
+    });
     const current = rows[index];
     if (!current) return;
     const images = [...(current.images ?? [])];
-    if (images.length < 2) images.push({ url: uploaded.url, name: uploaded.name });
+    if (images.length < 2)
+      images.push({ url: uploaded.url, name: uploaded.name });
     updateRow(index, { images });
   };
 
@@ -563,11 +588,15 @@ const CertificationsField = ({
             {canAddImage ? (
               <>
                 <input
-                  ref={(el) => { if (fileInputRefs[index]) fileInputRefs[index].current = el; }}
+                  ref={(el) => {
+                    if (fileInputRefs[index]) fileInputRefs[index].current = el;
+                  }}
                   type="file"
                   accept=".jpg,.jpeg,.png,.webp,.svg"
                   className="hidden"
-                  onChange={(e) => void handleImageUpload(index, e.target.files)}
+                  onChange={(e) =>
+                    void handleImageUpload(index, e.target.files)
+                  }
                 />
                 <Button
                   type="button"
@@ -637,7 +666,10 @@ const BrandColorPickers = ({
 );
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1939 }, (_, i) => CURRENT_YEAR - i);
+const YEAR_OPTIONS = Array.from(
+  { length: CURRENT_YEAR - 1939 },
+  (_, i) => CURRENT_YEAR - i,
+);
 
 const YearSelectField = ({
   value,
@@ -660,7 +692,9 @@ const YearSelectField = ({
         <SelectContent>
           <SelectItem value="__none__">— Not sure —</SelectItem>
           {YEAR_OPTIONS.map((y) => (
-            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+            <SelectItem key={y} value={String(y)}>
+              {y}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -671,7 +705,10 @@ const YearSelectField = ({
 const parseChips = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value === "string" && value.trim()) {
-    return value.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
+    return value
+      .split(/[,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   return [];
 };
@@ -694,7 +731,10 @@ const ChipInput = ({
 
   const commit = () => {
     const trimmed = draft.trim();
-    if (!trimmed || chips.includes(trimmed)) { setDraft(""); return; }
+    if (!trimmed || chips.includes(trimmed)) {
+      setDraft("");
+      return;
+    }
     onChange([...chips, trimmed]);
     setDraft("");
   };
@@ -702,13 +742,18 @@ const ChipInput = ({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      {helpText ? <p className="text-xs text-muted-foreground">{helpText}</p> : null}
+      {helpText ? (
+        <p className="text-xs text-muted-foreground">{helpText}</p>
+      ) : null}
       <Input
         value={draft}
         placeholder={placeholder ?? "Type and press Enter…"}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(); }
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            commit();
+          }
           if (e.key === "Backspace" && !draft && chips.length > 0) {
             onChange(chips.slice(0, -1));
           }
@@ -718,7 +763,10 @@ const ChipInput = ({
       {chips.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {chips.map((chip) => (
-            <span key={chip} className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-0.5 text-xs">
+            <span
+              key={chip}
+              className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-0.5 text-xs"
+            >
               {chip}
               <button
                 type="button"
@@ -739,7 +787,10 @@ const ChipInput = ({
 const parseBulletList = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.map(String);
   if (typeof value === "string" && value.trim()) {
-    return value.split("\n").map((s) => s.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
+    return value
+      .split("\n")
+      .map((s) => s.replace(/^[-•*]\s*/, "").trim())
+      .filter(Boolean);
   }
   return [];
 };
@@ -777,7 +828,9 @@ const BulletListField = ({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      {helpText ? <p className="text-xs text-muted-foreground">{helpText}</p> : null}
+      {helpText ? (
+        <p className="text-xs text-muted-foreground">{helpText}</p>
+      ) : null}
       <div className="space-y-2">
         {visibleItems.map((item, index) => (
           <div key={index} className="flex items-center gap-2">
@@ -828,7 +881,13 @@ type ServicePreset = {
 const SERVICE_PRESETS: ServicePreset[] = [
   {
     label: "Roofing Contractor",
-    services: ["Roof Repairs", "Roof Replacements", "Gutter Cleaning", "Chimney Repairs", "Gutter Repairs"],
+    services: [
+      "Roof Repairs",
+      "Roof Replacements",
+      "Gutter Cleaning",
+      "Chimney Repairs",
+      "Gutter Repairs",
+    ],
     primaryService: "Roof Replacements",
     insuranceClaims: "Yes",
     acceptsXactimate: "Yes",
@@ -843,7 +902,12 @@ const SERVICE_PRESETS: ServicePreset[] = [
   },
   {
     label: "Siding Contractor",
-    services: ["Siding Repairs", "Siding Replacements", "Vinyl Siding Installation", "Exterior Painting"],
+    services: [
+      "Siding Repairs",
+      "Siding Replacements",
+      "Vinyl Siding Installation",
+      "Exterior Painting",
+    ],
     primaryService: "Siding Replacements",
     insuranceClaims: "Yes",
     freeInspection: true,
@@ -856,7 +920,13 @@ const SERVICE_PRESETS: ServicePreset[] = [
   },
   {
     label: "Deck & Fence Contractor",
-    services: ["Deck Repairs", "Deck Replacements", "New Deck Construction", "Composite Decking (Trex)", "Railing Systems"],
+    services: [
+      "Deck Repairs",
+      "Deck Replacements",
+      "New Deck Construction",
+      "Composite Decking (Trex)",
+      "Railing Systems",
+    ],
     primaryService: "New Deck Construction",
     differentiators: [
       "Custom design options",
@@ -878,7 +948,12 @@ const SERVICE_PRESETS: ServicePreset[] = [
   },
   {
     label: "Gutter Specialist",
-    services: ["Gutter Cleaning", "Gutter Repairs", "Gutter Replacements", "Gutter Installation"],
+    services: [
+      "Gutter Cleaning",
+      "Gutter Repairs",
+      "Gutter Replacements",
+      "Gutter Installation",
+    ],
     primaryService: "Gutter Replacements",
     freeInspection: true,
     differentiators: [
@@ -895,27 +970,58 @@ type BrandCategoryDef = { all: string[]; top3: string[] };
 const CATEGORY_BRANDS: Record<string, BrandCategoryDef> = {
   Roofing: {
     top3: ["GAF", "Owens Corning", "CertainTeed"],
-    all:  ["GAF", "Owens Corning", "CertainTeed", "Atlas Roofing", "IKO", "TAMKO", "Malarkey", "Boral"],
+    all: [
+      "GAF",
+      "Owens Corning",
+      "CertainTeed",
+      "Atlas Roofing",
+      "IKO",
+      "TAMKO",
+      "Malarkey",
+      "Boral",
+    ],
   },
   Siding: {
     top3: ["James Hardie", "LP SmartSide", "Alside"],
-    all:  ["James Hardie", "LP SmartSide", "Alside", "Ply Gem", "CertainTeed Siding", "Mastic", "Norandex"],
+    all: [
+      "James Hardie",
+      "LP SmartSide",
+      "Alside",
+      "Ply Gem",
+      "CertainTeed Siding",
+      "Mastic",
+      "Norandex",
+    ],
   },
   Painting: {
     top3: ["Sherwin-Williams", "Benjamin Moore", "PPG Paints"],
-    all:  ["Sherwin-Williams", "Benjamin Moore", "PPG Paints", "Behr", "Valspar", "Dunn-Edwards"],
+    all: [
+      "Sherwin-Williams",
+      "Benjamin Moore",
+      "PPG Paints",
+      "Behr",
+      "Valspar",
+      "Dunn-Edwards",
+    ],
   },
   Gutters: {
     top3: ["Amerimax", "Spectra Metals", "LeafGuard"],
-    all:  ["Amerimax", "Spectra Metals", "Mueller", "LeafGuard", "K-Guard"],
+    all: ["Amerimax", "Spectra Metals", "Mueller", "LeafGuard", "K-Guard"],
   },
   "Decking & Fencing": {
     top3: ["Trex", "TimberTech", "Fiberon"],
-    all:  ["Trex", "TimberTech", "Fiberon", "Azek", "Wolf Decking", "Deckorators"],
+    all: [
+      "Trex",
+      "TimberTech",
+      "Fiberon",
+      "Azek",
+      "Wolf Decking",
+      "Deckorators",
+    ],
   },
   "General Home Improvements": {
     top3: ["Sherwin-Williams", "3M", "DAP"],
-    all:  ["3M", "DAP", "Quikrete", "USG", "James Hardie", "Sherwin-Williams"],
+    all: ["3M", "DAP", "Quikrete", "USG", "James Hardie", "Sherwin-Williams"],
   },
 };
 
@@ -924,18 +1030,26 @@ const getBrandsForCategories = (categories: string[]): string[] => {
   const result: string[] = [];
   for (const cat of categories.filter(Boolean)) {
     for (const brand of CATEGORY_BRANDS[cat]?.all ?? []) {
-      if (!seen.has(brand)) { seen.add(brand); result.push(brand); }
+      if (!seen.has(brand)) {
+        seen.add(brand);
+        result.push(brand);
+      }
     }
   }
   return result;
 };
 
-export const getDefaultBrandsForCategories = (categories: string[]): string[] => {
+export const getDefaultBrandsForCategories = (
+  categories: string[],
+): string[] => {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const cat of categories.filter(Boolean)) {
     for (const brand of CATEGORY_BRANDS[cat]?.top3 ?? []) {
-      if (!seen.has(brand)) { seen.add(brand); result.push(brand); }
+      if (!seen.has(brand)) {
+        seen.add(brand);
+        result.push(brand);
+      }
     }
   }
   return result;
@@ -1002,12 +1116,17 @@ const BrandsField = ({
             className="w-full justify-between font-normal"
           >
             <span className="truncate text-left">
-              {selected.length === 0 ? "Select brands…" : `${selected.length} selected`}
+              {selected.length === 0
+                ? "Select brands…"
+                : `${selected.length} selected`}
             </span>
             <ChevronDown className="size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <PopoverContent
+          className="w-[--radix-popover-trigger-width] p-0"
+          align="start"
+        >
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="Search or add a brand…"
@@ -1134,7 +1253,10 @@ const CreatableMultiSelect = ({
             <ChevronDown className="size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <PopoverContent
+          className="w-[--radix-popover-trigger-width] p-0"
+          align="start"
+        >
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="Search or add a service…"
@@ -1229,7 +1351,7 @@ const PrimaryServiceSelect = ({
     <div className="space-y-2">
       <Label>Primary / most profitable service</Label>
       <Select
-        value={isCustom ? "__custom__" : (value || "")}
+        value={isCustom ? "__custom__" : value || ""}
         onValueChange={(next) => {
           if (next !== "__custom__") onChange(next === "__none__" ? "" : next);
         }}
@@ -1240,7 +1362,9 @@ const PrimaryServiceSelect = ({
         <SelectContent>
           <SelectItem value="__none__">— None —</SelectItem>
           {services.map((s) => (
-            <SelectItem key={s} value={s}>{s}</SelectItem>
+            <SelectItem key={s} value={s}>
+              {s}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -1344,8 +1468,12 @@ const VisualContentSection = (props: BriefSectionProps) => {
 };
 
 const BRAND_STYLE_HANDLED = new Set([
-  "brand_colors_option", "brand_color_1", "brand_color_2", "brand_color_3",
-  "reference_sites", "site_exclusions",
+  "brand_colors_option",
+  "brand_color_1",
+  "brand_color_2",
+  "brand_color_3",
+  "reference_sites",
+  "site_exclusions",
 ]);
 
 const BrandStyleSection = (props: BriefSectionProps) => {
@@ -1389,7 +1517,10 @@ const getServicesForCategories = (categories: string[]): string[] => {
   const result: string[] = [];
   for (const cat of categories) {
     for (const s of CATEGORY_PRESET_MAP[cat]?.services ?? []) {
-      if (!seen.has(s)) { seen.add(s); result.push(s); }
+      if (!seen.has(s)) {
+        seen.add(s);
+        result.push(s);
+      }
     }
   }
   return result;
@@ -1424,7 +1555,9 @@ const ServicesSection = (props: BriefSectionProps) => {
     : [];
 
   // Services that the user manually added (not from any preset)
-  const customServices = selectedServices.filter((s) => !ALL_PRESET_SERVICES.has(s));
+  const customServices = selectedServices.filter(
+    (s) => !ALL_PRESET_SERVICES.has(s),
+  );
 
   // Options for the multi-select = sub-services from selected categories + custom ones already added
   const activeCategories = categories.filter(Boolean);
@@ -1456,12 +1589,17 @@ const ServicesSection = (props: BriefSectionProps) => {
     void allKnownBrands; // used above for type narrowing
 
     // Auto-fill from first category with a service preset
-    const firstPreset = activeCats.map((c) => CATEGORY_PRESET_MAP[c]).find(Boolean);
+    const firstPreset = activeCats
+      .map((c) => CATEGORY_PRESET_MAP[c])
+      .find(Boolean);
     if (firstPreset) {
       setField("primary_service", firstPreset.primaryService);
-      if (firstPreset.insuranceClaims) setField("insurance_claims", firstPreset.insuranceClaims);
-      if (firstPreset.acceptsXactimate) setField("accepts_xactimate", firstPreset.acceptsXactimate);
-      if (firstPreset.freeInspection) setField("free_offers", ["Free inspection", "Free estimate"]);
+      if (firstPreset.insuranceClaims)
+        setField("insurance_claims", firstPreset.insuranceClaims);
+      if (firstPreset.acceptsXactimate)
+        setField("accepts_xactimate", firstPreset.acceptsXactimate);
+      if (firstPreset.freeInspection)
+        setField("free_offers", ["Free inspection", "Free estimate"]);
     }
   };
 
@@ -1498,7 +1636,9 @@ const ServicesSection = (props: BriefSectionProps) => {
               </SelectTrigger>
               <SelectContent>
                 {CATEGORY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

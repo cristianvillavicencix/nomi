@@ -88,5 +88,12 @@ export const useProposalRecipient = (proposal: Proposal) => {
       recipientPhone: readContactPhone(resolvedContact),
       contact: resolvedContact,
     };
-  }, [contact, deal?.id, dealContact, primaryContact, proposal.contact_id, proposal.deal_id]);
+  }, [
+    contact,
+    deal?.id,
+    dealContact,
+    primaryContact,
+    proposal.contact_id,
+    proposal.deal_id,
+  ]);
 };

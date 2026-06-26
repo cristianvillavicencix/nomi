@@ -17,13 +17,7 @@ import {
   type PortalDelivery,
 } from "@/modules/portal/portalTypes";
 
-const InfoRow = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) => {
+const InfoRow = ({ label, value }: { label: string; value: ReactNode }) => {
   if (value == null || value === "" || value === "—") return null;
   return (
     <div className="flex flex-col gap-1 border-b py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
@@ -35,7 +29,10 @@ const InfoRow = ({
   );
 };
 
-const hostingStatusLabel = (status: string | null | undefined, copy: PortalCopy) => {
+const hostingStatusLabel = (
+  status: string | null | undefined,
+  copy: PortalCopy,
+) => {
   const normalized = String(status ?? "").toLowerCase();
   if (normalized === "active") return copy.hostingActive;
   if (normalized === "expired") return copy.hostingExpired;
@@ -93,7 +90,11 @@ export const ClientHostingSection = ({
         <h2 className="text-sm font-semibold text-foreground">
           {copy.hostingSiteLocationTitle}
         </h2>
-        <ClientDomainSection siteUrl={siteUrl} stagingUrl={stagingUrl} copy={copy} />
+        <ClientDomainSection
+          siteUrl={siteUrl}
+          stagingUrl={stagingUrl}
+          copy={copy}
+        />
       </section>
 
       <section className="rounded-lg border bg-background/80">
@@ -105,8 +106,14 @@ export const ClientHostingSection = ({
         <dl className="px-4">
           <InfoRow label={copy.hostingProviderLabel} value={hostingProvider} />
           <InfoRow label={copy.managedByLabel} value={hostingManagedBy} />
-          <InfoRow label={copy.hostingPanelUrlLabel} value={hostingMeta.panel_url} />
-          <InfoRow label={copy.hostingLocationLabel} value={hostingMeta.location} />
+          <InfoRow
+            label={copy.hostingPanelUrlLabel}
+            value={hostingMeta.panel_url}
+          />
+          <InfoRow
+            label={copy.hostingLocationLabel}
+            value={hostingMeta.location}
+          />
           <InfoRow label={copy.plan} value={delivery.plan_name} />
           <InfoRow
             label={copy.hostingRenewal}

@@ -50,7 +50,9 @@ export const SelectedEntityRow = ({
 }) => (
   <div className="flex items-start gap-3 rounded-md border bg-muted/20 px-3 py-2.5">
     <Avatar className="size-8 shrink-0">
-      <AvatarFallback className="text-xs">{entityInitials(title)}</AvatarFallback>
+      <AvatarFallback className="text-xs">
+        {entityInitials(title)}
+      </AvatarFallback>
     </Avatar>
     <div className="min-w-0 flex-1 space-y-1">
       <p className="truncate text-sm font-medium leading-tight">{title}</p>
@@ -199,11 +201,11 @@ export const EntitySearchToolbar = ({
                   Loading…
                 </div>
               ) : (
-                children ?? (
+                (children ?? (
                   <CommandEmpty>
                     {trimmedSearch ? emptySearchMessage : emptyMessage}
                   </CommandEmpty>
-                )
+                ))
               )}
             </CommandList>
           </Command>
@@ -235,10 +237,7 @@ export const EntitySearchOption = ({
   selected: boolean;
   onSelect: () => void;
 }) => (
-  <CommandItem
-    value={`${label} ${sublabel ?? ""}`.trim()}
-    onSelect={onSelect}
-  >
+  <CommandItem value={`${label} ${sublabel ?? ""}`.trim()} onSelect={onSelect}>
     <CheckIcon selected={selected} />
     <p className="min-w-0 flex-1 truncate text-sm leading-snug">
       <span className="font-medium">{label}</span>
@@ -258,7 +257,10 @@ const CheckIcon = ({ selected }: { selected: boolean }) => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className={cn("mr-2 size-4 shrink-0", selected ? "opacity-100" : "opacity-0")}
+    className={cn(
+      "mr-2 size-4 shrink-0",
+      selected ? "opacity-100" : "opacity-0",
+    )}
     aria-hidden
   >
     <path d="M20 6 9 17l-5-5" />

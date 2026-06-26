@@ -156,8 +156,9 @@ export const applyLeadStageChange = async ({
         }),
       });
 
-      const calendarEventId = (calendarResult?.data as { id?: Identifier } | undefined)
-        ?.id;
+      const calendarEventId = (
+        calendarResult?.data as { id?: Identifier } | undefined
+      )?.id;
       const provider = dataProvider as CrmDataProvider;
       if (calendarEventId != null && provider.notifyFollowUp) {
         try {

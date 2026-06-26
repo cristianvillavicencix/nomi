@@ -69,7 +69,9 @@ const PersonCompanyInlineDraft = () => {
   );
 };
 
-export const PersonCompanySection = ({ variant }: PersonCompanySectionProps) => {
+export const PersonCompanySection = ({
+  variant,
+}: PersonCompanySectionProps) => {
   if (variant === "hidden") return null;
 
   return (

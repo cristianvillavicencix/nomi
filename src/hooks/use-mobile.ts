@@ -30,7 +30,9 @@ export function useIsBelowLg() {
   });
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${TABLET_MAX_BREAKPOINT - 1}px)`);
+    const mql = window.matchMedia(
+      `(max-width: ${TABLET_MAX_BREAKPOINT - 1}px)`,
+    );
     const onChange = () => {
       setIsBelowLg(window.innerWidth < TABLET_MAX_BREAKPOINT);
     };

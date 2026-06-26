@@ -128,7 +128,9 @@ export const buildProjectBriefMarkdown = (record: LbsDeal): string => {
     timeStyle: "short",
   });
   const projectName = record.name?.trim() || `Project #${record.id}`;
-  const deliveryDate = formatProjectDeliveryDate(getProjectDeliveryDate(record));
+  const deliveryDate = formatProjectDeliveryDate(
+    getProjectDeliveryDate(record),
+  );
 
   const lines: string[] = [
     `# Project brief: ${projectName}`,
@@ -152,9 +154,7 @@ export const buildProjectBriefMarkdown = (record: LbsDeal): string => {
 
   for (const section of sections) {
     const visibleFields = section.fields.filter((field) =>
-      field.visibleWhen
-        ? evaluateCondition(field.visibleWhen, answers)
-        : true,
+      field.visibleWhen ? evaluateCondition(field.visibleWhen, answers) : true,
     );
 
     const fieldBlocks = visibleFields
@@ -209,7 +209,10 @@ export const buildProjectBriefMarkdown = (record: LbsDeal): string => {
     }
   }
 
-  return `${lines.filter((line, index, all) => !(line === "" && all[index - 1] === "")).join("\n").trim()}\n`;
+  return `${lines
+    .filter((line, index, all) => !(line === "" && all[index - 1] === ""))
+    .join("\n")
+    .trim()}\n`;
 };
 
 export const downloadProjectBriefMarkdown = (

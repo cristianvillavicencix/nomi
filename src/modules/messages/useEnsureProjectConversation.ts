@@ -60,7 +60,15 @@ export const useEnsureProjectConversation = (
       .finally(() => {
         isCreatingRef.current = false;
       });
-  }, [conversation, dataProvider, dealId, dealTitle, isPending, memberId, refetch]);
+  }, [
+    conversation,
+    dataProvider,
+    dealId,
+    dealTitle,
+    isPending,
+    memberId,
+    refetch,
+  ]);
 
   return {
     conversation,

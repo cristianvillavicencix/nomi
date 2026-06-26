@@ -1,6 +1,11 @@
 import { useGetList, useGetOne } from "ra-core";
 import { useMemo } from "react";
-import type { Company, Contact, Deal, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Company,
+  Contact,
+  Deal,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import {
   generatePaymentInstallments,
   lineTotal,
@@ -71,9 +76,7 @@ export const buildCrmDocumentSnapshot = ({
     member,
     contractTerms,
     termsMarkdown:
-      termsMarkdown ??
-      contractTerms?.body_markdown?.trim() ??
-      null,
+      termsMarkdown ?? contractTerms?.body_markdown?.trim() ?? null,
     termsTitle: termsTitle ?? contractTerms?.title ?? null,
   };
 };
@@ -91,11 +94,7 @@ export const useProposalDocumentData = (
     isPending: isProposalPending,
     isError: isProposalError,
     error: proposalError,
-  } = useGetOne<Proposal>(
-    "proposals",
-    { id: proposalId },
-    { enabled },
-  );
+  } = useGetOne<Proposal>("proposals", { id: proposalId }, { enabled });
 
   const { data: lines = [], isPending: isLinesPending } =
     useGetList<ProposalLineItem>(
@@ -162,14 +161,15 @@ export const useProposalDocumentData = (
     },
   );
 
-  const { data: contractTermsList = [] } = useGetList<OrganizationContractTerms>(
-    "organization_contract_terms",
-    {
-      filter: { "is_active@eq": true },
-      pagination: { page: 1, perPage: 1 },
-    },
-    { enabled: enabled && fetchContractTerms },
-  );
+  const { data: contractTermsList = [] } =
+    useGetList<OrganizationContractTerms>(
+      "organization_contract_terms",
+      {
+        filter: { "is_active@eq": true },
+        pagination: { page: 1, perPage: 1 },
+      },
+      { enabled: enabled && fetchContractTerms },
+    );
 
   const lineDrafts: ProposalLineDraft[] = useMemo(
     () =>
@@ -200,8 +200,12 @@ export const useProposalDocumentData = (
       depositAmount: proposal.deposit_amount ?? 0,
       balanceAmount: proposal.balance_amount ?? 0,
       config: {
-        installment_frequency: schedule?.installment_frequency ?? config.installment_frequency ?? "weekly",
-        installment_count: schedule?.installment_count ?? config.installment_count ?? 4,
+        installment_frequency:
+          schedule?.installment_frequency ??
+          config.installment_frequency ??
+          "weekly",
+        installment_count:
+          schedule?.installment_count ?? config.installment_count ?? 4,
         deposit_due_date: schedule?.deposit_due_date ?? null,
         balance_start_date: null,
       },
@@ -214,9 +218,7 @@ export const useProposalDocumentData = (
     }));
   }, [installments, proposal, schedule]);
 
-  const basePackageLine = lineDrafts.find((line) =>
-    isPackageLine(line),
-  );
+  const basePackageLine = lineDrafts.find((line) => isPackageLine(line));
 
   const recurringSubtotal = lineDrafts
     .filter((line) => line.billing_type === "recurring")

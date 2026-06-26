@@ -29,10 +29,7 @@ const DEAL_FIN_RESOURCES = new Set([
   "deal_change_orders",
   "deal_client_payments",
 ]);
-const DEAL_OPS_RESOURCES = new Set([
-  "deal_resources",
-  "deal_access_entries",
-]);
+const DEAL_OPS_RESOURCES = new Set(["deal_resources", "deal_access_entries"]);
 
 function canMutateViaCatalog(
   identity: AccessIdentity,

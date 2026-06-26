@@ -45,17 +45,24 @@ export const ProjectDeliveryEmailPreview = ({
           <p>Hi {firstName},</p>
           <p className="text-muted-foreground">
             Your website project is complete and ready for you to review. Open
-            your client portal with the link below — no password, just one click.
+            your client portal with the link below — no password, just one
+            click.
           </p>
           {normalizedSite ? (
             <p className="text-muted-foreground">
               Live site:{" "}
-              <span className="font-medium text-foreground">{normalizedSite}</span>
+              <span className="font-medium text-foreground">
+                {normalizedSite}
+              </span>
             </p>
           ) : null}
           <div className="rounded-lg border bg-muted/20 p-4">
-            <div className="text-xs text-muted-foreground">Your access link</div>
-            <div className="mt-1 font-mono text-sm text-primary">{portalPath}</div>
+            <div className="text-xs text-muted-foreground">
+              Your access link
+            </div>
+            <div className="mt-1 font-mono text-sm text-primary">
+              {portalPath}
+            </div>
             <div className="mt-2 text-xs text-muted-foreground">
               This link is personal and non-transferable.
             </div>

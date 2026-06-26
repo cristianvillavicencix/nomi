@@ -37,7 +37,8 @@ type ClientPortalCredentialsBody = {
 const SENSITIVE_CODE_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 8;
 
-const generateOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
+const generateOtpCode = () =>
+  String(Math.floor(100000 + Math.random() * 900000));
 
 const sha256Hex = async (value: string) => {
   const data = new TextEncoder().encode(value);
@@ -47,11 +48,7 @@ const sha256Hex = async (value: string) => {
     .join("");
 };
 
-const sendOtpEmail = async (
-  orgId: number,
-  to: string,
-  code: string,
-) => {
+const sendOtpEmail = async (orgId: number, to: string, code: string) => {
   await sendTransactionalEmail({
     orgId,
     to,
@@ -208,7 +205,9 @@ const sendPortalOtp = async (
 
   const code = generateOtpCode();
   const codeHash = await sha256Hex(code);
-  const otpExpiresAt = new Date(Date.now() + SENSITIVE_CODE_TTL_MS).toISOString();
+  const otpExpiresAt = new Date(
+    Date.now() + SENSITIVE_CODE_TTL_MS,
+  ).toISOString();
   const sessionExpiresAt = new Date(Date.now() + sessionTtlMs).toISOString();
 
   const { error: insertError } = await supabaseAdmin
@@ -239,7 +238,10 @@ const verifyPortalOtp = async (
   if (!challenge?.id || !challenge.otp_code_hash || !challenge.otp_expires_at) {
     throw new Error("Verification code required");
   }
-  if (challenge.otp_attempts != null && Number(challenge.otp_attempts) >= MAX_OTP_ATTEMPTS) {
+  if (
+    challenge.otp_attempts != null &&
+    Number(challenge.otp_attempts) >= MAX_OTP_ATTEMPTS
+  ) {
     throw new Error("Too many attempts. Request a new code.");
   }
   if (new Date(String(challenge.otp_expires_at)).getTime() < Date.now()) {
@@ -315,7 +317,11 @@ const loadSharedEntry = async (
   return entry;
 };
 
-const loadSharedSecret = async (orgId: number, dealId: number, secretId: number) => {
+const loadSharedSecret = async (
+  orgId: number,
+  dealId: number,
+  secretId: number,
+) => {
   const { data: secret, error } = await supabaseAdmin
     .from("deal_secrets")
     .select("id, org_id, deal_id, label, has_secret, shared_with_client")
@@ -341,16 +347,18 @@ const insertClientCredentialAudit = async (params: {
   action: "view" | "copy";
   req: Request;
 }) => {
-  const { error } = await supabaseAdmin.from("client_credential_access_log").insert({
-    org_id: params.orgId,
-    deal_id: params.dealId,
-    access_entry_id: params.entryId ?? null,
-    secret_id: params.secretId ?? null,
-    portal_account_id: params.portalAccountId,
-    action: params.action,
-    ip_address: getClientIp(params.req),
-    user_agent: params.req.headers.get("user-agent"),
-  });
+  const { error } = await supabaseAdmin
+    .from("client_credential_access_log")
+    .insert({
+      org_id: params.orgId,
+      deal_id: params.dealId,
+      access_entry_id: params.entryId ?? null,
+      secret_id: params.secretId ?? null,
+      portal_account_id: params.portalAccountId,
+      action: params.action,
+      ip_address: getClientIp(params.req),
+      user_agent: params.req.headers.get("user-agent"),
+    });
   if (error) throw new Error(error.message);
 };
 
@@ -383,8 +391,14 @@ Deno.serve(
               PORTAL_LOGIN_SESSION_TTL_MS,
             );
             return new Response(
-              JSON.stringify({ ok: true, sent: true, expires_at: sentExpiresAt }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+              JSON.stringify({
+                ok: true,
+                sent: true,
+                expires_at: sentExpiresAt,
+              }),
+              {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
             );
           } catch (error) {
             console.error("request_email_login_code.send", error);
@@ -518,7 +532,10 @@ Deno.serve(
 
       const session = await loadSensitiveSession(account.id, sensitiveSession);
       if (!session) {
-        return createErrorResponse(401, "Sensitive session expired. Confirm your email again.");
+        return createErrorResponse(
+          401,
+          "Sensitive session expired. Confirm your email again.",
+        );
       }
 
       const dealId = Number(body.deal_id);
@@ -552,7 +569,9 @@ Deno.serve(
       if (action === "reveal_password") {
         const cryptoKey = getPgcryptoKey();
         const hasPassword =
-          kind === "api_key" ? Boolean((entry as { has_secret?: boolean }).has_secret) : Boolean((entry as { has_password?: boolean }).has_password);
+          kind === "api_key"
+            ? Boolean((entry as { has_secret?: boolean }).has_secret)
+            : Boolean((entry as { has_password?: boolean }).has_password);
         if (!hasPassword) {
           return new Response(JSON.stringify({ password: null }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },

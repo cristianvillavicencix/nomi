@@ -2,7 +2,11 @@ import type { CalendarEvent } from "@/modules/calendar/calendarUtils";
 import { formatEventTimeLabel } from "@/modules/calendar/calendarReminderOptions";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 import { formatOrganizationMemberName } from "@/modules/billing/billingUtils";
-import type { WorkCategory, WorkItem, WorkListGroup } from "@/modules/work/workTypes";
+import type {
+  WorkCategory,
+  WorkItem,
+  WorkListGroup,
+} from "@/modules/work/workTypes";
 import { toDateKey } from "@/modules/calendar/calendarUtils";
 
 export const WORK_CATEGORY_OPTIONS: Array<{
@@ -14,36 +18,31 @@ export const WORK_CATEGORY_OPTIONS: Array<{
   {
     value: "task",
     label: "Task",
-    chipClass:
-      "border-border bg-muted font-medium text-foreground",
+    chipClass: "border-border bg-muted font-medium text-foreground",
     dotClass: "bg-blue-500",
   },
   {
     value: "meeting",
     label: "Meeting",
-    chipClass:
-      "border-border bg-muted font-medium text-foreground",
+    chipClass: "border-border bg-muted font-medium text-foreground",
     dotClass: "bg-emerald-500",
   },
   {
     value: "delivery",
     label: "Delivery",
-    chipClass:
-      "border-border bg-muted font-medium text-foreground",
+    chipClass: "border-border bg-muted font-medium text-foreground",
     dotClass: "bg-violet-500",
   },
   {
     value: "activity",
     label: "Activity",
-    chipClass:
-      "border-border bg-muted font-medium text-foreground",
+    chipClass: "border-border bg-muted font-medium text-foreground",
     dotClass: "bg-amber-500",
   },
   {
     value: "follow_up",
     label: "Follow up",
-    chipClass:
-      "border-border bg-muted font-medium text-foreground",
+    chipClass: "border-border bg-muted font-medium text-foreground",
     dotClass: "bg-pink-500",
   },
 ];
@@ -104,7 +103,10 @@ export const calendarEventToWorkItem = (
 
   if (event.kind === "task") {
     dealId = event.task.deal_id ?? null;
-  } else if (event.kind === "project_delivery" || event.kind === "project_start") {
+  } else if (
+    event.kind === "project_delivery" ||
+    event.kind === "project_start"
+  ) {
     dealId = event.dealId;
     dealName = event.dealName;
   } else if ("record" in event) {

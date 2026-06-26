@@ -17,7 +17,10 @@ import {
 import { getInvoiceOrganizationBranding } from "../src/modules/billing/invoiceOrganizationInfo";
 
 const DEFAULT_PUBLIC_APP_URL = "https://www.nomicrm.com";
-import type { ClientInvoice, ClientInvoiceLineItem } from "../src/modules/types";
+import type {
+  ClientInvoice,
+  ClientInvoiceLineItem,
+} from "../src/modules/types";
 import type { Company, Contact } from "../src/components/atomic-crm/types";
 
 const SUPABASE_URL = "https://qjglkywmqwqdoaboakao.supabase.co";
@@ -28,7 +31,9 @@ const toEmail = process.argv[2]?.trim().toLowerCase();
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
 if (!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
-  console.error("Usage: SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/send-invoice-email-test.ts <email>");
+  console.error(
+    "Usage: SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/send-invoice-email-test.ts <email>",
+  );
   process.exit(1);
 }
 
@@ -179,11 +184,11 @@ async function main() {
     );
   }
 
-  console.log(JSON.stringify(body, null, 2));
+  console.warn(JSON.stringify(body, null, 2));
   if (body.email_skipped) {
     console.warn("Email was skipped — Twilio is not configured for this org.");
   } else if (body.email_sent) {
-    console.log(`Sent invoice email to ${toEmail}`);
+    console.warn(`Sent invoice email to ${toEmail}`);
   }
 }
 

@@ -11,10 +11,7 @@ import { useSearchParams } from "react-router";
 import { Briefcase, Loader2 } from "lucide-react";
 import { Create } from "@/components/admin/create";
 import { SaveButton } from "@/components/admin/form";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isValidRecordId } from "@/lib/isValidRecordId";
@@ -90,9 +87,7 @@ export const AgencyProjectCreateForm = ({
     "companies",
     { id: parsedCompanyId as number },
     {
-      enabled:
-        parsedCompanyId != null &&
-        !presetContact?.company_name?.trim(),
+      enabled: parsedCompanyId != null && !presetContact?.company_name?.trim(),
       retry: false,
     },
   );
@@ -226,9 +221,7 @@ export const AgencyProjectCreateForm = ({
                   />
                 }
               >
-                <LbsDealCreateFields
-                  seedContact={presetContact ?? null}
-                />
+                <LbsDealCreateFields seedContact={presetContact ?? null} />
               </CreateFormDialogShell>
             </Form>
           </Create>

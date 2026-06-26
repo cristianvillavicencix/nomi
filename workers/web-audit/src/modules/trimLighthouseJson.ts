@@ -49,7 +49,8 @@ export const trimLighthouseJson = (
   const keepIds = new Set<string>(METRIC_AUDIT_IDS);
 
   for (const category of Object.values(categories ?? {})) {
-    const rawRefs = (category as { auditRefs?: Array<{ id: string }> }).auditRefs;
+    const rawRefs = (category as { auditRefs?: Array<{ id: string }> })
+      .auditRefs;
     const refs = Array.isArray(rawRefs) ? rawRefs : [];
     for (const ref of refs) {
       if (ref?.id) keepIds.add(ref.id);

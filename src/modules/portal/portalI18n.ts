@@ -11,8 +11,7 @@ export const portalCopy = {
     security: "Security",
     billing: "Facturación",
     settings: "Ajustes",
-    lockedTooltip:
-      "Esta sección se activará cuando tu sitio esté listo.",
+    lockedTooltip: "Esta sección se activará cuando tu sitio esté listo.",
     newBadge: "Nuevo",
     welcome: "Bienvenido",
     portalAccount: "Cuenta del portal",
@@ -35,8 +34,7 @@ export const portalCopy = {
     portalLoginCodeLabel: "Código de verificación",
     portalLoginCodeExpires: "El código vence a las {time}",
     portalSignOut: "Cerrar sesión",
-    noToken:
-      "Abre el enlace de invitación que te envió tu project manager.",
+    noToken: "Abre el enlace de invitación que te envió tu project manager.",
     loading: "Cargando…",
     deliveryReady: "¡Tu sitio web está en vivo!",
     deliveredOn: "Entregado el",
@@ -102,7 +100,8 @@ export const portalCopy = {
     billingIntro: "Facturas emitidas y pagos registrados para este proyecto.",
     billingInvoicesTitle: "Facturas",
     billingPaymentsTitle: "Historial de pagos",
-    noBillingRecords: "Aún no hay facturas ni pagos registrados para este proyecto.",
+    noBillingRecords:
+      "Aún no hay facturas ni pagos registrados para este proyecto.",
     invoiceNumberColumn: "Factura",
     invoiceDateColumn: "Fecha",
     invoiceAmountColumn: "Monto",
@@ -192,7 +191,8 @@ export const portalCopy = {
     downloadFolderZip: "Descargar carpeta (ZIP)",
     downloadFile: "Descargar",
     fileFallback: "Archivo",
-    filesDownloadError: "No se pudieron descargar los archivos de esta carpeta.",
+    filesDownloadError:
+      "No se pudieron descargar los archivos de esta carpeta.",
     noSharedFiles: "Aún no hay archivos compartidos en el portal.",
     domainIntro:
       "Información del dominio registrado para tu sitio web y servidores DNS.",
@@ -311,7 +311,8 @@ export const portalCopy = {
     billingIntro: "Invoices issued and payments recorded for this project.",
     billingInvoicesTitle: "Invoices",
     billingPaymentsTitle: "Payment history",
-    noBillingRecords: "No invoices or payments have been recorded for this project yet.",
+    noBillingRecords:
+      "No invoices or payments have been recorded for this project yet.",
     invoiceNumberColumn: "Invoice",
     invoiceDateColumn: "Date",
     invoiceAmountColumn: "Amount",
@@ -402,7 +403,8 @@ export const portalCopy = {
     fileFallback: "File",
     filesDownloadError: "Could not download files from this folder.",
     noSharedFiles: "No shared files in the portal yet.",
-    domainIntro: "Domain registration details and DNS servers for your website.",
+    domainIntro:
+      "Domain registration details and DNS servers for your website.",
     noDomainInfo: "No domain information recorded yet.",
     domainRegistrar: "Registrar",
     domainRegistered: "Registration date",
@@ -411,7 +413,8 @@ export const portalCopy = {
     dnsServers: "DNS servers",
     requestDomainTransfer: "Request transfer",
     reportDomainIssue: "Report issue",
-    corporateEmailsIntro: "Corporate email accounts configured for your domain.",
+    corporateEmailsIntro:
+      "Corporate email accounts configured for your domain.",
     noCorporateEmails: "No corporate emails recorded yet.",
     emailColumn: "Email",
     emailNotesColumn: "Notes",

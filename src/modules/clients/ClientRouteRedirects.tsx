@@ -18,7 +18,8 @@ export const LegacyClientsListRedirect = () => {
   }
 
   const query = next.toString();
-  const base = tab === "contacts" ? getContactsListPath() : getCompaniesListPath();
+  const base =
+    tab === "contacts" ? getContactsListPath() : getCompaniesListPath();
   return <Navigate to={`${base}${query ? `?${query}` : ""}`} replace />;
 };
 

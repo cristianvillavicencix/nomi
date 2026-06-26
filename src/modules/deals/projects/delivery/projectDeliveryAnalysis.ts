@@ -82,16 +82,17 @@ export const buildProjectDeliveryAnalysis = (
       status: briefStatus,
       detail: `${input.briefPercent}%`,
       fixHint:
-        briefStatus !== "ok"
-          ? DELIVERY_ANALYSIS_FIX_HINTS.brief
-          : undefined,
+        briefStatus !== "ok" ? DELIVERY_ANALYSIS_FIX_HINTS.brief : undefined,
     },
     {
       id: "production_url",
       label: "Production URL",
       status: urlStatus,
       detail: productionUrl || "Missing",
-      fixHint: urlStatus === "error" ? DELIVERY_ANALYSIS_FIX_HINTS.production_url : undefined,
+      fixHint:
+        urlStatus === "error"
+          ? DELIVERY_ANALYSIS_FIX_HINTS.production_url
+          : undefined,
     },
     {
       id: "credentials",
@@ -139,13 +140,16 @@ export const buildProjectDeliveryAnalysis = (
       status: portalStatus,
       detail: portalDetail,
       fixHint:
-        portalStatus === "error" ? DELIVERY_ANALYSIS_FIX_HINTS.portal : undefined,
+        portalStatus === "error"
+          ? DELIVERY_ANALYSIS_FIX_HINTS.portal
+          : undefined,
     },
   ];
 };
 
-export const getBlockingDeliveryAnalysisItems = (items: DeliveryAnalysisItem[]) =>
-  items.filter((item) => item.status === "error");
+export const getBlockingDeliveryAnalysisItems = (
+  items: DeliveryAnalysisItem[],
+) => items.filter((item) => item.status === "error");
 
 export const hasBlockingDeliveryAnalysis = (items: DeliveryAnalysisItem[]) =>
   getBlockingDeliveryAnalysisItems(items).length > 0;

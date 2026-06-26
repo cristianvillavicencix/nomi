@@ -145,9 +145,7 @@ const ProjectStageFlowInner = ({
             <button
               key={stage.id}
               type="button"
-              onClick={() =>
-                canChangeToStage && onStageChange?.(stage.id)
-              }
+              onClick={() => canChangeToStage && onStageChange?.(stage.id)}
               disabled={!canChangeToStage}
               className={cn(
                 "relative flex h-9 min-w-0 flex-1 items-center justify-center px-1 text-[10px] font-medium transition-all duration-300 sm:h-11 sm:px-1.5 sm:text-xs md:h-12 md:text-sm",
@@ -159,9 +157,7 @@ const ProjectStageFlowInner = ({
               style={{
                 clipPath,
                 marginLeft:
-                  index === 0
-                    ? 0
-                    : "calc(var(--stage-chevron-depth) * -0.56)",
+                  index === 0 ? 0 : "calc(var(--stage-chevron-depth) * -0.56)",
                 zIndex: stages.length - index,
                 background,
                 color: textColor,

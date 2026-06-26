@@ -181,9 +181,7 @@ function parseLocaleContentBlock(
   return Object.keys(block).length > 0 ? block : undefined;
 }
 
-function parseLocalesBlock(
-  raw: unknown,
-): ProposalDocumentContent["locales"] {
+function parseLocalesBlock(raw: unknown): ProposalDocumentContent["locales"] {
   if (!raw || typeof raw !== "object") return undefined;
   const record = raw as Record<string, unknown>;
   const es = parseLocaleContentBlock(record.es);
@@ -194,9 +192,7 @@ function parseLocalesBlock(
 export const proposalContentSnapshot = (raw: unknown): string =>
   JSON.stringify(parseProposalContent(raw));
 
-export const parseProposalContent = (
-  raw: unknown,
-): ProposalDocumentContent => {
+export const parseProposalContent = (raw: unknown): ProposalDocumentContent => {
   if (!raw || typeof raw !== "object") {
     return emptyProposalDocumentContent();
   }

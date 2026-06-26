@@ -67,9 +67,13 @@ export const ClientWebsiteSection = ({
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const siteUrl = delivery.site_url || project.production_url || "";
   const stagingUrl = project.staging_url ?? "";
-  const enabled = new Set(normalizePortalEnabledSections(delivery.enabled_sections));
+  const enabled = new Set(
+    normalizePortalEnabledSections(delivery.enabled_sections),
+  );
   const tabs = PORTAL_DELIVERY_NAV.filter((tab) => enabled.has(tab.id));
-  const activeTab = enabled.has(activeView) ? activeView : (tabs[0]?.id ?? "overview");
+  const activeTab = enabled.has(activeView)
+    ? activeView
+    : (tabs[0]?.id ?? "overview");
 
   const href = siteUrl
     ? siteUrl.startsWith("http")
@@ -103,7 +107,11 @@ export const ClientWebsiteSection = ({
   const renderActiveSection = () => {
     if (activeTab === "overview") {
       return (
-        <ClientOverviewSection delivery={delivery} copy={copy} locale={locale} />
+        <ClientOverviewSection
+          delivery={delivery}
+          copy={copy}
+          locale={locale}
+        />
       );
     }
     if (activeTab === "hosting") {
@@ -190,19 +198,18 @@ export const ClientWebsiteSection = ({
 
         <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-foreground">{project.name}</h1>
+            <h1 className="text-xl font-semibold text-foreground">
+              {project.name}
+            </h1>
             {siteUrl ? (
-              <p className="mt-1 truncate text-sm text-muted-foreground">{siteUrl}</p>
+              <p className="mt-1 truncate text-sm text-muted-foreground">
+                {siteUrl}
+              </p>
             ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              asChild
-              size="sm"
-              className="h-9"
-              disabled={!href}
-            >
+            <Button asChild size="sm" className="h-9" disabled={!href}>
               <a href={href} target="_blank" rel="noreferrer">
                 <ExternalLink className="size-4" />
                 {copy.visitSite}

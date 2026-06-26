@@ -272,8 +272,7 @@ export const LBS_SERVICE_ADDONS: CatalogAddonSeed[] = [
   },
   {
     name: "Managed hosting",
-    description:
-      "Hosting, domain, SSL, and monitoring managed by LBS.",
+    description: "Hosting, domain, SSL, and monitoring managed by LBS.",
     category: "hosting",
     billing_type: "recurring",
     billing_interval: "monthly",

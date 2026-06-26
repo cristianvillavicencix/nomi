@@ -24,8 +24,7 @@ export const getClientEditPath = (companyId: string | number) =>
 
 export const getClientCreatePath = () => "/clients?create=company";
 
-export const getContactCreatePath = () =>
-  "/clients?tab=people&create=contact";
+export const getContactCreatePath = () => "/clients?tab=people&create=contact";
 
 export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 

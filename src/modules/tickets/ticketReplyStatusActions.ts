@@ -46,9 +46,17 @@ export const getTicketReplyStatusActions = (
 ): TicketReplyStatusAction[] => {
   switch (currentStatus) {
     case "new":
-      return [action("open", true), action("waiting", false), action("resolved", false)];
+      return [
+        action("open", true),
+        action("waiting", false),
+        action("resolved", false),
+      ];
     case "open":
-      return [action("open", true), action("waiting", false), action("resolved", false)];
+      return [
+        action("open", true),
+        action("waiting", false),
+        action("resolved", false),
+      ];
     case "waiting":
       return [
         action("waiting", true),
@@ -58,6 +66,10 @@ export const getTicketReplyStatusActions = (
     case "resolved":
       return [action("open", true), action("resolved", false)];
     default:
-      return [action("open", true), action("waiting", false), action("resolved", false)];
+      return [
+        action("open", true),
+        action("waiting", false),
+        action("resolved", false),
+      ];
   }
 };

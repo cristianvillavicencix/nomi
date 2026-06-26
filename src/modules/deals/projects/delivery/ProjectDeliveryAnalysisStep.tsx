@@ -1,4 +1,9 @@
-import { AlertTriangle, CheckCircle2, CircleAlert, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleAlert,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DeliveryAnalysisItem } from "@/modules/deals/projects/delivery/projectDeliveryAnalysis";
 
@@ -37,17 +42,16 @@ export const ProjectDeliveryAnalysisStep = ({
   return (
     <div className="space-y-1">
       {items.map((item) => (
-        <div
-          key={item.id}
-          className="border-b py-3 last:border-b-0"
-        >
+        <div key={item.id} className="border-b py-3 last:border-b-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
               <div className="pt-0.5">{statusIcon(item.status)}</div>
               <div className="min-w-0 space-y-1">
                 <span className="text-sm font-medium">{item.label}</span>
                 {item.fixHint && item.status !== "ok" ? (
-                  <p className="text-xs text-muted-foreground">{item.fixHint}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.fixHint}
+                  </p>
                 ) : null}
                 {item.pendingLabels && item.pendingLabels.length > 0 ? (
                   <ul className="text-xs text-muted-foreground list-disc space-y-0.5 pl-4">

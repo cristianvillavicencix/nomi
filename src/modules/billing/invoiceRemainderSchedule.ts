@@ -95,7 +95,8 @@ export const parseInvoiceRemainderSchedule = (
       : undefined,
     installment_due_dates: Array.isArray(row.installment_due_dates)
       ? row.installment_due_dates.filter(
-          (value): value is string => typeof value === "string" && Boolean(value.trim()),
+          (value): value is string =>
+            typeof value === "string" && Boolean(value.trim()),
         )
       : undefined,
   };
@@ -165,8 +166,7 @@ export const generateInvoiceBalanceCharges = ({
   }
 
   if (timing === "project_end") {
-    const due =
-      config.project_end_date?.trim() || invoiceDueDate;
+    const due = config.project_end_date?.trim() || invoiceDueDate;
     return [
       {
         installment_number: 1,
@@ -184,9 +184,7 @@ export const generateInvoiceBalanceCharges = ({
     : addDays(new Date(`${issueDate}T12:00:00`), 7);
 
   const perInstallment =
-    count > 0
-      ? Math.round((balanceAmount / count) * 100) / 100
-      : balanceAmount;
+    count > 0 ? Math.round((balanceAmount / count) * 100) / 100 : balanceAmount;
 
   const rows: InvoiceBalanceChargeRow[] = [];
   let allocated = 0;
@@ -200,13 +198,8 @@ export const generateInvoiceBalanceCharges = ({
 
     rows.push({
       installment_number: index + 1,
-      label:
-        count === 1
-          ? "Balance"
-          : `Installment ${index + 1} of ${count}`,
-      due_date: toDateKey(
-        nextDueDate(balanceStart, frequency, index),
-      ),
+      label: count === 1 ? "Balance" : `Installment ${index + 1} of ${count}`,
+      due_date: toDateKey(nextDueDate(balanceStart, frequency, index)),
       amount,
     });
   }
@@ -302,9 +295,13 @@ export const previewRemainderScheduleAfterPayments = ({
   payingInstallmentNumbers: number[];
 }) => {
   const depositTarget =
-    Math.round(total * (Math.min(Math.max(upfrontPercent, 1), 99) / 100) * 100) /
-    100;
-  const balanceAmount = Math.max(Math.round((total - depositTarget) * 100) / 100, 0);
+    Math.round(
+      total * (Math.min(Math.max(upfrontPercent, 1), 99) / 100) * 100,
+    ) / 100;
+  const balanceAmount = Math.max(
+    Math.round((total - depositTarget) * 100) / 100,
+    0,
+  );
   const originalCharges = generateOriginalInvoiceBalanceCharges({
     balanceAmount,
     config,
@@ -342,9 +339,13 @@ export const getUnpaidRemainderChargesDueBy = ({
   asOfDate: string;
 }) => {
   const depositTarget =
-    Math.round(total * (Math.min(Math.max(upfrontPercent, 1), 99) / 100) * 100) /
-    100;
-  const balanceAmount = Math.max(Math.round((total - depositTarget) * 100) / 100, 0);
+    Math.round(
+      total * (Math.min(Math.max(upfrontPercent, 1), 99) / 100) * 100,
+    ) / 100;
+  const balanceAmount = Math.max(
+    Math.round((total - depositTarget) * 100) / 100,
+    0,
+  );
   const originalCharges = generateOriginalInvoiceBalanceCharges({
     balanceAmount,
     config,
@@ -401,8 +402,9 @@ export const describeInvoiceOnlinePaymentSummary = ({
     return "Client pays the full balance in one checkout.";
   }
   const deposit =
-    Math.round(total * (Math.min(Math.max(depositPercent, 1), 99) / 100) * 100) /
-    100;
+    Math.round(
+      total * (Math.min(Math.max(depositPercent, 1), 99) / 100) * 100,
+    ) / 100;
   const balance = Math.max(Math.round((total - deposit) * 100) / 100, 0);
   const timing = describeInvoiceRemainderTiming(remainderSchedule);
   return `${depositPercent}% deposit now (${formatUsd(deposit)}) · Balance ${formatUsd(balance)} — ${timing} (auto-debit)`;

@@ -110,7 +110,9 @@ export const SmsComposerActionsMenu = ({
         {hasSignature && !signatureRequired ? (
           <DropdownMenuCheckboxItem
             checked={includeSignature}
-            onCheckedChange={(value) => onIncludeSignatureChange(value === true)}
+            onCheckedChange={(value) =>
+              onIncludeSignatureChange(value === true)
+            }
             disabled={menuDisabled || isInternalNote}
           >
             Include signature

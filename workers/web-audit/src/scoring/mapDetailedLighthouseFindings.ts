@@ -81,7 +81,9 @@ const buildDescription = (
 ): string => {
   const parts: string[] = [];
   if (categoryScore != null) {
-    parts.push(`Esta regla afecta la categoría con score ${categoryScore}/100.`);
+    parts.push(
+      `Esta regla afecta la categoría con score ${categoryScore}/100.`,
+    );
   }
   if (weight != null && weight > 0) {
     parts.push(`Peso en el cálculo Lighthouse: ${weight}.`);

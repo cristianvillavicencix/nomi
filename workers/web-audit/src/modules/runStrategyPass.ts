@@ -105,8 +105,7 @@ export const runStrategyPass = async (
     } catch (axeCause) {
       console.error("web-audit axe failed", strategy, axeCause);
       axeJson = {
-        error:
-          axeCause instanceof Error ? axeCause.message : String(axeCause),
+        error: axeCause instanceof Error ? axeCause.message : String(axeCause),
       };
     }
 

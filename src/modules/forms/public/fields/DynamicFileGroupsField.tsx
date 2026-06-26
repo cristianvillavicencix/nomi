@@ -92,7 +92,12 @@ export const DynamicFileGroupsField = ({
         )}
       </div>
       {onSkip ? (
-        <Button type="button" variant="ghost" disabled={disabled} onClick={onSkip}>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={disabled}
+          onClick={onSkip}
+        >
           {skipButtonLabel ?? field.skip_button_label ?? "Skip this service"}
         </Button>
       ) : null}
@@ -106,11 +111,19 @@ export const WizardSummaryStep = ({
   answers: Record<string, unknown>;
 }) => {
   const logos = Array.isArray(answers.logos) ? answers.logos.length : 0;
-  const services = Array.isArray(answers.services) ? answers.services.filter(Boolean).length : 0;
+  const services = Array.isArray(answers.services)
+    ? answers.services.filter(Boolean).length
+    : 0;
   const servicePhotos = answers.service_photos;
   let photoCount = 0;
-  if (servicePhotos && typeof servicePhotos === "object" && !Array.isArray(servicePhotos)) {
-    photoCount = Object.values(servicePhotos as Record<string, unknown[]>).reduce(
+  if (
+    servicePhotos &&
+    typeof servicePhotos === "object" &&
+    !Array.isArray(servicePhotos)
+  ) {
+    photoCount = Object.values(
+      servicePhotos as Record<string, unknown[]>,
+    ).reduce(
       (sum, group) => sum + (Array.isArray(group) ? group.length : 0),
       0,
     );
@@ -134,10 +147,13 @@ export const WizardSummaryStep = ({
           <span className="font-medium text-foreground">Logos:</span> {logos}
         </li>
         <li>
-          <span className="font-medium text-foreground">Servicios:</span> {services}
+          <span className="font-medium text-foreground">Servicios:</span>{" "}
+          {services}
         </li>
         <li>
-          <span className="font-medium text-foreground">Fotos de servicios:</span>{" "}
+          <span className="font-medium text-foreground">
+            Fotos de servicios:
+          </span>{" "}
           {photoCount}
         </li>
       </ul>

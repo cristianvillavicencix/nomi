@@ -39,9 +39,16 @@ const invoiceStatusVariant = (
   return "outline";
 };
 
-const paymentStatusLabel = (status: string | null | undefined, copy: PortalCopy) => {
+const paymentStatusLabel = (
+  status: string | null | undefined,
+  copy: PortalCopy,
+) => {
   const normalized = String(status ?? "").toLowerCase();
-  if (normalized === "paid" || normalized === "cleared" || normalized === "deposited") {
+  if (
+    normalized === "paid" ||
+    normalized === "cleared" ||
+    normalized === "deposited"
+  ) {
     return copy.paymentStatusCompleted;
   }
   if (normalized === "pending") return copy.paymentStatusPending;
@@ -88,7 +95,9 @@ export const ClientBillingSection = ({
                   <TableHead>{copy.invoiceDateColumn}</TableHead>
                   <TableHead>{copy.invoiceAmountColumn}</TableHead>
                   <TableHead>{copy.invoiceStatusColumn}</TableHead>
-                  <TableHead className="text-right">{copy.actionsColumn}</TableHead>
+                  <TableHead className="text-right">
+                    {copy.actionsColumn}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -115,7 +124,11 @@ export const ClientBillingSection = ({
                         {formatPortalDate(invoice.issue_date, localeTag)}
                       </TableCell>
                       <TableCell>
-                        {formatMoney(Number(invoice.amount), invoice.currency, locale)}
+                        {formatMoney(
+                          Number(invoice.amount),
+                          invoice.currency,
+                          locale,
+                        )}
                         {Number(invoice.amount_paid) > 0 ? (
                           <div className="text-xs text-muted-foreground">
                             {copy.invoicePaidAmount}:{" "}
@@ -140,11 +153,15 @@ export const ClientBillingSection = ({
                           <Button asChild size="sm" variant="outline">
                             <a href={href} target="_blank" rel="noreferrer">
                               <ExternalLink className="size-4" />
-                              {canPay ? copy.invoicePayAction : copy.invoiceViewAction}
+                              {canPay
+                                ? copy.invoicePayAction
+                                : copy.invoiceViewAction}
                             </a>
                           </Button>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -169,7 +186,9 @@ export const ClientBillingSection = ({
                   <TableHead>{copy.paymentReferenceColumn}</TableHead>
                   <TableHead>{copy.paymentMethodColumn}</TableHead>
                   <TableHead>{copy.paymentStatusColumn}</TableHead>
-                  <TableHead className="text-right">{copy.paymentAmountColumn}</TableHead>
+                  <TableHead className="text-right">
+                    {copy.paymentAmountColumn}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -75,7 +75,9 @@ export const TicketComposerToolbar = ({
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/10 px-2 py-1.5">
-      {toolButton("Bold", <Bold className="size-4" />, () => runCommand("bold"))}
+      {toolButton("Bold", <Bold className="size-4" />, () =>
+        runCommand("bold"),
+      )}
       {toolButton("Italic", <Italic className="size-4" />, () =>
         runCommand("italic"),
       )}
@@ -92,7 +94,11 @@ export const TicketComposerToolbar = ({
 
       <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
 
-      {toolButton("Attach files", <Paperclip className="size-4" />, onAttachClick)}
+      {toolButton(
+        "Attach files",
+        <Paperclip className="size-4" />,
+        onAttachClick,
+      )}
       {onLargeFileTransferClick
         ? toolButton(
             "Large file via transfer.it",

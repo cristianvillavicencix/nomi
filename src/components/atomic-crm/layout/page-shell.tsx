@@ -55,6 +55,4 @@ export const ScrollableContentArea = ({
 }: {
   children: ReactNode;
   className?: string;
-}) => (
-  <div className={cn("min-h-0", className)}>{children}</div>
-);
+}) => <div className={cn("min-h-0", className)}>{children}</div>;

@@ -1,7 +1,11 @@
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDataProvider, type Identifier } from "ra-core";
-import type { Contact, Conversation, ConversationMessage } from "@/modules/types";
+import type {
+  Contact,
+  Conversation,
+  ConversationMessage,
+} from "@/modules/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";

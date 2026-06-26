@@ -1,4 +1,9 @@
-import type { Company, Contact, Deal, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Company,
+  Contact,
+  Deal,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import type {
   ProposalCustomSection,
   ProposalDocumentContent,
@@ -27,7 +32,8 @@ export const PROPOSAL_DOCUMENT_VARIABLE_DEFINITIONS: {
   {
     key: "empresa",
     label: "Company",
-    description: "Linked company on the proposal (Settings on the proposal record).",
+    description:
+      "Linked company on the proposal (Settings on the proposal record).",
   },
   {
     key: "cliente",
@@ -37,7 +43,8 @@ export const PROPOSAL_DOCUMENT_VARIABLE_DEFINITIONS: {
   {
     key: "preparada_por",
     label: "Prepared by",
-    description: "Proposal owner / organization member assigned to the proposal.",
+    description:
+      "Proposal owner / organization member assigned to the proposal.",
   },
   {
     key: "deal",
@@ -107,9 +114,7 @@ export const buildProposalVariableContext = ({
   return {
     cliente: contactName || company?.name || "your team",
     empresa:
-      company?.name?.trim() ||
-      organizationName?.trim() ||
-      "your company",
+      company?.name?.trim() || organizationName?.trim() || "your company",
     deal: deal?.name ?? "",
     preparada_por: member
       ? `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim() ||

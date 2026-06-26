@@ -61,7 +61,11 @@ export const TicketInboxReplyTemplatesSection = () => {
   const canManageTickets = useMemberCapability("support.tickets.manage");
   const canEdit = isAdmin || canManageSettings || canManageTickets;
 
-  const { data: inboxes = [], isPending, error } = useQuery({
+  const {
+    data: inboxes = [],
+    isPending,
+    error,
+  } = useQuery({
     queryKey: ["ticket-inbox-reply-templates"],
     queryFn: loadTicketInboxes,
     enabled: canEdit,

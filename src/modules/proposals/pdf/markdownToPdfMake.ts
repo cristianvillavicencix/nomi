@@ -13,15 +13,24 @@ const inlineFromTokens = (
       continue;
     }
     if (token.type === "strong") {
-      parts.push({ text: inlineFromTokens(token.tokens) as string, bold: true });
+      parts.push({
+        text: inlineFromTokens(token.tokens) as string,
+        bold: true,
+      });
       continue;
     }
     if (token.type === "em") {
-      parts.push({ text: inlineFromTokens(token.tokens) as string, italics: true });
+      parts.push({
+        text: inlineFromTokens(token.tokens) as string,
+        italics: true,
+      });
       continue;
     }
     if (token.type === "del") {
-      parts.push({ text: inlineFromTokens(token.tokens) as string, decoration: "lineThrough" });
+      parts.push({
+        text: inlineFromTokens(token.tokens) as string,
+        decoration: "lineThrough",
+      });
       continue;
     }
     if (token.type === "link") {
@@ -39,8 +48,20 @@ const inlineFromTokens = (
 };
 
 const headingStyle = (depth: number): Style => {
-  if (depth === 1) return { fontSize: 14, bold: true, color: "#0f172a", margin: [0, 14, 0, 8] };
-  if (depth === 2) return { fontSize: 12, bold: true, color: "#0f172a", margin: [0, 12, 0, 6] };
+  if (depth === 1)
+    return {
+      fontSize: 14,
+      bold: true,
+      color: "#0f172a",
+      margin: [0, 14, 0, 8],
+    };
+  if (depth === 2)
+    return {
+      fontSize: 12,
+      bold: true,
+      color: "#0f172a",
+      margin: [0, 12, 0, 6],
+    };
   return { fontSize: 11, bold: true, color: "#334155", margin: [0, 10, 0, 4] };
 };
 
@@ -122,7 +143,17 @@ export const markdownToPdfMakeContent = (markdown: string): Content[] => {
 
     if (token.type === "hr") {
       content.push({
-        canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: "#e2e8f0" }],
+        canvas: [
+          {
+            type: "line",
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 0.5,
+            lineColor: "#e2e8f0",
+          },
+        ],
         margin: [0, 8, 0, 12],
       });
       continue;

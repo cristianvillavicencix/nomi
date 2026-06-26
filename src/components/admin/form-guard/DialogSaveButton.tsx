@@ -1,8 +1,5 @@
 import type { RaRecord } from "ra-core";
-import {
-  SaveButton,
-  type SaveButtonProps,
-} from "@/components/admin/form";
+import { SaveButton, type SaveButtonProps } from "@/components/admin/form";
 
 /**
  * Save button for forms inside a Radix Dialog or Sheet portal.

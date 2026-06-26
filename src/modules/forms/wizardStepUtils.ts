@@ -2,7 +2,11 @@ import {
   getVisibleFields,
   getVisibleSections,
 } from "@/modules/forms/formSchemaUtils";
-import type { FormFieldDef, FormSchemaV2, FormSectionDef } from "@/modules/forms/types";
+import type {
+  FormFieldDef,
+  FormSchemaV2,
+  FormSectionDef,
+} from "@/modules/forms/types";
 
 export type WizardStep =
   | { kind: "section"; section: FormSectionDef; sectionIndex: number }

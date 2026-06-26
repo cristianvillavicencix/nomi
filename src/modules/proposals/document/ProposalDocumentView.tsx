@@ -202,7 +202,14 @@ export const ProposalDocumentView = ({
       member,
       organizationName: dataSource?.organization?.name,
     });
-  }, [resolvedProposal, company, contact, deal, member, dataSource?.organization?.name]);
+  }, [
+    resolvedProposal,
+    company,
+    contact,
+    deal,
+    member,
+    dataSource?.organization?.name,
+  ]);
 
   const mergedContent = useMemo(
     () => mergeProposalDocumentContent(localizedContent, variables),
@@ -218,11 +225,7 @@ export const ProposalDocumentView = ({
             : mergedContent.custom_sections,
         ),
       ),
-    [
-      editable,
-      localizedContent.custom_sections,
-      mergedContent.custom_sections,
-    ],
+    [editable, localizedContent.custom_sections, mergedContent.custom_sections],
   );
 
   const resolvedAcceptMode =
@@ -346,15 +349,15 @@ export const ProposalDocumentView = ({
     >
       {!showSectionNav ? metaLine : null}
 
-      <section
-        id="intro"
-        className="pf-section proposal-pdf-page scroll-mt-6"
-      >
+      <section id="intro" className="pf-section proposal-pdf-page scroll-mt-6">
         <div className="pf-hero relative">
           <div className="pf-hero-grid" aria-hidden />
           <div className="relative px-6 py-10 md:px-10 md:py-12">
             <div className="pf-hero-tag">
-              <span className="size-1.5 rounded-full bg-[#f59e0b]" aria-hidden />
+              <span
+                className="size-1.5 rounded-full bg-[#f59e0b]"
+                aria-hidden
+              />
               {copy.serviceProposal}
             </div>
             <EditableBlock
@@ -379,7 +382,10 @@ export const ProposalDocumentView = ({
               <div>
                 <p className="pf-mono text-[10px]">{copy.date}</p>
                 <p className="mt-1 font-semibold normal-case text-white">
-                  {formatDisplayDate(new Date().toISOString().slice(0, 10), locale)}
+                  {formatDisplayDate(
+                    new Date().toISOString().slice(0, 10),
+                    locale,
+                  )}
                 </p>
               </div>
               <div>
@@ -472,219 +478,224 @@ export const ProposalDocumentView = ({
         id="investment"
         className="pf-section proposal-pdf-page scroll-mt-6 space-y-4"
       >
-            <div>
-              <div className="pf-kicker">{copy.sections.investment}</div>
-              <EditableBlock
-                as="h2"
-                editable={editable}
-                value={
-                  mergedContent.investment_title ?? copy.investmentDefaultTitle
-                }
-                onChange={(investment_title) => patch({ investment_title })}
-                placeholder="Section title"
-              />
-              <EditableBlock
-                editable={editable}
-                value={mergedContent.investment_notes ?? ""}
-                onChange={(investment_notes) => patch({ investment_notes })}
-                placeholder="Optional notes above the investment summary…"
-                className="mt-2 text-sm text-muted-foreground"
-              />
-            </div>
+        <div>
+          <div className="pf-kicker">{copy.sections.investment}</div>
+          <EditableBlock
+            as="h2"
+            editable={editable}
+            value={
+              mergedContent.investment_title ?? copy.investmentDefaultTitle
+            }
+            onChange={(investment_title) => patch({ investment_title })}
+            placeholder="Section title"
+          />
+          <EditableBlock
+            editable={editable}
+            value={mergedContent.investment_notes ?? ""}
+            onChange={(investment_notes) => patch({ investment_notes })}
+            placeholder="Optional notes above the investment summary…"
+            className="mt-2 text-sm text-muted-foreground"
+          />
+        </div>
 
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold tracking-tight">
-                {copy.sections.packageLines}
-              </h3>
-              <p className="text-sm text-muted-foreground">{copy.includesSubtitle}</p>
-            </div>
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold tracking-tight">
+            {copy.sections.packageLines}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {copy.includesSubtitle}
+          </p>
+        </div>
 
-            <div className="pf-invest">
-            {resolvedBasePackageLine ? (
-              <Card className="rounded-none border-0 shadow-none">
-                <CardContent className="flex items-start gap-4 p-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Monitor className="size-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold">
-                        {resolvedBasePackageLine.description}
-                      </p>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {copy.basePackage}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold tabular-nums">
-                      {formatProposalMoney(
-                        lineItemTotal(resolvedBasePackageLine),
-                        resolvedCurrency,
-                      )}
+        <div className="pf-invest">
+          {resolvedBasePackageLine ? (
+            <Card className="rounded-none border-0 shadow-none">
+              <CardContent className="flex items-start gap-4 p-4">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Monitor className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">
+                      {resolvedBasePackageLine.description}
                     </p>
-                    <p className="text-xs text-muted-foreground">{copy.oneTime}</p>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {copy.basePackage}
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            <Card>
-              <CardContent className="divide-y p-0">
-                {resolvedLineDrafts
-                  .filter((line) => !isPackageLine(line))
-                  .map((line) => (
-                    <LineItemRow
-                      key={line.key}
-                      line={line}
-                      currency={resolvedCurrency}
-                    />
-                  ))}
-                {resolvedLineDrafts.filter((line) => !isPackageLine(line)).length ===
-                0 ? (
-                  <p className="p-4 text-sm text-muted-foreground">{copy.noAddons}</p>
-                ) : null}
+                </div>
+                <div className="text-right">
+                  <p className="font-bold tabular-nums">
+                    {formatProposalMoney(
+                      lineItemTotal(resolvedBasePackageLine),
+                      resolvedCurrency,
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {copy.oneTime}
+                  </p>
+                </div>
               </CardContent>
             </Card>
+          ) : null}
 
-            <Card className="rounded-none border-0 border-t shadow-none">
-              <CardContent className="space-y-0 p-0">
+          <Card>
+            <CardContent className="divide-y p-0">
+              {resolvedLineDrafts
+                .filter((line) => !isPackageLine(line))
+                .map((line) => (
+                  <LineItemRow
+                    key={line.key}
+                    line={line}
+                    currency={resolvedCurrency}
+                  />
+                ))}
+              {resolvedLineDrafts.filter((line) => !isPackageLine(line))
+                .length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">
+                  {copy.noAddons}
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-none border-0 border-t shadow-none">
+            <CardContent className="space-y-0 p-0">
+              <div className="flex justify-between gap-4 border-b px-4 py-3 text-sm">
+                <span>{copy.oneTimePayment}</span>
+                <span className="font-semibold tabular-nums">
+                  {formatProposalMoney(resolvedOneTimeTotal, resolvedCurrency)}
+                </span>
+              </div>
+              {displayRecurringSubtotal > 0 ? (
                 <div className="flex justify-between gap-4 border-b px-4 py-3 text-sm">
-                  <span>{copy.oneTimePayment}</span>
-                  <span className="font-semibold tabular-nums">
-                    {formatProposalMoney(resolvedOneTimeTotal, resolvedCurrency)}
+                  <span className="text-[#1E5FA8]">
+                    {copy.recurringServices}
+                  </span>
+                  <span className="font-semibold tabular-nums text-[#1E5FA8]">
+                    {formatProposalMoney(
+                      displayRecurringSubtotal,
+                      resolvedCurrency,
+                    )}
+                    /mo
                   </span>
                 </div>
-                {displayRecurringSubtotal > 0 ? (
-                  <div className="flex justify-between gap-4 border-b px-4 py-3 text-sm">
-                    <span className="text-[#1E5FA8]">{copy.recurringServices}</span>
-                    <span className="font-semibold tabular-nums text-[#1E5FA8]">
-                      {formatProposalMoney(displayRecurringSubtotal, resolvedCurrency)}
-                      /mo
-                    </span>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
+              ) : null}
+            </CardContent>
+          </Card>
 
-            <div className="pf-inv-grand">
-              <span className="font-semibold">{copy.totalInvestment}</span>
-              <span className="text-xl font-bold tabular-nums">
-                {formatProposalMoney(resolvedOneTimeTotal, resolvedCurrency)}
-                {displayRecurringSubtotal > 0
-                  ? ` + ${formatProposalMoney(displayRecurringSubtotal, resolvedCurrency)}/mo`
-                  : ""}
-              </span>
-            </div>
-            </div>
+          <div className="pf-inv-grand">
+            <span className="font-semibold">{copy.totalInvestment}</span>
+            <span className="text-xl font-bold tabular-nums">
+              {formatProposalMoney(resolvedOneTimeTotal, resolvedCurrency)}
+              {displayRecurringSubtotal > 0
+                ? ` + ${formatProposalMoney(displayRecurringSubtotal, resolvedCurrency)}/mo`
+                : ""}
+            </span>
+          </div>
+        </div>
 
-            <Card>
-              <CardContent className="space-y-3 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <PaymentCardIcon className="size-4 text-primary" />
-                  {copy.paymentsTitle}
-                </div>
-                {resolvedDepositInstallment ? (
-                  <PaymentRow
-                    badge={copy.depositBadge}
-                    label={copy.depositLabel}
-                    sub={copy.depositSub}
-                    amount={resolvedDepositInstallment.amount}
-                    currency={resolvedCurrency}
-                  />
-                ) : null}
-                {resolvedBalanceInstallments.length > 0 ? (
-                  <PaymentRow
-                    badge={`${resolvedBalanceInstallments.length}x`}
-                    label={copy.installmentsLabel(
-                      resolvedBalanceInstallments.length,
-                    )}
-                    sub={copy.installmentsSub}
-                    amount={resolvedPerBalancePayment}
-                    currency={resolvedCurrency}
-                  />
-                ) : null}
-                {displayRecurringSubtotal > 0 ? (
-                  <PaymentRow
-                    badge={<RefreshCw className="size-3" />}
-                    label={copy.recurringLabel}
-                    sub={copy.recurringSub}
-                    amount={displayRecurringSubtotal}
-                    currency={resolvedCurrency}
-                    suffix="/mo"
-                  />
-                ) : null}
-                {!stripeSkipped ? (
-                  <p className="text-xs text-muted-foreground">
-                    {copy.stripeNote}
-                  </p>
-                ) : null}
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <PaymentCardIcon className="size-4 text-primary" />
+              {copy.paymentsTitle}
+            </div>
+            {resolvedDepositInstallment ? (
+              <PaymentRow
+                badge={copy.depositBadge}
+                label={copy.depositLabel}
+                sub={copy.depositSub}
+                amount={resolvedDepositInstallment.amount}
+                currency={resolvedCurrency}
+              />
+            ) : null}
+            {resolvedBalanceInstallments.length > 0 ? (
+              <PaymentRow
+                badge={`${resolvedBalanceInstallments.length}x`}
+                label={copy.installmentsLabel(
+                  resolvedBalanceInstallments.length,
+                )}
+                sub={copy.installmentsSub}
+                amount={resolvedPerBalancePayment}
+                currency={resolvedCurrency}
+              />
+            ) : null}
+            {displayRecurringSubtotal > 0 ? (
+              <PaymentRow
+                badge={<RefreshCw className="size-3" />}
+                label={copy.recurringLabel}
+                sub={copy.recurringSub}
+                amount={displayRecurringSubtotal}
+                currency={resolvedCurrency}
+                suffix="/mo"
+              />
+            ) : null}
+            {!stripeSkipped ? (
+              <p className="text-xs text-muted-foreground">{copy.stripeNote}</p>
+            ) : null}
+            <EditableBlock
+              editable={editable}
+              value={mergedContent.payment_notes ?? ""}
+              onChange={(payment_notes) => patch({ payment_notes })}
+              placeholder="Notes about payments (optional)…"
+              className="text-xs text-muted-foreground"
+            />
+          </CardContent>
+        </Card>
+
+        {mergedContent.warranty_body?.trim() ? (
+          <Card className="border-emerald-500/30 bg-emerald-500/5">
+            <CardContent className="flex gap-3 p-4">
+              <Shield className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div className="min-w-0 space-y-2">
+                <EditableBlock
+                  as="h3"
+                  editable={editable}
+                  value={mergedContent.warranty_title ?? copy.sections.warranty}
+                  onChange={(warranty_title) => patch({ warranty_title })}
+                  placeholder="Warranty title"
+                  className="font-semibold"
+                />
                 <EditableBlock
                   editable={editable}
-                  value={mergedContent.payment_notes ?? ""}
-                  onChange={(payment_notes) => patch({ payment_notes })}
-                  placeholder="Notes about payments (optional)…"
-                  className="text-xs text-muted-foreground"
+                  value={mergedContent.warranty_body ?? ""}
+                  onChange={(warranty_body) => patch({ warranty_body })}
+                  placeholder="Warranty details…"
+                  className="text-sm text-muted-foreground"
                 />
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+      </section>
 
-            {mergedContent.warranty_body?.trim() ? (
-              <Card className="border-emerald-500/30 bg-emerald-500/5">
-                <CardContent className="flex gap-3 p-4">
-                  <Shield className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                  <div className="min-w-0 space-y-2">
-                    <EditableBlock
-                      as="h3"
-                      editable={editable}
-                      value={mergedContent.warranty_title ?? copy.sections.warranty}
-                      onChange={(warranty_title) => patch({ warranty_title })}
-                      placeholder="Warranty title"
-                      className="font-semibold"
-                    />
-                    <EditableBlock
-                      editable={editable}
-                      value={mergedContent.warranty_body ?? ""}
-                      onChange={(warranty_body) => patch({ warranty_body })}
-                      placeholder="Warranty details…"
-                      className="text-sm text-muted-foreground"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null}
-          </section>
-
-          {resolvedAcceptMode !== "off" ? (
-            <section
-              id="accept"
-              className="pf-section proposal-pdf-page scroll-mt-6 space-y-3 pb-12"
-            >
-              <div className="pf-kicker">{copy.sections.accept}</div>
-              <ProposalDocumentAcceptSection
-                locale={locale}
-                mode={
-                  resolvedAcceptMode === "live"
-                    ? "live"
-                    : "preview"
-                }
-                proposalId={Number(resolvedProposal.id)}
-                depositAmount={resolvedProposal.deposit_amount ?? 0}
-                currency={resolvedCurrency}
-                acceptedAt={resolvedProposal.accepted_at}
-                contract={contractForAccept}
-                termsMarkdown={termsMarkdown}
-                termsTitle={dataSource?.termsTitle ?? contractTerms?.title ?? null}
-                publicToken={publicToken}
-                onRefresh={onPublicRefresh}
-                editable={resolvedAcceptMode === "editor"}
-                acceptTitle={mergedContent.accept_title}
-                acceptBody={mergedContent.accept_body}
-                onAcceptTitleChange={(accept_title) => patch({ accept_title })}
-                onAcceptBodyChange={(accept_body) => patch({ accept_body })}
-              />
-            </section>
-          ) : null}
+      {resolvedAcceptMode !== "off" ? (
+        <section
+          id="accept"
+          className="pf-section proposal-pdf-page scroll-mt-6 space-y-3 pb-12"
+        >
+          <div className="pf-kicker">{copy.sections.accept}</div>
+          <ProposalDocumentAcceptSection
+            locale={locale}
+            mode={resolvedAcceptMode === "live" ? "live" : "preview"}
+            proposalId={Number(resolvedProposal.id)}
+            depositAmount={resolvedProposal.deposit_amount ?? 0}
+            currency={resolvedCurrency}
+            acceptedAt={resolvedProposal.accepted_at}
+            contract={contractForAccept}
+            termsMarkdown={termsMarkdown}
+            termsTitle={dataSource?.termsTitle ?? contractTerms?.title ?? null}
+            publicToken={publicToken}
+            onRefresh={onPublicRefresh}
+            editable={resolvedAcceptMode === "editor"}
+            acceptTitle={mergedContent.accept_title}
+            acceptBody={mergedContent.accept_body}
+            onAcceptTitleChange={(accept_title) => patch({ accept_title })}
+            onAcceptBodyChange={(accept_body) => patch({ accept_body })}
+          />
+        </section>
+      ) : null}
     </div>
   );
 
@@ -732,7 +743,14 @@ const LineItemRow = ({
   line,
   currency,
 }: {
-  line: { key: string; description: string; quantity?: number; unit_price?: number; billing_type?: string; billing_interval?: string | null };
+  line: {
+    key: string;
+    description: string;
+    quantity?: number;
+    unit_price?: number;
+    billing_type?: string;
+    billing_interval?: string | null;
+  };
   currency: string;
 }) => (
   <div className="flex items-start gap-3 px-4 py-3">
@@ -780,7 +798,9 @@ const PaymentRow = ({
     <p className="shrink-0 font-bold tabular-nums">
       {formatProposalMoney(amount, currency)}
       {suffix ? (
-        <span className="text-xs font-normal text-muted-foreground">{suffix}</span>
+        <span className="text-xs font-normal text-muted-foreground">
+          {suffix}
+        </span>
       ) : null}
     </p>
   </div>

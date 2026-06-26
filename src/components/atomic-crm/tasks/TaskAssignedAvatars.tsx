@@ -90,16 +90,10 @@ export const TaskAssignedAvatars = ({
         to={`/organization_members/${member.id}`}
         title={`${name} · ${role}${done ? " · Done" : ""}`}
         aria-label={`${name} · ${role}${done ? " · Done" : ""}`}
-        className={cn(
-          linkClassName,
-          done && completedAvatarClass,
-        )}
+        className={cn(linkClassName, done && completedAvatarClass)}
       >
         <Avatar className={avatarClass}>
-          <AvatarImage
-            src={member.avatar?.src ?? undefined}
-            alt={name}
-          />
+          <AvatarImage src={member.avatar?.src ?? undefined} alt={name} />
           <AvatarFallback
             className={cn(
               textClass,

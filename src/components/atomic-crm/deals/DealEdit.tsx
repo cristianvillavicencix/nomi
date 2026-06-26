@@ -60,11 +60,7 @@ export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
   );
 };
 
-const DealEditDialogShell = ({
-  onClose,
-}: {
-  onClose: () => void;
-}) => {
+const DealEditDialogShell = ({ onClose }: { onClose: () => void }) => {
   const guardedClose = useGuardedDialogClose((next) => {
     if (!next) onClose();
   });

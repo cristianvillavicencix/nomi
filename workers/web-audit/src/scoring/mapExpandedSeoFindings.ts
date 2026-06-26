@@ -43,8 +43,7 @@ export const mapExpandedSeoFindings = (
       source: "static",
       source_id: "noindex",
       title: "La página tiene noindex",
-      description:
-        `meta robots incluye noindex; los buscadores no deberían indexar esta URL.${ctx}`,
+      description: `meta robots incluye noindex; los buscadores no deberían indexar esta URL.${ctx}`,
       recommendation:
         "Quita noindex en páginas que quieras posicionar. Resérvalo para staging o thank-you pages.",
       display_order: order++,
@@ -81,7 +80,10 @@ export const mapExpandedSeoFindings = (
     });
   }
 
-  if (seo.metaDescriptionLengthStatus === "short" && staticResult.metaDescription) {
+  if (
+    seo.metaDescriptionLengthStatus === "short" &&
+    staticResult.metaDescription
+  ) {
     findings.push({
       category: "seo",
       severity: "importante",
@@ -96,7 +98,10 @@ export const mapExpandedSeoFindings = (
     });
   }
 
-  if (seo.metaDescriptionLengthStatus === "long" && staticResult.metaDescription) {
+  if (
+    seo.metaDescriptionLengthStatus === "long" &&
+    staticResult.metaDescription
+  ) {
     findings.push({
       category: "seo",
       severity: "nice-to-have",
@@ -148,7 +153,8 @@ export const mapExpandedSeoFindings = (
       source_id: "incomplete-twitter-card",
       title: "Twitter Card incompleta",
       description: `Faltan: ${seo.twitterCard.missingRecommended.join(", ")}.`,
-      recommendation: "Agrega twitter:card y metadatos para previews en X/Twitter.",
+      recommendation:
+        "Agrega twitter:card y metadatos para previews en X/Twitter.",
       display_order: order++,
     });
   }

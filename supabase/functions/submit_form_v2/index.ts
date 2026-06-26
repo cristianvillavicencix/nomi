@@ -226,10 +226,7 @@ Deno.serve(
           );
         }
 
-        if (
-          answers.project_link_mode === "existing" &&
-          !resolvedDealId
-        ) {
+        if (answers.project_link_mode === "existing" && !resolvedDealId) {
           return jsonResponse({ error: "Project code not found" }, 400);
         }
       }
@@ -351,10 +348,7 @@ Deno.serve(
         }
       }
 
-      if (
-        formInstance.slug === "project-resources" &&
-        submission.deal_id
-      ) {
+      if (formInstance.slug === "project-resources" && submission.deal_id) {
         await processProjectResourcesSubmission(
           supabaseAdmin,
           {

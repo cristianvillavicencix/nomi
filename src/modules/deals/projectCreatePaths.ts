@@ -1,12 +1,10 @@
 export type ProjectCreateMode = "manual" | "web-form";
 
-export const buildProjectCreatePath = (
-  options?: {
-    companyId?: string | number | null;
-    contactId?: string | number | null;
-    mode?: ProjectCreateMode;
-  },
-) => {
+export const buildProjectCreatePath = (options?: {
+  companyId?: string | number | null;
+  contactId?: string | number | null;
+  mode?: ProjectCreateMode;
+}) => {
   const params = new URLSearchParams();
   params.set("mode", options?.mode ?? "manual");
   if (options?.companyId != null) {

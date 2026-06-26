@@ -286,7 +286,9 @@ export const WebsiteBriefAccordion = ({
   );
 
   const toggleSection = (sectionId: string) => {
-    setOpenSection((current) => (current === sectionId ? undefined : sectionId));
+    setOpenSection((current) =>
+      current === sectionId ? undefined : sectionId,
+    );
   };
 
   const setupSubtitle = getSectionSubtitle(
@@ -307,7 +309,9 @@ export const WebsiteBriefAccordion = ({
         <TableHeader>
           <TableRow className="bg-muted/20 hover:bg-muted/20">
             <TableHead className="w-12 px-3" aria-hidden />
-            <TableHead className="px-3 text-muted-foreground">Section</TableHead>
+            <TableHead className="px-3 text-muted-foreground">
+              Section
+            </TableHead>
             <TableHead className="w-16 px-3 text-right text-muted-foreground">
               Progress
             </TableHead>

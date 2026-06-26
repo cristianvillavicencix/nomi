@@ -110,9 +110,7 @@ Deno.serve(
         if (contactId) {
           const { data } = await supabaseAdmin
             .from("contacts")
-            .select(
-              "first_name, last_name, email_jsonb, phone_jsonb, address",
-            )
+            .select("first_name, last_name, email_jsonb, phone_jsonb, address")
             .eq("id", contactId)
             .maybeSingle();
           contact = data;

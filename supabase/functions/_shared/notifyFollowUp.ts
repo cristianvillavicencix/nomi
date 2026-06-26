@@ -119,10 +119,13 @@ export const formatFollowUpWhenLabel = (
   });
 };
 
-const getContactDisplayName = (contact: ContactRow | null, fallback: string) => {
+const getContactDisplayName = (
+  contact: ContactRow | null,
+  fallback: string,
+) => {
   if (!contact) return fallback;
-  const fullName = `${contact.first_name ?? ""} ${contact.last_name ?? ""}`
-    .trim();
+  const fullName =
+    `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim();
   if (fullName && contact.company_name?.trim()) {
     return `${fullName} (${contact.company_name.trim()})`;
   }
@@ -274,11 +277,21 @@ export async function notifyFollowUpForCalendarEvent(
   }
 
   if (kind === "scheduled" && row.follow_up_scheduled_notified_at) {
-    return { ok: true, sent: false, reason: "already_scheduled", calendarEventId };
+    return {
+      ok: true,
+      sent: false,
+      reason: "already_scheduled",
+      calendarEventId,
+    };
   }
 
   if (kind === "reminder" && row.follow_up_reminder_sent_at) {
-    return { ok: true, sent: false, reason: "already_reminded", calendarEventId };
+    return {
+      ok: true,
+      sent: false,
+      reason: "already_reminded",
+      calendarEventId,
+    };
   }
 
   let contact: ContactRow | null = null;
@@ -385,7 +398,7 @@ export async function notifyFollowUpForCalendarEvent(
   }
 
   return { ok: true, sent: true, calendarEventId };
-};
+}
 
 export async function processDueCalendarFollowUpReminders(
   supabase: SupabaseClient,
@@ -447,7 +460,7 @@ export async function processDueCalendarFollowUpReminders(
   }
 
   return results;
-};
+}
 
 export function isAuthorizedFollowUpCron(req: Request) {
   const secret = Deno.env.get("CRON_SECRET")?.trim();

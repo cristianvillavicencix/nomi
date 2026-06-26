@@ -8,7 +8,9 @@ import {
 } from "@/modules/tickets/ticketsRealtimeCache";
 import { invalidateQueriesForResource } from "@/lib/queryCache";
 
-const refreshTicketBilling = (queryClient: ReturnType<typeof useQueryClient>) => {
+const refreshTicketBilling = (
+  queryClient: ReturnType<typeof useQueryClient>,
+) => {
   void invalidateQueriesForResource(queryClient, "client_invoices");
   void invalidateQueriesForResource(queryClient, "ticket_deliverables");
 };
@@ -30,10 +32,7 @@ export const useTicketsInboxRealtime = (enabled: boolean) => {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "ticket_messages" },
         (payload) => {
-          appendTicketMessageToCache(
-            queryClient,
-            payload.new as TicketMessage,
-          );
+          appendTicketMessageToCache(queryClient, payload.new as TicketMessage);
           refreshTicketInboxLists(queryClient);
         },
       )
@@ -41,10 +40,7 @@ export const useTicketsInboxRealtime = (enabled: boolean) => {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "ticket_messages" },
         (payload) => {
-          appendTicketMessageToCache(
-            queryClient,
-            payload.new as TicketMessage,
-          );
+          appendTicketMessageToCache(queryClient, payload.new as TicketMessage);
         },
       )
       .on(

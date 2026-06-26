@@ -35,7 +35,9 @@ describe("primaryContactDraft (deferred create on new company)", () => {
         primaryContactId: upsert.primaryContactId,
         primary: {
           fullName: "Jane Doe",
-          emails: [{ value: "jane@example.com", type: "Work", isPrimary: true }],
+          emails: [
+            { value: "jane@example.com", type: "Work", isPrimary: true },
+          ],
           phones: [],
         },
       }),

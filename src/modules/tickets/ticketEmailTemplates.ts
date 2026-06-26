@@ -80,10 +80,7 @@ export const buildTicketDeliveryEmailHtml = (params: {
   const filesHtml =
     params.fileNames.length > 0
       ? `<ul style="margin:12px 0;padding-left:20px;">${params.fileNames
-          .map(
-            (name) =>
-              `<li style="margin:4px 0;">${escapeHtml(name)}</li>`,
-          )
+          .map((name) => `<li style="margin:4px 0;">${escapeHtml(name)}</li>`)
           .join("")}</ul>`
       : "<p>Your supplement files are attached to this email.</p>";
 

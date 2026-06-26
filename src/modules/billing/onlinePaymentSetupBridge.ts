@@ -149,10 +149,10 @@ export const onlinePaymentSetupToProposalSchedule = (
 
   const balance_start_date =
     remainderSchedule.timing === "project_end"
-      ? remainderSchedule.project_end_date ?? anchorDate
+      ? (remainderSchedule.project_end_date ?? anchorDate)
       : remainderSchedule.timing === "invoice_due_date"
         ? anchorDate
-        : remainderSchedule.balance_start_date ?? null;
+        : (remainderSchedule.balance_start_date ?? null);
 
   return {
     depositPercent: setup.depositPercent,

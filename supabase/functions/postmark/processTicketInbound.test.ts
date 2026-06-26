@@ -8,8 +8,18 @@ Deno.test("buildInboundTicketMessageBody uses plain text when present", () => {
 
 Deno.test("buildInboundTicketMessageBody accepts photo-only mail", () => {
   const attachments = [
-    { title: "a.jpg", type: "image/jpeg", path: "a.jpg", src: "https://x/a.jpg" },
-    { title: "b.jpg", type: "image/jpeg", path: "b.jpg", src: "https://x/b.jpg" },
+    {
+      title: "a.jpg",
+      type: "image/jpeg",
+      path: "a.jpg",
+      src: "https://x/a.jpg",
+    },
+    {
+      title: "b.jpg",
+      type: "image/jpeg",
+      path: "b.jpg",
+      src: "https://x/b.jpg",
+    },
   ];
   const result = buildInboundTicketMessageBody("", null, attachments);
   assertEquals(result?.body, "2 photos attached");

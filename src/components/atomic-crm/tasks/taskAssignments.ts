@@ -72,9 +72,7 @@ export const createTaskTagNotifications = async (
     });
 
   const existingKeys = new Set(
-    existing.map(
-      (entry) => `member:${entry.recipient_organization_member_id}`,
-    ),
+    existing.map((entry) => `member:${entry.recipient_organization_member_id}`),
   );
 
   const { data: members } = await dataProvider.getList<{

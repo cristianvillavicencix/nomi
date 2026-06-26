@@ -75,7 +75,9 @@ export const INSTALLMENT_FILTER_OPTIONS: Array<{
   { value: "requires_action", label: "Action required" },
 ];
 
-export const buildInstallmentListFilter = (statusFilter: InstallmentStatusFilter) => {
+export const buildInstallmentListFilter = (
+  statusFilter: InstallmentStatusFilter,
+) => {
   if (statusFilter === "all") return {};
   if (statusFilter === "overdue") {
     return {
@@ -86,7 +88,13 @@ export const buildInstallmentListFilter = (statusFilter: InstallmentStatusFilter
   return { "status@eq": statusFilter };
 };
 
-export type InvoiceStatusFilter = "all" | "draft" | "sent" | "paid" | "overdue" | "void";
+export type InvoiceStatusFilter =
+  | "all"
+  | "draft"
+  | "sent"
+  | "paid"
+  | "overdue"
+  | "void";
 
 export const INVOICE_FILTER_OPTIONS: Array<{
   value: InvoiceStatusFilter;
@@ -108,12 +116,18 @@ export const isClientInvoiceOverdue = (invoice: {
   Boolean(invoice.due_date) &&
   invoice.due_date! < todayIso();
 
-export const invoiceStatusLabel = (status?: string | null, dueDate?: string | null) => {
+export const invoiceStatusLabel = (
+  status?: string | null,
+  dueDate?: string | null,
+) => {
   if (isClientInvoiceOverdue({ status, due_date: dueDate })) return "Overdue";
   return status?.replace(/_/g, " ") ?? "—";
 };
 
-export const invoiceStatusVariant = (status?: string | null, dueDate?: string | null) => {
+export const invoiceStatusVariant = (
+  status?: string | null,
+  dueDate?: string | null,
+) => {
   if (isClientInvoiceOverdue({ status, due_date: dueDate })) {
     return "destructive" as const;
   }

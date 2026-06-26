@@ -5,10 +5,7 @@ import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import type { CompanyWithPrimaryContact } from "@/modules/clients/clientProfile";
 import type { Contact } from "@/components/atomic-crm/types";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
-import {
-  getClientShowPath,
-  getPersonShowPath,
-} from "@/app/routing";
+import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { relatedPreviewItemClassName } from "@/modules/shared/relatedFilters";
 import {
   RelatedEmptyState,
@@ -41,8 +38,7 @@ export const LeadRelatedSidebar = ({ lead }: LeadRelatedSidebarProps) => {
   );
 
   const hasReferrer =
-    lead.referred_by_contact_id != null ||
-    lead.referred_by_company_id != null;
+    lead.referred_by_contact_id != null || lead.referred_by_company_id != null;
 
   return (
     <div className="space-y-6">

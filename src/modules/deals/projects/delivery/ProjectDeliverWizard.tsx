@@ -7,7 +7,13 @@ import {
   useNotify,
   useRefresh,
 } from "ra-core";
-import { AlertTriangle, ChevronLeft, Copy, ExternalLink, Rocket } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronLeft,
+  Copy,
+  ExternalLink,
+  Rocket,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,7 +49,11 @@ import {
 } from "@/modules/deals/projects/delivery/projectMaintenanceReview";
 import { useDeliverProjectForm } from "@/modules/deals/projects/delivery/useDeliverProjectForm";
 import { useProjectPortalLink } from "@/modules/portal/useProjectPortalLink";
-import type { ClientPortalAccount, DealResource, LbsDeal } from "@/modules/types";
+import type {
+  ClientPortalAccount,
+  DealResource,
+  LbsDeal,
+} from "@/modules/types";
 
 const WIZARD_STEPS = ["analysis", "maintenance", "confirm", "email"] as const;
 type WizardStep = (typeof WIZARD_STEPS)[number];
@@ -107,20 +117,23 @@ export const ProjectDeliverWizard = ({
     { enabled: open && !!contactId },
   );
 
-  const { total: pendingChecklistCount = 0, data: pendingChecklistItems = [], isPending: checklistPending } =
-    useGetList<{ id: number; label: string }>(
-      "deal_launch_checklist_items",
-      {
-        filter: {
-          "deal_id@eq": record.id,
-          "is_required@eq": true,
-          "is_completed@eq": false,
-        },
-        pagination: { page: 1, perPage: 50 },
-        sort: { field: "order_index", order: "ASC" },
+  const {
+    total: pendingChecklistCount = 0,
+    data: pendingChecklistItems = [],
+    isPending: checklistPending,
+  } = useGetList<{ id: number; label: string }>(
+    "deal_launch_checklist_items",
+    {
+      filter: {
+        "deal_id@eq": record.id,
+        "is_required@eq": true,
+        "is_completed@eq": false,
       },
-      { enabled: open && !!record.id },
-    );
+      pagination: { page: 1, perPage: 50 },
+      sort: { field: "order_index", order: "ASC" },
+    },
+    { enabled: open && !!record.id },
+  );
 
   const pendingChecklistLabels = useMemo(
     () =>
@@ -355,8 +368,9 @@ export const ProjectDeliverWizard = ({
           <DialogHeader>
             <DialogTitle>Portal access</DialogTitle>
             <DialogDescription>
-              This project was already delivered. To give the client access again,
-              share the portal link below — you do not need to run delivery twice.
+              This project was already delivered. To give the client access
+              again, share the portal link below — you do not need to run
+              delivery twice.
             </DialogDescription>
           </DialogHeader>
 
@@ -379,7 +393,11 @@ export const ProjectDeliverWizard = ({
                   Copy link
                 </Button>
                 <Button type="button" variant="outline" asChild>
-                  <a href={portalLink} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={portalLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <ExternalLink className="size-4" />
                     Open portal
                   </a>
@@ -393,8 +411,9 @@ export const ProjectDeliverWizard = ({
             </div>
           ) : (
             <div className="rounded-lg border border-warning/40 bg-warning/15 p-4 text-sm text-warning-foreground">
-              No portal account is linked yet. Link a client contact, then create a
-              portal invite from the project menu before sharing access.
+              No portal account is linked yet. Link a client contact, then
+              create a portal invite from the project menu before sharing
+              access.
             </div>
           )}
 
@@ -470,7 +489,9 @@ export const ProjectDeliverWizard = ({
             </div>
           ) : null}
 
-          {step === "confirm" && !form.canSubmit && form.submitBlockers.length > 0 ? (
+          {step === "confirm" &&
+          !form.canSubmit &&
+          form.submitBlockers.length > 0 ? (
             <div className="rounded-lg border border-warning/40 bg-warning/15 p-3 text-sm text-warning-foreground">
               <p className="font-medium">Still required on this step:</p>
               <ul className="mt-2 list-disc space-y-1 pl-4">
@@ -581,10 +602,7 @@ export const ProjectDeliverWizard = ({
                     : "Confirm delivery"}
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  onClick={goNext}
-                >
+                <Button type="button" onClick={goNext}>
                   <Rocket className="size-4" />
                   Continue delivery
                 </Button>

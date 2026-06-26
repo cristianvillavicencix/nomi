@@ -62,12 +62,9 @@ export const ProposalIntroSection = ({
   const paragraphs = splitPreambleParagraphs(body);
   const hasBody = paragraphs.length > 0;
   const displayName = signatory?.trim();
-  const displayCompany =
-    signatoryCompany?.trim() || signatoryOrgLabel;
+  const displayCompany = signatoryCompany?.trim() || signatoryOrgLabel;
   const showSignatory =
-    editable ||
-    Boolean(displayName) ||
-    Boolean(signatoryImageUrl?.trim());
+    editable || Boolean(displayName) || Boolean(signatoryImageUrl?.trim());
 
   const initialsFromName = (name: string) =>
     name
@@ -89,9 +86,7 @@ export const ProposalIntroSection = ({
             editable={editable}
             aspectClass="pf-avatar size-14 shrink-0 sm:size-16"
             placeholder="Profile photo"
-            initials={
-              displayName ? initialsFromName(displayName) : undefined
-            }
+            initials={displayName ? initialsFromName(displayName) : undefined}
             className="mb-0"
           />
         ) : (
@@ -221,7 +216,8 @@ export const ProposalIntroSection = ({
               <p
                 key={String(index)}
                 className={cn(
-                  index === 0 && "text-foreground/90 text-[1.05rem] leading-relaxed",
+                  index === 0 &&
+                    "text-foreground/90 text-[1.05rem] leading-relaxed",
                 )}
               >
                 {paragraph}
@@ -229,7 +225,9 @@ export const ProposalIntroSection = ({
             ))}
           </div>
         ) : (
-          <p className="mt-5 text-sm text-muted-foreground">{bodyPlaceholder}</p>
+          <p className="mt-5 text-sm text-muted-foreground">
+            {bodyPlaceholder}
+          </p>
         )}
         {signatoryBlock}
       </div>

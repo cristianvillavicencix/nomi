@@ -172,7 +172,9 @@ export async function processProjectResourcesSubmission(
   }
 
   if (resourcesToInsert.length > 0) {
-    const { error } = await supabase.from("deal_resources").insert(resourcesToInsert);
+    const { error } = await supabase
+      .from("deal_resources")
+      .insert(resourcesToInsert);
     if (error) {
       console.error("[processProjectResourcesSubmission] insert failed", error);
     }

@@ -3,7 +3,11 @@ import { Paperclip } from "lucide-react";
 import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 import type { AttachmentNote, ContactNote, DealNote } from "../types";
 
-const NoteAttachmentImage = ({ attachment }: { attachment: AttachmentNote }) => {
+const NoteAttachmentImage = ({
+  attachment,
+}: {
+  attachment: AttachmentNote;
+}) => {
   const href = useStorageSignedUrl(attachment.src, {
     path: attachment.path,
     defaultBucket: "attachments",

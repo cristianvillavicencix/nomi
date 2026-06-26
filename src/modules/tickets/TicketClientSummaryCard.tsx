@@ -69,7 +69,9 @@ const SummaryRow = ({
       )}
     >
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words text-sm text-foreground">{children}</dd>
+      <dd className="min-w-0 break-words text-sm text-foreground">
+        {children}
+      </dd>
     </div>
   );
 };
@@ -95,19 +97,27 @@ export const TicketClientSummaryCard = ({
   const contactTitle = contact?.title?.trim();
   const email =
     meta.email ??
-    (contact && getContactEmail(contact) !== "—" ? getContactEmail(contact) : null);
+    (contact && getContactEmail(contact) !== "—"
+      ? getContactEmail(contact)
+      : null);
   const phoneRaw =
     meta.phone ??
-    (contact && getContactPhone(contact) !== "—" ? getContactPhone(contact) : null) ??
+    (contact && getContactPhone(contact) !== "—"
+      ? getContactPhone(contact)
+      : null) ??
     company?.phone_number?.trim();
   const phone = phoneRaw ? formatUsPhoneDisplayFromAny(phoneRaw) : null;
-  const address =
-    formatLocation(contact) ??
-    formatLocation(company) ??
-    null;
+  const address = formatLocation(contact) ?? formatLocation(company) ?? null;
   const website = meta.website ?? company?.website?.trim() ?? null;
 
-  if (!companyName && !contactName && !email && !phone && !address && !website) {
+  if (
+    !companyName &&
+    !contactName &&
+    !email &&
+    !phone &&
+    !address &&
+    !website
+  ) {
     return null;
   }
 
@@ -116,9 +126,7 @@ export const TicketClientSummaryCard = ({
   return (
     <section
       className={cn(
-        stacked
-          ? "min-w-0"
-          : "rounded-lg border bg-muted/25 px-3 py-3 sm:px-4",
+        stacked ? "min-w-0" : "rounded-lg border bg-muted/25 px-3 py-3 sm:px-4",
         className,
       )}
       aria-label="Client summary"
@@ -172,7 +180,10 @@ export const TicketClientSummaryCard = ({
 
         {phone ? (
           <SummaryRow label="Phone" stacked={stacked}>
-            <a href={`tel:${phoneRaw}`} className="text-primary hover:underline">
+            <a
+              href={`tel:${phoneRaw}`}
+              className="text-primary hover:underline"
+            >
               {phone}
             </a>
           </SummaryRow>

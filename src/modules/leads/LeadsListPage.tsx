@@ -31,7 +31,10 @@ import {
   formatFollowUpDate,
   isFollowUpOverdue,
 } from "@/modules/leads/leadFollowUpUtils";
-import { getLeadStageDef, normalizeLeadStage } from "@/modules/leads/leadStages";
+import {
+  getLeadStageDef,
+  normalizeLeadStage,
+} from "@/modules/leads/leadStages";
 import { cn } from "@/lib/utils";
 
 const VIEW_STORAGE_KEY = "lbs.leads.view";
@@ -191,7 +194,9 @@ const LeadsListActions = ({
         onClick={toggleMyLeads}
         disabled={identity?.id == null}
         title={
-          myFilterActive ? "Showing only your leads" : "Filter to your leads only"
+          myFilterActive
+            ? "Showing only your leads"
+            : "Filter to your leads only"
         }
       >
         <UserCheck className="size-4" />
@@ -226,7 +231,11 @@ const LeadsListLayout = ({ view }: { view: LeadsView }) => {
 
   if (isPending) return null;
   if (view === "kanban") {
-    return <div className="h-full min-h-0"><LeadsKanban /></div>;
+    return (
+      <div className="h-full min-h-0">
+        <LeadsKanban />
+      </div>
+    );
   }
   if (!data?.length) return <ContactEmpty />;
 
@@ -300,7 +309,9 @@ const LeadsListLayout = ({ view }: { view: LeadsView }) => {
           source="lead_stage"
           label="Stage"
           render={(record: Contact) => {
-            const stage = getLeadStageDef(normalizeLeadStage(record.lead_stage));
+            const stage = getLeadStageDef(
+              normalizeLeadStage(record.lead_stage),
+            );
             return (
               <span
                 className="text-sm font-medium"

@@ -38,10 +38,7 @@ export const appendRequestScopeToUrl = (
   scope: ResourceRequestScope,
 ) => {
   const next = new URL(url, window.location.origin);
-  next.searchParams.set(
-    "sections",
-    buildRequestSectionsParam(scope.sections),
-  );
+  next.searchParams.set("sections", buildRequestSectionsParam(scope.sections));
   if (scope.presetServices?.length) {
     next.searchParams.set("services", scope.presetServices.join("|"));
   }
@@ -80,7 +77,9 @@ export const scopeForResourceTab = (
   return FULL_RESOURCE_REQUEST;
 };
 
-export const scopeForNewServiceTab = (serviceName: string): ResourceRequestScope => {
+export const scopeForNewServiceTab = (
+  serviceName: string,
+): ResourceRequestScope => {
   const category = buildServiceCategory(serviceName);
   const slug = parseServiceCategorySlug(category) ?? serviceName;
   return {
@@ -105,7 +104,9 @@ export const readRequestScopeFromLocation = (): {
 };
 
 export const filterProjectResourcesSchema = (
-  schema: { sections?: Array<{ id: string }>; settings?: Record<string, unknown> } | undefined,
+  schema:
+    | { sections?: Array<{ id: string }>; settings?: Record<string, unknown> }
+    | undefined,
   sections: ResourceRequestSection[] | null,
 ) => {
   if (!schema || !sections?.length) return schema;

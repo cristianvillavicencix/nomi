@@ -49,14 +49,9 @@ export const calculateInvoiceTotals = (
     (sum, line) => sum + invoiceLineTotal(line.quantity, line.unit_price),
     0,
   );
-  const percent = Math.min(
-    Math.max(Number(discountPercent) || 0, 0),
-    100,
-  );
-  const discount =
-    Math.round(subtotal * (percent / 100) * 100) / 100;
-  const discountedSubtotal =
-    Math.round((subtotal - discount) * 100) / 100;
+  const percent = Math.min(Math.max(Number(discountPercent) || 0, 0), 100);
+  const discount = Math.round(subtotal * (percent / 100) * 100) / 100;
+  const discountedSubtotal = Math.round((subtotal - discount) * 100) / 100;
   const feeAmount =
     discountedSubtotal > 0 ? calculateTransferFee(discountedSubtotal) : 0;
   const total = Math.round((discountedSubtotal + feeAmount) * 100) / 100;

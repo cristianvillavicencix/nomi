@@ -3,7 +3,11 @@ import { ProjectDeploymentCard } from "@/modules/deals/projects/ProjectDeploymen
 import { ProjectGithubLink } from "@/modules/deals/ProjectGithubLink";
 import type { LbsDeal } from "@/modules/types";
 
-export const ProjectSecurityWorkspaceTab = ({ record }: { record: LbsDeal }) => (
+export const ProjectSecurityWorkspaceTab = ({
+  record,
+}: {
+  record: LbsDeal;
+}) => (
   <div className="space-y-6">
     <div>
       <h3 className="text-base font-semibold">Security & deployment</h3>

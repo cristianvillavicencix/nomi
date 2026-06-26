@@ -1,8 +1,5 @@
 import type { Identifier } from "ra-core";
-import type {
-  EmailAndType,
-  PhoneNumberAndType,
-} from "../../types";
+import type { EmailAndType, PhoneNumberAndType } from "../../types";
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
@@ -42,8 +39,7 @@ export const resolveContactOrgMemberForWrite = async (
   const assigned = Array.isArray(contact.assigned_member_ids)
     ? contact.assigned_member_ids[0]
     : null;
-  const candidate =
-    contact.organization_member_id ?? assigned ?? null;
+  const candidate = contact.organization_member_id ?? assigned ?? null;
 
   let memberId: Identifier | null = null;
   if (candidate != null && candidate !== "") {
@@ -214,9 +210,7 @@ const COMPANY_READ_ONLY_WRITE_FIELDS = [
   "primary_contact_interested_service",
 ] as const;
 
-export const prepareCompanyWriteData = <
-  T extends Record<string, unknown>,
->(
+export const prepareCompanyWriteData = <T extends Record<string, unknown>>(
   data: T,
 ): T => {
   const rest = { ...data };
@@ -241,9 +235,7 @@ export const prepareCompanyWriteData = <
   return rest as T;
 };
 
-export const prepareContactWriteData = <
-  T extends Record<string, unknown>,
->(
+export const prepareContactWriteData = <T extends Record<string, unknown>>(
   data: T,
 ): T => {
   const {
@@ -258,10 +250,12 @@ export const prepareContactWriteData = <
     delete rest[field];
   }
 
-  return normalizeContactData(rest as T & {
-    email_jsonb?: EmailAndType[];
-    phone_jsonb?: PhoneNumberAndType[];
-  });
+  return normalizeContactData(
+    rest as T & {
+      email_jsonb?: EmailAndType[];
+      phone_jsonb?: PhoneNumberAndType[];
+    },
+  );
 };
 
 /** Form-only fields — never PATCH/INSERT on contacts. */
@@ -276,7 +270,9 @@ const CONTACT_FORM_META_FIELDS = [
   "_company_draft_sector",
 ] as const;
 
-export const stripContactFormMetaFields = (payload: Record<string, unknown>) => {
+export const stripContactFormMetaFields = (
+  payload: Record<string, unknown>,
+) => {
   for (const field of CONTACT_FORM_META_FIELDS) {
     delete payload[field];
   }
@@ -294,7 +290,9 @@ const CONTACT_UPDATE_OMIT_FIELDS = [
   "phone_fts",
 ] as const;
 
-const stripContactSummaryComputedFields = (payload: Record<string, unknown>) => {
+const stripContactSummaryComputedFields = (
+  payload: Record<string, unknown>,
+) => {
   for (const key of Object.keys(payload)) {
     if (key.endsWith("_fts")) {
       delete payload[key];

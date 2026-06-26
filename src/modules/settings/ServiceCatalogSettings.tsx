@@ -261,9 +261,7 @@ export const ServiceCatalogSettings = () => {
         open={packageDialog != null}
         onOpenChange={(open) => !open && setPackageDialog(null)}
         variant="package"
-        title={
-          packageDialog?.mode === "edit" ? "Edit package" : "New package"
-        }
+        title={packageDialog?.mode === "edit" ? "Edit package" : "New package"}
         sortOrder={packages.length + 1}
         initial={
           packageDialog?.mode === "edit"
@@ -469,10 +467,7 @@ const CatalogTable = <
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 <MoneyText value={row.suggested_price} />
-                {billingIntervalSuffix(
-                  row.billing_type,
-                  row.billing_interval,
-                )}
+                {billingIntervalSuffix(row.billing_type, row.billing_interval)}
               </TableCell>
               <TableCell className="text-center">
                 <Switch

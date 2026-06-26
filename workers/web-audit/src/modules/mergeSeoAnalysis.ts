@@ -66,14 +66,17 @@ const walkForSeoStrings = (
     null;
 
   const meta =
-    (typeof record.metaDescription === "string" && record.metaDescription.trim()) ||
+    (typeof record.metaDescription === "string" &&
+      record.metaDescription.trim()) ||
     (typeof record.description === "string" && record.description.trim()) ||
-    (typeof record.seoDescription === "string" && record.seoDescription.trim()) ||
+    (typeof record.seoDescription === "string" &&
+      record.seoDescription.trim()) ||
     (typeof record.ogDescription === "string" && record.ogDescription.trim()) ||
     null;
 
   if (!found.title && title) found.title = title.slice(0, 300);
-  if (!found.metaDescription && meta) found.metaDescription = meta.slice(0, 400);
+  if (!found.metaDescription && meta)
+    found.metaDescription = meta.slice(0, 400);
 
   if (typeof record.canonical === "string" && !found.canonical) {
     found.canonical = record.canonical.trim();
@@ -112,7 +115,10 @@ const walkForSeoStrings = (
     for (const key of SEO_STRING_KEYS) {
       const val = record[key];
       if (typeof val === "string" && val.trim()) {
-        if ((key.includes("title") || key === "headline" || key === "name") && !found.title) {
+        if (
+          (key.includes("title") || key === "headline" || key === "name") &&
+          !found.title
+        ) {
           found.title = val.trim().slice(0, 300);
         }
         if (key.includes("description") && !found.metaDescription) {
@@ -234,7 +240,8 @@ export const applyMergedSeoAnalysis = (params: {
   staticResult.h1Text = merged.h1Text;
   staticResult.canonical = merged.canonical;
 
-  const seoHtml = strategy.preferRendered && rendered?.html ? rendered.html : staticHtml;
+  const seoHtml =
+    strategy.preferRendered && rendered?.html ? rendered.html : staticHtml;
   const $ = cheerio.load(seoHtml);
 
   if (strategy.preferRendered && rendered?.html) {

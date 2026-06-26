@@ -112,10 +112,9 @@ export const InvoiceShareLinkDialog = ({
       if (result.sms_sent) {
         notify("Link sent by text message", { type: "success" });
       } else if (result.sms_skipped) {
-        notify(
-          "Text message was not sent — check Communications settings.",
-          { type: "warning" },
-        );
+        notify("Text message was not sent — check Communications settings.", {
+          type: "warning",
+        });
       } else {
         notify("Link sent", { type: "success" });
       }
@@ -193,7 +192,11 @@ export const InvoiceShareLinkDialog = ({
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button

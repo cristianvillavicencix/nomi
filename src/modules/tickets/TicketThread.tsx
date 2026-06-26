@@ -101,7 +101,9 @@ const TicketThreadMessage = ({
               </span>
             </div>
             {collapsed && !isEditingInternal ? (
-              <p className="mt-1 truncate text-xs text-muted-foreground">{preview}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                {preview}
+              </p>
             ) : null}
           </button>
           {!isEditingInternal ? (
@@ -195,12 +197,16 @@ const TicketThreadMessage = ({
                 {senderLabel}
               </span>
               <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
-                {outbound ? <EmailDeliveryBadge message={message} compact /> : null}
+                {outbound ? (
+                  <EmailDeliveryBadge message={message} compact />
+                ) : null}
                 {formatTicketMessageTime(message.created_at)}
               </span>
             </div>
             {collapsed ? (
-              <p className="mt-1 truncate text-xs text-muted-foreground">{preview}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                {preview}
+              </p>
             ) : null}
           </button>
           {inbound && quoteContext ? (
@@ -275,7 +281,9 @@ export const TicketThread = ({
   isPending?: boolean;
   threadEndRef?: RefObject<HTMLDivElement | null>;
 }) => {
-  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(() => new Set());
+  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(
+    () => new Set(),
+  );
 
   const messageIds = useMemo(
     () => messages.map((message) => Number(message.id)).filter(Number.isFinite),

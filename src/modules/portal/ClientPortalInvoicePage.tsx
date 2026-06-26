@@ -57,7 +57,8 @@ const payloadToInvoiceRecord = (
       upfront_percent: invoice.upfront_percent ?? 100,
       auto_charge_remainder: invoice.auto_charge_remainder ?? false,
       amount_paid: invoice.amount_paid ?? 0,
-      save_card_for_future_charges: invoice.save_card_for_future_charges ?? false,
+      save_card_for_future_charges:
+        invoice.save_card_for_future_charges ?? false,
       remainder_schedule: invoice.remainder_schedule ?? null,
     } as ClientInvoice,
     lineItems,
@@ -112,13 +113,12 @@ export const ClientPortalInvoicePage = () => {
         organizationName: organization.name,
         organizationAddress: organization.address ?? null,
         organizationWebsite: organization.website ?? null,
-        company: bill_to.company_name
-          ? { name: bill_to.company_name }
-          : null,
+        company: bill_to.company_name ? { name: bill_to.company_name } : null,
         contact: bill_to.contact_name
           ? {
               first_name: bill_to.contact_name.split(" ")[0] ?? "",
-              last_name: bill_to.contact_name.split(" ").slice(1).join(" ") || "",
+              last_name:
+                bill_to.contact_name.split(" ").slice(1).join(" ") || "",
             }
           : null,
         lineItems,
@@ -207,7 +207,10 @@ const InvoicePortalContent = ({
   const navigate = useNavigate();
   const [payOpen, setPayOpen] = useState(false);
   const { invoice, line_items, organization, bill_to } = payload;
-  const lines = useMemo(() => lineItemsToInvoiceDrafts(line_items), [line_items]);
+  const lines = useMemo(
+    () => lineItemsToInvoiceDrafts(line_items),
+    [line_items],
+  );
   const total = Number(invoice.amount) || 0;
   const amountPaid = Number(invoice.amount_paid) || 0;
   const balanceDue = computeInvoiceBalanceDue(total, amountPaid);

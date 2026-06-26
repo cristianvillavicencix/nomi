@@ -107,7 +107,9 @@ export const resolveTicketSmsServiceSubject = (
 ) => {
   const billed = billedDeliverables(deliverables);
   if (billed.length === 1) {
-    return SMS_SERVICE_SUBJECT[billed[0].billing_kind as DeliverableBillingKind];
+    return SMS_SERVICE_SUBJECT[
+      billed[0].billing_kind as DeliverableBillingKind
+    ];
   }
   if (billed.length > 1) return "project deliverables";
   const address = propertyAddress?.trim();

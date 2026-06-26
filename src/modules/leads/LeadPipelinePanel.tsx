@@ -108,9 +108,7 @@ export const LeadPipelinePanel = ({
                     <p
                       className={cn(
                         "text-sm font-medium",
-                        isCurrent
-                          ? "text-foreground"
-                          : "text-muted-foreground",
+                        isCurrent ? "text-foreground" : "text-muted-foreground",
                       )}
                     >
                       {stage.label}

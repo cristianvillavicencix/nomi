@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  useDataProvider,
-  useNotify,
-  useRefresh,
-} from "ra-core";
+import { useDataProvider, useNotify, useRefresh } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,7 +74,9 @@ export const ClientPortalSection = ({ record }: { record: LbsDeal }) => {
       <CardContent className="space-y-3 text-sm">
         {portalLink ? (
           <div className="space-y-2">
-            <div className="text-muted-foreground">Share this link with your client</div>
+            <div className="text-muted-foreground">
+              Share this link with your client
+            </div>
             <Input readOnly value={portalLink} />
           </div>
         ) : (

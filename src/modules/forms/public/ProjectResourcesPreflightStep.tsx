@@ -22,7 +22,8 @@ export const ProjectResourcesPreflightStep = ({
   <section className="space-y-4 rounded-lg border p-4">
     <h2 className="text-base font-semibold">¿Para qué proyecto es esto?</h2>
     <p className="text-sm text-muted-foreground">
-      Elegí si este envío es para un proyecto nuevo o uno que ya tenés con nosotros.
+      Elegí si este envío es para un proyecto nuevo o uno que ya tenés con
+      nosotros.
     </p>
     <div className="flex flex-col gap-2 sm:flex-row">
       <Button

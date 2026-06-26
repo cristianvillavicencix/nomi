@@ -138,7 +138,9 @@ export const ContactDuplicateResolveDialog = ({
             <ConfidenceBadge confidence={topConfidence} />
           ) : null}
           {selectedMatch?.reason ? (
-            <p className="text-sm text-muted-foreground">{selectedMatch.reason}</p>
+            <p className="text-sm text-muted-foreground">
+              {selectedMatch.reason}
+            </p>
           ) : null}
 
           <ul className="space-y-2">

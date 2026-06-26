@@ -62,9 +62,7 @@ export const ProjectActivityTab = ({ record }: { record: LbsDeal }) => {
       </TableHeader>
       <TableBody>
         {visibleActivities.map((activity) => (
-          <TableRow
-            key={`${activity.activity_type}-${activity.activity_id}`}
-          >
+          <TableRow key={`${activity.activity_type}-${activity.activity_id}`}>
             <TableCell className="px-4 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
               {formatDateTime(activity.created_at)}
             </TableCell>

@@ -31,13 +31,16 @@ export const ProjectDeliveryMaintenanceStep = ({
       <div>
         <h3 className="text-sm font-semibold">Next web review & maintenance</h3>
         <p className="text-sm text-muted-foreground">
-          Schedule when the team should follow up with the client after delivery.
+          Schedule when the team should follow up with the client after
+          delivery.
         </p>
       </div>
 
       <RadioGroup
         value={mode}
-        onValueChange={(value) => onModeChange(value as MaintenanceScheduleMode)}
+        onValueChange={(value) =>
+          onModeChange(value as MaintenanceScheduleMode)
+        }
         className="space-y-3"
       >
         <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-4">

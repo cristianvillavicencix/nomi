@@ -4,6 +4,6 @@ export const stripCidFromHtml = (html: string | null | undefined) => {
 
   return html
     .replace(/<img\b[^>]*\bsrc\s*=\s*["']cid:[^"']+["'][^>]*>/gi, "")
-    .replace(/\bsrc\s*=\s*(["'])cid:[^"']+\1/gi, 'src=$1$1')
+    .replace(/\bsrc\s*=\s*(["'])cid:[^"']+\1/gi, "src=$1$1")
     .replace(/url\((["']?)cid:[^)"']+\1\)/gi, "none");
 };

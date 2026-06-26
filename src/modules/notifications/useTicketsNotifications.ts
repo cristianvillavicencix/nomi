@@ -150,7 +150,9 @@ export const useTicketsNotifications = () => {
           const previous = payload.old as Ticket | undefined;
           if (!ticket?.id) return;
           if (ticket.assignee_id == null) return;
-          if (String(ticket.assignee_id) === String(previous?.assignee_id ?? "")) {
+          if (
+            String(ticket.assignee_id) === String(previous?.assignee_id ?? "")
+          ) {
             return;
           }
           notifyAssignment(ticket);

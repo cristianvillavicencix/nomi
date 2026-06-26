@@ -31,16 +31,12 @@ export const useProposalCrmLinks = () => {
   );
 
   const contactFilter = useMemo(
-    () =>
-      companyIdEnabled
-        ? { "company_id@eq": companyId }
-        : emptyListFilter,
+    () => (companyIdEnabled ? { "company_id@eq": companyId } : emptyListFilter),
     [companyId, companyIdEnabled],
   );
 
   const dealFilter = useMemo(
-    () =>
-      companyIdEnabled ? { "company_id@eq": companyId } : emptyListFilter,
+    () => (companyIdEnabled ? { "company_id@eq": companyId } : emptyListFilter),
     [companyId, companyIdEnabled],
   );
 

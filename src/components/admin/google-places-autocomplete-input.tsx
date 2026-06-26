@@ -1,5 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { FieldTitle, useInput, useResourceContext, type InputProps } from "ra-core";
+import {
+  FieldTitle,
+  useInput,
+  useResourceContext,
+  type InputProps,
+} from "ra-core";
 import { Loader2, MapPin } from "lucide-react";
 import {
   FormControl,
@@ -88,15 +93,23 @@ export const GooglePlacesAutocompleteInput = ({
       setIsLoading(true);
       setFetchError(null);
       try {
-        const next = await fetchPlacesAutocomplete(query, mode, controller.signal);
+        const next = await fetchPlacesAutocomplete(
+          query,
+          mode,
+          controller.signal,
+        );
         setSuggestions(next);
-        setFetchError(next.length === 0 ? "No Google results for this search." : null);
+        setFetchError(
+          next.length === 0 ? "No Google results for this search." : null,
+        );
       } catch (error) {
         setSuggestions([]);
         if (error instanceof GooglePlacesUnavailableError) {
           setFetchError(error.message);
         } else {
-          setFetchError("Could not reach Google Places. You can still type manually.");
+          setFetchError(
+            "Could not reach Google Places. You can still type manually.",
+          );
         }
       } finally {
         setIsLoading(false);
@@ -110,7 +123,7 @@ export const GooglePlacesAutocompleteInput = ({
   }, [query, mode, placesEnabled]);
 
   const handlePick = async (item: { placeId: string; text: string }) => {
-  const displayValue = item.text.split(",")[0]?.trim() || item.text;
+    const displayValue = item.text.split(",")[0]?.trim() || item.text;
     field.onChange(displayValue);
     setOpen(false);
 
@@ -141,7 +154,9 @@ export const GooglePlacesAutocompleteInput = ({
         Google suggestions
       </div>
       {isLoading ? (
-        <div className="px-2 py-1.5 text-xs text-muted-foreground">Searching…</div>
+        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+          Searching…
+        </div>
       ) : suggestions.length > 0 ? (
         suggestions.map((item) => (
           <button

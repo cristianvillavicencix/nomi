@@ -199,7 +199,9 @@ export const DataImportSection = () => {
 
   const logActivity = useCallback(
     (text: string, tone: ActivityEntry["tone"] = "info") => {
-      setActivity((prev) => [{ at: Date.now(), text, tone }, ...prev].slice(0, 12));
+      setActivity((prev) =>
+        [{ at: Date.now(), text, tone }, ...prev].slice(0, 12),
+      );
     },
     [],
   );
@@ -495,8 +497,8 @@ const NotConnectedPanel = ({
         <p className="font-medium">⚪ Not connected to Zoho</p>
         <p className="text-muted-foreground">
           One click takes you to Zoho, you approve the connection, and Zoho
-          sends you back. The refresh token is stored permanently so you
-          never have to do it again.
+          sends you back. The refresh token is stored permanently so you never
+          have to do it again.
         </p>
 
         <div className="grid gap-3 sm:grid-cols-[1fr_140px] items-end">
@@ -680,12 +682,11 @@ const ConnectedPanel = ({
         (sum, m) => sum + (m?.totalUpserted ?? 0),
         0,
       );
-      const tone =
-        Object.values(result.summary ?? {}).some(
-          (m) => (m?.errors?.length ?? 0) > 0,
-        )
-          ? "error"
-          : "success";
+      const tone = Object.values(result.summary ?? {}).some(
+        (m) => (m?.errors?.length ?? 0) > 0,
+      )
+        ? "error"
+        : "success";
       logActivity(
         `Synced ${modules.join(", ")}: fetched ${totalFetched}, upserted ${totalUpserted}`,
         tone,
@@ -721,8 +722,8 @@ const ConnectedPanel = ({
       const totals = Object.entries(result.summary ?? {}).map(
         ([k, v]) => `${k}: ${v.inserted}+, ${v.updated}~, ${v.skipped}-`,
       );
-      const allErrors = Object.entries(result.summary ?? {}).flatMap(
-        ([k, v]) => (v.errors ?? []).map((err) => `${k}: ${err}`),
+      const allErrors = Object.entries(result.summary ?? {}).flatMap(([k, v]) =>
+        (v.errors ?? []).map((err) => `${k}: ${err}`),
       );
       const hasErrors = allErrors.length > 0;
       logActivity(
@@ -933,10 +934,10 @@ const ConnectedPanel = ({
       </ul>
 
       <p className="text-xs text-muted-foreground">
-        Tip: Companies sync first, then Contacts (linked to their company),
-        then Deals (linked to company + contact). Promotion respects the same
-        order automatically — picking only Deals when no Companies are in
-        staging will leave them un-linked.
+        Tip: Companies sync first, then Contacts (linked to their company), then
+        Deals (linked to company + contact). Promotion respects the same order
+        automatically — picking only Deals when no Companies are in staging will
+        leave them un-linked.
       </p>
     </div>
   );

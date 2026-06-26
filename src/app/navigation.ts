@@ -77,10 +77,7 @@ export const filterLbsNavItems = (
 ) =>
   items.filter(
     (item) =>
-      !(
-        item.to === "/web-monitor" &&
-        options?.websiteMonitorEnabled === false
-      ),
+      !(item.to === "/web-monitor" && options?.websiteMonitorEnabled === false),
   );
 
 export const filterLbsNavGroups = (

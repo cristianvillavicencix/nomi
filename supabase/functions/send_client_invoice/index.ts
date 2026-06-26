@@ -40,7 +40,11 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const normalizeEmailList = (values?: string[]) =>
   (values ?? [])
-    .map((entry) => String(entry ?? "").trim().toLowerCase())
+    .map((entry) =>
+      String(entry ?? "")
+        .trim()
+        .toLowerCase(),
+    )
     .filter((entry) => entry.length > 0 && emailRegex.test(entry));
 
 async function sendInvoiceSms(params: {
@@ -64,7 +68,11 @@ async function sendInvoiceSms(params: {
   const authToken = settings.twilio_auth_token?.trim();
   const fromNumber = settings.twilio_phone_number?.trim();
   if (!accountSid || !authToken || !fromNumber) {
-    return { sent: false, skipped: true, reason: "sms_not_configured" as const };
+    return {
+      sent: false,
+      skipped: true,
+      reason: "sms_not_configured" as const,
+    };
   }
 
   const body = sanitizeMessageBody(params.body.trim());
@@ -148,7 +156,9 @@ Deno.serve(
         const body = (await req.json()) as SendBody;
         const invoiceId = Number(body.invoice_id);
         const linkOnly = body.link_only === true;
-        const to = String(body.to ?? "").trim().toLowerCase();
+        const to = String(body.to ?? "")
+          .trim()
+          .toLowerCase();
         const pdfBase64 = String(body.pdf_base64 ?? "").trim();
         const smsTo = String(body.sms_to ?? "").trim();
         const smsBody = String(body.sms_body ?? "").trim();
@@ -211,7 +221,10 @@ Deno.serve(
         }
 
         if (!to || !emailRegex.test(to)) {
-          return createErrorResponse(400, "Invalid invoice_id or recipient email");
+          return createErrorResponse(
+            400,
+            "Invalid invoice_id or recipient email",
+          );
         }
 
         if (!pdfBase64) {
@@ -219,12 +232,17 @@ Deno.serve(
         }
 
         if (smsTo && !smsBody) {
-          return createErrorResponse(400, "sms_body is required when sms_to is set");
+          return createErrorResponse(
+            400,
+            "sms_body is required when sms_to is set",
+          );
         }
 
         const { data: invoice } = await supabaseAdmin
           .from("client_invoices")
-          .select("id, invoice_number, amount, currency, description, org_id, status, contact_id")
+          .select(
+            "id, invoice_number, amount, currency, description, org_id, status, contact_id",
+          )
           .eq("id", invoiceId)
           .eq("org_id", member.org_id)
           .maybeSingle();

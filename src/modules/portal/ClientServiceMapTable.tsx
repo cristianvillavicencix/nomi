@@ -36,8 +36,10 @@ export const ClientServiceMapTable = ({
         </TableHeader>
         <TableBody>
           {entries.map((entry) => {
-            const provider = inferCredentialProvider(entry) ?? copy.serviceProviderUnknown;
-            const location = inferCredentialLocation(entry) ?? copy.serviceLocationUnknown;
+            const provider =
+              inferCredentialProvider(entry) ?? copy.serviceProviderUnknown;
+            const location =
+              inferCredentialLocation(entry) ?? copy.serviceLocationUnknown;
 
             return (
               <TableRow key={entry.id}>

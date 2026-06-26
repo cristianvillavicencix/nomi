@@ -23,12 +23,8 @@ const sortDueSites = (sites: WebsiteMonitorSiteRow[]) =>
     if (aMissingHosting !== bMissingHosting) {
       return aMissingHosting - bMissingHosting;
     }
-    const aLast = a.last_checked_at
-      ? new Date(a.last_checked_at).getTime()
-      : 0;
-    const bLast = b.last_checked_at
-      ? new Date(b.last_checked_at).getTime()
-      : 0;
+    const aLast = a.last_checked_at ? new Date(a.last_checked_at).getTime() : 0;
+    const bLast = b.last_checked_at ? new Date(b.last_checked_at).getTime() : 0;
     return aLast - bLast;
   });
 
@@ -54,10 +50,16 @@ Deno.serve((req: Request) =>
       return createErrorResponse(500, error.message);
     }
 
-    const orgSettingsCache = new Map<number, Awaited<ReturnType<typeof getWebsiteMonitorSettings>>>();
+    const orgSettingsCache = new Map<
+      number,
+      Awaited<ReturnType<typeof getWebsiteMonitorSettings>>
+    >();
     const isOrgMonitoringEnabled = async (orgId: number) => {
       if (!orgSettingsCache.has(orgId)) {
-        orgSettingsCache.set(orgId, await getWebsiteMonitorSettings(supabaseAdmin, orgId));
+        orgSettingsCache.set(
+          orgId,
+          await getWebsiteMonitorSettings(supabaseAdmin, orgId),
+        );
       }
       return orgSettingsCache.get(orgId)?.enabled !== false;
     };
@@ -86,7 +88,9 @@ Deno.serve((req: Request) =>
           !site.hosting_provider ||
           Date.now() - new Date(site.last_checked_at).getTime() >
             24 * 60 * 60 * 1000;
-        const result = await runWebsiteMonitorCheck(site, { includeDeepMetadata });
+        const result = await runWebsiteMonitorCheck(site, {
+          includeDeepMetadata,
+        });
         await persistWebsiteCheckResult(supabaseAdmin, site, result);
         checked += 1;
       } catch (cause) {

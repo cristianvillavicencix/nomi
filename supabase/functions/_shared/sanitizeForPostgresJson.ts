@@ -27,7 +27,9 @@ export const sanitizeForPostgresJson = (value: unknown): unknown => {
   }
   if (typeof value === "object") {
     const out: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    for (const [key, entry] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
       out[key] = sanitizeForPostgresJson(entry);
     }
     return out;

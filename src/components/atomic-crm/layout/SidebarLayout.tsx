@@ -253,10 +253,8 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
   const hideGlobalHeaderOnProjectShow = showDealExplorer;
 
   const globalHeader =
-    hideGlobalHeader || hideGlobalHeaderOnProjectShow
-      ? null
-      : !hideGlobalSearch
-        ? (
+    hideGlobalHeader ||
+    hideGlobalHeaderOnProjectShow ? null : !hideGlobalSearch ? (
       <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
         <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
         <div className="flex shrink-0 items-center gap-2">
@@ -266,8 +264,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
           <SpotlightSearchButton />
         </div>
       </header>
-        )
-        : (
+    ) : (
       <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
         <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
         <PageActionsTrailingSlot className="ml-auto flex items-center" />
@@ -275,7 +272,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         <NotificationCenterButton />
         <SpotlightSearchButton variant="hidden" />
       </header>
-        );
+    );
 
   const mainContentPadding = cn(
     "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
@@ -285,9 +282,9 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         ? "gap-0 p-0"
         : isBillingInvoiceShell
           ? "gap-0 p-0"
-        : showDealExplorer
-          ? "px-4 pt-0 pb-0"
-          : "gap-4 px-4 pt-2 pb-0",
+          : showDealExplorer
+            ? "px-4 pt-0 pb-0"
+            : "gap-4 px-4 pt-2 pb-0",
   );
 
   const scrollableContent = (

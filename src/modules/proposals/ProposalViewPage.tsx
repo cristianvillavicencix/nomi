@@ -121,7 +121,12 @@ export const ProposalViewPage = () => {
         </Button>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={handlePrint}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+          >
             <Printer className="size-4" />
             Print
           </Button>

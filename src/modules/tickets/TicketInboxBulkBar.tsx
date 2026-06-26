@@ -1,10 +1,6 @@
 import { CheckCircle2, GitMerge, Receipt, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import {
-  useDelete,
-  useNotify,
-  useRefresh,
-} from "ra-core";
+import { useDelete, useNotify, useRefresh } from "ra-core";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { TicketBulkCreateInvoiceDialog } from "@/modules/tickets/TicketBulkCreateInvoiceDialog";

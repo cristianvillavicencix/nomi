@@ -31,9 +31,11 @@ const en: ProposalPaymentFlowCopy = {
   paidInFullBody:
     "All installments are paid. Your project will be activated shortly.",
   cardError: "Could not process your card. Please try again.",
-  stripeNotConfigured: "Card payments are not available yet. Contact your LBS representative.",
+  stripeNotConfigured:
+    "Card payments are not available yet. Contact your LBS representative.",
   authenticateTitle: "Additional verification required",
-  authenticateHint: "Complete the verification step from your bank, then try again.",
+  authenticateHint:
+    "Complete the verification step from your bank, then try again.",
 };
 
 export const getProposalPaymentFlowCopy = (

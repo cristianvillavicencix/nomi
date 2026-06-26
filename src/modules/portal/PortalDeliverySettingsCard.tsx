@@ -21,7 +21,9 @@ type PortalDeliverySettingsCardProps = {
   record: LbsDeal;
 };
 
-export const PortalDeliverySettingsCard = ({ record }: PortalDeliverySettingsCardProps) => {
+export const PortalDeliverySettingsCard = ({
+  record,
+}: PortalDeliverySettingsCardProps) => {
   const notify = useNotify();
   const refresh = useRefresh();
   const [update] = useUpdate();
@@ -43,7 +45,9 @@ export const PortalDeliverySettingsCard = ({ record }: PortalDeliverySettingsCar
   const [hostingProvider, setHostingProvider] = useState("");
   const [hostingPanelUrl, setHostingPanelUrl] = useState("");
   const [hostingLocation, setHostingLocation] = useState("");
-  const [hostingManagedBy, setHostingManagedBy] = useState<"lbs" | "client">("lbs");
+  const [hostingManagedBy, setHostingManagedBy] = useState<"lbs" | "client">(
+    "lbs",
+  );
   const [hostingRenewalDate, setHostingRenewalDate] = useState("");
   const [domainRegistrar, setDomainRegistrar] = useState("");
   const [saving, setSaving] = useState(false);
@@ -55,7 +59,9 @@ export const PortalDeliverySettingsCard = ({ record }: PortalDeliverySettingsCar
     setHostingPanelUrl(meta.panel_url ?? "");
     setHostingLocation(meta.location ?? "");
     setHostingManagedBy(meta.managed_by === "client" ? "client" : "lbs");
-    setHostingRenewalDate(String(delivery.hosting_renewal_date ?? "").slice(0, 10));
+    setHostingRenewalDate(
+      String(delivery.hosting_renewal_date ?? "").slice(0, 10),
+    );
     const domainInfo =
       delivery.domain_info && typeof delivery.domain_info === "object"
         ? (delivery.domain_info as Record<string, unknown>)
@@ -77,7 +83,8 @@ export const PortalDeliverySettingsCard = ({ record }: PortalDeliverySettingsCar
           data: {
             hosting_renewal_date: hostingRenewalDate.trim() || null,
             domain_info: {
-              ...(delivery.domain_info && typeof delivery.domain_info === "object"
+              ...(delivery.domain_info &&
+              typeof delivery.domain_info === "object"
                 ? delivery.domain_info
                 : {}),
               hosting: buildPortalHostingMetaPayload({
@@ -180,7 +187,12 @@ export const PortalDeliverySettingsCard = ({ record }: PortalDeliverySettingsCar
       </div>
 
       {canEdit ? (
-        <Button type="button" size="sm" disabled={saving} onClick={() => void handleSave()}>
+        <Button
+          type="button"
+          size="sm"
+          disabled={saving}
+          onClick={() => void handleSave()}
+        >
           {saving ? "Saving…" : "Save portal details"}
         </Button>
       ) : null}

@@ -164,7 +164,9 @@ export const LbsDealBoardContent = ({ pipelineId }: { pipelineId: string }) => {
     const sourceStage = source.droppableId;
     const destinationStage = destination.droppableId;
     const sourceDeal = dealsByStage[sourceStage][source.index]!;
-    const destinationDeal = dealsByStage[destinationStage][destination.index] ?? {
+    const destinationDeal = dealsByStage[destinationStage][
+      destination.index
+    ] ?? {
       stage: destinationStage,
       index: undefined,
     };
@@ -218,7 +220,6 @@ export const LbsDealBoardContent = ({ pipelineId }: { pipelineId: string }) => {
             type: "warning",
           });
         }
-
       })
       .catch((error: unknown) => {
         setDealsByStage(previousState);

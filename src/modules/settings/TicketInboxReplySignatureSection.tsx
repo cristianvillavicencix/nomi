@@ -37,7 +37,9 @@ type TicketInboxRow = Pick<
 const loadTicketInboxes = async () => {
   const { data, error } = await supabase
     .from("ticket_inboxes")
-    .select("id, email, display_name, reply_signature_text, reply_signature_html")
+    .select(
+      "id, email, display_name, reply_signature_text, reply_signature_html",
+    )
     .eq("is_active", true)
     .order("id", { ascending: true });
 
@@ -61,7 +63,11 @@ export const TicketInboxReplySignatureSection = () => {
   const canManageTickets = useMemberCapability("support.tickets.manage");
   const canEdit = isAdmin || canManageSettings || canManageTickets;
 
-  const { data: inboxes = [], isPending, error } = useQuery({
+  const {
+    data: inboxes = [],
+    isPending,
+    error,
+  } = useQuery({
     queryKey: ["ticket-inbox-signatures"],
     queryFn: loadTicketInboxes,
     enabled: canEdit,
@@ -121,7 +127,9 @@ export const TicketInboxReplySignatureSection = () => {
           reply_signature_html: null,
         })
         .eq("id", selectedInbox.id)
-        .select("id, email, display_name, reply_signature_text, reply_signature_html")
+        .select(
+          "id, email, display_name, reply_signature_text, reply_signature_html",
+        )
         .single();
 
       if (updateError) throw updateError;
@@ -190,10 +198,7 @@ export const TicketInboxReplySignatureSection = () => {
         {inboxes.length > 1 ? (
           <div className="space-y-2">
             <Label htmlFor="ticket-inbox-signature-inbox">Inbox</Label>
-            <Select
-              value={selectedInboxId}
-              onValueChange={setSelectedInboxId}
-            >
+            <Select value={selectedInboxId} onValueChange={setSelectedInboxId}>
               <SelectTrigger id="ticket-inbox-signature-inbox">
                 <SelectValue placeholder="Select inbox" />
               </SelectTrigger>

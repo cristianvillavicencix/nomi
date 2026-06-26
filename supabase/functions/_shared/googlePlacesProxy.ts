@@ -39,7 +39,10 @@ const legacyTypesForMode = (mode: GooglePlacesAutocompleteMode) =>
   mode === "business" ? "establishment" : "address";
 
 const stripWebsiteForDisplay = (uri: string): string =>
-  uri.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  uri
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/$/, "");
 
 type AddressComponent = {
   types?: string[];
@@ -76,7 +79,11 @@ export const serverPlacesAutocomplete = async (
     return { suggestions: newResult.suggestions };
   }
 
-  const legacySuggestions = await fetchLegacyPlacesAutocomplete(input, mode, key);
+  const legacySuggestions = await fetchLegacyPlacesAutocomplete(
+    input,
+    mode,
+    key,
+  );
   if (legacySuggestions.length > 0) {
     return { suggestions: legacySuggestions };
   }
@@ -228,7 +235,9 @@ const fetchNewPlaceDetails = async (
 
   const payload = (await response.json()) as Record<string, unknown>;
   const displayName = payload.displayName as { text?: string } | undefined;
-  const components = payload.addressComponents as AddressComponent[] | undefined;
+  const components = payload.addressComponents as
+    | AddressComponent[]
+    | undefined;
 
   return {
     placeId,

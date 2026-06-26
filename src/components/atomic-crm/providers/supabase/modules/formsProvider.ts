@@ -67,7 +67,11 @@ export const formsProvider = {
           company_id?: number | null;
           deal_id?: number | null;
         };
-      }>("get_form_by_token", { token: payload.token }, { signal: payload.signal });
+      }>(
+        "get_form_by_token",
+        { token: payload.token },
+        { signal: payload.signal },
+      );
 
       if (!data?.form) {
         throw new Error("Form not found or link expired");
@@ -80,7 +84,9 @@ export const formsProvider = {
       }
       console.error("get_form_by_token.error", error);
       throw new Error(
-        error instanceof Error ? error.message : "Form not found or link expired",
+        error instanceof Error
+          ? error.message
+          : "Form not found or link expired",
       );
     }
   },

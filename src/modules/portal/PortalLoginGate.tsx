@@ -52,7 +52,9 @@ export const PortalLoginGate = ({
             <>
               {emailEditable ? (
                 <div className="space-y-2">
-                  <Label htmlFor="portal-login-email">{copy.portalLoginEmailLabel}</Label>
+                  <Label htmlFor="portal-login-email">
+                    {copy.portalLoginEmailLabel}
+                  </Label>
                   <Input
                     id="portal-login-email"
                     type="email"
@@ -87,17 +89,24 @@ export const PortalLoginGate = ({
             <>
               <p className="text-sm text-muted-foreground">
                 {copy.portalLoginEmailHint}{" "}
-                <span className="font-medium text-foreground">{resolvedEmail}</span>.
+                <span className="font-medium text-foreground">
+                  {resolvedEmail}
+                </span>
+                .
               </p>
               <div className="space-y-2">
-                <Label htmlFor="portal-login-code">{copy.portalLoginCodeLabel}</Label>
+                <Label htmlFor="portal-login-code">
+                  {copy.portalLoginCodeLabel}
+                </Label>
                 <Input
                   id="portal-login-code"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   value={code}
                   onChange={(event) =>
-                    setCode(event.target.value.replace(/[^\d]/g, "").slice(0, 6))
+                    setCode(
+                      event.target.value.replace(/[^\d]/g, "").slice(0, 6),
+                    )
                   }
                   placeholder="123456"
                 />
@@ -123,7 +132,9 @@ export const PortalLoginGate = ({
                 <Button
                   type="button"
                   className="flex-1"
-                  disabled={confirming || code.trim().length !== 6 || !canSendCode}
+                  disabled={
+                    confirming || code.trim().length !== 6 || !canSendCode
+                  }
                   onClick={() => onVerifyCode(resolvedEmail, code.trim())}
                 >
                   {confirming ? copy.verifying : copy.portalLoginVerifyCode}

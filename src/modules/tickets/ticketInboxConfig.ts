@@ -11,8 +11,7 @@ export const TICKET_STATUS_FILTERS = [
 
 export type TicketStatusFilterId = (typeof TICKET_STATUS_FILTERS)[number]["id"];
 
-export const ticketStatusLabel = (status: string) =>
-  status.replace(/_/g, " ");
+export const ticketStatusLabel = (status: string) => status.replace(/_/g, " ");
 
 export const ticketStatusVariant = (status: string) => {
   switch (status) {

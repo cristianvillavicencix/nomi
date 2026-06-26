@@ -156,24 +156,24 @@ Deno.serve(
           .maybeSingle(),
         companyId
           ? supabaseAdmin
-            .from("companies")
-            .select("id, name")
-            .eq("id", companyId)
-            .maybeSingle()
+              .from("companies")
+              .select("id, name")
+              .eq("id", companyId)
+              .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         contactId
           ? supabaseAdmin
-            .from("contacts")
-            .select("id, first_name, last_name")
-            .eq("id", contactId)
-            .maybeSingle()
+              .from("contacts")
+              .select("id, first_name, last_name")
+              .eq("id", contactId)
+              .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         memberId
           ? supabaseAdmin
-            .from("organization_members")
-            .select("id, first_name, last_name, email")
-            .eq("id", memberId)
-            .maybeSingle()
+              .from("organization_members")
+              .select("id, first_name, last_name, email")
+              .eq("id", memberId)
+              .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
       ]);
 
@@ -232,18 +232,18 @@ Deno.serve(
             : null,
           contact: contact
             ? {
-              id: contact.id,
-              first_name: contact.first_name,
-              last_name: contact.last_name,
-            }
+                id: contact.id,
+                first_name: contact.first_name,
+                last_name: contact.last_name,
+              }
             : null,
           member: member
             ? {
-              id: member.id,
-              first_name: member.first_name,
-              last_name: member.last_name,
-              email: member.email,
-            }
+                id: member.id,
+                first_name: member.first_name,
+                last_name: member.last_name,
+                email: member.email,
+              }
             : null,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },

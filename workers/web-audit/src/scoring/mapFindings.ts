@@ -1,4 +1,8 @@
-import type { AuditFindingInput, LighthouseScores, StaticAnalysisResult } from "../types.js";
+import type {
+  AuditFindingInput,
+  LighthouseScores,
+  StaticAnalysisResult,
+} from "../types.js";
 import { mapDetailedLighthouseFindings } from "./mapDetailedLighthouseFindings.js";
 import { mapExpandedSeoFindings } from "./mapExpandedSeoFindings.js";
 import { mapAiSeoFindings } from "./mapAiSeoFindings.js";
@@ -35,7 +39,8 @@ export const mapStaticFindings = (
       source_id: "missing-title",
       title: "Falta etiqueta title",
       description: `La página no tiene un elemento <title>${staticResult.expandedSeo?.analysisMode === "rendered" ? " ni en el DOM renderizado" : ""}.${ctx}`,
-      recommendation: "Agrega un title descriptivo con la marca y servicio principal.",
+      recommendation:
+        "Agrega un title descriptivo con la marca y servicio principal.",
       display_order: order++,
     });
   }
@@ -48,7 +53,8 @@ export const mapStaticFindings = (
       source_id: "missing-meta-description",
       title: "Falta meta description",
       description: `No se encontró meta name="description"${staticResult.expandedSeo?.analysisMode === "rendered" ? " en el DOM renderizado" : ""}.${ctx}`,
-      recommendation: "Escribe una descripción de 120–160 caracteres orientada a conversión.",
+      recommendation:
+        "Escribe una descripción de 120–160 caracteres orientada a conversión.",
       display_order: order++,
     });
   }
@@ -61,7 +67,8 @@ export const mapStaticFindings = (
       source_id: "missing-h1",
       title: "Sin H1 en la home",
       description: `No hay un encabezado H1 visible${staticResult.expandedSeo?.analysisMode === "rendered" ? " tras ejecutar JavaScript" : ""}.${ctx}`,
-      recommendation: "Usa un H1 claro con el servicio principal y la ciudad/metro.",
+      recommendation:
+        "Usa un H1 claro con el servicio principal y la ciudad/metro.",
       display_order: order++,
     });
   }
@@ -80,10 +87,17 @@ export const mapStaticFindings = (
   }
 
   if (staticResult.imagesWithoutAlt > 0) {
-    const examples = (staticResult.pageImages ?? staticResult.imagesMissingAlt ?? [])
-      .filter((img) => "status" in img ? img.status === "missing_alt" : true)
+    const examples = (
+      staticResult.pageImages ??
+      staticResult.imagesMissingAlt ??
+      []
+    )
+      .filter((img) => ("status" in img ? img.status === "missing_alt" : true))
       .slice(0, 4)
-      .map((img) => img.filename ?? img.src.split("/").pop()?.split("?")[0] ?? img.src)
+      .map(
+        (img) =>
+          img.filename ?? img.src.split("/").pop()?.split("?")[0] ?? img.src,
+      )
       .filter(Boolean);
     pushFinding(findings, {
       category: "a11y",
@@ -93,7 +107,7 @@ export const mapStaticFindings = (
       title: "Imágenes sin texto alternativo",
       description: `${staticResult.imagesWithoutAlt} de ${staticResult.totalImages} imágenes sin atributo alt.${examples.length ? ` Dónde: ${examples.join(" · ")}.` : ""}`,
       recommendation:
-        "En cada <img> agrega alt descriptivo (servicio, proyecto, equipo). Decorativas: alt=\"\".",
+        'En cada <img> agrega alt descriptivo (servicio, proyecto, equipo). Decorativas: alt="".',
       metric_key: "images_without_alt",
       metric_value: String(staticResult.imagesWithoutAlt),
       display_order: order++,
@@ -151,7 +165,9 @@ export const mapStaticFindings = (
       severity: blocked ? "importante" : "nice-to-have",
       source: "static",
       source_id: blocked ? "robots-txt-blocked" : "missing-robots-txt",
-      title: blocked ? "robots.txt bloqueado por WAF" : "robots.txt no encontrado",
+      title: blocked
+        ? "robots.txt bloqueado por WAF"
+        : "robots.txt no encontrado",
       description: blocked
         ? `El fetch automático recibió HTTP ${robots?.fetchStatus ?? robots?.status ?? 403} en ${robots?.url ?? "/robots.txt"}. El archivo puede existir pero estar bloqueado para bots del datacenter.`
         : robots?.url
@@ -173,7 +189,9 @@ export const mapStaticFindings = (
       severity: "importante",
       source: "static",
       source_id: blocked ? "sitemap-blocked" : "missing-sitemap",
-      title: blocked ? "Sitemap bloqueado por WAF" : "sitemap.xml no encontrado",
+      title: blocked
+        ? "Sitemap bloqueado por WAF"
+        : "sitemap.xml no encontrado",
       description: blocked
         ? `Rutas estándar bloqueadas (HTTP ${sitemap?.fetchStatus ?? sitemap?.status ?? 403})${tried ? ` · ${tried} rutas probadas` : ""}.`
         : sitemap?.url
@@ -237,7 +255,8 @@ export const mapLighthouseFindings = (
       source_id: "performance-score",
       title: "Performance muy baja",
       description: `Score Lighthouse performance: ${lighthouse.performance}/100.`,
-      recommendation: "Optimiza imágenes, JS/CSS y hosting para mejorar carga móvil.",
+      recommendation:
+        "Optimiza imágenes, JS/CSS y hosting para mejorar carga móvil.",
       metric_key: "performance_score",
       metric_value: String(lighthouse.performance),
       display_order: order++,
@@ -267,7 +286,8 @@ export const mapLighthouseFindings = (
       source_id: "seo-score",
       title: "SEO técnico mejorable",
       description: `Score Lighthouse SEO: ${lighthouse.seo}/100.`,
-      recommendation: "Corrige meta tags, indexación y datos estructurados básicos.",
+      recommendation:
+        "Corrige meta tags, indexación y datos estructurados básicos.",
       metric_key: "seo_score",
       metric_value: String(lighthouse.seo),
       display_order: order++,
@@ -294,7 +314,9 @@ const prefixFindings = (
 ): AuditFindingInput[] =>
   findings.map((finding, index) => ({
     ...finding,
-    title: finding.title.startsWith("[") ? finding.title : `[${label}] ${finding.title}`,
+    title: finding.title.startsWith("[")
+      ? finding.title
+      : `[${label}] ${finding.title}`,
     display_order: orderOffset + index,
   }));
 

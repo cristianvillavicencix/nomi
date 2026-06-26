@@ -49,13 +49,10 @@ export const calculateSupplementTotalForLineCount = (
   return roundMoney(basePrice + extraItems * SUPPLEMENT_EXTRA_LINE_PRICE);
 };
 
-export const isTicketCatalogPackage = (
-  pkg: TicketCatalogPackage,
-): boolean => pkg.active !== false;
+export const isTicketCatalogPackage = (pkg: TicketCatalogPackage): boolean =>
+  pkg.active !== false;
 
-export const listTicketBillingPackages = (
-  packages: TicketCatalogPackage[],
-) =>
+export const listTicketBillingPackages = (packages: TicketCatalogPackage[]) =>
   packages
     .filter((pkg) => isTicketCatalogPackage(pkg))
     .sort(
