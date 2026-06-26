@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Phone, PhoneOff, UserRound } from "lucide-react";
+import { BellOff, Phone, PhoneOff, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,7 +15,7 @@ import { useVoiceCallContextOptional } from "@/modules/voice/voiceCallContext";
 
 export const IncomingCallDialog = () => {
   const voice = useVoiceCallContextOptional();
-  if (!voice?.incomingCall) return null;
+  if (!voice?.incomingCall || voice.incomingUiMinimized) return null;
 
   const info = voice.incomingCallerInfo;
   const title =
@@ -26,9 +26,28 @@ export const IncomingCallDialog = () => {
   const subtitlePhone =
     info?.contactName && info.displayPhone ? info.displayPhone : null;
 
+  const handleMinimize = () => {
+    voice.dismissIncomingUi();
+  };
+
   return (
-    <Dialog open onOpenChange={() => voice.rejectIncoming()}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) handleMinimize();
+      }}
+    >
+      <DialogContent
+        className="sm:max-w-md"
+        onInteractOutside={(event) => {
+          event.preventDefault();
+          handleMinimize();
+        }}
+        onEscapeKeyDown={(event) => {
+          event.preventDefault();
+          handleMinimize();
+        }}
+      >
         <DialogHeader>
           <div className="mb-2 flex justify-center">
             <span className="relative flex size-14 items-center justify-center rounded-full bg-primary/10">
@@ -71,7 +90,9 @@ export const IncomingCallDialog = () => {
                 >
                   <Link
                     to={getPersonShowPath({ id: info.contactId })}
-                    onClick={() => voice.rejectIncoming()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => voice.dismissIncomingUi()}
                   >
                     View contact profile
                   </Link>
@@ -80,18 +101,34 @@ export const IncomingCallDialog = () => {
             </div>
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-2 sm:justify-between">
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          <div className="flex w-full gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => voice.rejectIncoming()}
+            >
+              <PhoneOff className="mr-2 size-4" />
+              Decline
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={() => voice.acceptIncoming()}
+            >
+              <Phone className="mr-2 size-4" />
+              Answer
+            </Button>
+          </div>
           <Button
             type="button"
-            variant="outline"
-            onClick={() => voice.rejectIncoming()}
+            variant="ghost"
+            className="w-full text-muted-foreground"
+            onClick={handleMinimize}
           >
-            <PhoneOff className="mr-2 size-4" />
-            Decline
-          </Button>
-          <Button type="button" onClick={() => voice.acceptIncoming()}>
-            <Phone className="mr-2 size-4" />
-            Answer
+            <BellOff className="mr-2 size-4" />
+            Ignore and keep ringing
           </Button>
         </DialogFooter>
       </DialogContent>

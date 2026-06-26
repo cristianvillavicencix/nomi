@@ -35,10 +35,8 @@ import { ProjectWorkspaceTabs } from "@/modules/deals/projects/ProjectWorkspaceT
 import { ProjectDeliveredStamp } from "@/modules/deals/projects/ProjectDeliveredStamp";
 import { ProjectDeliverButton } from "@/modules/deals/projects/ProjectDeliverButton";
 import { ProjectNextMaintenanceBadge } from "@/modules/deals/projects/ProjectNextMaintenanceBadge";
-import {
-  ProjectTasksDialog,
-  ProjectTasksRail,
-} from "@/modules/deals/projects/ProjectTasksRail";
+import { ProjectContextPanel } from "@/modules/deals/projects/ProjectContextPanel";
+import { ProjectTasksDialog } from "@/modules/deals/projects/ProjectTasksRail";
 import { ClientPortalDialog } from "@/modules/portal/ClientPortalDialog";
 import type { LbsDeal } from "@/modules/types";
 import { isValidRecordId } from "@/lib/isValidRecordId";
@@ -224,7 +222,7 @@ const ProjectShowContent = () => {
             <ProjectWorkspaceTabs record={record} />
           </div>
           <div className="hidden lg:flex">
-            <ProjectTasksRail
+            <ProjectContextPanel
               record={record}
               collapsed={tasksRailCollapsed}
               onToggleCollapsed={handleToggleRail}

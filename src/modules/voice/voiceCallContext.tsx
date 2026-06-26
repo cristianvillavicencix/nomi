@@ -13,6 +13,9 @@ export type VoiceCallContextValue = {
   hangUp: () => void;
   acceptIncoming: () => void;
   rejectIncoming: () => void;
+  dismissIncomingUi: () => void;
+  expandIncomingUi: () => void;
+  incomingUiMinimized: boolean;
   isBusy: boolean;
   isRegistered: boolean;
 };

@@ -12,6 +12,7 @@ import {
   type VoiceCallContextValue,
 } from "@/modules/voice/voiceCallContext";
 import { IncomingCallDialog } from "@/modules/voice/IncomingCallDialog";
+import { IncomingCallBanner } from "@/modules/voice/IncomingCallBanner";
 import { ActiveCallBar } from "@/modules/voice/ActiveCallBar";
 import type {
   IncomingCallerInfo,
@@ -53,6 +54,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   );
   const [incomingCallerInfo, setIncomingCallerInfo] =
     useState<IncomingCallerInfo | null>(null);
+  const [incomingUiMinimized, setIncomingUiMinimized] = useState(false);
   const [activeCallLabel, setActiveCallLabel] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
 
@@ -75,6 +77,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     setIncomingCall(null);
     setIncomingCallerLabel(null);
     setIncomingCallerInfo(null);
+    setIncomingUiMinimized(false);
     setActiveCallLabel(null);
     setIsRegistered(false);
     const device = deviceRef.current;
@@ -196,6 +199,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     });
 
     device.on("incoming", (call) => {
+      setIncomingUiMinimized(false);
       setIncomingCall((current) => {
         current?.reject();
         return call;
@@ -205,6 +209,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
         setIncomingCall((current) => (current === call ? null : current));
         setIncomingCallerLabel(null);
         setIncomingCallerInfo(null);
+        setIncomingUiMinimized(false);
       });
     });
 
@@ -324,6 +329,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     setIncomingCall(null);
     setIncomingCallerLabel(null);
     setIncomingCallerInfo(null);
+    setIncomingUiMinimized(false);
     setActiveCallLabel(label);
     setCallState("connecting");
     activeCallRef.current = call;
@@ -336,7 +342,16 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     setIncomingCall(null);
     setIncomingCallerLabel(null);
     setIncomingCallerInfo(null);
+    setIncomingUiMinimized(false);
   }, [incomingCall]);
+
+  const dismissIncomingUi = useCallback(() => {
+    setIncomingUiMinimized(true);
+  }, []);
+
+  const expandIncomingUi = useCallback(() => {
+    setIncomingUiMinimized(false);
+  }, []);
 
   const value: VoiceCallContextValue = {
     callState,
@@ -344,11 +359,14 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     incomingCall,
     incomingCallerLabel,
     incomingCallerInfo,
+    incomingUiMinimized,
     activeCallLabel,
     placeCall,
     hangUp,
     acceptIncoming,
     rejectIncoming,
+    dismissIncomingUi,
+    expandIncomingUi,
     isBusy: callState !== "idle" && callState !== "error",
     isRegistered,
   };
@@ -357,6 +375,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     <VoiceCallContext.Provider value={value}>
       {children}
       <IncomingCallDialog />
+      <IncomingCallBanner />
       <ActiveCallBar />
     </VoiceCallContext.Provider>
   );
