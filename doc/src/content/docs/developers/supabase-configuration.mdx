@@ -126,8 +126,6 @@ If you want more information on how to customize email templates, check the [Cus
 
 ## Frequently Asked Questions
 
-**I have a *Security Definer View* error in *Security Advisor***
+**I have a *Security Definer View* error in *Security Advisor* for `init_state`**
 
-This warning informs you that the `init_state` state view is public and can be called by everybody.
-
-This view is required to test if the CRM has been setup correctly. It doesn't expose any data, so you can ignore the Security Advisor error.
+This was addressed in migration `20260830140000_init_state_security_invoker.sql`: the view now uses `security_invoker = true` and delegates the privileged count to `public.crm_is_initialized()` (a narrow `SECURITY DEFINER` function). After applying migrations, re-run Security Advisor to confirm the view warning is cleared.

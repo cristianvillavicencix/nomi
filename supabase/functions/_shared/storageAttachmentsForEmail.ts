@@ -6,6 +6,7 @@ export type StoredAttachment = {
   type?: string;
   path?: string;
   src?: string;
+  size?: number;
 };
 
 const uint8ToBase64 = (bytes: Uint8Array) => {

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Forward, Loader2, Lock, Paperclip, Reply, Save, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useDataProvider,
   useGetList,
@@ -40,11 +40,19 @@ import {
   type ForwardMessage,
 } from "@/modules/tickets/ticketReplySignature";
 import {
-  MAX_TICKET_ATTACHMENTS,
   MAX_TICKET_ATTACHMENT_BYTES,
-  uploadTicketAttachment,
+  MAX_TICKET_ATTACHMENTS,
+  uploadTicketAttachmentWithProgress,
+  uploadTicketReplyAttachmentWithProgress,
+  type PendingTicketAttachment,
   type TicketReplyAttachment,
 } from "@/modules/tickets/uploadTicketAttachment";
+import {
+  isTicketReplyAttachmentTooLarge,
+  TICKET_REPLY_ATTACHMENT_HINT,
+  ticketReplyAttachmentTooLargeMessage,
+} from "@/modules/tickets/ticketReplyAttachmentLimits";
+import { TicketPendingAttachmentItem } from "@/modules/tickets/TicketPendingAttachmentItem";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -56,12 +64,6 @@ import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 import { cn } from "@/lib/utils";
-
-type PendingAttachment = {
-  id: string;
-  file: File;
-  previewUrl?: string;
-};
 
 type ComposeMode = "reply" | "forward" | "internal";
 
@@ -92,12 +94,14 @@ export const TicketReplyForm = ({
   const [internalNoteText, setInternalNoteText] = useState("");
   const [toRecipients, setToRecipients] = useState("");
   const [ccRecipients, setCcRecipients] = useState("");
-  const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<PendingTicketAttachment[]>([]);
   const [submittingAs, setSubmittingAs] = useState<
     "internal" | "forward" | TicketWorkflowStatus | null
   >(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const composeModeRef = useRef(composeMode);
+  composeModeRef.current = composeMode;
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -192,12 +196,21 @@ export const TicketReplyForm = ({
   const replyMaxHeight = composeMode === "forward" ? 280 : 720;
 
   const fromAddress = ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
+  const readyPendingFiles = pendingFiles.filter(
+    (entry) => entry.status === "ready" && entry.uploaded,
+  );
+  const attachmentsUploading = pendingFiles.some(
+    (entry) => entry.status === "uploading",
+  );
+  const attachmentsErrored = pendingFiles.some(
+    (entry) => entry.status === "error",
+  );
   const hasContent =
     composeMode === "internal"
-      ? Boolean(internalNoteText.trim()) || pendingFiles.length > 0
+      ? Boolean(internalNoteText.trim()) || readyPendingFiles.length > 0
       : (composeMode === "forward" && forwardContext != null) ||
         hasReplyContentHtml(bodyHtml) ||
-        pendingFiles.length > 0;
+        readyPendingFiles.length > 0;
 
   const composerTabSummary = useMemo(() => {
     const truncate = (value: string, max = 72) => {
@@ -209,9 +222,11 @@ export const TicketReplyForm = ({
     };
 
     const attachmentHint =
-      pendingFiles.length > 0
-        ? `${pendingFiles.length} attachment${pendingFiles.length === 1 ? "" : "s"}`
-        : "";
+      readyPendingFiles.length > 0
+        ? `${readyPendingFiles.length} attachment${readyPendingFiles.length === 1 ? "" : "s"}`
+        : attachmentsUploading
+          ? "Uploading attachments…"
+          : "";
 
     if (composeMode === "internal") {
       const preview = truncate(internalNoteText, 80);
@@ -255,6 +270,8 @@ export const TicketReplyForm = ({
     defaultRecipientEmail,
     internalNoteText,
     pendingFiles.length,
+    readyPendingFiles.length,
+    attachmentsUploading,
     toRecipients,
   ]);
 
@@ -351,6 +368,56 @@ export const TicketReplyForm = ({
     requestAnimationFrame(() => editorRef.current?.focus());
   }, [quoteText, onQuoteApplied]);
 
+  const uploadPendingFile = useCallback(async (id: string, file: File) => {
+    const upload =
+      composeModeRef.current === "internal"
+        ? uploadTicketAttachmentWithProgress
+        : uploadTicketReplyAttachmentWithProgress;
+
+    try {
+      const uploaded = await upload(
+        file,
+        (progress) => {
+          setPendingFiles((current) =>
+            current.map((entry) =>
+              entry.id === id ? { ...entry, progress } : entry,
+            ),
+          );
+        },
+      );
+
+      setPendingFiles((current) =>
+        current.map((entry) =>
+          entry.id === id
+            ? {
+                ...entry,
+                status: "ready",
+                progress: 100,
+                uploaded,
+                errorMessage: undefined,
+              }
+            : entry,
+        ),
+      );
+    } catch (error) {
+      setPendingFiles((current) =>
+        current.map((entry) =>
+          entry.id === id
+            ? {
+                ...entry,
+                status: "error",
+                progress: 0,
+                errorMessage:
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to upload attachment",
+              }
+            : entry,
+        ),
+      );
+    }
+  }, []);
+
   const addPendingFile = (file: File) => {
     if (pendingFiles.length >= MAX_TICKET_ATTACHMENTS) {
       notify(`You can attach up to ${MAX_TICKET_ATTACHMENTS} files`, {
@@ -358,8 +425,13 @@ export const TicketReplyForm = ({
       });
       return;
     }
-    if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-      notify(`"${file.name}" exceeds the 10 MB limit`, { type: "warning" });
+    if (composeMode === "internal") {
+      if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
+        notify(`"${file.name}" exceeds the 10 MB limit`, { type: "error" });
+        return;
+      }
+    } else if (isTicketReplyAttachmentTooLarge(file.size)) {
+      notify(ticketReplyAttachmentTooLargeMessage(file.name), { type: "error" });
       return;
     }
 
@@ -367,7 +439,37 @@ export const TicketReplyForm = ({
     const previewUrl = file.type.startsWith("image/")
       ? URL.createObjectURL(file)
       : undefined;
-    setPendingFiles((current) => [...current, { id, file, previewUrl }]);
+    setPendingFiles((current) => [
+      ...current,
+      {
+        id,
+        file,
+        previewUrl,
+        status: "uploading",
+        progress: 0,
+      },
+    ]);
+    void uploadPendingFile(id, file);
+  };
+
+  const retryPendingFile = (id: string) => {
+    const target = pendingFiles.find((entry) => entry.id === id);
+    if (!target) return;
+
+    setPendingFiles((current) =>
+      current.map((entry) =>
+        entry.id === id
+          ? {
+              ...entry,
+              status: "uploading",
+              progress: 0,
+              errorMessage: undefined,
+              uploaded: undefined,
+            }
+          : entry,
+      ),
+    );
+    void uploadPendingFile(id, target.file);
   };
 
   const removePendingFile = (id: string) => {
@@ -403,10 +505,9 @@ export const TicketReplyForm = ({
       ccEmails?: string[];
       nextStatus?: TicketWorkflowStatus;
     }) => {
-      const uploadedAttachments: TicketReplyAttachment[] = [];
-      for (const pending of pendingFiles) {
-        uploadedAttachments.push(await uploadTicketAttachment(pending.file));
-      }
+      const uploadedAttachments: TicketReplyAttachment[] = readyPendingFiles
+        .map((entry) => entry.uploaded)
+        .filter((entry): entry is TicketReplyAttachment => Boolean(entry));
 
       return dataProvider.replyTicket({
         ticketId: ticket.id,
@@ -465,6 +566,18 @@ export const TicketReplyForm = ({
     isInternalNote: boolean;
     nextStatus?: TicketWorkflowStatus;
   }) => {
+    if (attachmentsUploading) {
+      notify("Wait until attachments finish uploading", { type: "warning" });
+      return;
+    }
+
+    if (attachmentsErrored) {
+      notify("Remove or retry failed attachments before sending", {
+        type: "warning",
+      });
+      return;
+    }
+
     if (!hasContent) {
       notify("Add a message or attach a file", { type: "warning" });
       return;
@@ -472,7 +585,7 @@ export const TicketReplyForm = ({
 
     if (isInternalNote) {
       const noteBody = internalNoteText.trim();
-      if (!noteBody && pendingFiles.length === 0) {
+      if (!noteBody && readyPendingFiles.length === 0) {
         notify("Add a message or attach a file", { type: "warning" });
         return;
       }
@@ -507,7 +620,7 @@ export const TicketReplyForm = ({
     }
 
     if (
-      pendingFiles.length > 0 &&
+      readyPendingFiles.length > 0 &&
       !outboundAttachmentsAllowed
     ) {
       notify(TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE, { type: "warning" });
@@ -688,33 +801,15 @@ export const TicketReplyForm = ({
             {minimizeButton}
           </div>
           {pendingFiles.length > 0 ? (
-            <div className="flex flex-wrap gap-2 border-b px-5 py-2">
+            <div className="flex flex-col gap-2 border-b px-5 py-2">
               {pendingFiles.map((pending) => (
-                <div
+                <TicketPendingAttachmentItem
                   key={pending.id}
-                  className="relative flex items-center gap-2 border bg-muted/30 px-2.5 py-1.5 text-xs"
-                >
-                  {pending.previewUrl ? (
-                    <img
-                      src={pending.previewUrl}
-                      alt=""
-                      className="size-8 object-cover"
-                    />
-                  ) : (
-                    <Paperclip className="size-3.5 text-muted-foreground" />
-                  )}
-                  <span className="max-w-[160px] truncate">
-                    {pending.file.name}
-                  </span>
-                  <button
-                    type="button"
-                    className="p-0.5 hover:bg-muted"
-                    onClick={() => removePendingFile(pending.id)}
-                    aria-label="Remove attachment"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
+                  pending={pending}
+                  disabled={isPending}
+                  onRemove={() => removePendingFile(pending.id)}
+                  onRetry={() => retryPendingFile(pending.id)}
+                />
               ))}
             </div>
           ) : null}
@@ -759,7 +854,7 @@ export const TicketReplyForm = ({
                 type="button"
                 size="sm"
                 className="h-9 gap-2"
-                disabled={isPending || !hasContent}
+                disabled={isPending || attachmentsUploading || !hasContent}
                 onClick={() => handleSend({ isInternalNote: true })}
               >
                 {submittingAs === "internal" ? (
@@ -843,34 +938,22 @@ export const TicketReplyForm = ({
         ) : null}
 
         {pendingFiles.length > 0 ? (
-          <div className="flex flex-wrap gap-2 border-b px-5 py-2">
+          <div className="flex flex-col gap-2 border-b px-5 py-2">
             {pendingFiles.map((pending) => (
-              <div
+              <TicketPendingAttachmentItem
                 key={pending.id}
-                className="relative flex items-center gap-2 border bg-muted/30 px-2.5 py-1.5 text-xs"
-              >
-                {pending.previewUrl ? (
-                  <img
-                    src={pending.previewUrl}
-                    alt=""
-                    className="size-8 object-cover"
-                  />
-                ) : (
-                  <Paperclip className="size-3.5 text-muted-foreground" />
-                )}
-                <span className="max-w-[160px] truncate">{pending.file.name}</span>
-                <button
-                  type="button"
-                  className="p-0.5 hover:bg-muted"
-                  onClick={() => removePendingFile(pending.id)}
-                  aria-label="Remove attachment"
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
+                pending={pending}
+                disabled={isPending}
+                onRemove={() => removePendingFile(pending.id)}
+                onRetry={() => retryPendingFile(pending.id)}
+              />
             ))}
           </div>
         ) : null}
+
+        <p className="border-b px-5 py-1.5 text-xs text-muted-foreground">
+          {TICKET_REPLY_ATTACHMENT_HINT}
+        </p>
 
         <input
           ref={fileInputRef}
@@ -931,7 +1014,7 @@ export const TicketReplyForm = ({
         <TicketReplyComposerActions
           composeMode={composeMode}
           actions={replyStatusActions}
-          disabled={isPending}
+          disabled={isPending || attachmentsUploading}
           hasContent={hasContent}
           submittingAs={submittingAs}
           onCancel={collapseComposer}

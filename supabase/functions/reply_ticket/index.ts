@@ -14,6 +14,10 @@ import {
   isTicketAwaitingPaidDelivery,
   TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE,
 } from "../_shared/ticketOutboundAttachments.ts";
+import {
+  isTicketReplyAttachmentTooLarge,
+  TICKET_REPLY_ATTACHMENT_TOO_LARGE_MESSAGE,
+} from "../_shared/ticketReplyAttachmentLimits.ts";
 import { buildEmailThreadHeaders } from "../_shared/emailThreading.ts";
 import { stripCidFromHtml } from "../_shared/stripCidFromHtml.ts";
 
@@ -163,6 +167,18 @@ Deno.serve(
         }
 
         if (attachments.length > 0) {
+          const oversized = attachments.find(
+            (file) =>
+              typeof file.size === "number" &&
+              isTicketReplyAttachmentTooLarge(file.size),
+          );
+          if (oversized) {
+            return createErrorResponse(
+              400,
+              TICKET_REPLY_ATTACHMENT_TOO_LARGE_MESSAGE,
+            );
+          }
+
           let invoiceStatus: string | null = null;
           if (ticket.invoice_id) {
             const { data: invoice } = await supabaseAdmin
