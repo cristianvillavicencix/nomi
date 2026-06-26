@@ -13,6 +13,7 @@ import { getPersonShowPath } from "@/app/routing";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { cn } from "@/lib/utils";
 import { VoiceCallButton } from "@/modules/voice/VoiceCallButton";
+import { ConversationCallHistory } from "@/modules/voice/ConversationCallHistory";
 
 const DetailSection = ({
   label,
@@ -208,6 +209,9 @@ export const ContextPanelContent = ({
           conversationId={conversation?.id}
           dealId={deal?.id ?? conversation?.deal_id}
         />
+        {conversation?.id != null ? (
+          <ConversationCallHistory conversationId={conversation.id} />
+        ) : null}
       </div>
     </div>
   );

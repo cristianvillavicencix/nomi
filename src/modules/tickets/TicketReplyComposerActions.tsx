@@ -29,6 +29,7 @@ type TicketReplyComposerActionsProps = {
   hasContent: boolean;
   submittingAs: TicketReplySubmittingAs;
   showReplyAndCharge?: boolean;
+  className?: string;
   onCancel: () => void;
   onSendReply: (nextStatus: TicketWorkflowStatus) => void;
   onSendReplyAndCharge?: () => void;
@@ -42,6 +43,7 @@ export const TicketReplyComposerActions = ({
   hasContent,
   submittingAs,
   showReplyAndCharge = false,
+  className,
   onCancel,
   onSendReply,
   onSendReplyAndCharge,
@@ -60,7 +62,12 @@ export const TicketReplyComposerActions = ({
   const isChargeSubmitting = submittingAs === "charge";
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/15 px-4 py-2.5 md:px-5">
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-end gap-2 border-t bg-background px-4 py-2.5 md:px-5",
+        className,
+      )}
+    >
       {composeMode === "forward" ? (
         <Button
           type="button"

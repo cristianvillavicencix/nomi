@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { mapTwilioVoiceStatus } from "./twilioVoice.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
+import { parseVoiceClientIdentity } from "./voiceIdentity.ts";
 
 const parseOptionalId = (value: string | undefined) => {
   const parsed = Number(value);
@@ -29,7 +30,12 @@ export const upsertVoiceCallFromTwilioStatus = async (
     normalizeUsPhoneToE164(params.To ?? "") ?? params.To?.trim() ?? null;
 
   const durationSeconds = Number(params.CallDuration);
-  const memberId = parseOptionalId(params.member_id);
+  let memberId = parseOptionalId(params.member_id);
+  if (!memberId) {
+    const fromClient = parseVoiceClientIdentity(params.From);
+    const toClient = parseVoiceClientIdentity(params.To);
+    memberId = fromClient?.memberId ?? toClient?.memberId ?? null;
+  }
   const contactId = parseOptionalId(params.contact_id);
   const dealId = parseOptionalId(params.deal_id);
   const conversationId = parseOptionalId(params.conversation_id);

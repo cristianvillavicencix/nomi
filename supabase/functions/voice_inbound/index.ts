@@ -2,19 +2,18 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { validateTwilioSignatureForVoiceWebhook } from "../_shared/twilio.ts";
 import {
-  buildOutboundDialTwiml,
+  buildInboundDialClientsTwiml,
   buildTwimlSayAndHangup,
   parseTwilioFormBody,
-  resolveOutboundDestination,
 } from "../_shared/twilioVoice.ts";
-import {
-  findOrgVoiceSettingsByTwimlAppSid,
-  resolveOutboundCallerId,
-} from "../_shared/voiceSettings.ts";
-import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
 import { getVoiceWebhookUrls } from "../_shared/voiceSettings.ts";
+import {
+  findOrgVoiceSettingsByInboundNumber,
+  listInboundVoiceClientIdentities,
+} from "../_shared/voiceInbound.ts";
 import { upsertVoiceCallFromTwilioStatus } from "../_shared/voiceCallSync.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
 
 const twimlResponse = (twiml: string, status = 200) =>
   new Response(twiml, {
@@ -36,22 +35,24 @@ Deno.serve(async (req) => {
 
   try {
     const params = await parseTwilioFormBody(req);
-    const applicationSid = params.ApplicationSid?.trim();
-    if (!applicationSid) {
-      console.error("[voice_twiml] missing ApplicationSid", params);
+    const calledNumber =
+      params.To?.trim() ||
+      params.Called?.trim() ||
+      params.called?.trim() ||
+      "";
+    if (!calledNumber) {
+      console.error("[voice_inbound] missing called number", params);
       return twimlResponse(
-        buildTwimlSayAndHangup("Voice application is not configured."),
+        buildTwimlSayAndHangup("This number is not configured for voice."),
       );
     }
 
-    const settings = await findOrgVoiceSettingsByTwimlAppSid(applicationSid);
+    const settings = await findOrgVoiceSettingsByInboundNumber(calledNumber);
     const authToken = settings?.twilio_auth_token?.trim();
     if (!settings || !authToken) {
-      console.error("[voice_twiml] voice not configured", { applicationSid });
+      console.error("[voice_inbound] voice not configured", { calledNumber });
       return twimlResponse(
-        buildTwimlSayAndHangup(
-          "Voice is not configured. Check Nomi settings and Twilio auth token.",
-        ),
+        buildTwimlSayAndHangup("Voice is not configured for this number."),
       );
     }
 
@@ -61,34 +62,15 @@ Deno.serve(async (req) => {
       signature,
       req,
       params,
-      "voice_twiml",
+      "voice_inbound",
     );
     if (!valid) {
-      console.error("[voice_twiml] invalid signature", {
-        applicationSid,
+      console.error("[voice_inbound] invalid signature", {
+        calledNumber,
         callSid: params.CallSid,
       });
       return twimlResponse(
         buildTwimlSayAndHangup("Could not verify this call request."),
-      );
-    }
-
-    const rawTo = resolveOutboundDestination(params);
-    const toNumber = rawTo ? normalizeUsPhoneToE164(rawTo) ?? rawTo : null;
-    if (!toNumber) {
-      console.error("[voice_twiml] missing destination", {
-        callSid: params.CallSid,
-        keys: Object.keys(params),
-      });
-      return twimlResponse(
-        buildTwimlSayAndHangup("No destination phone number was provided."),
-      );
-    }
-
-    const callerId = resolveOutboundCallerId(settings);
-    if (!callerId) {
-      return twimlResponse(
-        buildTwimlSayAndHangup("Outbound caller ID is not configured."),
       );
     }
 
@@ -99,35 +81,48 @@ Deno.serve(async (req) => {
       );
     }
 
+    const inboundParams = { ...params };
+    if (inboundParams.From) {
+      inboundParams.From =
+        normalizeUsPhoneToE164(inboundParams.From) ?? inboundParams.From;
+    }
+    if (inboundParams.To) {
+      inboundParams.To =
+        normalizeUsPhoneToE164(inboundParams.To) ?? inboundParams.To;
+    }
+
     try {
       await upsertVoiceCallFromTwilioStatus(
         supabaseAdmin,
-        params,
+        inboundParams,
         settings.org_id,
       );
     } catch (syncError) {
-      console.error("[voice_twiml] call log sync failed", syncError);
+      console.error("[voice_inbound] call log sync failed", syncError);
     }
 
-    const twiml = buildOutboundDialTwiml({
-      to: toNumber,
-      callerId,
-      statusCallbackUrl,
-      record: settings.voice_recording_default,
+    const clientIdentities = await listInboundVoiceClientIdentities(
+      settings.org_id,
+    );
+
+    console.info("[voice_inbound] routing", {
+      callSid: params.CallSid,
+      from: inboundParams.From,
+      to: calledNumber,
+      orgId: settings.org_id,
+      clients: clientIdentities.length,
     });
 
-    console.info("[voice_twiml] dialing", {
-      callSid: params.CallSid,
-      to: toNumber,
-      callerId,
-      orgId: settings.org_id,
+    const twiml = buildInboundDialClientsTwiml({
+      clientIdentities,
+      statusCallbackUrl,
     });
 
     return twimlResponse(twiml);
   } catch (error) {
-    console.error("[voice_twiml] error", error);
+    console.error("[voice_inbound] error", error);
     return twimlResponse(
-      buildTwimlSayAndHangup("An unexpected error occurred starting the call."),
+      buildTwimlSayAndHangup("An unexpected error occurred."),
     );
   }
 });

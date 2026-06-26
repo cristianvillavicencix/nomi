@@ -153,7 +153,7 @@ export async function validateTwilioSignatureForVoiceWebhook(
   signature: string | null,
   req: Request,
   params: Record<string, string>,
-  functionName: "voice_twiml" | "voice_status_webhook",
+  functionName: "voice_twiml" | "voice_status_webhook" | "voice_inbound",
 ) {
   if (!signature) return false;
 
@@ -162,7 +162,9 @@ export async function validateTwilioSignatureForVoiceWebhook(
   const explicit =
     functionName === "voice_twiml"
       ? Deno.env.get("TWILIO_VOICE_TWIML_URL")?.trim()
-      : Deno.env.get("TWILIO_VOICE_STATUS_CALLBACK_URL")?.trim();
+      : functionName === "voice_status_webhook"
+        ? Deno.env.get("TWILIO_VOICE_STATUS_CALLBACK_URL")?.trim()
+        : Deno.env.get("TWILIO_VOICE_INBOUND_URL")?.trim();
   const candidates = [
     explicit,
     supabaseUrl ? `${supabaseUrl}/functions/v1/${functionName}` : null,

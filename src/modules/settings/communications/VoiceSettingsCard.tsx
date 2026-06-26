@@ -83,8 +83,8 @@ export const VoiceSettingsCard = () => {
       <div>
         <h3 className="font-semibold">Voice (Twilio)</h3>
         <p className="text-sm text-muted-foreground">
-          Outbound browser calls from Messages. Uses the same Twilio account as
-          SMS.
+          Outbound and inbound browser calls from Messages. Uses the same Twilio
+          account as SMS.
         </p>
       </div>
 
@@ -110,6 +110,10 @@ export const VoiceSettingsCard = () => {
                 <li>
                   Create an API Key (Account → API keys) and paste SID + secret
                   here
+                </li>
+                <li>
+                  Phone Numbers → your number → Voice → A call comes in: paste the{" "}
+                  <strong>Inbound webhook URL</strong> below
                 </li>
               </ol>
             </AlertDescription>
@@ -153,6 +157,31 @@ export const VoiceSettingsCard = () => {
                 Copy
               </Button>
             </div>
+          </div>
+
+          <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
+            <Label>Inbound webhook URL (phone number)</Label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                readOnly
+                value={data?.voice_inbound_url ?? ""}
+                className="font-mono text-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  void copyUrl(data?.voice_inbound_url, "Inbound URL")
+                }
+              >
+                <Copy className="size-4" />
+                Copy
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Set this on your Twilio phone number under Voice → A call comes in
+              (HTTP POST). Rings users with call permission in the CRM.
+            </p>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -212,7 +241,7 @@ export const VoiceSettingsCard = () => {
               checked={voiceEnabled}
               onCheckedChange={(checked) => setVoiceEnabled(checked === true)}
             />
-            Enable outbound voice calling
+            Enable voice calling
           </label>
 
           <label className="flex items-center gap-2 text-sm">

@@ -49,6 +49,7 @@ export const createTwilioVoiceAccessToken = async (params: {
     grants: {
       identity: params.identity,
       voice: {
+        incoming: { allow: true },
         outgoing: {
           application_sid: params.twimlAppSid,
         },

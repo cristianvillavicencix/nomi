@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { NotificationPrefsProvider } from "@/modules/notifications/NotificationPrefsContext";
 import { MessagesQuickAccessProvider } from "@/modules/messages/MessagesQuickAccessProvider";
+import { VoiceCallProvider } from "@/modules/voice/VoiceCallProvider";
 
 export const withLbsMessagesProvider = <P extends { children?: ReactNode }>(
   LayoutComponent: (props: P) => ReactNode,
@@ -8,7 +9,9 @@ export const withLbsMessagesProvider = <P extends { children?: ReactNode }>(
   const WrappedLayout = (props: P) => (
     <NotificationPrefsProvider>
       <MessagesQuickAccessProvider>
-        <LayoutComponent {...props} />
+        <VoiceCallProvider>
+          <LayoutComponent {...props} />
+        </VoiceCallProvider>
       </MessagesQuickAccessProvider>
     </NotificationPrefsProvider>
   );

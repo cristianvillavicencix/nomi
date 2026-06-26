@@ -22,6 +22,7 @@ export type VoiceSettingsPublic = {
   voice_recording_default: boolean;
   voice_twiml_url: string | null;
   voice_status_webhook_url: string | null;
+  voice_inbound_url: string | null;
 };
 
 export type VoiceSettingsSecrets = {
@@ -61,11 +62,16 @@ const resolveVoiceApiKeySecret = async (
 export const getVoiceWebhookUrls = () => {
   const base = getSupabaseFunctionsBase();
   if (!base) {
-    return { voice_twiml_url: null, voice_status_webhook_url: null };
+    return {
+      voice_twiml_url: null,
+      voice_status_webhook_url: null,
+      voice_inbound_url: null,
+    };
   }
   return {
     voice_twiml_url: `${base}/voice_twiml`,
     voice_status_webhook_url: `${base}/voice_status_webhook`,
+    voice_inbound_url: `${base}/voice_inbound`,
   };
 };
 

@@ -966,50 +966,56 @@ export const TicketReplyForm = ({
     return (
       <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
         <div
-          className={cn("overflow-hidden bg-background", slideAnimationClass)}
+          className={cn(
+            "flex max-h-[min(75vh,52rem)] flex-col overflow-hidden bg-background",
+            slideAnimationClass,
+          )}
         >
-          <div className="flex items-center justify-between border-b bg-muted/10 px-4 py-2 md:px-5">
+          <div className="flex shrink-0 items-center justify-between border-b bg-muted/10 px-4 py-2 md:px-5">
             <span className="text-xs text-muted-foreground">Internal note</span>
             {minimizeButton}
           </div>
-          {pendingFiles.length > 0 ? (
-            <div className="flex flex-col gap-2 border-b px-5 py-2">
-              {pendingFiles.map((pending) => (
-                <TicketPendingAttachmentItem
-                  key={pending.id}
-                  pending={pending}
-                  disabled={isPending}
-                  onRemove={() => removePendingFile(pending.id)}
-                  onRetry={() => retryPendingFile(pending.id)}
-                />
-              ))}
-            </div>
-          ) : null}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            multiple
-            onChange={(event) => {
-              const files = event.target.files;
-              if (!files) return;
-              Array.from(files).forEach(addPendingFile);
-              event.target.value = "";
-            }}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {pendingFiles.length > 0 ? (
+              <div className="flex flex-col gap-2 border-b px-5 py-2">
+                {pendingFiles.map((pending) => (
+                  <TicketPendingAttachmentItem
+                    key={pending.id}
+                    pending={pending}
+                    disabled={isPending}
+                    onRemove={() => removePendingFile(pending.id)}
+                    onRetry={() => retryPendingFile(pending.id)}
+                  />
+                ))}
+              </div>
+            ) : null}
 
-          <Textarea
-            value={internalNoteText}
-            onChange={(event) => setInternalNoteText(event.target.value)}
-            placeholder="Add an internal note for the team…"
-            rows={5}
-            disabled={isPending}
-            className="min-h-32 resize-y rounded-none border-0 px-4 py-3 text-sm shadow-none focus-visible:ring-0 md:px-5"
-            autoFocus
-          />
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              onChange={(event) => {
+                const files = event.target.files;
+                if (!files) return;
+                Array.from(files).forEach(addPendingFile);
+                event.target.value = "";
+              }}
+            />
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/15 px-4 py-2.5 md:px-5">
+            <Textarea
+              value={internalNoteText}
+              onChange={(event) => setInternalNoteText(event.target.value)}
+              placeholder="Add an internal note for the team…"
+              rows={5}
+              disabled={isPending}
+              className="min-h-32 resize-y rounded-none border-0 px-4 py-3 text-sm shadow-none focus-visible:ring-0 md:px-5"
+              autoFocus
+            />
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-background px-4 py-2.5 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)] md:px-5">
             <Button
               type="button"
               variant="ghost"
@@ -1055,8 +1061,13 @@ export const TicketReplyForm = ({
 
   return (
     <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
-      <div className={cn("overflow-hidden bg-background", slideAnimationClass)}>
-        <div className="border-b bg-muted/10 px-4 py-2.5 md:px-5">
+      <div
+        className={cn(
+          "flex max-h-[min(75vh,52rem)] flex-col overflow-hidden bg-background",
+          slideAnimationClass,
+        )}
+      >
+        <div className="shrink-0 border-b bg-muted/10 px-4 py-2.5 md:px-5">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1 grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 text-sm">
               <span className="text-xs text-muted-foreground">From</span>
@@ -1098,97 +1109,100 @@ export const TicketReplyForm = ({
           </div>
         </div>
 
-        {awaitingPaidDelivery ? (
-          <p className="border-b border-warning/30 bg-warning/10 px-5 py-2 text-xs text-foreground">
-            {TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT}
-          </p>
-        ) : null}
-
-        {pendingFiles.length > 0 ? (
-          <div className="flex flex-col gap-2 border-b px-5 py-2">
-            {pendingFiles.map((pending) => (
-              <TicketPendingAttachmentItem
-                key={pending.id}
-                pending={pending}
-                disabled={isPending}
-                onRemove={() => removePendingFile(pending.id)}
-                onRetry={() => retryPendingFile(pending.id)}
-              />
-            ))}
-          </div>
-        ) : null}
-
-        <p className="border-b px-5 py-1.5 text-xs text-muted-foreground">
-          {TICKET_REPLY_ATTACHMENT_HINT_BEFORE}
-          <a
-            href={LARGE_FILE_TRANSFER_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-primary underline underline-offset-2"
-          >
-            transfer.it
-          </a>
-          {TICKET_REPLY_ATTACHMENT_HINT_AFTER}
-        </p>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          multiple
-          onChange={(event) => {
-            const files = event.target.files;
-            if (!files) return;
-            Array.from(files).forEach(addPendingFile);
-            event.target.value = "";
-          }}
-        />
-
-        <TicketComposerToolbar
-          editorRef={editorRef}
-          onEditorChange={setBodyHtml}
-          disabled={isPending}
-          ticket={ticket}
-          inbox={activeInbox}
-          contact={contact}
-          company={company}
-          onInsertTemplate={handleInsertTemplate}
-          onAttachClick={() => fileInputRef.current?.click()}
-          onLargeFileTransferClick={handleLargeFileTransferClick}
-        />
-
-        <TicketReplyRichComposer
-          editorRef={editorRef}
-          value={bodyHtml}
-          onChange={setBodyHtml}
-          onPaste={handlePaste}
-          placeholder={
-            composeMode === "forward"
-              ? "Add a note above the forwarded message..."
-              : "Write your reply..."
-          }
-          disabled={isPending}
-          minHeight={replyMinHeight}
-          maxHeight={replyMaxHeight}
-          resizeTrigger={isExpanded}
-          className={composeMode === "forward" ? "min-h-24" : "min-h-[12.5rem]"}
-        />
-
-        {composeMode === "forward" && forwardContext ? (
-          <div className="border-t bg-muted/10 px-4 py-3 md:px-5">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
-              Forwarded message
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {awaitingPaidDelivery ? (
+            <p className="border-b border-warning/30 bg-warning/10 px-5 py-2 text-xs text-foreground">
+              {TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT}
             </p>
-            <div className="max-h-[min(40vh,320px)] overflow-y-auto rounded-md border bg-background p-4 text-sm">
-              <TicketMessageBody
-                body={forwardContext.message.body}
-                htmlBody={forwardContext.message.html_body}
-              />
+          ) : null}
+
+          {pendingFiles.length > 0 ? (
+            <div className="flex flex-col gap-2 border-b px-5 py-2">
+              {pendingFiles.map((pending) => (
+                <TicketPendingAttachmentItem
+                  key={pending.id}
+                  pending={pending}
+                  disabled={isPending}
+                  onRemove={() => removePendingFile(pending.id)}
+                  onRetry={() => retryPendingFile(pending.id)}
+                />
+              ))}
             </div>
-          </div>
-        ) : null}
+          ) : null}
+
+          <p className="border-b px-5 py-1.5 text-xs text-muted-foreground">
+            {TICKET_REPLY_ATTACHMENT_HINT_BEFORE}
+            <a
+              href={LARGE_FILE_TRANSFER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              transfer.it
+            </a>
+            {TICKET_REPLY_ATTACHMENT_HINT_AFTER}
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            onChange={(event) => {
+              const files = event.target.files;
+              if (!files) return;
+              Array.from(files).forEach(addPendingFile);
+              event.target.value = "";
+            }}
+          />
+
+          <TicketComposerToolbar
+            editorRef={editorRef}
+            onEditorChange={setBodyHtml}
+            disabled={isPending}
+            ticket={ticket}
+            inbox={activeInbox}
+            contact={contact}
+            company={company}
+            onInsertTemplate={handleInsertTemplate}
+            onAttachClick={() => fileInputRef.current?.click()}
+            onLargeFileTransferClick={handleLargeFileTransferClick}
+          />
+
+          <TicketReplyRichComposer
+            editorRef={editorRef}
+            value={bodyHtml}
+            onChange={setBodyHtml}
+            onPaste={handlePaste}
+            placeholder={
+              composeMode === "forward"
+                ? "Add a note above the forwarded message..."
+                : "Write your reply..."
+            }
+            disabled={isPending}
+            minHeight={replyMinHeight}
+            maxHeight={replyMaxHeight}
+            resizeTrigger={isExpanded}
+            className={composeMode === "forward" ? "min-h-24" : "min-h-[12.5rem]"}
+          />
+
+          {composeMode === "forward" && forwardContext ? (
+            <div className="border-t bg-muted/10 px-4 py-3 md:px-5">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                Forwarded message
+              </p>
+              <div className="max-h-[min(40vh,320px)] overflow-y-auto rounded-md border bg-background p-4 text-sm">
+                <TicketMessageBody
+                  body={forwardContext.message.body}
+                  htmlBody={forwardContext.message.html_body}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         <TicketReplyComposerActions
+          className="shrink-0 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)]"
           composeMode={composeMode}
           actions={replyStatusActions}
           disabled={isPending || attachmentsUploading}

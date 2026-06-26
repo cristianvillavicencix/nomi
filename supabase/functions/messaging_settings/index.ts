@@ -99,22 +99,55 @@ Deno.serve((req: Request) =>
         await assertOrgAdministrator(user, orgId);
 
         const settings = await upsertMessagingSettings(orgId, {
-          twilio_account_sid: body.twilio_account_sid ?? null,
-          twilio_auth_token: body.twilio_auth_token ?? null,
-          twilio_phone_number: body.twilio_phone_number ?? null,
-          sms_enabled: body.sms_enabled === true,
-          keepExistingToken: !body.twilio_auth_token?.trim(),
-          business_hours: body.business_hours ?? undefined,
-          out_of_hours_message: body.out_of_hours_message ?? undefined,
-          auto_acknowledge_enabled: body.auto_acknowledge_enabled ?? undefined,
-          auto_acknowledge_message: body.auto_acknowledge_message ?? undefined,
-          voice_enabled: body.voice_enabled,
-          voice_twiml_app_sid: body.voice_twiml_app_sid ?? null,
-          voice_api_key_sid: body.voice_api_key_sid ?? null,
-          voice_api_key_secret: body.voice_api_key_secret ?? null,
-          keepExistingVoiceApiKeySecret: !body.voice_api_key_secret?.trim(),
-          voice_caller_id: body.voice_caller_id ?? null,
-          voice_recording_default: body.voice_recording_default,
+          ...(body.twilio_account_sid !== undefined
+            ? { twilio_account_sid: body.twilio_account_sid }
+            : {}),
+          ...(body.twilio_auth_token !== undefined
+            ? {
+                twilio_auth_token: body.twilio_auth_token,
+                keepExistingToken: !body.twilio_auth_token?.trim(),
+              }
+            : {}),
+          ...(body.twilio_phone_number !== undefined
+            ? { twilio_phone_number: body.twilio_phone_number }
+            : {}),
+          ...(body.sms_enabled !== undefined
+            ? { sms_enabled: body.sms_enabled === true }
+            : {}),
+          ...(body.business_hours !== undefined
+            ? { business_hours: body.business_hours }
+            : {}),
+          ...(body.out_of_hours_message !== undefined
+            ? { out_of_hours_message: body.out_of_hours_message }
+            : {}),
+          ...(body.auto_acknowledge_enabled !== undefined
+            ? { auto_acknowledge_enabled: body.auto_acknowledge_enabled }
+            : {}),
+          ...(body.auto_acknowledge_message !== undefined
+            ? { auto_acknowledge_message: body.auto_acknowledge_message }
+            : {}),
+          ...(body.voice_enabled !== undefined
+            ? { voice_enabled: body.voice_enabled === true }
+            : {}),
+          ...(body.voice_twiml_app_sid !== undefined
+            ? { voice_twiml_app_sid: body.voice_twiml_app_sid }
+            : {}),
+          ...(body.voice_api_key_sid !== undefined
+            ? { voice_api_key_sid: body.voice_api_key_sid }
+            : {}),
+          ...(body.voice_api_key_secret !== undefined
+            ? {
+                voice_api_key_secret: body.voice_api_key_secret,
+                keepExistingVoiceApiKeySecret:
+                  !body.voice_api_key_secret?.trim(),
+              }
+            : {}),
+          ...(body.voice_caller_id !== undefined
+            ? { voice_caller_id: body.voice_caller_id }
+            : {}),
+          ...(body.voice_recording_default !== undefined
+            ? { voice_recording_default: body.voice_recording_default === true }
+            : {}),
         });
 
         return new Response(JSON.stringify(settings), {

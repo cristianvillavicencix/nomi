@@ -620,6 +620,7 @@ export type MessagingSettingsPublic = {
   voice_recording_default?: boolean;
   voice_twiml_url?: string | null;
   voice_status_webhook_url?: string | null;
+  voice_inbound_url?: string | null;
 };
 
 export type DealLaunchChecklistItem = {
