@@ -15,14 +15,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
+export type TicketReplySubmittingAs =
+  | "internal"
+  | "forward"
+  | "charge"
+  | TicketWorkflowStatus
+  | null;
+
 type TicketReplyComposerActionsProps = {
   composeMode: "reply" | "forward";
   actions: TicketReplyStatusAction[];
   disabled?: boolean;
   hasContent: boolean;
-  submittingAs: "internal" | "forward" | TicketWorkflowStatus | null;
+  submittingAs: TicketReplySubmittingAs;
+  showReplyAndCharge?: boolean;
   onCancel: () => void;
   onSendReply: (nextStatus: TicketWorkflowStatus) => void;
+  onSendReplyAndCharge?: () => void;
   onSendForward: () => void;
 };
 
@@ -32,8 +41,10 @@ export const TicketReplyComposerActions = ({
   disabled = false,
   hasContent,
   submittingAs,
+  showReplyAndCharge = false,
   onCancel,
   onSendReply,
+  onSendReplyAndCharge,
   onSendForward,
 }: TicketReplyComposerActionsProps) => {
   const primaryAction =
@@ -46,6 +57,7 @@ export const TicketReplyComposerActions = ({
     submittingAs != null &&
     submittingAs !== "internal" &&
     submittingAs !== "forward";
+  const isChargeSubmitting = submittingAs === "charge";
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/15 px-4 py-2.5 md:px-5">
@@ -120,6 +132,25 @@ export const TicketReplyComposerActions = ({
                     {action.label}
                   </DropdownMenuItem>
                 ))}
+                {showReplyAndCharge && onSendReplyAndCharge ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                      Billing
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={onSendReplyAndCharge}
+                      disabled={isChargeSubmitting}
+                    >
+                      {isChargeSubmitting ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                      Reply & Charge
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}

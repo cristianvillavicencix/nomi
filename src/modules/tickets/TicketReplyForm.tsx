@@ -27,7 +27,10 @@ import type {
   TicketMessage,
 } from "@/modules/types";
 import { getTicketReplyStatusActions } from "@/modules/tickets/ticketReplyStatusActions";
-import { TicketReplyComposerActions } from "@/modules/tickets/TicketReplyComposerActions";
+import {
+  TicketReplyComposerActions,
+  type TicketReplySubmittingAs,
+} from "@/modules/tickets/TicketReplyComposerActions";
 import type { TicketWorkflowStatus } from "@/modules/tickets/ticketStatusWorkflow";
 import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
 import {
@@ -40,13 +43,17 @@ import { TicketComposerToolbar } from "@/modules/tickets/TicketComposerToolbar";
 import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
 import { TicketReplyRichComposer } from "@/modules/tickets/TicketReplyRichComposer";
 import { expandTicketReplyTemplate } from "@/modules/tickets/ticketReplyTemplates";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import {
   createDefaultReplyHtml,
+  extractReplyComposerParts,
   hasReplyContentHtml,
   htmlToPlainText,
   insertAboveSignatureHtml,
-  stripReplySignatureHtml,
+  insertBelowSignatureHtml,
+  stripReplyComposerMetaHtml,
 } from "@/modules/tickets/ticketReplyRichText";
+import { buildQuotedReplyEditorHtml } from "@/modules/tickets/ticketReplyQuotedThread";
 import {
   buildForwardOutboundBodies,
   buildReplyOutboundBodiesFromHtml,
@@ -94,13 +101,13 @@ type ForwardContext = {
 export const TicketReplyForm = ({
   ticket,
   placement = "bottom",
-  quoteText,
+  quoteMessage,
   onQuoteApplied,
   onSent,
 }: {
   ticket: Ticket;
   placement?: "top" | "bottom";
-  quoteText?: string | null;
+  quoteMessage?: TicketMessage | null;
   onQuoteApplied?: () => void;
   onSent?: () => void;
 }) => {
@@ -117,9 +124,8 @@ export const TicketReplyForm = ({
   const [pendingFiles, setPendingFiles] = useState<PendingTicketAttachment[]>(
     [],
   );
-  const [submittingAs, setSubmittingAs] = useState<
-    "internal" | "forward" | TicketWorkflowStatus | null
-  >(null);
+  const [submittingAs, setSubmittingAs] =
+    useState<TicketReplySubmittingAs>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const composeModeRef = useRef(composeMode);
@@ -127,6 +133,9 @@ export const TicketReplyForm = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const canManageTickets = useMemberCapability("support.tickets.manage");
+  const canSendInvoices = useMemberCapability("proposals.send");
+  const canReplyAndCharge = canManageTickets && canSendInvoices;
 
   const { data: contact } = useGetOne<Contact>(
     "contacts",
@@ -206,9 +215,25 @@ export const TicketReplyForm = ({
     );
   }, [activeInbox]);
 
-  const defaultReplyHtml = useMemo(
-    () => createDefaultReplyHtml(inboxSignature),
+  const lastInboundMessage = useMemo(
+    () =>
+      recentMessages.find((message) => message.direction === "inbound") ?? null,
+    [recentMessages],
+  );
+
+  const buildReplyHtmlWithQuote = useCallback(
+    (quotedMessage?: TicketMessage | null) => {
+      const quotedHtml = quotedMessage
+        ? buildQuotedReplyEditorHtml(quotedMessage)
+        : "";
+      return createDefaultReplyHtml(inboxSignature, quotedHtml);
+    },
     [inboxSignature],
+  );
+
+  const defaultReplyHtml = useMemo(
+    () => buildReplyHtmlWithQuote(lastInboundMessage),
+    [buildReplyHtmlWithQuote, lastInboundMessage],
   );
 
   const forwardSourceMessage =
@@ -264,7 +289,7 @@ export const TicketReplyForm = ({
     if (composeMode === "forward") {
       const recipient = toRecipients.trim().split(",")[0]?.trim();
       const preview = truncate(
-        htmlToPlainText(stripReplySignatureHtml(bodyHtml)),
+        htmlToPlainText(stripReplyComposerMetaHtml(bodyHtml)),
         80,
       );
       return {
@@ -279,7 +304,7 @@ export const TicketReplyForm = ({
       defaultRecipientEmail ||
       "Add recipient";
     const preview = truncate(
-      htmlToPlainText(stripReplySignatureHtml(bodyHtml)),
+      htmlToPlainText(stripReplyComposerMetaHtml(bodyHtml)),
       80,
     );
 
@@ -346,7 +371,7 @@ export const TicketReplyForm = ({
     if (mode === "reply") {
       setForwardContext(null);
       setToRecipients(defaultRecipientEmail);
-      setBodyHtml(defaultReplyHtml);
+      setBodyHtml(buildReplyHtmlWithQuote(lastInboundMessage));
     } else if (mode === "internal") {
       setForwardContext(null);
       setInternalNoteText("");
@@ -374,21 +399,15 @@ export const TicketReplyForm = ({
   }, [ticket.id, defaultRecipientEmail, defaultReplyHtml]);
 
   useEffect(() => {
-    if (!quoteText?.trim()) return;
-    const quotedLines = quoteText
-      .trim()
-      .split("\n")
-      .map((line) => `> ${line}`)
-      .join("\n");
+    if (!quoteMessage) return;
+    const quotedHtml = buildQuotedReplyEditorHtml(quoteMessage);
     setComposeMode("reply");
     setIsExpanded(true);
     setIsMinimized(false);
-    setBodyHtml((current) =>
-      insertAboveSignatureHtml(current, quotedLines.replace(/\n/g, "<br/>")),
-    );
+    setBodyHtml((current) => insertBelowSignatureHtml(current, quotedHtml));
     onQuoteApplied?.();
     requestAnimationFrame(() => editorRef.current?.focus());
-  }, [quoteText, onQuoteApplied]);
+  }, [quoteMessage, onQuoteApplied]);
 
   const uploadPendingFile = useCallback(async (id: string, file: File) => {
     const upload =
@@ -645,7 +664,7 @@ export const TicketReplyForm = ({
       contact,
       company,
     );
-    const userNoteHtml = stripReplySignatureHtml(expandedHtml);
+    const userNoteHtml = extractReplyComposerParts(expandedHtml).userNoteHtml;
 
     const toEmails = parseEmailList(toRecipients);
     const ccEmails = parseEmailList(ccRecipients);
@@ -697,6 +716,116 @@ export const TicketReplyForm = ({
       ccEmails: ccEmails.length ? ccEmails : undefined,
       nextStatus,
     });
+  };
+
+  const chargeTicketAfterReply = async () => {
+    if (invoice?.status === "draft") {
+      await dataProvider.sendTicketInvoice({
+        ticketId: ticket.id,
+        baseUrl: window.location.origin,
+      });
+      return;
+    }
+
+    if (invoice?.status === "sent" || invoice?.status === "paid") {
+      throw new Error(
+        "This ticket already has a sent invoice. Use Remind on the invoice panel.",
+      );
+    }
+
+    await dataProvider.createTicketInvoice({
+      ticketId: ticket.id,
+      baseUrl: window.location.origin,
+    });
+  };
+
+  const handleSendAndCharge = async () => {
+    if (attachmentsUploading) {
+      notify("Wait until attachments finish uploading", { type: "warning" });
+      return;
+    }
+
+    if (attachmentsErrored) {
+      notify("Remove or retry failed attachments before sending", {
+        type: "warning",
+      });
+      return;
+    }
+
+    if (!hasContent) {
+      notify("Add a message or attach a file", { type: "warning" });
+      return;
+    }
+
+    const expandedHtml = expandTicketReplyTemplate(
+      bodyHtml,
+      ticket,
+      contact,
+      company,
+    );
+    const toEmails = parseEmailList(toRecipients);
+    const ccEmails = parseEmailList(ccRecipients);
+
+    if (!isValidEmailList(toEmails)) {
+      notify("Enter at least one valid To email (comma-separated)", {
+        type: "warning",
+      });
+      return;
+    }
+    if (ccRecipients.trim() && !isValidEmailList(ccEmails)) {
+      notify("Cc contains an invalid email address", { type: "warning" });
+      return;
+    }
+
+    if (readyPendingFiles.length > 0 && !outboundAttachmentsAllowed) {
+      notify(TICKET_AWAITING_PAYMENT_ATTACHMENT_MESSAGE, { type: "warning" });
+      return;
+    }
+
+    const { textBody, htmlBody } = buildReplyOutboundBodiesFromHtml(
+      expandedHtml,
+      inboxSignature,
+    );
+
+    setSubmittingAs("charge");
+    try {
+      const result = await dataProvider.replyTicket({
+        ticketId: ticket.id,
+        body: textBody,
+        htmlBody,
+        toEmails,
+        ccEmails: ccEmails.length ? ccEmails : undefined,
+        nextStatus: "waiting",
+      });
+
+      await chargeTicketAfterReply();
+
+      setIsExpanded(false);
+      setIsMinimized(false);
+      resetDraft();
+      refresh();
+      onSent?.();
+
+      if (result.email_sent) {
+        notify("Reply sent and payment invoice sent", { type: "success" });
+      } else if (result.email_skipped) {
+        notify(
+          "Reply saved and invoice sent. Email was not sent — check Communications settings.",
+          { type: "warning" },
+        );
+      } else {
+        notify("Reply sent and payment invoice sent", { type: "success" });
+      }
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Failed to send reply and charge",
+        { type: "error" },
+      );
+    } finally {
+      setSubmittingAs(null);
+    }
   };
 
   const handleInsertTemplate = (text: string) => {
@@ -1065,10 +1194,12 @@ export const TicketReplyForm = ({
           disabled={isPending || attachmentsUploading}
           hasContent={hasContent}
           submittingAs={submittingAs}
+          showReplyAndCharge={canReplyAndCharge}
           onCancel={collapseComposer}
           onSendReply={(nextStatus) =>
             handleSend({ isInternalNote: false, nextStatus })
           }
+          onSendReplyAndCharge={() => void handleSendAndCharge()}
           onSendForward={() => handleSend({ isInternalNote: false })}
         />
       </div>

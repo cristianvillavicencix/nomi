@@ -1,7 +1,8 @@
 import { createContext, useContext, type ReactNode } from "react";
+import type { TicketMessage } from "@/modules/types";
 
 type TicketThreadQuoteContextValue = {
-  quoteMessage: (plainText: string) => void;
+  quoteMessage: (message: TicketMessage) => void;
 };
 
 const TicketThreadQuoteContext =
@@ -12,7 +13,7 @@ export const TicketThreadQuoteProvider = ({
   onQuote,
 }: {
   children: ReactNode;
-  onQuote: (plainText: string) => void;
+  onQuote: (message: TicketMessage) => void;
 }) => (
   <TicketThreadQuoteContext.Provider value={{ quoteMessage: onQuote }}>
     {children}

@@ -4,7 +4,7 @@ import {
   htmlToPlainText,
   includesReplySignatureHtml,
   sanitizeComposerHtml,
-  stripReplySignatureHtml,
+  extractReplyComposerParts,
 } from "@/modules/tickets/ticketReplyRichText";
 
 export const TICKET_REPLY_SIGNATURE = LBS_SUPPORT_SIGNATURE;
@@ -175,12 +175,14 @@ export const buildOutboundEmailHtml = ({
   userNote,
   userNoteHtml,
   forwardHtml,
+  quotedReplyHtml,
   includeSignature = true,
   signatureHtml,
 }: {
   userNote?: string;
   userNoteHtml?: string;
   forwardHtml?: string | null;
+  quotedReplyHtml?: string | null;
   includeSignature?: boolean;
   signatureHtml?: string | null;
 }) => {
@@ -202,6 +204,10 @@ export const buildOutboundEmailHtml = ({
 
   if (includeSignature) {
     parts.push(buildSignatureHtml(signatureHtml));
+  }
+
+  if (quotedReplyHtml?.trim()) {
+    parts.push(quotedReplyHtml.trim());
   }
 
   return parts.join("");
@@ -247,14 +253,17 @@ export const buildReplyOutboundBodiesFromHtml = (
   signatureHtml?: string | null,
 ) => {
   const sanitized = sanitizeComposerHtml(composerHtml);
-  const userNoteHtml = stripReplySignatureHtml(sanitized).trim();
+  const { userNoteHtml, quotedReplyHtml } = extractReplyComposerParts(sanitized);
   const includeSignature = includesReplySignatureHtml(sanitized);
-  const textBody =
-    normalizeOutboundPlainText(htmlToPlainText(sanitized)) ||
-    "(See attachments)";
+  const userPlain = htmlToPlainText(userNoteHtml);
+  const quotedPlain = quotedReplyHtml ? htmlToPlainText(quotedReplyHtml) : "";
+  const textBody = normalizeOutboundPlainText(
+    [userPlain, quotedPlain].filter(Boolean).join("\n\n") || "(See attachments)",
+  );
 
   const htmlBody = buildOutboundEmailHtml({
     userNoteHtml,
+    quotedReplyHtml,
     includeSignature,
     signatureHtml,
   });

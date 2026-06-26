@@ -1,5 +1,5 @@
 import { LBS_SUPPORT_SIGNATURE } from "@/modules/tickets/ticketReplyTemplates";
-import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
+import { TICKET_REPLY_QUOTE_SELECTOR } from "@/modules/tickets/ticketReplyQuotedThread";
 
 export const TICKET_REPLY_SIGNATURE_SELECTOR =
   '[data-ticket-reply-signature="true"]';
@@ -63,8 +63,11 @@ export const buildReplySignatureEditorHtml = (
   return `<div data-ticket-reply-signature="true" style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;color:#374151;font-size:13px;line-height:1.5;">${lines}</div>`;
 };
 
-export const createDefaultReplyHtml = (signatureHtml?: string | null) =>
-  `<p><br></p>${buildReplySignatureEditorHtml(signatureHtml)}`;
+export const createDefaultReplyHtml = (
+  signatureHtml?: string | null,
+  quotedHtml?: string | null,
+) =>
+  `<p><br></p>${buildReplySignatureEditorHtml(signatureHtml)}${quotedHtml ?? ""}`;
 
 export const includesReplySignatureHtml = (html: string) =>
   html.includes('data-ticket-reply-signature="true"') ||
@@ -84,8 +87,48 @@ export const stripReplySignatureHtml = (html: string) => {
   return container.innerHTML.trim();
 };
 
+export const stripQuotedReplyHtml = (html: string) => {
+  if (typeof document === "undefined") {
+    return html;
+  }
+
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  container
+    .querySelectorAll(TICKET_REPLY_QUOTE_SELECTOR)
+    .forEach((node) => node.remove());
+
+  return container.innerHTML.trim();
+};
+
+export const extractReplyComposerParts = (html: string) => {
+  if (typeof document === "undefined") {
+    return {
+      userNoteHtml: stripQuotedReplyHtml(stripReplySignatureHtml(html)),
+      quotedReplyHtml: "",
+    };
+  }
+
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  const signature = container.querySelector(TICKET_REPLY_SIGNATURE_SELECTOR);
+  const quote = container.querySelector(TICKET_REPLY_QUOTE_SELECTOR);
+  const quotedReplyHtml = quote?.outerHTML ?? "";
+
+  quote?.remove();
+  signature?.remove();
+
+  return {
+    userNoteHtml: container.innerHTML.trim(),
+    quotedReplyHtml,
+  };
+};
+
+export const stripReplyComposerMetaHtml = (html: string) =>
+  extractReplyComposerParts(html).userNoteHtml;
+
 export const hasReplyContentHtml = (html: string) => {
-  const plain = htmlToPlainText(stripReplySignatureHtml(html));
+  const plain = htmlToPlainText(stripReplyComposerMetaHtml(html));
   return Boolean(plain.trim());
 };
 
@@ -135,6 +178,40 @@ export const insertAboveSignatureHtml = (html: string, text: string) => {
   }
 
   removeEmptyLeadingBlocks(container, signature);
+
+  return container.innerHTML;
+};
+
+export const insertBelowSignatureHtml = (
+  html: string,
+  insertionHtml: string,
+) => {
+  const insertion = insertionHtml.trim();
+  if (!insertion) return html;
+
+  if (typeof document === "undefined") {
+    return `${html}${insertion}`;
+  }
+
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  container
+    .querySelectorAll(TICKET_REPLY_QUOTE_SELECTOR)
+    .forEach((node) => node.remove());
+
+  const signature = container.querySelector(TICKET_REPLY_SIGNATURE_SELECTOR);
+  if (!signature) {
+    return `${html}${insertion}`;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = insertion;
+  let anchor: ChildNode | null = signature.nextSibling;
+  while (wrapper.firstChild) {
+    const child = wrapper.firstChild;
+    container.insertBefore(child, anchor);
+    anchor = child.nextSibling;
+  }
 
   return container.innerHTML;
 };

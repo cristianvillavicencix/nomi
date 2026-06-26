@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useGetList, useGetOne, useRefresh, useUpdate } from "ra-core";
 import { useNavigate } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
-import type { Deal, Ticket } from "@/modules/types";
+import type { Deal, Ticket, TicketMessage } from "@/modules/types";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TicketCompactHeader } from "@/modules/tickets/TicketCompactHeader";
@@ -31,7 +31,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
   const [readCutoff, setReadCutoff] = useState<string | null | undefined>(
     undefined,
   );
-  const [quoteText, setQuoteText] = useState<string | null>(null);
+  const [quoteMessage, setQuoteMessage] = useState<TicketMessage | null>(null);
   const markedTicketRef = useRef<string | null>(null);
   const openedStatusRef = useRef<string | null>(null);
   const [update] = useUpdate();
@@ -73,8 +73,8 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
     scrollToBottom,
   } = useTicketThreadMessages(ticket?.id);
 
-  const handleQuote = useCallback((plainText: string) => {
-    setQuoteText(plainText);
+  const handleQuote = useCallback((message: TicketMessage) => {
+    setQuoteMessage(message);
   }, []);
 
   useEffect(() => {
@@ -177,8 +177,8 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
               key={`reply-${ticket.id}`}
               ticket={ticket}
               placement="bottom"
-              quoteText={quoteText}
-              onQuoteApplied={() => setQuoteText(null)}
+              quoteMessage={quoteMessage}
+              onQuoteApplied={() => setQuoteMessage(null)}
               onSent={() => scrollToBottom()}
             />
           </div>

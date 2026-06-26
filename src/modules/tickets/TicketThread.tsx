@@ -67,8 +67,7 @@ const TicketThreadMessage = ({
   const ccLine = formatRecipientList(message.cc_emails);
 
   const handleQuote = () => {
-    const plain = getMessagePreview(message).replace(/…$/, "");
-    quoteContext?.quoteMessage(plain);
+    quoteContext?.quoteMessage(message);
   };
 
   useEffect(() => {
