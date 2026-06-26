@@ -21,7 +21,6 @@ const callStateLabel = (
 export const ActiveCallBar = () => {
   const voice = useVoiceCallContextOptional();
   if (!voice) return null;
-  if (voice.incomingCall) return null;
 
   const hasActiveCall =
     voice.activeCallLabel != null ||
@@ -29,19 +28,28 @@ export const ActiveCallBar = () => {
     voice.callState === "ringing" ||
     voice.callState === "open";
 
+  // Incoming ring uses IncomingCallDialog / IncomingCallBanner instead.
+  if (voice.incomingCall && !hasActiveCall) return null;
+
   const label = callStateLabel(voice.callState, voice.activeCallLabel);
   if (!hasActiveCall && !voice.errorMessage) return null;
   if (!hasActiveCall && voice.callState === "error") return null;
 
   const busy = voice.isBusy;
+  const onCall = voice.callState === "open";
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4">
       <div className="pointer-events-auto flex w-full max-w-lg items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/95 px-4 py-3 shadow-lg backdrop-blur">
         <div className="min-w-0">
           <div className="truncate text-sm font-medium">
             {label ?? "Call error"}
           </div>
+          {onCall ? (
+            <div className="truncate text-xs text-muted-foreground">
+              Stay on this call while you work anywhere in the CRM.
+            </div>
+          ) : null}
           {voice.errorMessage ? (
             <div className="truncate text-xs text-destructive">
               {voice.errorMessage}

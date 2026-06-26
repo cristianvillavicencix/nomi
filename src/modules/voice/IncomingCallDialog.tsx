@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { BellOff, Phone, PhoneOff, UserRound } from "lucide-react";
+import { Minimize2, Phone, PhoneOff, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -58,6 +58,10 @@ export const IncomingCallDialog = () => {
           <DialogTitle className="text-center">{title}</DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-2 text-center">
+              <p className="text-sm text-muted-foreground">
+                Answer when you are ready. You can keep working in the CRM — the
+                call only ends if you tap Decline or hang up after answering.
+              </p>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {info?.isLookupPending ? (
                   <Badge variant="secondary">Looking up caller…</Badge>
@@ -92,7 +96,6 @@ export const IncomingCallDialog = () => {
                     to={getPersonShowPath({ id: info.contactId })}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => voice.dismissIncomingUi()}
                   >
                     View contact profile
                   </Link>
@@ -127,8 +130,8 @@ export const IncomingCallDialog = () => {
             className="w-full text-muted-foreground"
             onClick={handleMinimize}
           >
-            <BellOff className="mr-2 size-4" />
-            Ignore and keep ringing
+            <Minimize2 className="mr-2 size-4" />
+            Keep working — call keeps ringing
           </Button>
         </DialogFooter>
       </DialogContent>

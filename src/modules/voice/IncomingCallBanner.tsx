@@ -14,7 +14,7 @@ export const IncomingCallBanner = () => {
     "Incoming call";
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4">
       <div className="pointer-events-auto flex w-full max-w-lg items-center justify-between gap-3 rounded-xl border border-primary/30 bg-background/95 px-4 py-3 shadow-lg backdrop-blur">
         <button
           type="button"
@@ -28,7 +28,7 @@ export const IncomingCallBanner = () => {
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium">{title}</span>
             <span className="block truncate text-xs text-muted-foreground">
-              Incoming call · tap to expand
+              Still ringing — tap to expand and answer
             </span>
           </span>
           <ChevronUp className="size-4 shrink-0 text-muted-foreground" />

@@ -46,6 +46,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   const { voiceEnabled, isPending } = useMessagingEnabled();
   const deviceRef = useRef<Device | null>(null);
   const activeCallRef = useRef<Call | null>(null);
+  const incomingCallRef = useRef<Call | null>(null);
   const [callState, setCallState] = useState<VoiceCallState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [incomingCall, setIncomingCall] = useState<Call | null>(null);
@@ -62,7 +63,17 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     identity as AccessIdentity | undefined,
     "voice.calls.make",
   );
-  const shouldRegister = voiceEnabled && canUseVoice && !isPending && !!identity?.id;
+
+  const hasLiveCall = useCallback(
+    () => Boolean(activeCallRef.current || incomingCallRef.current),
+    [],
+  );
+
+  const shouldRegister =
+    voiceEnabled &&
+    canUseVoice &&
+    !!identity?.id &&
+    (!isPending || isRegistered || hasLiveCall());
 
   useVoiceCallRingtone({ incomingCall, callState, activeCallLabel });
 
@@ -70,24 +81,32 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     void queryClient.invalidateQueries({ queryKey: ["voice_calls"] });
   }, [queryClient]);
 
-  const destroyDevice = useCallback(() => {
-    stopVoiceCallRingtone();
-    activeCallRef.current?.disconnect();
-    activeCallRef.current = null;
-    setIncomingCall(null);
-    setIncomingCallerLabel(null);
-    setIncomingCallerInfo(null);
-    setIncomingUiMinimized(false);
-    setActiveCallLabel(null);
-    setIsRegistered(false);
-    const device = deviceRef.current;
-    deviceRef.current = null;
-    if (device) {
-      device.removeAllListeners();
-      void device.unregister().catch(() => undefined);
-      device.destroy();
-    }
-  }, []);
+  const destroyDevice = useCallback(
+    (options?: { force?: boolean }) => {
+      if (!options?.force && hasLiveCall()) {
+        return;
+      }
+
+      stopVoiceCallRingtone();
+      activeCallRef.current?.disconnect();
+      activeCallRef.current = null;
+      incomingCallRef.current = null;
+      setIncomingCall(null);
+      setIncomingCallerLabel(null);
+      setIncomingCallerInfo(null);
+      setIncomingUiMinimized(false);
+      setActiveCallLabel(null);
+      setIsRegistered(false);
+      const device = deviceRef.current;
+      deviceRef.current = null;
+      if (device) {
+        device.removeAllListeners();
+        void device.unregister().catch(() => undefined);
+        device.destroy();
+      }
+    },
+    [hasLiveCall],
+  );
 
   const bindCallEvents = useCallback(
     (call: Call) => {
@@ -100,13 +119,17 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
         setCallState("open");
       });
       call.on("disconnect", () => {
-        activeCallRef.current = null;
+        if (activeCallRef.current === call) {
+          activeCallRef.current = null;
+        }
         setActiveCallLabel(null);
         setCallState("idle");
         invalidateCallHistory();
       });
       call.on("cancel", () => {
-        activeCallRef.current = null;
+        if (activeCallRef.current === call) {
+          activeCallRef.current = null;
+        }
         setActiveCallLabel(null);
         setCallState("idle");
         invalidateCallHistory();
@@ -204,9 +227,13 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
         current?.reject();
         return call;
       });
+      incomingCallRef.current = call;
       void resolveIncomingCaller(call.parameters ?? {});
       call.on("cancel", () => {
         setIncomingCall((current) => (current === call ? null : current));
+        if (incomingCallRef.current === call) {
+          incomingCallRef.current = null;
+        }
         setIncomingCallerLabel(null);
         setIncomingCallerInfo(null);
         setIncomingUiMinimized(false);
@@ -242,8 +269,10 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!shouldRegister) {
-      destroyDevice();
-      setCallState("idle");
+      if (!hasLiveCall()) {
+        destroyDevice();
+        setCallState("idle");
+      }
       return;
     }
 
@@ -258,11 +287,17 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       cancelled = true;
-      destroyDevice();
     };
     // Register once per voice-enabled session; ensureDevice is stable enough for this flow.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldRegister]);
+
+  useEffect(
+    () => () => {
+      destroyDevice({ force: true });
+    },
+    [destroyDevice],
+  );
 
   const hangUp = useCallback(() => {
     activeCallRef.current?.disconnect();
@@ -327,6 +362,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
       incomingCallerInfo?.displayPhone ??
       null;
     setIncomingCall(null);
+    incomingCallRef.current = null;
     setIncomingCallerLabel(null);
     setIncomingCallerInfo(null);
     setIncomingUiMinimized(false);
@@ -340,6 +376,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   const rejectIncoming = useCallback(() => {
     incomingCall?.reject();
     setIncomingCall(null);
+    incomingCallRef.current = null;
     setIncomingCallerLabel(null);
     setIncomingCallerInfo(null);
     setIncomingUiMinimized(false);
