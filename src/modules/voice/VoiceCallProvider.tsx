@@ -14,23 +14,28 @@ import {
 import { IncomingCallDialog } from "@/modules/voice/IncomingCallDialog";
 import { ActiveCallBar } from "@/modules/voice/ActiveCallBar";
 import type {
+  IncomingCallerInfo,
   PlaceVoiceCallParams,
   VoiceCallState,
 } from "@/modules/voice/voiceCallTypes";
 import { useVoiceCallRingtone } from "@/modules/voice/useVoiceCallRingtone";
 import { stopVoiceCallRingtone, unlockVoiceCallAudio } from "@/modules/voice/voiceCallRingtone";
+import {
+  formatCallerPhoneLabel,
+  resolveIncomingCallerPhone,
+} from "@/modules/voice/voiceCallerUtils";
 
-const resolveCallLabel = (params: Record<string, string | undefined>) => {
-  const raw =
-    params.To ??
-    params.From ??
-    params.Called ??
-    params.Caller ??
-    params.phone ??
-    null;
-  if (!raw) return "Unknown number";
-  if (raw.startsWith("client:")) return "CRM user";
-  return formatUsPhoneDisplayFromAny(raw);
+const emptyIncomingCallerInfo = (
+  params: Record<string, string | undefined>,
+): IncomingCallerInfo => {
+  const phoneE164 = resolveIncomingCallerPhone(params);
+  const displayPhone = formatCallerPhoneLabel(params);
+  return {
+    phoneE164,
+    displayPhone,
+    isKnownContact: false,
+    isLookupPending: Boolean(phoneE164),
+  };
 };
 
 export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
@@ -46,6 +51,8 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   const [incomingCallerLabel, setIncomingCallerLabel] = useState<string | null>(
     null,
   );
+  const [incomingCallerInfo, setIncomingCallerInfo] =
+    useState<IncomingCallerInfo | null>(null);
   const [activeCallLabel, setActiveCallLabel] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
 
@@ -67,6 +74,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     activeCallRef.current = null;
     setIncomingCall(null);
     setIncomingCallerLabel(null);
+    setIncomingCallerInfo(null);
     setActiveCallLabel(null);
     setIsRegistered(false);
     const device = deviceRef.current;
@@ -123,6 +131,46 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     await device.updateToken(token);
   }, [dataProvider]);
 
+  const resolveIncomingCaller = useCallback(
+    async (params: Record<string, string | undefined>) => {
+      const base = emptyIncomingCallerInfo(params);
+      setIncomingCallerInfo(base);
+      setIncomingCallerLabel(base.displayPhone);
+
+      if (!base.phoneE164) {
+        setIncomingCallerInfo({ ...base, isLookupPending: false });
+        return;
+      }
+
+      try {
+        const contact = await dataProvider.lookupContactByPhone(base.phoneE164);
+        if (!contact?.id) {
+          setIncomingCallerInfo({ ...base, isLookupPending: false });
+          return;
+        }
+
+        const contactName =
+          contact.full_name?.trim() ||
+          `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+          base.displayPhone;
+
+        setIncomingCallerInfo({
+          phoneE164: base.phoneE164,
+          displayPhone: base.displayPhone,
+          contactId: contact.id,
+          contactName,
+          companyName: contact.company_name,
+          isKnownContact: true,
+          isLookupPending: false,
+        });
+        setIncomingCallerLabel(contactName);
+      } catch {
+        setIncomingCallerInfo({ ...base, isLookupPending: false });
+      }
+    },
+    [dataProvider],
+  );
+
   const ensureDevice = useCallback(async () => {
     if (deviceRef.current) {
       return deviceRef.current;
@@ -152,10 +200,11 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
         current?.reject();
         return call;
       });
-      setIncomingCallerLabel(resolveCallLabel(call.parameters ?? {}));
+      void resolveIncomingCaller(call.parameters ?? {});
       call.on("cancel", () => {
         setIncomingCall((current) => (current === call ? null : current));
-        setIncomingCallerLabel((current) => (current ? null : current));
+        setIncomingCallerLabel(null);
+        setIncomingCallerInfo(null);
       });
     });
 
@@ -184,7 +233,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
       setCallState("idle");
     }
     return device;
-  }, [dataProvider, refreshToken]);
+  }, [dataProvider, refreshToken, resolveIncomingCaller]);
 
   useEffect(() => {
     if (!shouldRegister) {
@@ -267,19 +316,26 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   const acceptIncoming = useCallback(() => {
     const call = incomingCall;
     if (!call) return;
+    const label =
+      incomingCallerInfo?.contactName ??
+      incomingCallerLabel ??
+      incomingCallerInfo?.displayPhone ??
+      null;
     setIncomingCall(null);
     setIncomingCallerLabel(null);
-    setActiveCallLabel(incomingCallerLabel);
+    setIncomingCallerInfo(null);
+    setActiveCallLabel(label);
     setCallState("connecting");
     activeCallRef.current = call;
     bindCallEvents(call);
     call.accept();
-  }, [bindCallEvents, incomingCall, incomingCallerLabel]);
+  }, [bindCallEvents, incomingCall, incomingCallerInfo, incomingCallerLabel]);
 
   const rejectIncoming = useCallback(() => {
     incomingCall?.reject();
     setIncomingCall(null);
     setIncomingCallerLabel(null);
+    setIncomingCallerInfo(null);
   }, [incomingCall]);
 
   const value: VoiceCallContextValue = {
@@ -287,6 +343,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     errorMessage,
     incomingCall,
     incomingCallerLabel,
+    incomingCallerInfo,
     activeCallLabel,
     placeCall,
     hangUp,

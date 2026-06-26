@@ -373,6 +373,25 @@ export const messagingProvider = {
 
     return (data as import("@/modules/types").Conversation | null) ?? null;
   },
+  async lookupContactByPhone(phone: string) {
+    const { data, error } = await invokeEdgeFunction<{
+      contact: {
+        id: number;
+        first_name: string | null;
+        last_name: string | null;
+        full_name: string | null;
+        company_id: number | null;
+        company_name: string | null;
+      } | null;
+    }>("lookup_contact_by_phone", {
+      method: "POST",
+      body: { phone },
+    });
+    if (error) {
+      return null;
+    }
+    return data?.contact ?? null;
+  },
   async ensureClientConversation(params: {
     contactId: Identifier;
     authorMemberId: Identifier;

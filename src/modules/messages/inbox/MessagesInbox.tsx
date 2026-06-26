@@ -33,6 +33,7 @@ import {
 } from "@/modules/messages/messageContactUtils";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { getInitials } from "@/modules/messages/conversationDisplay";
+import { VoiceDialButton } from "@/modules/voice/VoiceDialDialog";
 
 const INBOX_PAGE_SIZE = 30;
 
@@ -269,19 +270,22 @@ export const MessagesInbox = (props: {
         members={props.members}
       />
       <div className="px-3 py-2">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={filters.query}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                query: event.target.value,
-              }))
-            }
-            placeholder="Search conversations, clients, or phone…"
-            className="h-9 pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={filters.query}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  query: event.target.value,
+                }))
+              }
+              placeholder="Search conversations, clients, or phone…"
+              className="h-9 pl-9"
+            />
+          </div>
+          <VoiceDialButton variant="outline" size="icon" className="shrink-0" />
         </div>
       </div>
       {activeTab === "team" ? (

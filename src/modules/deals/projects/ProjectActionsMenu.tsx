@@ -19,6 +19,7 @@ import {
   Link2,
   ListChecks,
   MessageSquare,
+  Phone,
   Pencil,
   Share2,
   Trash2,
@@ -34,6 +35,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { canUseCrmPermission } from "@/components/atomic-crm/providers/commons/crmPermissions";
+import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
+import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
 import { ShareRecordModal } from "@/components/atomic-crm/settings/ShareRecordModal";
 import type { Contact } from "@/components/atomic-crm/types";
 import type { LbsDeal } from "@/modules/types";
@@ -44,6 +47,7 @@ import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useProjectBriefActions } from "@/modules/deals/projects/ProjectBriefActionsProvider";
 import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
+import { VoiceDialDialog } from "@/modules/voice/VoiceDialDialog";
 
 const getMainContactId = (record: LbsDeal) => {
   if (record.contact_id != null) return Number(record.contact_id);
@@ -67,6 +71,7 @@ export const ProjectActionsMenu = ({
   const refresh = useRefresh();
   const [update] = useUpdate();
   const [shareOpen, setShareOpen] = useState(false);
+  const [dialOpen, setDialOpen] = useState(false);
   const {
     openRequestBrief,
     openFillAllSections,
@@ -82,13 +87,19 @@ export const ProjectActionsMenu = ({
     { enabled: contactId != null },
   );
 
-  const { smsEnabled } = useMessagingEnabled();
+  const { smsEnabled, voiceEnabled } = useMessagingEnabled();
   const messagesQuickAccess = useMessagesQuickAccessOptional();
   const canSms =
     smsEnabled &&
     contact &&
     contactHasSmsPhone(contact) &&
     messagesQuickAccess != null;
+  const canVoice =
+    voiceEnabled &&
+    hasMemberCapability(
+      identity as AccessIdentity | undefined,
+      "voice.calls.make",
+    );
 
   const canManageSales = canUseCrmPermission(
     identity as Parameters<typeof canUseCrmPermission>[0],
@@ -225,6 +236,17 @@ export const ProjectActionsMenu = ({
               SMS client
             </DropdownMenuItem>
           ) : null}
+          {canVoice ? (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                setDialOpen(true);
+              }}
+            >
+              <Phone className="size-4" />
+              Call a number
+            </DropdownMenuItem>
+          ) : null}
 
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Brief</DropdownMenuLabel>
@@ -321,6 +343,7 @@ export const ProjectActionsMenu = ({
         onOpenChange={setShareOpen}
         hideTrigger
       />
+      <VoiceDialDialog open={dialOpen} onOpenChange={setDialOpen} />
     </>
   );
 };

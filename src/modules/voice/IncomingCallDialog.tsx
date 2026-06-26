@@ -1,5 +1,7 @@
-import { Phone, PhoneOff } from "lucide-react";
+import { Link } from "react-router";
+import { Phone, PhoneOff, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -8,11 +10,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { getPersonShowPath } from "@/app/routing";
 import { useVoiceCallContextOptional } from "@/modules/voice/voiceCallContext";
 
 export const IncomingCallDialog = () => {
   const voice = useVoiceCallContextOptional();
   if (!voice?.incomingCall) return null;
+
+  const info = voice.incomingCallerInfo;
+  const title =
+    info?.contactName?.trim() ||
+    voice.incomingCallerLabel?.trim() ||
+    info?.displayPhone ||
+    "Incoming call";
+  const subtitlePhone =
+    info?.contactName && info.displayPhone ? info.displayPhone : null;
 
   return (
     <Dialog open onOpenChange={() => voice.rejectIncoming()}>
@@ -24,11 +36,48 @@ export const IncomingCallDialog = () => {
               <Phone className="relative size-7 text-primary" aria-hidden />
             </span>
           </div>
-          <DialogTitle>Incoming call</DialogTitle>
-          <DialogDescription>
-            {voice.incomingCallerLabel
-              ? `Call from ${voice.incomingCallerLabel}`
-              : "Someone is calling your CRM number."}
+          <DialogTitle className="text-center">{title}</DialogTitle>
+          <DialogDescription asChild>
+            <div className="space-y-2 text-center">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {info?.isLookupPending ? (
+                  <Badge variant="secondary">Looking up caller…</Badge>
+                ) : info?.isKnownContact ? (
+                  <Badge className="bg-emerald-500/15 text-emerald-800 hover:bg-emerald-500/15 dark:text-emerald-200">
+                    <UserRound className="mr-1 size-3.5" />
+                    Contact in CRM
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">Unknown number</Badge>
+                )}
+              </div>
+              {subtitlePhone ? (
+                <p className="text-sm text-muted-foreground">{subtitlePhone}</p>
+              ) : null}
+              {info?.companyName ? (
+                <p className="text-sm text-muted-foreground">{info.companyName}</p>
+              ) : null}
+              {!info?.isKnownContact && !info?.isLookupPending ? (
+                <p className="text-sm text-muted-foreground">
+                  This number is not saved as a contact yet.
+                </p>
+              ) : null}
+              {info?.isKnownContact && info.contactId != null ? (
+                <Button
+                  asChild
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-sm"
+                >
+                  <Link
+                    to={getPersonShowPath({ id: info.contactId })}
+                    onClick={() => voice.rejectIncoming()}
+                  >
+                    View contact profile
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:justify-between">

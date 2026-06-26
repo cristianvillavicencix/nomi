@@ -1,12 +1,13 @@
 import { createContext, useContext } from "react";
 import type { Call } from "@twilio/voice-sdk";
-import type { VoiceCallState, PlaceVoiceCallParams } from "@/modules/voice/voiceCallTypes";
+import type { VoiceCallState, PlaceVoiceCallParams, IncomingCallerInfo } from "@/modules/voice/voiceCallTypes";
 
 export type VoiceCallContextValue = {
   callState: VoiceCallState;
   errorMessage: string | null;
   incomingCall: Call | null;
   incomingCallerLabel: string | null;
+  incomingCallerInfo: IncomingCallerInfo | null;
   activeCallLabel: string | null;
   placeCall: (params: PlaceVoiceCallParams) => Promise<Call>;
   hangUp: () => void;

@@ -1377,6 +1377,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     token: "demo-voice-token",
     identity: "member-1-1",
   }),
+  lookupContactByPhone: async () => null,
   getMessagingSettings: async () => ({
     org_id: 1,
     twilio_account_sid: null,
