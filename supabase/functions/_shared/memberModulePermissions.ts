@@ -105,6 +105,54 @@ export function hasMemberCapability(
   return stored[modKey] === true;
 }
 
+const VOICE_MAKE_CAPABILITY = "voice.calls.make";
+
+const ROLE_PRESETS_WITH_VOICE_MAKE = new Set([
+  "super_admin",
+  "admin",
+  "user",
+]);
+
+const getStoredRolePreset = (
+  stored: Record<string, unknown> | null,
+): string | null => {
+  const preset = stored?.["_role_preset"];
+  return typeof preset === "string" && preset.trim() ? preset.trim() : null;
+};
+
+/** Voice token + inbound routing — honors _role_preset like the frontend catalog. */
+export function hasMemberVoiceCallCapability(
+  member:
+    | {
+        administrator?: boolean | null;
+        module_permissions?: unknown;
+      }
+    | null
+    | undefined,
+): boolean {
+  if (!member) return false;
+  if (member.administrator === true) return true;
+
+  const stored =
+    member.module_permissions != null &&
+    typeof member.module_permissions === "object" &&
+    !Array.isArray(member.module_permissions)
+      ? (member.module_permissions as Record<string, unknown>)
+      : null;
+
+  if (!stored) return false;
+
+  if (stored[VOICE_MAKE_CAPABILITY] === true) return true;
+  if (stored[VOICE_MAKE_CAPABILITY] === false) return false;
+
+  const preset = getStoredRolePreset(stored);
+  if (preset && ROLE_PRESETS_WITH_VOICE_MAKE.has(preset)) {
+    return true;
+  }
+
+  return hasMemberCapability(member, VOICE_MAKE_CAPABILITY);
+}
+
 export function hasAnyOperationalModule(mod: ModulePermissionRecord): boolean {
   for (const k of MODULE_KEYS) {
     if (k === "view_amounts") continue;

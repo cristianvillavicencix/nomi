@@ -17,6 +17,8 @@ import type {
   PlaceVoiceCallParams,
   VoiceCallState,
 } from "@/modules/voice/voiceCallTypes";
+import { useVoiceCallRingtone } from "@/modules/voice/useVoiceCallRingtone";
+import { stopVoiceCallRingtone, unlockVoiceCallAudio } from "@/modules/voice/voiceCallRingtone";
 
 const resolveCallLabel = (params: Record<string, string | undefined>) => {
   const raw =
@@ -53,11 +55,14 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   );
   const shouldRegister = voiceEnabled && canUseVoice && !isPending && !!identity?.id;
 
+  useVoiceCallRingtone({ incomingCall, callState, activeCallLabel });
+
   const invalidateCallHistory = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["voice_calls"] });
   }, [queryClient]);
 
   const destroyDevice = useCallback(() => {
+    stopVoiceCallRingtone();
     activeCallRef.current?.disconnect();
     activeCallRef.current = null;
     setIncomingCall(null);
@@ -123,13 +128,18 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
       return deviceRef.current;
     }
 
-    setCallState("initializing");
     setErrorMessage(null);
 
     const { token } = await dataProvider.getVoiceToken();
     const device = new Device(token, {
       codecPreferences: ["opus", "pcmu"],
       logLevel: 1,
+      // Custom Web Audio ringtones in useVoiceCallRingtone (avoids Twilio output-device errors).
+      sounds: {
+        incoming: false,
+        outgoing: false,
+        disconnect: false,
+      },
     });
 
     device.on("error", (error) => {
@@ -168,6 +178,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
 
     deviceRef.current = device;
     await device.register();
+    void unlockVoiceCallAudio();
     setIsRegistered(true);
     if (!activeCallRef.current) {
       setCallState("idle");

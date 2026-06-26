@@ -85,7 +85,7 @@ const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: 
   { id: "messaging.settings.manage", area: "Messaging", label: "Configure communications (Twilio, WhatsApp, Voice)", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   // Area 3b — Voice (shell)
   { id: "voice.calls.view", area: "Voice", label: "View call history", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "voice.calls.make", area: "Voice", label: "Make calls", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "voice.calls.make", area: "Voice", label: "Make & receive calls", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "voice.recordings.access", area: "Voice", label: "Access call recordings", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   // Area 4 — Proposals & Contracts
   { id: "proposals.view", area: "Proposals & contracts", label: "View proposals", scopeable: true, matrix: { super_admin: true, admin: true, user: false, read_only: false } },

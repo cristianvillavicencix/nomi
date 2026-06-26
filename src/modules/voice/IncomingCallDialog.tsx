@@ -18,6 +18,12 @@ export const IncomingCallDialog = () => {
     <Dialog open onOpenChange={() => voice.rejectIncoming()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
+          <div className="mb-2 flex justify-center">
+            <span className="relative flex size-14 items-center justify-center rounded-full bg-primary/10">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/30" />
+              <Phone className="relative size-7 text-primary" aria-hidden />
+            </span>
+          </div>
           <DialogTitle>Incoming call</DialogTitle>
           <DialogDescription>
             {voice.incomingCallerLabel

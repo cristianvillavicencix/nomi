@@ -8,7 +8,6 @@ const callStateLabel = (
 ) => {
   switch (state) {
     case "connecting":
-    case "initializing":
       return "Connecting…";
     case "ringing":
       return label ? `Calling ${label}…` : "Ringing…";
@@ -22,10 +21,17 @@ const callStateLabel = (
 export const ActiveCallBar = () => {
   const voice = useVoiceCallContextOptional();
   if (!voice) return null;
+  if (voice.incomingCall) return null;
+
+  const hasActiveCall =
+    voice.activeCallLabel != null ||
+    voice.callState === "connecting" ||
+    voice.callState === "ringing" ||
+    voice.callState === "open";
 
   const label = callStateLabel(voice.callState, voice.activeCallLabel);
-  if (!label && !voice.errorMessage) return null;
-  if (voice.incomingCall) return null;
+  if (!hasActiveCall && !voice.errorMessage) return null;
+  if (!hasActiveCall && voice.callState === "error") return null;
 
   const busy = voice.isBusy;
 
@@ -49,8 +55,7 @@ export const ActiveCallBar = () => {
             variant={busy ? "destructive" : "outline"}
             onClick={() => voice.hangUp()}
           >
-            {voice.callState === "connecting" ||
-            voice.callState === "initializing" ? (
+            {voice.callState === "connecting" ? (
               <Loader2 className="mr-2 size-4 animate-spin" />
             ) : (
               <PhoneOff className="mr-2 size-4" />

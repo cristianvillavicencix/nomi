@@ -3,7 +3,7 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { UserMiddleware } from "../_shared/authentication.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
-import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
+import { hasMemberVoiceCallCapability } from "../_shared/memberModulePermissions.ts";
 import {
   assertVoiceTokenConfigured,
   getVoiceSettingsSecrets,
@@ -27,10 +27,7 @@ Deno.serve((req: Request) =>
           return createErrorResponse(401, "Unauthorized");
         }
 
-        if (
-          !member.administrator &&
-          !hasMemberCapability(member, "voice.calls.make")
-        ) {
+        if (!hasMemberVoiceCallCapability(member)) {
           return createErrorResponse(403, "You cannot place calls");
         }
 

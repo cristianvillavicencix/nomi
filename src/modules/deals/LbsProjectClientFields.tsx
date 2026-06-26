@@ -89,16 +89,25 @@ export const LbsProjectClientFields = ({
     );
   }, [seedContact]);
 
-  useEffect(() => {
-    if (!selectedContactError) return;
-    clearClient();
-  }, [clearClient, selectedContactError]);
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogDefaults, setDialogDefaults] = useState<ContactCreateDefaults>(
     {},
   );
   const pendingCreateRef = useRef<PendingClientCreate | null>(null);
+
+  const clearClient = useCallback(() => {
+    setOptimisticContact(null);
+    skipGetOneForId.current = null;
+    setValue("contact_id", null, { shouldDirty: true });
+    setValue("contact_ids", [], { shouldDirty: true });
+    setValue("company_id", null, { shouldDirty: true });
+    setValue("company_name", "", { shouldDirty: true });
+  }, [setValue]);
+
+  useEffect(() => {
+    if (!selectedContactError) return;
+    clearClient();
+  }, [clearClient, selectedContactError]);
 
   useEffect(() => {
     if (
@@ -133,15 +142,6 @@ export const LbsProjectClientFields = ({
       setValue("company_name", businessName.trim(), { shouldDirty: true });
     }
   };
-
-  const clearClient = useCallback(() => {
-    setOptimisticContact(null);
-    skipGetOneForId.current = null;
-    setValue("contact_id", null, { shouldDirty: true });
-    setValue("contact_ids", [], { shouldDirty: true });
-    setValue("company_id", null, { shouldDirty: true });
-    setValue("company_name", "", { shouldDirty: true });
-  }, [setValue]);
 
   const settlePendingCreate = (record?: Contact) => {
     pendingCreateRef.current?.resolve(record);

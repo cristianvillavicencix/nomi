@@ -1,28 +1,11 @@
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { phonesMatch } from "./phone.ts";
-import { hasMemberCapability } from "./memberModulePermissions.ts";
+import { hasMemberVoiceCallCapability } from "./memberModulePermissions.ts";
 import { buildVoiceClientIdentity } from "./voiceIdentity.ts";
 import {
   getVoiceSettingsSecrets,
   type VoiceSettingsSecrets,
 } from "./voiceSettings.ts";
-
-const VOICE_RECEIVE_CAPABILITY = "voice.calls.make";
-
-const memberCanReceiveInboundVoice = (member: {
-  administrator?: boolean | null;
-  module_permissions?: unknown;
-}) => {
-  if (member.administrator === true) return true;
-  const stored =
-    member.module_permissions != null &&
-    typeof member.module_permissions === "object" &&
-    !Array.isArray(member.module_permissions)
-      ? (member.module_permissions as Record<string, unknown>)
-      : null;
-  if (stored?.[VOICE_RECEIVE_CAPABILITY] === true) return true;
-  return hasMemberCapability(member, VOICE_RECEIVE_CAPABILITY);
-};
 
 export const findOrgVoiceSettingsByInboundNumber = async (
   calledNumber: string,
@@ -69,7 +52,7 @@ export const listInboundVoiceClientIdentities = async (orgId: number) => {
   }
 
   return (data ?? [])
-    .filter((member) => memberCanReceiveInboundVoice(member))
+    .filter((member) => hasMemberVoiceCallCapability(member))
     .map((member) => buildVoiceClientIdentity(orgId, Number(member.id)))
     .filter((identity) => identity.length > 0)
     .slice(0, 10);

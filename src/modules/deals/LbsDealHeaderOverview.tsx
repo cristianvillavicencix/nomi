@@ -12,6 +12,7 @@ import {
   getGithubRepoLabel,
   getGithubRepoUrl,
 } from "@/modules/deals/githubRepo";
+import { DealClientSmsButton } from "@/modules/deals/DealClientSmsButton";
 import { ProjectPortalLinkButton } from "@/modules/portal/ProjectPortalLinkButton";
 import { getClientShowPath } from "@/app/routing";
 import type { LbsDeal } from "@/modules/types";
@@ -77,6 +78,14 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
           {record.name}
         </h1>
         <ProjectPortalLinkButton record={record} />
+        <DealClientSmsButton
+          record={record}
+          size="icon"
+          variant="ghost"
+          label="Message client"
+          showLabel={false}
+          className="text-muted-foreground hover:text-foreground"
+        />
         {githubUrl ? (
           <a
             href={githubUrl}
