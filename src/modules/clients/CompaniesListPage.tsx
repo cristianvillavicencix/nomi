@@ -32,7 +32,7 @@ import {
   type CompanyWithPrimaryContact,
 } from "@/modules/clients/clientProfile";
 import {
-  resolveCompanyPhoneForDisplay,
+  resolveCompanyEmailForDisplay,
   resolveCompanyPhoneRaw,
 } from "@/modules/clients/companyChannelResolvers";
 import { ClientEditDialog } from "@/modules/clients/ClientEditDialog";
