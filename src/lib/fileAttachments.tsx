@@ -7,6 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 
 export type FileAttachment = {
   title?: string;
@@ -107,12 +108,16 @@ export const FileTypeIcon = ({
 export const FileAttachmentPill = ({ file }: { file: FileAttachment }) => {
   const kind = getFileKind(file);
   const { Icon, iconClassName } = FILE_KIND_META[kind];
+  const href = useStorageSignedUrl(file.src, {
+    path: (file as FileAttachment & { path?: string }).path,
+    defaultBucket: "attachments",
+  });
 
-  if (!file.src) return null;
+  if (!href) return null;
 
   return (
     <a
-      href={file.src}
+      href={href}
       target="_blank"
       rel="noreferrer"
       title={file.title || "Attachment"}
@@ -158,12 +163,16 @@ export const FileAttachmentIconLink = ({
   const { Icon, iconClassName, tileClassName } = FILE_KIND_META[kind];
   const tileSize = size === "sm" ? "size-7" : "size-9";
   const iconSize = size === "sm" ? "size-3.5" : "size-4";
+  const href = useStorageSignedUrl(file.src, {
+    path: (file as FileAttachment & { path?: string }).path,
+    defaultBucket: "attachments",
+  });
 
-  if (!file.src) return null;
+  if (!href) return null;
 
   return (
     <a
-      href={file.src}
+      href={href}
       target="_blank"
       rel="noreferrer"
       title={file.title || "Attachment"}

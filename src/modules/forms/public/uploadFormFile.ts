@@ -1,5 +1,9 @@
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { optimizeImageForUpload } from "@/modules/deals/projectResourceImageOptimize";
+import {
+  buildStorageObjectReference,
+  createStorageSignedUrl,
+} from "@/lib/supabase/storageObjectUrl";
 
 export type UploadedFormFile = {
   name: string;
@@ -88,10 +92,12 @@ export async function uploadFormFile(
       upsert: false,
     });
   if (uploadError) throw uploadError;
-  const { data: publicUrl } = supabase.storage.from("attachments").getPublicUrl(path);
+  const reference = buildStorageObjectReference("attachments", path);
+  const signed =
+    (await createStorageSignedUrl("attachments", path, 3600)) ?? reference;
   return {
     name: file.name,
-    url: publicUrl.publicUrl,
+    url: signed,
     size: file.size,
     type: file.type,
     path,

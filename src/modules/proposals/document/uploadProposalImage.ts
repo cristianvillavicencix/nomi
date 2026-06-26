@@ -1,7 +1,8 @@
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { optimizeImageForUpload } from "@/modules/deals/projectResourceImageOptimize";
+import { buildStorageObjectReference } from "@/lib/supabase/storageObjectUrl";
 
-/** Upload proposal deck / hero images to the public attachments bucket. */
+/** Upload proposal deck / hero images to the attachments bucket (private; signed on read). */
 export async function uploadProposalImage(
   file: File,
   orgId: string | number,
@@ -17,8 +18,7 @@ export async function uploadProposalImage(
     upsert: false,
   });
   if (error) throw error;
-  const { data } = supabase.storage.from("attachments").getPublicUrl(path);
-  return data.publicUrl;
+  return buildStorageObjectReference("attachments", path);
 }
 
 export const isProposalImageUrl = (value: string | null | undefined) => {

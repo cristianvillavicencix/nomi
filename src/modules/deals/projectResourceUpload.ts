@@ -1,6 +1,10 @@
 import type { Identifier } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { optimizeImageForUpload } from "@/modules/deals/projectResourceImageOptimize";
+import {
+  buildStorageObjectReference,
+  createStorageSignedUrl,
+} from "@/lib/supabase/storageObjectUrl";
 import type {
   ProjectResourceCategory,
   ProjectResourceFile,
@@ -49,14 +53,14 @@ export const uploadProjectResourceFile = async (
         upsert: false,
       });
     if (legacy.error) throw legacy.error;
-    const { data } = supabase.storage
-      .from("attachments")
-      .getPublicUrl(legacyPath);
+    const src = buildStorageObjectReference("attachments", legacyPath);
+    const signedSrc =
+      (await createStorageSignedUrl("attachments", legacyPath, 3600)) ?? src;
     return {
       title: optimized.name,
       type: optimized.type || "application/octet-stream",
       path: legacyPath,
-      src: data.publicUrl,
+      src: signedSrc,
       bucket: "attachments",
     };
   }
@@ -79,8 +83,10 @@ export const getProjectResourceSignedUrl = async (
   bucket = PROJECT_FILES_BUCKET,
 ) => {
   if (bucket === "attachments") {
-    const { data } = supabase.storage.from("attachments").getPublicUrl(path);
-    return data.publicUrl;
+    return (
+      (await createStorageSignedUrl("attachments", path, 3600)) ??
+      buildStorageObjectReference("attachments", path)
+    );
   }
   const { data, error } = await supabase.storage
     .from(bucket)

@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { buildBriefPrefillFromCrm } from "../_shared/briefPrefill.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { resolveStorageDisplayUrl } from "../_shared/storageObjectUrl.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 
@@ -141,6 +142,17 @@ Deno.serve(
         ? templateJoin[0]?.type
         : templateJoin?.type;
 
+      const logoUrl = await resolveStorageDisplayUrl(
+        supabaseAdmin,
+        formInstance.logo_url,
+        { defaultBucket: "form-branding", expiresIn: 60 * 60 * 24 },
+      );
+      const backgroundImageUrl = await resolveStorageDisplayUrl(
+        supabaseAdmin,
+        formInstance.background_image_url,
+        { defaultBucket: "form-branding", expiresIn: 60 * 60 * 24 },
+      );
+
       return new Response(
         JSON.stringify({
           token,
@@ -152,9 +164,9 @@ Deno.serve(
             description: formInstance.description,
             schema: formInstance.schema,
             type: templateType ?? "custom",
-            logo_url: formInstance.logo_url,
+            logo_url: logoUrl,
             primary_color: formInstance.primary_color,
-            background_image_url: formInstance.background_image_url,
+            background_image_url: backgroundImageUrl,
             welcome_title: formInstance.welcome_title,
             welcome_message: formInstance.welcome_message,
             thank_you_title: formInstance.thank_you_title,

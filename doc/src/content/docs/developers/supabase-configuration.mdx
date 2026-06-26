@@ -134,6 +134,10 @@ This was addressed in migration `20260830140000_init_state_security_invoker.sql`
 
 Migration `20260831120000_security_advisor_phase1.sql` pins `search_path` on functions flagged by the linter, revokes direct browser access to cron/secret helpers (service role only), and blocks anonymous RPC on app helpers while keeping authenticated grants used by RLS and the CRM.
 
+**Security Advisor phase 2 (private storage buckets)**
+
+Migration `20260831140000_storage_buckets_phase2_private.sql` sets `attachments`, `avatars`, and `form-branding` buckets to **private** (no public listing). The app and edge functions use **signed URLs** at read time via `src/lib/supabase/storageObjectUrl.ts` and `supabase/functions/_shared/storageObjectUrl.ts`. Existing rows that store legacy `/object/public/...` URLs remain compatible because parsers extract the bucket/path and sign on demand.
+
 **Leaked password protection (Dashboard, not SQL)**
 
 In **Authentication → Providers → Email**, enable **Prevent use of leaked passwords** (Have I Been Pwned check). This clears the `auth_leaked_password_protection` Security Advisor warning and blocks compromised passwords at sign-up/password change.

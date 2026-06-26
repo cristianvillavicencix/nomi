@@ -43,6 +43,7 @@ import {
   initialsOf,
   resolveAvatarUrl,
 } from "@/components/avatar/resolveAvatar";
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 
 export const ProfilePage = () => {
   const [isEditMode, setEditMode] = useState(false);
@@ -148,7 +149,10 @@ const ProfileForm = ({
     }
   };
 
-  const avatarPreviewUrl = record ? resolveAvatarUrl(record, 96) : null;
+  const avatarPreviewUrl = useStorageSignedUrl(
+    record ? resolveAvatarUrl(record, 96) : null,
+    { defaultBucket: "avatars" },
+  );
   const avatarInitials = initialsOf(record);
 
   return (

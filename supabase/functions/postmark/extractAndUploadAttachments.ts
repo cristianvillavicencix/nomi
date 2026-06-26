@@ -1,6 +1,9 @@
 import { decode } from "npm:base64-arraybuffer";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
+  buildStorageObjectReference,
+} from "../_shared/storageObjectUrl.ts";
+import {
   assertInboundAttachmentCount,
   assertInboundAttachmentSize,
   MAX_INBOUND_ATTACHMENTS,
@@ -82,15 +85,22 @@ export const extractAndUploadAttachments = async (
           throw new Error("Failed to upload attachment");
         }
 
-        const { data } = supabaseAdmin.storage
+        const { data: signed } = await supabaseAdmin.storage
           .from("attachments")
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 60 * 60 * 24 * 7);
+
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+        const reference = buildStorageObjectReference(
+          supabaseUrl,
+          "attachments",
+          fileName,
+        );
 
         return {
           title: Name,
           type: ContentType,
           path: fileName,
-          src: fixPublicUrl(data.publicUrl),
+          src: fixPublicUrl(signed?.signedUrl ?? reference),
           contentId: ContentID?.trim() || null,
         };
       }),

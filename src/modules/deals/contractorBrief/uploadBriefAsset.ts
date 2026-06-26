@@ -1,6 +1,10 @@
 import type { Identifier } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { optimizeImageForUpload } from "@/modules/deals/projectResourceImageOptimize";
+import {
+  buildStorageObjectReference,
+  createStorageSignedUrl,
+} from "@/lib/supabase/storageObjectUrl";
 import type { UploadedFormFile } from "@/modules/forms/public/uploadFormFile";
 
 const BRIEF_ASSETS_BUCKET = "attachments";
@@ -26,11 +30,14 @@ export const uploadBriefAsset = async (
 
   if (error) throw error;
 
-  const { data } = supabase.storage.from(BRIEF_ASSETS_BUCKET).getPublicUrl(path);
+  const reference = buildStorageObjectReference(BRIEF_ASSETS_BUCKET, path);
+  const signed =
+    (await createStorageSignedUrl(BRIEF_ASSETS_BUCKET, path, 3600)) ??
+    reference;
 
   return {
     name: optimized.name,
-    url: data.publicUrl,
+    url: signed,
     size: optimized.size,
     type: optimized.type || "application/octet-stream",
     path,

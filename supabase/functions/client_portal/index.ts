@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { createStorageSignedUrl } from "../_shared/storageObjectUrl.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { loadPortalSession } from "../_shared/portalSession.ts";
@@ -83,13 +84,20 @@ const signResourceUrls = async (file: ResourceFile) => {
 
   const bucket = file.bucket?.trim() || "project-files";
   if (bucket === "attachments") {
-    const { data } = supabaseAdmin.storage.from("attachments").getPublicUrl(path);
+    const signed = await createStorageSignedUrl(
+      supabaseAdmin,
+      "attachments",
+      path,
+      3600,
+    );
+    const fallback = file.src?.trim() || null;
+    const downloadUrl = signed ?? fallback;
     return {
       file_name: fileName,
       mime_type: mimeType,
       is_image: isImage,
-      download_url: data.publicUrl,
-      preview_url: data.publicUrl,
+      download_url: downloadUrl,
+      preview_url: downloadUrl,
       size_bytes: file.size ?? null,
     };
   }

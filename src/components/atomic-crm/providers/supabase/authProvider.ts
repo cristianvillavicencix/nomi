@@ -5,6 +5,7 @@ import { canAccess } from "../commons/canAccess";
 import type { MemberModulePermissions } from "../../types";
 import { supabase } from "./supabase";
 import { resolveAvatarUrl } from "@/components/avatar/resolveAvatar";
+import { resolveStorageDisplayUrl } from "@/lib/supabase/storageObjectUrl";
 
 const baseAuthProvider = supabaseAuthProvider(supabase, {
   getIdentity: async () => {
@@ -14,11 +15,16 @@ const baseAuthProvider = supabaseAuthProvider(supabase, {
       throw new Error();
     }
 
+    const rawAvatar = resolveAvatarUrl(sale as any, 96);
+    const avatar =
+      (await resolveStorageDisplayUrl(rawAvatar, { defaultBucket: "avatars" })) ??
+      rawAvatar;
+
     return {
       id: sale.id,
       org_id: sale.org_id ?? null,
       fullName: `${sale.first_name} ${sale.last_name}`,
-      avatar: resolveAvatarUrl(sale as any, 96),
+      avatar,
       administrator: sale.administrator === true,
       role: sale.administrator ? "admin" : (sale.roles?.[0] ?? "user"),
       roles: sale.roles ?? (sale.administrator ? ["admin"] : []),

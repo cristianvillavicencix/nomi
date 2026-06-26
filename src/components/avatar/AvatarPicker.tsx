@@ -14,6 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useNotify } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { buildStorageObjectReference } from "@/lib/supabase/storageObjectUrl";
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 
 import {
   PEEPS_GALLERY_SEEDS,
@@ -73,17 +75,16 @@ export const AvatarPicker = ({
   const [uploading, setUploading] = useState(false);
   const [galleryOffset, setGalleryOffset] = useState(0);
 
-  const previewUrl = useMemo(
-    () =>
-      resolveAvatarUrl(
-        {
-          ...(record ?? {}),
-          avatar_type: value.avatar_type ?? null,
-          avatar_url: value.avatar_url ?? null,
-        },
-        192,
-      ),
-    [record, value.avatar_type, value.avatar_url],
+  const previewUrl = useStorageSignedUrl(
+    resolveAvatarUrl(
+      {
+        ...(record ?? {}),
+        avatar_type: value.avatar_type ?? null,
+        avatar_url: value.avatar_url ?? null,
+      },
+      192,
+    ),
+    { defaultBucket: "avatars", expiresIn: 3600 },
   );
 
   const initials = useMemo(() => initialsOf(record), [record]);
@@ -148,17 +149,11 @@ export const AvatarPicker = ({
             upsert: false,
           });
         if (uploadError) throw uploadError;
-        const { data: publicData } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(path);
-        if (!publicData?.publicUrl) {
-          throw new Error("No se pudo obtener la URL pública del avatar");
-        }
         onChange({
           avatar_type: "upload",
-          avatar_url: publicData.publicUrl,
+          avatar_url: buildStorageObjectReference("avatars", path),
         });
-        notify("Foto cargada", { type: "info" });
+        notify("Photo uploaded", { type: "info" });
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Error al subir el archivo";

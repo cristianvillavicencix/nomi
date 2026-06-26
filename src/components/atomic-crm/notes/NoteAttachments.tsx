@@ -1,14 +1,57 @@
 import { Paperclip } from "lucide-react";
 
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 import type { AttachmentNote, ContactNote, DealNote } from "../types";
+
+const NoteAttachmentImage = ({ attachment }: { attachment: AttachmentNote }) => {
+  const href = useStorageSignedUrl(attachment.src, {
+    path: attachment.path,
+    defaultBucket: "attachments",
+  });
+
+  if (!href) return null;
+
+  return (
+    <a
+      href={href}
+      title={attachment.title}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <img
+        src={href}
+        alt={attachment.title}
+        className="w-[200px] h-[100px] object-cover cursor-pointer object-left border border-border"
+      />
+    </a>
+  );
+};
+
+const NoteAttachmentLink = ({ attachment }: { attachment: AttachmentNote }) => {
+  const href = useStorageSignedUrl(attachment.src, {
+    path: attachment.path,
+    defaultBucket: "attachments",
+  });
+
+  if (!href) return null;
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline hover:no-underline"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {attachment.title}
+    </a>
+  );
+};
 
 /**
  * Displays persisted note attachments in note show/list views.
- *
- * This component receives a full note record and renders all attachments.
- *
- * @param props.note - Note record containing attachments to render.
- * @returns `null` when there are no attachments, otherwise attachment previews and links.
  */
 export const NoteAttachments = ({ note }: { note: ContactNote | DealNote }) => {
   if (!note.attachments || note.attachments.length === 0) {
@@ -28,20 +71,7 @@ export const NoteAttachments = ({ note }: { note: ContactNote | DealNote }) => {
         <div className="grid grid-cols-4 gap-8">
           {imageAttachments.map((attachment: AttachmentNote, index: number) => (
             <div key={index}>
-              <a
-                href={attachment.src}
-                title={attachment.title}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <img
-                  src={attachment.src}
-                  alt={attachment.title}
-                  className="w-[200px] h-[100px] object-cover cursor-pointer object-left border border-border"
-                />
-              </a>
+              <NoteAttachmentImage attachment={attachment} />
             </div>
           ))}
         </div>
@@ -50,27 +80,13 @@ export const NoteAttachments = ({ note }: { note: ContactNote | DealNote }) => {
         otherAttachments.map((attachment: AttachmentNote, index: number) => (
           <div key={index} className="flex items-center gap-2">
             <Paperclip className="w-4 h-4" />
-            <a
-              href={attachment.src}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:no-underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {attachment.title}
-            </a>
+            <NoteAttachmentLink attachment={attachment} />
           </div>
         ))}
     </div>
   );
 };
 
-/**
- * Checks whether a mime type corresponds to an image.
- *
- * @param mimeType - The attachment mime type.
- * @returns `true` when the mime type starts with `image/`.
- */
 const isImageMimeType = (mimeType?: string): boolean => {
   if (!mimeType) {
     return false;

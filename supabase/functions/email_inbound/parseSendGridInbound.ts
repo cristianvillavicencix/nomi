@@ -1,5 +1,9 @@
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
+  buildStorageObjectReference,
+  createStorageSignedUrl,
+} from "../_shared/storageObjectUrl.ts";
+import {
   assertInboundAttachmentCount,
   assertInboundAttachmentSize,
   MAX_INBOUND_ATTACHMENTS,
@@ -150,12 +154,23 @@ const uploadSendGridAttachments = async (form: FormData) => {
       throw new Error(`Failed to upload attachment "${title}"`);
     }
 
-    const { data } = supabaseAdmin.storage.from("attachments").getPublicUrl(fileName);
+    const signed = await createStorageSignedUrl(
+      supabaseAdmin,
+      "attachments",
+      fileName,
+      60 * 60 * 24 * 7,
+    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const reference = buildStorageObjectReference(
+      supabaseUrl,
+      "attachments",
+      fileName,
+    );
     attachments.push({
       title,
       type,
       path: fileName,
-      src: fixPublicUrl(data.publicUrl),
+      src: fixPublicUrl(signed ?? reference),
       contentId: meta["content-id"]?.trim() || null,
     });
   }

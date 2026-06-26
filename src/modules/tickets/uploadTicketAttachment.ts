@@ -1,4 +1,5 @@
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { buildStorageObjectReference } from "@/lib/supabase/storageObjectUrl";
 import {
   isTicketReplyAttachmentTooLarge,
   MAX_TICKET_REPLY_ATTACHMENT_BYTES,
@@ -38,16 +39,13 @@ const buildAttachmentPath = (file: File) => {
 const toTicketReplyAttachment = (
   file: File,
   path: string,
-): TicketReplyAttachment => {
-  const { data } = supabase.storage.from("attachments").getPublicUrl(path);
-  return {
-    title: file.name,
-    type: file.type || "application/octet-stream",
-    path,
-    src: data.publicUrl,
-    size: file.size,
-  };
-};
+): TicketReplyAttachment => ({
+  title: file.name,
+  type: file.type || "application/octet-stream",
+  path,
+  src: buildStorageObjectReference("attachments", path),
+  size: file.size,
+});
 
 const getUploadAccessToken = async () => {
   const { data } = await supabase.auth.getSession();

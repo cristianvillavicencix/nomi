@@ -4,6 +4,8 @@ import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { buildStorageObjectReference } from "@/lib/supabase/storageObjectUrl";
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 
 type FormImageUploadProps = {
   label: string;
@@ -26,6 +28,7 @@ export const FormImageUpload = ({
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const previewUrl = useStorageSignedUrl(value, { defaultBucket: "form-branding" });
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -52,10 +55,7 @@ export const FormImageUpload = ({
             upsert: false,
           });
         if (uploadError) throw uploadError;
-        const { data } = supabase.storage
-          .from("form-branding")
-          .getPublicUrl(path);
-        onChange(data.publicUrl);
+        onChange(buildStorageObjectReference("form-branding", path));
       } catch (uploadError) {
         setError(
           uploadError instanceof Error ? uploadError.message : "Upload failed",
@@ -98,7 +98,7 @@ export const FormImageUpload = ({
         {value ? (
           <div className="space-y-3">
             <img
-              src={value}
+              src={previewUrl}
               alt=""
               className="max-h-32 w-auto rounded-md border object-contain"
             />

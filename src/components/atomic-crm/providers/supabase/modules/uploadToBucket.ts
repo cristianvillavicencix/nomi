@@ -1,5 +1,6 @@
 import type { RAFile } from "../../../types";
 import { supabase } from "../supabase";
+import { buildStorageObjectReference } from "@/lib/supabase/storageObjectUrl";
 
 export const uploadToBucket = async (fi: RAFile) => {
   if (!fi.src.startsWith("blob:") && !fi.src.startsWith("data:")) {
@@ -48,10 +49,8 @@ export const uploadToBucket = async (fi: RAFile) => {
     throw new Error("Failed to upload attachment");
   }
 
-  const { data } = supabase.storage.from("attachments").getPublicUrl(filePath);
-
   fi.path = filePath;
-  fi.src = data.publicUrl;
+  fi.src = buildStorageObjectReference("attachments", filePath);
 
   // save MIME type
   const mimeType = file.type;
