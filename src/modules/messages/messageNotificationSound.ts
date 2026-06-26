@@ -1,6 +1,7 @@
 export {
   playMessageNotificationSound,
   playNotificationSound,
+  playNotificationSoundForCategory,
   playTicketNotificationSound,
   primeAudioContext,
   primeNotificationAudioContext,

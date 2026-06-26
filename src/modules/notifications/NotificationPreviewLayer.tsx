@@ -89,7 +89,7 @@ export const NotificationPreviewLayer = () => {
 
   return (
     <div
-      className="pointer-events-none fixed top-14 right-3 z-[60] flex w-[min(100vw-1.5rem,22rem)] flex-col gap-2 sm:right-4"
+      className="pointer-events-none fixed bottom-20 right-3 z-[55] flex w-[min(100vw-1.5rem,22rem)] flex-col-reverse gap-2 sm:bottom-6"
       aria-live="polite"
     >
       {rows.map((row) => {
@@ -102,9 +102,9 @@ export const NotificationPreviewLayer = () => {
             className={cn(
               "pointer-events-auto overflow-hidden rounded-lg border bg-background shadow-lg transition-all duration-300 ease-out",
               row.visible && !row.dismissing
-                ? "translate-x-0 opacity-100"
-                : "translate-x-6 opacity-0",
-              row.dismissing && "-translate-y-2 scale-[0.98]",
+                ? "translate-y-0 opacity-100"
+                : "translate-y-3 opacity-0",
+              row.dismissing && "translate-y-2 scale-[0.98] opacity-0",
             )}
           >
             <div className="flex gap-3 p-3">

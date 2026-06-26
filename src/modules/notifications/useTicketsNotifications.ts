@@ -5,6 +5,10 @@ import { useLocation } from "react-router";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { Ticket, TicketMessage } from "@/modules/types";
 import { useNotificationPrefsContext } from "@/modules/notifications/NotificationPrefsContext";
+import {
+  hasRecentSelfTicketActivity,
+  markSelfTicketActivity,
+} from "@/modules/notifications/ticketSelfActivity";
 
 const trimNotifiedIds = (notifiedIds: Set<string>) => {
   if (notifiedIds.size <= 500) return;
@@ -15,6 +19,27 @@ const trimNotifiedIds = (notifiedIds: Set<string>) => {
 
 const isViewingTicket = (pathname: string, ticketId: string | number) =>
   pathname.includes(`/tickets/${ticketId}/`);
+
+const isMessageFromCurrentMember = (
+  message: TicketMessage,
+  memberId: string | number | null | undefined,
+) =>
+  message.author_member_id != null &&
+  String(message.author_member_id) === String(memberId ?? "");
+
+/** Only inbound client mail and internal notes from teammates should alert. */
+const isIncomingTicketAlert = (
+  message: TicketMessage,
+  memberId: string | number | null | undefined,
+) => {
+  if (isMessageFromCurrentMember(message, memberId)) return false;
+  if (message.direction === "outbound") return false;
+  if (message.direction === "inbound") return true;
+  if (message.direction === "internal") {
+    return message.author_member_id != null;
+  }
+  return message.author_member_id == null;
+};
 
 export const useTicketsNotifications = () => {
   const { identity } = useGetIdentity();
@@ -30,6 +55,8 @@ export const useTicketsNotifications = () => {
       notifiedMessageIdsRef.current.add(messageId);
       trimNotifiedIds(notifiedMessageIdsRef.current);
 
+      if (!isIncomingTicketAlert(message, identity?.id)) return;
+
       const { data: ticket, error } = await supabase
         .from("tickets")
         .select("id, subject, assignee_id")
@@ -38,13 +65,6 @@ export const useTicketsNotifications = () => {
 
       if (error || !ticket) return;
       if (String(ticket.assignee_id) !== String(identity?.id ?? "")) return;
-
-      if (
-        message.author_member_id != null &&
-        String(message.author_member_id) === String(identity?.id ?? "")
-      ) {
-        return;
-      }
 
       const tabVisible =
         document.visibilityState === "visible" && document.hasFocus();
@@ -63,6 +83,7 @@ export const useTicketsNotifications = () => {
         href: `/tickets/${ticket.id}/show`,
         sound: !viewingTicket || !tabVisible,
         desktop: !tabVisible,
+        preview: true,
       });
     },
     [identity?.id, location.pathname, pushNotification],
@@ -72,6 +93,8 @@ export const useTicketsNotifications = () => {
     (ticket: Pick<Ticket, "id" | "subject" | "assignee_id">) => {
       if (ticket.assignee_id == null) return;
       if (String(ticket.assignee_id) !== String(identity?.id ?? "")) return;
+
+      if (hasRecentSelfTicketActivity(ticket.id)) return;
 
       const key = `assign-${ticket.id}-${ticket.assignee_id}`;
       if (notifiedAssignmentIdsRef.current.has(key)) return;
@@ -85,6 +108,7 @@ export const useTicketsNotifications = () => {
         tag: key,
         href: `/tickets/${ticket.id}/show`,
         desktop: true,
+        preview: true,
       });
     },
     [identity?.id, pushNotification],
@@ -105,6 +129,12 @@ export const useTicketsNotifications = () => {
         (payload) => {
           const message = payload.new as TicketMessage | undefined;
           if (!message?.ticket_id || message.id == null) return;
+
+          if (isMessageFromCurrentMember(message, identity.id)) {
+            markSelfTicketActivity(message.ticket_id);
+            return;
+          }
+
           void notifyTicketMessage(message);
         },
       )

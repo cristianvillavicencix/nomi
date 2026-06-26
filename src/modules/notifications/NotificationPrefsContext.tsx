@@ -18,7 +18,7 @@ import {
   showDesktopNotification,
   type DesktopNotificationSupport,
 } from "@/lib/desktopNotifications";
-import { playNotificationSound, playTicketNotificationSound } from "@/lib/notificationSound";
+import { playNotificationSoundForCategory } from "@/lib/notificationSound";
 import {
   isNotificationCategoryEnabled,
   parseNotificationPrefs,
@@ -37,6 +37,8 @@ type PushNotificationInput = {
   href?: string;
   sound?: boolean;
   desktop?: boolean;
+  /** In-app preview card (incoming alerts only). Defaults to true. */
+  preview?: boolean;
 };
 
 type NotificationPrefsContextValue = {
@@ -134,6 +136,7 @@ export const NotificationPrefsProvider = ({
 
       const shouldSound = input.sound ?? true;
       const shouldDesktop = input.desktop ?? !isTabFocused();
+      const shouldPreview = input.preview ?? true;
 
       const entry = pushNotificationHistory({
         category: input.category,
@@ -143,21 +146,14 @@ export const NotificationPrefsProvider = ({
         tag: input.tag,
       });
 
-      if (isTabFocused()) {
+      if (shouldPreview && isTabFocused()) {
         window.dispatchEvent(
           new CustomEvent("nomi:notification-preview", { detail: entry }),
         );
       }
 
       if (shouldSound && prefs.sound_enabled) {
-        if (
-          input.category === "tickets_message" ||
-          input.category === "tickets_assigned"
-        ) {
-          playTicketNotificationSound();
-        } else {
-          playNotificationSound();
-        }
+        playNotificationSoundForCategory(input.category);
       }
 
       if (
