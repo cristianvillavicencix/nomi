@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { useDataProvider, useGetIdentity } from "ra-core";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import { PageLayout } from "@/components/atomic-crm/layout/page-shell";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,6 +25,7 @@ import {
 export const MessagesPage = () => {
   const isMobile = useIsMobile();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const queryClient = useQueryClient();
   const { identity } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkConversationId = parseMessagesConversationId(searchParams);
@@ -46,6 +48,10 @@ export const MessagesPage = () => {
 
   const { conversations, deals, dmParticipants, members, contacts, isPending } =
     useInboxConversations({ pageSize: inboxPageSize });
+
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ["messaging-settings"] });
+  }, [queryClient]);
 
   const clearConversationDeepLink = useCallback(() => {
     if (!searchParams.has(MESSAGES_CONVERSATION_PARAM)) return;

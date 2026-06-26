@@ -9,9 +9,9 @@ export const useMessagingEnabled = () => {
     queryKey: ["messaging-settings"],
     queryFn: () => dataProvider.getMessagingSettings(),
     enabled: !!identity?.id,
-    staleTime: 60_000,
+    staleTime: 30_000,
     retry: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 
   return {

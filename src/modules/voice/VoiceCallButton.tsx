@@ -2,6 +2,12 @@ import { Loader2, Phone, PhoneOff } from "lucide-react";
 import { useGetIdentity, useNotify } from "ra-core";
 import type { Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
@@ -13,6 +19,7 @@ type VoiceCallButtonProps = {
   conversationId?: Identifier | null;
   dealId?: Identifier | null;
   className?: string;
+  variant?: "full" | "icon";
 };
 
 export const VoiceCallButton = ({
@@ -21,6 +28,7 @@ export const VoiceCallButton = ({
   conversationId,
   dealId,
   className,
+  variant = "full",
 }: VoiceCallButtonProps) => {
   const notify = useNotify();
   const { identity } = useGetIdentity();
@@ -68,7 +76,7 @@ export const VoiceCallButton = ({
     }
   };
 
-  if ((!voiceEnabled && !isPending) || !canCall) {
+  if (!canCall) {
     return null;
   }
 
@@ -81,14 +89,41 @@ export const VoiceCallButton = ({
           ? "Connecting…"
           : "Call";
 
-  return (
-    <div className={className}>
+  const voiceDisabled = !voiceEnabled && !isPending;
+  const noPhone = !phoneNumber?.trim();
+
+  const tooltip = voiceDisabled
+    ? "Enable voice in Settings → Communications"
+    : noPhone
+      ? "No phone number for this conversation"
+      : errorMessage ?? label;
+
+  const button =
+    variant === "icon" ? (
+      <Button
+        type="button"
+        variant={isBusy ? "destructive" : "ghost"}
+        size="icon"
+        className="size-9 shrink-0"
+        disabled={(disabled && !isBusy) || voiceDisabled || noPhone}
+        onClick={() => void handleClick()}
+        aria-label={label}
+      >
+        {callState === "connecting" || callState === "initializing" ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : isBusy ? (
+          <PhoneOff className="size-4" />
+        ) : (
+          <Phone className="size-4" />
+        )}
+      </Button>
+    ) : (
       <Button
         type="button"
         variant={isBusy ? "destructive" : "outline"}
         size="sm"
         className="w-full justify-start"
-        disabled={disabled && !isBusy}
+        disabled={(disabled && !isBusy) || voiceDisabled || noPhone}
         onClick={() => void handleClick()}
         title={errorMessage ?? undefined}
       >
@@ -101,6 +136,20 @@ export const VoiceCallButton = ({
         )}
         {label}
       </Button>
+    );
+
+  if (variant === "full" && voiceDisabled) {
+    return null;
+  }
+
+  return (
+    <div className={className}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipContent>{tooltip}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 };

@@ -16,6 +16,7 @@ import {
 import { ConversationActionsMenu } from "@/modules/messages/ConversationActionsMenu";
 import { ChangeStatusDropdown } from "@/modules/messages/status/ChangeStatusDropdown";
 import { SendFormButton } from "@/modules/forms/share/SendFormButton";
+import { VoiceCallButton } from "@/modules/voice/VoiceCallButton";
 import { useOrgPresence } from "@/modules/messages/useOrgPresence";
 import { getOtherDmMemberId } from "@/modules/messages/useDirectMessage";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
@@ -200,6 +201,15 @@ export const ConversationChatHeader = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
+          {conversation.type === "client" && conversation.external_phone ? (
+            <VoiceCallButton
+              variant="icon"
+              phoneNumber={conversation.external_phone}
+              contactId={conversation.contact_id}
+              conversationId={conversation.id}
+              dealId={conversation.deal_id}
+            />
+          ) : null}
           {conversation.type === "client" && conversation.contact_id ? (
             <SendFormButton
               variant="icon"
