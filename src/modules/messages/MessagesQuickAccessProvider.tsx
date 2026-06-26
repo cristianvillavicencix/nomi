@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ClientSmsDraft, Contact, Conversation } from "@/modules/types";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
 import { AppNotificationsLayer } from "@/modules/notifications/AppNotificationsLayer";
+import { NotificationPreviewLayer } from "@/modules/notifications/NotificationPreviewLayer";
 import { persistConversationRead } from "@/modules/messages/persistConversationRead";
 import { useOpenClientSms } from "@/modules/messages/useClientSms";
 import { primeNotificationAudioContext } from "@/lib/notificationSound";
@@ -248,6 +249,7 @@ export const MessagesQuickAccessProvider = ({
     <MessagesQuickAccessContext.Provider value={value}>
       {children}
       <AppNotificationsLayer />
+      <NotificationPreviewLayer />
     </MessagesQuickAccessContext.Provider>
   );
 };

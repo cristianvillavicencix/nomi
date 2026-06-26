@@ -96,5 +96,25 @@ export const markNotificationHistoryItemsRead = (ids: string[]) => {
   window.dispatchEvent(new CustomEvent("nomi:notifications-updated"));
 };
 
+const TICKET_NOTIFICATION_CATEGORIES = new Set([
+  "tickets_message",
+  "tickets_assigned",
+]);
+
+export const markTicketNotificationsRead = () => {
+  const history = readHistory();
+  let changed = false;
+  const next = history.map((item) => {
+    if (!item.read && TICKET_NOTIFICATION_CATEGORIES.has(item.category)) {
+      changed = true;
+      return { ...item, read: true };
+    }
+    return item;
+  });
+  if (!changed) return;
+  writeHistory(next);
+  window.dispatchEvent(new CustomEvent("nomi:notifications-updated"));
+};
+
 export const countUnreadNotificationHistory = () =>
   readHistory().filter((item) => !item.read).length;

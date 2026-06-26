@@ -3,7 +3,7 @@ import DOMPurify from "dompurify";
 let emailHtmlHookInstalled = false;
 let preserveColorsInHook = false;
 
-/** Strip only layout-breaking CSS; keep email typography/colors. */
+/** Strip layout-breaking CSS; in safe mode also strip colors so dark mode stays readable. */
 const BLOCKED_STYLE_PROPS = new Set([
   "position",
   "float",
@@ -15,7 +15,14 @@ const BLOCKED_STYLE_PROPS = new Set([
   "transform",
 ]);
 
-const cleanInlineStyle = (raw: string) =>
+const COLOR_STYLE_PROPS = new Set([
+  "color",
+  "background",
+  "background-color",
+  "background-image",
+]);
+
+const cleanInlineStyle = (raw: string, stripColors: boolean) =>
   raw
     .split(";")
     .map((chunk) => chunk.trim())
@@ -24,6 +31,7 @@ const cleanInlineStyle = (raw: string) =>
       const prop = chunk.split(":")[0]?.trim().toLowerCase();
       if (!prop) return false;
       if (BLOCKED_STYLE_PROPS.has(prop)) return false;
+      if (stripColors && COLOR_STYLE_PROPS.has(prop)) return false;
       if (prop === "margin" && /-\d/.test(chunk)) return false;
       return true;
     })
@@ -91,10 +99,14 @@ const installEmailSanitizeHooks = () => {
 
     if (!preserveColorsInHook) {
       node.removeAttribute("bgcolor");
+      node.removeAttribute("color");
     }
 
     if (node.hasAttribute("style")) {
-      const cleaned = cleanInlineStyle(node.getAttribute("style") ?? "");
+      const cleaned = cleanInlineStyle(
+        node.getAttribute("style") ?? "",
+        !preserveColorsInHook,
+      );
       if (cleaned) {
         node.setAttribute("style", cleaned);
       } else {

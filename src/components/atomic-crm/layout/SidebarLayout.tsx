@@ -30,6 +30,7 @@ import { DealsExplorerPanel } from "../deals/DealsExplorerPanel";
 import { LbsSidebarNav } from "@/app/LbsSidebarNav";
 import { useWebsiteMonitorEnabled } from "@/modules/settings/useWebsiteMonitorSettings";
 import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCounts";
+import { useNotificationUnreadCounts } from "@/modules/notifications/useNotificationUnreadCounts";
 import {
   PageActionsProvider,
   PageActionsSlot,
@@ -160,6 +161,7 @@ const SidebarFooterControls = () => {
 
 const SidebarNavigation = () => {
   const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
+  const { tickets: ticketsNotificationUnread } = useNotificationUnreadCounts();
   const { enabled: websiteMonitorEnabled } = useWebsiteMonitorEnabled(true);
   const { darkModeLogo, lightModeLogo, title } = useConfigurationContext();
 
@@ -221,6 +223,7 @@ const SidebarNavigation = () => {
         <LbsSidebarNav
           websiteMonitorEnabled={websiteMonitorEnabled}
           messagesUnreadCount={messagesUnreadCount}
+          ticketsNotificationUnread={ticketsNotificationUnread}
         />
       </SidebarContent>
       <SidebarFooter className="p-2 group-data-[collapsible=icon]:p-1">

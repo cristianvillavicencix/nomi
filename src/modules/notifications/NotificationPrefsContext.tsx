@@ -18,7 +18,7 @@ import {
   showDesktopNotification,
   type DesktopNotificationSupport,
 } from "@/lib/desktopNotifications";
-import { playNotificationSound } from "@/lib/notificationSound";
+import { playNotificationSound, playTicketNotificationSound } from "@/lib/notificationSound";
 import {
   isNotificationCategoryEnabled,
   parseNotificationPrefs,
@@ -135,7 +135,7 @@ export const NotificationPrefsProvider = ({
       const shouldSound = input.sound ?? true;
       const shouldDesktop = input.desktop ?? !isTabFocused();
 
-      pushNotificationHistory({
+      const entry = pushNotificationHistory({
         category: input.category,
         title: input.title,
         body: input.body,
@@ -143,8 +143,21 @@ export const NotificationPrefsProvider = ({
         tag: input.tag,
       });
 
+      if (isTabFocused()) {
+        window.dispatchEvent(
+          new CustomEvent("nomi:notification-preview", { detail: entry }),
+        );
+      }
+
       if (shouldSound && prefs.sound_enabled) {
-        playNotificationSound();
+        if (
+          input.category === "tickets_message" ||
+          input.category === "tickets_assigned"
+        ) {
+          playTicketNotificationSound();
+        } else {
+          playNotificationSound();
+        }
       }
 
       if (

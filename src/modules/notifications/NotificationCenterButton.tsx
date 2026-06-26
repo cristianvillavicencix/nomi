@@ -27,6 +27,7 @@ import {
   NOTIFICATION_CATEGORY_ACCENT,
   NOTIFICATION_CATEGORY_ICONS,
   NOTIFICATION_FILTER_TABS,
+  countUnreadInTab,
   type GroupedNotification,
   type NotificationFilterTab,
 } from "@/modules/notifications/notificationDisplay";
@@ -258,10 +259,27 @@ export const NotificationCenterButton = () => {
 
   useEffect(() => {
     refresh();
-    const handler = () => refresh();
-    window.addEventListener("nomi:notifications-updated", handler);
-    return () => window.removeEventListener("nomi:notifications-updated", handler);
+    const onUpdated = () => refresh();
+    const onOpenCenter = () => setOpen(true);
+    window.addEventListener("nomi:notifications-updated", onUpdated);
+    window.addEventListener("nomi:open-notification-center", onOpenCenter);
+    return () => {
+      window.removeEventListener("nomi:notifications-updated", onUpdated);
+      window.removeEventListener("nomi:open-notification-center", onOpenCenter);
+    };
   }, [refresh]);
+
+  const tabUnreadCounts = useMemo(
+    () =>
+      NOTIFICATION_FILTER_TABS.reduce(
+        (acc, filterTab) => {
+          acc[filterTab.id] = countUnreadInTab(items, filterTab.id);
+          return acc;
+        },
+        {} as Record<NotificationFilterTab, number>,
+      ),
+    [items],
+  );
 
   const filteredItems = useMemo(
     () => filterNotificationsByTab(items, tab),
@@ -360,15 +378,23 @@ export const NotificationCenterButton = () => {
               onValueChange={(value) => setTab(value as NotificationFilterTab)}
             >
               <TabsList className="grid h-auto w-full grid-cols-3 gap-0.5 p-1 sm:grid-cols-6">
-                {NOTIFICATION_FILTER_TABS.map((filterTab) => (
-                  <TabsTrigger
-                    key={filterTab.id}
-                    value={filterTab.id}
-                    className="px-1 py-1.5 text-[11px] sm:text-xs"
-                  >
-                    {filterTab.label}
-                  </TabsTrigger>
-                ))}
+                {NOTIFICATION_FILTER_TABS.map((filterTab) => {
+                  const tabUnread = tabUnreadCounts[filterTab.id];
+                  return (
+                    <TabsTrigger
+                      key={filterTab.id}
+                      value={filterTab.id}
+                      className="relative px-1 py-1.5 text-[11px] sm:text-xs"
+                    >
+                      <span>{filterTab.label}</span>
+                      {tabUnread > 0 ? (
+                        <Badge className="ml-1 h-4 min-w-4 rounded-sm px-1 text-[9px] leading-none">
+                          {tabUnread > 9 ? "9+" : tabUnread}
+                        </Badge>
+                      ) : null}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
             </Tabs>
           </SheetHeader>

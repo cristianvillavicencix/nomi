@@ -48,6 +48,7 @@ import { useTicketListAttachments } from "@/modules/tickets/useTicketListAttachm
 import { useTicketListMessagePreviews } from "@/modules/tickets/useTicketListMessagePreviews";
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
 import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
+import { useMarkTicketNotificationsReadOnVisit } from "@/modules/notifications/useMarkTicketNotificationsReadOnVisit";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { ClientInvoice, OrganizationMember, Ticket } from "@/modules/types";
 
@@ -57,6 +58,7 @@ export const TicketsInbox = () => {
   const isMobile = useIsMobile();
 
   useTicketsInboxRealtime(Boolean(identity));
+  useMarkTicketNotificationsReadOnVisit();
 
   if (!identity) return null;
 

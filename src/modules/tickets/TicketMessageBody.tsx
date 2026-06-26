@@ -48,16 +48,18 @@ export const TicketMessageBody = ({
         </div>
         <div
           className={cn(
-            "ticket-email-html isolate overflow-x-auto leading-relaxed break-words text-foreground",
-            "rounded-md dark:bg-card/50 dark:p-3 dark:ring-1 dark:ring-border/60",
-            "[&_a]:font-medium [&_a]:text-primary [&_a]:underline",
+            "ticket-email-html isolate overflow-x-auto leading-relaxed break-words",
+            "rounded-md border border-border/60 bg-white p-3 text-neutral-900 shadow-sm",
+            "dark:border-border/80 dark:bg-[#f4f4f5] dark:text-neutral-900 dark:shadow-none",
+            "[&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline dark:[&_a]:text-blue-800",
             "[&_img]:my-2 [&_img]:block [&_img]:h-auto [&_img]:max-w-full",
             "[&_table]:my-2 [&_table]:max-w-full [&_table]:table-fixed",
-            "[&_td]:break-words [&_th]:break-words [&_td]:text-foreground [&_th]:text-foreground",
+            "[&_td]:break-words [&_th]:break-words",
             "[&_*]:!float-none [&_*]:!clear-both [&_*]:max-w-full",
-            "[&_p]:my-2 [&_p]:text-foreground [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
-            "[&_div]:relative [&_span]:relative [&_span]:text-inherit",
-            "[&_font]:text-inherit",
+            "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
+            "[&_div]:relative [&_span]:relative",
+            viewOriginal &&
+              "[&_*]:text-inherit [&_p]:text-inherit [&_span]:text-inherit [&_font]:text-inherit",
           )}
           dangerouslySetInnerHTML={{ __html: sanitized }}
         />

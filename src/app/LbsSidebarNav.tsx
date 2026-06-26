@@ -90,11 +90,13 @@ const isClientsNavActive = (pathname: string) =>
 type LbsSidebarNavProps = {
   websiteMonitorEnabled: boolean;
   messagesUnreadCount: number;
+  ticketsNotificationUnread: number;
 };
 
 export const LbsSidebarNav = ({
   websiteMonitorEnabled,
   messagesUnreadCount,
+  ticketsNotificationUnread,
 }: LbsSidebarNavProps) => {
   const location = useLocation();
   const { data: identity } = useGetIdentity();
@@ -181,7 +183,13 @@ export const LbsSidebarNav = ({
               key={item.to}
               item={item}
               active={isActive(item.activePattern)}
-              badgeCount={item.to === "/messages" ? messagesUnreadCount : 0}
+              badgeCount={
+                item.to === "/messages"
+                  ? messagesUnreadCount
+                  : item.to === "/tickets"
+                    ? ticketsNotificationUnread
+                    : 0
+              }
               collapsed={sidebarState === "collapsed"}
             />
           ))}
