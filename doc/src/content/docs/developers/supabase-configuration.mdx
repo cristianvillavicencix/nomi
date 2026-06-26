@@ -138,6 +138,10 @@ Migration `20260831120000_security_advisor_phase1.sql` pins `search_path` on fun
 
 Migration `20260831140000_storage_buckets_phase2_private.sql` sets `attachments`, `avatars`, and `form-branding` buckets to **private** (no public listing). The app and edge functions use **signed URLs** at read time via `src/lib/supabase/storageObjectUrl.ts` and `supabase/functions/_shared/storageObjectUrl.ts`. Existing rows that store legacy `/object/public/...` URLs remain compatible because parsers extract the bucket/path and sign on demand.
 
+**Remaining `authenticated_security_definer_function_executable` warnings**
+
+The CRM exposes `SECURITY DEFINER` helpers (`can_view_deal`, `current_user_org_id`, etc.) to the `authenticated` role for RLS and RPC. Supabase Security Advisor will keep flagging those while they stay in `public` and callable via PostgREST — that is expected and safe when the function body enforces org/member checks. Migration `20260831150000_security_advisor_revoke_public_rpc.sql` removes **anonymous** RPC access (`PUBLIC` + `anon`) except `crm_is_initialized()` for the setup gate.
+
 **Leaked password protection (Dashboard, not SQL)**
 
 In **Authentication → Providers → Email**, enable **Prevent use of leaked passwords** (Have I Been Pwned check). This clears the `auth_leaked_password_protection` Security Advisor warning and blocks compromised passwords at sign-up/password change.
