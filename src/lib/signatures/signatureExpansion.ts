@@ -5,6 +5,9 @@ export interface SignatureContext {
   org_name: string;
 }
 
+export const DEFAULT_SMS_SIGNATURE_TEMPLATE =
+  "- {{user_first_name}} {{user_last_name}} | {{org_name}}";
+
 export function expandSignature(
   template: string,
   context: SignatureContext,
@@ -30,4 +33,24 @@ export function parseMessageBodyWithSignature(body: string) {
   }
 
   return { content: body, signature: null as string | null };
+}
+
+export function resolveOrganizationSmsSignature(params: {
+  template: string | null | undefined;
+  orgEnabled: boolean | null | undefined;
+  forceUserSignature: boolean;
+  context: SignatureContext;
+}): { signature: string; signatureRequired: boolean } {
+  const template =
+    params.template?.trim() || DEFAULT_SMS_SIGNATURE_TEMPLATE;
+  const orgEnabled = params.orgEnabled ?? true;
+  const shouldApply = orgEnabled || params.forceUserSignature;
+  const signature = shouldApply
+    ? expandSignature(template, params.context)
+    : "";
+
+  return {
+    signature,
+    signatureRequired: params.forceUserSignature && signature.length > 0,
+  };
 }

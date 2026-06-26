@@ -10,13 +10,15 @@ import { uploadSmsMedia } from "@/modules/messages/smsMediaUpload";
 import { SmsComposerActionsMenu } from "@/modules/messages/composer/SmsComposerActionsMenu";
 import { useSendClientSms } from "@/modules/messages/useClientSms";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
+import { isScopedWorkspaceUser } from "@/lib/permissions/permissionCatalog";
+import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
 import { ClientSmsPhoneField } from "@/modules/messages/ClientSmsPhoneField";
 import { resolveClientSmsPhone } from "@/modules/messages/messageContactUtils";
 import {
   formatUsPhoneDisplayFromAny,
   normalizeUsPhoneToE164,
 } from "@/utils/phone";
-import { useOrganizationSmsSignature } from "@/modules/settings/useOrganizationSmsSignature";
 import { SmsTemplateShortcutTiles } from "@/modules/messages/SmsTemplateShortcutTiles";
 
 type PendingAttachment = {
@@ -53,9 +55,14 @@ export const ClientSmsComposer = ({
 }) => {
   const notify = useNotify();
   const { identity } = useGetIdentity();
+  const isStandardUser = isScopedWorkspaceUser(identity as AccessIdentity | undefined);
   const sendClientSms = useSendClientSms();
-  const { signature, settings: orgSignatureSettings, signatureContext } =
-    useOrganizationSmsSignature();
+  const {
+    signature,
+    settings: orgSignatureSettings,
+    signatureContext,
+    signatureRequired,
+  } = useOrganizationSmsSignature({ forceUserSignature: isStandardUser });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [body, setBody] = useState("");
@@ -71,11 +78,15 @@ export const ClientSmsComposer = ({
   );
 
   useEffect(() => {
+    if (signatureRequired) {
+      setIncludeSignature(true);
+      return;
+    }
     if (signatureDefaultApplied.current) return;
     if (orgSignatureSettings?.sms_signature_enabled == null) return;
     setIncludeSignature(orgSignatureSettings.sms_signature_enabled);
     signatureDefaultApplied.current = true;
-  }, [orgSignatureSettings?.sms_signature_enabled]);
+  }, [orgSignatureSettings?.sms_signature_enabled, signatureRequired]);
 
   const textareaMaxHeightPx = compact ? 144 : 208;
 
@@ -190,12 +201,11 @@ export const ClientSmsComposer = ({
       }
 
       let finalBody = body.trim();
-      if (
+      const shouldIncludeSignature =
         !isInternalNote &&
-        includeSignature &&
         signature &&
-        finalBody.length > 0
-      ) {
+        (signatureRequired || includeSignature);
+      if (shouldIncludeSignature && finalBody.length > 0) {
         finalBody = `${finalBody}\n${signature}`;
       }
 
@@ -246,7 +256,10 @@ export const ClientSmsComposer = ({
     await handleSend();
   };
 
-  const showSignatureToggle = Boolean(signature) && !isInternalNote;
+  const showSignatureToggle =
+    Boolean(signature) && !isInternalNote && !signatureRequired;
+  const showSignatureBadge =
+    Boolean(signature) && !isInternalNote && signatureRequired;
 
   return (
     <form
@@ -292,6 +305,10 @@ export const ClientSmsComposer = ({
               />
               Signature
             </label>
+          ) : showSignatureBadge ? (
+            <span className="inline-flex shrink-0 items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              Signature on
+            </span>
           ) : null}
         </div>
       ) : resolvedExternalPhone ? (
@@ -302,6 +319,8 @@ export const ClientSmsComposer = ({
           </span>
           <span className="text-muted-foreground"> · Unsaved number</span>
         </p>
+      ) : showSignatureBadge ? (
+        <p className="text-xs font-medium text-primary">Signature on</p>
       ) : null}
 
       {!isInternalNote ? (
@@ -378,9 +397,10 @@ export const ClientSmsComposer = ({
           isInternalNote={isInternalNote}
           onInternalNoteChange={setIsInternalNote}
           canWriteInternalNotes={canWriteInternalNotes}
-          includeSignature={includeSignature}
+          includeSignature={signatureRequired || includeSignature}
           onIncludeSignatureChange={setIncludeSignature}
           hasSignature={Boolean(signature)}
+          signatureRequired={signatureRequired}
           onAttachFile={() => fileInputRef.current?.click()}
           onInsertFormLink={insertFormLink}
           compact={compact}

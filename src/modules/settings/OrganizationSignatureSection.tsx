@@ -15,14 +15,14 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
-import { expandSignature } from "@/lib/signatures/signatureExpansion";
+import {
+  DEFAULT_SMS_SIGNATURE_TEMPLATE,
+  expandSignature,
+} from "@/lib/signatures/signatureExpansion";
 import {
   useOrganizationSmsSignature,
   type OrganizationSmsSignatureSettings,
 } from "@/modules/settings/useOrganizationSmsSignature";
-
-const DEFAULT_TEMPLATE =
-  "- {{user_first_name}} {{user_last_name}} | {{org_name}}";
 
 export const OrganizationSignatureSection = () => {
   const notify = useNotify();
@@ -40,7 +40,7 @@ export const OrganizationSignatureSection = () => {
 
   useEffect(() => {
     if (!org) return;
-    setTemplate(org.sms_signature_template ?? DEFAULT_TEMPLATE);
+    setTemplate(org.sms_signature_template ?? DEFAULT_SMS_SIGNATURE_TEMPLATE);
     setEnabled(org.sms_signature_enabled ?? true);
   }, [org]);
 
@@ -64,7 +64,7 @@ export const OrganizationSignatureSection = () => {
       const { data, error } = await supabase
         .from("organizations")
         .update({
-          sms_signature_template: template.trim() || DEFAULT_TEMPLATE,
+          sms_signature_template: template.trim() || DEFAULT_SMS_SIGNATURE_TEMPLATE,
           sms_signature_enabled: enabled,
         })
         .eq("id", org.id)
@@ -142,7 +142,7 @@ export const OrganizationSignatureSection = () => {
                 onChange={(event) => setTemplate(event.target.value)}
                 rows={3}
                 maxLength={200}
-                placeholder={DEFAULT_TEMPLATE}
+                placeholder={DEFAULT_SMS_SIGNATURE_TEMPLATE}
               />
               <p className="text-xs text-muted-foreground">
                 {template.length}/200 characters

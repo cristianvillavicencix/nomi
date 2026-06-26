@@ -3,7 +3,7 @@ import { useGetIdentity, useGetOne } from "ra-core";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 import {
-  expandSignature,
+  resolveOrganizationSmsSignature,
   type SignatureContext,
 } from "@/lib/signatures/signatureExpansion";
 
@@ -14,7 +14,11 @@ export type OrganizationSmsSignatureSettings = {
   sms_signature_enabled: boolean;
 };
 
-export function useOrganizationSmsSignature() {
+export function useOrganizationSmsSignature(options?: {
+  /** Scoped standard users always sign outbound SMS, even when org-wide signature is off. */
+  forceUserSignature?: boolean;
+}) {
+  const forceUserSignature = options?.forceUserSignature ?? false;
   const { data: identity } = useGetIdentity();
   const { data: member } = useGetOne<OrganizationMember>(
     "organization_members",
@@ -44,14 +48,17 @@ export function useOrganizationSmsSignature() {
     org_name: query.data?.name ?? "",
   };
 
-  const signature =
-    query.data?.sms_signature_template && query.data.sms_signature_enabled
-      ? expandSignature(query.data.sms_signature_template, signatureContext)
-      : "";
+  const { signature, signatureRequired } = resolveOrganizationSmsSignature({
+    template: query.data?.sms_signature_template,
+    orgEnabled: query.data?.sms_signature_enabled,
+    forceUserSignature,
+    context: signatureContext,
+  });
 
   return {
     ...query,
     signature,
+    signatureRequired,
     signatureContext,
     settings: query.data,
   };

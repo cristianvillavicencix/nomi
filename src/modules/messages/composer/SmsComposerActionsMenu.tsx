@@ -35,6 +35,7 @@ export const SmsComposerActionsMenu = ({
   includeSignature,
   onIncludeSignatureChange,
   hasSignature,
+  signatureRequired = false,
   onAttachFile,
   onInsertFormLink,
   compact,
@@ -49,6 +50,7 @@ export const SmsComposerActionsMenu = ({
   includeSignature: boolean;
   onIncludeSignatureChange: (checked: boolean) => void;
   hasSignature: boolean;
+  signatureRequired?: boolean;
   onAttachFile: () => void;
   onInsertFormLink: (url: string, label: string) => void;
   compact?: boolean;
@@ -105,7 +107,7 @@ export const SmsComposerActionsMenu = ({
             Internal note
           </DropdownMenuCheckboxItem>
         ) : null}
-        {hasSignature ? (
+        {hasSignature && !signatureRequired ? (
           <DropdownMenuCheckboxItem
             checked={includeSignature}
             onCheckedChange={(value) => onIncludeSignatureChange(value === true)}
