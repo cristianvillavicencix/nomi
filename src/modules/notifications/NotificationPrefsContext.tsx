@@ -12,6 +12,8 @@ import { useGetIdentity, useGetOne, useNotify } from "ra-core";
 
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
+import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import {
   getDesktopNotificationSupport,
   requestDesktopNotifications,
@@ -23,6 +25,7 @@ import {
   isNotificationCategoryEnabled,
   parseNotificationPrefs,
 } from "@/modules/notifications/notificationPrefs";
+import { canAccessNotificationCategory } from "@/modules/notifications/notificationCategoryAccess";
 import { pushNotificationHistory } from "@/modules/notifications/notificationHistory";
 import type {
   NotificationCategory,
@@ -132,6 +135,13 @@ export const NotificationPrefsProvider = ({
 
   const pushNotification = useCallback(
     (input: PushNotificationInput) => {
+      if (
+        !canAccessNotificationCategory(input.category, (capabilityId) =>
+          hasMemberCapability(identity as AccessIdentity | undefined, capabilityId),
+        )
+      ) {
+        return;
+      }
       if (!isNotificationCategoryEnabled(prefs, input.category)) return;
 
       const shouldSound = input.sound ?? true;
@@ -173,7 +183,7 @@ export const NotificationPrefsProvider = ({
         });
       }
     },
-    [desktopSupport, prefs],
+    [desktopSupport, identity, prefs],
   );
 
   const value = useMemo(

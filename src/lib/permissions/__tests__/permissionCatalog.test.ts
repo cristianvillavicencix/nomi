@@ -44,6 +44,9 @@ assert.equal(hasCapability(userPerms, "messaging.send"), true);
 assert.equal(hasCapability(userPerms, "crm.pipeline.view"), true);
 assert.equal(hasCapability(userPerms, "crm.upload_images"), true);
 assert.equal(hasCapability(userPerms, "view_amounts.show"), false);
+assert.equal(hasCapability(userPerms, "support.tickets.view"), false);
+assert.equal(hasCapability(userPerms, "support.tickets.manage"), false);
+assert.equal(hasCapability(userPerms, "support.messages.send"), false);
 assert.equal(hasCapability(userPerms, "admin.settings.manage"), false);
 
 const adminPerms = permissionsMapFromRolePreset("admin");

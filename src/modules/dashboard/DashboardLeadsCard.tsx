@@ -21,6 +21,7 @@ import {
   isLeadTerminalStage,
 } from "@/modules/leads/leadFollowUpUtils";
 import { DashboardModuleCard } from "@/modules/dashboard/DashboardModuleCard";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 
 const LEAD_STATUS_FILTER = {
   "status@in": `(${LBS_LEAD_STATUSES_FOR_FILTER.map((status) => `"${status}"`).join(",")})`,
@@ -38,6 +39,7 @@ const isActionableLead = (contact: Contact) =>
   !isLeadTerminalStage(contact.lead_stage);
 
 export const DashboardLeadsCard = () => {
+  const canViewLeads = useMemberCapability("crm.contacts.view");
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: leads = [], isPending } = useGetList<Contact>(
@@ -47,8 +49,10 @@ export const DashboardLeadsCard = () => {
       pagination: { page: 1, perPage: 100 },
       sort: { field: "last_seen", order: "DESC" },
     },
-    { staleTime: 30_000 },
+    { staleTime: 30_000, enabled: canViewLeads },
   );
+
+  if (!canViewLeads) return null;
 
   const actionableLeads = useMemo(
     () => leads.filter(isActionableLead),

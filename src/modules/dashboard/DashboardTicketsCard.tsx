@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Ticket } from "@/modules/types";
 import { DashboardModuleCard } from "@/modules/dashboard/DashboardModuleCard";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { NewTicketDialog } from "@/modules/tickets/NewTicketDialog";
 import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
 import { isTicketUnread } from "@/modules/tickets/ticketReadState";
@@ -22,6 +23,7 @@ const ACTIVE_TICKET_FILTER = {
 };
 
 export const DashboardTicketsCard = () => {
+  const canViewTickets = useMemberCapability("support.tickets.view");
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: tickets = [], isPending } = useGetList<Ticket>(
@@ -31,8 +33,10 @@ export const DashboardTicketsCard = () => {
       pagination: { page: 1, perPage: 100 },
       sort: { field: "updated_at", order: "DESC" },
     },
-    { staleTime: 30_000 },
+    { staleTime: 30_000, enabled: canViewTickets },
   );
+
+  if (!canViewTickets) return null;
 
   const ticketIds = useMemo(
     () => tickets.map((ticket) => String(ticket.id)),

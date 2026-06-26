@@ -1,5 +1,5 @@
 import { Settings, User } from "lucide-react";
-import { useUserMenu } from "ra-core";
+import { useCanAccess, useUserMenu } from "ra-core";
 import { Link } from "react-router";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { SettingsPage } from "../settings/SettingsPage";
@@ -14,14 +14,34 @@ export const CRMUserMenuItems = () => (
 
 const SettingsMenu = () => {
   const userMenuContext = useUserMenu();
+  const { canAccess: canEditSettings, isPending: settingsPending } =
+    useCanAccess({ resource: "configuration", action: "edit" });
+  const { canAccess: canManageUsers, isPending: usersPending } = useCanAccess({
+    resource: "organization_members",
+    action: "edit",
+  });
+
   if (!userMenuContext) {
     throw new Error("<SettingsMenu> must be used inside <UserMenu>");
   }
+
+  if (settingsPending || usersPending) {
+    return null;
+  }
+
+  if (!canEditSettings && !canManageUsers) {
+    return null;
+  }
+
+  const settingsPath = canEditSettings
+    ? SettingsPage.path
+    : `${SettingsPage.path}?tab=users`;
+
   return (
     <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
-      <Link to={SettingsPage.path} className="flex items-center gap-2">
+      <Link to={settingsPath} className="flex items-center gap-2">
         <Settings />
-        General
+        Settings
       </Link>
     </DropdownMenuItem>
   );

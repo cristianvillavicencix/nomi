@@ -1,6 +1,6 @@
 import { Bell, Loader2, Save } from "lucide-react";
-import { useNotify } from "ra-core";
-import { useCallback, useEffect, useState } from "react";
+import { useGetIdentity, useNotify } from "ra-core";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 
 import { Button } from "@/components/ui/button";
@@ -14,68 +14,26 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
+import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
 import { useNotificationPrefsContext } from "@/modules/notifications/NotificationPrefsContext";
+import {
+  filterNotificationCategoryGroups,
+  prefsKeyForCategory,
+  sanitizeNotificationPrefsForCapabilities,
+} from "@/modules/notifications/notificationCategoryAccess";
 import {
   DEFAULT_NOTIFICATION_PREFS,
   parseNotificationPrefs,
 } from "@/modules/notifications/notificationPrefs";
 import {
   NOTIFICATION_CATEGORY_LABELS,
-  type NotificationCategory,
   type NotificationPrefs,
 } from "@/modules/notifications/types";
 
-const CATEGORY_GROUPS: {
-  title: string;
-  keys: NotificationCategory[];
-}[] = [
-  {
-    title: "Messages",
-    keys: ["messages_sms", "messages_internal"],
-  },
-  {
-    title: "Tickets",
-    keys: ["tickets_message", "tickets_assigned"],
-  },
-  {
-    title: "Tasks",
-    keys: ["tasks_mention"],
-  },
-  {
-    title: "Leads",
-    keys: ["leads_followup_due", "leads_stale"],
-  },
-  {
-    title: "Bookings",
-    keys: ["bookings_new"],
-  },
-];
-
-const prefsKeyForCategory = (
-  category: NotificationCategory,
-): keyof NotificationPrefs => {
-  switch (category) {
-    case "messages_sms":
-      return "messages_sms";
-    case "messages_internal":
-      return "messages_internal";
-    case "tickets_message":
-      return "tickets_message";
-    case "tickets_assigned":
-      return "tickets_assigned";
-    case "tasks_mention":
-      return "tasks_mention";
-    case "leads_followup_due":
-      return "leads_followup_due";
-    case "leads_stale":
-      return "leads_stale";
-    case "bookings_new":
-      return "bookings_new";
-  }
-};
-
 export const ProfileDesktopNotificationsSection = () => {
   const notify = useNotify();
+  const { identity } = useGetIdentity();
   const {
     prefs,
     desktopSupport,
@@ -84,6 +42,17 @@ export const ProfileDesktopNotificationsSection = () => {
     isSaving,
     refreshDesktopSupport,
   } = useNotificationPrefsContext();
+
+  const hasCapability = useCallback(
+    (capabilityId: string) =>
+      hasMemberCapability(identity as AccessIdentity | undefined, capabilityId),
+    [identity],
+  );
+
+  const visibleCategoryGroups = useMemo(
+    () => filterNotificationCategoryGroups(hasCapability),
+    [hasCapability],
+  );
 
   const [draft, setDraft] = useState<NotificationPrefs>(prefs);
   const [requesting, setRequesting] = useState(false);
@@ -127,12 +96,22 @@ export const ProfileDesktopNotificationsSection = () => {
   };
 
   const save = async () => {
-    await updatePrefs(draft);
+    const sanitized = sanitizeNotificationPrefsForCapabilities(
+      draft,
+      hasCapability,
+    );
+    await updatePrefs(sanitized);
+    setDraft(sanitized);
     notify("Notification preferences saved", { type: "success" });
   };
 
   const resetDefaults = () => {
-    setDraft({ ...DEFAULT_NOTIFICATION_PREFS });
+    setDraft(
+      sanitizeNotificationPrefsForCapabilities(
+        { ...DEFAULT_NOTIFICATION_PREFS },
+        hasCapability,
+      ),
+    );
   };
 
   const isDirty =
@@ -218,7 +197,7 @@ export const ProfileDesktopNotificationsSection = () => {
 
         <Separator />
 
-        {CATEGORY_GROUPS.map((group) => (
+        {visibleCategoryGroups.map((group) => (
           <div key={group.title} className="space-y-2">
             <h3 className="text-sm font-medium">{group.title}</h3>
             <div className="space-y-2">

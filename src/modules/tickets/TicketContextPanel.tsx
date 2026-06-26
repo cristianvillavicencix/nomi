@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FileText, Info, MessageSquare, PanelRightClose } from "lucide-react";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { TicketBillingSidePanel } from "@/modules/tickets/TicketBillingSidePanel";
 import { TicketClientSummaryCard } from "@/modules/tickets/TicketClientSummaryCard";
 import { cn } from "@/lib/utils";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import {
   Sheet,
   SheetContent,
@@ -21,19 +22,28 @@ import {
 
 type ContextTab = "billing" | "sms" | "info";
 
-const CONTEXT_TABS: Array<{ id: ContextTab; label: string; icon: typeof FileText }> =
-  [
-    { id: "billing", label: "Billing", icon: FileText },
-    { id: "sms", label: "SMS", icon: MessageSquare },
-    { id: "info", label: "Info", icon: Info },
-  ];
+const ALL_CONTEXT_TABS: Array<{
+  id: ContextTab;
+  label: string;
+  icon: typeof FileText;
+}> = [
+  { id: "billing", label: "Billing", icon: FileText },
+  { id: "sms", label: "SMS", icon: MessageSquare },
+  { id: "info", label: "Info", icon: Info },
+];
+
+const defaultContextTab = (
+  tabs: Array<(typeof ALL_CONTEXT_TABS)[number]>,
+): ContextTab => tabs[0]?.id ?? "info";
 
 const TicketContextTabs = ({
+  tabs,
   activeTab,
   onChange,
   onCollapse,
   className,
 }: {
+  tabs: Array<(typeof ALL_CONTEXT_TABS)[number]>;
   activeTab: ContextTab;
   onChange: (tab: ContextTab) => void;
   onCollapse?: () => void;
@@ -41,7 +51,7 @@ const TicketContextTabs = ({
 }) => (
   <div className={cn("flex shrink-0 items-center gap-1 border-b px-2 py-2", className)}>
     <div className="flex min-w-0 flex-1 gap-1">
-      {CONTEXT_TABS.map((tab) => {
+      {tabs.map((tab) => {
         const Icon = tab.icon;
         return (
           <button
@@ -132,13 +142,15 @@ const TicketContextBody = ({
 };
 
 const TicketContextCollapsedRail = ({
+  tabs,
   onOpenTab,
 }: {
+  tabs: Array<(typeof ALL_CONTEXT_TABS)[number]>;
   onOpenTab: (tab: ContextTab) => void;
 }) => (
   <aside className="flex w-11 shrink-0 flex-col self-stretch border-l bg-background">
     <div className="flex flex-1 flex-col items-center gap-2 py-3">
-      {CONTEXT_TABS.map((tab) => {
+      {tabs.map((tab) => {
         const Icon = tab.icon;
         return (
           <Tooltip key={tab.id}>
@@ -176,12 +188,23 @@ export const TicketContextPanel = ({
   contact?: Contact | null;
   className?: string;
 }) => {
+  const canViewAmounts = useCanViewAmounts();
+  const contextTabs = useMemo(
+    () =>
+      canViewAmounts
+        ? ALL_CONTEXT_TABS
+        : ALL_CONTEXT_TABS.filter((tab) => tab.id !== "billing"),
+    [canViewAmounts],
+  );
   const [collapsed, setCollapsed] = useState(true);
-  const [activeTab, setActiveTab] = useState<ContextTab>("billing");
+  const [activeTab, setActiveTab] = useState<ContextTab>(() =>
+    defaultContextTab(contextTabs),
+  );
 
   useEffect(() => {
     setCollapsed(true);
-  }, [ticket.id]);
+    setActiveTab(defaultContextTab(contextTabs));
+  }, [ticket.id, contextTabs]);
 
   const openTab = (tab: ContextTab) => {
     setActiveTab(tab);
@@ -189,7 +212,7 @@ export const TicketContextPanel = ({
   };
 
   if (collapsed) {
-    return <TicketContextCollapsedRail onOpenTab={openTab} />;
+    return <TicketContextCollapsedRail tabs={contextTabs} onOpenTab={openTab} />;
   }
 
   return (
@@ -200,6 +223,7 @@ export const TicketContextPanel = ({
       )}
     >
       <TicketContextTabs
+        tabs={contextTabs}
         activeTab={activeTab}
         onChange={setActiveTab}
         onCollapse={() => setCollapsed(true)}
@@ -225,8 +249,22 @@ export const TicketContextSheet = ({
   company?: Company | null;
   contact?: Contact | null;
 }) => {
+  const canViewAmounts = useCanViewAmounts();
+  const contextTabs = useMemo(
+    () =>
+      canViewAmounts
+        ? ALL_CONTEXT_TABS
+        : ALL_CONTEXT_TABS.filter((tab) => tab.id !== "billing"),
+    [canViewAmounts],
+  );
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ContextTab>("billing");
+  const [activeTab, setActiveTab] = useState<ContextTab>(() =>
+    defaultContextTab(contextTabs),
+  );
+
+  useEffect(() => {
+    setActiveTab(defaultContextTab(contextTabs));
+  }, [ticket.id, contextTabs]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -240,7 +278,11 @@ export const TicketContextSheet = ({
         <SheetHeader className="border-b px-4 py-3 text-left">
           <SheetTitle>Ticket context</SheetTitle>
         </SheetHeader>
-        <TicketContextTabs activeTab={activeTab} onChange={setActiveTab} />
+        <TicketContextTabs
+          tabs={contextTabs}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <TicketContextBody
             activeTab={activeTab}

@@ -20,6 +20,7 @@ import type {
 import { applyPriorDealToCreateForm } from "@/modules/deals/applyPriorDealToCreateForm";
 import { buildAutoProjectName } from "@/modules/deals/buildAutoProjectName";
 import { isValidRecordId } from "@/lib/isValidRecordId";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import {
   getLbsProjectStageLabel,
   LBS_DEFAULT_PROJECT_CATEGORY,
@@ -87,6 +88,7 @@ export const LbsDealCreateFields = ({
   seedContact?: Contact | null;
 } = {}) => {
   const { identity } = useGetIdentity();
+  const canViewAmounts = useCanViewAmounts();
   const { control, setValue } = useFormContext<Deal & Record<string, unknown>>();
   const contactId = useWatch({ control, name: "contact_id" });
   const companyIdOnForm = useWatch({ control, name: "company_id" });
@@ -357,14 +359,16 @@ export const LbsDealCreateFields = ({
       </CreateFormFieldRow>
 
       <CreateFormFieldRow>
-        <NumberInput
-          source="amount"
-          label="Amount"
-          helperText={false}
-          validate={optionalPositiveCurrency}
-          min={0}
-          step={0.01}
-        />
+        {canViewAmounts ? (
+          <NumberInput
+            source="amount"
+            label="Amount"
+            helperText={false}
+            validate={optionalPositiveCurrency}
+            min={0}
+            step={0.01}
+          />
+        ) : null}
         <DateInput
           source="expected_closing_date"
           label="Expected close"

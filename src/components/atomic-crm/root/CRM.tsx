@@ -291,9 +291,9 @@ const DesktopAdmin = (props: CoreAdminProps) => {
         <Route
           path={SettingsPage.path}
           element={
-            <ProtectedRoute resource="configuration" action="edit">
+            <SettingsProtectedRoute>
               <SettingsPage />
-            </ProtectedRoute>
+            </SettingsProtectedRoute>
           }
         />
         <Route
@@ -394,6 +394,27 @@ const ProtectedRoute = ({
   }
 
   if (!canAccess) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+const SettingsProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const configuration = useCanAccess({
+    resource: "configuration",
+    action: "edit",
+  });
+  const users = useCanAccess({
+    resource: "organization_members",
+    action: "edit",
+  });
+
+  if (configuration.isPending || users.isPending) {
+    return <Skeleton className="h-24 w-full rounded-xl" />;
+  }
+
+  if (!configuration.canAccess && !users.canAccess) {
     return <Navigate to="/" replace />;
   }
 

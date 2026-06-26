@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import type { ClientInvoice } from "@/modules/types";
 import {
   formatBillingDate,
@@ -23,6 +24,7 @@ const isInvoiceOverdue = (invoice: ClientInvoice) =>
   invoice.due_date < todayIso();
 
 export const DashboardInvoicesCard = () => {
+  const canViewInvoices = useMemberCapability("proposals.view");
   const { data: invoices = [], isPending } = useGetList<ClientInvoice>(
     "client_invoices",
     {
@@ -30,8 +32,10 @@ export const DashboardInvoicesCard = () => {
       pagination: { page: 1, perPage: 100 },
       sort: { field: "due_date", order: "ASC" },
     },
-    { staleTime: 30_000 },
+    { staleTime: 30_000, enabled: canViewInvoices },
   );
+
+  if (!canViewInvoices) return null;
 
   const overdue = useMemo(
     () => invoices.filter(isInvoiceOverdue).length,

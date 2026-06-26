@@ -24,6 +24,8 @@ import {
   useUpdate,
 } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { FinancialAccessDenied } from "@/lib/permissions/FinancialAccessDenied";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import type {
   ClientInvoice,
   Ticket,
@@ -197,6 +199,7 @@ export const TicketBillingSidePanel = ({
   embedView,
   className,
 }: TicketBillingSidePanelProps) => {
+  const canViewAmounts = useCanViewAmounts();
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -212,7 +215,7 @@ export const TicketBillingSidePanel = ({
     return sessionStorage.getItem(STORAGE_KEY) !== "false";
   });
   const [activeView, setActiveView] = useState<ToolsPanelView>(
-    embedView === "sms" ? "sms" : "invoice",
+    embedView === "sms" ? "sms" : canViewAmounts ? "invoice" : "sms",
   );
 
   const [pendingUploads, setPendingUploads] = useState<File[]>([]);
@@ -243,9 +246,13 @@ export const TicketBillingSidePanel = ({
 
   useEffect(() => {
     if (!embedView) return;
-    setActiveView(embedView === "sms" ? "sms" : "invoice");
+    if (embedView === "sms") {
+      setActiveView("sms");
+    } else if (canViewAmounts) {
+      setActiveView("invoice");
+    }
     setCollapsed(false);
-  }, [embedView]);
+  }, [embedView, canViewAmounts]);
 
   const openInvoiceDialog = (
     mode: TicketInvoiceViewMode,
@@ -261,8 +268,12 @@ export const TicketBillingSidePanel = ({
   }, [collapsed]);
 
   useEffect(() => {
-    setActiveView("invoice");
-  }, [ticket.id]);
+    if (canViewAmounts) {
+      setActiveView("invoice");
+    } else {
+      setActiveView("sms");
+    }
+  }, [ticket.id, canViewAmounts]);
 
   const { data: deliverables = [] } = useGetList<TicketDeliverable>(
     "ticket_deliverables",
@@ -1162,16 +1173,17 @@ export const TicketBillingSidePanel = ({
       <>
         <aside className="flex w-11 shrink-0 flex-col self-stretch border-l bg-background">
           <div className="flex flex-1 flex-col items-center gap-2 py-3">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-9 flex-col gap-0.5 py-1"
-                  aria-label="Open invoice tools"
-                  onClick={() => openPanel("invoice")}
-                >
+            {canViewAmounts ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 flex-col gap-0.5 py-1"
+                    aria-label="Open invoice tools"
+                    onClick={() => openPanel("invoice")}
+                  >
                   <FileText className="size-4" />
                   {deliverables.length > 0 ? (
                     <span className="text-[9px] font-medium tabular-nums leading-none">
@@ -1184,6 +1196,7 @@ export const TicketBillingSidePanel = ({
                 Invoice ({deliverables.length} files)
               </TooltipContent>
             </Tooltip>
+            ) : null}
 
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1235,16 +1248,18 @@ export const TicketBillingSidePanel = ({
       >
         {!embedMode ? (
         <div className="flex items-center gap-1 border-b px-2 py-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={panelTabClass("invoice")}
-            onClick={() => setActiveView("invoice")}
-          >
-            <FileText className="size-3.5" />
-            Invoice
-          </Button>
+          {canViewAmounts ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={panelTabClass("invoice")}
+              onClick={() => setActiveView("invoice")}
+            >
+              <FileText className="size-3.5" />
+              Invoice
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
@@ -1256,7 +1271,7 @@ export const TicketBillingSidePanel = ({
             Text
           </Button>
           <div className="flex-1" />
-          {activeView === "invoice" && showNewInvoiceButton ? (
+          {activeView === "invoice" && canViewAmounts && showNewInvoiceButton ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -1294,7 +1309,7 @@ export const TicketBillingSidePanel = ({
             <TooltipContent side="left">Hide panel</TooltipContent>
           </Tooltip>
         </div>
-        ) : embedView === "invoice" && showNewInvoiceButton ? (
+        ) : embedView === "invoice" && canViewAmounts && showNewInvoiceButton ? (
           <div className="flex justify-end border-b px-2 py-2">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1353,7 +1368,11 @@ export const TicketBillingSidePanel = ({
 
           {resolvedView === "invoice" ? (
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-              {renderInvoiceSection()}
+              {canViewAmounts ? (
+                renderInvoiceSection()
+              ) : (
+                <FinancialAccessDenied />
+              )}
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col">

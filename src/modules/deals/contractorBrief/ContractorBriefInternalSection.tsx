@@ -6,6 +6,7 @@ import { TextInput } from "@/components/admin/text-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 import { evaluateCondition } from "@/lib/forms-v2/conditionalLogic";
 import type { LbsDeal } from "@/modules/types";
 import { BusinessHoursBriefField } from "@/modules/deals/BusinessHoursBriefField";
@@ -51,6 +52,31 @@ const readFreeOffersYesNo = (value: unknown) => {
   if (items.includes("Neither") || items.length === 0) return "No";
   if (items.some((entry) => entry.toLowerCase().includes("free"))) return "Yes";
   return "No";
+};
+
+const BriefLogoPreview = ({
+  file,
+}: {
+  file: ReturnType<typeof readBriefUploadedFiles>[number];
+}) => {
+  const previewUrl = useStorageSignedUrl(file.url, {
+    path: file.path,
+    bucket: file.bucket ?? "attachments",
+    defaultBucket: "attachments",
+  });
+
+  if (!previewUrl) return null;
+
+  return (
+    <div className="max-w-xs overflow-hidden rounded-md border bg-muted/20">
+      <img
+        src={previewUrl}
+        alt={file.name}
+        className="aspect-square w-full object-contain p-4"
+      />
+      <p className="truncate border-t px-2 py-1.5 text-xs">{file.name}</p>
+    </div>
+  );
 };
 
 const BriefLogoUpload = ({
@@ -112,16 +138,7 @@ const BriefLogoUpload = ({
           </Button>
         ) : null}
       </div>
-      {file?.url ? (
-        <div className="max-w-xs overflow-hidden rounded-md border bg-muted/20">
-          <img
-            src={file.url}
-            alt={file.name}
-            className="aspect-square w-full object-contain p-4"
-          />
-          <p className="truncate border-t px-2 py-1.5 text-xs">{file.name}</p>
-        </div>
-      ) : null}
+      {file?.url ? <BriefLogoPreview file={file} /> : null}
     </div>
   );
 };

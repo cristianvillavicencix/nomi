@@ -16,7 +16,7 @@ import {
   type ProjectResourceFile,
 } from "@/modules/deals/projectResourceConstants";
 import { formatResourceDate } from "@/modules/deals/projectResourceGrouping";
-import { getProjectResourceSignedUrl } from "@/modules/deals/projectResourceUpload";
+import { resolveStorageDisplayUrl } from "@/lib/supabase/storageObjectUrl";
 import type { DealResource } from "@/modules/types";
 
 type ResourceLightboxProps = {
@@ -28,13 +28,12 @@ type ResourceLightboxProps = {
 
 const resolveResourceUrl = async (file: ProjectResourceFile) => {
   const bucket = file.bucket ?? "project-files";
-  if (bucket === "attachments" && file.src) {
-    return file.src;
-  }
-  if (file.path) {
-    return getProjectResourceSignedUrl(file.path, bucket);
-  }
-  return file.src;
+  const signed = await resolveStorageDisplayUrl(file.src, {
+    path: file.path,
+    bucket,
+    defaultBucket: bucket,
+  });
+  return signed ?? file.src ?? "";
 };
 
 export const ResourceLightbox = ({

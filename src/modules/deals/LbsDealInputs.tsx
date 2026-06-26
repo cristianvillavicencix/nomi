@@ -15,6 +15,8 @@ import type {
   OrganizationMember,
 } from "@/components/atomic-crm/types";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MoneyText } from "@/lib/permissions/MoneyText";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import { buildAutoProjectName } from "@/modules/deals/buildAutoProjectName";
 import { LbsProjectClientFields } from "@/modules/deals/LbsProjectClientFields";
 import { optionalGithubRepo } from "@/modules/deals/githubRepo";
@@ -109,6 +111,7 @@ export const LbsDealInputs = ({
 }: { createStep?: 1 | 2 } = {}) => {
   const showStep = (step: 1 | 2) => !createStep || createStep === step;
   const isMobile = useIsMobile();
+  const canViewAmounts = useCanViewAmounts();
   const isCreateFlow = createStep != null;
   const { identity } = useGetIdentity();
   const { control, setValue, getValues } = useFormContext<
@@ -432,7 +435,7 @@ export const LbsDealInputs = ({
               label="Delivery date"
               helperText={false}
             />
-            {!proposalBudgetLocked ? (
+            {!canViewAmounts ? null : !proposalBudgetLocked ? (
               <NumberInput
                 source="estimated_value"
                 label="Project budget (USD)"
@@ -447,10 +450,7 @@ export const LbsDealInputs = ({
                   Project budget (USD)
                 </p>
                 <p className="mt-1 text-sm font-medium tabular-nums text-foreground">
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                  }).format(toNumber(selectedProposal?.amount) ?? 0)}
+                  <MoneyText value={toNumber(selectedProposal?.amount) ?? 0} />
                 </p>
               </div>
             )}

@@ -3,13 +3,10 @@ import { ListChecks } from "lucide-react";
 import { useGetList } from "ra-core";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
+import { MoneyText } from "@/lib/permissions/MoneyText";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import type { Contract, LbsDeal, Proposal } from "@/modules/types";
 import type { FormSubmissionV2 } from "@/modules/forms/types";
-
-const formatMoney = (value?: number | null) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    Number(value ?? 0),
-  );
 
 const ResourceSection = ({
   title,
@@ -44,10 +41,12 @@ const LinkedRecordList = <
   items,
   getHref,
   getLabel,
+  showAmounts,
 }: {
   items: T[];
   getHref: (item: T) => string;
   getLabel: (item: T) => string;
+  showAmounts: boolean;
 }) => (
   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     {items.map((item) => (
@@ -64,9 +63,9 @@ const LinkedRecordList = <
             </Badge>
           ) : null}
         </div>
-        {"amount" in item && item.amount != null ? (
+        {showAmounts && "amount" in item && item.amount != null ? (
           <div className="mt-3 text-muted-foreground">
-            {formatMoney(item.amount)}
+            <MoneyText value={item.amount} />
           </div>
         ) : null}
       </Link>
@@ -79,6 +78,7 @@ export const ProjectResourceLinkedDocs = ({
 }: {
   dealId: LbsDeal["id"];
 }) => {
+  const canViewAmounts = useCanViewAmounts();
   const { data: proposals = [], isPending: proposalsPending } =
     useGetList<Proposal>(
       "proposals",
@@ -129,6 +129,7 @@ export const ProjectResourceLinkedDocs = ({
           items={proposals}
           getHref={(item) => `/proposals/${item.id}/show`}
           getLabel={(item) => item.title}
+          showAmounts={canViewAmounts}
         />
       </ResourceSection>
 
@@ -137,6 +138,7 @@ export const ProjectResourceLinkedDocs = ({
           items={contracts}
           getHref={(item) => `/contracts/${item.id}/show`}
           getLabel={(item) => item.title}
+          showAmounts={canViewAmounts}
         />
       </ResourceSection>
 

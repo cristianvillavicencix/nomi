@@ -9,6 +9,10 @@ import type { Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import {
+  maskAmountIfNeeded,
+  useCanViewAmounts,
+} from "@/lib/permissions/useMaskedAmount";
 import { resolveInvoiceOrganizationName } from "@/modules/billing/invoiceEmailTemplate";
 import type { ClientInvoice, Conversation, Ticket, TicketDeliverable } from "@/modules/types";
 import { getDeliverablesForInvoice } from "@/modules/tickets/ticketInvoiceTabs";
@@ -30,7 +34,6 @@ import {
   buildTicketPaymentReminderSmsText,
   buildTicketPaymentSmsText,
   buildTicketPaymentThankYouSmsText,
-  formatTicketInvoicePreviewMoney,
   resolveTicketSmsServiceSubject,
 } from "@/modules/tickets/ticketInvoicePreview";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -60,6 +63,7 @@ export const TicketToolsClientSms = ({
   const { title, companyLegalName } = useConfigurationContext();
   const { smsEnabled, isPending: messagingPending } = useMessagingEnabled();
   const canSendMessages = useMemberCapability("messaging.send");
+  const canViewAmounts = useCanViewAmounts();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [composerPrefill, setComposerPrefill] = useState<{
@@ -95,7 +99,8 @@ export const TicketToolsClientSms = ({
   );
 
   const canUseQuickActions =
-    activeInvoice?.status === "sent" || activeInvoice?.status === "paid";
+    canViewAmounts &&
+    (activeInvoice?.status === "sent" || activeInvoice?.status === "paid");
 
   const { data: shareLink } = useQuery({
     queryKey: ["ticket-sms-share", activeInvoice?.id],
@@ -142,8 +147,9 @@ export const TicketToolsClientSms = ({
         ticket,
         contact,
         invoiceNumber: activeInvoice.invoice_number,
-        amountFormatted: formatTicketInvoicePreviewMoney(
+        amountFormatted: maskAmountIfNeeded(
           Number(activeInvoice.amount) || 0,
+          canViewAmounts,
         ),
       });
       const filesDelivered = buildTicketDeliverySmsText({

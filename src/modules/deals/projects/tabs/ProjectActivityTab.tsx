@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useGetList } from "ra-core";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -10,6 +11,8 @@ import {
 } from "@/components/ui/table";
 import { AuthorBadge } from "@/components/atomic-crm/accountability/AuthorBadge";
 import { formatDateTime } from "@/modules/clients/clientShowUtils";
+import { FINANCIAL_DEAL_ACTIVITY_TYPES } from "@/lib/permissions/financialVisibility";
+import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import type { DealActivityUnified, LbsDeal } from "@/modules/types";
 
 const ActivityLoading = () => (
@@ -21,6 +24,7 @@ const ActivityLoading = () => (
 );
 
 export const ProjectActivityTab = ({ record }: { record: LbsDeal }) => {
+  const canViewAmounts = useCanViewAmounts();
   const { data: activities = [], isPending } = useGetList<DealActivityUnified>(
     "deal_activity_unified",
     {
@@ -31,9 +35,16 @@ export const ProjectActivityTab = ({ record }: { record: LbsDeal }) => {
     { staleTime: 30_000 },
   );
 
+  const visibleActivities = useMemo(() => {
+    if (canViewAmounts) return activities;
+    return activities.filter(
+      (activity) => !FINANCIAL_DEAL_ACTIVITY_TYPES.has(activity.activity_type),
+    );
+  }, [activities, canViewAmounts]);
+
   if (isPending) return <ActivityLoading />;
 
-  if (activities.length === 0) {
+  if (visibleActivities.length === 0) {
     return (
       <p className="px-4 py-8 text-center text-sm text-muted-foreground">
         No activity yet.
@@ -50,7 +61,7 @@ export const ProjectActivityTab = ({ record }: { record: LbsDeal }) => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {activities.map((activity) => (
+        {visibleActivities.map((activity) => (
           <TableRow
             key={`${activity.activity_type}-${activity.activity_id}`}
           >

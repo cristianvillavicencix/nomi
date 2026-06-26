@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Paperclip, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 import {
   isImageResource,
   type ProjectResourceTabCategory,
 } from "@/modules/deals/projectResourceConstants";
 import { formatResourceDate } from "@/modules/deals/projectResourceGrouping";
-import { getProjectResourceSignedUrl } from "@/modules/deals/projectResourceUpload";
 import type { DealResource } from "@/modules/types";
 
 type ResourceMediaCardProps = {
@@ -19,34 +19,12 @@ type ResourceMediaCardProps = {
 
 const useResourcePreviewUrl = (resource: DealResource) => {
   const file = resource.file;
-  const [previewUrl, setPreviewUrl] = useState(file.src ?? "");
-
-  useEffect(() => {
-    let cancelled = false;
-    const bucket = file.bucket ?? "project-files";
-    if (bucket === "attachments" && file.src) {
-      setPreviewUrl(file.src);
-      return;
-    }
-    if (!file.path) {
-      setPreviewUrl(file.src ?? "");
-      return;
-    }
-
-    void getProjectResourceSignedUrl(file.path, bucket)
-      .then((url) => {
-        if (!cancelled) setPreviewUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setPreviewUrl(file.src ?? "");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [file.bucket, file.path, file.src]);
-
-  return previewUrl;
+  const bucket = file.bucket ?? "project-files";
+  return useStorageSignedUrl(file.src, {
+    path: file.path,
+    bucket,
+    defaultBucket: bucket,
+  });
 };
 
 export const ResourceMediaCard = ({

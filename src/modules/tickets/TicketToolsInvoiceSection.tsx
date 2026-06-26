@@ -1,6 +1,6 @@
 import { FileText } from "lucide-react";
 import type { ClientInvoice } from "@/modules/types";
-import { formatSupplementMoney } from "@/modules/tickets/supplementPricing";
+import { MoneyText } from "@/lib/permissions/MoneyText";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,6 @@ export const TicketToolsInvoiceSection = ({
   onView,
 }: TicketToolsInvoiceSectionProps) => {
   const badge = invoiceStatusBadge(invoice.status);
-  const amount = Number(invoice.amount) || 0;
   const paidAt = invoice.paid_at ? new Date(invoice.paid_at) : null;
 
   return (
@@ -51,7 +50,7 @@ export const TicketToolsInvoiceSection = ({
             {invoice.invoice_number || `Invoice #${invoice.id}`}
           </p>
           <p className="mt-0.5 text-2xl font-semibold tabular-nums tracking-tight">
-            {formatSupplementMoney(amount)}
+            <MoneyText value={Number(invoice.amount) || 0} />
           </p>
         </div>
         <Badge variant="outline" className={cn("shrink-0", badge.className)}>

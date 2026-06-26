@@ -100,9 +100,9 @@ const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: 
   // Area 5 — Forms & Support
   { id: "forms.manage", area: "Forms & support", label: "Manage web forms", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "forms.submissions.view", area: "Forms & support", label: "View form submissions", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "support.tickets.view", area: "Forms & support", label: "View tickets", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
-  { id: "support.tickets.manage", area: "Forms & support", label: "Manage tickets", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
-  { id: "support.messages.send", area: "Forms & support", label: "Send ticket messages", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "support.tickets.view", area: "Forms & support", label: "View tickets", scopeable: true, matrix: { super_admin: true, admin: true, user: false, read_only: true } },
+  { id: "support.tickets.manage", area: "Forms & support", label: "Manage tickets", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "support.messages.send", area: "Forms & support", label: "Send ticket messages", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   // Area 6 — Deal operations
   { id: "deal_operations.resources.view", area: "Deal operations", label: "View project resources", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   { id: "deal_operations.resources.manage", area: "Deal operations", label: "Manage project resources", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
@@ -158,7 +158,7 @@ const ROLE_DESCRIPTIONS: Record<RoleSlug, { label: string; description: string }
   user: {
     label: "User",
     description:
-      "Assigned projects only — tasks, calendar, and messaging on those projects; no leads, clients, proposals, or amounts",
+      "Assigned projects only — tasks, calendar, and messaging on those projects; no leads, clients, proposals, tickets, or amounts unless granted",
   },
   read_only: {
     label: "Read-only",
