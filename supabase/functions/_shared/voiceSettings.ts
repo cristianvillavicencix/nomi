@@ -117,9 +117,11 @@ export async function getVoiceSettingsSecrets(
 
   return {
     org_id: orgId,
-    twilio_account_sid: smsSecrets?.twilio_account_sid ?? null,
+    twilio_account_sid:
+      smsSecrets?.twilio_account_sid ?? data.twilio_account_sid ?? null,
     twilio_auth_token: smsSecrets?.twilio_auth_token ?? null,
-    twilio_phone_number: smsSecrets?.twilio_phone_number ?? null,
+    twilio_phone_number:
+      smsSecrets?.twilio_phone_number ?? data.twilio_phone_number ?? null,
     voice_enabled: data.voice_enabled === true,
     voice_twiml_app_sid: data.voice_twiml_app_sid ?? null,
     voice_api_key_sid: data.voice_api_key_sid ?? null,
@@ -148,22 +150,26 @@ export async function findOrgVoiceSettingsByTwimlAppSid(applicationSid: string) 
   return getVoiceSettingsSecrets(Number(data.org_id));
 }
 
-export function assertVoiceConfigured(
+/** Browser dialer token — needs Account SID + API key, not Auth Token. */
+export function assertVoiceTokenConfigured(
   settings: VoiceSettingsSecrets | null,
 ): asserts settings is VoiceSettingsSecrets {
   if (!settings?.voice_enabled) {
-    throw new Error("Voice calling is not enabled");
+    throw new Error(
+      "Voice calling is not enabled. Turn it on in Settings → Communications.",
+    );
   }
   const accountSid = settings.twilio_account_sid?.trim();
-  const authToken = settings.twilio_auth_token?.trim();
   const twimlAppSid = settings.voice_twiml_app_sid?.trim();
   const apiKeySid = settings.voice_api_key_sid?.trim();
   const apiKeySecret = settings.voice_api_key_secret?.trim();
   const callerId =
     settings.voice_caller_id?.trim() || settings.twilio_phone_number?.trim();
 
-  if (!accountSid || !authToken) {
-    throw new Error("Twilio Account SID and Auth Token are required for voice");
+  if (!accountSid) {
+    throw new Error(
+      "Twilio Account SID is missing. Re-save Twilio SMS settings in Settings → Communications, then try again.",
+    );
   }
   if (!twimlAppSid) {
     throw new Error("TwiML App SID is required for voice");
@@ -173,6 +179,19 @@ export function assertVoiceConfigured(
   }
   if (!callerId) {
     throw new Error("Outbound caller ID is required for voice");
+  }
+}
+
+/** TwiML webhooks — needs Auth Token for signature validation. */
+export function assertVoiceConfigured(
+  settings: VoiceSettingsSecrets | null,
+): asserts settings is VoiceSettingsSecrets {
+  assertVoiceTokenConfigured(settings);
+  const authToken = settings.twilio_auth_token?.trim();
+  if (!authToken) {
+    throw new Error(
+      "Twilio Auth Token is missing. Re-save your Auth Token in Settings → Communications → Twilio SMS.",
+    );
   }
 }
 

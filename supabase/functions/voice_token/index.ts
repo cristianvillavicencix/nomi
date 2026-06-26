@@ -5,7 +5,7 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import {
-  assertVoiceConfigured,
+  assertVoiceTokenConfigured,
   getVoiceSettingsSecrets,
 } from "../_shared/voiceSettings.ts";
 import { createTwilioVoiceAccessToken } from "../_shared/twilioAccessToken.ts";
@@ -36,7 +36,7 @@ Deno.serve((req: Request) =>
 
         const settings = await getVoiceSettingsSecrets(Number(member.org_id));
         try {
-          assertVoiceConfigured(settings);
+          assertVoiceTokenConfigured(settings);
         } catch (error) {
           return createErrorResponse(
             503,
