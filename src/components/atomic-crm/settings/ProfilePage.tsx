@@ -38,6 +38,7 @@ import type { CrmDataProvider } from "../providers/types";
 import type { OrganizationMember, OrganizationMemberFormData } from "../types";
 import { ProfileNotificationsSection } from "./ProfileNotificationsSection";
 import { ProfileDesktopNotificationsSection } from "@/modules/notifications/ProfileDesktopNotificationsSection";
+import { ProfileCalendarSubscriptionSection } from "@/modules/calendar/ProfileCalendarSubscriptionSection";
 import { EditAvatarDialog } from "@/components/avatar/EditAvatarDialog";
 import {
   initialsOf,
@@ -225,6 +226,7 @@ const ProfileForm = ({
       </Card>
       <ProfileNotificationsSection />
       <ProfileDesktopNotificationsSection />
+      <ProfileCalendarSubscriptionSection />
       {record ? (
         <EditAvatarDialog
           open={avatarDialogOpen}

@@ -335,6 +335,9 @@ verify_jwt = false
 [functions.send_calendar_reminders]
 verify_jwt = false
 
+[functions.calendar_feed]
+verify_jwt = false
+
 [functions.website_monitor_check]
 verify_jwt = false
 

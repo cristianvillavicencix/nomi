@@ -310,6 +310,29 @@ export const orgProvider = {
 
     invalidateResourceQueries("organization_pipeline_stages");
   },
+  async ensureCalendarFeedToken(options?: { regenerate?: boolean }) {
+    const { data, error } = await invokeEdgeFunction<{
+      token: string;
+      feed_url: string;
+      webcal_url: string;
+    }>("calendar_feed", {
+      method: "POST",
+      body: options ?? {},
+    });
+
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to load calendar subscription",
+      );
+    }
+
+    if (!data?.token || !data.feed_url || !data.webcal_url) {
+      throw new Error("Invalid calendar subscription response");
+    }
+
+    return data;
+  },
   async getPlatformAuthUsers() {
     const { data, error } = await invokeEdgeFunction<{
       users: Array<{

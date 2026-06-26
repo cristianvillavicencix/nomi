@@ -1366,6 +1366,13 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     users: [],
     total: 0,
   }),
+  ensureCalendarFeedToken: async () => ({
+    token: "demo-feed-token",
+    feed_url:
+      "https://example.supabase.co/functions/v1/calendar_feed?token=demo-feed-token",
+    webcal_url:
+      "webcal://example.supabase.co/functions/v1/calendar_feed?token=demo-feed-token",
+  }),
   getMessagingSettings: async () => ({
     org_id: 1,
     twilio_account_sid: null,
