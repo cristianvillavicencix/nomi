@@ -48,10 +48,15 @@ import {
   type TicketReplyAttachment,
 } from "@/modules/tickets/uploadTicketAttachment";
 import {
-  isTicketReplyAttachmentTooLarge,
-  TICKET_REPLY_ATTACHMENT_HINT,
+  buildLargeFileTransferComposerHtml,
+  insertHtmlAboveSignatureHtml,
+  LARGE_FILE_TRANSFER_URL,
+  openLargeFileTransferUpload,
+  TICKET_REPLY_ATTACHMENT_HINT_AFTER,
+  TICKET_REPLY_ATTACHMENT_HINT_BEFORE,
   ticketReplyAttachmentTooLargeMessage,
-} from "@/modules/tickets/ticketReplyAttachmentLimits";
+} from "@/modules/tickets/ticketLargeFileTransfer";
+import { isTicketReplyAttachmentTooLarge } from "@/modules/tickets/ticketReplyAttachmentLimits";
 import { TicketPendingAttachmentItem } from "@/modules/tickets/TicketPendingAttachmentItem";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -418,6 +423,28 @@ export const TicketReplyForm = ({
     }
   }, []);
 
+  const insertLargeFileTransferBlock = useCallback((fileName?: string) => {
+    setComposeMode("reply");
+    setIsExpanded(true);
+    setIsMinimized(false);
+    setBodyHtml((current) =>
+      insertHtmlAboveSignatureHtml(
+        current,
+        buildLargeFileTransferComposerHtml(fileName),
+      ),
+    );
+    openLargeFileTransferUpload();
+    requestAnimationFrame(() => editorRef.current?.focus());
+  }, []);
+
+  const handleLargeFileTransferClick = () => {
+    insertLargeFileTransferBlock();
+    notify(
+      "Upload at transfer.it, then replace the download link placeholder in your message.",
+      { type: "info" },
+    );
+  };
+
   const addPendingFile = (file: File) => {
     if (pendingFiles.length >= MAX_TICKET_ATTACHMENTS) {
       notify(`You can attach up to ${MAX_TICKET_ATTACHMENTS} files`, {
@@ -431,7 +458,10 @@ export const TicketReplyForm = ({
         return;
       }
     } else if (isTicketReplyAttachmentTooLarge(file.size)) {
-      notify(ticketReplyAttachmentTooLargeMessage(file.name), { type: "error" });
+      insertLargeFileTransferBlock(file.name);
+      notify(ticketReplyAttachmentTooLargeMessage(file.name), {
+        type: "warning",
+      });
       return;
     }
 
@@ -952,7 +982,16 @@ export const TicketReplyForm = ({
         ) : null}
 
         <p className="border-b px-5 py-1.5 text-xs text-muted-foreground">
-          {TICKET_REPLY_ATTACHMENT_HINT}
+          {TICKET_REPLY_ATTACHMENT_HINT_BEFORE}
+          <a
+            href={LARGE_FILE_TRANSFER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline underline-offset-2"
+          >
+            transfer.it
+          </a>
+          {TICKET_REPLY_ATTACHMENT_HINT_AFTER}
         </p>
 
         <input
@@ -978,6 +1017,7 @@ export const TicketReplyForm = ({
           company={company}
           onInsertTemplate={handleInsertTemplate}
           onAttachClick={() => fileInputRef.current?.click()}
+          onLargeFileTransferClick={handleLargeFileTransferClick}
         />
 
         <TicketReplyRichComposer

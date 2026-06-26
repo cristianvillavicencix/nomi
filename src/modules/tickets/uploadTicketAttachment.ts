@@ -2,8 +2,8 @@ import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import {
   isTicketReplyAttachmentTooLarge,
   MAX_TICKET_REPLY_ATTACHMENT_BYTES,
-  ticketReplyAttachmentTooLargeMessage,
 } from "@/modules/tickets/ticketReplyAttachmentLimits";
+import { ticketReplyAttachmentTooLargeMessage } from "@/modules/tickets/ticketLargeFileTransfer";
 
 export const MAX_TICKET_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_TICKET_ATTACHMENTS = 10;
