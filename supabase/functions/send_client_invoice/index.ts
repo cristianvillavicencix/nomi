@@ -34,6 +34,7 @@ type SendBody = {
   sms_body?: string;
   contact_id?: number;
   link_only?: boolean;
+  sms_only?: boolean;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -156,6 +157,7 @@ Deno.serve(
         const body = (await req.json()) as SendBody;
         const invoiceId = Number(body.invoice_id);
         const linkOnly = body.link_only === true;
+        const smsOnly = body.sms_only === true;
         const to = String(body.to ?? "")
           .trim()
           .toLowerCase();
@@ -173,17 +175,17 @@ Deno.serve(
           return createErrorResponse(400, "Invalid invoice_id");
         }
 
-        if (linkOnly) {
+        if (linkOnly || smsOnly) {
           if (!smsTo || !smsBody) {
             return createErrorResponse(
               400,
-              "sms_to and sms_body are required for link-only sends",
+              "sms_to and sms_body are required for text delivery",
             );
           }
 
           const { data: invoice } = await supabaseAdmin
             .from("client_invoices")
-            .select("id, org_id, status, contact_id")
+            .select("id, org_id, status, contact_id, recipient_email")
             .eq("id", invoiceId)
             .eq("org_id", member.org_id)
             .maybeSingle();
@@ -196,6 +198,13 @@ Deno.serve(
             return createErrorResponse(400, "Void invoices cannot be shared");
           }
 
+          if (smsOnly && (invoice.status === "paid")) {
+            return createErrorResponse(
+              400,
+              "Paid invoices cannot be sent again",
+            );
+          }
+
           const smsOutcome = await sendInvoiceSms({
             orgId: member.org_id,
             memberId: Number(member.id),
@@ -203,6 +212,55 @@ Deno.serve(
             body: smsBody,
             contactId: contactId ?? invoice.contact_id ?? null,
           });
+
+          if (smsOnly) {
+            let recipientEmail = String(invoice.recipient_email ?? "").trim();
+            if (!recipientEmail && invoice.contact_id) {
+              const { data: contact } = await supabaseAdmin
+                .from("contacts")
+                .select("email_jsonb")
+                .eq("id", invoice.contact_id)
+                .eq("org_id", member.org_id)
+                .maybeSingle();
+              const firstEmail = Array.isArray(contact?.email_jsonb)
+                ? contact?.email_jsonb.find(
+                    (entry) =>
+                      typeof entry === "object" &&
+                      entry &&
+                      "email" in entry &&
+                      String((entry as { email?: string }).email ?? "").trim(),
+                  )
+                : null;
+              recipientEmail =
+                typeof firstEmail === "object" &&
+                firstEmail &&
+                "email" in firstEmail
+                  ? String((firstEmail as { email?: string }).email ?? "").trim()
+                  : recipientEmail;
+            }
+
+            const updated = await markClientInvoiceSent(
+              supabaseAdmin,
+              invoiceId,
+              member.org_id,
+              recipientEmail || smsTo,
+            );
+
+            return new Response(
+              JSON.stringify({
+                invoice: updated,
+                sent: true,
+                email_sent: false,
+                email_skipped: true,
+                sms_sent: smsOutcome.sent,
+                sms_skipped: smsOutcome.skipped,
+                sms_only: true,
+              }),
+              {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
 
           return new Response(
             JSON.stringify({

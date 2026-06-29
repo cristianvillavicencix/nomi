@@ -44,8 +44,9 @@ export const findOrgVoiceSettingsByInboundNumber = async (
 export const listInboundVoiceClientIdentities = async (orgId: number) => {
   const { data, error } = await supabaseAdmin
     .from("organization_members")
-    .select("id, administrator, module_permissions")
-    .eq("org_id", orgId);
+    .select("id, administrator, module_permissions, roles, disabled")
+    .eq("org_id", orgId)
+    .eq("disabled", false);
 
   if (error) {
     throw new Error(error.message ?? "Failed to load voice members");

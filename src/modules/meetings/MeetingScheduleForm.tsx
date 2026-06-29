@@ -23,6 +23,7 @@ import {
   REMIND_BEFORE_NONE,
 } from "@/modules/calendar/calendarReminderOptions";
 import { MeetingContactTitleSync } from "@/modules/meetings/meetingFormUtils";
+import { MeetingShareOptions } from "@/modules/meetings/MeetingShareOptions";
 import { MeetingVideoCallSection } from "@/modules/meetings/MeetingVideoCallSection";
 import { Form } from "ra-core";
 
@@ -69,10 +70,22 @@ export const MeetingScheduleForm = ({
   isEdit,
   onDeleteSuccess,
   onDeleteError,
+  emailConfigured = false,
+  shareEmail = false,
+  shareSms = false,
+  onShareEmailChange,
+  onShareSmsChange,
+  showShareOptions = false,
 }: {
   isEdit: boolean;
   onDeleteSuccess?: () => void;
   onDeleteError?: (error: unknown) => void;
+  emailConfigured?: boolean;
+  shareEmail?: boolean;
+  shareSms?: boolean;
+  onShareEmailChange?: (value: boolean) => void;
+  onShareSmsChange?: (value: boolean) => void;
+  showShareOptions?: boolean;
 }) => (
   <Form className="flex flex-col gap-4">
     <MeetingContactTitleSync />
@@ -170,6 +183,16 @@ export const MeetingScheduleForm = ({
         </MeetingFormRow>
       </TableBody>
     </Table>
+
+    {showShareOptions && onShareEmailChange && onShareSmsChange ? (
+      <MeetingShareOptions
+        emailConfigured={emailConfigured}
+        shareEmail={shareEmail}
+        shareSms={shareSms}
+        onShareEmailChange={onShareEmailChange}
+        onShareSmsChange={onShareSmsChange}
+      />
+    ) : null}
 
     {isEdit ? (
       <BooleanInput

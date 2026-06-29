@@ -1,13 +1,17 @@
+import { useEffect, useState } from "react";
 import {
   CreateBase,
   EditBase,
   Form,
   required,
+  useDataProvider,
   useGetIdentity,
   useNotify,
   useRefresh,
   type Identifier,
 } from "ra-core";
+import { useQuery } from "@tanstack/react-query";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { DateInput } from "@/components/admin/date-input";
 import { SaveButton } from "@/components/admin/form";
@@ -38,6 +42,8 @@ import {
   REMIND_BEFORE_NONE,
 } from "@/modules/calendar/calendarReminderOptions";
 import { MeetingScheduleForm } from "@/modules/meetings/MeetingScheduleForm";
+import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingShareNotifications";
+import { useSendClientSms } from "@/modules/messages/useClientSms";
 
 const dealOptionText = (choice: {
   name?: string | null;
@@ -196,7 +202,25 @@ export const CalendarReminderDialog = ({
   const { identity } = useGetIdentity();
   const notify = useNotify();
   const refresh = useRefresh();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const sendClientSms = useSendClientSms();
   const isEdit = reminderId != null;
+  const [shareEmail, setShareEmail] = useState(true);
+  const [shareSms, setShareSms] = useState(true);
+
+  const { data: emailSettings } = useQuery({
+    queryKey: ["email-delivery-settings"],
+    queryFn: () => dataProvider.getEmailDeliverySettings(),
+    enabled: open && variant === "meeting" && !!identity?.id,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!open) {
+      setShareEmail(true);
+      setShareSms(true);
+    }
+  }, [open]);
 
   if (!identity) return null;
 
@@ -208,7 +232,29 @@ export const CalendarReminderDialog = ({
     notify(message, { type: "error" });
   };
 
-  const handleCreateSuccess = () => {
+  const notifyMeetingShare = async (record: Record<string, unknown>) => {
+    if (variant !== "meeting" || (!shareEmail && !shareSms)) return;
+
+    const { errors } = await sendMeetingShareNotifications({
+      record,
+      shareEmail,
+      shareSms,
+      dataProvider,
+      sendClientSms,
+      identity,
+      orgName: emailSettings?.org_name,
+      notify,
+    });
+
+    if (errors.length > 0) {
+      notify(errors.join(". "), { type: "warning" });
+    }
+  };
+
+  const handleCreateSuccess = async (record?: Record<string, unknown>) => {
+    if (record) {
+      await notifyMeetingShare(record);
+    }
     refresh();
     closeDialog();
     notify(variant === "meeting" ? "Meeting scheduled" : "Event added");
@@ -219,6 +265,18 @@ export const CalendarReminderDialog = ({
     closeDialog();
     notify(variant === "meeting" ? "Meeting updated" : "Event updated");
   };
+
+  const meetingFormProps =
+    variant === "meeting"
+      ? {
+          emailConfigured: emailSettings?.configured === true,
+          shareEmail,
+          shareSms,
+          onShareEmailChange: setShareEmail,
+          onShareSmsChange: setShareSms,
+          showShareOptions: !isEdit,
+        }
+      : {};
 
   const FormComponent =
     variant === "meeting" ? MeetingScheduleForm : CalendarEventForm;
@@ -248,6 +306,7 @@ export const CalendarReminderDialog = ({
               isEdit
               onDeleteSuccess={handleDeleteSuccess}
               onDeleteError={handleMutationError}
+              {...meetingFormProps}
             />
           </DialogContent>
         </Dialog>
@@ -277,14 +336,16 @@ export const CalendarReminderDialog = ({
         transform={prepareCalendarEventWriteData}
         mutationMode="pessimistic"
         mutationOptions={{
-          onSuccess: handleCreateSuccess,
+          onSuccess: (record) => {
+            void handleCreateSuccess(record as Record<string, unknown>);
+          },
           onError: handleMutationError,
         }}
         redirect={false}
       >
         <Dialog open={open} onOpenChange={onOpenChange}>
           <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
-            <FormComponent isEdit={false} />
+            <FormComponent isEdit={false} {...meetingFormProps} />
           </DialogContent>
         </Dialog>
       </CreateBase>

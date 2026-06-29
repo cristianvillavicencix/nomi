@@ -3,7 +3,7 @@ import { Device, type Call } from "@twilio/voice-sdk";
 import { useDataProvider, useGetIdentity } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
+import { memberHasVoiceCallCapability } from "@/lib/permissions/voiceCallCapability";
 import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
 import { normalizeUsPhoneToE164, formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
@@ -59,9 +59,8 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   const [activeCallLabel, setActiveCallLabel] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
 
-  const canUseVoice = hasMemberCapability(
+  const canUseVoice = memberHasVoiceCallCapability(
     identity as AccessIdentity | undefined,
-    "voice.calls.make",
   );
 
   const hasLiveCall = useCallback(

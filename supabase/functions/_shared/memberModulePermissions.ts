@@ -120,12 +120,13 @@ const getStoredRolePreset = (
   return typeof preset === "string" && preset.trim() ? preset.trim() : null;
 };
 
-/** Voice token + inbound routing — honors _role_preset like the frontend catalog. */
+/** Voice token + inbound routing — mirrors `src/lib/permissions/voiceCallCapability.ts`. */
 export function hasMemberVoiceCallCapability(
   member:
     | {
         administrator?: boolean | null;
         module_permissions?: unknown;
+        roles?: unknown;
       }
     | null
     | undefined,
@@ -140,17 +141,44 @@ export function hasMemberVoiceCallCapability(
       ? (member.module_permissions as Record<string, unknown>)
       : null;
 
-  if (!stored) return false;
+  const preset = stored ? getStoredRolePreset(stored) : null;
+  const legacyPreset = inferLegacyRolePreset(member.roles);
+  const effectivePreset =
+    (preset && ROLE_PRESETS_WITH_VOICE_MAKE.has(preset) ? preset : null) ??
+    (legacyPreset && ROLE_PRESETS_WITH_VOICE_MAKE.has(legacyPreset)
+      ? legacyPreset
+      : "read_only");
 
-  if (stored[VOICE_MAKE_CAPABILITY] === true) return true;
-  if (stored[VOICE_MAKE_CAPABILITY] === false) return false;
+  let effective = ROLE_PRESETS_WITH_VOICE_MAKE.has(effectivePreset);
 
-  const preset = getStoredRolePreset(stored);
-  if (preset && ROLE_PRESETS_WITH_VOICE_MAKE.has(preset)) {
-    return true;
+  if (stored && typeof stored[VOICE_MAKE_CAPABILITY] === "boolean") {
+    effective = stored[VOICE_MAKE_CAPABILITY] as boolean;
   }
 
-  return hasMemberCapability(member, VOICE_MAKE_CAPABILITY);
+  return effective;
+}
+
+function inferLegacyRolePreset(roles: unknown): string | null {
+  if (!Array.isArray(roles)) return null;
+  const normalized = roles.map((role) => String(role).toLowerCase());
+  if (
+    normalized.includes("admin") ||
+    normalized.includes("sales_manager") ||
+    normalized.includes("manager")
+  ) {
+    return "admin";
+  }
+  if (
+    normalized.includes("employee") ||
+    normalized.includes("designer") ||
+    normalized.includes("developer") ||
+    normalized.includes("marketing") ||
+    normalized.includes("sales") ||
+    normalized.includes("pm")
+  ) {
+    return "user";
+  }
+  return "read_only";
 }
 
 export function hasAnyOperationalModule(mod: ModulePermissionRecord): boolean {

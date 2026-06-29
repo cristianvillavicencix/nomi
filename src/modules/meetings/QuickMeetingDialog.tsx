@@ -59,10 +59,7 @@ import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { MeetingContactTitleSync } from "@/modules/meetings/meetingFormUtils";
 import { MeetingVideoCallSection } from "@/modules/meetings/MeetingVideoCallSection";
 import { QuickMeetingContactCreateDialog } from "@/modules/meetings/QuickMeetingContactCreateDialog";
-import {
-  buildQuickMeetingShareParts,
-  getSenderFirstName,
-} from "@/modules/meetings/quickMeetingShareMessage";
+import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingShareNotifications";
 import { cn } from "@/lib/utils";
 
 const dealOptionText = (choice: {
@@ -249,56 +246,20 @@ export const QuickMeetingDialog = ({
         organization_member_id: identity.id,
       });
 
-      await dataProvider.create("calendar_events", { data: payload });
-
-      const contact = (
-        await dataProvider.getOne("contacts_summary", { id: contactId })
-      ).data as Contact;
-
-      const share = buildQuickMeetingShareParts({
-        contact,
-        meetingUrl,
-        notes: String(values.description ?? ""),
-        senderFirstName: getSenderFirstName(
-          identity as { first_name?: string; fullName?: string },
-        ),
-        orgName: emailSettings?.org_name,
+      const created = await dataProvider.create("calendar_events", {
+        data: payload,
       });
 
-      const errors: string[] = [];
-
-      if (shareEmail) {
-        try {
-          const result = await dataProvider.sendMeetingLink({
-            contactId,
-            meetingUrl,
-            title,
-            greeting: share.greeting,
-            intro: share.intro,
-            signature: share.signature,
-          });
-          notify(`Link sent to ${result.to}`, { type: "info" });
-        } catch (error) {
-          errors.push(
-            error instanceof Error ? error.message : "Could not send email",
-          );
-        }
-      }
-
-      if (shareSms) {
-        try {
-          await sendClientSms({
-            contactId,
-            dealId: (values.deal_id as Identifier | null) ?? null,
-            body: share.smsBody,
-          });
-          notify("Link sent via SMS", { type: "info" });
-        } catch (error) {
-          errors.push(
-            error instanceof Error ? error.message : "Could not send SMS",
-          );
-        }
-      }
+      const { errors } = await sendMeetingShareNotifications({
+        record: created.data as Record<string, unknown>,
+        shareEmail,
+        shareSms,
+        dataProvider,
+        sendClientSms,
+        identity,
+        orgName: emailSettings?.org_name,
+        notify,
+      });
 
       refresh();
       onOpenChange(false);

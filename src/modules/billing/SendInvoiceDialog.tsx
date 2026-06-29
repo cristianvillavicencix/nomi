@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Loader2,
   Mail,
+  MessageSquare,
   Send,
   ExternalLink,
   CheckCircle2,
@@ -69,7 +70,6 @@ import {
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,6 +88,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
+
+export type InvoiceDeliveryChannel = "email" | "sms" | "both";
 
 const formatPdfSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -117,7 +119,7 @@ export const SendInvoiceDialog = ({
   onSent?: () => void;
   onScheduleSend?: () => void;
   onShareLink?: (shareUrl: string) => void;
-  deliveryChannel?: "email" | "sms" | "both";
+  deliveryChannel?: InvoiceDeliveryChannel;
 }) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -155,7 +157,7 @@ export const SendInvoiceDialog = ({
   const [showBcc, setShowBcc] = useState(false);
   const [editingTo, setEditingTo] = useState(false);
   const [phone, setPhone] = useState("");
-  const [sendSms, setSendSms] = useState(true);
+  const [channel, setChannel] = useState<InvoiceDeliveryChannel>(deliveryChannel);
   const [subject, setSubject] = useState("");
   const [pdfPreviewPending, setPdfPreviewPending] = useState(false);
 
@@ -313,11 +315,7 @@ export const SendInvoiceDialog = ({
       }),
     );
     setPhone(defaultPhone);
-    setSendSms(
-      deliveryChannel === "sms" || deliveryChannel === "both"
-        ? Boolean(defaultPhone.trim())
-        : false,
-    );
+    setChannel(deliveryChannel);
     setCc("");
     setBcc("");
     setShowCc(false);
@@ -326,9 +324,27 @@ export const SendInvoiceDialog = ({
     setSubject(buildDefaultInvoiceEmailSubject(invoice, organizationName));
   }, [open, invoice, company, contact, organizationName, deliveryChannel]);
 
+  const sendEmail = channel === "email" || channel === "both";
+  const sendSms = channel === "sms" || channel === "both";
+
   const sendMutation = useMutation({
     mutationFn: async () => {
       if (!invoice?.id) throw new Error("Missing invoice");
+      if (!emailTemplateContext) {
+        throw new Error("Payment link is not ready yet");
+      }
+
+      if (channel === "sms") {
+        return dataProvider.sendClientInvoice({
+          invoiceId: invoice.id,
+          to: "",
+          smsTo: phone.trim(),
+          smsBody: smsText,
+          contactId: contact?.id ?? invoice.contact_id ?? undefined,
+          smsOnly: true,
+        });
+      }
+
       const blob = await generateClientInvoicePdfBlob(
         buildInvoicePdfContext({
           invoice,
@@ -342,9 +358,6 @@ export const SendInvoiceDialog = ({
         }),
       );
       const pdfBase64 = await blobToBase64(blob);
-      if (!emailTemplateContext) {
-        throw new Error("Payment link is not ready yet");
-      }
       return dataProvider.sendClientInvoice({
         invoiceId: invoice.id,
         to,
@@ -365,7 +378,18 @@ export const SendInvoiceDialog = ({
       });
     },
     onSuccess: (result) => {
-      if (result.email_skipped && !result.sms_sent) {
+      if (channel === "sms") {
+        if (result.sms_sent) {
+          notify("Invoice sent by text message", { type: "success" });
+        } else if (result.sms_skipped) {
+          notify(
+            "Invoice marked as sent. SMS was not sent — check Communications settings.",
+            { type: "warning" },
+          );
+        } else {
+          notify("Invoice sent", { type: "success" });
+        }
+      } else if (result.email_skipped && !result.sms_sent) {
         notify(
           "Invoice marked as sent. Email and SMS are not configured — use Share to send the portal link.",
           { type: "warning" },
@@ -383,6 +407,8 @@ export const SendInvoiceDialog = ({
         );
       } else if (result.email_sent && result.sms_sent) {
         notify("Invoice sent by email and text", { type: "success" });
+      } else if (channel === "email" && result.email_sent) {
+        notify("Invoice sent by email", { type: "success" });
       } else {
         notify("Invoice sent", { type: "success" });
       }
@@ -397,12 +423,27 @@ export const SendInvoiceDialog = ({
   if (!invoice) return null;
 
   const canSend =
-    Boolean(to.trim()) &&
-    Boolean(subject.trim()) &&
     !shareLinkPending &&
     Boolean(paymentUrl) &&
     Boolean(emailTemplateContext) &&
-    (!sendSms || Boolean(phone.trim()));
+    ((channel === "email" &&
+      Boolean(to.trim()) &&
+      Boolean(subject.trim())) ||
+      (channel === "sms" && Boolean(phone.trim())) ||
+      (channel === "both" &&
+        Boolean(to.trim()) &&
+        Boolean(subject.trim()) &&
+        Boolean(phone.trim())));
+
+  const channelOptions: Array<{
+    id: InvoiceDeliveryChannel;
+    label: string;
+    icon: typeof Mail;
+  }> = [
+    { id: "email", label: "Email only", icon: Mail },
+    { id: "sms", label: "SMS only", icon: MessageSquare },
+    { id: "both", label: "Email + SMS", icon: Send },
+  ];
 
   const showSendMenu = Boolean(onScheduleSend || onShareLink);
 
@@ -422,7 +463,11 @@ export const SendInvoiceDialog = ({
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
-            Send invoice
+            {channel === "sms"
+              ? "Send invoice by SMS"
+              : channel === "email"
+                ? "Send invoice by email"
+                : "Send invoice by email and SMS"}
             <Badge variant="outline" className="font-mono text-xs font-normal">
               {invoice.invoice_number}
             </Badge>
@@ -448,6 +493,30 @@ export const SendInvoiceDialog = ({
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label>Delivery</Label>
+              <div className="flex flex-wrap gap-2">
+                {channelOptions.map((option) => {
+                  const Icon = option.icon;
+                  const selected = channel === option.id;
+                  return (
+                    <Button
+                      key={option.id}
+                      type="button"
+                      size="sm"
+                      variant={selected ? "default" : "outline"}
+                      className="gap-1.5"
+                      onClick={() => setChannel(option.id)}
+                    >
+                      <Icon className="size-3.5" />
+                      {option.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {sendEmail ? (
             <div className="space-y-2">
               <Label htmlFor="invoice-send-to">To</Label>
               <div className="rounded-md border px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
@@ -514,35 +583,9 @@ export const SendInvoiceDialog = ({
                 </div>
               ) : null}
             </div>
-
-            {showCc ? (
-              <div className="space-y-2">
-                <Label htmlFor="invoice-send-cc">Cc</Label>
-                <Input
-                  id="invoice-send-cc"
-                  type="text"
-                  inputMode="email"
-                  placeholder="Separate with commas"
-                  value={cc}
-                  onChange={(event) => setCc(event.target.value)}
-                />
-              </div>
             ) : null}
 
-            {showBcc ? (
-              <div className="space-y-2">
-                <Label htmlFor="invoice-send-bcc">Bcc</Label>
-                <Input
-                  id="invoice-send-bcc"
-                  type="text"
-                  inputMode="email"
-                  placeholder="Separate with commas"
-                  value={bcc}
-                  onChange={(event) => setBcc(event.target.value)}
-                />
-              </div>
-            ) : null}
-
+            {sendEmail ? (
             <div className="space-y-2">
               <Label htmlFor="invoice-send-subject">Subject</Label>
               <Input
@@ -551,7 +594,9 @@ export const SendInvoiceDialog = ({
                 onChange={(event) => setSubject(event.target.value)}
               />
             </div>
+            ) : null}
 
+            {sendEmail ? (
             <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-destructive/10">
                 <FileText className="size-4 text-destructive" />
@@ -580,19 +625,39 @@ export const SendInvoiceDialog = ({
                 )}
               </Button>
             </div>
+            ) : null}
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="invoice-send-sms" className="cursor-pointer">
-                  Also send text message
-                </Label>
-                <Switch
-                  id="invoice-send-sms"
-                  checked={sendSms}
-                  onCheckedChange={setSendSms}
-                  disabled={!phone.trim()}
+            {sendEmail && showCc ? (
+              <div className="space-y-2">
+                <Label htmlFor="invoice-send-cc">Cc</Label>
+                <Input
+                  id="invoice-send-cc"
+                  type="text"
+                  inputMode="email"
+                  placeholder="Separate with commas"
+                  value={cc}
+                  onChange={(event) => setCc(event.target.value)}
                 />
               </div>
+            ) : null}
+
+            {sendEmail && showBcc ? (
+              <div className="space-y-2">
+                <Label htmlFor="invoice-send-bcc">Bcc</Label>
+                <Input
+                  id="invoice-send-bcc"
+                  type="text"
+                  inputMode="email"
+                  placeholder="Separate with commas"
+                  value={bcc}
+                  onChange={(event) => setBcc(event.target.value)}
+                />
+              </div>
+            ) : null}
+
+            {sendSms ? (
+            <div className="space-y-2">
+              <Label htmlFor="invoice-send-phone">Text message to</Label>
               <Input
                 id="invoice-send-phone"
                 type="tel"
@@ -607,6 +672,7 @@ export const SendInvoiceDialog = ({
                 }}
               />
             </div>
+            ) : null}
 
             {shareLinkPending ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -630,6 +696,7 @@ export const SendInvoiceDialog = ({
                 emailTo={to}
                 smsTo={phone}
                 sendSms={sendSms}
+                sendEmail={sendEmail}
               />
             ) : (
               <p className="text-sm text-muted-foreground">

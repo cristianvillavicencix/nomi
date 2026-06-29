@@ -34,6 +34,7 @@ import {
 } from "@/modules/calendar/calendarReminderOptions";
 import { toDateKey } from "@/modules/calendar/calendarUtils";
 import { MeetingLinkActions } from "@/modules/meetings/MeetingLinkActions";
+import { MeetingResendInviteActions } from "@/modules/meetings/MeetingResendInviteActions";
 import { MeetingDoneSwitch } from "@/modules/meetings/MeetingDoneSwitch";
 import { QuickMeetingDialog } from "@/modules/meetings/QuickMeetingDialog";
 
@@ -261,6 +262,7 @@ export const MeetingsPage = () => {
                           <MeetingLinkActions
                             meetingUrl={meeting.meeting_url}
                           />
+                          <MeetingResendInviteActions meeting={meeting} />
                           <Button
                             type="button"
                             variant="outline"

@@ -102,6 +102,7 @@ export const InvoiceSendDeliveryPreview = ({
   emailTo,
   smsTo,
   sendSms,
+  sendEmail = true,
 }: {
   subject: string;
   emailHtml: string;
@@ -109,6 +110,7 @@ export const InvoiceSendDeliveryPreview = ({
   emailTo: string;
   smsTo: string;
   sendSms: boolean;
+  sendEmail?: boolean;
 }) => {
   const isMobile = useIsMobile();
 
@@ -116,39 +118,53 @@ export const InvoiceSendDeliveryPreview = ({
     return (
       <div className="space-y-3">
         <p className="text-xs font-medium text-muted-foreground">Previews</p>
-        <Accordion type="multiple" className="rounded-lg border px-3">
-          <AccordionItem value="email" className="border-b-0">
-            <AccordionTrigger className="py-3 hover:no-underline">
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <Mail className="size-4 text-muted-foreground" />
-                Email
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <EmailPreviewPanel
-                subject={subject}
-                emailHtml={emailHtml}
-                emailTo={emailTo}
-                showHeader={false}
-              />
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="text" className="border-b-0 border-t">
-            <AccordionTrigger className="py-3 hover:no-underline">
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <MessageSquare className="size-4 text-muted-foreground" />
-                Text message
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <SmsPreviewPanel
-                smsText={smsText}
-                smsTo={smsTo}
-                sendSms={sendSms}
-                showHeader={false}
-              />
-            </AccordionContent>
-          </AccordionItem>
+        <Accordion
+          type="multiple"
+          defaultValue={[
+            ...(sendEmail ? ["email"] : []),
+            ...(sendSms ? ["text"] : []),
+          ]}
+          className="rounded-lg border px-3"
+        >
+          {sendEmail ? (
+            <AccordionItem value="email" className="border-b-0">
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Mail className="size-4 text-muted-foreground" />
+                  Email
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <EmailPreviewPanel
+                  subject={subject}
+                  emailHtml={emailHtml}
+                  emailTo={emailTo}
+                  showHeader={false}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          ) : null}
+          {sendSms ? (
+            <AccordionItem
+              value="text"
+              className={sendEmail ? "border-b-0 border-t" : "border-b-0"}
+            >
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <MessageSquare className="size-4 text-muted-foreground" />
+                  Text message
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <SmsPreviewPanel
+                  smsText={smsText}
+                  smsTo={smsTo}
+                  sendSms={sendSms}
+                  showHeader={false}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          ) : null}
         </Accordion>
       </div>
     );
@@ -156,12 +172,16 @@ export const InvoiceSendDeliveryPreview = ({
 
   return (
     <div className="space-y-4">
-      <EmailPreviewPanel
-        subject={subject}
-        emailHtml={emailHtml}
-        emailTo={emailTo}
-      />
-      <SmsPreviewPanel smsText={smsText} smsTo={smsTo} sendSms={sendSms} />
+      {sendEmail ? (
+        <EmailPreviewPanel
+          subject={subject}
+          emailHtml={emailHtml}
+          emailTo={emailTo}
+        />
+      ) : null}
+      {sendSms ? (
+        <SmsPreviewPanel smsText={smsText} smsTo={smsTo} sendSms={sendSms} />
+      ) : null}
     </div>
   );
 };

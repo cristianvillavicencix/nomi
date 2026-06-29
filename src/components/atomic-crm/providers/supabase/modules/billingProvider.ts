@@ -127,6 +127,7 @@ export const billingProvider = {
     cc,
     bcc,
     linkOnly,
+    smsOnly,
   }: {
     invoiceId: Identifier;
     to: string;
@@ -141,6 +142,7 @@ export const billingProvider = {
     cc?: string[];
     bcc?: string[];
     linkOnly?: boolean;
+    smsOnly?: boolean;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       invoice: Record<string, unknown>;
@@ -159,6 +161,7 @@ export const billingProvider = {
         filename,
         subject,
         link_only: linkOnly === true,
+        sms_only: smsOnly === true,
         ...(cc?.length ? { cc } : {}),
         ...(bcc?.length ? { bcc } : {}),
         ...(smsTo?.trim() ? { sms_to: smsTo.trim() } : {}),

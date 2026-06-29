@@ -747,10 +747,11 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     );
     return invoice;
   },
-  sendClientInvoice: async ({ invoiceId, smsTo }) => ({
-    invoice: { id: invoiceId, status: "sent" },
+  sendClientInvoice: async ({ invoiceId, smsTo, smsOnly }) => ({
+    invoice: { id: invoiceId, status: smsOnly || smsTo ? "sent" : "sent" },
     sent: true,
-    email_skipped: true,
+    email_sent: !smsOnly && !smsTo,
+    email_skipped: Boolean(smsOnly || smsTo),
     sms_sent: Boolean(smsTo),
     sms_skipped: !smsTo,
   }),
