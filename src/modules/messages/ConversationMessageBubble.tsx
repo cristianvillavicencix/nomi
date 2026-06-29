@@ -42,10 +42,14 @@ export const ConversationMessageBubble = ({
   message,
   isOwn,
   compact = false,
+  onRetryDelivery,
+  retryingDelivery = false,
 }: {
   message: ConversationMessage;
   isOwn: boolean;
   compact?: boolean;
+  onRetryDelivery?: (message: ConversationMessage) => void;
+  retryingDelivery?: boolean;
 }) => {
   useOrganizationSmsSignature();
   const { content, signature } = useMemo(
@@ -116,7 +120,12 @@ export const ConversationMessageBubble = ({
           )}
         >
           <span>{formatMessageTime(message.created_at)}</span>
-          <SmsDeliveryBadge message={message} compact={compact} />
+          <SmsDeliveryBadge
+            message={message}
+            compact={compact}
+            onRetry={onRetryDelivery}
+            retrying={retryingDelivery}
+          />
         </div>
       </div>
       {!compact &&

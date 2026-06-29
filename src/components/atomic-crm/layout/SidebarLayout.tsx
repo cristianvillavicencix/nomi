@@ -250,6 +250,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
   const hideGlobalHeader = isMessagesShell || isProposalPreview;
   const showDealExplorer =
     Boolean(currentDealId) && !isMessagesShell && !isProposalPreview;
+  const isProjectShowShell = showDealExplorer;
   const hideGlobalHeaderOnProjectShow = showDealExplorer;
 
   const globalHeader =
@@ -283,7 +284,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         : isBillingInvoiceShell
           ? "gap-0 p-0"
           : showDealExplorer
-            ? "px-4 pt-0 pb-0"
+            ? "flex min-h-0 flex-1 flex-col px-4 pt-0 pb-0"
             : "gap-4 px-4 pt-2 pb-0",
   );
 
@@ -291,7 +292,10 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
     <div
       className={cn(
         "min-h-0 min-w-0 flex-1",
-        isMessagesShell || isProposalPreview || isBillingInvoiceShell
+        isMessagesShell ||
+          isProposalPreview ||
+          isBillingInvoiceShell ||
+          isProjectShowShell
           ? "overflow-hidden"
           : "overflow-y-auto overscroll-contain pr-1",
       )}

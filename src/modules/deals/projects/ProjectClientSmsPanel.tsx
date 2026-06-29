@@ -14,6 +14,7 @@ import {
 } from "@/modules/messages/messageContactUtils";
 import { useConversationMessages } from "@/modules/messages/useConversationMessages";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
+import { useResendFailedSmsMessage } from "@/modules/messages/useResendFailedSmsMessage";
 import { ClientSmsComposer } from "@/modules/messages/ClientSmsComposer";
 import {
   ConversationMessageBubble,
@@ -72,6 +73,16 @@ export const ProjectClientSmsPanel = ({
     conversation?.id,
   );
 
+  const { retryMessage, retryingMessageId } = useResendFailedSmsMessage({
+    enabled: canSendMessages && smsEnabled,
+    onSent: () => {
+      const node = scrollRef.current;
+      if (node) {
+        node.scrollTop = node.scrollHeight;
+      }
+    },
+  });
+
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
@@ -90,7 +101,9 @@ export const ProjectClientSmsPanel = ({
   );
 
   if (!contact) {
-    return renderEmptyState("Link a contact to this project to text the client.");
+    return renderEmptyState(
+      "Link a contact to this project to text the project owner.",
+    );
   }
 
   if (messagingPending || conversationPending) {
@@ -129,8 +142,8 @@ export const ProjectClientSmsPanel = ({
     conversation?.id != null && messagesPending && messages.length === 0;
 
   return (
-    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
-      <div className="flex items-center gap-2.5 border-b border-border/70 px-3 py-2">
+    <div className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden", className)}>
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-border/70 px-3 py-2">
         <Avatar className="size-8 rounded-full">
           <AvatarFallback className="rounded-full bg-emerald-500/10 text-xs font-medium text-emerald-800 dark:text-emerald-200">
             {getInitials(clientName)}
@@ -146,7 +159,7 @@ export const ProjectClientSmsPanel = ({
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-2"
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 py-2"
       >
         {conversationError ? (
           <p className="py-6 text-center text-xs text-destructive">
@@ -175,22 +188,26 @@ export const ProjectClientSmsPanel = ({
                 message={message}
                 isOwn={message.direction === "outbound"}
                 compact
+                onRetryDelivery={retryMessage}
+                retryingDelivery={String(retryingMessageId) === String(message.id)}
               />
             ),
           )
         )}
       </div>
 
-      <ClientSmsComposer
-        contact={contact}
-        dealId={record.id}
-        conversationId={conversation?.id}
-        disabled={!canSendMessages}
-        compact
-        onSent={({ conversation: nextConversation }) => {
-          setConversation(nextConversation);
-        }}
-      />
+      <div className="mt-auto shrink-0 border-t border-border/70 bg-background">
+        <ClientSmsComposer
+          contact={contact}
+          dealId={record.id}
+          conversationId={conversation?.id}
+          disabled={!canSendMessages}
+          compact
+          onSent={({ conversation: nextConversation }) => {
+            setConversation(nextConversation);
+          }}
+        />
+      </div>
     </div>
   );
 };

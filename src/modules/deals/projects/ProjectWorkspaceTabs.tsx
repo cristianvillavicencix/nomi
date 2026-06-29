@@ -97,10 +97,14 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
   const showTab = (tab: string) => visited.has(tab) || currentTab === tab;
 
   return (
-    <Card className="flex h-full min-w-0 flex-1 flex-col gap-0 border-0 py-0 shadow-none">
-      <CardContent className="px-4 pt-1 sm:px-6">
-        <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <StickyTabsBar className="pb-1">
+    <Card className="flex h-full min-h-0 min-w-0 flex-1 flex-col gap-0 border-0 py-0 shadow-none">
+      <CardContent className="flex min-h-0 flex-1 flex-col px-4 pt-1 sm:px-6">
+        <Tabs
+          value={currentTab}
+          onValueChange={handleTabChange}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <StickyTabsBar className="shrink-0 bg-background pb-1">
             <TabsList className="inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
               <TabsTrigger value="overview" className="shrink-0">
                 Activities
@@ -131,7 +135,7 @@ export const ProjectWorkspaceTabs = ({ record }: { record: LbsDeal }) => {
               ) : null}
             </TabsList>
           </StickyTabsBar>
-          <ScrollableContentArea>
+          <ScrollableContentArea className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <TabsContent value="overview" className="pt-4">
               <LbsProjectOverviewTab record={record} />
             </TabsContent>

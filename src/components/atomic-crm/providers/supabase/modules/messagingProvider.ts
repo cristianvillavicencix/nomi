@@ -240,12 +240,13 @@ export const messagingProvider = {
     conversationId?: Identifier;
     contactId?: Identifier;
     dealId?: Identifier | null;
-    body: string;
+    body?: string;
     mediaUrls?: string[];
     isInternalNote?: boolean;
     templateId?: Identifier;
     replyToMessageId?: Identifier | null;
     externalPhone?: string | null;
+    resendMessageId?: Identifier;
   }) {
     const { data, error } = await invokeEdgeFunction<{
       message?: import("@/modules/types").ConversationMessage;
@@ -275,6 +276,10 @@ export const messagingProvider = {
         external_phone:
           params.externalPhone != null && params.externalPhone !== ""
             ? params.externalPhone
+            : undefined,
+        resend_message_id:
+          params.resendMessageId != null
+            ? Number(params.resendMessageId)
             : undefined,
       },
     });

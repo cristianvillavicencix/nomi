@@ -364,6 +364,53 @@ export const findMatchingContacts = async (
   );
 };
 
+/** Resolve CRM contacts that already use this phone number (search + edge lookup). */
+export const findContactsByPhone = async (
+  dataProvider: CrmDataProvider,
+  phoneE164: string,
+  phoneDisplay?: string,
+): Promise<CreateDuplicateMatch[]> => {
+  const display = phoneDisplay ?? phoneE164;
+  const matches = await findMatchingContacts(dataProvider, { phone: display });
+
+  const lookup = await dataProvider.lookupContactByPhone(phoneE164);
+  if (lookup?.id != null) {
+    const alreadyLinked = matches.some(
+      (match) => String(match.contact.id) === String(lookup.id),
+    );
+    if (!alreadyLinked) {
+      try {
+        const { data } = await dataProvider.getOne<Contact>("contacts_summary", {
+          id: lookup.id,
+        });
+        if (data) {
+          const scored = scoreCreateDuplicateMatch({ phone: display }, data, [
+            "phone",
+          ]);
+          matches.unshift({
+            contact: data,
+            matchedOn: ["phone"],
+            confidence: scored.confidence,
+            reason: scored.reason || "Same phone number",
+          });
+        }
+      } catch {
+        // Best-effort enrichment from lookup_contact_by_phone.
+      }
+    }
+  }
+
+  const order: Record<DuplicateConfidence, number> = {
+    safe: 0,
+    review: 1,
+    do_not_merge: 2,
+  };
+
+  return matches.sort(
+    (left, right) => order[left.confidence] - order[right.confidence],
+  );
+};
+
 export const buildEnrichedContactChannels = (
   contact: Contact,
   additions: { email?: string; phone?: string },

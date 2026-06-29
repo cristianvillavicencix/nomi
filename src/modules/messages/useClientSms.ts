@@ -56,23 +56,25 @@ export const useSendClientSms = () => {
       conversationId?: Identifier;
       contactId?: Identifier;
       dealId?: Identifier | null;
-      body: string;
+      body?: string;
       mediaUrls?: string[];
       isInternalNote?: boolean;
       templateId?: Identifier;
       replyToMessageId?: Identifier | null;
       externalPhone?: string | null;
+      resendMessageId?: Identifier;
     }) => {
       const result = await dataProvider.sendClientSms({
         conversationId: params.conversationId,
         contactId: params.contactId,
         dealId: params.dealId,
-        body: params.body,
+        body: params.body ?? "",
         mediaUrls: params.mediaUrls,
         isInternalNote: params.isInternalNote,
         templateId: params.templateId,
         replyToMessageId: params.replyToMessageId,
         externalPhone: params.externalPhone,
+        resendMessageId: params.resendMessageId,
       });
 
       const message = result.message as ConversationMessage | null;

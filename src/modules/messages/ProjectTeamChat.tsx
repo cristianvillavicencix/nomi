@@ -33,14 +33,15 @@ export const ProjectTeamChat = ({
 
   if (embedMode) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
         <p className="shrink-0 border-b px-3 py-2 text-[11px] text-muted-foreground">
           Internal team chat — clients cannot see these messages.
         </p>
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 overflow-hidden">
           <ConversationThread
             conversation={conversation}
             emptyLabel="No team messages yet."
+            layout="sidebar"
           />
         </div>
       </div>

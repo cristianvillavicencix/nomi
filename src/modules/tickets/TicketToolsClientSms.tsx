@@ -26,6 +26,7 @@ import {
 } from "@/modules/messages/messageContactUtils";
 import { useConversationMessages } from "@/modules/messages/useConversationMessages";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
+import { useResendFailedSmsMessage } from "@/modules/messages/useResendFailedSmsMessage";
 import { ClientSmsComposer } from "@/modules/messages/ClientSmsComposer";
 import {
   ConversationMessageBubble,
@@ -99,6 +100,16 @@ export const TicketToolsClientSms = ({
   const { messages, isPending: messagesPending } = useConversationMessages(
     conversation?.id,
   );
+
+  const { retryMessage, retryingMessageId } = useResendFailedSmsMessage({
+    enabled: canSendMessages && smsEnabled,
+    onSent: () => {
+      const node = scrollRef.current;
+      if (node) {
+        node.scrollTop = node.scrollHeight;
+      }
+    },
+  });
 
   const canUseQuickActions =
     canViewAmounts &&
@@ -331,6 +342,8 @@ export const TicketToolsClientSms = ({
                 message={message}
                 isOwn={message.direction === "outbound"}
                 compact
+                onRetryDelivery={retryMessage}
+                retryingDelivery={String(retryingMessageId) === String(message.id)}
               />
             ),
           )

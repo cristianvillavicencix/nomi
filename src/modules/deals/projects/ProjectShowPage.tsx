@@ -190,38 +190,40 @@ const ProjectShowContent = () => {
 
   return (
     <ProjectBriefActionsProvider record={record}>
-      <div className="relative space-y-2">
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
         <ProjectDeliveredStamp record={record} />
-        {record.archived_at ? <ArchivedTitle /> : null}
+        <div className="shrink-0 space-y-2">
+          {record.archived_at ? <ArchivedTitle /> : null}
 
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <LbsDealHeaderOverview record={record} />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <LbsDealHeaderOverview record={record} />
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
+              <ProjectNextMaintenanceBadge record={record} />
+              <LbsProjectDeliveryUrgency record={record} />
+              <ProjectDeliverButton record={record} />
+              <ProjectActionsMenu
+                record={record}
+                onOpenTasks={() => setTasksDialogOpen(true)}
+                onOpenPortal={() => setPortalDialogOpen(true)}
+              />
+            </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
-            <ProjectNextMaintenanceBadge record={record} />
-            <LbsProjectDeliveryUrgency record={record} />
-            <ProjectDeliverButton record={record} />
-            <ProjectActionsMenu
-              record={record}
-              onOpenTasks={() => setTasksDialogOpen(true)}
-              onOpenPortal={() => setPortalDialogOpen(true)}
-            />
-          </div>
+
+          <ProjectStageFlow
+            stages={displayStages}
+            currentStage={displayCurrentStage}
+            onStageChange={handleStageChange}
+            className="rounded-b-none pb-2"
+          />
         </div>
 
-        <ProjectStageFlow
-          stages={displayStages}
-          currentStage={displayCurrentStage}
-          onStageChange={handleStageChange}
-          className="mb-1.5 rounded-b-none pb-2"
-        />
-
-        <div className="flex flex-col lg:flex-row lg:items-stretch">
-          <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <ProjectWorkspaceTabs record={record} />
           </div>
-          <div className="hidden lg:flex">
+          <div className="hidden lg:flex lg:h-full lg:min-h-0 lg:shrink-0">
             <ProjectContextPanel
               record={record}
               collapsed={tasksRailCollapsed}
@@ -252,13 +254,21 @@ export const ProjectShowPage = ({ id }: { id?: string }) => {
 
   return (
     <div
-      className={cn("w-full py-2", layoutMode === "sidebar" ? "px-4 py-4" : "")}
+      className={cn(
+        "flex h-full min-h-0 w-full flex-col",
+        layoutMode === "sidebar" ? "px-4" : "py-2",
+      )}
     >
-      <div className={cn(showExplorerPanel ? "flex gap-4" : "")}>
+      <div
+        className={cn(
+          "flex min-h-0 flex-1",
+          showExplorerPanel ? "gap-4" : "flex-col",
+        )}
+      >
         {showExplorerPanel ? (
           <DealsExplorerPanel currentDealId={validId} />
         ) : null}
-        <div className="min-w-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {validId ? (
             <ShowBase id={validId}>
               <ProjectShowContent />

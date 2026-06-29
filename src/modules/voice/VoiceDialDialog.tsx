@@ -16,7 +16,6 @@ import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { useTwilioVoice } from "@/modules/voice/useTwilioVoice";
 import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
-import { useGetIdentity, useNotify } from "ra-core";
 import {
   formatUsPhoneDisplayFromAny,
   normalizeUsPhoneToE164,

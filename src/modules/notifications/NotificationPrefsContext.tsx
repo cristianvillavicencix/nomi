@@ -26,6 +26,7 @@ import {
   parseNotificationPrefs,
 } from "@/modules/notifications/notificationPrefs";
 import { canAccessNotificationCategory } from "@/modules/notifications/notificationCategoryAccess";
+import { pushNotificationHistory } from "@/modules/notifications/notificationHistory";
 import { navigateToNotificationHref } from "@/modules/notifications/notificationNavigation";
 import type {
   NotificationCategory,

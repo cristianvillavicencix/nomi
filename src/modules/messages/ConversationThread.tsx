@@ -11,6 +11,7 @@ import type {
 } from "@/modules/types";
 import { useConversationMessages } from "@/modules/messages/useConversationMessages";
 import { useMarkConversationRead } from "@/modules/messages/useMarkConversationRead";
+import { useResendFailedSmsMessage } from "@/modules/messages/useResendFailedSmsMessage";
 import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
 import { ClientSmsComposer } from "@/modules/messages/ClientSmsComposer";
 import {
@@ -19,6 +20,7 @@ import {
 } from "@/modules/messages/ConversationMessageBubble";
 import { getClientSmsDraftLabel } from "@/modules/messages/messageContactUtils";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { cn } from "@/lib/utils";
 
 const SEND_MESSAGES_CAPABILITY = "messaging.send";
 
@@ -38,6 +40,7 @@ export const ConversationThread = ({
   clientSmsExternalPhone,
   onClientSmsPhoneChange,
   emptyLabel = "No messages yet. Say hello to the team.",
+  layout = "default",
 }: {
   conversation: Conversation | null;
   clientSmsDraft?: ClientSmsDraft | null;
@@ -46,6 +49,7 @@ export const ConversationThread = ({
   clientSmsExternalPhone?: string | null;
   onClientSmsPhoneChange?: (phone: string) => void;
   emptyLabel?: string;
+  layout?: "default" | "sidebar";
 }) => {
   const { identity } = useGetIdentity();
   const notify = useNotify();
@@ -79,6 +83,13 @@ export const ConversationThread = ({
 
   const isClientSms = conversation?.type === "client" || !!clientSmsDraft;
   const isDraftOnly = !conversation && !!clientSmsDraft;
+
+  const { retryMessage, retryingMessageId } = useResendFailedSmsMessage({
+    enabled: isClientSms && canSendMessages,
+    onSent: () => {
+      void refetch();
+    },
+  });
 
   useEffect(() => {
     setBody("");
@@ -168,11 +179,21 @@ export const ConversationThread = ({
   const draftIsUnsavedNumber =
     !clientSmsDraft?.contact && Boolean(clientSmsDraft?.externalPhone);
 
+  const isSidebar = layout === "sidebar";
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
+    <div
+      className={cn(
+        "flex h-full min-h-0 flex-col bg-background",
+        isSidebar && "overflow-hidden",
+      )}
+    >
       <div
         ref={scrollContainerRef}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+          isSidebar ? "space-y-2 px-3 py-2" : "space-y-3 px-4 py-4",
+        )}
       >
         {hasMoreOlder ? (
           <div className="flex justify-center pb-2">
@@ -188,7 +209,12 @@ export const ConversationThread = ({
           </div>
         ) : null}
         {isDraftOnly ? (
-          <div className="flex h-full min-h-[220px] flex-col items-center justify-center px-4 text-center">
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center px-4 py-8 text-center",
+              !isSidebar && "h-full min-h-[220px]",
+            )}
+          >
             <p className="text-sm font-medium">{draftLabel}</p>
             {draftCompany ? (
               <p className="mt-1 text-sm text-muted-foreground">
@@ -205,8 +231,18 @@ export const ConversationThread = ({
             </p>
           </div>
         ) : isLoadingMessages ? null : messages.length === 0 ? (
-          <div className="flex h-full min-h-[220px] items-center justify-center">
-            <p className="max-w-xs text-center text-sm text-muted-foreground">
+          <div
+            className={cn(
+              "flex items-center justify-center",
+              isSidebar ? "py-8" : "h-full min-h-[220px]",
+            )}
+          >
+            <p
+              className={cn(
+                "max-w-xs text-center text-muted-foreground",
+                isSidebar ? "text-xs" : "text-sm",
+              )}
+            >
               {emptyLabel}
             </p>
           </div>
@@ -226,6 +262,9 @@ export const ConversationThread = ({
                     ? message.direction === "outbound"
                     : String(message.author_member_id) === String(identity?.id)
                 }
+                compact={isSidebar}
+                onRetryDelivery={retryMessage}
+                retryingDelivery={String(retryingMessageId) === String(message.id)}
               />
             ),
           )
@@ -234,7 +273,12 @@ export const ConversationThread = ({
       </div>
 
       {isClientSms ? (
-        <div className="mt-auto shrink-0 bg-background">
+        <div
+          className={cn(
+            "mt-auto shrink-0 bg-background",
+            isSidebar && "border-t border-border/70",
+          )}
+        >
           <ClientSmsComposer
             contact={composerContact ?? clientSmsDraft?.contact}
             dealId={clientSmsDraft?.dealId ?? conversation?.deal_id}
@@ -257,7 +301,12 @@ export const ConversationThread = ({
       ) : canSendMessages ? (
         <form
           onSubmit={handleSubmit}
-          className="mt-auto shrink-0 bg-background px-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-3"
+          className={cn(
+            "mt-auto shrink-0 border-t border-border/70 bg-background",
+            isSidebar
+              ? "px-3 py-2"
+              : "px-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-3",
+          )}
         >
           <div className="flex items-end gap-0.5 rounded-full border border-border/40 bg-card px-1.5 py-1 shadow-sm">
             <Input

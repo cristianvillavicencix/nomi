@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ListChecks, MessageSquare, PanelRightClose, Users } from "lucide-react";
+import { ListChecks, MessageSquare, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -7,24 +7,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { TASK_STATUS_FILTERS } from "@/components/atomic-crm/tasks/taskConstants";
 import { computeTaskStats } from "@/components/atomic-crm/tasks/taskStats";
-import { useGetList, useGetOne } from "ra-core";
-import type { Contact } from "@/components/atomic-crm/types";
+import { useGetList } from "ra-core";
 import type { LbsDeal, Task as TaskRecord } from "@/modules/types";
-import {
-  contactHasSmsPhone,
-} from "@/modules/messages/messageContactUtils";
-import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { ProjectTasksPanel } from "@/modules/deals/projects/ProjectTasksPanel";
-import { ProjectClientSmsPanel } from "@/modules/deals/projects/ProjectClientSmsPanel";
-import { ProjectTeamChat } from "@/modules/messages/ProjectTeamChat";
+import { ProjectMessagesPanel } from "@/modules/deals/projects/ProjectMessagesPanel";
 
-type ContextTab = "tasks" | "sms" | "team";
+type ContextTab = "tasks" | "messages";
 
 const RAIL_WIDTH_PX = 360;
 const COLLAPSED_RAIL_WIDTH_PX = 44;
+
+const projectContextAsideClass =
+  "flex h-full shrink-0 flex-col overflow-hidden border-l bg-background print:hidden";
 
 const resolveContactIds = (record: LbsDeal): LbsDeal["contact_ids"] => {
   if (record.contact_ids && record.contact_ids.length > 0) {
@@ -32,14 +28,6 @@ const resolveContactIds = (record: LbsDeal): LbsDeal["contact_ids"] => {
   }
   if (record.contact_id != null) return [record.contact_id];
   return [];
-};
-
-const resolveMainContactId = (record: LbsDeal) => {
-  if (record.contact_id != null) return Number(record.contact_id);
-  if (Array.isArray(record.contact_ids) && record.contact_ids.length > 0) {
-    return Number(record.contact_ids[0]);
-  }
-  return null;
 };
 
 const useProjectOpenTaskStats = (dealId: LbsDeal["id"]) => {
@@ -117,11 +105,8 @@ const ProjectContextCollapsedRail = ({
   onOpenTab: (tab: ContextTab) => void;
 }) => (
   <aside
-    className="sticky top-4 flex shrink-0 flex-col items-center self-stretch border-l bg-background py-3 print:hidden"
-    style={{
-      width: COLLAPSED_RAIL_WIDTH_PX,
-      minHeight: "calc(100vh - 8rem)",
-    }}
+    className={cn(projectContextAsideClass, "py-3")}
+    style={{ width: COLLAPSED_RAIL_WIDTH_PX }}
   >
     <div className="flex flex-1 flex-col items-center gap-2">
       {tabs.map((tab) => {
@@ -165,35 +150,20 @@ export const ProjectContextPanel = ({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) => {
-  const { smsEnabled } = useMessagingEnabled();
-  const canSendMessages = useMemberCapability("messaging.send");
-  const contactId = resolveMainContactId(record);
-  const { data: contact } = useGetOne<Contact>(
-    "contacts",
-    { id: contactId as number },
-    { enabled: contactId != null },
-  );
   const contactIds = useMemo(() => resolveContactIds(record), [record]);
   const stats = useProjectOpenTaskStats(record.id);
 
-  const showSmsTab =
-    smsEnabled &&
-    Boolean(contact && contactHasSmsPhone(contact) && canSendMessages);
-
-  const tabs = useMemo(() => {
-    const next: Array<{
+  const tabs = useMemo(
+    (): Array<{
       id: ContextTab;
       label: string;
       icon: typeof ListChecks;
-    }> = [
+    }> => [
       { id: "tasks", label: "Tasks", icon: ListChecks },
-      { id: "team", label: "Team", icon: Users },
-    ];
-    if (showSmsTab) {
-      next.splice(1, 0, { id: "sms", label: "SMS", icon: MessageSquare });
-    }
-    return next;
-  }, [showSmsTab]);
+      { id: "messages", label: "Messages", icon: MessageSquare },
+    ],
+    [],
+  );
 
   const [activeTab, setActiveTab] = useState<ContextTab>("tasks");
 
@@ -220,8 +190,8 @@ export const ProjectContextPanel = ({
 
   return (
     <aside
-      className="sticky top-4 flex shrink-0 flex-col self-stretch overflow-hidden border-l bg-background print:hidden"
-      style={{ width: RAIL_WIDTH_PX, minHeight: "calc(100vh - 8rem)" }}
+      className={projectContextAsideClass}
+      style={{ width: RAIL_WIDTH_PX }}
     >
       <ProjectContextTabs
         tabs={tabs}
@@ -231,17 +201,12 @@ export const ProjectContextPanel = ({
       />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {activeTab === "tasks" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
             <ProjectTasksPanel record={record} contactIds={contactIds} />
           </div>
         ) : null}
-        {activeTab === "sms" && showSmsTab ? (
-          <ProjectClientSmsPanel record={record} className="min-h-0 flex-1" />
-        ) : null}
-        {activeTab === "team" ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <ProjectTeamChat record={record} variant="sidebar" embedMode />
-          </div>
+        {activeTab === "messages" ? (
+          <ProjectMessagesPanel record={record} className="h-full min-h-0 flex-1" />
         ) : null}
       </div>
     </aside>

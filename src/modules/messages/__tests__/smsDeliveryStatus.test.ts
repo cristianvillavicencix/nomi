@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSmsDeliveryDisplay } from "@/modules/messages/smsDeliveryStatus";
+import { getSmsDeliveryDisplay, isSmsDeliveryRetryable } from "@/modules/messages/smsDeliveryStatus";
 import type { ConversationMessage } from "@/modules/types";
 
 const outbound = (
@@ -41,5 +41,23 @@ describe("getSmsDeliveryDisplay", () => {
       tone: "error",
       detail: "Blocked by carrier (spam filter)",
     });
+  });
+});
+
+describe("isSmsDeliveryRetryable", () => {
+  it("allows retry for failed outbound SMS", () => {
+    expect(
+      isSmsDeliveryRetryable(
+        outbound({ sms_delivery_status: "undelivered" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("blocks retry for delivered messages", () => {
+    expect(
+      isSmsDeliveryRetryable(
+        outbound({ sms_delivery_status: "delivered" }),
+      ),
+    ).toBe(false);
   });
 });

@@ -1436,7 +1436,29 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     body,
     mediaUrls,
     externalPhone,
+    resendMessageId,
   }) => {
+    if (resendMessageId != null) {
+      const { data: existing } = await baseDataProvider.getOne<
+        import("@/modules/types").ConversationMessage
+      >("conversation_messages", { id: resendMessageId });
+      const { data: conversation } = await baseDataProvider.getOne<
+        import("@/modules/types").Conversation
+      >("conversations", { id: existing.conversation_id });
+      const { data: message } = await baseDataProvider.update<
+        import("@/modules/types").ConversationMessage
+      >("conversation_messages", {
+        id: resendMessageId,
+        data: {
+          sms_delivery_status: "queued",
+          sms_error_code: null,
+          external_id: `SM_FAKE_${Date.now()}`,
+        },
+        previousData: existing,
+      });
+      return { message: message, conversation };
+    }
+
     let conversation: import("@/modules/types").Conversation;
     if (conversationId) {
       const { data } = await baseDataProvider.getOne<

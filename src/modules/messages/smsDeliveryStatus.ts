@@ -42,6 +42,17 @@ const normalizeStatus = (
   return null;
 };
 
+export const isSmsDeliveryRetryable = (message: ConversationMessage) => {
+  if (message.direction !== "outbound" || message.is_internal_note) {
+    return false;
+  }
+  if (!message.external_id) {
+    return false;
+  }
+  const status = normalizeStatus(message.sms_delivery_status);
+  return status === "undelivered" || status === "failed";
+};
+
 export const getSmsDeliveryDisplay = (
   message: ConversationMessage,
 ): SmsDeliveryDisplay | null => {

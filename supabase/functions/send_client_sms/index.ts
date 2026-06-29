@@ -12,6 +12,7 @@ import {
   insertSmsMessage,
   touchConversationFirstResponse,
 } from "../_shared/messagingConversations.ts";
+import { resendFailedClientSms } from "../_shared/clientSmsResend.ts";
 import {
   expandTemplateVariables,
   sanitizeMessageBody,
@@ -31,6 +32,7 @@ type SendBody = {
   template_id?: number;
   reply_to_message_id?: number | null;
   external_phone?: string;
+  resend_message_id?: number;
 };
 
 const normalizeTwilioDeliveryStatus = (raw: string | undefined) => {
@@ -85,6 +87,27 @@ Deno.serve((req: Request) =>
           return createErrorResponse(
             403,
             "You don't have permission to send messages.",
+          );
+        }
+
+        const resendMessageId =
+          payload.resend_message_id != null &&
+          Number.isFinite(Number(payload.resend_message_id))
+            ? Number(payload.resend_message_id)
+            : null;
+
+        if (resendMessageId) {
+          const { message, conversation } = await resendFailedClientSms({
+            orgId,
+            memberId,
+            messageId: resendMessageId,
+          });
+
+          return new Response(
+            JSON.stringify({ message, conversation }),
+            {
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            },
           );
         }
 
