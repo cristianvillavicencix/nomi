@@ -39,7 +39,11 @@ Deno.serve(
 
         if (
           !member.administrator &&
-          !hasMemberCapability(member, "proposals.send")
+          !hasMemberCapability(member, "proposals.send") &&
+          !(
+            body.sync_all_installments === true &&
+            hasMemberCapability(member, "proposals.edit")
+          )
         ) {
           return createErrorResponse(403, "You cannot issue invoices");
         }

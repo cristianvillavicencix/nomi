@@ -81,6 +81,15 @@ export async function issueClientInvoiceFromInstallment(
     row,
   );
 
+  if (
+    paymentFields.upfront_percent <= 0 ||
+    paymentFields.upfront_percent > 100
+  ) {
+    throw new Error(
+      `Invalid upfront_percent (${paymentFields.upfront_percent}) for installment invoice`,
+    );
+  }
+
   const { data: invoiceNumber, error: numberError } = await supabase.rpc(
     "next_client_invoice_number",
     { p_org_id: orgId },

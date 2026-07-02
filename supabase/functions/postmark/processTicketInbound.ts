@@ -3,6 +3,10 @@ import type { Attachment } from "./extractAndUploadAttachments.ts";
 import { isOrgTransactionalEmailConfigured } from "../_shared/transactionalEmail.ts";
 import { sendNewTicketAutoReply } from "../_shared/ticketInboundAutoReply.ts";
 import { INVOICE_ORGANIZATION_NAME } from "../_shared/invoiceOrganizationInfo.ts";
+import {
+  stripQuotedHtml,
+  stripQuotedPlainText,
+} from "../_shared/ticketEmailQuotedContent.ts";
 
 type PostmarkAddress = {
   Email?: string;
@@ -20,6 +24,7 @@ export type PostmarkInboundPayload = {
   TextBody?: string;
   HtmlBody?: string;
   StrippedTextReply?: string;
+  StrippedHtmlReply?: string;
   FromFull?: PostmarkAddress;
   ToFull?: PostmarkAddress[];
   CcFull?: PostmarkAddress[];
@@ -345,9 +350,11 @@ export const processTicketInbound = async ({
 
   const fromName = payload.FromFull?.Name?.trim() || null;
   const subject = payload.Subject?.trim() || "(No subject)";
-  const textBody =
-    payload.StrippedTextReply?.trim() || payload.TextBody?.trim() || "";
-  const htmlBody = payload.HtmlBody?.trim() || null;
+  const textBody = payload.StrippedTextReply?.trim()
+    || stripQuotedPlainText(payload.TextBody?.trim() || "")
+    || "";
+  const htmlBody = payload.StrippedHtmlReply?.trim()
+    || (payload.HtmlBody?.trim() ? stripQuotedHtml(payload.HtmlBody) : null);
   const messageId = payload.MessageID?.trim() || null;
   const inReplyTo = headerValue(payload.Headers, "In-Reply-To");
   const references = headerValue(payload.Headers, "References");

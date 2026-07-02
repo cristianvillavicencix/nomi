@@ -10,6 +10,8 @@ import {
   Phone,
   PhoneCall,
   Trash2,
+  Trophy,
+  XCircle,
 } from "lucide-react";
 
 import { Confirm } from "@/components/admin/confirm";
@@ -40,6 +42,7 @@ import {
   shouldShowLeadQuoteAmount,
 } from "@/modules/leads/leadCardUtils";
 import { normalizeLeadStage } from "@/modules/leads/leadStages";
+import { isLeadTerminalStage } from "@/modules/leads/leadFollowUpUtils";
 import { useMessagesQuickAccessOptional } from "@/modules/messages/messagesQuickAccessContext";
 import { contactHasSmsPhone } from "@/modules/messages/messageContactUtils";
 import { useCrmPhoneCall } from "@/modules/voice/useCrmPhoneCall";
@@ -51,6 +54,9 @@ const cardActionClassName = (isDragging: boolean) =>
     "hover:bg-muted hover:text-foreground",
     isDragging && "opacity-100",
   );
+
+const cardToolbarIconClassName =
+  "size-7 shrink-0 rounded-none text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40";
 
 export type LeadCardProps = {
   lead: Contact;
@@ -64,11 +70,13 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
   const notify = useNotify();
   const refresh = useRefresh();
   const [deleteOne, { isPending: isDeleting }] = useDelete<Contact>();
-  const { membersById, conversationsByContactId } = useLeadKanbanContext();
+  const { membersById, conversationsByContactId, requestStageChange } =
+    useLeadKanbanContext();
   const messagesQuickAccess = useMessagesQuickAccessOptional();
   const canViewAmounts = useCanViewAmounts();
 
   const stage = normalizeLeadStage(lead.lead_stage);
+  const isTerminal = isLeadTerminalStage(lead.lead_stage);
   const name = getLeadDisplayName(lead);
   const phone = getLeadPrimaryPhoneDisplay(lead);
   const email = getLeadPrimaryEmail(lead);
@@ -283,56 +291,10 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                   </div>
                 </div>
 
-                {stage === "new" ? (
-                  <div className="mt-1.5 flex items-center gap-1.5 border-t border-border/60 pt-1.5">
-                    {phone?.e164 ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 flex-1 gap-1 px-2 text-[11px]"
-                        disabled={!canCallPhone}
-                        onClick={(event) => {
-                          stopCardNavigation(event);
-                          if (phone?.e164) {
-                            void callPhone({
-                              to: phone.e164,
-                              contactId: lead.id,
-                            });
-                          }
-                        }}
-                      >
-                        <PhoneCall className="size-3" />
-                        Call
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 flex-1 gap-1 px-2 text-[11px]"
-                        disabled
-                      >
-                        <PhoneCall className="size-3" />
-                        Call
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 flex-1 gap-1 px-2 text-[11px]"
-                      disabled={!contactHasSmsPhone(lead)}
-                      onClick={openSms}
-                    >
-                      <MessageSquare className="size-3" />
-                      SMS
-                    </Button>
-                  </div>
-                ) : (
+                {stage !== "new" ? (
                   <p
                     className={cn(
-                      "mt-1.5 border-t border-border/60 pt-1.5 text-[11px] leading-snug",
+                      "mt-1.5 text-[11px] leading-snug",
                       activityStale
                         ? "font-medium text-amber-600 dark:text-amber-500"
                         : "text-muted-foreground",
@@ -340,7 +302,85 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                   >
                     {formatLeadActivityFooter(activity)}
                   </p>
-                )}
+                ) : null}
+
+                {!isTerminal ? (
+                  <div
+                    className="-mx-2 -mb-2 mt-1.5 flex items-stretch border-t border-border/60"
+                    onClick={stopCardNavigation}
+                    onPointerDown={stopCardNavigation}
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(cardToolbarIconClassName, "flex-1 rounded-bl-lg")}
+                      title="Call"
+                      disabled={!canCallPhone}
+                      onClick={(event) => {
+                        stopCardAction(event);
+                        if (phone?.e164) {
+                          void callPhone({
+                            to: phone.e164,
+                            contactId: lead.id,
+                          });
+                        }
+                      }}
+                    >
+                      <PhoneCall className="size-3.5" />
+                      <span className="sr-only">Call</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        cardToolbarIconClassName,
+                        "flex-1 border-l border-border/60",
+                      )}
+                      title="SMS"
+                      disabled={!contactHasSmsPhone(lead)}
+                      onClick={openSms}
+                    >
+                      <MessageSquare className="size-3.5" />
+                      <span className="sr-only">SMS</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        cardToolbarIconClassName,
+                        "flex-1 border-l border-border/60 text-emerald-600 hover:text-emerald-700 dark:text-emerald-500",
+                      )}
+                      title="Mark as won"
+                      onClick={(event) => {
+                        stopCardAction(event);
+                        requestStageChange(lead, "won");
+                      }}
+                    >
+                      <Trophy className="size-3.5" />
+                      <span className="sr-only">Mark as won</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        cardToolbarIconClassName,
+                        "flex-1 rounded-br-lg border-l border-border/60 text-destructive hover:text-destructive",
+                      )}
+                      title="Mark as lost"
+                      onClick={(event) => {
+                        stopCardAction(event);
+                        requestStageChange(lead, "lost");
+                      }}
+                    >
+                      <XCircle className="size-3.5" />
+                      <span className="sr-only">Mark as lost</span>
+                    </Button>
+                  </div>
+                ) : null}
               </div>
 
               <LeadActivitySheet

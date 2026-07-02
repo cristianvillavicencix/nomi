@@ -9,14 +9,19 @@ import type { LeadStageDef } from "./leadStages";
 export type LeadColumnProps = {
   stage: LeadStageDef;
   leads: Contact[];
+  isDragging?: boolean;
 };
 
-export const LeadColumn = ({ stage, leads }: LeadColumnProps) => {
+export const LeadColumn = ({
+  stage,
+  leads,
+  isDragging = false,
+}: LeadColumnProps) => {
   return (
-    <div className="flex h-full w-[280px] shrink-0 flex-col min-h-0">
+    <div className="flex h-full min-h-0 min-w-[11rem] max-w-[18rem] flex-1 basis-0 flex-col">
       <div
         data-kanban-header
-        className="mb-2 shrink-0 flex flex-col items-center text-center select-none"
+        className="mb-2 flex shrink-0 select-none flex-col items-center text-center"
       >
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <span
@@ -24,11 +29,6 @@ export const LeadColumn = ({ stage, leads }: LeadColumnProps) => {
             style={{ backgroundColor: stage.color }}
           />
           {stage.label}
-          {stage.terminal ? (
-            <span className="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
-              terminal
-            </span>
-          ) : null}
         </h3>
         <p className="text-[11px] text-muted-foreground">
           {leads.length} {leads.length === 1 ? "lead" : "leads"}
@@ -41,24 +41,30 @@ export const LeadColumn = ({ stage, leads }: LeadColumnProps) => {
             <div
               ref={droppableProvided.innerRef}
               {...droppableProvided.droppableProps}
-              data-kanban-cards
-              className={cn(
-                "flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-y-contain rounded-xl border bg-muted/20 p-2 transition-colors",
-                snapshot.isDraggingOver
-                  ? "border-primary/50 bg-primary/5"
-                  : "border-transparent",
-              )}
+              className="flex min-h-[10rem] flex-1 flex-col"
             >
-              {leads.map((lead, index) => (
-                <LeadCard key={lead.id} lead={lead} index={index} />
-              ))}
-              {leads.length === 0 ? (
-                <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                  Drop a lead here to move to{" "}
-                  <span className="font-medium">{stage.label}</span>
-                </p>
-              ) : null}
-              {droppableProvided.placeholder}
+              <div
+                data-kanban-cards
+                data-column-scroll
+                className={cn(
+                  "flex min-h-0 flex-1 flex-col gap-1.5 rounded-xl border bg-muted/20 p-2 transition-colors",
+                  isDragging ? "overflow-hidden" : "overflow-y-auto overscroll-y-contain",
+                  snapshot.isDraggingOver
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-transparent",
+                )}
+              >
+                {leads.map((lead, index) => (
+                  <LeadCard key={lead.id} lead={lead} index={index} />
+                ))}
+                {leads.length === 0 ? (
+                  <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                    Drop a lead here to move to{" "}
+                    <span className="font-medium">{stage.label}</span>
+                  </p>
+                ) : null}
+                {droppableProvided.placeholder}
+              </div>
             </div>
           )}
         </Droppable>

@@ -45,6 +45,7 @@ import { TicketReplyRichComposer } from "@/modules/tickets/TicketReplyRichCompos
 import { expandTicketReplyTemplate } from "@/modules/tickets/ticketReplyTemplates";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import {
+  assembleReplyComposerHtml,
   createDefaultReplyHtml,
   extractReplyComposerParts,
   hasReplyContentHtml,
@@ -1085,7 +1086,7 @@ export const TicketReplyForm = ({
                 id={`ticket-reply-to-${ticket.id}`}
                 value={toRecipients}
                 onChange={setToRecipients}
-                placeholder="Search contact or type email…"
+                placeholder="email@example.com, another@example.com"
                 disabled={isPending}
                 className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-none focus-visible:ring-1"
               />
@@ -1100,7 +1101,7 @@ export const TicketReplyForm = ({
                 id={`ticket-reply-cc-${ticket.id}`}
                 value={ccRecipients}
                 onChange={setCcRecipients}
-                placeholder="Optional"
+                placeholder="Optional, comma-separated"
                 disabled={isPending}
                 className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-none focus-visible:ring-1"
               />
@@ -1158,7 +1159,17 @@ export const TicketReplyForm = ({
 
           <TicketComposerToolbar
             editorRef={editorRef}
-            onEditorChange={setBodyHtml}
+            onEditorChange={(userHtml) => {
+              setBodyHtml((current) => {
+                const { signatureHtml, quotedReplyHtml } =
+                  extractReplyComposerParts(current);
+                return assembleReplyComposerHtml({
+                  userNoteHtml: userHtml,
+                  signatureHtml,
+                  quotedReplyHtml,
+                });
+              });
+            }}
             disabled={isPending}
             ticket={ticket}
             inbox={activeInbox}

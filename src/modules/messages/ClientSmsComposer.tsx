@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ import {
   normalizeUsPhoneToE164,
 } from "@/utils/phone";
 import { SmsTemplateShortcutTiles } from "@/modules/messages/SmsTemplateShortcutTiles";
+import { SmsBodyLengthHint } from "@/modules/messages/SmsBodyLengthHint";
+import { isSmsLengthOverLimit } from "@/modules/messages/smsMessageLimits";
 
 type PendingAttachment = {
   id: string;
@@ -126,9 +128,29 @@ export const ClientSmsComposer = ({
       ? normalizeUsPhoneToE164(externalPhone)
       : null;
 
+  const outboundBody = useMemo(() => {
+    const trimmed = body.trim();
+    if (isInternalNote) return trimmed;
+    const shouldIncludeSignature =
+      Boolean(signature) && (signatureRequired || includeSignature);
+    if (shouldIncludeSignature && trimmed.length > 0) {
+      return `${trimmed}\n${signature}`;
+    }
+    return trimmed;
+  }, [
+    body,
+    includeSignature,
+    isInternalNote,
+    signature,
+    signatureRequired,
+  ]);
+
+  const smsOverLimit = !isInternalNote && isSmsLengthOverLimit(outboundBody);
+
   const canSend =
     !disabled &&
     !isSending &&
+    !smsOverLimit &&
     (body.trim().length > 0 || pendingFiles.length > 0) &&
     (conversationId != null || resolvedExternalPhone != null);
 
@@ -211,6 +233,12 @@ export const ClientSmsComposer = ({
         !isInternalNote && signature && (signatureRequired || includeSignature);
       if (shouldIncludeSignature && finalBody.length > 0) {
         finalBody = `${finalBody}\n${signature}`;
+      }
+
+      if (!isInternalNote && finalBody && isSmsLengthOverLimit(finalBody)) {
+        throw new Error(
+          "SMS is too long. Shorten the message before sending.",
+        );
       }
 
       const result = await sendClientSms({
@@ -450,6 +478,10 @@ export const ClientSmsComposer = ({
           />
         </Button>
       </div>
+
+      {!isInternalNote ? (
+        <SmsBodyLengthHint body={outboundBody} className="px-0.5" />
+      ) : null}
     </form>
   );
 };

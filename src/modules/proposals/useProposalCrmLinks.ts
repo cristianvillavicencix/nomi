@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { useGetList, useGetOne } from "ra-core";
-import type { Company, Contact } from "@/components/atomic-crm/types";
+import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { getContactDisplayName } from "@/modules/messages/messageContactUtils";
+import { buildOpenDealsFilter } from "@/modules/deals/openDealFilters";
+import { pickPreferredDeal } from "@/modules/proposals/proposalClientSearch";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 
 export const proposalContactOptionText = (contact: Contact) =>
@@ -18,8 +21,10 @@ const emptyListFilter = { "id@eq": -1 };
 
 export const useProposalCrmLinks = () => {
   const { watch, setValue } = useFormContext<ProposalCrmFormValues>();
+  const { dealStages, dealPipelineStatuses } = useConfigurationContext();
   const companyId = watch("company_id");
   const contactId = watch("contact_id");
+  const dealId = watch("deal_id");
   const prevCompanyIdRef = useRef(companyId);
 
   const companyIdEnabled = isValidRecordId(companyId);
@@ -36,8 +41,13 @@ export const useProposalCrmLinks = () => {
   );
 
   const dealFilter = useMemo(
-    () => (companyIdEnabled ? { "company_id@eq": companyId } : emptyListFilter),
-    [companyId, companyIdEnabled],
+    () =>
+      companyIdEnabled
+        ? buildOpenDealsFilter(dealPipelineStatuses, dealStages, {
+            "company_id@eq": companyId,
+          })
+        : emptyListFilter,
+    [companyId, companyIdEnabled, dealPipelineStatuses, dealStages],
   );
 
   const { data: companyContacts = [] } = useGetList<Contact>(
@@ -50,6 +60,22 @@ export const useProposalCrmLinks = () => {
     { enabled: companyIdEnabled },
   );
 
+  const { data: companyDeals = [] } = useGetList<Deal>(
+    "deals",
+    {
+      filter: dealFilter,
+      pagination: { page: 1, perPage: 50 },
+      sort: { field: "updated_at", order: "DESC" },
+    },
+    { enabled: companyIdEnabled },
+  );
+
+  const { data: selectedDeal } = useGetOne<Deal>(
+    "deals",
+    { id: dealId as Deal["id"] },
+    { enabled: isValidRecordId(dealId) },
+  );
+
   useEffect(() => {
     if (prevCompanyIdRef.current !== companyId) {
       setValue("deal_id", null);
@@ -58,10 +84,7 @@ export const useProposalCrmLinks = () => {
   }, [companyId, setValue]);
 
   useEffect(() => {
-    if (!companyIdEnabled) {
-      if (contactId) setValue("contact_id", null);
-      return;
-    }
+    if (!companyIdEnabled) return;
 
     const contactBelongs = companyContacts.some(
       (row) => String(row.id) === String(contactId),
@@ -93,10 +116,24 @@ export const useProposalCrmLinks = () => {
     setValue,
   ]);
 
+  useEffect(() => {
+    if (!companyIdEnabled) return;
+
+    const dealBelongs = companyDeals.some(
+      (row) => String(row.id) === String(dealId),
+    );
+    if (dealId && dealBelongs) return;
+
+    const preferred = pickPreferredDeal(companyDeals, contactId);
+    setValue("deal_id", preferred?.id ?? null);
+  }, [companyIdEnabled, companyDeals, contactId, dealId, setValue]);
+
   return {
     companyIdEnabled,
     contactFilter,
     dealFilter,
     companyContacts,
+    company,
+    selectedDeal,
   };
 };

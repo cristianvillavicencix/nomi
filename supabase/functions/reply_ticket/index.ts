@@ -20,6 +20,12 @@ import {
 } from "../_shared/ticketReplyAttachmentLimits.ts";
 import { buildEmailThreadHeaders } from "../_shared/emailThreading.ts";
 import { stripCidFromHtml } from "../_shared/stripCidFromHtml.ts";
+import {
+  stripComposerQuotedHtml,
+  stripComposerQuotedPlainText,
+  stripQuotedHtml,
+  stripQuotedPlainText,
+} from "../_shared/ticketEmailQuotedContent.ts";
 
 type ReplyBody = {
   ticket_id?: number;
@@ -314,13 +320,21 @@ Deno.serve(
 
         const emailDeliveryStatus = emailResult.skipped ? "skipped" : "sent";
 
+        const storedBody =
+          stripComposerQuotedPlainText(stripQuotedPlainText(body)) ||
+          body ||
+          "(See attachments)";
+        const storedHtmlBody = outboundHtmlBody
+          ? stripComposerQuotedHtml(stripQuotedHtml(outboundHtmlBody)) || null
+          : null;
+
         const { data: message, error: messageError } = await supabaseAdmin
           .from("ticket_messages")
           .insert({
             ticket_id: ticket.id,
             author_member_id: member.id,
-            body: body || "(See attachments)",
-            html_body: outboundHtmlBody || null,
+            body: storedBody,
+            html_body: storedHtmlBody,
             direction: "outbound",
             from_email: inboxAddress,
             from_name: memberName || fromName,

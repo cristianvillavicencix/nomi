@@ -138,7 +138,7 @@ export const clientInvoicePaymentFromProposalInstallment = (
   }
 
   return {
-    upfront_percent: 0,
+    upfront_percent: 100,
     save_card_for_future_charges: true,
     auto_charge_remainder: true,
     remainder_schedule: {

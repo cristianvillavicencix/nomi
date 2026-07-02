@@ -13,6 +13,7 @@ import {
   appendConversationMessageToCache,
   refreshConversationLists,
 } from "@/modules/messages/messagesRealtimeCache";
+import { assertSmsBodyWithinLimit } from "@/modules/messages/smsMessageLimits";
 
 export const useOpenClientSms = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -64,11 +65,16 @@ export const useSendClientSms = () => {
       externalPhone?: string | null;
       resendMessageId?: Identifier;
     }) => {
+      const body = params.body ?? "";
+      if (!params.isInternalNote && body.trim()) {
+        assertSmsBodyWithinLimit(body);
+      }
+
       const result = await dataProvider.sendClientSms({
         conversationId: params.conversationId,
         contactId: params.contactId,
         dealId: params.dealId,
-        body: params.body ?? "",
+        body,
         mediaUrls: params.mediaUrls,
         isInternalNote: params.isInternalNote,
         templateId: params.templateId,

@@ -1,11 +1,55 @@
-import { useState } from "react";
-import { Markdown } from "@/components/atomic-crm/misc/Markdown";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { stripTrailingDuplicateOfQuoted } from "@/modules/tickets/dedupeQuotedEmailDisplay";
+import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
+import { TicketQuotedEmailSection } from "@/modules/tickets/TicketQuotedEmailSection";
 import {
-  sanitizeTicketEmailHtml,
-  sanitizeTicketEmailHtmlOriginal,
-} from "@/modules/tickets/sanitizeTicketEmailHtml";
+  hasRichHtmlStructure,
+  hasSubstantialQuotedContent,
+  isPlainTextSimilar,
+  splitHtmlEmail,
+  splitPlainTextEmail,
+} from "@/modules/tickets/ticketEmailQuotedContent";
+import { htmlToPlainText } from "@/modules/tickets/ticketReplyRichText";
+
+const emailHtmlClassName = cn(
+  "ticket-email-html leading-relaxed break-words text-sm text-foreground",
+  "[&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline",
+  "[&_img]:my-2 [&_img]:block [&_img]:h-auto [&_img]:max-w-full",
+  "[&_table]:my-2 [&_table]:max-w-full [&_table]:table-fixed",
+  "[&_td]:break-words [&_th]:break-words",
+  "[&_*]:!float-none [&_*]:!clear-both [&_*]:max-w-full",
+  "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
+  "[&_div]:relative [&_span]:relative",
+);
+
+const PlainTicketText = ({ text }: { text: string }) => (
+  <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+    {text}
+  </div>
+);
+
+const HtmlTicketBody = ({
+  html,
+  stripHrefs,
+  attachmentSrcs,
+  attachmentTitles,
+}: {
+  html: string;
+  stripHrefs?: string[];
+  attachmentSrcs?: string[];
+  attachmentTitles?: string[];
+}) => (
+  <div
+    className={emailHtmlClassName}
+    dangerouslySetInnerHTML={{
+      __html: sanitizeTicketEmailHtml(html, {
+        stripHrefs,
+        attachmentSrcs,
+        attachmentTitles,
+      }),
+    }}
+  />
+);
 
 export const TicketMessageBody = ({
   body,
@@ -16,59 +60,92 @@ export const TicketMessageBody = ({
 }: {
   body?: string | null;
   htmlBody?: string | null;
-  /** Hrefs removed from HTML because they render in the attachments panel. */
   stripHrefs?: string[];
   attachmentSrcs?: string[];
   attachmentTitles?: string[];
 }) => {
-  const [viewOriginal, setViewOriginal] = useState(false);
   const html = htmlBody?.trim();
+  const plain = body?.trim();
 
   if (html) {
-    const sanitized = viewOriginal
-      ? sanitizeTicketEmailHtmlOriginal(html)
-      : sanitizeTicketEmailHtml(html, {
-          stripHrefs,
-          attachmentSrcs,
-          attachmentTitles,
-        });
+    const split = splitHtmlEmail(html);
+    const hasQuoted =
+      Boolean(split.quoted) && hasSubstantialQuotedContent(split.quoted);
+    const htmlMainText = htmlToPlainText(split.content || html);
 
-    return (
-      <div className="space-y-2">
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs"
-            onClick={() => setViewOriginal((current) => !current)}
-          >
-            {viewOriginal ? "Safe view" : "Original email"}
-          </Button>
+    // Plain body is already stripped on ingest; HTML may still include the quoted thread.
+    const usePlainAsMain =
+      Boolean(plain) &&
+      hasQuoted &&
+      isPlainTextSimilar(plain, htmlMainText);
+
+    if (usePlainAsMain && plain) {
+      const mainPlain = splitPlainTextEmail(plain).content || plain;
+      return (
+        <div className="space-y-1">
+          <PlainTicketText text={mainPlain} />
+          <TicketQuotedEmailSection
+            quoted={split.quoted!}
+            quoteHeader={split.quoteHeader}
+            isHtml
+          />
         </div>
-        <div
-          className={cn(
-            "ticket-email-html isolate overflow-x-auto leading-relaxed break-words",
-            "rounded-md border border-border/60 bg-white p-3 text-neutral-900 shadow-sm",
-            "dark:border-border/80 dark:bg-[#f4f4f5] dark:text-neutral-900 dark:shadow-none",
-            "[&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline dark:[&_a]:text-blue-800",
-            "[&_img]:my-2 [&_img]:block [&_img]:h-auto [&_img]:max-w-full",
-            "[&_table]:my-2 [&_table]:max-w-full [&_table]:table-fixed",
-            "[&_td]:break-words [&_th]:break-words",
-            "[&_*]:!float-none [&_*]:!clear-both [&_*]:max-w-full",
-            "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
-            "[&_div]:relative [&_span]:relative",
-            viewOriginal &&
-              "[&_*]:text-inherit [&_p]:text-inherit [&_span]:text-inherit [&_font]:text-inherit",
-          )}
-          dangerouslySetInnerHTML={{ __html: sanitized }}
+      );
+    }
+
+    if (plain && !hasQuoted && !hasRichHtmlStructure(html)) {
+      if (isPlainTextSimilar(plain, htmlMainText)) {
+        return (
+          <div className="space-y-1">
+            <PlainTicketText text={plain} />
+          </div>
+        );
+      }
+    }
+
+    const displayHtml = hasQuoted
+      ? stripTrailingDuplicateOfQuoted(
+          split.content || html,
+          split.quoted!,
+          true,
+        )
+      : split.content || html;
+    return (
+      <div className="space-y-1">
+        <HtmlTicketBody
+          html={displayHtml}
+          stripHrefs={stripHrefs}
+          attachmentSrcs={attachmentSrcs}
+          attachmentTitles={attachmentTitles}
         />
+        {hasQuoted ? (
+          <TicketQuotedEmailSection
+            quoted={split.quoted!}
+            quoteHeader={split.quoteHeader}
+            isHtml
+          />
+        ) : null}
       </div>
     );
   }
 
-  if (body?.trim()) {
-    return <Markdown className="leading-relaxed">{body}</Markdown>;
+  if (plain) {
+    const split = splitPlainTextEmail(plain);
+    const displayContent =
+      split.quoted && hasSubstantialQuotedContent(split.quoted)
+        ? stripTrailingDuplicateOfQuoted(split.content, split.quoted, false)
+        : split.content;
+    return (
+      <div className="space-y-1">
+        <PlainTicketText text={displayContent} />
+        {split.quoted && hasSubstantialQuotedContent(split.quoted) ? (
+          <TicketQuotedEmailSection
+            quoted={split.quoted}
+            quoteHeader={split.quoteHeader}
+          />
+        ) : null}
+      </div>
+    );
   }
 
   return <p className="text-muted-foreground">(Empty message)</p>;

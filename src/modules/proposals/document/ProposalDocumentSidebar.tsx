@@ -3,6 +3,7 @@ import { Download, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { daysUntilValidUntil } from "@/modules/proposals/ProposalSendExpiryDialog";
+import { ProposalBillingOnAcceptHint } from "@/modules/proposals/ProposalBillingOnAcceptHint";
 import type { ProposalDocumentNavSection } from "@/modules/proposals/document/proposalDocumentSections";
 import type { Proposal } from "@/modules/types";
 
@@ -119,6 +120,11 @@ export const ProposalDocumentSidebar = ({
         ) : null}
 
         <div className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+          <ProposalBillingOnAcceptHint
+            proposal={proposal}
+            variant="inline"
+            className="mb-2 text-[11px]"
+          />
           {proposal.proposal_number ? (
             <p>
               Proposal{" "}

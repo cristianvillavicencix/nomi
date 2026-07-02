@@ -7,8 +7,10 @@ import {
 import { useAutoGrowTextarea } from "@/hooks/use-auto-grow-textarea";
 import { cn } from "@/lib/utils";
 import {
+  assembleReplyComposerHtml,
+  extractReplyComposerParts,
   sanitizeComposerHtml,
-  hasReplyContentHtml,
+  shouldShowComposerPlaceholder,
 } from "@/modules/tickets/ticketReplyRichText";
 
 type TicketReplyRichComposerProps = {
@@ -36,10 +38,12 @@ export const TicketReplyRichComposer = ({
   resizeTrigger,
   className,
 }: TicketReplyRichComposerProps) => {
-  const localRef = useRef<HTMLDivElement | null>(null);
+  const userEditorRef = useRef<HTMLDivElement | null>(null);
+  const { userNoteHtml, signatureHtml, quotedReplyHtml } =
+    extractReplyComposerParts(value);
 
-  const setRef = (node: HTMLDivElement | null) => {
-    localRef.current = node;
+  const setUserEditorRef = (node: HTMLDivElement | null) => {
+    userEditorRef.current = node;
     if (editorRef) {
       (editorRef as React.MutableRefObject<HTMLDivElement | null>).current =
         node;
@@ -47,39 +51,74 @@ export const TicketReplyRichComposer = ({
   };
 
   useLayoutEffect(() => {
-    const el = localRef.current;
+    const el = userEditorRef.current;
     if (!el || document.activeElement === el) return;
-    const sanitized = sanitizeComposerHtml(value);
+    const sanitized = sanitizeComposerHtml(userNoteHtml || "<p><br></p>");
     if (el.innerHTML !== sanitized) {
       el.innerHTML = sanitized;
     }
-  }, [value]);
+  }, [userNoteHtml]);
 
-  useAutoGrowTextarea(localRef, value, { minHeight, maxHeight, resizeTrigger });
+  useAutoGrowTextarea(userEditorRef, userNoteHtml, {
+    minHeight: Math.min(minHeight, 160),
+    maxHeight: Math.min(maxHeight, 280),
+    resizeTrigger,
+  });
+
+  const updateUserHtml = (nextUserHtml: string) => {
+    onChange(
+      assembleReplyComposerHtml({
+        userNoteHtml: sanitizeComposerHtml(nextUserHtml),
+        signatureHtml,
+        quotedReplyHtml,
+      }),
+    );
+  };
+
+  const showPlaceholder = shouldShowComposerPlaceholder(value);
 
   return (
-    <div className="relative">
-      {!hasReplyContentHtml(value) ? (
-        <p className="pointer-events-none absolute left-5 top-3.5 text-sm text-muted-foreground">
-          {placeholder}
-        </p>
+    <div className="px-5 py-3.5">
+      <div className="relative">
+        {showPlaceholder ? (
+          <p className="pointer-events-none absolute left-0 top-0 text-sm text-muted-foreground">
+            {placeholder}
+          </p>
+        ) : null}
+        <div
+          ref={setUserEditorRef}
+          contentEditable={!disabled}
+          suppressContentEditableWarning
+          onInput={() => {
+            updateUserHtml(userEditorRef.current?.innerHTML ?? "");
+          }}
+          onPaste={onPaste}
+          className={cn(
+            "ticket-reply-rich-editor min-h-[5.5rem] overflow-hidden rounded-none border-0 p-0 text-sm leading-relaxed shadow-none outline-none focus-visible:ring-0",
+            "[&_a]:text-primary [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_p+p]:mt-3 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
+            disabled && "cursor-not-allowed opacity-60",
+            className,
+          )}
+        />
+      </div>
+
+      {signatureHtml ? (
+        <div
+          className="ticket-reply-rich-meta mt-4 border-t border-border/80 pt-4 text-[13px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_p]:my-0 [&_p+p]:mt-1"
+          contentEditable={false}
+          suppressContentEditableWarning
+          dangerouslySetInnerHTML={{ __html: signatureHtml }}
+        />
       ) : null}
-      <div
-        ref={setRef}
-        contentEditable={!disabled}
-        suppressContentEditableWarning
-        onInput={() => {
-          const html = sanitizeComposerHtml(localRef.current?.innerHTML ?? "");
-          onChange(html);
-        }}
-        onPaste={onPaste}
-        className={cn(
-          "ticket-reply-rich-editor min-h-[12.5rem] overflow-hidden rounded-none border-0 px-5 py-3.5 text-sm leading-relaxed shadow-none outline-none focus-visible:ring-0",
-          "[&_a]:text-primary [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_p+p]:mt-3 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
-          disabled && "cursor-not-allowed opacity-60",
-          className,
-        )}
-      />
+
+      {quotedReplyHtml ? (
+        <div
+          className="ticket-reply-rich-meta mt-4 text-[13px] leading-relaxed text-muted-foreground [&_.ticket-reply-quoted-body]:text-foreground [&_a]:text-primary [&_a]:underline [&_p]:my-1.5 [&_p:first-child]:mt-0 [&_table]:my-2"
+          contentEditable={false}
+          suppressContentEditableWarning
+          dangerouslySetInnerHTML={{ __html: quotedReplyHtml }}
+        />
+      ) : null}
     </div>
   );
 };

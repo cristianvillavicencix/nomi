@@ -6,7 +6,10 @@ import {
   getContactEmail,
   getContactFullName,
 } from "@/modules/clients/clientShowUtils";
-import { parseEmailList } from "@/modules/tickets/ticketReplySignature";
+import {
+  isValidEmailList,
+  parseEmailList,
+} from "@/modules/tickets/ticketReplySignature";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -22,6 +25,8 @@ type RecipientSuggestion = {
   kind: "contact" | "company";
 };
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const splitRecipientToken = (value: string) => {
   const lastComma = value.lastIndexOf(",");
   const token = (lastComma === -1 ? value : value.slice(lastComma + 1)).trim();
@@ -31,6 +36,9 @@ const splitRecipientToken = (value: string) => {
       : value.slice(0, lastComma).trim().replace(/,\s*$/, "");
   return { token, base };
 };
+
+const formatRecipientList = (value: string) =>
+  parseEmailList(value).join(", ");
 
 const applyRecipientEmail = (value: string, email: string) => {
   const normalized = email.trim().toLowerCase();
@@ -149,6 +157,15 @@ export const TicketRecipientInput = ({
     setOpen(false);
   };
 
+  const commitCurrentToken = (nextValue: string) => {
+    const formatted = formatRecipientList(nextValue);
+    if (formatted) {
+      onChange(`${formatted}, `);
+      return;
+    }
+    onChange(nextValue);
+  };
+
   return (
     <Popover open={open && suggestions.length > 0} onOpenChange={setOpen} modal>
       <PopoverAnchor asChild>
@@ -159,13 +176,33 @@ export const TicketRecipientInput = ({
             onChange(event.target.value);
             setOpen(true);
           }}
+          onBlur={() => {
+            const formatted = formatRecipientList(value);
+            if (formatted !== value.trim()) {
+              onChange(formatted);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "," || event.key === "Enter") {
+              const { token: currentToken } = splitRecipientToken(value);
+              if (currentToken && emailPattern.test(currentToken)) {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitCurrentToken(value);
+                }
+                setOpen(false);
+              }
+            }
+          }}
           onFocus={() => {
             if (canSearch && suggestions.length > 0) setOpen(true);
           }}
           placeholder={placeholder}
           disabled={disabled}
+          spellCheck={false}
+          autoComplete="off"
           className={cn(
-            "h-7 min-w-[10rem] flex-1 border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0",
+            "min-h-8 min-w-[10rem] flex-1 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0",
             className,
           )}
         />
@@ -213,3 +250,7 @@ export const TicketRecipientInput = ({
     </Popover>
   );
 };
+
+// Keep validation helper exported for tests and callers.
+export const recipientListIsValid = (value: string) =>
+  isValidEmailList(parseEmailList(value));

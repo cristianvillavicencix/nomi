@@ -1,3 +1,5 @@
+import { assertSmsBodyWithinLimit } from "./smsMessageLimits.ts";
+
 const getTwilioSmsStatusCallbackUrl = () => {
   const explicit = Deno.env.get("TWILIO_SMS_STATUS_CALLBACK_URL")?.trim();
   if (explicit) return explicit;
@@ -15,13 +17,18 @@ export async function sendTwilioSms(params: {
   mediaUrls?: string[];
   statusCallback?: string | null;
 }) {
+  const body = params.body.trim() || " ";
+  if (body !== " ") {
+    assertSmsBodyWithinLimit(body);
+  }
+
   const url = `https://api.twilio.com/2010-04-01/Accounts/${params.accountSid}/Messages.json`;
   const credentials = btoa(`${params.accountSid}:${params.authToken}`);
 
   const form = new URLSearchParams({
     To: params.to,
     From: params.from,
-    Body: params.body.trim() || " ",
+    Body: body,
   });
 
   const statusCallback =

@@ -128,31 +128,33 @@ export const useProposalDocumentData = (
 
   const { data: company } = useGetOne<Company>(
     "companies",
-    { id: proposal!.company_id! },
-    { enabled: isValidRecordId(proposal?.company_id) },
+    { id: proposal?.company_id as Company["id"] },
+    { enabled: enabled && isValidRecordId(proposal?.company_id) },
   );
 
   const { data: contact } = useGetOne<Contact>(
     "contacts",
-    { id: proposal!.contact_id! },
-    { enabled: isValidRecordId(proposal?.contact_id) },
+    { id: proposal?.contact_id as Contact["id"] },
+    { enabled: enabled && isValidRecordId(proposal?.contact_id) },
   );
 
   const { data: deal } = useGetOne<Deal>(
     "deals",
-    { id: proposal!.deal_id! },
-    { enabled: isValidRecordId(proposal?.deal_id) },
+    { id: proposal?.deal_id as Deal["id"] },
+    { enabled: enabled && isValidRecordId(proposal?.deal_id) },
   );
 
   const { data: member } = useGetOne<OrganizationMember>(
     "organization_members",
-    { id: proposal!.organization_member_id! },
-    { enabled: isValidRecordId(proposal?.organization_member_id) },
+    { id: proposal?.organization_member_id as OrganizationMember["id"] },
+    {
+      enabled: enabled && isValidRecordId(proposal?.organization_member_id),
+    },
   );
 
   const { data: linkedContract } = useGetOne<Contract>(
     "contracts",
-    { id: proposal!.contract_id! },
+    { id: proposal?.contract_id as Contract["id"] },
     {
       enabled:
         enabled &&

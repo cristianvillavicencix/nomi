@@ -58,6 +58,7 @@ const ProposalBuilderFields = ({
   setOnlinePaymentSetup,
   isSaving,
   proposalId,
+  proposalStatus,
 }: {
   lines: ProposalLineDraft[];
   setLines: (lines: ProposalLineDraft[]) => void;
@@ -65,6 +66,7 @@ const ProposalBuilderFields = ({
   setOnlinePaymentSetup: (value: OnlinePaymentSetup) => void;
   isSaving: boolean;
   proposalId?: string | number;
+  proposalStatus?: Proposal["status"];
 }) => {
   const { watch, setValue } = useFormContext<ProposalFormValues>();
   const validityDays = watch("validity_days") ?? DEFAULT_VALIDITY_DAYS;
@@ -109,8 +111,8 @@ const ProposalBuilderFields = ({
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
         <Badge variant="secondary">Draft</Badge>
         {proposalId ? (
           <Button type="button" variant="outline" size="sm" asChild>
@@ -132,12 +134,12 @@ const ProposalBuilderFields = ({
 
       <TextInput source="title" className="sr-only" label={false} />
 
-      <div className="grid w-full min-w-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,33fr)_minmax(0,17fr)] lg:items-start">
-        <div className="min-w-0 space-y-3">
-          <ProposalCrmLinksCard />
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,33fr)_minmax(0,17fr)]">
+        <div className="min-h-0 lg:max-h-full lg:overflow-y-auto lg:overscroll-contain lg:pr-0.5">
           <ProposalCatalogPanel lines={lines} onChange={setLines} />
         </div>
-        <div className="min-w-0 lg:sticky lg:top-2 lg:self-start">
+        <div className="min-h-0 space-y-3 lg:max-h-full lg:overflow-y-auto lg:overscroll-contain lg:pl-0.5">
+          <ProposalCrmLinksCard />
           <ProposalCartPanel
             lines={lines}
             onChange={setLines}
@@ -146,6 +148,7 @@ const ProposalBuilderFields = ({
             paymentSummary={paymentSummary}
             onConfigurePayment={() => setPaymentSetupOpen(true)}
             isSaving={isSaving}
+            proposalStatus={proposalStatus}
           />
         </div>
       </div>
@@ -293,67 +296,66 @@ export const ProposalBuilderForm = ({
   };
 
   return (
-    <>
-      <Form
-        id={PROPOSAL_BUILDER_FORM_ID}
-        key={proposalId ?? "create"}
-        defaultValues={defaultValues}
-        onSubmit={async (values: ProposalFormValues) => {
-          const filledLines = lines.filter((line) => line.description.trim());
-          if (filledLines.length === 0) {
-            notify("Select a base package or add at least one line", {
-              type: "warning",
-            });
-            return;
-          }
+    <Form
+      id={PROPOSAL_BUILDER_FORM_ID}
+      key={proposalId ?? "create"}
+      defaultValues={defaultValues}
+      className="flex min-h-0 flex-1 flex-col"
+      onSubmit={async (values: ProposalFormValues) => {
+        const filledLines = lines.filter((line) => line.description.trim());
+        if (filledLines.length === 0) {
+          notify("Select a base package or add at least one line", {
+            type: "warning",
+          });
+          return;
+        }
 
-          setIsSaving(true);
-          try {
-            const { proposal: saved, syncedInvoices } =
-              await saveProposalCommercial(
-                dataProvider,
-                {
-                  orgId,
-                  proposal: {
-                    ...values,
-                    organization_member_id: identity?.id ?? null,
-                    notes: values.notes?.trim() || null,
-                  },
-                  lines: filledLines,
-                  onlinePaymentSetup,
-                  validityDays: values.validity_days,
+        if (
+          !isValidRecordId(values.company_id) &&
+          !isValidRecordId(values.contact_id)
+        ) {
+          notify("Select a client or lead before saving", { type: "warning" });
+          return;
+        }
+
+        setIsSaving(true);
+        try {
+          const { proposal: saved } = await saveProposalCommercial(
+              dataProvider,
+              {
+                orgId,
+                proposal: {
+                  ...values,
+                  organization_member_id: identity?.id ?? null,
+                  notes: values.notes?.trim() || null,
                 },
-                proposalId ?? null,
-              );
-            const invoiceCount = syncedInvoices?.length ?? 0;
-            notify(
-              invoiceCount > 0
-                ? `Proposal saved — ${invoiceCount} invoice${invoiceCount === 1 ? "" : "s"} ready in Billing`
-                : "Proposal saved",
-              { type: "success" },
+                lines: filledLines,
+                onlinePaymentSetup,
+                validityDays: values.validity_days,
+              },
+              proposalId ?? null,
             );
-            navigate(`/proposals/${saved.id}/preview`);
-          } catch (error) {
-            notify(
-              error instanceof Error
-                ? error.message
-                : "Failed to save proposal",
-              { type: "error" },
-            );
-          } finally {
-            setIsSaving(false);
-          }
-        }}
-      >
-        <ProposalBuilderFields
+          notify("Proposal saved", { type: "success" });
+          navigate(`/proposals/${saved.id}/preview`);
+        } catch (error) {
+          notify(
+            error instanceof Error ? error.message : "Failed to save proposal",
+            { type: "error" },
+          );
+        } finally {
+          setIsSaving(false);
+        }
+      }}
+    >
+      <ProposalBuilderFields
           lines={lines}
           setLines={setLines}
           onlinePaymentSetup={onlinePaymentSetup}
           setOnlinePaymentSetup={setOnlinePaymentSetup}
           isSaving={isSaving}
-          proposalId={proposalId}
-        />
-      </Form>
-    </>
+        proposalId={proposalId}
+        proposalStatus={proposal?.status}
+      />
+    </Form>
   );
 };

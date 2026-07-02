@@ -39,6 +39,7 @@ import { useProposalDocumentData } from "@/modules/proposals/document/useProposa
 import { buildProposalVariableContext } from "@/modules/proposals/document/proposalVariableMerge";
 import { ProposalVariablesHelp } from "@/modules/proposals/document/ProposalVariablesHelp";
 import { ProposalSendActions } from "@/modules/proposals/ProposalSendActions";
+import { ProposalBillingOnAcceptHint } from "@/modules/proposals/ProposalBillingOnAcceptHint";
 import type { ServicePackage } from "@/modules/types";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 
@@ -326,6 +327,14 @@ export const ProposalPreviewPage = () => {
     <ProposalLocaleProvider>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <div className="shrink-0">{stepper}</div>
+        {proposal ? (
+          <div className="shrink-0 border-b bg-muted/10 px-3 py-2">
+            <ProposalBillingOnAcceptHint
+              proposal={proposal}
+              variant="inline"
+            />
+          </div>
+        ) : null}
         <div className="shrink-0">
           <ProposalPreviewToolbar
             proposalId={proposalId}

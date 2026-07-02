@@ -17,6 +17,7 @@ import {
   expandTemplateVariables,
   sanitizeMessageBody,
 } from "../_shared/messagingUtils.ts";
+import { assertSmsBodyWithinLimit } from "../_shared/smsMessageLimits.ts";
 import { sendTwilioSms } from "../_shared/twilio.ts";
 import { resolveTwilioMediaUrls } from "../_shared/twilioMedia.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
@@ -334,6 +335,10 @@ Deno.serve((req: Request) =>
         let initialDeliveryStatus: string | null = null;
 
         if (!isInternalNote) {
+          if (body) {
+            assertSmsBodyWithinLimit(body);
+          }
+
           if (!externalPhone) {
             throw new Error("Client phone number is missing");
           }

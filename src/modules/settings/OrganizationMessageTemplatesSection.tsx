@@ -37,6 +37,12 @@ import {
 import { DEFAULT_MESSAGE_SHORTCUT_SAMPLES } from "@/lib/messages/defaultMessageShortcuts";
 import type { MessageTemplate } from "@/modules/types";
 import { cn } from "@/lib/utils";
+import { SmsBodyLengthHint } from "@/modules/messages/SmsBodyLengthHint";
+import {
+  assertSmsBodyWithinLimit,
+  isSmsLengthOverLimit,
+  SMS_MAX_BODY_CHARS,
+} from "@/modules/messages/smsMessageLimits";
 
 type TemplateDraft = {
   name: string;
@@ -132,6 +138,8 @@ export const OrganizationMessageTemplatesSection = () => {
       if (!payload.name || !payload.body) {
         throw new Error("Name and message body are required");
       }
+
+      assertSmsBodyWithinLimit(payload.body);
 
       if (editing) {
         return update(
@@ -483,6 +491,7 @@ export const OrganizationMessageTemplatesSection = () => {
               <Textarea
                 id="template-body"
                 value={draft.body}
+                maxLength={SMS_MAX_BODY_CHARS}
                 onChange={(event) =>
                   setDraft((current) => ({
                     ...current,
@@ -492,6 +501,7 @@ export const OrganizationMessageTemplatesSection = () => {
                 rows={5}
                 placeholder="Hi {{contact_first_name}}, thanks for reaching out…"
               />
+              <SmsBodyLengthHint body={draft.body} />
             </div>
 
             <div className="flex items-center gap-2">
@@ -525,7 +535,9 @@ export const OrganizationMessageTemplatesSection = () => {
             <Button
               type="button"
               onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
+              disabled={
+                saveMutation.isPending || isSmsLengthOverLimit(draft.body)
+              }
             >
               {saveMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />

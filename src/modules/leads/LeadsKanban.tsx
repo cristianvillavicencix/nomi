@@ -7,9 +7,12 @@ import {
   useNotify,
   useRefresh,
 } from "ra-core";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Sparkles } from "lucide-react";
+
+import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
+import { useKanbanEdgeAutoScroll } from "@/hooks/useKanbanEdgeAutoScroll";
 
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type {
@@ -32,15 +35,17 @@ import { Label } from "@/components/ui/label";
 
 import { getClientShowPath } from "@/app/routing";
 import {
-  LBS_LEAD_KANBAN_STAGES,
+  LBS_LEAD_KANBAN_BOARD_STAGES,
   type LeadStageId,
   normalizeLeadStage,
 } from "./leadStages";
 import { LeadColumn } from "./LeadColumn";
 import { LeadKanbanProvider } from "./LeadKanbanContext";
+import { isLeadTerminalStage } from "./leadFollowUpUtils";
 import { LeadStageChangeDialog } from "./LeadStageChangeDialog";
 
-type LeadsByStage = Record<LeadStageId, Contact[]>;
+type BoardStageId = (typeof LBS_LEAD_KANBAN_BOARD_STAGES)[number]["id"];
+type LeadsByStage = Record<BoardStageId, Contact[]>;
 
 type PendingStageTransition = {
   lead: Contact;
@@ -49,7 +54,7 @@ type PendingStageTransition = {
 };
 
 const emptyBuckets = (): LeadsByStage =>
-  LBS_LEAD_KANBAN_STAGES.reduce((acc, stage) => {
+  LBS_LEAD_KANBAN_BOARD_STAGES.reduce((acc, stage) => {
     acc[stage.id] = [];
     return acc;
   }, {} as LeadsByStage);
@@ -57,8 +62,11 @@ const emptyBuckets = (): LeadsByStage =>
 const groupLeadsByStage = (leads: Contact[]): LeadsByStage => {
   const buckets = emptyBuckets();
   for (const lead of leads) {
-    const stage = normalizeLeadStage(lead.lead_stage);
-    buckets[stage].push(lead);
+    if (isLeadTerminalStage(lead.lead_stage)) continue;
+    const stage = normalizeLeadStage(lead.lead_stage) as BoardStageId;
+    if (stage in buckets) {
+      buckets[stage].push(lead);
+    }
   }
   return buckets;
 };
@@ -68,29 +76,12 @@ const fullLeadName = (lead: Contact) =>
   lead.company_name ||
   "this lead";
 
-const SCROLL_EDGE_EPSILON = 2;
-
-const canScrollVertically = (element: HTMLElement, deltaY: number) => {
-  if (element.scrollHeight <= element.clientHeight + SCROLL_EDGE_EPSILON) {
-    return false;
-  }
-  if (deltaY > 0) {
-    return (
-      element.scrollTop + element.clientHeight <
-      element.scrollHeight - SCROLL_EDGE_EPSILON
-    );
-  }
-  if (deltaY < 0) {
-    return element.scrollTop > SCROLL_EDGE_EPSILON;
-  }
-  return false;
-};
-
 /**
  * Kanban view of leads grouped by `contacts.lead_stage`. Reads from the
  * surrounding `<List resource="contacts">` so filters / search keep
  * working; on drop we open a stage-change dialog (required follow-up
  * fields, note, and optional task) before persisting the move.
+ * Won/Lost are button actions on each card (not Kanban columns).
  * Dropping a card in "Won" also offers to convert the lead to a client.
  */
 export const LeadsKanban = () => {
@@ -106,7 +97,10 @@ export const LeadsKanban = () => {
   const [pendingTransition, setPendingTransition] =
     useState<PendingStageTransition | null>(null);
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
+  useHorizontalWheelScroll(boardRef);
+  useKanbanEdgeAutoScroll(boardRef, isDragging);
 
   const { data: members = [] } = useGetList<OrganizationMember>(
     "organization_members",
@@ -130,7 +124,10 @@ export const LeadsKanban = () => {
       members.map((member) => [String(member.id), member]),
     );
 
-    const contactIds = new Set((data ?? []).map((lead) => String(lead.id)));
+    const activeLeads = (data ?? []).filter(
+      (lead) => !isLeadTerminalStage(lead.lead_stage),
+    );
+    const contactIds = new Set(activeLeads.map((lead) => String(lead.id)));
     const conversationsByContactId: Record<string, Conversation> = {};
 
     for (const conversation of clientConversations) {
@@ -140,62 +137,31 @@ export const LeadsKanban = () => {
       conversationsByContactId[key] = conversation;
     }
 
-    return { membersById, conversationsByContactId };
+    return {
+      membersById,
+      conversationsByContactId,
+      requestStageChange: (lead: Contact, toStage: LeadStageId) => {
+        const fromStage = normalizeLeadStage(lead.lead_stage);
+        if (fromStage === toStage) return;
+        setPendingTransition({ lead, fromStage, toStage });
+        setStageDialogOpen(true);
+      },
+    };
   }, [clientConversations, data, members]);
 
-  const handleBoardWheelCapture = useCallback((event: WheelEvent) => {
-    const board = boardRef.current;
-    if (!board || board.scrollWidth <= board.clientWidth) return;
-
-    const target = event.target as HTMLElement;
-    const cards = target.closest("[data-kanban-cards]") as HTMLElement | null;
-    const absX = Math.abs(event.deltaX);
-    const absY = Math.abs(event.deltaY);
-    const isHorizontalGesture = absX > absY;
-
-    // Trackpad / tilt wheel left-right → pan the board (must be handled here;
-    // nested column scroll areas do not bubble horizontal scroll to the board).
-    if (isHorizontalGesture) {
-      event.preventDefault();
-      board.scrollLeft += event.deltaX;
-      return;
-    }
-
-    // Trackpad / wheel up-down over a tall column → scroll cards vertically.
-    if (cards && canScrollVertically(cards, event.deltaY)) {
-      return;
-    }
-
-    if (cards) {
-      // Column top/bottom edge or short column: stop here — stay in the column.
-      event.preventDefault();
-      return;
-    }
-
-    // Vertical wheel on header / gap: board only pans on horizontal gestures.
-    event.preventDefault();
-  }, []);
+  const activeLeads = useMemo(
+    () => (data ?? []).filter((lead) => !isLeadTerminalStage(lead.lead_stage)),
+    [data],
+  );
+  const closedLeadCount = (data?.length ?? 0) - activeLeads.length;
 
   useEffect(() => {
-    const board = boardRef.current;
-    if (!board) return;
-
-    board.addEventListener("wheel", handleBoardWheelCapture, {
-      passive: false,
-      capture: true,
-    });
-    return () => {
-      board.removeEventListener("wheel", handleBoardWheelCapture, {
-        capture: true,
-      });
-    };
-  }, [handleBoardWheelCapture]);
-
-  useEffect(() => {
-    if (data) {
-      setLeadsByStage(groupLeadsByStage(data));
+    if (activeLeads.length > 0) {
+      setLeadsByStage(groupLeadsByStage(activeLeads));
+    } else {
+      setLeadsByStage(emptyBuckets());
     }
-  }, [data]);
+  }, [activeLeads]);
 
   const totalCount = useMemo(
     () =>
@@ -213,8 +179,8 @@ export const LeadsKanban = () => {
       return;
     }
 
-    const sourceStage = source.droppableId as LeadStageId;
-    const destStage = destination.droppableId as LeadStageId;
+    const sourceStage = source.droppableId as BoardStageId;
+    const destStage = destination.droppableId as BoardStageId;
     if (sourceStage === destStage) return;
 
     const sourceList = leadsByStage[sourceStage];
@@ -243,8 +209,10 @@ export const LeadsKanban = () => {
 
   const closeStageDialog = (revertBoard = true) => {
     setStageDialogOpen(false);
-    if (revertBoard && pendingTransition && data) {
-      setLeadsByStage(groupLeadsByStage(data));
+    if (revertBoard && pendingTransition && activeLeads.length > 0) {
+      setLeadsByStage(groupLeadsByStage(activeLeads));
+    } else if (revertBoard) {
+      setLeadsByStage(emptyBuckets());
     }
     setPendingTransition(null);
   };
@@ -266,6 +234,18 @@ export const LeadsKanban = () => {
   if (isPending) return null;
 
   if (totalCount === 0) {
+    if (closedLeadCount > 0) {
+      return (
+        <div className="rounded-lg border border-dashed bg-muted/30 p-12 text-center text-sm text-muted-foreground">
+          No active pipeline leads.{" "}
+          <span className="font-medium text-foreground">
+            {closedLeadCount} won or lost
+          </span>{" "}
+          — switch to Table view to see them.
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-lg border border-dashed bg-muted/30 p-12 text-center text-sm text-muted-foreground">
         No leads match the current filters.
@@ -274,18 +254,25 @@ export const LeadsKanban = () => {
   }
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       <LeadKanbanProvider value={kanbanContextValue}>
-        <DragDropContext onDragEnd={onDragEnd}>
+        <DragDropContext
+          onDragStart={() => setIsDragging(true)}
+          onDragEnd={(result) => {
+            setIsDragging(false);
+            onDragEnd(result);
+          }}
+        >
           <div
             ref={boardRef}
-            className="flex h-full min-h-0 w-full gap-3 overflow-x-auto overscroll-x-contain"
+            className="flex min-h-0 w-full flex-1 gap-2 overflow-x-auto overscroll-x-contain pb-2"
           >
-            {LBS_LEAD_KANBAN_STAGES.map((stage) => (
+            {LBS_LEAD_KANBAN_BOARD_STAGES.map((stage) => (
               <LeadColumn
                 key={stage.id}
                 stage={stage}
                 leads={leadsByStage[stage.id]}
+                isDragging={isDragging}
               />
             ))}
           </div>
@@ -313,15 +300,14 @@ export const LeadsKanban = () => {
           navigate(getClientShowPath(companyId));
         }}
       />
-    </>
+    </div>
   );
 };
 
 /**
- * Lightweight version of <ConvertLeadButton> for the Kanban "won" drop
- * flow. The lead has already moved to the "won" column when this opens;
- * accepting also promotes it to a client (and optionally a project).
- * Declining keeps it as a won lead — no harm done.
+ * Lightweight version of <ConvertLeadButton> for the Kanban won flow.
+ * The lead has already moved to won when this opens; accepting also promotes
+ * it to a client (and optionally a project). Declining keeps it as won.
  */
 const ConvertWonLeadDialog = ({
   lead,
@@ -401,11 +387,11 @@ const ConvertWonLeadDialog = ({
             Convert to client?
           </DialogTitle>
           <DialogDescription>
-            You moved{" "}
+            You marked{" "}
             <span className="font-medium">
               {lead ? fullLeadName(lead) : "this lead"}
             </span>{" "}
-            to <span className="font-medium">Won</span>. Promote them to a
+            as <span className="font-medium">Won</span>. Promote them to a
             client now?
           </DialogDescription>
         </DialogHeader>

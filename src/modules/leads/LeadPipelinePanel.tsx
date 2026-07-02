@@ -5,13 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Contact } from "@/components/atomic-crm/types";
 import { LeadStageChangeDialog } from "@/modules/leads/LeadStageChangeDialog";
+import { isLeadTerminalStage } from "@/modules/leads/leadFollowUpUtils";
 import {
   getLeadStageDef,
-  LBS_LEAD_KANBAN_STAGES,
+  LBS_LEAD_KANBAN_BOARD_STAGES,
+  LBS_LEAD_OUTCOME_STAGES,
   normalizeLeadStage,
   type LeadStageId,
 } from "@/modules/leads/leadStages";
 import { cn } from "@/lib/utils";
+
+const PIPELINE_STAGES = LBS_LEAD_KANBAN_BOARD_STAGES;
+const OUTCOME_STAGES = LBS_LEAD_OUTCOME_STAGES;
 
 export const LeadPipelinePanel = ({
   lead,
@@ -32,13 +37,10 @@ export const LeadPipelinePanel = ({
     setDialogOpen(true);
   };
 
-  const visibleStages = LBS_LEAD_KANBAN_STAGES.filter(
-    (stage) => !stage.terminal || stage.id === currentStage,
-  );
-
-  const currentIndex = visibleStages.findIndex(
-    (stage) => stage.id === currentStage,
-  );
+  const isTerminal = isLeadTerminalStage(currentStage);
+  const pipelineIndex = isTerminal
+    ? PIPELINE_STAGES.length
+    : PIPELINE_STAGES.findIndex((stage) => stage.id === currentStage);
   const currentDef = getLeadStageDef(currentStage);
 
   const body = (
@@ -71,13 +73,13 @@ export const LeadPipelinePanel = ({
       </div>
 
       <ol className="space-y-0">
-        {visibleStages.map((stage, index) => {
-          const isCurrent = stage.id === currentStage;
-          const isPast = currentIndex > -1 && index < currentIndex;
+        {PIPELINE_STAGES.map((stage, index) => {
+          const isCurrent = !isTerminal && stage.id === currentStage;
+          const isPast = pipelineIndex > -1 && index < pipelineIndex;
 
           return (
             <li key={stage.id} className="relative flex gap-3 pb-5 last:pb-0">
-              {index < visibleStages.length - 1 ? (
+              {index < PIPELINE_STAGES.length - 1 ? (
                 <span
                   aria-hidden
                   className={cn(
@@ -139,11 +141,44 @@ export const LeadPipelinePanel = ({
         })}
       </ol>
 
+      {!isTerminal ? (
+        <div className="mt-6 rounded-lg border border-dashed px-4 py-4">
+          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Close lead
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Mark this lead as won or lost when you are done working the
+            pipeline.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {OUTCOME_STAGES.map((stage) => (
+              <Button
+                key={stage.id}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={() => openStageDialog(stage.id)}
+              >
+                Mark as {stage.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {currentStage === "won" ? (
         <p className="mt-4 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
           This lead is won and ready to convert. Use{" "}
           <span className="font-medium text-foreground">Convert to client</span>{" "}
           in the header to create the company and optional project.
+        </p>
+      ) : null}
+
+      {currentStage === "lost" ? (
+        <p className="mt-4 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+          This lead is marked as lost. You can reopen it by moving it back to an
+          active pipeline stage.
         </p>
       ) : null}
 

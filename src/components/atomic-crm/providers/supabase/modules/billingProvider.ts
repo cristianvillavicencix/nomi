@@ -36,8 +36,14 @@ export const billingProvider = {
       body,
     });
 
-    if (error || !data?.invoice) {
+    if (error) {
       console.error("issue_client_invoice.error", error);
+      throw new Error(
+        await readEdgeFunctionErrorMessage(error, "Failed to issue invoice"),
+      );
+    }
+
+    if (!data?.invoice) {
       throw new Error("Failed to issue invoice");
     }
 
@@ -54,8 +60,17 @@ export const billingProvider = {
       },
     });
 
-    if (error || !data?.invoices) {
+    if (error) {
       console.error("syncProposalInvoices.error", error);
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to sync proposal invoices",
+        ),
+      );
+    }
+
+    if (!Array.isArray(data?.invoices)) {
       throw new Error("Failed to sync proposal invoices");
     }
 

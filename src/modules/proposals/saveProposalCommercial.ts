@@ -1,5 +1,4 @@
 import type { DataProvider, Identifier } from "ra-core";
-import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type {
   ClientInvoice,
   Proposal,
@@ -124,17 +123,6 @@ const voidDraftProposalInstallmentInvoices = async (
         }),
       ),
   );
-};
-
-const syncProposalInvoices = async (
-  dataProvider: DataProvider,
-  proposalId: Identifier,
-) => {
-  const provider = dataProvider as CrmDataProvider;
-  if (!provider.syncProposalInvoices) {
-    return [];
-  }
-  return provider.syncProposalInvoices({ proposalId });
 };
 
 export const saveProposalCommercial = async (
@@ -274,14 +262,5 @@ export const saveProposalCommercial = async (
     ),
   );
 
-  let syncedInvoices: unknown[] = [];
-  if (totals.oneTimeTotal > 0.01 && installments.length > 0) {
-    try {
-      syncedInvoices = await syncProposalInvoices(dataProvider, proposalId!);
-    } catch (error) {
-      console.error("saveProposalCommercial.syncProposalInvoices", error);
-    }
-  }
-
-  return { proposal: proposalRecord, schedule, installments, syncedInvoices };
+  return { proposal: proposalRecord, schedule, installments };
 };

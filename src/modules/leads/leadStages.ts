@@ -77,6 +77,14 @@ export const LBS_LEAD_KANBAN_STAGES: readonly LeadStageDef[] = Object.freeze([
   },
 ]);
 
+/** Active pipeline columns shown on the leads Kanban board (excludes Won/Lost). */
+export const LBS_LEAD_KANBAN_BOARD_STAGES: readonly LeadStageDef[] =
+  LBS_LEAD_KANBAN_STAGES.filter((stage) => !stage.terminal);
+
+/** Terminal outcome stages — actions only, not Kanban columns. */
+export const LBS_LEAD_OUTCOME_STAGES: readonly LeadStageDef[] =
+  LBS_LEAD_KANBAN_STAGES.filter((stage) => stage.terminal);
+
 /** Best-effort coercion: anything outside the known set falls back to "new". */
 export const normalizeLeadStage = (value: unknown): LeadStageId => {
   if (typeof value !== "string") return "new";

@@ -105,6 +105,7 @@ export const extractReplyComposerParts = (html: string) => {
   if (typeof document === "undefined") {
     return {
       userNoteHtml: stripQuotedReplyHtml(stripReplySignatureHtml(html)),
+      signatureHtml: "",
       quotedReplyHtml: "",
     };
   }
@@ -113,6 +114,7 @@ export const extractReplyComposerParts = (html: string) => {
   container.innerHTML = html;
   const signature = container.querySelector(TICKET_REPLY_SIGNATURE_SELECTOR);
   const quote = container.querySelector(TICKET_REPLY_QUOTE_SELECTOR);
+  const signatureHtml = signature?.outerHTML ?? "";
   const quotedReplyHtml = quote?.outerHTML ?? "";
 
   quote?.remove();
@@ -120,8 +122,27 @@ export const extractReplyComposerParts = (html: string) => {
 
   return {
     userNoteHtml: container.innerHTML.trim(),
+    signatureHtml,
     quotedReplyHtml,
   };
+};
+
+export const assembleReplyComposerHtml = ({
+  userNoteHtml,
+  signatureHtml,
+  quotedReplyHtml,
+}: {
+  userNoteHtml: string;
+  signatureHtml?: string;
+  quotedReplyHtml?: string;
+}) => {
+  const user = userNoteHtml.trim() || "<p><br></p>";
+  return `${user}${signatureHtml ?? ""}${quotedReplyHtml ?? ""}`;
+};
+
+export const shouldShowComposerPlaceholder = (html: string) => {
+  const { userNoteHtml } = extractReplyComposerParts(html);
+  return !htmlToPlainText(userNoteHtml).trim();
 };
 
 export const stripReplyComposerMetaHtml = (html: string) =>

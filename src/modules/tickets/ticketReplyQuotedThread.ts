@@ -1,5 +1,12 @@
 import type { TicketMessage } from "@/modules/types";
-import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
+import { dedupeQuotedHtmlForDisplay } from "@/modules/tickets/dedupeQuotedEmailDisplay";
+import { sanitizeTicketEmailHtmlOriginal } from "@/modules/tickets/sanitizeTicketEmailHtml";
+import {
+  hasRichHtmlStructure,
+  isPlainTextSimilar,
+  splitHtmlEmail,
+  splitPlainTextEmail,
+} from "@/modules/tickets/ticketEmailQuotedContent";
 import {
   htmlToPlainText,
   plainTextToEditorHtml,
@@ -35,10 +42,7 @@ export const formatQuotedReplyHeader = (
 };
 
 export const buildQuotedReplyPlainText = (message: TicketMessage) => {
-  const body =
-    message.body?.trim() ||
-    htmlToPlainText(message.html_body ?? "") ||
-    "(No message body)";
+  const body = resolveQuotedMessagePlainText(message);
 
   const quotedLines = body
     .split("\n")
@@ -48,18 +52,47 @@ export const buildQuotedReplyPlainText = (message: TicketMessage) => {
   return `${formatQuotedReplyHeader(message)}\n${quotedLines}`;
 };
 
+const resolveQuotedMessagePlainText = (message: TicketMessage) => {
+  const plain = message.body?.trim();
+  if (plain) {
+    return splitPlainTextEmail(plain).content || plain;
+  }
+
+  return htmlToPlainText(message.html_body ?? "") || "(No message body)";
+};
+
+const resolveQuotedMessageBodyHtml = (message: TicketMessage) => {
+  const html = message.html_body?.trim();
+  const plain = message.body?.trim();
+  const plainMain = plain ? splitPlainTextEmail(plain).content || plain : "";
+
+  if (html) {
+    const split = splitHtmlEmail(html);
+    const mainHtml = (split.content || html).trim();
+    const mainPlain = htmlToPlainText(mainHtml);
+
+    const useFormattedHtml =
+      hasRichHtmlStructure(mainHtml) ||
+      (plainMain
+        ? isPlainTextSimilar(plainMain, mainPlain)
+        : Boolean(mainPlain));
+
+    if (useFormattedHtml && mainHtml) {
+      return dedupeQuotedHtmlForDisplay(sanitizeTicketEmailHtmlOriginal(mainHtml));
+    }
+  }
+
+  return plainTextToEditorHtml(
+    plainMain || htmlToPlainText(html ?? "") || "(No message body)",
+  );
+};
+
 export const buildQuotedReplyEditorHtml = (message: TicketMessage) => {
   const header = escapeHtml(formatQuotedReplyHeader(message));
-  const htmlBody = message.html_body?.trim();
-
-  const bodyHtml = htmlBody
-    ? `<div class="ticket-reply-quoted-body" style="color:#374151;">${sanitizeTicketEmailHtml(htmlBody)}</div>`
-    : `<blockquote style="margin:0;padding-left:12px;border-left:3px solid #d1d5db;color:#374151;">${plainTextToEditorHtml(
-        message.body?.trim() || "(No message body)",
-      )}</blockquote>`;
+  const bodyHtml = resolveQuotedMessageBodyHtml(message);
 
   return `<div data-ticket-reply-quote="true" contenteditable="false" style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px;line-height:1.5;">
 <p style="margin:0 0 8px;">${header}</p>
-${bodyHtml}
+<div class="ticket-reply-quoted-body ticket-email-html" style="color:#374151;">${bodyHtml}</div>
 </div>`;
 };

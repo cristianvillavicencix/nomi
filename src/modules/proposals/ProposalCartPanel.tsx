@@ -7,11 +7,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { isClientBillingSkipped } from "@/modules/billing/clientBillingProvider";
 import type { OnlinePaymentSetup } from "@/modules/billing/onlinePaymentSetupBridge";
-import {
-  type ProposalLineDraft,
-  type ProposalTotals,
-} from "@/modules/proposals/proposalCommercialUtils";
+import type { ProposalLineDraft, ProposalTotals } from "@/modules/proposals/proposalCommercialUtils";
+import type { Proposal } from "@/modules/types";
 import { MoneyText } from "@/lib/permissions/MoneyText";
+import { ProposalBillingOnAcceptHint } from "@/modules/proposals/ProposalBillingOnAcceptHint";
 
 const SectionLabel = ({ children }: { children: ReactNode }) => (
   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -88,6 +87,7 @@ export const ProposalCartPanel = ({
   paymentSummary,
   onConfigurePayment,
   isSaving = false,
+  proposalStatus = "draft",
 }: {
   lines: ProposalLineDraft[];
   onChange: (lines: ProposalLineDraft[]) => void;
@@ -96,6 +96,7 @@ export const ProposalCartPanel = ({
   paymentSummary: string;
   onConfigurePayment: () => void;
   isSaving?: boolean;
+  proposalStatus?: Proposal["status"];
 }) => {
   const oneTimeLines = useMemo(
     () => lines.filter((line) => line.billing_type === "one_time"),
@@ -228,6 +229,10 @@ export const ProposalCartPanel = ({
                   ? "Stripe billing is skipped in dev — schedule is saved for production."
                   : "Matches invoice checkout: deposit, saved card, and automatic balance charges."}
               </p>
+              <ProposalBillingOnAcceptHint
+                proposal={{ status: proposalStatus }}
+                variant="inline"
+              />
             </section>
           ) : null}
 
