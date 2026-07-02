@@ -73,8 +73,12 @@ export const appendTicketMessageToCache = (
 };
 
 export const refreshTicketInboxLists = (queryClient: QueryClient) => {
-  void queryClient.invalidateQueries({ queryKey: ["tickets"] });
+  void queryClient.invalidateQueries({
+    queryKey: ["tickets"],
+    refetchType: "all",
+  });
   void queryClient.invalidateQueries({
     queryKey: ["tickets-unread-counts"],
+    refetchType: "all",
   });
 };

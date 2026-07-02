@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useGetList, useGetOne, useRefresh, useUpdate } from "ra-core";
+import { useGetList, useGetOne, useUpdate } from "ra-core";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket, TicketMessage } from "@/modules/types";
@@ -17,11 +18,15 @@ import { TicketThreadQuoteProvider } from "@/modules/tickets/TicketThreadQuoteCo
 import { useAutoLinkTicketRequester } from "@/modules/tickets/useAutoLinkTicketRequester";
 import { useTicketMemberRead } from "@/modules/tickets/useTicketInboxReads";
 import { useTicketThreadMessages } from "@/modules/tickets/useTicketThreadMessages";
+import { refreshTicketInboxLists } from "@/modules/tickets/ticketsRealtimeCache";
 
 export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const refresh = useRefresh();
+  const queryClient = useQueryClient();
+  const refreshInbox = useCallback(() => {
+    refreshTicketInboxLists(queryClient);
+  }, [queryClient]);
   const canManage = useMemberCapability("support.tickets.manage");
   const {
     lastReadAt,
@@ -92,9 +97,14 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
     update(
       "tickets",
       { id: ticket.id, data: { status: "open" }, previousData: ticket },
-      { mutationMode: "pessimistic" },
+      {
+        mutationMode: "pessimistic",
+        onSuccess: () => {
+          refreshInbox();
+        },
+      },
     );
-  }, [ticket, update]);
+  }, [ticket, update, refreshInbox]);
 
   if (isPending || !ticket) {
     return (
@@ -139,7 +149,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
             contact={contact}
             deal={deal}
             canManage={canManage}
-            onUpdated={refresh}
+            onUpdated={refreshInbox}
             showBack={isMobile}
             onBack={() => navigate("/tickets")}
             contextAction={
