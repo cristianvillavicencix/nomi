@@ -49,7 +49,9 @@ import type {
 } from "@/modules/forms/types";
 import { toSlug } from "@/lib/toSlug";
 
-export const FormsListPage = () => {
+import { cn } from "@/lib/utils";
+
+export const FormsListPage = ({ embedded = false }: { embedded?: boolean }) => {
   const navigate = useNavigate();
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -165,21 +167,37 @@ export const FormsListPage = () => {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Forms</h1>
-          <p className="text-sm text-muted-foreground">
-            Build, share, and manage client-facing forms.
-          </p>
+    <div
+      className={cn(
+        "w-full space-y-6",
+        !embedded && "mx-auto max-w-6xl px-4 py-6",
+      )}
+    >
+      {!embedded ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Forms</h1>
+            <p className="text-sm text-muted-foreground">
+              Build, share, and manage client-facing forms.
+            </p>
+          </div>
+          {canManage ? (
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" />
+              New form
+            </Button>
+          ) : null}
         </div>
-        {canManage ? (
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-4" />
-            New form
-          </Button>
-        ) : null}
-      </div>
+      ) : (
+        <div className="flex justify-end">
+          {canManage ? (
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" />
+              New form
+            </Button>
+          ) : null}
+        </div>
+      )}
 
       <Input
         value={search}

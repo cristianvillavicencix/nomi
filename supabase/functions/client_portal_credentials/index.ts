@@ -9,6 +9,7 @@ import {
   SENSITIVE_SESSION_TTL_MS,
 } from "../_shared/portalSession.ts";
 import { sendTransactionalEmail } from "../_shared/transactionalEmail.ts";
+import { resolveOrgGeneralFrom } from "../_shared/organizationEmailSenders.ts";
 
 type ClientPortalCredentialsBody = {
   token?: string;
@@ -49,11 +50,15 @@ const sha256Hex = async (value: string) => {
 };
 
 const sendOtpEmail = async (orgId: number, to: string, code: string) => {
+  const generalFrom = await resolveOrgGeneralFrom(orgId);
   await sendTransactionalEmail({
     orgId,
     to,
     subject: "Your Latino Business Support verification code",
     textBody: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
+    fromEmail: generalFrom.email,
+    fromName: generalFrom.name,
+    replyTo: generalFrom.email,
   });
 };
 

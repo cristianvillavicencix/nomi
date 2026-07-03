@@ -25,7 +25,11 @@ import {
   LBS_DEFAULT_CONTRACT_TERMS_VERSION,
 } from "@/modules/proposals/defaultContractTerms";
 
-export const ContractTermsSettings = () => {
+export const ContractTermsSettings = ({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) => {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const { identity } = useGetIdentity();
@@ -106,8 +110,59 @@ export const ContractTermsSettings = () => {
     setBody(seed.body_markdown);
   };
 
+  const fields = (
+    <>
+      {!activeTerms ? (
+        <Button type="button" variant="outline" onClick={loadDefaultSeed}>
+          Load default LBS terms
+        </Button>
+      ) : null}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
+          <Label>Version</Label>
+          <Input
+            value={version}
+            onChange={(event) => setVersion(event.target.value)}
+          />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label>Title</Label>
+          <Input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Body (Markdown)</Label>
+        <Textarea
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          rows={18}
+          className="min-h-[320px] w-full font-mono text-xs"
+        />
+      </div>
+      <Button
+        type="button"
+        onClick={() => saveMutation.mutate()}
+        disabled={saveMutation.isPending}
+      >
+        {saveMutation.isPending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Save className="size-4" />
+        )}
+        Save terms
+      </Button>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-4">{fields}</div>;
+  }
+
   return (
-    <Card className="max-w-4xl">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-base">Contract terms template</CardTitle>
         <CardDescription>
@@ -115,50 +170,7 @@ export const ContractTermsSettings = () => {
           deposit_amount, payment_schedule, recurring_terms, terms_version, etc.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {!activeTerms ? (
-          <Button type="button" variant="outline" onClick={loadDefaultSeed}>
-            Load default LBS terms
-          </Button>
-        ) : null}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Version</Label>
-            <Input
-              value={version}
-              onChange={(event) => setVersion(event.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Title</Label>
-            <Input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Body (Markdown)</Label>
-          <Textarea
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            rows={18}
-            className="font-mono text-xs"
-          />
-        </div>
-        <Button
-          type="button"
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
-        >
-          {saveMutation.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Save className="size-4" />
-          )}
-          Save terms
-        </Button>
-      </CardContent>
+      <CardContent className="space-y-4">{fields}</CardContent>
     </Card>
   );
 };

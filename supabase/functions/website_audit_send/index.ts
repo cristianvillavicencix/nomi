@@ -5,6 +5,7 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { getUserOrganizationMember } from "../_shared/getUserOrganizationMember.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { sendTransactionalEmail } from "../_shared/transactionalEmail.ts";
+import { resolveOrgGeneralFrom } from "../_shared/organizationEmailSenders.ts";
 
 type SendBody = {
   audit_id?: number;
@@ -81,13 +82,20 @@ Deno.serve((req: Request) =>
           .eq("id", orgId)
           .maybeSingle();
 
+        const generalFrom = await resolveOrgGeneralFrom(
+          orgId,
+          org?.name ?? null,
+        );
+
         await sendTransactionalEmail({
           orgId,
           orgName: org?.name ?? null,
           to,
           subject,
           textBody: message,
-          replyTo: org?.email?.trim() ?? null,
+          fromEmail: generalFrom.email,
+          fromName: generalFrom.name,
+          replyTo: generalFrom.email,
           attachments: [
             {
               name: filename,

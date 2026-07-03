@@ -9,15 +9,77 @@ import {
   getOrgTransactionalEmailStatus,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
+import { resolveOrgGeneralFrom } from "../_shared/organizationEmailSenders.ts";
 import { getTicketInboundSetup } from "../_shared/ticketInboundSetup.ts";
 
 type EmailSettingsBody = {
   action?: "get" | "update" | "test";
+  /** General sender (portal, meetings). Alias: reply_to. */
   reply_to?: string | null;
+  general_from_email?: string | null;
+  billing_from_email?: string | null;
   test_email?: string | null;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type OrgEmailRow = {
+  id: number;
+  name: string | null;
+  email: string | null;
+  billing_from_email?: string | null;
+};
+
+const loadOrgEmailRow = async (orgId: number): Promise<OrgEmailRow | null> => {
+  const { data, error } = await supabaseAdmin
+    .from("organizations")
+    .select("id, name, email, billing_from_email")
+    .eq("id", orgId)
+    .maybeSingle();
+
+  if (
+    error?.message?.includes("billing_from_email") ||
+    error?.message?.includes("column")
+  ) {
+    const { data: fallback, error: fallbackError } = await supabaseAdmin
+      .from("organizations")
+      .select("id, name, email")
+      .eq("id", orgId)
+      .maybeSingle();
+    if (fallbackError) throw new Error(fallbackError.message);
+    return fallback;
+  }
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const loadOrgEmailFields = async (orgId: number) => {
+  const { data, error } = await supabaseAdmin
+    .from("organizations")
+    .select("email, billing_from_email")
+    .eq("id", orgId)
+    .maybeSingle();
+
+  if (
+    error?.message?.includes("billing_from_email") ||
+    error?.message?.includes("column")
+  ) {
+    const { data: fallback, error: fallbackError } = await supabaseAdmin
+      .from("organizations")
+      .select("email")
+      .eq("id", orgId)
+      .maybeSingle();
+    if (fallbackError) throw new Error(fallbackError.message);
+    return { email: fallback?.email ?? null, billing_from_email: null };
+  }
+
+  if (error) throw new Error(error.message);
+  return {
+    email: data?.email ?? null,
+    billing_from_email: data?.billing_from_email ?? null,
+  };
+};
 
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {
@@ -40,20 +102,24 @@ Deno.serve((req: Request) =>
         const body = (await req.json().catch(() => ({}))) as EmailSettingsBody;
         const action = body.action ?? "get";
 
-        const { data: org } = await supabaseAdmin
-          .from("organizations")
-          .select("id, name, email")
-          .eq("id", orgId)
-          .maybeSingle();
+        const org = await loadOrgEmailRow(orgId);
+        if (!org) {
+          return createErrorResponse(403, "Organization not found");
+        }
 
-        const buildStatus = async (replyTo?: string | null) => {
+        const buildStatus = async () => {
           const status = await getOrgTransactionalEmailStatus(orgId);
+          const freshOrg = await loadOrgEmailFields(orgId);
+
           return {
             configured: status.configured,
             provider: status.provider,
-            from_email: status.from_email,
-            reply_to: replyTo ?? org?.email?.trim() ?? null,
-            org_name: org?.name ?? null,
+            from_email: status.general_from_email ?? status.from_email,
+            general_from_email: status.general_from_email ?? status.from_email,
+            billing_from_email: status.billing_from_email,
+            reply_to: freshOrg.email?.trim() ?? null,
+            billing_from: freshOrg.billing_from_email?.trim() ?? null,
+            org_name: org.name ?? null,
             uses_messaging_credentials: status.uses_messaging_credentials,
           };
         };
@@ -77,14 +143,17 @@ Deno.serve((req: Request) =>
             return createErrorResponse(400, "Enter a valid test email address");
           }
 
+          const generalFrom = await resolveOrgGeneralFrom(orgId, org.name ?? null);
           await sendTransactionalEmail({
             orgId,
-            orgName: org?.name ?? null,
+            orgName: org.name ?? null,
             to,
             subject: "Latino Business Support test email",
             textBody:
-              "Your transactional email integration is working.\n\nThis message was sent from Settings → Communications.",
-            replyTo: org?.email?.trim() ?? null,
+              "Your system email integration is working.\n\nThis message was sent from Settings → Integrations.",
+            fromEmail: generalFrom.email,
+            fromName: generalFrom.name,
+            replyTo: generalFrom.email,
           });
 
           return new Response(JSON.stringify({ ok: true }), {
@@ -96,24 +165,67 @@ Deno.serve((req: Request) =>
           return createErrorResponse(400, "Invalid action");
         }
 
-        const replyTo = body.reply_to?.trim() ?? "";
-        if (replyTo && !emailRegex.test(replyTo)) {
-          return createErrorResponse(400, "Enter a valid reply-to email");
+        const generalFromEmail = (
+          body.general_from_email ??
+          body.reply_to ??
+          ""
+        ).trim();
+        const billingFromEmail = (body.billing_from_email ?? "").trim();
+
+        if (generalFromEmail && !emailRegex.test(generalFromEmail)) {
+          return createErrorResponse(400, "Enter a valid general sender email");
+        }
+        if (billingFromEmail && !emailRegex.test(billingFromEmail)) {
+          return createErrorResponse(400, "Enter a valid billing sender email");
         }
 
-        const { data: updated, error } = await supabaseAdmin
+        const emailUpdate: { email: string | null; billing_from_email?: string | null } =
+          { email: generalFromEmail || null };
+        if (billingFromEmail) {
+          emailUpdate.billing_from_email = billingFromEmail;
+        } else {
+          emailUpdate.billing_from_email = null;
+        }
+
+        let updated: { email: string | null; billing_from_email?: string | null } | null =
+          null;
+
+        const fullUpdate = await supabaseAdmin
           .from("organizations")
-          .update({ email: replyTo || null })
+          .update(emailUpdate)
           .eq("id", orgId)
-          .select("email")
+          .select("email, billing_from_email")
           .single();
 
-        if (error) {
-          throw new Error(error.message ?? "Could not save reply-to email");
+        updated = fullUpdate.data;
+        const updateError = fullUpdate.error;
+
+        if (
+          updateError?.message?.includes("billing_from_email") ||
+          (updateError?.message?.includes("column") &&
+            updateError.message.includes("does not exist"))
+        ) {
+          const emailOnlyUpdate = await supabaseAdmin
+            .from("organizations")
+            .update({ email: generalFromEmail || null })
+            .eq("id", orgId)
+            .select("email")
+            .single();
+          if (emailOnlyUpdate.error) {
+            throw new Error(
+              emailOnlyUpdate.error.message ?? "Could not save email settings",
+            );
+          }
+          updated = {
+            email: emailOnlyUpdate.data?.email ?? null,
+            billing_from_email: null,
+          };
+        } else if (updateError) {
+          throw new Error(updateError.message ?? "Could not save email settings");
         }
 
         return new Response(
-          JSON.stringify(await buildStatus(updated?.email?.trim() ?? null)),
+          JSON.stringify(await buildStatus()),
           {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           },

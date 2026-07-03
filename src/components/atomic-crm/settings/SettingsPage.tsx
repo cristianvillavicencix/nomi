@@ -4,21 +4,15 @@ import {
   EditBase,
   Form,
   useDataProvider,
-  useGetList,
-  useInput,
   useNotify,
 } from "ra-core";
-import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isTenantBrandingEditorVisible } from "./tenantBrandingFlags";
 import { useSearchParams } from "react-router";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { toSlug } from "@/lib/toSlug";
-import { ArrayInput } from "@/components/admin/array-input";
-import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
-import { TextInput } from "@/components/admin/text-input";
 
 import {
   useConfigurationContext,
@@ -33,41 +27,30 @@ import {
 import type { DealPipeline, DealPipelineStage } from "../types";
 import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import { UsersSettingsSection } from "./UsersSettingsSection";
-import { MessagingSettingsSection } from "@/modules/settings/MessagingSettingsSection";
+import { ConnectorsSettingsSection } from "@/modules/settings/ConnectorsSettingsSection";
 import { DataImportSection } from "@/modules/settings/DataImportSection";
-import { CommercialSettingsSection } from "@/modules/settings/CommercialSettingsSection";
+import { BillingSettingsSection } from "@/modules/settings/BillingSettingsSection";
+import { CommunicationsSettingsSection } from "@/modules/settings/CommunicationsSettingsSection";
+import { ProductsSettingsSection } from "@/modules/settings/ProductsSettingsSection";
+import { ProposalsSettingsSection } from "@/modules/settings/ProposalsSettingsSection";
 import { FormsSettingsSection } from "@/modules/settings/FormsSettingsSection";
+import { NotificationsSettingsSection } from "@/modules/settings/NotificationsSettingsSection";
+import { SettingsHubLayout } from "@/modules/settings/SettingsHubLayout";
+import { WorkflowsSettingsSection } from "@/modules/settings/WorkflowsSettingsSection";
+import {
+  buildSettingsSearchParams,
+  getSettingsTabLabel,
+  resolveSettingsRoute,
+  type CompanySectionId,
+  type CommunicationsSectionId,
+  type ConnectorsSectionId,
+  type DataSectionId,
+  type FormsSectionId,
+  type NotificationsSectionId,
+  type SettingsTabId,
+  type WorkflowsSectionId,
+} from "@/modules/settings/settingsNavigation";
 import { useLbsPipelineConfig } from "@/modules/deals/useLbsPipelineConfig";
-
-const LBS_SETTINGS_TAB_IDS = [
-  "general",
-  "users",
-  "forms",
-  "messaging",
-  "commercial",
-  "projects",
-  "notes",
-  "tasks",
-  "data",
-] as const;
-
-const SETTINGS_TAB_IDS = LBS_SETTINGS_TAB_IDS;
-type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];
-
-const SETTINGS_TABS: { id: SettingsTabId; label: string }[] = [
-  { id: "general", label: "Company Settings" },
-  { id: "users", label: "Users" },
-  { id: "forms", label: "Forms" },
-  { id: "messaging", label: "Communications" },
-  { id: "commercial", label: "Proposals & contracts" },
-  { id: "projects", label: "Project Stages" },
-  { id: "notes", label: "Lead Statuses" },
-  { id: "tasks", label: "Task Types" },
-  { id: "data", label: "Data Import" },
-];
-
-const isSettingsTabId = (value: string | null): value is SettingsTabId =>
-  value != null && (SETTINGS_TAB_IDS as readonly string[]).includes(value);
 
 /** Ensure every item in a { value, label } array has a value (slug from label). */
 const ensureValues = (items: { value?: string; label: string }[] | undefined) =>
@@ -194,6 +177,7 @@ const SettingsPageContent = () => {
   );
 
   return (
+    <div className="flex w-full min-w-0 flex-col">
     <EditBase
       resource="configuration"
       id={1}
@@ -224,6 +208,7 @@ const SettingsPageContent = () => {
     >
       <SettingsForm config={lbsConfig} />
     </EditBase>
+    </div>
   );
 };
 
@@ -266,7 +251,7 @@ const SettingsForm = ({ config }: { config: ConfigurationContextValue }) => {
   );
 
   return (
-    <Form defaultValues={defaultValues}>
+    <Form className="flex w-full min-w-0 flex-col" defaultValues={defaultValues}>
       <SettingsFormFields />
     </Form>
   );
@@ -274,515 +259,207 @@ const SettingsForm = ({ config }: { config: ConfigurationContextValue }) => {
 
 const SettingsFormFields = () => {
   const config = useConfigurationContext();
-  const {
-    watch,
-    setValue,
-    reset,
-    formState: { isSubmitting },
-  } = useFormContext();
+  const { reset, formState: { isSubmitting } } = useFormContext();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const dealPipelines: DealPipeline[] = watch("dealPipelines") ?? [];
-
-  const tabParam = searchParams.get("tab");
-  const normalizedTab =
-    tabParam === "plans" || tabParam === "roles" ? "users" : tabParam;
-  const activeTab: SettingsTabId = isSettingsTabId(normalizedTab)
-    ? normalizedTab
-    : "general";
+  const {
+    tab: activeTab,
+    workflowsSection,
+    connectorsSection,
+    communicationsSection,
+    formsSection,
+    notificationsSection,
+    dataSection,
+    companySection,
+  } = resolveSettingsRoute(searchParams);
 
   const setSettingsTab = useCallback(
     (id: SettingsTabId) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("tab", id);
-          next.delete("section");
-          return next;
-        },
-        { replace: true },
-      );
+      setSearchParams(buildSettingsSearchParams(id), { replace: true });
     },
     [setSearchParams],
   );
 
-  useLayoutEffect(() => {
-    if (
-      searchParams.get("tab") !== "plans" &&
-      searchParams.get("tab") !== "roles"
-    ) {
-      return;
-    }
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set("tab", "users");
-        return next;
-      },
-      { replace: true },
-    );
-  }, [searchParams, setSearchParams]);
-
-  useLayoutEffect(() => {
-    const section = searchParams.get("section");
-    if (section == null) return;
-    if (section !== "users" && section !== "general") return;
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set("tab", section === "users" ? "users" : "general");
-        next.delete("section");
-        return next;
-      },
-      { replace: true },
-    );
-  }, [searchParams, setSearchParams]);
-
-  const { data: deals } = useGetList("deals", {
-    pagination: { page: 1, perPage: 1000 },
-  });
-
-  const validateDealCategories = useCallback(
-    (categories: { value: string; label: string }[] | undefined) => {
-      if (!categories) return undefined;
-
-      const normalized = categories.map(
-        (item) => item.value || toSlug(item.label),
-      );
-      const duplicateValues = normalized.filter(
-        (value, index) => normalized.indexOf(value) !== index,
-      );
-      if (duplicateValues.length > 0) {
-        return `Duplicate categories: ${[...new Set(duplicateValues)].join(", ")}`;
-      }
-
-      const initialValues = new Set(
-        (config.dealCategories ?? []).map(
-          (item) => item.value || toSlug(item.label),
-        ),
-      );
-      const currentValues = new Set(normalized);
-      const removedInitialValues = [...initialValues].filter(
-        (value) => !currentValues.has(value),
-      );
-
-      // Allow saving unrelated sections (e.g. Branding) when categories haven't been removed.
-      if (removedInitialValues.length === 0) return undefined;
-
-      return validateItemsInUse(categories, deals, "category", "categories");
+  const setSettingsSection = useCallback(
+    (tab: SettingsTabId, section: string) => {
+      setSearchParams(buildSettingsSearchParams(tab, section), { replace: true });
     },
-    [config.dealCategories, deals],
+    [setSearchParams],
   );
 
-  return (
-    <div className="w-full min-w-0 mt-1 pb-28">
-      <h1 className="text-2xl font-semibold tracking-tight mb-5">Settings</h1>
-      <nav
-        className="flex flex-wrap gap-2 mb-8 border-b border-border/50 pb-4"
-        aria-label="Settings sections"
-        role="tablist"
-      >
-        {SETTINGS_TABS.map((t) => (
-          <Button
-            key={t.id}
-            type="button"
-            role="tab"
-            variant={activeTab === t.id ? "default" : "secondary"}
-            size="sm"
-            aria-selected={activeTab === t.id}
-            onClick={() => setSettingsTab(t.id)}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </nav>
-
-      {activeTab === "general" ? <SettingsGeneralTab /> : null}
-      {activeTab === "users" ? <UsersSettingsSection /> : null}
-      {activeTab === "forms" ? <FormsSettingsSection /> : null}
-      {activeTab === "messaging" ? <MessagingSettingsSection /> : null}
-      {activeTab === "commercial" ? <CommercialSettingsSection /> : null}
-      {activeTab === "data" ? <DataImportSection /> : null}
-      {activeTab === "projects" ? (
-        <div className="space-y-6 max-w-6xl">
-          <PipelinesEditor
-            pipelines={dealPipelines}
-            onChange={(pipelines) => setValue("dealPipelines", pipelines)}
-            deals={deals}
-          />
-          <Separator />
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Categories
-          </h2>
-          <ArrayInput
-            source="dealCategories"
-            label={false}
-            helperText={false}
-            validate={validateDealCategories}
-          >
-            <SimpleFormIterator disableReordering disableClear>
-              <TextInput source="label" label={false} />
-            </SimpleFormIterator>
-          </ArrayInput>
-        </div>
-      ) : null}
-      {activeTab === "notes" ? (
-        <div className="space-y-4 max-w-4xl">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Note statuses
-          </h2>
-          <ArrayInput source="noteStatuses" label={false} helperText={false}>
-            <SimpleFormIterator inline disableReordering disableClear>
-              <TextInput source="label" label={false} className="flex-1" />
-              <ColorInput source="color" />
-            </SimpleFormIterator>
-          </ArrayInput>
-        </div>
-      ) : null}
-      {activeTab === "tasks" ? (
-        <div className="space-y-4 max-w-4xl">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Task types
-          </h2>
-          <ArrayInput source="taskTypes" label={false} helperText={false}>
-            <SimpleFormIterator disableReordering disableClear>
-              <TextInput source="label" label={false} />
-            </SimpleFormIterator>
-          </ArrayInput>
-        </div>
-      ) : null}
-
-      {activeTab !== "users" &&
-      activeTab !== "forms" &&
-      activeTab !== "messaging" &&
-      activeTab !== "data" ? (
-        <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="flex w-full min-w-0 items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() =>
-                reset(
-                  isTenantBrandingEditorVisible()
-                    ? {
-                        ...defaultConfiguration,
-                        primaryBusinessSector: primaryBusinessSectorUnsetToken,
-                        lightModeLogo: {
-                          src: defaultConfiguration.lightModeLogo,
-                        },
-                        darkModeLogo: {
-                          src: defaultConfiguration.darkModeLogo,
-                        },
-                      }
-                    : {
-                        ...defaultConfiguration,
-                        primaryBusinessSector: primaryBusinessSectorUnsetToken,
-                        title: config.title,
-                        lightModeLogo: { src: config.lightModeLogo },
-                        darkModeLogo: { src: config.darkModeLogo },
-                      },
-                )
-              }
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Reset to Defaults
-            </Button>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => window.history.back()}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                <Save className="h-4 w-4 mr-1" />
-                {isSubmitting ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </div>
+  const setWorkflowsSection = useCallback(
+    (section: WorkflowsSectionId) => {
+      setSettingsSection("workflows", section);
+    },
+    [setSettingsSection],
   );
-};
 
-const PipelinesEditor = ({
-  pipelines,
-  onChange,
-  deals,
-}: {
-  pipelines: DealPipeline[];
-  onChange: (pipelines: DealPipeline[]) => void;
-  deals?: RaRecord[];
-}) => {
-  const [selectedPipelineId, setSelectedPipelineId] = useState(
-    () => pipelines[0]?.id ?? "default",
+  const setConnectorsSection = useCallback(
+    (section: ConnectorsSectionId) => {
+      setSettingsSection("connectors", section);
+    },
+    [setSettingsSection],
   );
-  const selectedPipeline =
-    pipelines.find((pipeline) => pipeline.id === selectedPipelineId) ??
-    pipelines[0];
 
-  const replacePipeline = (nextPipeline: DealPipeline) => {
-    onChange(
-      pipelines.map((pipeline) =>
-        pipeline.id === nextPipeline.id ? nextPipeline : pipeline,
-      ),
-    );
-  };
+  const setCommunicationsSection = useCallback(
+    (section: CommunicationsSectionId) => {
+      setSettingsSection("communications", section);
+    },
+    [setSettingsSection],
+  );
 
-  const addPipeline = () => {
-    const id = `pipeline-${Date.now()}`;
-    const nextPipeline: DealPipeline = {
-      id,
-      label: "New Pipeline",
-      order: pipelines.length + 1,
-      stages: [
-        {
-          id: "new",
-          label: "New",
-          color: "#64748b",
-          order: 1,
-          pipelineId: id,
-          isDefault: true,
-        },
-      ],
-      isDefault: pipelines.length === 0,
+  const setFormsSection = useCallback(
+    (section: FormsSectionId) => {
+      setSettingsSection("forms", section);
+    },
+    [setSettingsSection],
+  );
+
+  const setNotificationsSection = useCallback(
+    (section: NotificationsSectionId) => {
+      setSettingsSection("notifications", section);
+    },
+    [setSettingsSection],
+  );
+
+  const setDataSection = useCallback(
+    (section: DataSectionId) => {
+      setSettingsSection("data", section);
+    },
+    [setSettingsSection],
+  );
+
+  const setCompanySection = useCallback(
+    (section: CompanySectionId) => {
+      setSettingsSection("company", section);
+    },
+    [setSettingsSection],
+  );
+
+  useLayoutEffect(() => {
+    const rawTab = searchParams.get("tab");
+    if (!rawTab) return;
+
+    const route = resolveSettingsRoute(searchParams);
+    const legacyTabs = new Set([
+      "general",
+      "messaging",
+      "projects",
+      "notes",
+      "tasks",
+      "plans",
+      "roles",
+      "web-monitor",
+      "commercial",
+    ]);
+
+    const sectionByTab: Partial<Record<SettingsTabId, string>> = {
+      workflows: route.workflowsSection,
+      connectors: route.connectorsSection,
+      communications: route.communicationsSection,
+      forms: route.formsSection,
+      notifications: route.notificationsSection,
+      data: route.dataSection,
+      company: route.companySection,
     };
-    onChange([...pipelines, nextPipeline]);
-    setSelectedPipelineId(id);
-  };
+    const section = sectionByTab[route.tab];
+    const next = buildSettingsSearchParams(route.tab, section);
+    const needsNormalize = next.toString() !== searchParams.toString();
 
-  const deletePipeline = () => {
-    if (!selectedPipeline) return;
-    if (pipelines.length <= 1) return;
-    const next = pipelines.filter(
-      (pipeline) => pipeline.id !== selectedPipeline.id,
-    );
-    onChange(next);
-    setSelectedPipelineId(next[0].id);
-  };
-
-  const movePipeline = (direction: "up" | "down") => {
-    if (!selectedPipeline) return;
-    const index = pipelines.findIndex(
-      (pipeline) => pipeline.id === selectedPipeline.id,
-    );
-    const nextIndex = direction === "up" ? index - 1 : index + 1;
-    if (index < 0 || nextIndex < 0 || nextIndex >= pipelines.length) return;
-    const reordered = [...pipelines];
-    const [moved] = reordered.splice(index, 1);
-    reordered.splice(nextIndex, 0, moved);
-    onChange(
-      reordered.map((pipeline, orderIndex) => ({
-        ...pipeline,
-        order: orderIndex + 1,
-        isDefault: orderIndex === 0 ? true : pipeline.isDefault,
-      })),
-    );
-  };
-
-  const addStage = () => {
-    if (!selectedPipeline) return;
-    const nextStage: DealPipelineStage = {
-      id: `stage-${Date.now()}`,
-      label: "New Stage",
-      color: "#64748b",
-      order: selectedPipeline.stages.length + 1,
-      pipelineId: selectedPipeline.id,
-    };
-    replacePipeline({
-      ...selectedPipeline,
-      stages: [...selectedPipeline.stages, nextStage],
-    });
-  };
-
-  const updateStage = (stageId: string, patch: Partial<DealPipelineStage>) => {
-    if (!selectedPipeline) return;
-    replacePipeline({
-      ...selectedPipeline,
-      stages: selectedPipeline.stages.map((stage) =>
-        stage.id === stageId ? { ...stage, ...patch } : stage,
-      ),
-    });
-  };
-
-  const swapStage = (fromIndex: number, toIndex: number) => {
-    if (!selectedPipeline) return;
-    if (toIndex < 0 || toIndex >= selectedPipeline.stages.length) return;
-    const stages = [...selectedPipeline.stages];
-    const [moved] = stages.splice(fromIndex, 1);
-    stages.splice(toIndex, 0, moved);
-    replacePipeline({
-      ...selectedPipeline,
-      stages: stages.map((stage, index) => ({ ...stage, order: index + 1 })),
-    });
-  };
-
-  const removeStage = (stage: DealPipelineStage) => {
-    if (!selectedPipeline) return;
-    const stageInUse =
-      deals?.some(
-        (deal) =>
-          (deal.pipeline_id || selectedPipeline.id) === selectedPipeline.id &&
-          deal.stage === stage.id,
-      ) ?? false;
-    if (stageInUse) {
-      window.alert(
-        "This stage is currently used by projects. Reassign those projects before deleting it.",
-      );
-      return;
+    if (legacyTabs.has(rawTab) || needsNormalize) {
+      setSearchParams(next, { replace: true });
     }
-    replacePipeline({
-      ...selectedPipeline,
-      stages: selectedPipeline.stages
-        .filter((item) => item.id !== stage.id)
-        .map((item, index) => ({ ...item, order: index + 1 })),
-    });
-  };
+  }, [searchParams, setSearchParams]);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h3 className="text-lg font-medium text-muted-foreground">Pipelines</h3>
-        <Button type="button" size="sm" variant="outline" onClick={addPipeline}>
-          Add Pipeline
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={deletePipeline}
-          disabled={pipelines.length <= 1}
-        >
-          Delete Pipeline
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => movePipeline("up")}
-          disabled={
-            pipelines.findIndex(
-              (pipeline) => pipeline.id === selectedPipeline?.id,
-            ) <= 0
-          }
-        >
-          Move Up
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => movePipeline("down")}
-          disabled={
-            pipelines.findIndex(
-              (pipeline) => pipeline.id === selectedPipeline?.id,
-            ) >=
-            pipelines.length - 1
-          }
-        >
-          Move Down
-        </Button>
-      </div>
-      <div className="flex items-center gap-2">
-        <select
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-          value={selectedPipeline?.id}
-          onChange={(event) => setSelectedPipelineId(event.target.value)}
-        >
-          {pipelines.map((pipeline) => (
-            <option key={pipeline.id} value={pipeline.id}>
-              {pipeline.label}
-            </option>
-          ))}
-        </select>
-        <input
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-          value={selectedPipeline?.label ?? ""}
-          onChange={(event) =>
-            selectedPipeline &&
-            replacePipeline({ ...selectedPipeline, label: event.target.value })
-          }
-          placeholder="Pipeline name"
-        />
-      </div>
+  const showConfigFooter =
+    activeTab === "company" || activeTab === "workflows";
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium text-muted-foreground">Stages</h4>
-          <Button type="button" size="sm" variant="outline" onClick={addStage}>
-            Add Stage
-          </Button>
-        </div>
-        {(selectedPipeline?.stages ?? []).map((stage, index) => (
-          <div
-            key={stage.id}
-            className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2"
-          >
-            <input
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              value={stage.label}
-              onChange={(event) =>
-                updateStage(stage.id, {
-                  label: event.target.value,
-                  id: toSlug(event.target.value || stage.id),
-                })
-              }
-              placeholder="Stage label"
-            />
-            <input
-              type="color"
-              value={stage.color || "#64748b"}
-              onChange={(event) =>
-                updateStage(stage.id, { color: event.target.value })
-              }
-              className="h-9 w-10 rounded-md border border-input bg-background p-1"
-            />
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => swapStage(index, index - 1)}
-                disabled={index === 0}
-              >
-                ↑
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => swapStage(index, index + 1)}
-                disabled={index === (selectedPipeline?.stages.length ?? 0) - 1}
-              >
-                ↓
-              </Button>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => removeStage(stage)}
-            >
-              Delete
-            </Button>
-          </div>
-        ))}
+  const footer = showConfigFooter ? (
+    <div className="flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() =>
+          reset(
+            isTenantBrandingEditorVisible()
+              ? {
+                  ...defaultConfiguration,
+                  primaryBusinessSector: primaryBusinessSectorUnsetToken,
+                  lightModeLogo: {
+                    src: defaultConfiguration.lightModeLogo,
+                  },
+                  darkModeLogo: {
+                    src: defaultConfiguration.darkModeLogo,
+                  },
+                }
+              : {
+                  ...defaultConfiguration,
+                  primaryBusinessSector: primaryBusinessSectorUnsetToken,
+                  title: config.title,
+                  lightModeLogo: { src: config.lightModeLogo },
+                  darkModeLogo: { src: config.darkModeLogo },
+                },
+          )
+        }
+      >
+        <RotateCcw className="mr-1 h-4 w-4" />
+        Reset to defaults
+      </Button>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" onClick={() => window.history.back()}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          <Save className="mr-1 h-4 w-4" />
+          {isSubmitting ? "Saving…" : "Save"}
+        </Button>
       </div>
     </div>
-  );
-};
+  ) : undefined;
 
-/** A minimal color picker input compatible with ra-core's useInput. */
-const ColorInput = ({ source }: { source: string }) => {
-  const { field } = useInput({ source });
   return (
-    <input
-      type="color"
-      {...field}
-      value={field.value || "#000000"}
-      className="w-9 h-9 shrink-0 cursor-pointer appearance-none rounded border bg-transparent p-0.5 [&::-webkit-color-swatch-wrapper]:cursor-pointer [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:cursor-pointer [&::-webkit-color-swatch]:rounded-sm [&::-webkit-color-swatch]:border-none [&::-moz-color-swatch]:cursor-pointer [&::-moz-color-swatch]:rounded-sm [&::-moz-color-swatch]:border-none"
-    />
+    <SettingsHubLayout
+      activeTab={activeTab}
+      onTabChange={setSettingsTab}
+      title={getSettingsTabLabel(activeTab)}
+      footer={footer}
+    >
+      {activeTab === "company" ? (
+        <SettingsGeneralTab
+          activeSection={companySection}
+          onSectionChange={setCompanySection}
+        />
+      ) : null}
+      {activeTab === "notifications" ? (
+        <NotificationsSettingsSection
+          activeSection={notificationsSection}
+          onSectionChange={setNotificationsSection}
+        />
+      ) : null}
+      {activeTab === "users" ? <UsersSettingsSection /> : null}
+      {activeTab === "connectors" ? <ConnectorsSettingsSection /> : null}
+      {activeTab === "forms" ? <FormsSettingsSection /> : null}
+      {activeTab === "communications" ? (
+        <CommunicationsSettingsSection
+          activeSection={communicationsSection}
+          onSectionChange={setCommunicationsSection}
+        />
+      ) : null}
+      {activeTab === "products" ? <ProductsSettingsSection /> : null}
+      {activeTab === "proposals" ? <ProposalsSettingsSection /> : null}
+      {activeTab === "billing" ? <BillingSettingsSection /> : null}
+      {activeTab === "data" ? (
+        <DataImportSection
+          activeSection={dataSection}
+          onSectionChange={setDataSection}
+        />
+      ) : null}
+      {activeTab === "workflows" ? (
+        <WorkflowsSettingsSection
+          activeSection={workflowsSection}
+          onSectionChange={setWorkflowsSection}
+        />
+      ) : null}
+    </SettingsHubLayout>
   );
 };

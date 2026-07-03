@@ -110,7 +110,7 @@ export const MarketingHubPage = () => {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Mail className="size-4" />
               <span>
-                Bulk email to newsletter opt-in contacts. Transactional emails are unchanged.
+                Bulk email to newsletter opt-in contacts. System email (invoices, portal, etc.) is unchanged.
               </span>
             </div>
             <EmailCampaignsPanel />

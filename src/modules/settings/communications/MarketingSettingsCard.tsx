@@ -27,17 +27,8 @@ export const MarketingSettingsCard = ({
   }, [settings]);
 
   return (
-    <div className="space-y-4 rounded-xl border bg-muted/10 p-4">
-      <div>
-        <h3 className="text-sm font-medium">Marketing campaigns</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Bulk SMS and email blasts use separate senders from 1:1 Messages and
-          transactional invoice or ticket email. Configure your Twilio marketing
-          Messaging Service (10DLC) here.
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="space-y-4">
+      <div className="grid w-full gap-4 lg:grid-cols-3">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="marketing-messaging-service-sid">
             Twilio Marketing Messaging Service SID
@@ -96,7 +87,7 @@ export const MarketingSettingsCard = ({
         ) : (
           <Save className="size-4" />
         )}
-        Save marketing settings
+        Save
       </Button>
     </div>
   );

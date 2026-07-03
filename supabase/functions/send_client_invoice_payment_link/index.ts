@@ -11,6 +11,9 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
+import {
+  getOrgInvoiceEmailSendOptions,
+} from "../_shared/organizationEmailSenders.ts";
 import { resolveContactEmail } from "../_shared/clientProposalBilling.ts";
 import { INVOICE_ORGANIZATION_NAME } from "../_shared/invoiceOrganizationInfo.ts";
 import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
@@ -229,6 +232,11 @@ Deno.serve(
             },
           );
 
+          const invoiceEmail = await getOrgInvoiceEmailSendOptions(
+            member.org_id,
+            orgName,
+          );
+
           await sendTransactionalEmail({
             orgId: member.org_id,
             orgName,
@@ -236,6 +244,7 @@ Deno.serve(
             subject,
             textBody,
             htmlBody,
+            ...invoiceEmail,
           });
 
           let smsOutcome: { sent: boolean; skipped: boolean } | null = null;
@@ -357,6 +366,11 @@ Deno.serve(
             <p style="color:#64748b;font-size:13px;">${orgName}</p>
           </div>`;
 
+          const invoiceEmail = await getOrgInvoiceEmailSendOptions(
+            member.org_id,
+            orgName,
+          );
+
           await sendTransactionalEmail({
             orgId: member.org_id,
             orgName,
@@ -364,6 +378,7 @@ Deno.serve(
             subject,
             textBody,
             htmlBody,
+            ...invoiceEmail,
           });
         }
 

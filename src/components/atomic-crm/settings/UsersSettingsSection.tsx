@@ -57,6 +57,7 @@ import {
   type OrgRbacConfig,
 } from "@/lib/permissions/orgRolePresets";
 import { NewRolePresetDialog } from "./NewRolePresetDialog";
+import { SettingsPanelBody } from "@/modules/settings/SettingsTabPanel";
 import type { CrmDataProvider } from "../providers/types";
 import type {
   MemberModuleKey,
@@ -1123,10 +1124,10 @@ export const UsersSettingsSection = () => {
 
   return (
     <>
-      <div className="space-y-8 max-w-6xl">
+      <SettingsPanelBody>
+      <div className="w-full space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 space-y-2">
-            <h2 className="text-base font-semibold tracking-tight">Users</h2>
             <SectionIntro
               internalOnly={SKIP_INVITE_SEAT_BILLING}
               priceUsd={priceUsd}
@@ -1159,6 +1160,7 @@ export const UsersSettingsSection = () => {
           {tableBlock}
         </div>
       </div>
+      </SettingsPanelBody>
 
       <Dialog
         open={seatGateOpen}

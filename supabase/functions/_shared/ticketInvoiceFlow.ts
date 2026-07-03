@@ -5,6 +5,7 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "./transactionalEmail.ts";
+import { getOrgInvoiceEmailSendOptions } from "./organizationEmailSenders.ts";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { sendTwilioSms } from "./twilio.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
@@ -959,6 +960,8 @@ export async function sendTicketInvoicePaymentLink(
 
   const now = new Date().toISOString();
 
+  const invoiceEmail = await getOrgInvoiceEmailSendOptions(params.orgId, orgName);
+
   await sendTransactionalEmail({
     orgId: params.orgId,
     orgName,
@@ -966,6 +969,7 @@ export async function sendTicketInvoicePaymentLink(
     subject,
     textBody,
     htmlBody,
+    ...invoiceEmail,
   });
 
   let smsOutcome: { sent: boolean; skipped: boolean } | null = null;

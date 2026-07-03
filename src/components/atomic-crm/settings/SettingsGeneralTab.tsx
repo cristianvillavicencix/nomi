@@ -6,6 +6,9 @@ import {
 } from "../root/defaultConfiguration";
 import ImageEditorField from "../misc/ImageEditorField";
 import { isTenantBrandingEditorVisible } from "./tenantBrandingFlags";
+import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
+import { SettingsTabPanel } from "@/modules/settings/SettingsTabPanel";
+import type { CompanySectionId } from "@/modules/settings/settingsNavigation";
 
 const SECTOR_CHOICES = [
   { id: primaryBusinessSectorUnsetToken, name: "Select a sector" },
@@ -24,76 +27,98 @@ const optionalWebsite = (value: string) => {
   return undefined;
 };
 
-/**
- * General: optional branding, business details + one sector. Supabase `organizations.name` is not edited here.
- */
-export const SettingsGeneralTab = () => {
-  return (
-    <div className="space-y-12 max-w-6xl">
-      {isTenantBrandingEditorVisible() ? (
-        <section className="space-y-4">
-          <h2 className="text-base font-semibold tracking-tight">Branding</h2>
-          <div className="space-y-4">
-            <TextInput source="title" label="App title" />
-            <div className="flex flex-wrap gap-8">
-              <div className="flex flex-col items-center gap-1">
-                <p className="text-sm text-muted-foreground">Light logo</p>
-                <ImageEditorField
-                  source="lightModeLogo"
-                  width={100}
-                  height={100}
-                  linkPosition="bottom"
-                  backgroundImageColor="#f5f5f5"
-                />
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <p className="text-sm text-muted-foreground">Dark logo</p>
-                <ImageEditorField
-                  source="darkModeLogo"
-                  width={100}
-                  height={100}
-                  linkPosition="bottom"
-                  backgroundImageColor="#1a1a1a"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
+type Props = {
+  activeSection: CompanySectionId;
+  onSectionChange: (section: CompanySectionId) => void;
+};
 
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold tracking-tight">
-          Your business
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <TextInput source="companyLegalName" label="Business name" />
-          <TextInput source="companyPhone" label="Phone" />
-          <TextInput source="companyEmail" label="Email" type="email" />
-          <TextInput
-            source="companyWebsite"
-            label="Website"
-            type="url"
-            placeholder="https://example.com"
-            validate={optionalWebsite}
-          />
-          <div className="sm:col-span-2 lg:col-span-3">
-            <TextInput
-              source="companyAddressLine1"
-              label="Address"
-              className="w-full"
-              multiline
-              rows={2}
-            />
-          </div>
-          <div className="sm:col-span-2 lg:col-span-3 max-w-md">
-            <SelectInput
-              source="primaryBusinessSector"
-              label="Your sector (industry)"
-              choices={SECTOR_CHOICES}
-            />
-          </div>
-        </div>
-      </section>
-    </div>
+/**
+ * Company profile: business details + optional branding.
+ */
+export const SettingsGeneralTab = ({
+  activeSection,
+  onSectionChange,
+}: Props) => {
+  const showBranding = isTenantBrandingEditorVisible();
+
+  if (!showBranding) {
+    return <CompanyProfileFields />;
+  }
+
+  return (
+    <SettingsSubNav
+      value={activeSection}
+      onValueChange={onSectionChange}
+      items={[
+        { id: "profile", label: "Business" },
+        { id: "branding", label: "Branding" },
+      ]}
+    >
+      <SettingsTabPanel value="profile">
+        <CompanyProfileFields />
+      </SettingsTabPanel>
+      <SettingsTabPanel value="branding">
+        <BrandingFields />
+      </SettingsTabPanel>
+    </SettingsSubNav>
   );
 };
+
+const CompanyProfileFields = () => (
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <TextInput source="companyLegalName" label="Business name" />
+    <TextInput source="companyPhone" label="Phone" />
+    <TextInput source="companyEmail" label="Email" type="email" />
+    <TextInput
+      source="companyWebsite"
+      label="Website"
+      type="url"
+      placeholder="https://example.com"
+      validate={optionalWebsite}
+    />
+    <div className="sm:col-span-2 lg:col-span-3">
+      <TextInput
+        source="companyAddressLine1"
+        label="Address"
+        className="w-full"
+        multiline
+        rows={2}
+      />
+    </div>
+    <div className="sm:col-span-2 lg:col-span-1">
+      <SelectInput
+        source="primaryBusinessSector"
+        label="Your sector (industry)"
+        choices={SECTOR_CHOICES}
+      />
+    </div>
+  </div>
+);
+
+const BrandingFields = () => (
+  <div className="space-y-4">
+    <TextInput source="title" label="App title" />
+    <div className="flex flex-wrap gap-8">
+      <div className="flex flex-col items-center gap-1">
+        <p className="text-sm text-muted-foreground">Light logo</p>
+        <ImageEditorField
+          source="lightModeLogo"
+          width={100}
+          height={100}
+          linkPosition="bottom"
+          backgroundImageColor="#f5f5f5"
+        />
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <p className="text-sm text-muted-foreground">Dark logo</p>
+        <ImageEditorField
+          source="darkModeLogo"
+          width={100}
+          height={100}
+          linkPosition="bottom"
+          backgroundImageColor="#1a1a1a"
+        />
+      </div>
+    </div>
+  </div>
+);

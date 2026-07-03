@@ -19,6 +19,7 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "./transactionalEmail.ts";
+import { getOrgInvoiceEmailSendOptions } from "./organizationEmailSenders.ts";
 import {
   buildPaymentReceiptFilename,
   generatePaymentReceiptPdfBase64,
@@ -416,6 +417,10 @@ export async function sendClientInvoicePaymentReceipt(
     </div>`;
 
   try {
+    const invoiceEmail = await getOrgInvoiceEmailSendOptions(
+      params.invoice.org_id,
+      INVOICE_ORGANIZATION_NAME,
+    );
     const sendResult = await sendTransactionalEmail({
       orgId: params.invoice.org_id,
       orgName: INVOICE_ORGANIZATION_NAME,
@@ -423,7 +428,7 @@ export async function sendClientInvoicePaymentReceipt(
       subject,
       textBody,
       htmlBody,
-      replyTo: INVOICE_ORGANIZATION_EMAIL,
+      ...invoiceEmail,
       attachments: [
         {
           name: receiptFilename,
@@ -693,6 +698,10 @@ export async function sendClientInvoicePaymentReminder(
     </div>`;
 
   try {
+    const invoiceEmail = await getOrgInvoiceEmailSendOptions(
+      params.invoice.org_id,
+      INVOICE_ORGANIZATION_NAME,
+    );
     await sendTransactionalEmail({
       orgId: params.invoice.org_id,
       orgName: INVOICE_ORGANIZATION_NAME,
@@ -700,7 +709,7 @@ export async function sendClientInvoicePaymentReminder(
       subject,
       textBody,
       htmlBody,
-      replyTo: INVOICE_ORGANIZATION_EMAIL,
+      ...invoiceEmail,
     });
     await logEmailAttempt(supabase, {
       orgId: params.invoice.org_id,

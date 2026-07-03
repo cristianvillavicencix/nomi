@@ -238,6 +238,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const matchDealShow = useMatch("/deals/:id/show");
   const matchMessages = useMatch("/messages");
+  const isSettingsShell = Boolean(useMatch("/settings"));
   const currentDealId = matchDealShow?.params.id;
   const isMessagesShell = Boolean(matchMessages);
   const isProposalFocusMode = isProposalFocusModePath(location.pathname);
@@ -279,6 +280,8 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
     "flex min-h-0 flex-1 print:block print:px-0 print:pt-0 print:pb-0",
     isMessagesShell
       ? "gap-2 p-2 pl-1"
+      : isSettingsShell
+        ? "gap-0 p-0 overflow-hidden"
       : isProposalPreview
         ? "gap-0 p-0"
         : isBillingInvoiceShell
@@ -297,7 +300,9 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
           isBillingInvoiceShell ||
           isProjectShowShell
           ? "overflow-hidden"
-          : "overflow-y-auto overscroll-contain pr-1",
+          : isSettingsShell
+            ? "overflow-y-auto overscroll-contain"
+            : "overflow-y-auto overscroll-contain pr-1",
       )}
     >
       <ErrorBoundary FallbackComponent={Error}>

@@ -15,7 +15,11 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { GoogleGscStatus } from "@/modules/web-monitor/googleSearchConsoleTypes";
 import { formatCheckedAt } from "@/modules/web-monitor/websiteMonitorUtils";
 
-export const GoogleSearchConsoleSettings = () => {
+export const GoogleSearchConsoleSettings = ({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) => {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -68,7 +72,7 @@ export const GoogleSearchConsoleSettings = () => {
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const redirectAfter = `${window.location.origin}/settings?tab=web-monitor`;
+      const redirectAfter = `${window.location.origin}/settings?tab=connectors&section=search`;
       return dataProvider.googleGscConnect({ redirectAfter });
     },
     onSuccess: (result) => {
@@ -123,17 +127,8 @@ export const GoogleSearchConsoleSettings = () => {
 
   if (!isAdmin) return null;
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Google Search Console</CardTitle>
-        <CardDescription>
-          Conecta la cuenta Google de la agencia para clics, impresiones y top
-          queries en los Web Reports. Solo sitios con propiedad en GSC tendrán
-          datos.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+  const body = (
+    <>
         {banner ? (
           <div
             className={
@@ -149,19 +144,19 @@ export const GoogleSearchConsoleSettings = () => {
         {isPending ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Cargando estado…
+            Loading status…
           </p>
         ) : connected ? (
           <div className="space-y-3">
             <p className="text-sm">
-              Conectado como{" "}
+              Connected as{" "}
               <span className="font-medium">
                 {(status as GoogleGscStatus)?.google_email ?? "Google"}
               </span>
               {(status as GoogleGscStatus)?.last_synced_at ? (
                 <span className="text-muted-foreground">
                   {" "}
-                  · último sync{" "}
+                  · last sync{" "}
                   {formatCheckedAt((status as GoogleGscStatus).last_synced_at)}
                 </span>
               ) : null}
@@ -177,7 +172,7 @@ export const GoogleSearchConsoleSettings = () => {
                 {syncAllMutation.isPending ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : null}
-                Sincronizar todos los sitios
+                Sync all sites
               </Button>
               <Button
                 type="button"
@@ -191,7 +186,7 @@ export const GoogleSearchConsoleSettings = () => {
                 ) : (
                   <Unplug className="mr-2 size-4" />
                 )}
-                Desconectar
+                Disconnect
               </Button>
               <Button type="button" variant="ghost" size="sm" asChild>
                 <a
@@ -200,7 +195,7 @@ export const GoogleSearchConsoleSettings = () => {
                   rel="noreferrer"
                 >
                   <ExternalLink className="mr-2 size-4" />
-                  Abrir GSC
+                  Open GSC
                 </a>
               </Button>
             </div>
@@ -208,8 +203,8 @@ export const GoogleSearchConsoleSettings = () => {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Requiere OAuth en Google Cloud (Search Console API) y que la
-              cuenta tenga acceso a las propiedades de tus clientes.
+              Requires Google Cloud OAuth (Search Console API) and account access
+              to your client properties.
             </p>
             <Button
               type="button"
@@ -220,11 +215,27 @@ export const GoogleSearchConsoleSettings = () => {
               {connectMutation.isPending ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               ) : null}
-              Conectar Search Console
+              Connect Search Console
             </Button>
           </div>
         )}
-      </CardContent>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="w-full space-y-4">{body}</div>;
+  }
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="text-base">Google Search Console</CardTitle>
+        <CardDescription>
+          Connect the agency Google account for clicks, impressions, and top
+          queries in Web Reports.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">{body}</CardContent>
     </Card>
   );
 };

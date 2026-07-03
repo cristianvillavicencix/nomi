@@ -8,6 +8,7 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
+import { getOrgInvoiceEmailSendOptions } from "../_shared/organizationEmailSenders.ts";
 import { getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
 import { sendTwilioSms } from "../_shared/twilio.ts";
 import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
@@ -104,13 +105,18 @@ Deno.serve(
             row.scheduled_send_message?.trim() ||
             `Please find attached invoice ${row.invoice_number} for ${row.description} (${row.currency} ${row.amount}).\n\nThank you for your business.`;
 
+          const invoiceEmail = await getOrgInvoiceEmailSendOptions(
+            row.org_id,
+            org?.name ?? null,
+          );
+
           await sendTransactionalEmail({
             orgId: row.org_id,
             orgName: org?.name ?? null,
             to,
             subject,
             textBody: message,
-            replyTo: org?.email?.trim() ?? null,
+            ...invoiceEmail,
             attachments: [
               {
                 name: `${row.invoice_number}.pdf`,

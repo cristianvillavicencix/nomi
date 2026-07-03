@@ -10,6 +10,7 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "./transactionalEmail.ts";
+import { getOrgInvoiceEmailSendOptions } from "./organizationEmailSenders.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 import {
   allDeliverablesHaveBilling,
@@ -737,6 +738,8 @@ export async function sendCombinedTicketInvoicePaymentLink(
 
   const now = new Date().toISOString();
 
+  const invoiceEmail = await getOrgInvoiceEmailSendOptions(params.orgId, orgName);
+
   await sendTransactionalEmail({
     orgId: params.orgId,
     orgName,
@@ -744,6 +747,7 @@ export async function sendCombinedTicketInvoicePaymentLink(
     subject,
     textBody,
     htmlBody,
+    ...invoiceEmail,
   });
 
   let smsOutcome: { sent: boolean; skipped: boolean } | null = null;

@@ -1,18 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
-import { CircleX, Copy, Pencil, Save } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 import {
-  Form,
   useDataProvider,
   useGetIdentity,
   useGetOne,
   useNotify,
-  useRecordContext,
 } from "ra-core";
-import { useState } from "react";
-import { useFormState } from "react-hook-form";
-import { RecordField } from "@/components/admin/record-field";
-import { EmailInput } from "@/components/admin/email-input";
-import { TextInput } from "@/components/admin/text-input";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,98 +28,137 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-import { supabase } from "../providers/supabase/supabase";
-import type { CrmDataProvider } from "../providers/types";
-import type { OrganizationMember, OrganizationMemberFormData } from "../types";
-import { ProfileNotificationsSection } from "./ProfileNotificationsSection";
-import { ProfileDesktopNotificationsSection } from "@/modules/notifications/ProfileDesktopNotificationsSection";
-import { ProfileCalendarSubscriptionSection } from "@/modules/calendar/ProfileCalendarSubscriptionSection";
 import { EditAvatarDialog } from "@/components/avatar/EditAvatarDialog";
 import {
   initialsOf,
   resolveAvatarUrl,
 } from "@/components/avatar/resolveAvatar";
 import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
+import { useDebouncedSave } from "@/hooks/useDebouncedSave";
+import { ProfileCalendarSubscriptionSection } from "@/modules/calendar/ProfileCalendarSubscriptionSection";
+import { buildSettingsSearchParams } from "@/modules/settings/settingsNavigation";
+
+import { supabase } from "../providers/supabase/supabase";
+import type { CrmDataProvider } from "../providers/types";
+import type { OrganizationMember, OrganizationMemberFormData } from "../types";
+
+type ProfileFields = {
+  first_name: string;
+  last_name: string;
+  email: string;
+};
+
+const emptyFields = (): ProfileFields => ({
+  first_name: "",
+  last_name: "",
+  email: "",
+});
 
 export const ProfilePage = () => {
-  const [isEditMode, setEditMode] = useState(false);
-  const { identity, refetch: refetchIdentity } = useGetIdentity();
-  const { data, refetch: refetchUser } = useGetOne("organization_members", {
+  const { identity } = useGetIdentity();
+  const { data: member } = useGetOne<OrganizationMember>("organization_members", {
     id: identity?.id,
-  });
-  const notify = useNotify();
-  const dataProvider = useDataProvider<CrmDataProvider>();
-
-  const { mutate } = useMutation({
-    mutationKey: ["signup"],
-    mutationFn: async (data: OrganizationMemberFormData) => {
-      if (!data?.id) {
-        throw new Error("Record not found");
-      }
-      return dataProvider.organizationMemberUpdate(data.id, data);
-    },
-    onSuccess: () => {
-      refetchIdentity();
-      refetchUser();
-      setEditMode(false);
-      notify("Your profile has been updated");
-    },
-    onError: (_) => {
-      notify("An error occurred. Please try again", {
-        type: "error",
-      });
-    },
   });
 
   if (!identity) return null;
 
-  const handleOnSubmit = async (values: any) => {
-    mutate(values);
-  };
-
   return (
-    <div className="max-w-lg mx-auto mt-8">
-      <Form onSubmit={handleOnSubmit} record={data}>
-        <ProfileForm isEditMode={isEditMode} setEditMode={setEditMode} />
-      </Form>
+    <div className="mx-auto mt-8 max-w-lg space-y-4">
+      <ProfileIdentityCard member={member} />
+      <Card>
+        <CardContent className="flex items-center justify-between gap-3 pt-6">
+          <h2 className="text-sm font-medium">Notifications</h2>
+          <Button type="button" size="sm" variant="outline" asChild>
+              <Link
+                to={{
+                  pathname: "/settings",
+                  search: buildSettingsSearchParams("notifications").toString(),
+                }}
+              >
+                Open settings
+              </Link>
+            </Button>
+        </CardContent>
+      </Card>
+      <ProfileCalendarSubscriptionSection />
+      {import.meta.env.VITE_INBOUND_EMAIL ? <InboundEmailCard /> : null}
     </div>
   );
 };
 
-const ProfileForm = ({
-  isEditMode,
-  setEditMode,
+const ProfileIdentityCard = ({
+  member,
 }: {
-  isEditMode: boolean;
-  setEditMode: (value: boolean) => void;
+  member?: OrganizationMember;
 }) => {
   const notify = useNotify();
-  const record = useRecordContext<OrganizationMember>();
   const { identity, refetch: refetchIdentity } = useGetIdentity();
-  const { isDirty } = useFormState();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const [fields, setFields] = useState<ProfileFields>(emptyFields);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    if (!member) return;
+    setFields({
+      first_name: member.first_name ?? "",
+      last_name: member.last_name ?? "",
+      email: member.email ?? "",
+    });
+    setTouched(false);
+  }, [member?.first_name, member?.last_name, member?.email, member]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: ProfileFields) => {
+      if (!member?.id) throw new Error("Record not found");
+      return dataProvider.organizationMemberUpdate(member.id, {
+        ...member,
+        ...data,
+      } as OrganizationMemberFormData);
+    },
+    onSuccess: () => {
+      void refetchIdentity();
+      notify("Profile updated", { type: "success" });
+    },
+    onError: () => {
+      notify("An error occurred. Please try again", { type: "error" });
+    },
+    onSettled: () => setSaving(false),
+  });
+
+  useDebouncedSave(
+    fields,
+    (next) => {
+      if (!member?.id) return;
+      setSaving(true);
+      saveMutation.mutate(next);
+    },
+    {
+      enabled: touched && Boolean(member?.id),
+      delayMs: 700,
+      isEqual: (a, b) =>
+        a.first_name === b.first_name &&
+        a.last_name === b.last_name &&
+        a.email === b.email,
+    },
+  );
 
   const avatarPreviewUrl = useStorageSignedUrl(
-    record ? resolveAvatarUrl(record, 96) : null,
+    member ? resolveAvatarUrl(member, 96) : null,
     { defaultBucket: "avatars" },
   );
-  const avatarInitials = initialsOf(record);
+  const avatarInitials = initialsOf(member);
 
-  if (!identity) return null;
+  if (!identity || !member) return null;
 
   const resetPasswordForm = () => {
     setNewPassword("");
     setConfirmPassword("");
-  };
-
-  const handleClickOpenPasswordChange = () => {
-    resetPasswordForm();
-    setPasswordDialogOpen(true);
   };
 
   const handlePasswordChange = async () => {
@@ -141,9 +176,7 @@ const ProfileForm = ({
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       setPasswordDialogOpen(false);
       resetPasswordForm();
       notify("Your password has been updated");
@@ -156,17 +189,28 @@ const ProfileForm = ({
     }
   };
 
+  const setField = (key: keyof ProfileFields, value: string) => {
+    setTouched(true);
+    setFields((current) => ({ ...current, [key]: value }));
+  };
+
   return (
-    <div className="space-y-4">
+    <>
       <Card>
-        <CardContent>
-          <div className="mb-4 flex flex-row justify-between">
+        <CardContent className="pt-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <h2 className="text-xl font-semibold text-muted-foreground">
               Profile
             </h2>
+            {saving ? (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" />
+                Saving…
+              </span>
+            ) : null}
           </div>
 
-          <div className="space-y-4 mb-4">
+          <div className="space-y-4">
             <div className="flex flex-row items-center gap-3">
               <button
                 type="button"
@@ -182,74 +226,80 @@ const ProfileForm = ({
               <button
                 type="button"
                 onClick={() => setAvatarDialogOpen(true)}
-                className="text-xs underline hover:no-underline cursor-pointer"
+                className="cursor-pointer text-xs underline hover:no-underline"
               >
                 Change
               </button>
             </div>
-            <TextRender source="first_name" isEditMode={isEditMode} />
-            <TextRender source="last_name" isEditMode={isEditMode} />
-            <TextRender source="email" isEditMode={isEditMode} />
+
+            <ProfileFieldRow
+              label="First name"
+              control={
+                <Input
+                  value={fields.first_name}
+                  onChange={(event) =>
+                    setField("first_name", event.target.value)
+                  }
+                  autoComplete="given-name"
+                />
+              }
+            />
+            <ProfileFieldRow
+              label="Last name"
+              control={
+                <Input
+                  value={fields.last_name}
+                  onChange={(event) =>
+                    setField("last_name", event.target.value)
+                  }
+                  autoComplete="family-name"
+                />
+              }
+            />
+            <ProfileFieldRow
+              label="Email"
+              control={
+                <Input
+                  type="email"
+                  value={fields.email}
+                  onChange={(event) => setField("email", event.target.value)}
+                  autoComplete="email"
+                />
+              }
+            />
           </div>
 
-          <div className="flex flex-row justify-end gap-2">
-            {!isEditMode && (
-              <>
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={handleClickOpenPasswordChange}
-                >
-                  Change password
-                </Button>
-              </>
-            )}
-
+          <div className="mt-6 flex justify-end">
             <Button
               type="button"
-              variant={isEditMode ? "ghost" : "outline"}
-              onClick={() => setEditMode(!isEditMode)}
-              className="flex items-center"
+              variant="outline"
+              onClick={() => {
+                resetPasswordForm();
+                setPasswordDialogOpen(true);
+              }}
             >
-              {isEditMode ? <CircleX /> : <Pencil />}
-              {isEditMode ? "Cancel" : "Edit"}
+              Change password
             </Button>
-
-            {isEditMode && (
-              <Button type="submit" disabled={!isDirty} variant="outline">
-                <Save />
-                Save
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
-      <ProfileNotificationsSection />
-      <ProfileDesktopNotificationsSection />
-      <ProfileCalendarSubscriptionSection />
-      {record ? (
-        <EditAvatarDialog
-          open={avatarDialogOpen}
-          onOpenChange={(next) => {
-            setAvatarDialogOpen(next);
-            if (!next) {
-              // Re-pull identity so the sidebar avatar updates right away
-              // after the picker closes.
-              void refetchIdentity?.();
-            }
-          }}
-          record={record}
-          target={{ kind: "organization_member", id: record.id }}
-          folder="organization_members"
-        />
-      ) : null}
+
+      <EditAvatarDialog
+        open={avatarDialogOpen}
+        onOpenChange={(next) => {
+          setAvatarDialogOpen(next);
+          if (!next) void refetchIdentity?.();
+        }}
+        record={member}
+        target={{ kind: "organization_member", id: member.id }}
+        folder="organization_members"
+      />
+
       <Dialog
         open={passwordDialogOpen}
         onOpenChange={(open) => {
           setPasswordDialogOpen(open);
-          if (!open) {
-            resetPasswordForm();
-          }
+          if (!open) resetPasswordForm();
         }}
       >
         <DialogContent>
@@ -293,7 +343,7 @@ const ProfileForm = ({
             </Button>
             <Button
               type="button"
-              onClick={handlePasswordChange}
+              onClick={() => void handlePasswordChange()}
               disabled={passwordSaving}
             >
               Save password
@@ -301,56 +351,47 @@ const ProfileForm = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {import.meta.env.VITE_INBOUND_EMAIL && (
-        <Card>
-          <CardContent>
-            <div className="space-y-4 justify-between">
-              <h2 className="text-xl font-semibold text-muted-foreground">
-                Inbound email
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                You can start sending emails to your server's inbound email
-                address, e.g. by adding it to the
-                <b> Cc: </b> field. Nomi CRM will process the emails and add
-                notes to the corresponding contacts.
-              </p>
-              <CopyPaste />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    </>
   );
 };
 
-const TextRender = ({
-  source,
-  isEditMode,
+const ProfileFieldRow = ({
+  label,
+  control,
 }: {
-  source: string;
-  isEditMode: boolean;
-}) => {
-  if (isEditMode) {
-    if (source === "email") {
-      return <EmailInput source={source} helperText={false} />;
-    }
-    return <TextInput source={source} helperText={false} />;
-  }
-  return (
-    <div className="m-2">
-      <RecordField source={source} />
-    </div>
-  );
-};
+  label: string;
+  control: ReactNode;
+}) => (
+  <div className="grid gap-2 border-b border-border/50 pb-3 sm:grid-cols-[7rem_1fr] sm:items-center sm:gap-4">
+    <Label className="text-sm text-muted-foreground">{label}</Label>
+    {control}
+  </div>
+);
+
+const InboundEmailCard = () => (
+  <Card>
+    <CardContent className="pt-6">
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-muted-foreground">
+          Inbound email
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          You can start sending emails to your server&apos;s inbound email
+          address, e.g. by adding it to the <b> Cc: </b> field. Nomi CRM will
+          process the emails and add notes to the corresponding contacts.
+        </p>
+        <CopyPaste />
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const CopyPaste = () => {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
     setCopied(true);
     navigator.clipboard.writeText(import.meta.env.VITE_INBOUND_EMAIL);
-    setTimeout(() => {
-      setCopied(false);
-    }, 1500);
+    setTimeout(() => setCopied(false), 1500);
   };
   return (
     <TooltipProvider>
@@ -360,12 +401,12 @@ const CopyPaste = () => {
             type="button"
             onClick={handleCopy}
             variant="ghost"
-            className="normal-case justify-between w-full"
+            className="w-full justify-between normal-case"
           >
             <span className="overflow-hidden text-ellipsis">
               {import.meta.env.VITE_INBOUND_EMAIL}
             </span>
-            <Copy className="h-4 w-4 ml-2" />
+            <Copy className="ml-2 h-4 w-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>

@@ -149,12 +149,8 @@ export const ServiceCatalogSettings = () => {
   const catalogEmpty = packages.length === 0 && addons.length === 0;
 
   return (
-    <div className="space-y-4 max-w-5xl">
+    <div className="w-full space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="text-sm text-muted-foreground max-w-2xl">
-          One catalog for proposals, invoices, ticket billing, and Book Now.
-          Suggested prices can still be edited per proposal or invoice.
-        </p>
         {catalogEmpty ? (
           <Button
             type="button"

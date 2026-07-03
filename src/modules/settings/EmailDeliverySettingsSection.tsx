@@ -19,12 +19,19 @@ import { useDataProvider } from "ra-core";
 import { TicketEmailInboundSetupCard } from "@/modules/settings/TicketEmailInboundSetupCard";
 import { TicketInboxReplySignatureSection } from "@/modules/settings/TicketInboxReplySignatureSection";
 import { TicketInboxReplyTemplatesSection } from "@/modules/settings/TicketInboxReplyTemplatesSection";
+import {
+  SYSTEM_EMAIL_NAME,
+  SYSTEM_EMAIL_SCOPE,
+} from "@/modules/settings/integrations/systemEmailCopy";
 
 export type EmailDeliverySettings = {
   configured: boolean;
   provider: "twilio" | null;
   from_email: string | null;
+  general_from_email?: string | null;
+  billing_from_email?: string | null;
   reply_to: string | null;
+  billing_from?: string | null;
   org_name: string | null;
   uses_messaging_credentials?: boolean;
   ticket_inbound?: TicketInboundSetup | null;
@@ -40,7 +47,11 @@ export type TicketInboundSetup = {
   webhook_configured: boolean;
 };
 
-export const EmailDeliverySettingsSection = () => {
+export const EmailDeliverySettingsSection = ({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const { identity } = useGetIdentity();
   const notify = useNotify();
@@ -118,25 +129,13 @@ export const EmailDeliverySettingsSection = () => {
   const providerLabel =
     data?.provider === "twilio" ? "Twilio Email" : "Not configured";
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Mail className="size-4" />
-          Transactional email
-        </CardTitle>
-        <CardDescription>
-          Outbound email for invoices, portal verification codes, and web audit
-          reports. Uses the same Twilio Account SID and Auth Token as SMS
-          (Settings → Communications → Twilio).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+  const body = (
+    <>
         {!data?.configured ? (
           <Alert>
             <AlertDescription>
-              Configure Twilio under <strong>Communications → Twilio</strong>{" "}
-              (Account SID, Auth Token, and phone number). Email uses those same
+              Configure Twilio under <strong>Integrations → SMS</strong> (Account
+              SID, Auth Token, and phone number). Email uses those same
               credentials. Also authenticate your domain in Twilio Console →
               Email.
             </AlertDescription>
@@ -168,8 +167,8 @@ export const EmailDeliverySettingsSection = () => {
           </p>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
+        <div className="grid w-full gap-4 lg:grid-cols-3">
+          <div className="space-y-2 lg:col-span-2">
             <Label htmlFor="email-reply-to">Reply-to email</Label>
             <Input
               id="email-reply-to"
@@ -233,7 +232,26 @@ export const EmailDeliverySettingsSection = () => {
         <TicketInboxReplySignatureSection />
 
         <TicketInboxReplyTemplatesSection />
-      </CardContent>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="w-full space-y-4">{body}</div>;
+  }
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Mail className="size-4" />
+          {SYSTEM_EMAIL_NAME}
+        </CardTitle>
+        <CardDescription>
+          {SYSTEM_EMAIL_SCOPE}. Uses the same Twilio Account SID and Auth Token
+          as SMS. Ticket replies use the ticket inbox address separately.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">{body}</CardContent>
     </Card>
   );
 };

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 
-export const VoiceSettingsCard = () => {
+export const VoiceSettingsCard = ({ embedded = false }: { embedded?: boolean }) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const { identity } = useGetIdentity();
   const notify = useNotify();
@@ -79,14 +79,22 @@ export const VoiceSettingsCard = () => {
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-border/60 p-4">
-      <div>
-        <h3 className="font-semibold">Voice (Twilio)</h3>
-        <p className="text-sm text-muted-foreground">
-          Outbound and inbound browser calls from Messages. Uses the same Twilio
-          account as SMS.
-        </p>
-      </div>
+    <div
+      className={
+        embedded
+          ? "w-full space-y-4"
+          : "w-full space-y-4 rounded-xl border border-border/60 p-4"
+      }
+    >
+      {!embedded ? (
+        <div>
+          <h3 className="font-semibold">Voice (Twilio)</h3>
+          <p className="text-sm text-muted-foreground">
+            Outbound and inbound browser calls from Messages. Uses the same Twilio
+            account as SMS.
+          </p>
+        </div>
+      ) : null}
 
       {isPending ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

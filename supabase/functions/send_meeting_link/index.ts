@@ -9,6 +9,7 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
+import { resolveOrgGeneralFrom } from "../_shared/organizationEmailSenders.ts";
 import { resolveContactEmail } from "../_shared/clientProposalBilling.ts";
 import { INVOICE_ORGANIZATION_NAME } from "../_shared/invoiceOrganizationInfo.ts";
 
@@ -115,6 +116,8 @@ Deno.serve(
             <p style="margin:0;font-size:14px;color:#64748b;">${escapeHtml(signature)}</p>
           </div>`;
 
+        const generalFrom = await resolveOrgGeneralFrom(member.org_id, orgName);
+
         await sendTransactionalEmail({
           orgId: member.org_id,
           orgName,
@@ -122,6 +125,9 @@ Deno.serve(
           subject,
           textBody,
           htmlBody,
+          fromEmail: generalFrom.email,
+          fromName: generalFrom.name,
+          replyTo: generalFrom.email,
         });
 
         return new Response(

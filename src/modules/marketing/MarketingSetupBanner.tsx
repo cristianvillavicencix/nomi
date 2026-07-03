@@ -26,11 +26,11 @@ export const MarketingSetupBanner = () => {
         Messaging Service in Settings before sending campaigns.
       </p>
       <Link
-        to="/settings?tab=messaging"
+        to="/settings?tab=connectors"
         className="inline-flex shrink-0 items-center gap-1.5 font-medium text-foreground hover:underline"
       >
         <Settings className="size-4" />
-        Settings → Communications
+        Settings → Connectors
       </Link>
     </div>
   );

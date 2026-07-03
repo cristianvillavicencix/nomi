@@ -11,6 +11,7 @@ import { Link } from "react-router";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { buildSettingsSearchParams } from "@/modules/settings/settingsNavigation";
 import {
   Sheet,
   SheetContent,
@@ -434,7 +435,14 @@ export const NotificationCenterButton = () => {
 
           <div className="border-t pt-3">
             <Button variant="outline" size="sm" asChild className="w-full">
-              <Link to="/profile">Notification settings</Link>
+              <Link
+                to={{
+                  pathname: "/settings",
+                  search: buildSettingsSearchParams("notifications").toString(),
+                }}
+              >
+                Notification settings
+              </Link>
             </Button>
           </div>
         </SheetContent>

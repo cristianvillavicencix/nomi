@@ -134,7 +134,11 @@ export const messagingProvider = {
     }
     return data;
   },
-  async updateEmailDeliverySettings(params: { reply_to?: string | null }) {
+  async updateEmailDeliverySettings(params: {
+    reply_to?: string | null;
+    general_from_email?: string | null;
+    billing_from_email?: string | null;
+  }) {
     const { data, error } = await invokeEdgeFunction<
       import("@/modules/settings/EmailDeliverySettingsSection").EmailDeliverySettings
     >("email_settings", {

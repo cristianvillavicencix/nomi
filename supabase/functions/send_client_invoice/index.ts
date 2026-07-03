@@ -10,6 +10,7 @@ import {
   isOrgTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
+import { getOrgInvoiceEmailSendOptions } from "../_shared/organizationEmailSenders.ts";
 import { getMessagingSettingsSecrets } from "../_shared/messagingSettings.ts";
 import { sendTwilioSms } from "../_shared/twilio.ts";
 import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
@@ -338,6 +339,10 @@ Deno.serve(
         let smsSkipped = false;
 
         if (await isOrgTransactionalEmailConfigured(member.org_id)) {
+          const invoiceEmail = await getOrgInvoiceEmailSendOptions(
+            member.org_id,
+            org?.name ?? null,
+          );
           await sendTransactionalEmail({
             orgId: member.org_id,
             orgName: org?.name ?? null,
@@ -347,7 +352,7 @@ Deno.serve(
             subject,
             textBody: message,
             htmlBody: body.html_message?.trim() || null,
-            replyTo: org?.email?.trim() ?? null,
+            ...invoiceEmail,
             attachments: [
               {
                 name: filename,

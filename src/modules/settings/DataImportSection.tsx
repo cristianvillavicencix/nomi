@@ -10,9 +10,7 @@ import {
   ChevronRight,
   CircleDot,
   Database,
-  Download,
   ExternalLink,
-  GitMerge,
   Loader2,
   LogIn,
   LogOut,
@@ -33,6 +31,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import {
+  SettingsSubNav,
+} from "@/modules/settings/SettingsSubNav";
+import { SettingsTabPanel } from "@/modules/settings/SettingsTabPanel";
+import type { DataSectionId } from "@/modules/settings/settingsNavigation";
 
 type ModuleKey = "Accounts" | "Contacts" | "Deals" | "Leads";
 
@@ -177,7 +180,15 @@ const MODULE_CONFIG: Array<{
 
 const ALL_MODULES: ModuleKey[] = ["Accounts", "Contacts", "Deals", "Leads"];
 
-export const DataImportSection = () => {
+type Props = {
+  activeSection: DataSectionId;
+  onSectionChange: (section: DataSectionId) => void;
+};
+
+export const DataImportSection = ({
+  activeSection,
+  onSectionChange,
+}: Props) => {
   const { identity } = useGetIdentity();
   const notify = useNotify();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -252,28 +263,26 @@ export const DataImportSection = () => {
 
   if (!isAdmin) {
     return (
-      <div className="space-y-4 max-w-3xl">
-        <h2 className="text-lg font-semibold">Data Import</h2>
-        <p className="text-sm text-muted-foreground">
-          Only administrators can configure data imports.
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Only administrators can configure data imports.
+      </p>
     );
   }
 
   const connected = status?.credentials.configured === true;
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">Data Import</h2>
-        <p className="text-sm text-muted-foreground">
-          Bring contacts, companies and deals into the CRM from Zoho CRM or a
-          CSV file. Then deduplicate any repeated records.
-        </p>
-      </header>
-
-      <Card>
+    <SettingsSubNav
+      value={activeSection}
+      onValueChange={onSectionChange}
+      items={[
+        { id: "zoho", label: "Zoho CRM" },
+        { id: "import", label: "CSV import" },
+        { id: "duplicates", label: "Duplicates" },
+      ]}
+    >
+      <SettingsTabPanel value="zoho" title="Zoho CRM">
+      <Card className="border-0 bg-transparent p-0 shadow-none">
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -281,7 +290,6 @@ export const DataImportSection = () => {
                 <Database className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base">Zoho CRM</CardTitle>
                 <CardDescription>
                   {connected
                     ? "Connected · click a module to sync, then promote into the CRM."
@@ -430,37 +438,26 @@ export const DataImportSection = () => {
           </CardContent>
         </Card>
       ) : null}
+      </SettingsTabPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Download className="h-5 w-5" /> Import from CSV
-          </CardTitle>
-          <CardDescription>
-            Unified CSV importer is on the way. For now, keep using the
-            per-module CSV import inside Contacts and Companies.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <SettingsTabPanel value="import" title="CSV import">
+        <p className="text-sm text-muted-foreground">
+          Unified CSV importer is on the way. For now, keep using the per-module
+          CSV import inside Contacts and Companies.
+        </p>
+      </SettingsTabPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <GitMerge className="h-5 w-5" /> Find duplicates
-          </CardTitle>
-          <CardDescription>
-            After importing, find contacts that share email, phone, or name.
-            Safe matches can be merged in one click; shared inboxes are flagged
-            so separate people are not combined.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline">
-            <Link to={getFindDuplicatesPath()}>Open duplicate finder</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+      <SettingsTabPanel value="duplicates" title="Find duplicates">
+        <p className="mb-4 text-sm text-muted-foreground">
+          After importing, find contacts that share email, phone, or name. Safe
+          matches can be merged in one click; shared inboxes are flagged so
+          separate people are not combined.
+        </p>
+        <Button asChild variant="outline">
+          <Link to={getFindDuplicatesPath()}>Open duplicate finder</Link>
+        </Button>
+      </SettingsTabPanel>
+    </SettingsSubNav>
   );
 };
 

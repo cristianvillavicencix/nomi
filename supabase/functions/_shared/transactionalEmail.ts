@@ -1,5 +1,9 @@
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
+import {
+  getOrgEmailSenderPreviews,
+  resolveOrgGeneralFrom,
+} from "./organizationEmailSenders.ts";
 
 export type EmailAttachment = {
   name: string;
@@ -7,9 +11,6 @@ export type EmailAttachment = {
   contentType: string;
 };
 
-const getTwilioEmailFromOverride = () =>
-  Deno.env.get("TWILIO_EMAIL_FROM")?.trim() ??
-  Deno.env.get("TWILIO_SENDGRID_FROM_EMAIL")?.trim();
 
 const isSkipFlagOn = (value: string | undefined) => {
   const flag = value?.trim().toLowerCase();
@@ -133,19 +134,8 @@ const resolveOrgTwilioCredentials = async (orgId: number) => {
 };
 
 const resolveFromAddress = async (orgId: number, orgName?: string | null) => {
-  const override = getTwilioEmailFromOverride();
-  if (override) return parseEmailAddress(override);
-
-  const { data: org } = await supabaseAdmin
-    .from("organizations")
-    .select("name, email")
-    .eq("id", orgId)
-    .maybeSingle();
-
-  const name =
-    orgName?.trim() || org?.name?.trim() || DEFAULT_ORGANIZATION_NAME;
-  const address = org?.email?.trim() || "billing@lbs.bz";
-  return { email: address, name };
+  const general = await resolveOrgGeneralFrom(orgId, orgName);
+  return { email: general.email, name: general.name };
 };
 
 export async function isOrgTransactionalEmailConfigured(orgId: number) {
@@ -159,23 +149,14 @@ export async function isOrgTransactionalEmailConfigured(orgId: number) {
 
 export async function getOrgTransactionalEmailStatus(orgId: number) {
   const configured = await isOrgTransactionalEmailConfigured(orgId);
-  const fromOverride = getTwilioEmailFromOverride();
-  const { data: org } = await supabaseAdmin
-    .from("organizations")
-    .select("name, email")
-    .eq("id", orgId)
-    .maybeSingle();
-
-  const fromPreview = fromOverride
-    ? fromOverride
-    : org?.email?.trim()
-      ? `${org?.name ?? DEFAULT_ORGANIZATION_NAME} <${org.email.trim()}>`
-      : `${org?.name ?? DEFAULT_ORGANIZATION_NAME} <billing@lbs.bz>`;
+  const senders = await getOrgEmailSenderPreviews(orgId);
 
   return {
     configured,
     provider: configured ? ("twilio" as const) : null,
-    from_email: configured ? fromPreview : null,
+    from_email: configured ? senders.general_from_preview : null,
+    billing_from_email: configured ? senders.billing_from_preview : null,
+    general_from_email: configured ? senders.general_from_preview : null,
     uses_messaging_credentials: configured,
   };
 }

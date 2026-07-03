@@ -23,10 +23,12 @@ export const BusinessHoursSettingsCard = ({
   settings,
   onSave,
   saving,
+  embedded = false,
 }: {
   settings: MessagingSettingsPublic;
   onSave: (payload: Partial<MessagingSettingsPublic>) => void;
   saving?: boolean;
+  embedded?: boolean;
 }) => {
   const [businessHours, setBusinessHours] = useState<BusinessHoursConfig>(
     settings.business_hours ?? {},
@@ -75,14 +77,24 @@ export const BusinessHoursSettingsCard = ({
   };
 
   return (
-    <div className="space-y-4 rounded-xl border p-4">
-      <div>
-        <h3 className="text-sm font-medium">Business hours & auto-reply</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configure when your team is available and optional automatic replies
-          for inbound SMS.
-        </p>
-      </div>
+    <div
+      className={
+        embedded
+          ? "w-full space-y-4 border-t pt-6"
+          : "w-full space-y-4 rounded-xl border p-4"
+      }
+    >
+      {!embedded ? (
+        <div>
+          <h3 className="text-sm font-medium">Business hours & auto-reply</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Configure when your team is available and optional automatic replies
+            for inbound SMS.
+          </p>
+        </div>
+      ) : (
+        <h4 className="text-sm font-medium">Business hours & auto-reply</h4>
+      )}
 
       <div className="space-y-2">
         {DAYS.map((day) => {

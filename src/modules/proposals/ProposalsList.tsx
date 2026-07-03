@@ -73,7 +73,7 @@ const ProposalsListLayout = () => {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
         No proposals yet. Set up your{" "}
-        <a href="/settings?tab=commercial" className="link-action">
+        <a href="/settings?tab=proposals" className="link-action">
           service catalog
         </a>{" "}
         in Settings, then create a proposal with packages and add-ons.
