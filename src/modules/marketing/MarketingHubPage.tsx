@@ -17,7 +17,7 @@ import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/m
 import { MarketingEmailCampaignDialog } from "@/modules/marketing/MarketingEmailCampaignDialog";
 import { MarketingSmsCampaignDialog } from "@/modules/marketing/MarketingSmsCampaignDialog";
 import { EmailCampaignsPanel } from "@/modules/marketing/EmailCampaignsPanel";
-import { MarketingSettingsCard } from "@/modules/marketing/MarketingSettingsCard";
+import { MarketingSetupBanner } from "@/modules/marketing/MarketingSetupBanner";
 import { SmsCampaignsPanel } from "@/modules/marketing/SmsCampaignsPanel";
 import {
   MARKETING_HUB_TAB_LABELS,
@@ -92,7 +92,7 @@ export const MarketingHubPage = () => {
       </Tabs>
 
       <ScrollableContentArea className="space-y-6 p-4">
-        {canManage ? <MarketingSettingsCard /> : null}
+        {canManage ? <MarketingSetupBanner /> : null}
 
         {activeTab === "sms" ? (
           <section className="space-y-3">

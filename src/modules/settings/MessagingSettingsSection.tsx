@@ -11,6 +11,7 @@ import { DesktopMessageAlertsSection } from "@/modules/settings/DesktopMessageAl
 import { WhatsAppSettingsCard } from "@/modules/settings/communications/WhatsAppSettingsCard";
 import { VoiceSettingsCard } from "@/modules/settings/communications/VoiceSettingsCard";
 import { BusinessHoursSettingsCard } from "@/modules/settings/communications/BusinessHoursSettingsCard";
+import { MarketingSettingsCard } from "@/modules/settings/communications/MarketingSettingsCard";
 import { TestSmsButton } from "@/modules/settings/communications/TestSmsButton";
 import { OrganizationSignatureSection } from "@/modules/settings/OrganizationSignatureSection";
 import { OrganizationMessageTemplatesSection } from "@/modules/settings/OrganizationMessageTemplatesSection";
@@ -81,6 +82,24 @@ export const MessagingSettingsSection = () => {
         mutationError instanceof Error
           ? mutationError.message
           : "Failed to save business hours",
+        { type: "error" },
+      );
+    },
+  });
+
+  const marketingMutation = useMutation({
+    mutationFn: (
+      payload: Parameters<CrmDataProvider["updateMessagingSettings"]>[0],
+    ) => dataProvider.updateMessagingSettings(payload),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(["messaging-settings"], saved);
+      notify("Marketing settings saved", { type: "success" });
+    },
+    onError: (mutationError) => {
+      notify(
+        mutationError instanceof Error
+          ? mutationError.message
+          : "Failed to save marketing settings",
         { type: "error" },
       );
     },
@@ -237,6 +256,14 @@ export const MessagingSettingsSection = () => {
               settings={data}
               saving={businessHoursMutation.isPending}
               onSave={(payload) => businessHoursMutation.mutate(payload)}
+            />
+          ) : null}
+
+          {data ? (
+            <MarketingSettingsCard
+              settings={data}
+              saving={marketingMutation.isPending}
+              onSave={(payload) => marketingMutation.mutate(payload)}
             />
           ) : null}
         </>
