@@ -83,6 +83,10 @@ const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: 
   { id: "messaging.assign", area: "Messaging", label: "Assign conversations", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "messaging.status.change", area: "Messaging", label: "Change conversation status", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "messaging.settings.manage", area: "Messaging", label: "Configure communications (Twilio, WhatsApp, Voice)", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  // Area 3c — Marketing (bulk SMS & email; separate from 1:1 Messages)
+  { id: "marketing.view", area: "Marketing", label: "View marketing hub", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "marketing.campaigns.manage", area: "Marketing", label: "Create & edit campaigns", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "marketing.campaigns.send", area: "Marketing", label: "Send marketing campaigns", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   // Area 3b — Voice (shell)
   { id: "voice.calls.view", area: "Voice", label: "View call history", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   { id: "voice.calls.make", area: "Voice", label: "Make & receive calls", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
@@ -310,6 +314,13 @@ export const RESOURCE_ACTION_TO_CAPABILITY: Record<
     create: "messaging.templates.manage",
     edit: "messaging.templates.manage",
     delete: "messaging.templates.manage",
+  },
+  marketing_campaigns: {
+    list: "marketing.view",
+    show: "marketing.view",
+    create: "marketing.campaigns.manage",
+    edit: "marketing.campaigns.manage",
+    delete: "marketing.campaigns.manage",
   },
   voice_calls: {
     list: "voice.calls.view",

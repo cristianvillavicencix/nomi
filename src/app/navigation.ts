@@ -9,6 +9,7 @@ import {
   Home,
   LayoutGrid,
   ListChecks,
+  Megaphone,
   Receipt,
   Ticket,
   UserPlus,
@@ -175,6 +176,15 @@ export const LBS_NAV_AFTER_CLIENTS: LbsNavItem[] = [
     activePattern: "/messages/*",
     capability: "messaging.conversations.view",
     resource: "conversations",
+    action: "list",
+  },
+  {
+    to: "/marketing",
+    label: "Marketing",
+    icon: Megaphone,
+    activePattern: "/marketing/*",
+    capability: "marketing.view",
+    resource: "marketing_campaigns",
     action: "list",
   },
 ];

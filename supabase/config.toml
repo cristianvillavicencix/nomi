@@ -296,6 +296,15 @@ verify_jwt = false
 [functions.twilio_inbound_sms]
 verify_jwt = false
 
+[functions.marketing_campaigns]
+verify_jwt = false
+
+[functions.process_marketing_campaigns]
+verify_jwt = false
+
+[functions.marketing_unsubscribe]
+verify_jwt = false
+
 [functions.twilio_sms_status]
 verify_jwt = false
 

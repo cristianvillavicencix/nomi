@@ -70,6 +70,9 @@ export const messagingProvider = {
     voice_api_key_secret?: string | null;
     voice_caller_id?: string | null;
     voice_recording_default?: boolean;
+    twilio_marketing_messaging_service_sid?: string | null;
+    twilio_marketing_phone_number?: string | null;
+    marketing_email_from?: string | null;
   }) {
     const { data, error } = await invokeEdgeFunction<
       import("@/modules/types").MessagingSettingsPublic

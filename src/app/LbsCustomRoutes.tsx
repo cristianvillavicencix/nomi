@@ -47,6 +47,7 @@ import { TicketShow } from "@/modules/tickets/TicketShow";
 import { lazy, Suspense } from "react";
 import { CalendarPage } from "@/modules/calendar/CalendarPage";
 import { MeetingsPage } from "@/modules/meetings/MeetingsPage";
+import { MarketingHubPage } from "@/modules/marketing/MarketingHubPage";
 import { WebsiteMonitorQuickCheckPage } from "@/modules/web-monitor/WebsiteMonitorQuickCheckPage";
 const MessagesPage = lazy(() =>
   import("@/modules/messages/MessagesPage").then((module) => ({
@@ -179,6 +180,14 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="tasks" action="list">
             <MeetingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/marketing"
+        element={
+          <ProtectedRoute resource="marketing_campaigns" action="list">
+            <MarketingHubPage />
           </ProtectedRoute>
         }
       />

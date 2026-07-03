@@ -623,6 +623,63 @@ export type MessagingSettingsPublic = {
   voice_twiml_url?: string | null;
   voice_status_webhook_url?: string | null;
   voice_inbound_url?: string | null;
+  twilio_marketing_messaging_service_sid?: string | null;
+  twilio_marketing_phone_number?: string | null;
+  marketing_email_from?: string | null;
+};
+
+export type MarketingAudienceFilter = {
+  statuses?: string[];
+  tags?: string[];
+  require_sms_opt_in?: boolean;
+  require_email_opt_in?: boolean;
+};
+
+export type SmsCampaign = {
+  id: number;
+  org_id: number;
+  name: string;
+  body: string;
+  status: string;
+  audience_filter: MarketingAudienceFilter;
+  include_stop_footer?: boolean;
+  recipient_count?: number;
+  sent_count?: number;
+  failed_count?: number;
+  skipped_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+};
+
+export type EmailCampaign = {
+  id: number;
+  org_id: number;
+  name: string;
+  subject: string;
+  body_html: string;
+  body_text?: string | null;
+  status: string;
+  audience_filter: MarketingAudienceFilter;
+  recipient_count?: number;
+  sent_count?: number;
+  failed_count?: number;
+  skipped_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+};
+
+export type ContactMarketingPreferences = {
+  contact_id: number;
+  org_id: number;
+  sms_marketing_opt_in_at?: string | null;
+  sms_marketing_opt_in_source?: string | null;
+  sms_marketing_opt_out_at?: string | null;
+  email_marketing_opt_in_at?: string | null;
+  email_marketing_opt_out_at?: string | null;
 };
 
 export type DealLaunchChecklistItem = {

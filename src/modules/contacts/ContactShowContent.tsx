@@ -22,7 +22,8 @@ import { ContactCollapsibleRelatedSidebar } from "@/modules/contacts/ContactColl
 import { ContactRelatedSidebar } from "@/modules/contacts/ContactRelatedSidebar";
 import { ContactShowActions } from "@/modules/contacts/ContactShowActions";
 import { ContactSummaryCard } from "@/modules/contacts/ContactSummaryCard";
-import { useContactTabCounts } from "@/modules/contacts/useContactTabCounts";
+import { ContactMarketingPreferencesCard } from "@/modules/marketing/ContactMarketingPreferencesCard";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 
 export const ContactShowContent = ({
   embedded = false,
@@ -38,6 +39,7 @@ export const ContactShowContent = ({
   const currentTab = embedded ? embeddedTab : urlTab;
   const syncUrl = !embedded;
   const counts = useContactTabCounts(record);
+  const canViewMarketing = useMemberCapability("marketing.view");
 
   useEffect(() => {
     if (embedded) return;
@@ -148,7 +150,15 @@ export const ContactShowContent = ({
   );
 
   const leftColumn = (
-    <ContactSummaryCard record={record} hideCompanyLink={embedded} />
+    <>
+      <ContactSummaryCard record={record} hideCompanyLink={embedded} />
+      {canViewMarketing && record.id != null ? (
+        <ContactMarketingPreferencesCard
+          contactId={Number(record.id)}
+          hasNewsletter={record.has_newsletter}
+        />
+      ) : null}
+    </>
   );
 
   if (embedded) {

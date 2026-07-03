@@ -10,8 +10,11 @@ import {
   findContactByPhone,
   insertSmsMessage,
 } from "../_shared/messagingConversations.ts";
-import { validateTwilioSignatureForRequest } from "../_shared/twilio.ts";
-import { sendTwilioSms } from "../_shared/twilio.ts";
+import { normalizeUsPhoneToE164 } from "../_shared/phone.ts";
+import {
+  sendTwilioSms,
+  validateTwilioSignatureForRequest,
+} from "../_shared/twilio.ts";
 import {
   expandAutoAckMessage,
   isWithinBusinessHours,
@@ -21,6 +24,11 @@ import {
   mirrorTwilioMediaToStorage,
 } from "../_shared/twilioMedia.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import {
+  isSmsOptOutMessage,
+  SMS_OPT_OUT_CONFIRMATION,
+} from "../_shared/marketingOptOut.ts";
+import { recordSmsMarketingOptOut } from "../_shared/marketingAudience.ts";
 
 /** Twilio expects TwiML; plain text (e.g. "OK") can be sent back to the sender as an SMS. */
 const emptyTwimlResponse = () =>
@@ -149,6 +157,42 @@ Deno.serve(async (req) => {
       mediaUrls: storedMediaUrls,
     });
 
+    const contact = await findContactByPhone(
+      Number(orgSettings.org_id),
+      fromPhone,
+    );
+
+    if (isSmsOptOutMessage(body)) {
+      const normalizedFrom =
+        normalizeUsPhoneToE164(fromPhone) ?? fromPhone.trim();
+      await recordSmsMarketingOptOut({
+        orgId: Number(orgSettings.org_id),
+        phoneE164: normalizedFrom,
+        contactId: contact?.id != null ? Number(contact.id) : null,
+        reason: "stop_reply",
+      });
+
+      const storedAccountSid =
+        settings?.twilio_account_sid?.trim() ??
+        orgSettings.twilio_account_sid?.trim();
+      if (storedAccountSid && authToken && toPhone) {
+        await sendTwilioSms({
+          accountSid: storedAccountSid,
+          authToken,
+          from: toPhone,
+          to: fromPhone,
+          body: SMS_OPT_OUT_CONFIRMATION,
+        });
+        await insertSmsMessage({
+          conversationId: Number(conversation.id),
+          body: SMS_OPT_OUT_CONFIRMATION,
+          direction: "outbound",
+        });
+      }
+
+      return emptyTwimlResponse();
+    }
+
     const fullSettings = await supabaseAdmin
       .from("organization_messaging_settings")
       .select(
@@ -175,10 +219,6 @@ Deno.serve(async (req) => {
     }
 
     if (autoReply && storedAccountSid && authToken && toPhone) {
-      const contact = await findContactByPhone(
-        Number(orgSettings.org_id),
-        fromPhone,
-      );
       const clientName = contact
         ? `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim()
         : "";

@@ -11,15 +11,22 @@ const getTwilioSmsStatusCallbackUrl = () => {
 export async function sendTwilioSms(params: {
   accountSid: string;
   authToken: string;
-  from: string;
+  from?: string;
   to: string;
   body: string;
   mediaUrls?: string[];
   statusCallback?: string | null;
+  messagingServiceSid?: string | null;
 }) {
   const body = params.body.trim() || " ";
   if (body !== " ") {
     assertSmsBodyWithinLimit(body);
+  }
+
+  const messagingServiceSid = params.messagingServiceSid?.trim();
+  const from = params.from?.trim();
+  if (!messagingServiceSid && !from) {
+    throw new Error("Twilio sender (From or MessagingServiceSid) is required");
   }
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${params.accountSid}/Messages.json`;
@@ -27,9 +34,14 @@ export async function sendTwilioSms(params: {
 
   const form = new URLSearchParams({
     To: params.to,
-    From: params.from,
     Body: body,
   });
+
+  if (messagingServiceSid) {
+    form.append("MessagingServiceSid", messagingServiceSid);
+  } else if (from) {
+    form.append("From", from);
+  }
 
   const statusCallback =
     params.statusCallback ?? getTwilioSmsStatusCallbackUrl();

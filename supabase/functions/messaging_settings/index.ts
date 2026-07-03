@@ -33,6 +33,9 @@ type SettingsBody = {
   voice_twiml_app_sid?: string | null;
   voice_api_key_sid?: string | null;
   test_phone?: string | null;
+  twilio_marketing_messaging_service_sid?: string | null;
+  twilio_marketing_phone_number?: string | null;
+  marketing_email_from?: string | null;
 };
 
 Deno.serve((req: Request) =>
@@ -147,6 +150,20 @@ Deno.serve((req: Request) =>
             : {}),
           ...(body.voice_recording_default !== undefined
             ? { voice_recording_default: body.voice_recording_default === true }
+            : {}),
+          ...(body.twilio_marketing_messaging_service_sid !== undefined
+            ? {
+                twilio_marketing_messaging_service_sid:
+                  body.twilio_marketing_messaging_service_sid,
+              }
+            : {}),
+          ...(body.twilio_marketing_phone_number !== undefined
+            ? {
+                twilio_marketing_phone_number: body.twilio_marketing_phone_number,
+              }
+            : {}),
+          ...(body.marketing_email_from !== undefined
+            ? { marketing_email_from: body.marketing_email_from }
             : {}),
         });
 

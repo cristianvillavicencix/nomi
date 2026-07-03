@@ -6,6 +6,7 @@ const MODULE_KEYS = [
   "forms",
   "support",
   "messaging",
+  "marketing",
   "deal_operations",
   "deal_financials",
   "payroll",

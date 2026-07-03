@@ -22,6 +22,9 @@ export type MessagingSettingsPublic = {
   out_of_hours_message?: string | null;
   auto_acknowledge_enabled?: boolean;
   auto_acknowledge_message?: string | null;
+  twilio_marketing_messaging_service_sid?: string | null;
+  twilio_marketing_phone_number?: string | null;
+  marketing_email_from?: string | null;
 } & VoiceSettingsPublic;
 
 export type MessagingSettingsSecrets = {
@@ -86,7 +89,7 @@ export async function getMessagingSettingsPublic(
   const { data, error } = await supabaseAdmin
     .from("organization_messaging_settings")
     .select(
-      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted, business_hours, out_of_hours_message, auto_acknowledge_enabled, auto_acknowledge_message, voice_enabled, voice_twiml_app_sid, voice_api_key_sid, voice_api_key_secret_encrypted, voice_caller_id, voice_recording_default",
+      "org_id, twilio_account_sid, twilio_phone_number, sms_enabled, twilio_auth_token, twilio_auth_token_encrypted, business_hours, out_of_hours_message, auto_acknowledge_enabled, auto_acknowledge_message, twilio_marketing_messaging_service_sid, twilio_marketing_phone_number, marketing_email_from, voice_enabled, voice_twiml_app_sid, voice_api_key_sid, voice_api_key_secret_encrypted, voice_caller_id, voice_recording_default",
     )
     .eq("org_id", orgId)
     .maybeSingle();
@@ -111,6 +114,10 @@ export async function getMessagingSettingsPublic(
     out_of_hours_message: data?.out_of_hours_message ?? null,
     auto_acknowledge_enabled: data?.auto_acknowledge_enabled === true,
     auto_acknowledge_message: data?.auto_acknowledge_message ?? null,
+    twilio_marketing_messaging_service_sid:
+      data?.twilio_marketing_messaging_service_sid ?? null,
+    twilio_marketing_phone_number: data?.twilio_marketing_phone_number ?? null,
+    marketing_email_from: data?.marketing_email_from ?? null,
     ...getVoiceSettingsPublicFromRow(data),
   };
 }
@@ -182,6 +189,9 @@ export async function upsertMessagingSettings(
     keepExistingVoiceApiKeySecret?: boolean;
     voice_caller_id?: string | null;
     voice_recording_default?: boolean;
+    twilio_marketing_messaging_service_sid?: string | null;
+    twilio_marketing_phone_number?: string | null;
+    marketing_email_from?: string | null;
   },
 ) {
   const existing = await getMessagingSettingsSecrets(orgId);
@@ -261,6 +271,24 @@ export async function upsertMessagingSettings(
   }
   if (input.voice_recording_default !== undefined) {
     payload.voice_recording_default = input.voice_recording_default === true;
+  }
+  if (input.twilio_marketing_messaging_service_sid !== undefined) {
+    payload.twilio_marketing_messaging_service_sid =
+      input.twilio_marketing_messaging_service_sid?.trim() || null;
+  }
+  if (input.twilio_marketing_phone_number !== undefined) {
+    const marketingPhoneRaw =
+      input.twilio_marketing_phone_number?.trim() || null;
+    const marketingPhone = marketingPhoneRaw
+      ? normalizeUsPhoneToE164(marketingPhoneRaw)
+      : null;
+    if (marketingPhoneRaw && !marketingPhone) {
+      throw new Error("Invalid marketing phone number. Use 10 digits.");
+    }
+    payload.twilio_marketing_phone_number = marketingPhone;
+  }
+  if (input.marketing_email_from !== undefined) {
+    payload.marketing_email_from = input.marketing_email_from?.trim() || null;
   }
 
   const { error } = await supabaseAdmin
