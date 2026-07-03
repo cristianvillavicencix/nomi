@@ -8,12 +8,23 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
   buildEmailCampaignRecipients,
   buildSmsCampaignRecipients,
+  estimateEmailAudience,
+  estimateSmsAudience,
   type MarketingAudienceFilter,
 } from "../_shared/marketingAudience.ts";
 
 type Body = {
-  action?: "prepare_sms_audience" | "prepare_email_audience" | "start_sms_send" | "start_email_send" | "cancel_sms" | "cancel_email";
+  action?:
+    | "prepare_sms_audience"
+    | "prepare_email_audience"
+    | "estimate_sms_audience"
+    | "estimate_email_audience"
+    | "start_sms_send"
+    | "start_email_send"
+    | "cancel_sms"
+    | "cancel_email";
   campaign_id?: number;
+  audience_filter?: MarketingAudienceFilter;
   channel?: "sms" | "email";
 };
 
@@ -39,8 +50,20 @@ Deno.serve((req: Request) =>
         const payload = (await req.json()) as Body;
         const action = payload.action;
         const campaignId = Number(payload.campaign_id);
-        if (!action || !Number.isFinite(campaignId) || campaignId <= 0) {
+        const isEstimate =
+          action === "estimate_sms_audience" ||
+          action === "estimate_email_audience";
+
+        if (!action) {
           return createErrorResponse(400, "Invalid request");
+        }
+
+        if (!isEstimate && (!Number.isFinite(campaignId) || campaignId <= 0)) {
+          return createErrorResponse(400, "Invalid request");
+        }
+
+        if (isEstimate && !payload.audience_filter && campaignId <= 0) {
+          return createErrorResponse(400, "Audience filter or campaign id required");
         }
 
         const canManage = hasMemberCapability(
@@ -48,6 +71,47 @@ Deno.serve((req: Request) =>
           "marketing.campaigns.manage",
         );
         const canSend = hasMemberCapability(member, "marketing.campaigns.send");
+
+        const resolveAudienceFilter = async (
+          channel: "sms" | "email",
+        ): Promise<MarketingAudienceFilter> => {
+          if (payload.audience_filter) {
+            return payload.audience_filter;
+          }
+          const table = channel === "sms" ? "sms_campaigns" : "email_campaigns";
+          const { data: campaign, error } = await supabaseAdmin
+            .from(table)
+            .select("audience_filter")
+            .eq("id", campaignId)
+            .eq("org_id", orgId)
+            .maybeSingle();
+          if (error || !campaign) {
+            throw new Error("Campaign not found");
+          }
+          return (campaign.audience_filter ?? {}) as MarketingAudienceFilter;
+        };
+
+        if (action === "estimate_sms_audience") {
+          if (!canManage) {
+            return createErrorResponse(403, "Forbidden");
+          }
+          const filter = await resolveAudienceFilter("sms");
+          const result = await estimateSmsAudience(orgId, filter);
+          return new Response(JSON.stringify(result), {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+
+        if (action === "estimate_email_audience") {
+          if (!canManage) {
+            return createErrorResponse(403, "Forbidden");
+          }
+          const filter = await resolveAudienceFilter("email");
+          const result = await estimateEmailAudience(orgId, filter);
+          return new Response(JSON.stringify(result), {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
 
         if (action === "prepare_sms_audience") {
           if (!canManage) {

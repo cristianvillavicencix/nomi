@@ -7,9 +7,62 @@ export type PrepareAudienceResult = {
   total: number;
   pending: number;
   skipped: number;
+  matched_contacts?: number;
+  skipped_suppressed?: number;
+  skipped_not_opted_in?: number;
 };
 
+export type AudienceEstimateResult = PrepareAudienceResult;
+
 export const marketingCampaignActions = {
+  async estimateSmsAudience(
+    audienceFilter: import("@/modules/types").MarketingAudienceFilter,
+    campaignId?: number,
+  ) {
+    const { data, error } = await invokeEdgeFunction<AudienceEstimateResult>(
+      "marketing_campaigns",
+      {
+        method: "POST",
+        body: {
+          action: "estimate_sms_audience",
+          audience_filter: audienceFilter,
+          ...(campaignId ? { campaign_id: campaignId } : {}),
+        },
+      },
+    );
+    if (error) {
+      throw new Error(readEdgeFunctionErrorMessage(error));
+    }
+    if (!data) {
+      throw new Error("Failed to estimate SMS audience");
+    }
+    return data;
+  },
+
+  async estimateEmailAudience(
+    audienceFilter: import("@/modules/types").MarketingAudienceFilter,
+    campaignId?: number,
+  ) {
+    const { data, error } = await invokeEdgeFunction<AudienceEstimateResult>(
+      "marketing_campaigns",
+      {
+        method: "POST",
+        body: {
+          action: "estimate_email_audience",
+          audience_filter: audienceFilter,
+          ...(campaignId ? { campaign_id: campaignId } : {}),
+        },
+      },
+    );
+    if (error) {
+      throw new Error(readEdgeFunctionErrorMessage(error));
+    }
+    if (!data) {
+      throw new Error("Failed to estimate email audience");
+    }
+    return data;
+  },
+
   async prepareSmsAudience(campaignId: number) {
     const { data, error } = await invokeEdgeFunction<PrepareAudienceResult>(
       "marketing_campaigns",

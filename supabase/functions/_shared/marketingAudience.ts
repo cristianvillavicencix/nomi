@@ -126,6 +126,146 @@ const isEmailOptedIn = (
   return contact.has_newsletter === true;
 };
 
+export type AudiencePlanResult = {
+  total: number;
+  pending: number;
+  skipped: number;
+  skipped_suppressed: number;
+  skipped_not_opted_in: number;
+  matched_contacts: number;
+};
+
+const planSmsAudience = async (
+  orgId: number,
+  filter: MarketingAudienceFilter,
+): Promise<AudiencePlanResult> => {
+  const requireOptIn = filter.require_sms_opt_in !== false;
+
+  const { data: contacts, error } = await supabaseAdmin
+    .from("contacts")
+    .select("id, org_id, status, tags, has_newsletter, phone_jsonb, email_jsonb")
+    .eq("org_id", orgId);
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to load contacts");
+  }
+
+  const eligible = (contacts ?? []).filter((contact) => {
+    const row = contact as ContactRow;
+    if (!matchesAudienceFilter(row, filter, "sms")) return false;
+    return Boolean(extractPrimaryPhone(row.phone_jsonb));
+  }) as ContactRow[];
+
+  const prefsMap = await loadMarketingPreferencesByContactIds(
+    orgId,
+    eligible.map((c) => c.id),
+  );
+
+  const phones = eligible
+    .map((c) => extractPrimaryPhone(c.phone_jsonb))
+    .filter((p): p is string => Boolean(p));
+  const suppressed = await loadSmsSuppressions(orgId, phones);
+
+  let pending = 0;
+  let skippedSuppressed = 0;
+  let skippedNotOptedIn = 0;
+
+  for (const contact of eligible) {
+    const phone = extractPrimaryPhone(contact.phone_jsonb);
+    if (!phone) continue;
+
+    const prefs = prefsMap.get(contact.id);
+    if (suppressed.has(phone)) {
+      skippedSuppressed += 1;
+      continue;
+    }
+
+    if (!isSmsOptedIn(contact, prefs, requireOptIn)) {
+      skippedNotOptedIn += 1;
+      continue;
+    }
+
+    pending += 1;
+  }
+
+  const skipped = skippedSuppressed + skippedNotOptedIn;
+
+  return {
+    matched_contacts: eligible.length,
+    total: pending + skipped,
+    pending,
+    skipped,
+    skipped_suppressed: skippedSuppressed,
+    skipped_not_opted_in: skippedNotOptedIn,
+  };
+};
+
+const planEmailAudience = async (
+  orgId: number,
+  filter: MarketingAudienceFilter,
+): Promise<AudiencePlanResult> => {
+  const requireOptIn = filter.require_email_opt_in !== false;
+
+  const { data: contacts, error } = await supabaseAdmin
+    .from("contacts")
+    .select("id, org_id, status, tags, has_newsletter, phone_jsonb, email_jsonb")
+    .eq("org_id", orgId);
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to load contacts");
+  }
+
+  const eligible = (contacts ?? []).filter((contact) => {
+    const row = contact as ContactRow;
+    if (!matchesAudienceFilter(row, filter, "email")) return false;
+    return Boolean(extractPrimaryEmail(row.email_jsonb));
+  }) as ContactRow[];
+
+  const prefsMap = await loadMarketingPreferencesByContactIds(
+    orgId,
+    eligible.map((c) => c.id),
+  );
+
+  let pending = 0;
+  let skippedNotOptedIn = 0;
+
+  for (const contact of eligible) {
+    const email = extractPrimaryEmail(contact.email_jsonb);
+    if (!email) continue;
+
+    const prefs = prefsMap.get(contact.id);
+    if (!isEmailOptedIn(contact, prefs, requireOptIn)) {
+      skippedNotOptedIn += 1;
+      continue;
+    }
+
+    pending += 1;
+  }
+
+  return {
+    matched_contacts: eligible.length,
+    total: pending + skippedNotOptedIn,
+    pending,
+    skipped: skippedNotOptedIn,
+    skipped_suppressed: 0,
+    skipped_not_opted_in: skippedNotOptedIn,
+  };
+};
+
+export async function estimateSmsAudience(
+  orgId: number,
+  audienceFilter: MarketingAudienceFilter,
+) {
+  return planSmsAudience(orgId, audienceFilter ?? {});
+}
+
+export async function estimateEmailAudience(
+  orgId: number,
+  audienceFilter: MarketingAudienceFilter,
+) {
+  return planEmailAudience(orgId, audienceFilter ?? {});
+}
+
 export async function buildSmsCampaignRecipients(params: {
   orgId: number;
   campaignId: number;

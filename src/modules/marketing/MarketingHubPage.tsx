@@ -14,8 +14,8 @@ import {
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
 import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
-import { CreateEmailCampaignDialog } from "@/modules/marketing/CreateEmailCampaignDialog";
-import { CreateSmsCampaignDialog } from "@/modules/marketing/CreateSmsCampaignDialog";
+import { MarketingEmailCampaignDialog } from "@/modules/marketing/MarketingEmailCampaignDialog";
+import { MarketingSmsCampaignDialog } from "@/modules/marketing/MarketingSmsCampaignDialog";
 import { EmailCampaignsPanel } from "@/modules/marketing/EmailCampaignsPanel";
 import { MarketingSettingsCard } from "@/modules/marketing/MarketingSettingsCard";
 import { SmsCampaignsPanel } from "@/modules/marketing/SmsCampaignsPanel";
@@ -118,11 +118,11 @@ export const MarketingHubPage = () => {
         )}
       </ScrollableContentArea>
 
-      <CreateSmsCampaignDialog
+      <MarketingSmsCampaignDialog
         open={createSmsOpen}
         onOpenChange={setCreateSmsOpen}
       />
-      <CreateEmailCampaignDialog
+      <MarketingEmailCampaignDialog
         open={createEmailOpen}
         onOpenChange={setCreateEmailOpen}
       />
