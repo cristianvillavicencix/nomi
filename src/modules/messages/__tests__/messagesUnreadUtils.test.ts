@@ -34,7 +34,17 @@ assert.equal(
       last_message_author_member_id: 1,
     }),
     [participant(1, "2026-01-02T00:00:00.000Z")],
-    1,
+  ),
+  false,
+);
+
+assert.equal(
+  isConversationUnread(
+    conversation(2, "2026-01-03T00:00:00.000Z", {
+      last_message_direction: "outbound",
+      last_message_author_member_id: 2,
+    }),
+    [participant(2, "2026-01-02T00:00:00.000Z")],
   ),
   false,
 );
@@ -45,7 +55,6 @@ assert.equal(
       last_message_direction: "inbound",
     }),
     [participant(1, "2026-01-02T00:00:00.000Z")],
-    1,
   ),
   true,
 );
@@ -78,7 +87,9 @@ assert.equal(getConversationReadAt(1, []), null);
 
 const counts = computeUnreadConversationCounts(
   [
-    conversation(1, "2026-01-03T00:00:00.000Z"),
+    conversation(1, "2026-01-03T00:00:00.000Z", {
+      last_message_direction: "inbound",
+    }),
     conversation(2, "2026-01-01T00:00:00.000Z"),
     conversation(3, "2026-01-03T00:00:00.000Z", {
       last_message_direction: "outbound",
@@ -90,7 +101,6 @@ const counts = computeUnreadConversationCounts(
     participant(2, "2026-01-02T00:00:00.000Z"),
     participant(3, "2026-01-02T00:00:00.000Z"),
   ],
-  1,
 );
 assert.equal(counts.totalUnread, 1);
 assert.equal(counts.unreadByConversationId["1"], true);

@@ -12,19 +12,19 @@ const STATUS_ITEMS: Array<{
     id: "new",
     label: "New",
     activeClass:
-      "bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-500/30 dark:text-emerald-300",
+      "bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-500/25 dark:text-emerald-300",
   },
   {
     id: "open",
     label: "Open",
     activeClass:
-      "bg-sky-500/15 text-sky-800 ring-1 ring-sky-500/30 dark:text-sky-300",
+      "bg-sky-500/15 text-sky-800 ring-1 ring-sky-500/25 dark:text-sky-300",
   },
   {
     id: "waiting",
     label: "Waiting",
     activeClass:
-      "bg-amber-500/15 text-amber-900 ring-1 ring-amber-500/30 dark:text-amber-300",
+      "bg-amber-500/15 text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-300",
     icon: "waiting",
   },
   {
@@ -47,45 +47,36 @@ export const TicketStatusBreadcrumb = ({
   counts,
   onSelect,
 }: TicketStatusBreadcrumbProps) => (
-  <div className="flex flex-wrap items-center gap-1 text-sm">
+  <div className="flex flex-nowrap items-center gap-0.5 overflow-x-auto text-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
     {STATUS_ITEMS.map((item, index) => {
       const isActive = active !== "all" && active === item.id;
       const count = counts[item.id] ?? 0;
 
       return (
-        <div key={item.id} className="flex items-center gap-1">
+        <div key={item.id} className="flex shrink-0 items-center gap-0.5">
           {index > 0 ? (
-            <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/50" />
+            <ChevronRight className="size-3 shrink-0 text-muted-foreground/45" />
           ) : null}
           <button
             type="button"
             onClick={() => onSelect(item.id)}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all",
+              "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-sm transition-colors",
               isActive
-                ? cn(item.activeClass, "text-base font-semibold shadow-sm")
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                ? cn(item.activeClass, "font-semibold")
+                : "font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground",
             )}
           >
             {item.icon === "waiting" ? (
-              <Clock className={cn("shrink-0", isActive ? "size-4" : "size-3.5")} />
+              <Clock className="size-3 shrink-0" />
             ) : null}
             {item.icon === "resolved" ? (
-              <Circle className={cn("shrink-0", isActive ? "size-4" : "size-3.5")} />
+              <Circle className="size-3 shrink-0" />
             ) : null}
             <span>{item.label}</span>
             {count > 0 ? (
-              <span
-                className={cn(
-                  "tabular-nums",
-                  isActive
-                    ? "text-sm font-semibold"
-                    : "text-xs font-normal opacity-80",
-                )}
-              >
-                {count}
-              </span>
+              <span className="tabular-nums opacity-90">{count}</span>
             ) : null}
           </button>
         </div>

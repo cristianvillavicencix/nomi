@@ -308,6 +308,8 @@ export type Ticket = {
   delivered_at?: string | null;
   created_at?: string;
   updated_at?: string;
+  /** Latest customer (inbound) message; used for inbox unread badges. */
+  last_inbound_at?: string | null;
 } & Pick<RaRecord, "id">;
 
 export type TicketDeliverable = {

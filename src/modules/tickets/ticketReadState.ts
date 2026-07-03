@@ -6,12 +6,13 @@ export type TicketMemberRead = {
 };
 
 export const isTicketUnread = (
-  ticket: Pick<Ticket, "updated_at">,
+  ticket: Pick<Ticket, "last_inbound_at">,
   lastReadAt?: string | null,
 ) => {
-  if (!ticket.updated_at) return false;
+  const inboundAt = ticket.last_inbound_at;
+  if (!inboundAt) return false;
   if (!lastReadAt) return true;
-  return ticket.updated_at > lastReadAt;
+  return inboundAt > lastReadAt;
 };
 
 export const isInboundMessageUnread = (

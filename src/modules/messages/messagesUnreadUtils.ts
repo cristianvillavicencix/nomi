@@ -14,17 +14,11 @@ export const getConversationReadAt = (
 export const isConversationUnread = (
   conversation: Conversation,
   participations: ConversationParticipant[],
-  currentMemberId?: Identifier | null,
 ) => {
   if (!conversation.last_message_at) return false;
 
-  if (
-    conversation.last_message_direction === "outbound" &&
-    currentMemberId != null &&
-    conversation.last_message_author_member_id != null &&
-    String(conversation.last_message_author_member_id) ===
-      String(currentMemberId)
-  ) {
+  // Team replies should not surface as unread for other members.
+  if (conversation.last_message_direction === "outbound") {
     return false;
   }
 
@@ -36,13 +30,12 @@ export const isConversationUnread = (
 export const computeUnreadConversationCounts = (
   conversations: Conversation[],
   participations: ConversationParticipant[],
-  currentMemberId?: Identifier | null,
 ) => {
   const unreadByConversationId: Record<string, boolean> = {};
   let totalUnread = 0;
 
   for (const conversation of conversations) {
-    if (!isConversationUnread(conversation, participations, currentMemberId)) {
+    if (!isConversationUnread(conversation, participations)) {
       continue;
     }
     unreadByConversationId[String(conversation.id)] = true;
