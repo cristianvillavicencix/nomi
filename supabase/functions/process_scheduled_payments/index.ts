@@ -7,13 +7,13 @@ import {
   buildClientPaymentMetadata,
   createOffSessionInstallmentPaymentIntent,
   getRecentAttemptCount,
-  getStripe,
   handleInstallmentPaymentFailed,
   isAuthorizedClientBillingCron,
   isStripeMockMode,
   logPaymentAttempt,
 } from "../_shared/clientProposalBilling.ts";
 import { markInstallmentPaidFromStripe } from "../_shared/proposalFlow.ts";
+import { getStripeForOrg } from "../_shared/stripeClient.ts";
 
 const MAX_BATCH = 50;
 const MAX_RETRIES_PER_DAY = 3;
@@ -41,7 +41,6 @@ Deno.serve(
 
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const stripe = getStripe();
 
       const { data: dueInstallments, error } = await supabaseAdmin
         .from("proposal_payment_installments")
@@ -190,6 +189,7 @@ Deno.serve(
         });
 
         try {
+          const stripe = await getStripeForOrg(row.org_id);
           const paymentIntent = await createOffSessionInstallmentPaymentIntent(
             stripe,
             {

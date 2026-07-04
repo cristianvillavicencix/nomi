@@ -748,6 +748,7 @@ export async function sendCombinedTicketInvoicePaymentLink(
     textBody,
     htmlBody,
     ...invoiceEmail,
+    emailChannel: "billing",
   });
 
   let smsOutcome: { sent: boolean; skipped: boolean } | null = null;

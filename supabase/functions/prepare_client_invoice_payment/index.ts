@@ -14,7 +14,11 @@ import {
   buildInvoicePaymentIntentMetadata,
   resolvePublicClientInvoicePayment,
 } from "../_shared/publicClientInvoicePaymentContext.ts";
-import { getStripe } from "../_shared/stripeClient.ts";
+import { getStripeForOrg } from "../_shared/stripeClient.ts";
+import {
+  isOrgClientStripePaymentsEnabled,
+  resolveOrgStripePublishableKey,
+} from "../_shared/organizationStripeSettings.ts";
 
 type PrepareBody = {
   public_token?: string;
@@ -55,6 +59,21 @@ Deno.serve(
         );
       }
 
+      const cardPaymentsLive = await isOrgClientStripePaymentsEnabled(
+        invoice.org_id,
+      );
+      if (!cardPaymentsLive) {
+        return new Response(
+          JSON.stringify({
+            billing_mode: "manual",
+            charge_amount: chargeAmount,
+            client_secret: null,
+            payment_intent_id: null,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       const email =
         (await resolveContactEmail(supabaseAdmin, invoice.contact_id)) ??
         invoice.recipient_email?.trim() ??
@@ -83,7 +102,7 @@ Deno.serve(
         invoice.save_card_for_future_charges || invoice.auto_charge_remainder,
       );
 
-      const stripe = getStripe();
+      const stripe = await getStripeForOrg(invoice.org_id);
       const metadata = buildInvoicePaymentIntentMetadata(
         invoice,
         remainderInstallmentNumbers,
@@ -128,12 +147,15 @@ Deno.serve(
         stripeCustomerId: customer.id,
       });
 
+      const publishableKey = await resolveOrgStripePublishableKey(invoice.org_id);
+
       return new Response(
         JSON.stringify({
           billing_mode: "stripe",
           charge_amount: chargeAmount,
           client_secret: intent.client_secret,
           payment_intent_id: intent.id,
+          stripe_publishable_key: publishableKey,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

@@ -353,6 +353,7 @@ Deno.serve(
             textBody: message,
             htmlBody: body.html_message?.trim() || null,
             ...invoiceEmail,
+            emailChannel: "billing",
             attachments: [
               {
                 name: filename,

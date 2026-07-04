@@ -17,7 +17,8 @@ import {
   resolvePublicClientInvoicePayment,
 } from "../_shared/publicClientInvoicePaymentContext.ts";
 import { notifyInvoicePaymentReceipt } from "../_shared/invoicePaymentEmails.ts";
-import { getStripe } from "../_shared/stripeClient.ts";
+import { getStripeForOrg } from "../_shared/stripeClient.ts";
+import { isOrgClientStripePaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
 
 type PayBody = {
   public_token?: string;
@@ -83,6 +84,9 @@ Deno.serve(
         resolved.data;
 
       const mock = isStripeMockMode();
+      const cardPaymentsLive = mock
+        ? false
+        : await isOrgClientStripePaymentsEnabled(invoice.org_id);
       let paymentIntentId: string | null =
         invoice.stripe_payment_intent_id ?? null;
       let stripeCustomerId: string | null = invoice.stripe_customer_id ?? null;
@@ -93,7 +97,14 @@ Deno.serve(
       let paidInstallmentNumbers = remainderInstallmentNumbers;
 
       if (!mock) {
-        const stripe = getStripe();
+        if (!cardPaymentsLive) {
+          return createErrorResponse(
+            403,
+            "Card payments are turned off for this organization",
+          );
+        }
+
+        const stripe = await getStripeForOrg(invoice.org_id);
 
         if (completedPaymentIntentId) {
           const finalized = await finalizeInvoicePaymentFromIntent(stripe, {

@@ -10,6 +10,7 @@ import {
   Package,
   Plug,
   ScrollText,
+  Ticket,
   Users,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ export const SETTINGS_TAB_IDS = [
   "users",
   "connectors",
   "communications",
+  "tickets",
   "forms",
   "products",
   "proposals",
@@ -32,21 +34,28 @@ export type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];
 export const WORKFLOWS_SECTION_IDS = ["pipelines", "leads", "tasks"] as const;
 export type WorkflowsSectionId = (typeof WORKFLOWS_SECTION_IDS)[number];
 
-/** Third-party APIs only (Twilio, Google, etc.). */
-export const CONNECTORS_SECTION_IDS = [
-  "sms",
-  "marketing",
-  "email",
-  "voice",
-  "whatsapp",
-  "search",
-] as const;
+/** Integrations sub-tabs: Twilio, Mail, Google, Stripe. */
+export const CONNECTORS_SECTION_IDS = ["twilio", "mail", "google", "stripe"] as const;
 export type ConnectorsSectionId = (typeof CONNECTORS_SECTION_IDS)[number];
+
+const LEGACY_CONNECTORS_SECTION: Record<string, ConnectorsSectionId> = {
+  sms: "twilio",
+  marketing: "twilio",
+  voice: "twilio",
+  whatsapp: "twilio",
+  email: "mail",
+  search: "google",
+  stripe: "stripe",
+  billing: "stripe",
+};
 
 /** In-app Messages composer content (CRM database, not external). */
 export const COMMUNICATIONS_SECTION_IDS = ["templates", "signature"] as const;
 export type CommunicationsSectionId =
   (typeof COMMUNICATIONS_SECTION_IDS)[number];
+
+export const TICKETS_SECTION_IDS = ["inbox", "signature", "templates"] as const;
+export type TicketsSectionId = (typeof TICKETS_SECTION_IDS)[number];
 
 export const FORMS_SECTION_IDS = ["list"] as const;
 export type FormsSectionId = (typeof FORMS_SECTION_IDS)[number];
@@ -100,6 +109,7 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
     items: [
       { id: "forms", label: "Forms", icon: FileText },
       { id: "communications", label: "Messaging", icon: MessageSquare },
+      { id: "tickets", label: "Tickets", icon: Ticket },
       { id: "products", label: "Products", icon: Package },
       { id: "proposals", label: "Proposals", icon: ScrollText },
       { id: "billing", label: "Billing", icon: CreditCard },
@@ -128,8 +138,9 @@ const LEGACY_TAB_ALIASES: Record<string, SettingsTabId> = {
 
 const DEFAULT_SECTION_BY_TAB: Partial<Record<SettingsTabId, string>> = {
   workflows: "pipelines",
-  connectors: "sms",
+  connectors: "twilio",
   communications: "templates",
+  tickets: "inbox",
   forms: "list",
   notifications: "personal",
   data: "zoho",
@@ -149,6 +160,9 @@ const isCommunicationsSectionId = (
   value: string,
 ): value is CommunicationsSectionId =>
   (COMMUNICATIONS_SECTION_IDS as readonly string[]).includes(value);
+
+const isTicketsSectionId = (value: string): value is TicketsSectionId =>
+  (TICKETS_SECTION_IDS as readonly string[]).includes(value);
 
 const isFormsSectionId = (value: string): value is FormsSectionId =>
   (FORMS_SECTION_IDS as readonly string[]).includes(value);
@@ -187,6 +201,8 @@ export const resolveSettingsRoute = (searchParams: URLSearchParams) => {
     normalizedTab = "communications";
   } else if (rawTab === "connectors" && sectionParam === "notifications") {
     normalizedTab = "notifications";
+  } else if (rawTab === "connectors" && sectionParam === "tickets") {
+    normalizedTab = "tickets";
   } else if (
     rawTab === "forms" &&
     sectionParam === "notifications"
@@ -209,11 +225,16 @@ export const resolveSettingsRoute = (searchParams: URLSearchParams) => {
     workflowsSection = "pipelines";
   }
 
-  let connectorsSection: ConnectorsSectionId = "sms";
+  let connectorsSection: ConnectorsSectionId = "twilio";
   if (isConnectorsSectionId(sectionParam ?? "")) {
     connectorsSection = sectionParam as ConnectorsSectionId;
+  } else if (
+    sectionParam &&
+    LEGACY_CONNECTORS_SECTION[sectionParam]
+  ) {
+    connectorsSection = LEGACY_CONNECTORS_SECTION[sectionParam];
   } else if (rawTab === "web-monitor" || rawTab === "messaging") {
-    connectorsSection = rawTab === "web-monitor" ? "search" : "sms";
+    connectorsSection = rawTab === "web-monitor" ? "google" : "twilio";
   }
 
   let communicationsSection: CommunicationsSectionId = "templates";
@@ -221,6 +242,13 @@ export const resolveSettingsRoute = (searchParams: URLSearchParams) => {
     communicationsSection = sectionParam as CommunicationsSectionId;
   } else if (rawTab === "connectors" && sectionParam === "content") {
     communicationsSection = "templates";
+  }
+
+  let ticketsSection: TicketsSectionId = "inbox";
+  if (isTicketsSectionId(sectionParam ?? "")) {
+    ticketsSection = sectionParam as TicketsSectionId;
+  } else if (rawTab === "connectors" && sectionParam === "tickets") {
+    ticketsSection = "inbox";
   }
 
   let formsSection: FormsSectionId = "list";
@@ -253,6 +281,7 @@ export const resolveSettingsRoute = (searchParams: URLSearchParams) => {
     workflowsSection,
     connectorsSection,
     communicationsSection,
+    ticketsSection,
     formsSection,
     notificationsSection,
     dataSection,

@@ -245,6 +245,7 @@ Deno.serve(
             textBody,
             htmlBody,
             ...invoiceEmail,
+            emailChannel: "billing",
           });
 
           let smsOutcome: { sent: boolean; skipped: boolean } | null = null;
@@ -379,6 +380,7 @@ Deno.serve(
             textBody,
             htmlBody,
             ...invoiceEmail,
+            emailChannel: "billing",
           });
         }
 

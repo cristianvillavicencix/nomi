@@ -24,7 +24,7 @@ import {
   buildPaymentReceiptFilename,
   generatePaymentReceiptPdfBase64,
 } from "./invoicePaymentReceiptPdf.ts";
-import { getStripe } from "./stripeClient.ts";
+import { getStripeForOrg } from "./stripeClient.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
 
 const formatMoney = (amount: number, currency = "USD") =>
@@ -107,12 +107,15 @@ async function resolveInvoiceBillToName(
   return companyName ?? contactName ?? "Client";
 }
 
-async function resolvePaymentReceiptDate(stripePaymentIntentId: string) {
+async function resolvePaymentReceiptDate(
+  orgId: number,
+  stripePaymentIntentId: string,
+) {
   const today = new Date().toISOString().slice(0, 10);
   if (isStripeMockMode()) return today;
 
   try {
-    const stripe = getStripe();
+    const stripe = await getStripeForOrg(orgId);
     const intent = await stripe.paymentIntents.retrieve(stripePaymentIntentId, {
       expand: ["latest_charge"],
     });
@@ -344,6 +347,7 @@ export async function sendClientInvoicePaymentReceipt(
 
   const billToName = await resolveInvoiceBillToName(supabase, params.invoice);
   const paymentDate = await resolvePaymentReceiptDate(
+    params.invoice.org_id,
     params.stripePaymentIntentId,
   );
   const paymentMethodLabel = params.invoice.payment_method_last4
@@ -429,6 +433,7 @@ export async function sendClientInvoicePaymentReceipt(
       textBody,
       htmlBody,
       ...invoiceEmail,
+      emailChannel: "billing",
       attachments: [
         {
           name: receiptFilename,
@@ -710,6 +715,7 @@ export async function sendClientInvoicePaymentReminder(
       textBody,
       htmlBody,
       ...invoiceEmail,
+      emailChannel: "billing",
     });
     await logEmailAttempt(supabase, {
       orgId: params.invoice.org_id,

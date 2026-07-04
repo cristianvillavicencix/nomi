@@ -1,7 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-/** Secrets: STRIPE_SECRET_KEY, STRIPE_CLIENT_WEBHOOK_SECRET */
+/** Client payment webhooks — signing secret from Settings → Integrations → Stripe or env. */
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
-import { getStripe, getClientWebhookSecret } from "../_shared/stripeClient.ts";
+import {
+  getClientWebhookSecret,
+  getStripeForWebhookVerification,
+} from "../_shared/stripeClient.ts";
 import {
   isClientPaymentMetadata,
   processPaymentIntentFailed,
@@ -18,11 +21,13 @@ Deno.serve(async (req: Request) => {
     return createErrorResponse(405, "Method not allowed");
   }
 
-  let stripe: ReturnType<typeof getStripe>;
+  let stripe: Awaited<ReturnType<typeof getStripeForWebhookVerification>>;
   let wh: string;
   try {
-    stripe = getStripe();
-    wh = getClientWebhookSecret();
+    [stripe, wh] = await Promise.all([
+      getStripeForWebhookVerification(),
+      getClientWebhookSecret(),
+    ]);
   } catch (e) {
     return createErrorResponse(500, (e as Error).message);
   }

@@ -7,7 +7,7 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { hasMemberCapability } from "../_shared/memberModulePermissions.ts";
 import { notifyInvoicePaymentReceipt } from "../_shared/invoicePaymentEmails.ts";
 import { isStripeMockMode } from "../_shared/clientProposalBilling.ts";
-import { getStripe } from "../_shared/stripeClient.ts";
+import { getStripeForOrg } from "../_shared/stripeClient.ts";
 
 type ResendBody = {
   invoice_id?: number;
@@ -80,7 +80,7 @@ Deno.serve(
         let chargedAmount = Number(body.charged_amount);
         if (!Number.isFinite(chargedAmount) || chargedAmount <= 0) {
           if (!isStripeMockMode()) {
-            const stripe = getStripe();
+            const stripe = await getStripeForOrg(invoice.org_id);
             const intent =
               await stripe.paymentIntents.retrieve(paymentIntentId);
             chargedAmount = Math.round(intent.amount ?? 0) / 100;

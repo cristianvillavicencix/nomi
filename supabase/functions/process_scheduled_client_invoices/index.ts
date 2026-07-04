@@ -117,6 +117,7 @@ Deno.serve(
             subject,
             textBody: message,
             ...invoiceEmail,
+            emailChannel: "billing",
             attachments: [
               {
                 name: `${row.invoice_number}.pdf`,

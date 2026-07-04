@@ -128,6 +128,7 @@ Deno.serve(
           fromEmail: generalFrom.email,
           fromName: generalFrom.name,
           replyTo: generalFrom.email,
+          emailChannel: "general",
         });
 
         return new Response(

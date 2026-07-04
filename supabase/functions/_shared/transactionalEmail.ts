@@ -2,7 +2,9 @@ import { supabaseAdmin } from "./supabaseAdmin.ts";
 import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import {
   getOrgEmailSenderPreviews,
+  isOrgEmailChannelEnabled,
   resolveOrgGeneralFrom,
+  type OrgEmailChannel,
 } from "./organizationEmailSenders.ts";
 
 export type EmailAttachment = {
@@ -155,8 +157,8 @@ export async function getOrgTransactionalEmailStatus(orgId: number) {
     configured,
     provider: configured ? ("twilio" as const) : null,
     from_email: configured ? senders.general_from_preview : null,
-    billing_from_email: configured ? senders.billing_from_preview : null,
-    general_from_email: configured ? senders.general_from_preview : null,
+    billing_from_email: configured ? senders.billing_from_email : null,
+    general_from_email: configured ? senders.general_from_email : null,
     uses_messaging_credentials: configured,
   };
 }
@@ -271,6 +273,7 @@ export async function sendTransactionalEmail(params: {
   fromEmail?: string | null;
   fromName?: string | null;
   headers?: Record<string, string>;
+  emailChannel?: OrgEmailChannel;
 }) {
   if (isTransactionalEmailSkipped()) {
     console.warn(
@@ -278,6 +281,25 @@ export async function sendTransactionalEmail(params: {
       "Email delivery skipped (SKIP_TRANSACTIONAL_EMAIL)",
     );
     return { skipped: true as const, provider: null };
+  }
+
+  if (params.emailChannel) {
+    const enabled = await isOrgEmailChannelEnabled(
+      params.orgId,
+      params.emailChannel,
+    );
+    if (!enabled) {
+      console.warn(
+        "transactional_email.channel_paused",
+        params.orgId,
+        params.emailChannel,
+      );
+      return {
+        skipped: true as const,
+        provider: null,
+        reason: "channel_paused" as const,
+      };
+    }
   }
 
   const twilio = await resolveOrgTwilioCredentials(params.orgId);

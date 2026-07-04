@@ -224,10 +224,16 @@ Deno.serve(
         if (inboxAddress) {
           const { data: inbox } = await supabaseAdmin
             .from("ticket_inboxes")
-            .select("email, from_name, display_name")
+            .select("email, from_name, display_name, is_active")
             .eq("org_id", member.org_id)
             .eq("email", inboxAddress)
             .maybeSingle();
+          if (inbox?.is_active === false) {
+            return createErrorResponse(
+              400,
+              "Ticket email sending is paused. Re-enable it under Settings → Integrations → Mail.",
+            );
+          }
           if (inbox?.from_name?.trim()) fromName = inbox.from_name.trim();
           else if (inbox?.display_name?.trim()) {
             fromName = inbox.display_name.trim();
@@ -235,12 +241,27 @@ Deno.serve(
         } else {
           const { data: defaultInbox } = await supabaseAdmin
             .from("ticket_inboxes")
-            .select("email, from_name, display_name")
+            .select("email, from_name, display_name, is_active")
             .eq("org_id", member.org_id)
             .eq("is_active", true)
             .order("id", { ascending: true })
             .limit(1)
             .maybeSingle();
+          if (!defaultInbox?.email?.trim()) {
+            const { data: pausedInbox } = await supabaseAdmin
+              .from("ticket_inboxes")
+              .select("email, is_active")
+              .eq("org_id", member.org_id)
+              .order("id", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            if (pausedInbox && pausedInbox.is_active === false) {
+              return createErrorResponse(
+                400,
+                "Ticket email sending is paused. Re-enable it under Settings → Integrations → Mail.",
+              );
+            }
+          }
           inboxAddress = defaultInbox?.email?.trim().toLowerCase() ?? "";
           if (defaultInbox?.from_name?.trim()) {
             fromName = defaultInbox.from_name.trim();

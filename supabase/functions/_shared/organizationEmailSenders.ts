@@ -5,10 +5,43 @@ import {
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 export const DEFAULT_BILLING_FROM_EMAIL = "billing@lbs.bz";
+export const DEFAULT_ALLOWED_EMAIL_DOMAIN = "lbs.bz";
 
 export type ResolvedEmailSender = {
   email: string;
   name: string;
+};
+
+export type OrgEmailChannel = "billing" | "general";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const isAllowedOrgEmailAddress = (
+  value: string,
+  allowedDomain = DEFAULT_ALLOWED_EMAIL_DOMAIN,
+) => {
+  const normalized = value.trim().toLowerCase();
+  const domain = allowedDomain.trim().toLowerCase();
+  if (!emailRegex.test(normalized)) return false;
+  return normalized.endsWith(`@${domain}`);
+};
+
+export const assertAllowedOrgEmailAddress = (
+  value: string,
+  label: string,
+  allowedDomain = DEFAULT_ALLOWED_EMAIL_DOMAIN,
+) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`${label} is required`);
+  }
+  if (!emailRegex.test(trimmed)) {
+    throw new Error(`Enter a valid ${label.toLowerCase()}`);
+  }
+  if (!isAllowedOrgEmailAddress(trimmed, allowedDomain)) {
+    throw new Error(`${label} must use @${allowedDomain}`);
+  }
+  return trimmed.toLowerCase();
 };
 
 const parseEmailAddress = (value: string): ResolvedEmailSender => {
@@ -44,17 +77,23 @@ type OrgSenderRow = {
   name: string | null;
   email: string | null;
   billing_from_email: string | null;
+  general_email_enabled?: boolean | null;
+  billing_email_enabled?: boolean | null;
 };
 
 const loadOrgSenderRow = async (orgId: number): Promise<OrgSenderRow | null> => {
   const { data, error } = await supabaseAdmin
     .from("organizations")
-    .select("name, email, billing_from_email")
+    .select(
+      "name, email, billing_from_email, general_email_enabled, billing_email_enabled",
+    )
     .eq("id", orgId)
     .maybeSingle();
 
   if (
     error?.message?.includes("billing_from_email") ||
+    error?.message?.includes("general_email_enabled") ||
+    error?.message?.includes("billing_email_enabled") ||
     error?.message?.includes("column")
   ) {
     const { data: fallback, error: fallbackError } = await supabaseAdmin
@@ -66,7 +105,14 @@ const loadOrgSenderRow = async (orgId: number): Promise<OrgSenderRow | null> => 
       console.error("organization_email_senders.load_failed", orgId, fallbackError);
       return null;
     }
-    return fallback ? { ...fallback, billing_from_email: null } : null;
+    return fallback
+      ? {
+          ...fallback,
+          billing_from_email: null,
+          general_email_enabled: true,
+          billing_email_enabled: true,
+        }
+      : null;
   }
 
   if (error) {
@@ -75,6 +121,18 @@ const loadOrgSenderRow = async (orgId: number): Promise<OrgSenderRow | null> => 
   }
   return data;
 };
+
+export async function isOrgEmailChannelEnabled(
+  orgId: number,
+  channel: OrgEmailChannel,
+): Promise<boolean> {
+  const orgRow = await loadOrgSenderRow(orgId);
+  if (!orgRow) return true;
+  if (channel === "billing") {
+    return orgRow.billing_email_enabled !== false;
+  }
+  return orgRow.general_email_enabled !== false;
+}
 
 const resolveOrgName = (
   orgName: string | null | undefined,

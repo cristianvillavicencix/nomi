@@ -12,7 +12,7 @@ import {
   resolveContactEmail,
   resolveOrCreateStripeCustomer,
 } from "../_shared/clientProposalBilling.ts";
-import { getStripe } from "../_shared/stripeClient.ts";
+import { getStripeForOrg } from "../_shared/stripeClient.ts";
 import {
   finalizeProposalIfPaidInFull,
   recordProposalDepositPaid,
@@ -178,7 +178,7 @@ Deno.serve(
         .filter(Boolean)
         .join(" ");
 
-      const stripe = getStripe();
+      const stripe = await getStripeForOrg(proposal.org_id);
       const customer = await resolveOrCreateStripeCustomer(stripe, {
         email,
         name: contactName || undefined,

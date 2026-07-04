@@ -22,7 +22,9 @@ export const buildTicketInboundWebhookUrl = () => {
 };
 
 export type TicketInboundSetup = {
+  inbox_id: number | null;
   support_email: string;
+  is_active: boolean;
   sendgrid_hostname: string | null;
   sendgrid_forward_address: string | null;
   hostinger_forward_to: string | null;
@@ -36,9 +38,10 @@ export async function getTicketInboundSetup(
 ): Promise<TicketInboundSetup | null> {
   const { data: inbox, error } = await supabaseAdmin
     .from("ticket_inboxes")
-    .select("email, sendgrid_hostname, sendgrid_forward_address, is_active")
+    .select(
+      "id, email, sendgrid_hostname, sendgrid_forward_address, is_active",
+    )
     .eq("org_id", orgId)
-    .eq("is_active", true)
     .order("id", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -56,7 +59,9 @@ export async function getTicketInboundSetup(
   const { user, password } = getInboundWebhookCredentials();
 
   return {
+    inbox_id: inbox.id ?? null,
     support_email: inbox.email,
+    is_active: inbox.is_active !== false,
     sendgrid_hostname: inbox.sendgrid_hostname?.trim() ?? null,
     sendgrid_forward_address: forwardAddress,
     hostinger_forward_to: forwardAddress,

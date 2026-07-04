@@ -62,11 +62,18 @@ import {
 } from "@/modules/billing/public/PublicInvoicePaymentSummary";
 import { cn } from "@/lib/utils";
 
-const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
+const envPublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
   | string
   | undefined;
 
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+const resolveStripePublishableKey = (
+  payload?: PublicInvoicePayload | null,
+  override?: string | null,
+) =>
+  override?.trim() ||
+  payload?.stripe_publishable_key?.trim() ||
+  envPublishableKey?.trim() ||
+  null;
 
 const stripeElementsAppearance = {
   theme: "stripe" as const,
@@ -343,6 +350,7 @@ type PaymentCheckoutSession = {
   paymentIntentId: string;
   clientSecret: string;
   billingMode: string;
+  stripePublishableKey?: string | null;
 };
 
 const useStablePaymentCheckoutSession = (
@@ -388,12 +396,12 @@ const useStablePaymentCheckoutSession = (
           paymentIntentId: storedPaymentIntentId,
         });
 
-        if (result.billing_mode === "mock") {
+        if (result.billing_mode === "mock" || result.billing_mode === "manual") {
           clearStoredInvoicePaymentIntentId(token);
           setSession({
             paymentIntentId: "",
             clientSecret: "",
-            billingMode: "mock",
+            billingMode: result.billing_mode,
           });
           return result;
         }
@@ -404,6 +412,7 @@ const useStablePaymentCheckoutSession = (
             paymentIntentId: result.payment_intent_id,
             clientSecret: result.client_secret,
             billingMode: result.billing_mode ?? "stripe",
+            stripePublishableKey: result.stripe_publishable_key ?? null,
           });
         }
 
@@ -839,6 +848,14 @@ const InvoiceStripeCheckout = ({
     paymentAmountState,
   );
   const { invoice } = payload;
+  const publishableKey = resolveStripePublishableKey(
+    payload,
+    checkout.session?.stripePublishableKey,
+  );
+  const stripePromise = useMemo(
+    () => (publishableKey ? loadStripe(publishableKey) : null),
+    [publishableKey],
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -964,13 +981,15 @@ const InvoiceStripeCheckout = ({
         >
           {checkout.syncError.message}
         </p>
-      ) : checkout.session?.billingMode === "mock" || !clientSecret ? (
+      ) : checkout.session?.billingMode === "mock" ||
+        checkout.session?.billingMode === "manual" ||
+        !clientSecret ? (
         <p
           className={`${publicInvoicePaymentSectionPadding} pb-4 text-sm text-warning`}
         >
-          Stripe is not configured on the server. Set{" "}
-          <code className="text-xs">STRIPE_SECRET_KEY</code> in Supabase Edge
-          Function secrets.
+          {checkout.session?.billingMode === "manual"
+            ? "Online card payment is not available for this invoice. Contact the office to pay."
+            : "Stripe is not configured. Add keys under Settings → Integrations → Stripe."}
         </p>
       ) : clientSecret && paymentIntentId && stripePromise ? (
         <Elements
@@ -1160,16 +1179,32 @@ const InvoiceMockPaymentForm = ({
 
 export const PublicInvoicePaymentFlow = (props: PaymentFlowProps) => {
   const billingSkipped = isClientBillingSkipped();
-  const useStripeElements = Boolean(stripePromise) && !billingSkipped;
+  const cardPaymentsLive = props.payload.client_billing_mode === "stripe";
+  const publishableKey = resolveStripePublishableKey(props.payload);
+  const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+  const useStripeElements =
+    Boolean(stripePromise) && !billingSkipped && cardPaymentsLive;
+
+  if (!billingSkipped && !cardPaymentsLive) {
+    return (
+      <div
+        className={`mx-auto max-w-[560px] rounded-[14px] border border-amber-200 bg-amber-50 ${publicInvoicePaymentSectionPadding} py-5 text-sm text-amber-900`}
+      >
+        Online card payment is not available for this invoice. Contact the office
+        to pay.
+      </div>
+    );
+  }
 
   if (!stripePromise && !billingSkipped) {
     return (
       <div
         className={`mx-auto max-w-[560px] rounded-[14px] border border-amber-200 bg-amber-50 ${publicInvoicePaymentSectionPadding} py-5 text-sm text-amber-900`}
       >
-        Card payments are not configured. Add{" "}
-        <code className="text-xs">VITE_STRIPE_PUBLISHABLE_KEY</code> to enable
-        Stripe checkout.
+        Card payments are not configured. Add Stripe keys under Settings →
+        Integrations → Stripe, or set{" "}
+        <code className="text-xs">VITE_STRIPE_PUBLISHABLE_KEY</code> on the
+        server build.
       </div>
     );
   }

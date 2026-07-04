@@ -96,6 +96,7 @@ Deno.serve((req: Request) =>
           fromEmail: generalFrom.email,
           fromName: generalFrom.name,
           replyTo: generalFrom.email,
+          emailChannel: "general",
           attachments: [
             {
               name: filename,

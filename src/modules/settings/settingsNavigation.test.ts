@@ -36,8 +36,39 @@ describe("resolveSettingsRoute", () => {
     expect(resolveSettingsRoute(params).tab).toBe("products");
   });
 
-  it("defaults to company", () => {
-    const params = new URLSearchParams();
-    expect(resolveSettingsRoute(params).tab).toBe("company");
+  it("defaults connectors section to twilio", () => {
+    const route = resolveSettingsRoute(
+      new URLSearchParams("tab=connectors"),
+    );
+    expect(route.tab).toBe("connectors");
+    expect(route.connectorsSection).toBe("twilio");
+  });
+
+  it("maps legacy connectors search section to google", () => {
+    const route = resolveSettingsRoute(
+      new URLSearchParams("tab=connectors&section=search"),
+    );
+    expect(route.connectorsSection).toBe("google");
+  });
+
+  it("maps legacy connectors email section to mail", () => {
+    const route = resolveSettingsRoute(
+      new URLSearchParams("tab=connectors&section=email"),
+    );
+    expect(route.connectorsSection).toBe("mail");
+  });
+
+  it("maps legacy connectors tickets section to tickets tab", () => {
+    const route = resolveSettingsRoute(
+      new URLSearchParams("tab=connectors&section=tickets"),
+    );
+    expect(route.tab).toBe("tickets");
+    expect(route.ticketsSection).toBe("inbox");
+  });
+
+  it("defaults tickets section to inbox", () => {
+    const route = resolveSettingsRoute(new URLSearchParams("tab=tickets"));
+    expect(route.tab).toBe("tickets");
+    expect(route.ticketsSection).toBe("inbox");
   });
 });

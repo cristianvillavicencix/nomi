@@ -72,7 +72,7 @@ export const GoogleSearchConsoleSettings = ({
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const redirectAfter = `${window.location.origin}/settings?tab=connectors&section=search`;
+      const redirectAfter = `${window.location.origin}/settings?tab=connectors&section=google`;
       return dataProvider.googleGscConnect({ redirectAfter });
     },
     onSuccess: (result) => {

@@ -9,7 +9,8 @@ import {
   isStripeMockMode,
 } from "../_shared/clientProposalBilling.ts";
 import { applyClientInvoicePaymentUpdate } from "../_shared/clientInvoicePayment.ts";
-import { getStripe } from "../_shared/stripeClient.ts";
+import { getStripeForOrg } from "../_shared/stripeClient.ts";
+import { isOrgClientStripePaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
 import {
   getUnpaidRemainderChargesDueBy,
   parseInvoiceRemainderSchedule,
@@ -42,7 +43,6 @@ Deno.serve(
 
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const stripe = getStripe();
 
       const { data: candidates, error } = await supabaseAdmin
         .from("client_invoices")
@@ -77,6 +77,18 @@ Deno.serve(
             invoice_id: invoice.id,
             ok: true,
             status: "already_paid",
+          });
+          continue;
+        }
+
+        const cardPaymentsLive = await isOrgClientStripePaymentsEnabled(
+          invoice.org_id,
+        );
+        if (!cardPaymentsLive) {
+          results.push({
+            invoice_id: invoice.id,
+            ok: false,
+            error: "card_payments_off",
           });
           continue;
         }
@@ -136,6 +148,7 @@ Deno.serve(
         const idempotencyKey = `invoice-auto-${invoice.id}-${charge.installment_number}-${today}`;
 
         try {
+          const stripe = await getStripeForOrg(invoice.org_id);
           const paymentIntent = await createOffSessionInvoicePaymentIntent(
             stripe,
             {

@@ -138,6 +138,10 @@ export const messagingProvider = {
     reply_to?: string | null;
     general_from_email?: string | null;
     billing_from_email?: string | null;
+    general_email_enabled?: boolean;
+    billing_email_enabled?: boolean;
+    ticket_inbox_email?: string | null;
+    ticket_inbox_enabled?: boolean;
   }) {
     const { data, error } = await invokeEdgeFunction<
       import("@/modules/settings/EmailDeliverySettingsSection").EmailDeliverySettings
@@ -171,6 +175,78 @@ export const messagingProvider = {
     }
     if (!data?.ok) {
       throw new Error("Failed to send test email");
+    }
+    return data;
+  },
+  async getStripeClientSettings() {
+    const fallback: import("@/modules/settings/integrations/stripeClientSettings").StripeClientSettings =
+      {
+        org_id: 0,
+        client_payments_enabled: false,
+        configured: false,
+        payment_status: "not_configured",
+        payment_status_label: "Not set up",
+        credential_source: "none",
+        connection_label: "Not configured",
+        stripe_publishable_key: null,
+        publishable_key_preview: null,
+        publishable_key_configured: false,
+        secret_key_configured: false,
+        webhook_secret_configured: false,
+        has_secret_key: false,
+        has_webhook_secret: false,
+        webhook_url: null,
+      };
+
+    const { data, error } = await invokeEdgeFunction<
+      import("@/modules/settings/integrations/stripeClientSettings").StripeClientSettings
+    >("stripe_settings", {
+      method: "POST",
+      body: { action: "get" },
+    });
+    if (error || !data) {
+      console.warn("getStripeClientSettings.error", error);
+      return fallback;
+    }
+    return data;
+  },
+  async updateStripeClientSettings(params: {
+    client_payments_enabled?: boolean;
+    stripe_publishable_key?: string | null;
+    stripe_secret_key?: string | null;
+    stripe_webhook_secret?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<
+      import("@/modules/settings/integrations/stripeClientSettings").StripeClientSettings
+    >("stripe_settings", {
+      method: "POST",
+      body: { action: "update", ...params },
+    });
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to save Stripe settings",
+      );
+    }
+    if (!data) {
+      throw new Error("Failed to save Stripe settings");
+    }
+    return data;
+  },
+  async testStripeClientSettings() {
+    const { data, error } = await invokeEdgeFunction<{ ok: boolean }>(
+      "stripe_settings",
+      {
+        method: "POST",
+        body: { action: "test" },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Stripe test failed",
+      );
+    }
+    if (!data?.ok) {
+      throw new Error("Stripe test failed");
     }
     return data;
   },

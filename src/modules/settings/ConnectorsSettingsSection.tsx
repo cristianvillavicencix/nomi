@@ -3,22 +3,22 @@ import { useDataProvider, useGetIdentity } from "ra-core";
 import { useQuery } from "@tanstack/react-query";
 
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { EmailIntegrationRow } from "@/modules/settings/integrations/EmailIntegrationRow";
-import { TicketInboxIntegrationRow } from "@/modules/settings/integrations/TicketInboxIntegrationRow";
-import { GoogleGscIntegrationRow } from "@/modules/settings/integrations/GoogleGscIntegrationRow";
-import { TwilioIntegrationRow } from "@/modules/settings/integrations/TwilioIntegrationRow";
-import {
-  SettingsRows,
-  SettingsSection,
-} from "@/modules/settings/SettingsSection";
+import { GoogleIntegrationPanel } from "@/modules/settings/integrations/GoogleIntegrationPanel";
+import { MailIntegrationPanel } from "@/modules/settings/integrations/MailIntegrationPanel";
+import { StripeIntegrationPanel } from "@/modules/settings/integrations/StripeIntegrationPanel";
+import { TwilioIntegrationPanel } from "@/modules/settings/integrations/TwilioIntegrationPanel";
+import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
+import type { ConnectorsSectionId } from "@/modules/settings/settingsNavigation";
 
-/** @deprecated Sections are ignored — single integrations list. */
 export type ConnectorsSettingsSectionProps = {
-  activeSection?: string;
-  onSectionChange?: (section: string) => void;
+  activeSection: ConnectorsSectionId;
+  onSectionChange: (section: ConnectorsSectionId) => void;
 };
 
-export const ConnectorsSettingsSection = (_props?: ConnectorsSettingsSectionProps) => {
+export const ConnectorsSettingsSection = ({
+  activeSection,
+  onSectionChange,
+}: ConnectorsSettingsSectionProps) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const { identity } = useGetIdentity();
   const isAdmin =
@@ -38,31 +38,37 @@ export const ConnectorsSettingsSection = (_props?: ConnectorsSettingsSectionProp
   }
 
   return (
-    <div className="space-y-8">
-      <SettingsSection title="Messaging">
-        <SettingsRows>
-          {isPending ? (
-            <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+    <SettingsSubNav
+      value={activeSection}
+      onValueChange={onSectionChange}
+      items={[
+        { id: "twilio", label: "Twilio" },
+        { id: "mail", label: "Mail" },
+        { id: "google", label: "Google" },
+        { id: "stripe", label: "Stripe" },
+      ]}
+      content={
+        activeSection === "twilio" ? (
+          isPending && !messagingSettings ? (
+            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
               Loading integrations…
             </div>
           ) : (
-            <TwilioIntegrationRow
+            <TwilioIntegrationPanel
               settings={messagingSettings}
               isPending={isPending}
             />
-          )}
-          <EmailIntegrationRow />
-          <TicketInboxIntegrationRow />
-        </SettingsRows>
-      </SettingsSection>
-
-      <SettingsSection title="Analytics">
-        <SettingsRows>
-          <GoogleGscIntegrationRow />
-        </SettingsRows>
-      </SettingsSection>
-    </div>
+          )
+        ) : activeSection === "mail" ? (
+          <MailIntegrationPanel />
+        ) : activeSection === "stripe" ? (
+          <StripeIntegrationPanel />
+        ) : (
+          <GoogleIntegrationPanel />
+        )
+      }
+    />
   );
 };
 

@@ -17,8 +17,6 @@ import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useDataProvider } from "ra-core";
 import { TicketEmailInboundSetupCard } from "@/modules/settings/TicketEmailInboundSetupCard";
-import { TicketInboxReplySignatureSection } from "@/modules/settings/TicketInboxReplySignatureSection";
-import { TicketInboxReplyTemplatesSection } from "@/modules/settings/TicketInboxReplyTemplatesSection";
 import {
   SYSTEM_EMAIL_NAME,
   SYSTEM_EMAIL_SCOPE,
@@ -30,6 +28,8 @@ export type EmailDeliverySettings = {
   from_email: string | null;
   general_from_email?: string | null;
   billing_from_email?: string | null;
+  general_email_enabled?: boolean;
+  billing_email_enabled?: boolean;
   reply_to: string | null;
   billing_from?: string | null;
   org_name: string | null;
@@ -38,7 +38,9 @@ export type EmailDeliverySettings = {
 };
 
 export type TicketInboundSetup = {
+  inbox_id?: number | null;
   support_email: string;
+  is_active?: boolean;
   sendgrid_hostname: string | null;
   sendgrid_forward_address: string | null;
   hostinger_forward_to: string | null;
@@ -229,9 +231,10 @@ export const EmailDeliverySettingsSection = ({
 
         <TicketEmailInboundSetupCard setup={data?.ticket_inbound ?? null} />
 
-        <TicketInboxReplySignatureSection />
-
-        <TicketInboxReplyTemplatesSection />
+        <p className="text-xs text-muted-foreground">
+          Ticket inbox, reply signature, and templates are under{" "}
+          <strong>Settings → Tickets</strong>.
+        </p>
     </>
   );
 

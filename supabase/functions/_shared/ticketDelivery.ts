@@ -90,10 +90,18 @@ async function deliverOneTicketForInvoicePayment(
   if (inboxAddress) {
     const { data: inbox } = await supabase
       .from("ticket_inboxes")
-      .select("email, from_name, display_name")
+      .select("email, from_name, display_name, is_active")
       .eq("org_id", params.orgId)
       .eq("email", inboxAddress)
       .maybeSingle();
+    if (inbox?.is_active === false) {
+      return {
+        delivered: false,
+        skipped: true,
+        reason: "inbox_paused",
+        ticket_id: ticket.id,
+      };
+    }
     if (inbox?.from_name?.trim()) fromName = inbox.from_name.trim();
     else if (inbox?.display_name?.trim()) fromName = inbox.display_name.trim();
   } else {

@@ -35,6 +35,8 @@ const invokePublicFunction = async <T>(
 export type PublicInvoicePayload = {
   token: string;
   portal_token?: string | null;
+  stripe_publishable_key?: string | null;
+  client_billing_mode?: "manual" | "stripe";
   invoice: {
     id: number;
     invoice_number: string;
@@ -137,6 +139,7 @@ export const preparePublicClientInvoicePayment = (params: {
     charge_amount: number;
     client_secret: string | null;
     payment_intent_id: string | null;
+    stripe_publishable_key?: string | null;
   }>("prepare_client_invoice_payment", {
     public_token: params.token,
     amount: params.amount,

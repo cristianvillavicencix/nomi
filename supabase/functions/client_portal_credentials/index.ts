@@ -59,6 +59,7 @@ const sendOtpEmail = async (orgId: number, to: string, code: string) => {
     fromEmail: generalFrom.email,
     fromName: generalFrom.name,
     replyTo: generalFrom.email,
+    emailChannel: "general",
   });
 };
 

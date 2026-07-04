@@ -11,7 +11,8 @@ import {
   isStripeMockMode,
 } from "../_shared/clientProposalBilling.ts";
 import { applyClientInvoicePaymentUpdate } from "../_shared/clientInvoicePayment.ts";
-import { getStripe } from "../_shared/stripeClient.ts";
+import { getStripeForOrg } from "../_shared/stripeClient.ts";
+import { isOrgClientStripePaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
 import {
   getUnpaidRemainderChargesDueBy,
   parseInvoiceRemainderSchedule,
@@ -166,6 +167,16 @@ Deno.serve(
           return createErrorResponse(404, "Invoice not found");
         }
 
+        const cardPaymentsLive = await isOrgClientStripePaymentsEnabled(
+          invoice.org_id,
+        );
+        if (!cardPaymentsLive) {
+          return createErrorResponse(
+            403,
+            "Card payments are turned off. Enable them under Settings → Integrations → Stripe.",
+          );
+        }
+
         if (invoice.status === "void" || invoice.status === "paid") {
           return createErrorResponse(
             409,
@@ -190,7 +201,7 @@ Deno.serve(
           return createErrorResponse(400, target.message);
         }
 
-        const stripe = getStripe();
+        const stripe = await getStripeForOrg(invoice.org_id);
         const amountCents = amountToCents(target.chargeAmount);
         const today = new Date().toISOString().slice(0, 10);
         const idempotencyKey = `invoice-staff-${invoice.id}-${amountCents}-${today}-${Date.now()}`;

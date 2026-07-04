@@ -37,6 +37,7 @@ import { FormsSettingsSection } from "@/modules/settings/FormsSettingsSection";
 import { NotificationsSettingsSection } from "@/modules/settings/NotificationsSettingsSection";
 import { SettingsHubLayout } from "@/modules/settings/SettingsHubLayout";
 import { WorkflowsSettingsSection } from "@/modules/settings/WorkflowsSettingsSection";
+import { TicketsSettingsSection } from "@/modules/settings/TicketsSettingsSection";
 import {
   buildSettingsSearchParams,
   getSettingsTabLabel,
@@ -48,6 +49,7 @@ import {
   type FormsSectionId,
   type NotificationsSectionId,
   type SettingsTabId,
+  type TicketsSectionId,
   type WorkflowsSectionId,
 } from "@/modules/settings/settingsNavigation";
 import { useLbsPipelineConfig } from "@/modules/deals/useLbsPipelineConfig";
@@ -269,6 +271,7 @@ const SettingsFormFields = () => {
     communicationsSection,
     formsSection,
     notificationsSection,
+    ticketsSection,
     dataSection,
     companySection,
   } = resolveSettingsRoute(searchParams);
@@ -322,6 +325,13 @@ const SettingsFormFields = () => {
     [setSettingsSection],
   );
 
+  const setTicketsSection = useCallback(
+    (section: TicketsSectionId) => {
+      setSettingsSection("tickets", section);
+    },
+    [setSettingsSection],
+  );
+
   const setDataSection = useCallback(
     (section: DataSectionId) => {
       setSettingsSection("data", section);
@@ -359,6 +369,7 @@ const SettingsFormFields = () => {
       communications: route.communicationsSection,
       forms: route.formsSection,
       notifications: route.notificationsSection,
+      tickets: route.ticketsSection,
       data: route.dataSection,
       company: route.companySection,
     };
@@ -437,12 +448,23 @@ const SettingsFormFields = () => {
         />
       ) : null}
       {activeTab === "users" ? <UsersSettingsSection /> : null}
-      {activeTab === "connectors" ? <ConnectorsSettingsSection /> : null}
+      {activeTab === "connectors" ? (
+        <ConnectorsSettingsSection
+          activeSection={connectorsSection}
+          onSectionChange={setConnectorsSection}
+        />
+      ) : null}
       {activeTab === "forms" ? <FormsSettingsSection /> : null}
       {activeTab === "communications" ? (
         <CommunicationsSettingsSection
           activeSection={communicationsSection}
           onSectionChange={setCommunicationsSection}
+        />
+      ) : null}
+      {activeTab === "tickets" ? (
+        <TicketsSettingsSection
+          activeSection={ticketsSection}
+          onSectionChange={setTicketsSection}
         />
       ) : null}
       {activeTab === "products" ? <ProductsSettingsSection /> : null}

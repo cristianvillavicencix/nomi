@@ -9,7 +9,10 @@ import {
   getOrgTransactionalEmailStatus,
   sendTransactionalEmail,
 } from "../_shared/transactionalEmail.ts";
-import { resolveOrgGeneralFrom } from "../_shared/organizationEmailSenders.ts";
+import {
+  assertAllowedOrgEmailAddress,
+  resolveOrgGeneralFrom,
+} from "../_shared/organizationEmailSenders.ts";
 import { getTicketInboundSetup } from "../_shared/ticketInboundSetup.ts";
 
 type EmailSettingsBody = {
@@ -18,6 +21,10 @@ type EmailSettingsBody = {
   reply_to?: string | null;
   general_from_email?: string | null;
   billing_from_email?: string | null;
+  general_email_enabled?: boolean;
+  billing_email_enabled?: boolean;
+  ticket_inbox_email?: string | null;
+  ticket_inbox_enabled?: boolean;
   test_email?: string | null;
 };
 
@@ -28,17 +35,23 @@ type OrgEmailRow = {
   name: string | null;
   email: string | null;
   billing_from_email?: string | null;
+  general_email_enabled?: boolean | null;
+  billing_email_enabled?: boolean | null;
 };
 
 const loadOrgEmailRow = async (orgId: number): Promise<OrgEmailRow | null> => {
   const { data, error } = await supabaseAdmin
     .from("organizations")
-    .select("id, name, email, billing_from_email")
+    .select(
+      "id, name, email, billing_from_email, general_email_enabled, billing_email_enabled",
+    )
     .eq("id", orgId)
     .maybeSingle();
 
   if (
     error?.message?.includes("billing_from_email") ||
+    error?.message?.includes("general_email_enabled") ||
+    error?.message?.includes("billing_email_enabled") ||
     error?.message?.includes("column")
   ) {
     const { data: fallback, error: fallbackError } = await supabaseAdmin
@@ -57,12 +70,16 @@ const loadOrgEmailRow = async (orgId: number): Promise<OrgEmailRow | null> => {
 const loadOrgEmailFields = async (orgId: number) => {
   const { data, error } = await supabaseAdmin
     .from("organizations")
-    .select("email, billing_from_email")
+    .select(
+      "email, billing_from_email, general_email_enabled, billing_email_enabled",
+    )
     .eq("id", orgId)
     .maybeSingle();
 
   if (
     error?.message?.includes("billing_from_email") ||
+    error?.message?.includes("general_email_enabled") ||
+    error?.message?.includes("billing_email_enabled") ||
     error?.message?.includes("column")
   ) {
     const { data: fallback, error: fallbackError } = await supabaseAdmin
@@ -71,15 +88,24 @@ const loadOrgEmailFields = async (orgId: number) => {
       .eq("id", orgId)
       .maybeSingle();
     if (fallbackError) throw new Error(fallbackError.message);
-    return { email: fallback?.email ?? null, billing_from_email: null };
+    return {
+      email: fallback?.email ?? null,
+      billing_from_email: null,
+      general_email_enabled: true,
+      billing_email_enabled: true,
+    };
   }
 
   if (error) throw new Error(error.message);
   return {
     email: data?.email ?? null,
     billing_from_email: data?.billing_from_email ?? null,
+    general_email_enabled: data?.general_email_enabled !== false,
+    billing_email_enabled: data?.billing_email_enabled !== false,
   };
 };
+
+const isProvided = <T>(value: T | undefined): value is T => value !== undefined;
 
 Deno.serve((req: Request) =>
   OptionsMiddleware(req, async (req) => {
@@ -110,6 +136,9 @@ Deno.serve((req: Request) =>
         const buildStatus = async () => {
           const status = await getOrgTransactionalEmailStatus(orgId);
           const freshOrg = await loadOrgEmailFields(orgId);
+          const ticket_inbound = member?.administrator === true
+            ? await getTicketInboundSetup(orgId)
+            : null;
 
           return {
             configured: status.configured,
@@ -117,20 +146,19 @@ Deno.serve((req: Request) =>
             from_email: status.general_from_email ?? status.from_email,
             general_from_email: status.general_from_email ?? status.from_email,
             billing_from_email: status.billing_from_email,
+            general_email_enabled: freshOrg.general_email_enabled,
+            billing_email_enabled: freshOrg.billing_email_enabled,
             reply_to: freshOrg.email?.trim() ?? null,
             billing_from: freshOrg.billing_from_email?.trim() ?? null,
             org_name: org.name ?? null,
             uses_messaging_credentials: status.uses_messaging_credentials,
+            ticket_inbound,
           };
         };
 
         if (action === "get") {
           const status = await buildStatus();
-          const isAdmin = member?.administrator === true;
-          const ticket_inbound = isAdmin
-            ? await getTicketInboundSetup(orgId)
-            : null;
-          return new Response(JSON.stringify({ ...status, ticket_inbound }), {
+          return new Response(JSON.stringify(status), {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });
         }
@@ -154,6 +182,7 @@ Deno.serve((req: Request) =>
             fromEmail: generalFrom.email,
             fromName: generalFrom.name,
             replyTo: generalFrom.email,
+            emailChannel: "general",
           });
 
           return new Response(JSON.stringify({ ok: true }), {
@@ -165,71 +194,115 @@ Deno.serve((req: Request) =>
           return createErrorResponse(400, "Invalid action");
         }
 
-        const generalFromEmail = (
-          body.general_from_email ??
-          body.reply_to ??
-          ""
-        ).trim();
-        const billingFromEmail = (body.billing_from_email ?? "").trim();
-
-        if (generalFromEmail && !emailRegex.test(generalFromEmail)) {
-          return createErrorResponse(400, "Enter a valid general sender email");
-        }
-        if (billingFromEmail && !emailRegex.test(billingFromEmail)) {
-          return createErrorResponse(400, "Enter a valid billing sender email");
-        }
-
-        const emailUpdate: { email: string | null; billing_from_email?: string | null } =
-          { email: generalFromEmail || null };
-        if (billingFromEmail) {
-          emailUpdate.billing_from_email = billingFromEmail;
-        } else {
-          emailUpdate.billing_from_email = null;
-        }
-
-        let updated: { email: string | null; billing_from_email?: string | null } | null =
-          null;
-
-        const fullUpdate = await supabaseAdmin
-          .from("organizations")
-          .update(emailUpdate)
-          .eq("id", orgId)
-          .select("email, billing_from_email")
-          .single();
-
-        updated = fullUpdate.data;
-        const updateError = fullUpdate.error;
+        const emailUpdate: Record<string, string | boolean | null> = {};
 
         if (
-          updateError?.message?.includes("billing_from_email") ||
-          (updateError?.message?.includes("column") &&
-            updateError.message.includes("does not exist"))
+          isProvided(body.general_from_email) ||
+          isProvided(body.reply_to)
         ) {
-          const emailOnlyUpdate = await supabaseAdmin
-            .from("organizations")
-            .update({ email: generalFromEmail || null })
-            .eq("id", orgId)
-            .select("email")
-            .single();
-          if (emailOnlyUpdate.error) {
-            throw new Error(
-              emailOnlyUpdate.error.message ?? "Could not save email settings",
-            );
-          }
-          updated = {
-            email: emailOnlyUpdate.data?.email ?? null,
-            billing_from_email: null,
-          };
-        } else if (updateError) {
-          throw new Error(updateError.message ?? "Could not save email settings");
+          const raw = (body.general_from_email ?? body.reply_to ?? "").trim();
+          emailUpdate.email = raw
+            ? assertAllowedOrgEmailAddress(raw, "General sender")
+            : null;
         }
 
-        return new Response(
-          JSON.stringify(await buildStatus()),
-          {
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+        if (isProvided(body.billing_from_email)) {
+          const raw = body.billing_from_email?.trim() ?? "";
+          emailUpdate.billing_from_email = raw
+            ? assertAllowedOrgEmailAddress(raw, "Billing sender")
+            : null;
+        }
+
+        if (isProvided(body.general_email_enabled)) {
+          emailUpdate.general_email_enabled = body.general_email_enabled === true;
+        }
+
+        if (isProvided(body.billing_email_enabled)) {
+          emailUpdate.billing_email_enabled = body.billing_email_enabled === true;
+        }
+
+        if (Object.keys(emailUpdate).length > 0) {
+          const fullUpdate = await supabaseAdmin
+            .from("organizations")
+            .update(emailUpdate)
+            .eq("id", orgId)
+            .select(
+              "email, billing_from_email, general_email_enabled, billing_email_enabled",
+            )
+            .single();
+
+          if (
+            fullUpdate.error?.message?.includes("billing_from_email") ||
+            fullUpdate.error?.message?.includes("general_email_enabled") ||
+            fullUpdate.error?.message?.includes("billing_email_enabled") ||
+            (fullUpdate.error?.message?.includes("column") &&
+              fullUpdate.error.message.includes("does not exist"))
+          ) {
+            const legacyUpdate: Record<string, string | null> = {};
+            if ("email" in emailUpdate) {
+              legacyUpdate.email = emailUpdate.email as string | null;
+            }
+            if (Object.keys(legacyUpdate).length > 0) {
+              const emailOnlyUpdate = await supabaseAdmin
+                .from("organizations")
+                .update(legacyUpdate)
+                .eq("id", orgId)
+                .select("email")
+                .single();
+              if (emailOnlyUpdate.error) {
+                throw new Error(
+                  emailOnlyUpdate.error.message ??
+                    "Could not save email settings",
+                );
+              }
+            }
+          } else if (fullUpdate.error) {
+            throw new Error(
+              fullUpdate.error.message ?? "Could not save email settings",
+            );
+          }
+        }
+
+        if (
+          isProvided(body.ticket_inbox_email) ||
+          isProvided(body.ticket_inbox_enabled)
+        ) {
+          const setup = await getTicketInboundSetup(orgId);
+          if (!setup?.inbox_id) {
+            throw new Error("No ticket inbox configured");
+          }
+
+          const inboxUpdate: Record<string, string | boolean> = {};
+          if (isProvided(body.ticket_inbox_email)) {
+            const raw = body.ticket_inbox_email?.trim() ?? "";
+            if (!raw) {
+              throw new Error("Ticket inbox address is required");
+            }
+            inboxUpdate.email = assertAllowedOrgEmailAddress(
+              raw,
+              "Ticket inbox address",
+            );
+          }
+          if (isProvided(body.ticket_inbox_enabled)) {
+            inboxUpdate.is_active = body.ticket_inbox_enabled === true;
+          }
+
+          const { error: inboxError } = await supabaseAdmin
+            .from("ticket_inboxes")
+            .update(inboxUpdate)
+            .eq("id", setup.inbox_id)
+            .eq("org_id", orgId);
+
+          if (inboxError) {
+            throw new Error(
+              inboxError.message ?? "Could not save ticket inbox settings",
+            );
+          }
+        }
+
+        return new Response(JSON.stringify(await buildStatus()), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Request failed";

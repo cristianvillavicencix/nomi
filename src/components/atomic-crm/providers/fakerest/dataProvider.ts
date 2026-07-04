@@ -1415,6 +1415,8 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     from_email: null,
     general_from_email: null,
     billing_from_email: null,
+    general_email_enabled: true,
+    billing_email_enabled: true,
     reply_to: null,
     billing_from: null,
     org_name: "Demo",
@@ -1423,13 +1425,72 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     configured: false,
     provider: null,
     from_email: null,
-    general_from_email: null,
-    billing_from_email: null,
+    general_from_email: params.general_from_email ?? params.reply_to ?? null,
+    billing_from_email: params.billing_from_email ?? null,
+    general_email_enabled: params.general_email_enabled ?? true,
+    billing_email_enabled: params.billing_email_enabled ?? true,
     reply_to: params.general_from_email ?? params.reply_to ?? null,
     billing_from: params.billing_from_email ?? null,
     org_name: "Demo",
+    ticket_inbound: params.ticket_inbox_email
+      ? {
+          support_email: params.ticket_inbox_email,
+          is_active: params.ticket_inbox_enabled ?? true,
+          sendgrid_hostname: null,
+          sendgrid_forward_address: null,
+          hostinger_forward_to: null,
+          mx_record: "mx.sendgrid.net",
+          webhook_url: null,
+          webhook_configured: false,
+        }
+      : null,
   }),
   sendTestTransactionalEmail: async () => ({ ok: true }),
+  getStripeClientSettings: async () => ({
+    org_id: 1,
+    client_payments_enabled: false,
+    configured: false,
+    payment_status: "not_configured" as const,
+    payment_status_label: "Not set up",
+    credential_source: "none" as const,
+    connection_label: "Not configured",
+    stripe_publishable_key: null,
+    publishable_key_preview: null,
+    publishable_key_configured: false,
+    secret_key_configured: false,
+    webhook_secret_configured: false,
+    has_secret_key: false,
+    has_webhook_secret: false,
+    webhook_url: null,
+  }),
+  updateStripeClientSettings: async (params) => ({
+    org_id: 1,
+    client_payments_enabled: params.client_payments_enabled ?? false,
+    configured: Boolean(params.stripe_publishable_key || params.stripe_secret_key),
+    payment_status: (params.client_payments_enabled
+      ? "live"
+      : params.stripe_secret_key
+        ? "paused"
+        : "not_configured") as const,
+    payment_status_label: params.client_payments_enabled
+      ? "Card payments on"
+      : params.stripe_secret_key
+        ? "Card payments paused"
+        : "Not set up",
+    credential_source: "database" as const,
+    connection_label: "Connected (Settings)",
+    stripe_publishable_key: params.stripe_publishable_key ?? null,
+    publishable_key_preview: params.stripe_publishable_key
+      ? `${params.stripe_publishable_key.slice(0, 8)}…${params.stripe_publishable_key.slice(-4)}`
+      : null,
+    publishable_key_configured: Boolean(params.stripe_publishable_key),
+    secret_key_configured: Boolean(params.stripe_secret_key),
+    webhook_secret_configured: Boolean(params.stripe_webhook_secret),
+    has_secret_key: Boolean(params.stripe_secret_key),
+    has_webhook_secret: Boolean(params.stripe_webhook_secret),
+    webhook_url: null,
+  }),
+  testStripeClientSettings: async () => ({ ok: true }),
   sendTestSms: async () => ({ ok: true }),
   sendMeetingLink: async ({ to, meetingUrl }) => ({
     sent: true,

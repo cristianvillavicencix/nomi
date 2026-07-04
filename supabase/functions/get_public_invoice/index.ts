@@ -3,6 +3,10 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { getPublicInvoiceOrganization } from "../_shared/invoiceOrganizationInfo.ts";
+import {
+  isOrgClientStripePaymentsEnabled,
+  resolveOrgStripePublishableKey,
+} from "../_shared/organizationStripeSettings.ts";
 
 type GetPublicInvoiceBody = {
   token?: string;
@@ -225,6 +229,13 @@ Deno.serve(
         .update({ uses_count: (tokenRow.uses_count ?? 0) + 1 })
         .eq("id", tokenRow.id);
 
+      const stripePublishableKey = await resolveOrgStripePublishableKey(
+        tokenRow.org_id,
+      );
+      const cardPaymentsLive = await isOrgClientStripePaymentsEnabled(
+        tokenRow.org_id,
+      );
+
       return new Response(
         JSON.stringify({
           token: tokenRow.token,
@@ -243,6 +254,8 @@ Deno.serve(
           },
           portal_token: portalToken,
           delivery,
+          stripe_publishable_key: stripePublishableKey,
+          client_billing_mode: cardPaymentsLive ? "stripe" : "manual",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
