@@ -16,7 +16,7 @@ import {
 } from "../_shared/publicClientInvoicePaymentContext.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
 import {
-  isOrgClientStripePaymentsEnabled,
+  isOrgClientInvoiceCheckoutEnabled,
   resolveOrgStripePublishableKey,
 } from "../_shared/organizationStripeSettings.ts";
 
@@ -59,7 +59,7 @@ Deno.serve(
         );
       }
 
-      const cardPaymentsLive = await isOrgClientStripePaymentsEnabled(
+      const cardPaymentsLive = await isOrgClientInvoiceCheckoutEnabled(
         invoice.org_id,
       );
       if (!cardPaymentsLive) {

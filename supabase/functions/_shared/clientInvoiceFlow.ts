@@ -356,6 +356,13 @@ export async function createStandaloneClientInvoice(
   const issueDate = input.issue_date ?? today;
   const now = new Date().toISOString();
 
+  const { data: orgBilling } = await supabase
+    .from("organizations")
+    .select("stripe_save_cards_default")
+    .eq("id", orgId)
+    .maybeSingle();
+  const saveCardDefault = orgBilling?.stripe_save_cards_default !== false;
+
   const { data: invoice, error: insertError } = await supabase
     .from("client_invoices")
     .insert({
@@ -378,7 +385,8 @@ export async function createStandaloneClientInvoice(
       reference: input.reference?.trim() || null,
       recipient_email: input.recipient_email?.trim() || null,
       sales_person_id: input.sales_person_id ?? null,
-      save_card_for_future_charges: input.save_card_for_future_charges ?? false,
+      save_card_for_future_charges:
+        input.save_card_for_future_charges ?? saveCardDefault,
       upfront_percent: input.upfront_percent ?? 100,
       auto_charge_remainder: input.auto_charge_remainder ?? false,
       remainder_schedule: input.remainder_schedule ?? null,

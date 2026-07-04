@@ -4,7 +4,7 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { getPublicInvoiceOrganization } from "../_shared/invoiceOrganizationInfo.ts";
 import {
-  isOrgClientStripePaymentsEnabled,
+  isOrgClientInvoiceCheckoutEnabled,
   resolveOrgStripePublishableKey,
 } from "../_shared/organizationStripeSettings.ts";
 
@@ -232,7 +232,7 @@ Deno.serve(
       const stripePublishableKey = await resolveOrgStripePublishableKey(
         tokenRow.org_id,
       );
-      const cardPaymentsLive = await isOrgClientStripePaymentsEnabled(
+      const cardPaymentsLive = await isOrgClientInvoiceCheckoutEnabled(
         tokenRow.org_id,
       );
 

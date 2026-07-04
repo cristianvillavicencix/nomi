@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { resolveProposalTermsMarkdown } from "../_shared/proposalFlow.ts";
+import { isOrgProposalCardPaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
 
 type GetPublicProposalBody = {
   token?: string;
@@ -151,7 +152,7 @@ Deno.serve(
           .order("installment_number", { ascending: true }),
         supabaseAdmin
           .from("organizations")
-          .select("name, client_billing_mode")
+          .select("name")
           .eq("id", tokenRow.org_id)
           .maybeSingle(),
         companyId
@@ -212,6 +213,10 @@ Deno.serve(
           .eq("id", proposal.id);
       }
 
+      const proposalCardPaymentsLive = await isOrgProposalCardPaymentsEnabled(
+        tokenRow.org_id,
+      );
+
       return new Response(
         JSON.stringify({
           token: tokenRow.token,
@@ -225,8 +230,7 @@ Deno.serve(
             name: org?.name ?? "LBS",
             logo_url: null,
           },
-          client_billing_mode:
-            org?.client_billing_mode === "stripe" ? "stripe" : "manual",
+          client_billing_mode: proposalCardPaymentsLive ? "stripe" : "manual",
           company: company?.name
             ? { id: company.id, name: company.name }
             : null,

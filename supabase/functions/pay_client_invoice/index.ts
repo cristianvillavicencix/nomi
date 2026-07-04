@@ -18,7 +18,7 @@ import {
 } from "../_shared/publicClientInvoicePaymentContext.ts";
 import { notifyInvoicePaymentReceipt } from "../_shared/invoicePaymentEmails.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
-import { isOrgClientStripePaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
+import { isOrgClientInvoiceCheckoutEnabled } from "../_shared/organizationStripeSettings.ts";
 
 type PayBody = {
   public_token?: string;
@@ -86,7 +86,7 @@ Deno.serve(
       const mock = isStripeMockMode();
       const cardPaymentsLive = mock
         ? false
-        : await isOrgClientStripePaymentsEnabled(invoice.org_id);
+        : await isOrgClientInvoiceCheckoutEnabled(invoice.org_id);
       let paymentIntentId: string | null =
         invoice.stripe_payment_intent_id ?? null;
       let stripeCustomerId: string | null = invoice.stripe_customer_id ?? null;

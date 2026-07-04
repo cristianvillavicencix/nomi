@@ -13,6 +13,7 @@ import {
   resolveOrCreateStripeCustomer,
 } from "../_shared/clientProposalBilling.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
+import { isOrgProposalCardPaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
 import {
   finalizeProposalIfPaidInFull,
   recordProposalDepositPaid,
@@ -71,11 +72,9 @@ Deno.serve(
         );
       }
 
-      const { data: org } = await supabaseAdmin
-        .from("organizations")
-        .select("client_billing_mode")
-        .eq("id", proposal.org_id)
-        .maybeSingle();
+      const proposalCardPaymentsLive = await isOrgProposalCardPaymentsEnabled(
+        proposal.org_id,
+      );
 
       const { data: contract } = await supabaseAdmin
         .from("contracts")
@@ -103,7 +102,7 @@ Deno.serve(
       }
 
       const mockMode =
-        isStripeMockMode() || org?.client_billing_mode !== "stripe";
+        isStripeMockMode() || !proposalCardPaymentsLive;
 
       if (mockMode) {
         await recordProposalDepositPaid(

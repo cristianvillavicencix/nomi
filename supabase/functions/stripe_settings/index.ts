@@ -7,12 +7,16 @@ import { assertOrgAdministrator } from "../_shared/messagingSettings.ts";
 import {
   getStripeClientSettingsPublic,
   upsertStripeClientSettings,
+  type StripeCredentialMode,
 } from "../_shared/organizationStripeSettings.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
 
 type StripeSettingsBody = {
   action?: "get" | "update" | "test";
-  client_payments_enabled?: boolean;
+  stripe_credential_mode?: StripeCredentialMode;
+  invoice_payments_enabled?: boolean;
+  proposal_payments_enabled?: boolean;
+  save_cards_default?: boolean;
   stripe_publishable_key?: string | null;
   stripe_secret_key?: string | null;
   stripe_webhook_secret?: string | null;
@@ -82,9 +86,26 @@ Deno.serve((req: Request) =>
           );
         }
 
+        if (
+          body.stripe_credential_mode &&
+          body.stripe_credential_mode !== "server" &&
+          body.stripe_credential_mode !== "settings"
+        ) {
+          return createErrorResponse(400, "Invalid credential mode");
+        }
+
         const saved = await upsertStripeClientSettings(orgId, {
-          ...(body.client_payments_enabled !== undefined
-            ? { client_payments_enabled: body.client_payments_enabled }
+          ...(body.stripe_credential_mode !== undefined
+            ? { stripe_credential_mode: body.stripe_credential_mode }
+            : {}),
+          ...(body.invoice_payments_enabled !== undefined
+            ? { invoice_payments_enabled: body.invoice_payments_enabled }
+            : {}),
+          ...(body.proposal_payments_enabled !== undefined
+            ? { proposal_payments_enabled: body.proposal_payments_enabled }
+            : {}),
+          ...(body.save_cards_default !== undefined
+            ? { save_cards_default: body.save_cards_default }
             : {}),
           ...(body.stripe_publishable_key !== undefined
             ? { stripe_publishable_key: publishable || null }

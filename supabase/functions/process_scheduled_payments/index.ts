@@ -13,6 +13,7 @@ import {
   logPaymentAttempt,
 } from "../_shared/clientProposalBilling.ts";
 import { markInstallmentPaidFromStripe } from "../_shared/proposalFlow.ts";
+import { isOrgProposalCardPaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
 
 const MAX_BATCH = 50;
@@ -82,17 +83,15 @@ Deno.serve(
           continue;
         }
 
-        const { data: org } = await supabaseAdmin
-          .from("organizations")
-          .select("client_billing_mode")
-          .eq("id", proposal.org_id)
-          .maybeSingle();
+        const proposalCardPaymentsLive = await isOrgProposalCardPaymentsEnabled(
+          proposal.org_id,
+        );
 
-        if (org?.client_billing_mode !== "stripe") {
+        if (!proposalCardPaymentsLive) {
           results.push({
             installment_id: row.id,
             ok: false,
-            error: "org_not_stripe",
+            error: "proposal_card_payments_off",
           });
           continue;
         }

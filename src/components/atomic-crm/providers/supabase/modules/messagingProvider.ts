@@ -12,6 +12,117 @@ const looksLikeUuid = (value: string) =>
     value,
   );
 
+const normalizeStripeClientSettings = (
+  raw: Record<string, unknown> | null | undefined,
+): import("@/modules/settings/integrations/stripeClientSettings").StripeClientSettings => {
+  const credentialMode =
+    raw?.stripe_credential_mode === "settings"
+      ? "settings"
+      : raw?.credential_source === "database"
+        ? "settings"
+        : "server";
+
+  const serverKeys =
+    raw?.server_keys_configured === true ||
+    (credentialMode === "server" && raw?.secret_key_configured === true) ||
+    raw?.credential_source === "environment";
+
+  const settingsKeys =
+    raw?.settings_keys_configured === true ||
+    (credentialMode === "settings" && raw?.secret_key_configured === true) ||
+    raw?.credential_source === "database";
+
+  const invoiceEnabled =
+    raw?.invoice_payments_enabled !== undefined
+      ? raw.invoice_payments_enabled === true
+      : true;
+
+  const paymentLinkEnabled = invoiceEnabled;
+
+  const proposalEnabled =
+    raw?.proposal_payments_enabled !== undefined
+      ? raw.proposal_payments_enabled === true
+      : raw?.client_payments_enabled === true;
+
+  const secretConfigured =
+    credentialMode === "settings" ? settingsKeys : serverKeys;
+
+  const anyChannel = invoiceEnabled || paymentLinkEnabled || proposalEnabled;
+  const paymentStatus =
+    raw?.payment_status === "live" ||
+    raw?.payment_status === "paused" ||
+    raw?.payment_status === "not_configured"
+      ? raw.payment_status
+      : !secretConfigured
+        ? "not_configured"
+        : anyChannel
+          ? "live"
+          : "paused";
+
+  return {
+    org_id: typeof raw?.org_id === "number" ? raw.org_id : 0,
+    stripe_credential_mode: credentialMode,
+    credential_mode_label:
+      typeof raw?.credential_mode_label === "string"
+        ? raw.credential_mode_label
+        : credentialMode === "settings"
+          ? "Manual (Settings)"
+          : "Supabase server",
+    invoice_payments_enabled: invoiceEnabled,
+    payment_link_payments_enabled: paymentLinkEnabled,
+    proposal_payments_enabled: proposalEnabled,
+    save_cards_default:
+      raw?.save_cards_default !== undefined
+        ? raw.save_cards_default === true
+        : true,
+    configured: raw?.configured === true || secretConfigured,
+    payment_status: paymentStatus,
+    payment_status_label:
+      typeof raw?.payment_status_label === "string"
+        ? raw.payment_status_label
+        : paymentStatus === "live"
+          ? "Card payments on"
+          : paymentStatus === "paused"
+            ? "Card payments paused"
+            : "Not set up",
+    credential_source:
+      raw?.credential_source === "database" ||
+      raw?.credential_source === "environment" ||
+      raw?.credential_source === "none"
+        ? raw.credential_source
+        : credentialMode === "settings"
+          ? "database"
+          : serverKeys
+            ? "environment"
+            : "none",
+    connection_label:
+      typeof raw?.connection_label === "string"
+        ? raw.connection_label
+        : secretConfigured
+          ? credentialMode === "server"
+            ? "Connected (Supabase server)"
+            : "Connected (Settings)"
+          : "Not configured",
+    server_keys_configured: serverKeys,
+    settings_keys_configured: settingsKeys,
+    stripe_publishable_key:
+      typeof raw?.stripe_publishable_key === "string"
+        ? raw.stripe_publishable_key
+        : null,
+    publishable_key_preview:
+      typeof raw?.publishable_key_preview === "string"
+        ? raw.publishable_key_preview
+        : null,
+    publishable_key_configured: raw?.publishable_key_configured === true,
+    secret_key_configured: secretConfigured,
+    webhook_secret_configured: raw?.webhook_secret_configured === true,
+    has_secret_key: raw?.has_secret_key === true || secretConfigured,
+    has_webhook_secret: raw?.has_webhook_secret === true,
+    webhook_url:
+      typeof raw?.webhook_url === "string" ? raw.webhook_url : null,
+  };
+};
+
 const resolveOrganizationMemberId = async (
   id: Identifier,
 ): Promise<Identifier> => {
@@ -182,12 +293,19 @@ export const messagingProvider = {
     const fallback: import("@/modules/settings/integrations/stripeClientSettings").StripeClientSettings =
       {
         org_id: 0,
-        client_payments_enabled: false,
+        stripe_credential_mode: "server",
+        credential_mode_label: "Supabase server",
+        invoice_payments_enabled: true,
+        payment_link_payments_enabled: true,
+        proposal_payments_enabled: false,
+        save_cards_default: true,
         configured: false,
         payment_status: "not_configured",
         payment_status_label: "Not set up",
         credential_source: "none",
         connection_label: "Not configured",
+        server_keys_configured: false,
+        settings_keys_configured: false,
         stripe_publishable_key: null,
         publishable_key_preview: null,
         publishable_key_configured: false,
@@ -208,10 +326,15 @@ export const messagingProvider = {
       console.warn("getStripeClientSettings.error", error);
       return fallback;
     }
-    return data;
+    return normalizeStripeClientSettings(
+      data as unknown as Record<string, unknown>,
+    );
   },
   async updateStripeClientSettings(params: {
-    client_payments_enabled?: boolean;
+    stripe_credential_mode?: "server" | "settings";
+    invoice_payments_enabled?: boolean;
+    proposal_payments_enabled?: boolean;
+    save_cards_default?: boolean;
     stripe_publishable_key?: string | null;
     stripe_secret_key?: string | null;
     stripe_webhook_secret?: string | null;
@@ -230,7 +353,9 @@ export const messagingProvider = {
     if (!data) {
       throw new Error("Failed to save Stripe settings");
     }
-    return data;
+    return normalizeStripeClientSettings(
+      data as unknown as Record<string, unknown>,
+    );
   },
   async testStripeClientSettings() {
     const { data, error } = await invokeEdgeFunction<{ ok: boolean }>(

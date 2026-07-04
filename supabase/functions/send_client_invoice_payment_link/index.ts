@@ -17,6 +17,7 @@ import {
 import { resolveContactEmail } from "../_shared/clientProposalBilling.ts";
 import { INVOICE_ORGANIZATION_NAME } from "../_shared/invoiceOrganizationInfo.ts";
 import { resolvePublicAppBaseUrl } from "../_shared/publicAppUrl.ts";
+import { isOrgPaymentLinkCardPaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
 import {
   buildTicketPaymentEmailBodies,
   buildTicketPaymentReminderInternalNoteBody,
@@ -153,6 +154,16 @@ Deno.serve(
           return createErrorResponse(
             409,
             "This invoice is already paid or void",
+          );
+        }
+
+        const paymentLinksEnabled = await isOrgPaymentLinkCardPaymentsEnabled(
+          invoice.org_id,
+        );
+        if (!paymentLinksEnabled) {
+          return createErrorResponse(
+            403,
+            "Payment links are turned off. Enable them under Settings → Integrations → Stripe.",
           );
         }
 

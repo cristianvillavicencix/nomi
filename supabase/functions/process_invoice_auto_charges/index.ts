@@ -10,7 +10,7 @@ import {
 } from "../_shared/clientProposalBilling.ts";
 import { applyClientInvoicePaymentUpdate } from "../_shared/clientInvoicePayment.ts";
 import { getStripeForOrg } from "../_shared/stripeClient.ts";
-import { isOrgClientStripePaymentsEnabled } from "../_shared/organizationStripeSettings.ts";
+import { isOrgClientInvoiceCheckoutEnabled } from "../_shared/organizationStripeSettings.ts";
 import {
   getUnpaidRemainderChargesDueBy,
   parseInvoiceRemainderSchedule,
@@ -81,7 +81,7 @@ Deno.serve(
           continue;
         }
 
-        const cardPaymentsLive = await isOrgClientStripePaymentsEnabled(
+        const cardPaymentsLive = await isOrgClientInvoiceCheckoutEnabled(
           invoice.org_id,
         );
         if (!cardPaymentsLive) {

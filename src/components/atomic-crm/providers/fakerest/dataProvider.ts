@@ -1448,12 +1448,19 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   sendTestTransactionalEmail: async () => ({ ok: true }),
   getStripeClientSettings: async () => ({
     org_id: 1,
-    client_payments_enabled: false,
+    stripe_credential_mode: "server" as const,
+    credential_mode_label: "Supabase server",
+    invoice_payments_enabled: true,
+    payment_link_payments_enabled: true,
+    proposal_payments_enabled: false,
+    save_cards_default: true,
     configured: false,
     payment_status: "not_configured" as const,
     payment_status_label: "Not set up",
     credential_source: "none" as const,
     connection_label: "Not configured",
+    server_keys_configured: false,
+    settings_keys_configured: false,
     stripe_publishable_key: null,
     publishable_key_preview: null,
     publishable_key_configured: false,
@@ -1465,20 +1472,35 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   }),
   updateStripeClientSettings: async (params) => ({
     org_id: 1,
-    client_payments_enabled: params.client_payments_enabled ?? false,
+    stripe_credential_mode: params.stripe_credential_mode ?? "server",
+    credential_mode_label:
+      params.stripe_credential_mode === "settings"
+        ? "Manual (Settings)"
+        : "Supabase server",
+    invoice_payments_enabled: params.invoice_payments_enabled ?? true,
+    payment_link_payments_enabled: params.invoice_payments_enabled ?? true,
+    proposal_payments_enabled: params.proposal_payments_enabled ?? false,
+    save_cards_default: params.save_cards_default ?? true,
     configured: Boolean(params.stripe_publishable_key || params.stripe_secret_key),
-    payment_status: (params.client_payments_enabled
+    payment_status: (params.invoice_payments_enabled ||
+    params.payment_link_payments_enabled ||
+    params.proposal_payments_enabled
       ? "live"
       : params.stripe_secret_key
         ? "paused"
         : "not_configured") as const,
-    payment_status_label: params.client_payments_enabled
-      ? "Card payments on"
-      : params.stripe_secret_key
-        ? "Card payments paused"
-        : "Not set up",
+    payment_status_label:
+      params.invoice_payments_enabled ||
+      params.payment_link_payments_enabled ||
+      params.proposal_payments_enabled
+        ? "Card payments on"
+        : params.stripe_secret_key
+          ? "Card payments paused"
+          : "Not set up",
     credential_source: "database" as const,
     connection_label: "Connected (Settings)",
+    server_keys_configured: false,
+    settings_keys_configured: Boolean(params.stripe_secret_key),
     stripe_publishable_key: params.stripe_publishable_key ?? null,
     publishable_key_preview: params.stripe_publishable_key
       ? `${params.stripe_publishable_key.slice(0, 8)}…${params.stripe_publishable_key.slice(-4)}`

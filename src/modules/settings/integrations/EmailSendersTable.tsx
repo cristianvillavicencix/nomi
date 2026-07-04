@@ -31,6 +31,7 @@ const parseDisplayEmail = (value: string) => {
 type RowConfig = {
   id: SenderChannel;
   purpose: string;
+  purposeHint?: string;
   getAddress: (data: EmailSendersTableData) => string;
   getEnabled: (data: EmailSendersTableData) => boolean;
   editLabel: string;
@@ -59,6 +60,8 @@ const ALL_ROWS: RowConfig[] = [
   {
     id: "billing",
     purpose: "Invoices & payment links",
+    purposeHint:
+      "Sender address (Mail). Card checkout: Integrations → Stripe.",
     getAddress: (data) =>
       parseDisplayEmail(data.billingFromEmail?.trim() || "Not configured"),
     getEnabled: (data) => data.billingEmailEnabled,
@@ -224,6 +227,11 @@ export const EmailSendersTable = ({
                   <tr key={row.id} className="border-b last:border-0">
                     <td className="px-3 py-2 align-top text-foreground">
                       {row.purpose}
+                      {row.purposeHint ? (
+                        <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
+                          {row.purposeHint}
+                        </span>
+                      ) : null}
                       {isPaused ? (
                         <span className="mt-0.5 block text-[10px] text-muted-foreground">
                           Paused
