@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useGetList, useUpdate, useDataProvider } from "ra-core";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
