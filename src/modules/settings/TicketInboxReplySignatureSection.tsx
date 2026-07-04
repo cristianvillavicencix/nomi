@@ -52,7 +52,11 @@ const inboxLabel = (inbox: TicketInboxRow) =>
     ? `${inbox.display_name} (${inbox.email})`
     : inbox.email;
 
-export const TicketInboxReplySignatureSection = () => {
+export const TicketInboxReplySignatureSection = ({
+  embedded,
+}: {
+  embedded?: boolean;
+}) => {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const { identity } = useGetIdentity();
@@ -185,17 +189,9 @@ export const TicketInboxReplySignatureSection = () => {
     );
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Ticket reply signature</CardTitle>
-        <CardDescription>
-          Appended to outbound ticket replies and forwards from the ticket
-          composer. Plain text only — line breaks are preserved in the email.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {inboxes.length > 1 ? (
+  const content = (
+    <>
+      {inboxes.length > 1 ? (
           <div className="space-y-2">
             <Label htmlFor="ticket-inbox-signature-inbox">Inbox</Label>
             <Select value={selectedInboxId} onValueChange={setSelectedInboxId}>
@@ -269,7 +265,33 @@ export const TicketInboxReplySignatureSection = () => {
             Reset to default
           </Button>
         </div>
-      </CardContent>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Reply signature</p>
+          <p className="text-xs text-muted-foreground">
+            Appended to outbound ticket replies from the composer.
+          </p>
+        </div>
+        {content}
+      </section>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Ticket reply signature</CardTitle>
+        <CardDescription>
+          Appended to outbound ticket replies and forwards from the ticket
+          composer. Plain text only — line breaks are preserved in the email.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">{content}</CardContent>
     </Card>
   );
 };

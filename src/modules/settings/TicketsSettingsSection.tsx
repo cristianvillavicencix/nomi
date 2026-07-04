@@ -29,7 +29,6 @@ const ADMIN_MAIL_SECTIONS: TicketsSectionId[] = ["outbound", "inbound"];
 const WORKSPACE_SECTIONS: TicketsSectionId[] = [
   "automations",
   "notifications",
-  "inboxes",
   "workflow",
   "billing",
   "spam",
@@ -83,11 +82,25 @@ export const TicketsSettingsSection = ({
     </div>
   );
 
+  const canManageInboxes =
+    isAdmin || canManageSettings || canManageTickets;
+
   const renderContent = () => {
     if (activeSection === "outbound") {
-      if (!isAdmin) return adminMailMessage;
-      if (emailPending || !emailData) return mailLoading;
-      return <TicketOutboundPanel data={emailData} configured={configured} />;
+      if (!canManageInboxes) {
+        return (
+          <p className="text-sm text-muted-foreground">
+            You do not have permission to manage ticket inboxes.
+          </p>
+        );
+      }
+      if (isAdmin) {
+        if (emailPending || !emailData) return mailLoading;
+        return (
+          <TicketOutboundPanel data={emailData} configured={configured} />
+        );
+      }
+      return <TicketInboxesManagePanel />;
     }
     if (activeSection === "inbound") {
       if (!isAdmin) return adminMailMessage;
@@ -107,8 +120,6 @@ export const TicketsSettingsSection = ({
           return <TicketAutomationsPanel />;
         case "notifications":
           return <TicketNotificationsPanel />;
-        case "inboxes":
-          return <TicketInboxesManagePanel />;
         case "workflow":
           return <TicketWorkflowPanel />;
         case "billing":
@@ -136,11 +147,10 @@ export const TicketsSettingsSection = ({
       value={activeSection}
       onValueChange={onSectionChange}
       items={[
-        { id: "outbound", label: "Outbound (Twilio)" },
+        { id: "outbound", label: "Outbound & inboxes" },
         { id: "inbound", label: "Inbound (SendGrid)" },
         { id: "automations", label: "Automations" },
         { id: "notifications", label: "Notifications" },
-        { id: "inboxes", label: "Inboxes" },
         { id: "workflow", label: "Workflow" },
         { id: "billing", label: "Billing" },
         { id: "spam", label: "Spam & routing" },

@@ -79,6 +79,13 @@ describe("resolveSettingsRoute", () => {
     expect(route.ticketsSection).toBe("outbound");
   });
 
+  it("maps legacy tickets inboxes section to outbound", () => {
+    const route = resolveSettingsRoute(
+      new URLSearchParams("tab=tickets&section=inboxes"),
+    );
+    expect(route.ticketsSection).toBe("outbound");
+  });
+
   it("resolves tickets inbound section", () => {
     const route = resolveSettingsRoute(
       new URLSearchParams("tab=tickets&section=inbound"),

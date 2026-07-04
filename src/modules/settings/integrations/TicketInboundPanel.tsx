@@ -24,9 +24,10 @@ const inboundStatusFor = (
 
 type Props = {
   data: EmailDeliverySettings;
+  embedded?: boolean;
 };
 
-export const TicketInboundPanel = ({ data }: Props) => {
+export const TicketInboundPanel = ({ data, embedded }: Props) => {
   const notify = useNotify();
   const { data: workspaceBundle } = useTicketWorkspaceSettings();
   const health = workspaceBundle?.health;
@@ -44,12 +45,14 @@ export const TicketInboundPanel = ({ data }: Props) => {
 
   if (!inbound) {
     return (
-      <div className="space-y-6">
-        <IntegrationPanelHeader
-          title="Inbound (SendGrid)"
-          description="Receive client email into Tickets via SendGrid Inbound Parse and a Supabase webhook."
-          status="off"
-        />
+      <div className={embedded ? "space-y-4" : "space-y-6"}>
+        {!embedded ? (
+          <IntegrationPanelHeader
+            title="Inbound (SendGrid)"
+            description="Receive client email into Tickets via SendGrid Inbound Parse and a Supabase webhook."
+            status="off"
+          />
+        ) : null}
         <Alert>
           <AlertDescription>
             No ticket inbox is configured for this organization. Contact your
@@ -62,20 +65,22 @@ export const TicketInboundPanel = ({ data }: Props) => {
   }
 
   return (
-    <div className="space-y-6">
-      <IntegrationPanelHeader
-        title="Inbound (SendGrid)"
-        description="Clients write to your public support address. Mail is forwarded into SendGrid, then posted to Nomi."
-        status={status}
-        badgeLabel={
-          status === "connected"
-            ? "Receiving"
-            : status === "partial"
-              ? "Setup needed"
-              : undefined
-        }
-        meta={inboxEmail}
-      />
+    <div className={embedded ? "space-y-4" : "space-y-6"}>
+      {!embedded ? (
+        <IntegrationPanelHeader
+          title="Inbound (SendGrid)"
+          description="Clients write to your public support address. Mail is forwarded into SendGrid, then posted to Nomi."
+          status={status}
+          badgeLabel={
+            status === "connected"
+              ? "Receiving"
+              : status === "partial"
+                ? "Setup needed"
+                : undefined
+          }
+          meta={inboxEmail}
+        />
+      ) : null}
 
       <Alert className="border-emerald-200/80 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20">
         <AlertDescription className="text-xs text-emerald-950 dark:text-emerald-100">

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TicketSettingsPanelShell } from "@/modules/settings/tickets/TicketSettingsPanelShell";
 import { useTicketWorkspaceSettingsContext } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
 
-export const TicketMacrosPanel = () => {
+export const TicketMacrosPanel = ({ embedded }: { embedded?: boolean }) => {
   const { data, patchWorkspace, saving } = useTicketWorkspaceSettingsContext();
   const workspace = data?.workspace;
   const [label, setLabel] = useState("");
@@ -36,11 +36,8 @@ export const TicketMacrosPanel = () => {
     setNote("");
   };
 
-  return (
-    <TicketSettingsPanelShell
-      title="Macros"
-      description="Saved actions for staff (status + internal note). Composer integration coming next."
-    >
+  const body = (
+    <>
       <section className="space-y-3 rounded-xl border bg-muted/10 p-4">
         <div className="space-y-2">
           <Label>Label</Label>
@@ -87,6 +84,29 @@ export const TicketMacrosPanel = () => {
           </li>
         ))}
       </ul>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Macros</p>
+          <p className="text-xs text-muted-foreground">
+            Saved actions for staff (status + internal note).
+          </p>
+        </div>
+        <div className="space-y-4">{body}</div>
+      </section>
+    );
+  }
+
+  return (
+    <TicketSettingsPanelShell
+      title="Macros"
+      description="Saved actions for staff (status + internal note). Composer integration coming next."
+    >
+      {body}
     </TicketSettingsPanelShell>
   );
 };

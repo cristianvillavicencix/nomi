@@ -8,6 +8,13 @@ import { TICKET_WORKSPACE_SETTINGS_QUERY_KEY } from "@/modules/settings/tickets/
 export const MAX_TICKET_REPLY_ATTACHMENT_BYTES =
   DEFAULT_TICKET_WORKSPACE_SETTINGS.max_reply_attachment_bytes;
 
+export const ticketAttachmentLimitLabel = (bytes: number) =>
+  `${Math.round(bytes / (1024 * 1024))} MB`;
+
+export const TICKET_REPLY_ATTACHMENT_LIMIT_LABEL = ticketAttachmentLimitLabel(
+  MAX_TICKET_REPLY_ATTACHMENT_BYTES,
+);
+
 export const useTicketAttachmentLimitBytes = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const { data } = useQuery({
@@ -20,9 +27,6 @@ export const useTicketAttachmentLimitBytes = () => {
     MAX_TICKET_REPLY_ATTACHMENT_BYTES
   );
 };
-
-export const ticketAttachmentLimitLabel = (bytes: number) =>
-  `${Math.round(bytes / (1024 * 1024))} MB`;
 
 export const isTicketReplyAttachmentTooLarge = (
   bytes: number,

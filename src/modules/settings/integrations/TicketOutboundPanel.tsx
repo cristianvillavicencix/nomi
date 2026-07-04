@@ -15,6 +15,7 @@ import {
 import { IntegrationPanelHeader } from "@/modules/settings/integrations/IntegrationPanelHeader";
 import type { IntegrationStatus } from "@/modules/settings/integrations/IntegrationListRow";
 import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
+import { TicketInboxesManagePanel } from "@/modules/settings/tickets/TicketInboxesManagePanel";
 
 const outboundStatusFor = (
   configured: boolean,
@@ -29,9 +30,10 @@ const outboundStatusFor = (
 type Props = {
   data: EmailDeliverySettings;
   configured: boolean;
+  embedded?: boolean;
 };
 
-export const TicketOutboundPanel = ({ data, configured }: Props) => {
+export const TicketOutboundPanel = ({ data, configured, embedded }: Props) => {
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [testEmail, setTestEmail] = useState("");
@@ -52,20 +54,22 @@ export const TicketOutboundPanel = ({ data, configured }: Props) => {
     senders.ticketInboxEmail?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
 
   return (
-    <div className="space-y-6">
-      <IntegrationPanelHeader
-        title="Outbound (Twilio Email)"
-        description="When staff reply in Tickets, Nomi sends email through Twilio Email from the address below."
-        status={status}
-        badgeLabel={
-          status === "connected"
-            ? "Sending"
-            : status === "partial"
-              ? "Paused"
-              : undefined
-        }
-        meta={fromAddress}
-      />
+    <div className={embedded ? "space-y-4" : "space-y-6"}>
+      {!embedded ? (
+        <IntegrationPanelHeader
+          title="Outbound & inboxes"
+          description="Support addresses, Twilio sender for ticket replies, and outbound test."
+          status={status}
+          badgeLabel={
+            status === "connected"
+              ? "Sending"
+              : status === "partial"
+                ? "Paused"
+                : undefined
+          }
+          meta={fromAddress}
+        />
+      ) : null}
 
       {!configured ? (
         <Alert>
@@ -78,9 +82,9 @@ export const TicketOutboundPanel = ({ data, configured }: Props) => {
       ) : (
         <Alert className="border-blue-200/80 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/20">
           <AlertDescription className="text-xs text-blue-950 dark:text-blue-100">
-            <strong>Twilio Email</strong> is send-only for ticket replies. Clients
-            do not reply through Twilio — inbound mail is configured under the{" "}
-            <strong>Inbound (SendGrid)</strong> tab.
+            <strong>Twilio Email</strong> is send-only for ticket replies. Client
+            replies arrive via SendGrid
+            {embedded ? " (see Inbound below)." : " — configure inbound under Settings → Tickets → Inbound (SendGrid)."}
           </AlertDescription>
         </Alert>
       )}
@@ -126,6 +130,8 @@ export const TicketOutboundPanel = ({ data, configured }: Props) => {
           </div>
         </div>
       </section>
+
+      <TicketInboxesManagePanel embedded />
     </div>
   );
 };

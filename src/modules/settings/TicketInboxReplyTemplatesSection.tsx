@@ -50,7 +50,11 @@ const inboxLabel = (inbox: TicketInboxRow) =>
     ? `${inbox.display_name} (${inbox.email})`
     : inbox.email;
 
-export const TicketInboxReplyTemplatesSection = () => {
+export const TicketInboxReplyTemplatesSection = ({
+  embedded,
+}: {
+  embedded?: boolean;
+}) => {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const { identity } = useGetIdentity();
@@ -152,141 +156,156 @@ export const TicketInboxReplyTemplatesSection = () => {
     );
   }
 
-  return (
+  const content = (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Ticket reply templates</CardTitle>
-          <CardDescription>
-            Custom templates appear in the ticket reply composer. Built-in
-            templates are shared across all inboxes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {inboxes.length > 1 ? (
-            <div className="space-y-2">
-              <Label htmlFor="ticket-inbox-templates-inbox">Inbox</Label>
-              <Select
-                value={selectedInboxId}
-                onValueChange={setSelectedInboxId}
-              >
-                <SelectTrigger id="ticket-inbox-templates-inbox">
-                  <SelectValue placeholder="Select inbox" />
-                </SelectTrigger>
-                <SelectContent>
-                  {inboxes.map((inbox) => (
-                    <SelectItem key={inbox.id} value={String(inbox.id)}>
-                      {inboxLabel(inbox)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : selectedInbox ? (
-            <p className="text-sm text-muted-foreground">
-              Inbox:{" "}
-              <span className="font-medium text-foreground">
-                {inboxLabel(selectedInbox)}
-              </span>
-            </p>
-          ) : null}
+      {inboxes.length > 1 ? (
+        <div className="space-y-2">
+          <Label htmlFor="ticket-inbox-templates-inbox">Inbox</Label>
+          <Select value={selectedInboxId} onValueChange={setSelectedInboxId}>
+            <SelectTrigger id="ticket-inbox-templates-inbox">
+              <SelectValue placeholder="Select inbox" />
+            </SelectTrigger>
+            <SelectContent>
+              {inboxes.map((inbox) => (
+                <SelectItem key={inbox.id} value={String(inbox.id)}>
+                  {inboxLabel(inbox)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : selectedInbox ? (
+        <p className="text-sm text-muted-foreground">
+          Inbox:{" "}
+          <span className="font-medium text-foreground">
+            {inboxLabel(selectedInbox)}
+          </span>
+        </p>
+      ) : null}
 
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">
-              Built-in templates
-            </p>
-            <ul className="divide-y rounded-md border">
-              {TICKET_REPLY_TEMPLATES.map((template) => (
-                <li
-                  key={template.id}
-                  className="flex items-start justify-between gap-3 px-3 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{template.label}</p>
+      {!embedded ? (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            Built-in templates
+          </p>
+          <ul className="divide-y rounded-md border">
+            {TICKET_REPLY_TEMPLATES.map((template) => (
+              <li
+                key={template.id}
+                className="flex items-start justify-between gap-3 px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{template.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {template.description}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  Built-in
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            {embedded ? "Custom reply templates" : "Custom templates"}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8"
+            disabled={!selectedInbox}
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-4" />
+            Add template
+          </Button>
+        </div>
+
+        {customTemplates.length === 0 ? (
+          <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
+            No custom templates yet. Add one here or from the ticket reply
+            composer.
+          </p>
+        ) : (
+          <ul className="divide-y rounded-md border">
+            {customTemplates.map((template) => (
+              <li
+                key={template.id}
+                className="flex items-start justify-between gap-3 px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{template.label}</p>
+                  {template.description ? (
                     <p className="text-xs text-muted-foreground">
                       {template.description}
                     </p>
-                  </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    Built-in
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Custom templates
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8"
-                disabled={!selectedInbox}
-                onClick={() => setCreateOpen(true)}
-              >
-                <Plus className="size-4" />
-                Add template
-              </Button>
-            </div>
-
-            {customTemplates.length === 0 ? (
-              <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
-                No custom templates yet. Add one here or from the ticket reply
-                composer.
-              </p>
-            ) : (
-              <ul className="divide-y rounded-md border">
-                {customTemplates.map((template) => (
-                  <li
-                    key={template.id}
-                    className="flex items-start justify-between gap-3 px-3 py-2.5"
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    title="Edit template"
+                    onClick={() => setEditingTemplate(template)}
                   >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{template.label}</p>
-                      {template.description ? (
-                        <p className="text-xs text-muted-foreground">
-                          {template.description}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        title="Edit template"
-                        onClick={() => setEditingTemplate(template)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-destructive hover:text-destructive"
-                        title="Delete template"
-                        disabled={deleteMutation.isPending}
-                        onClick={() => deleteMutation.mutate(template.id)}
-                      >
-                        {deleteMutation.isPending ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-destructive hover:text-destructive"
+                    title="Delete template"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => deleteMutation.mutate(template.id)}
+                  >
+                    {deleteMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-4" />
+                    )}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {embedded ? (
+        <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Custom reply templates</p>
+            <p className="text-xs text-muted-foreground">
+              Per-inbox templates for the ticket composer.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+          {content}
+        </section>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Ticket reply templates</CardTitle>
+            <CardDescription>
+              Custom templates appear in the ticket reply composer. Built-in
+              templates are shared across all inboxes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">{content}</CardContent>
+        </Card>
+      )}
 
       <TicketReplyTemplateCreateDialog
         inbox={selectedInbox ?? null}

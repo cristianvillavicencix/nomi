@@ -59,7 +59,6 @@ export const TICKETS_SECTION_IDS = [
   "inbound",
   "automations",
   "notifications",
-  "inboxes",
   "workflow",
   "billing",
   "spam",
@@ -73,6 +72,7 @@ export type TicketsSectionId = (typeof TICKETS_SECTION_IDS)[number];
 
 const LEGACY_TICKETS_SECTION: Record<string, TicketsSectionId> = {
   inbox: "outbound",
+  inboxes: "outbound",
   templates: "reply_templates",
 };
 

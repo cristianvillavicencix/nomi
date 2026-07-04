@@ -12,7 +12,7 @@ import {
   useTicketWorkspaceSettingsMutations,
 } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
 
-export const TicketInboxesManagePanel = () => {
+export const TicketInboxesManagePanel = ({ embedded }: { embedded?: boolean }) => {
   const notify = useNotify();
   const { saveMutation } = useTicketWorkspaceSettingsMutations();
   const { data, isPending, patchInbox, saving } =
@@ -42,13 +42,22 @@ export const TicketInboxesManagePanel = () => {
   if (isPending) return null;
 
   return (
-    <div className="space-y-6">
-      <IntegrationPanelHeader
-        title="Inboxes"
-        description="Manage support addresses mapped to your organization."
-        status={data?.inboxes.length ? "connected" : "partial"}
-        meta={`${data?.inboxes.length ?? 0} inbox(es)`}
-      />
+    <div className={embedded ? "space-y-4" : "space-y-6"}>
+      {!embedded ? (
+        <IntegrationPanelHeader
+          title="Inboxes"
+          description="Manage support addresses mapped to your organization."
+          status={data?.inboxes.length ? "connected" : "partial"}
+          meta={`${data?.inboxes.length ?? 0} inbox(es)`}
+        />
+      ) : (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Inboxes</p>
+          <p className="text-xs text-muted-foreground">
+            Support addresses for this organization.
+          </p>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border text-sm">
         <table className="w-full">
@@ -102,7 +111,8 @@ export const TicketInboxesManagePanel = () => {
       <section className="space-y-3 rounded-xl border border-dashed p-4">
         <p className="text-sm font-medium">Add inbox</p>
         <p className="text-xs text-muted-foreground">
-          After creating, configure DNS and SendGrid under Inbound (SendGrid).
+          After creating an address, configure DNS and SendGrid under{" "}
+          <strong>Inbound (SendGrid)</strong>.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">

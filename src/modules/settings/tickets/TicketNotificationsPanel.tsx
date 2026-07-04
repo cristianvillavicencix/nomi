@@ -4,18 +4,14 @@ import { IntegrationFeatureSwitchRow } from "@/modules/settings/integrations/Int
 import { TicketSettingsPanelShell } from "@/modules/settings/tickets/TicketSettingsPanelShell";
 import { useTicketWorkspaceSettingsContext } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
 
-export const TicketNotificationsPanel = () => {
+export const TicketNotificationsPanel = ({ embedded }: { embedded?: boolean }) => {
   const { data, patchWorkspace, saving } = useTicketWorkspaceSettingsContext();
   const workspace = data?.workspace;
   if (!workspace) return null;
 
-  return (
-    <TicketSettingsPanelShell
-      title="Notifications"
-      description="Workspace defaults for ticket alerts. Personal overrides stay under Settings → Notifications."
-    >
-      <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
-        <div className="space-y-2">
+  const body = (
+    <>
+      <div className="space-y-2">
           <Label>Who gets alerted for inbound client mail</Label>
           <RadioGroup
             value={workspace.notification_audience}
@@ -53,7 +49,29 @@ export const TicketNotificationsPanel = () => {
             void patchWorkspace({ workspace_notify_desktop: checked })
           }
         />
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Notifications</p>
+          <p className="text-xs text-muted-foreground">
+            Workspace defaults for ticket alerts.
+          </p>
+        </div>
+        <div className="space-y-4">{body}</div>
       </section>
+    );
+  }
+
+  return (
+    <TicketSettingsPanelShell
+      title="Notifications"
+      description="Workspace defaults for ticket alerts. Personal overrides stay under Settings → Notifications."
+    >
+      <section className="space-y-4 rounded-xl border bg-muted/10 p-4">{body}</section>
     </TicketSettingsPanelShell>
   );
 };

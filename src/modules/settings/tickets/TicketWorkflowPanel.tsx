@@ -9,7 +9,7 @@ import { IntegrationFeatureSwitchRow } from "@/modules/settings/integrations/Int
 import { TicketSettingsPanelShell } from "@/modules/settings/tickets/TicketSettingsPanelShell";
 import { useTicketWorkspaceSettingsContext } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
 
-export const TicketWorkflowPanel = () => {
+export const TicketWorkflowPanel = ({ embedded }: { embedded?: boolean }) => {
   const { data, patchWorkspace, saving } = useTicketWorkspaceSettingsContext();
   const workspace = data?.workspace;
   const [tagDraft, setTagDraft] = useState("");
@@ -41,11 +41,8 @@ export const TicketWorkflowPanel = () => {
     setStatusLabel("");
   };
 
-  return (
-    <TicketSettingsPanelShell
-      title="Workflow"
-      description="Status rules, tags, auto-close, and CSAT on resolve."
-    >
+  const body = (
+    <>
       <IntegrationFeatureSwitchRow
         label="Require internal note on status changes"
         description="Waiting, resolved, and reopening a ticket."
@@ -177,6 +174,29 @@ export const TicketWorkflowPanel = () => {
           />
         </div>
       </section>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Workflow</p>
+          <p className="text-xs text-muted-foreground">
+            Status rules, tags, auto-close, and CSAT on resolve.
+          </p>
+        </div>
+        <div className="space-y-4">{body}</div>
+      </section>
+    );
+  }
+
+  return (
+    <TicketSettingsPanelShell
+      title="Workflow"
+      description="Status rules, tags, auto-close, and CSAT on resolve."
+    >
+      {body}
     </TicketSettingsPanelShell>
   );
 };

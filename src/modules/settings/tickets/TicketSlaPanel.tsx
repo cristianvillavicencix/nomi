@@ -6,16 +6,13 @@ import { useTicketWorkspaceSettingsContext } from "@/modules/settings/tickets/us
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
-export const TicketSlaPanel = () => {
+export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
   const { data, patchWorkspace, saving } = useTicketWorkspaceSettingsContext();
   const workspace = data?.workspace;
   if (!workspace) return null;
 
-  return (
-    <TicketSettingsPanelShell
-      title="SLA & business hours"
-      description="Business hours reference and first-response SLA target."
-    >
+  const body = (
+    <>
       <IntegrationFeatureSwitchRow
         label="Enable business hours"
         description="Used for SLA reporting and future out-of-hours auto-replies."
@@ -125,6 +122,29 @@ export const TicketSlaPanel = () => {
           }}
         />
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">SLA & business hours</p>
+          <p className="text-xs text-muted-foreground">
+            Business hours and first-response SLA target.
+          </p>
+        </div>
+        <div className="space-y-4">{body}</div>
+      </section>
+    );
+  }
+
+  return (
+    <TicketSettingsPanelShell
+      title="SLA & business hours"
+      description="Business hours reference and first-response SLA target."
+    >
+      {body}
     </TicketSettingsPanelShell>
   );
 };

@@ -24,7 +24,7 @@ const loadMembers = async () => {
   }));
 };
 
-export const TicketSpamRoutingPanel = () => {
+export const TicketSpamRoutingPanel = ({ embedded }: { embedded?: boolean }) => {
   const { data, patchWorkspace, saving } = useTicketWorkspaceSettingsContext();
   const workspace = data?.workspace;
   const [allowedDraft, setAllowedDraft] = useState("");
@@ -76,11 +76,8 @@ export const TicketSpamRoutingPanel = () => {
     setRuleAssignee("");
   };
 
-  return (
-    <TicketSettingsPanelShell
-      title="Spam & routing"
-      description="Filter inbound senders and route tickets by subject keywords."
-    >
+  const body = (
+    <>
       <IntegrationFeatureSwitchRow
         label="Ignore auto-responders and mailer-daemon"
         checked={workspace.ignore_auto_responders}
@@ -191,6 +188,29 @@ export const TicketSpamRoutingPanel = () => {
           ))}
         </ul>
       </section>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Spam & routing</p>
+          <p className="text-xs text-muted-foreground">
+            Filter inbound senders and route by subject keywords.
+          </p>
+        </div>
+        {body}
+      </section>
+    );
+  }
+
+  return (
+    <TicketSettingsPanelShell
+      title="Spam & routing"
+      description="Filter inbound senders and route tickets by subject keywords."
+    >
+      {body}
     </TicketSettingsPanelShell>
   );
 };
