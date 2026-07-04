@@ -26,12 +26,14 @@ type TicketStatusChangeDialogProps = {
   request: TicketStatusChangeRequest | null;
   onClose: () => void;
   onSuccess?: () => void;
+  requireStatusNote?: boolean;
 };
 
 export const TicketStatusChangeDialog = ({
   request,
   onClose,
   onSuccess,
+  requireStatusNote = true,
 }: TicketStatusChangeDialogProps) => {
   const [note, setNote] = useState("");
   const [pending, setPending] = useState(false);
@@ -58,7 +60,7 @@ export const TicketStatusChangeDialog = ({
   const handleConfirm = async () => {
     if (!request) return;
     const trimmed = note.trim();
-    if (!trimmed) {
+    if (requireStatusNote && !trimmed) {
       notify("Add an internal note before changing status", {
         type: "warning",
       });
@@ -67,11 +69,13 @@ export const TicketStatusChangeDialog = ({
 
     setPending(true);
     try {
-      await dataProvider.replyTicket({
-        ticketId: request.ticket.id,
-        body: `**Status:** ${fromStatus} → ${toStatus}\n\n${trimmed}`,
-        isInternalNote: true,
-      });
+      if (trimmed) {
+        await dataProvider.replyTicket({
+          ticketId: request.ticket.id,
+          body: `**Status:** ${fromStatus} → ${toStatus}\n\n${trimmed}`,
+          isInternalNote: true,
+        });
+      }
       await update(
         "tickets",
         {
@@ -81,6 +85,11 @@ export const TicketStatusChangeDialog = ({
         },
         { mutationMode: "optimistic" },
       );
+      if (request.nextStatus === "resolved") {
+        void dataProvider.sendTicketCsatEmail(Number(request.ticket.id)).catch(
+          () => undefined,
+        );
+      }
       notify("Status updated", { type: "info" });
       setNote("");
       onClose();

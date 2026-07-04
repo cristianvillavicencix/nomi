@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { useDataProvider } from "ra-core";
-import { TicketEmailInboundSetupCard } from "@/modules/settings/TicketEmailInboundSetupCard";
 import {
   SYSTEM_EMAIL_NAME,
   SYSTEM_EMAIL_SCOPE,
@@ -229,11 +228,9 @@ export const EmailDeliverySettingsSection = ({
           </Button>
         </div>
 
-        <TicketEmailInboundSetupCard setup={data?.ticket_inbound ?? null} />
-
         <p className="text-xs text-muted-foreground">
-          Ticket inbox, reply signature, and templates are under{" "}
-          <strong>Settings → Tickets</strong>.
+          Ticket inbox (inbound/outbound, webhook, forward) and reply templates
+          are under <strong>Settings → Tickets</strong>.
         </p>
     </>
   );

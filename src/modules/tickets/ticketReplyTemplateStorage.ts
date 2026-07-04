@@ -25,15 +25,22 @@ export const parseInboxReplyTemplates = (
 
 export const mergeTicketReplyTemplates = (
   custom: TicketInboxReplyTemplate[] = [],
-): TicketReplyTemplate[] => [
-  ...TICKET_REPLY_TEMPLATES,
-  ...custom.map((row) => ({
-    id: row.id,
-    label: row.label,
-    description: row.description?.trim() || "Custom template",
-    body: row.body,
-  })),
-];
+  disabledBuiltinIds: string[] = [],
+): TicketReplyTemplate[] => {
+  const disabled = new Set(disabledBuiltinIds);
+  const builtins = TICKET_REPLY_TEMPLATES.filter(
+    (template) => !disabled.has(template.id),
+  );
+  return [
+    ...builtins,
+    ...custom.map((row) => ({
+      id: row.id,
+      label: row.label,
+      description: row.description?.trim() || "Custom template",
+      body: row.body,
+    })),
+  ];
+};
 
 export const createInboxReplyTemplateId = () => `custom-${crypto.randomUUID()}`;
 

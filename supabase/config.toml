@@ -281,6 +281,12 @@ verify_jwt = false
 [functions.stripe_settings]
 verify_jwt = false
 
+[functions.ticket_settings]
+verify_jwt = false
+
+[functions.process_ticket_automations]
+verify_jwt = false
+
 [functions.access_entry_password]
 verify_jwt = false
 

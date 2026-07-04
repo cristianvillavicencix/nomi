@@ -379,6 +379,7 @@ export type TicketInbox = {
   reply_signature_html?: string | null;
   reply_signature_text?: string | null;
   reply_templates?: TicketInboxReplyTemplate[] | null;
+  disabled_builtin_reply_template_ids?: string[] | null;
   is_active?: boolean;
   created_at?: string;
 } & Pick<RaRecord, "id">;

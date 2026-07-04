@@ -64,7 +64,7 @@ export const MailIntegrationPanel = () => {
         <p className="text-sm text-muted-foreground">
           Add your Twilio Account SID and Auth Token under the Twilio tab.
           Authenticate your domain in Twilio Console → Email. Ticket inbox
-          settings live under Settings → Tickets.
+          (receive, forward, webhook) is under Settings → Tickets.
         </p>
       ) : (
         <EmailSendersTable

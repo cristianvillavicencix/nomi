@@ -6,6 +6,10 @@ import {
   invokeEdgeFunction,
   readEdgeFunctionErrorMessage,
 } from "../invokeEdgeFunction";
+import {
+  DEFAULT_TICKET_WORKSPACE_SETTINGS,
+  type TicketWorkspaceSettingsResponse,
+} from "@/modules/settings/tickets/ticketWorkspaceSettings";
 
 const looksLikeUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -288,6 +292,88 @@ export const messagingProvider = {
       throw new Error("Failed to send test email");
     }
     return data;
+  },
+  async getTicketWorkspaceSettings() {
+    const fallback: TicketWorkspaceSettingsResponse = {
+      workspace: { ...DEFAULT_TICKET_WORKSPACE_SETTINGS },
+      inboxes: [],
+      health: {
+        webhook_configured: false,
+        outbound_configured: false,
+        last_inbound_at: null,
+        last_inbound_inbox_email: null,
+      },
+    };
+    const { data, error } = await invokeEdgeFunction<TicketWorkspaceSettingsResponse>(
+      "ticket_settings",
+      {
+        method: "POST",
+        body: { action: "get" },
+      },
+    );
+    if (error || !data) {
+      console.warn("getTicketWorkspaceSettings.error", error);
+      return fallback;
+    }
+    return data;
+  },
+  async updateTicketWorkspaceSettings(params: {
+    workspace?: Partial<
+      import("@/modules/settings/tickets/ticketWorkspaceSettings").TicketWorkspaceSettings
+    >;
+    inbox?: Record<string, unknown> & { id: number };
+    create_inbox?: {
+      email: string;
+      display_name?: string | null;
+      from_name?: string | null;
+    };
+  }) {
+    const { data, error } = await invokeEdgeFunction<TicketWorkspaceSettingsResponse>(
+      "ticket_settings",
+      {
+        method: "POST",
+        body: { action: "update", ...params },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ??
+          "Failed to save ticket settings",
+      );
+    }
+    if (!data) throw new Error("Failed to save ticket settings");
+    return data;
+  },
+  async sendTestTicketOutboundEmail(testEmail: string) {
+    const { data, error } = await invokeEdgeFunction<{ ok: boolean }>(
+      "ticket_settings",
+      {
+        method: "POST",
+        body: { action: "test_outbound", test_email: testEmail },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to send test email",
+      );
+    }
+    if (!data?.ok) throw new Error("Failed to send test email");
+    return data;
+  },
+  async sendTicketCsatEmail(ticketId: number) {
+    const { data, error } = await invokeEdgeFunction<{ ok?: boolean; skipped?: boolean }>(
+      "ticket_settings",
+      {
+        method: "POST",
+        body: { action: "send_csat", ticket_id: ticketId },
+      },
+    );
+    if (error) {
+      throw new Error(
+        (error as { message?: string }).message ?? "Failed to send CSAT email",
+      );
+    }
+    return data ?? { ok: false };
   },
   async getStripeClientSettings() {
     const fallback: import("@/modules/settings/integrations/stripeClientSettings").StripeClientSettings =

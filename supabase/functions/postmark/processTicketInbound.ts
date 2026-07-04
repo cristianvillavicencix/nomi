@@ -4,6 +4,15 @@ import { isOrgTransactionalEmailConfigured } from "../_shared/transactionalEmail
 import { sendNewTicketAutoReply } from "../_shared/ticketInboundAutoReply.ts";
 import { INVOICE_ORGANIZATION_NAME } from "../_shared/invoiceOrganizationInfo.ts";
 import {
+  loadOrgTicketWorkspaceSettings,
+  matchRoutingRule,
+  nextRoundRobinIndex,
+  passesInboundDomainRules,
+  resolveRoundRobinAssignee,
+  saveOrgTicketWorkspaceSettings,
+  shouldIgnoreInboundSender,
+} from "../_shared/ticketWorkspaceSettings.ts";
+import {
   stripQuotedHtml,
   stripQuotedPlainText,
 } from "../_shared/ticketEmailQuotedContent.ts";
@@ -89,7 +98,7 @@ const findInbox = async (recipientEmails: Set<string>) => {
   const { data: inboxes, error } = await supabaseAdmin
     .from("ticket_inboxes")
     .select(
-      "id, org_id, email, display_name, from_name, postmark_inbound_address, sendgrid_hostname, sendgrid_forward_address",
+      "id, org_id, email, display_name, from_name, postmark_inbound_address, sendgrid_hostname, sendgrid_forward_address, auto_reply_enabled, auto_reply_subject, auto_reply_html, auto_reply_text",
     )
     .eq("is_active", true);
 
@@ -348,6 +357,21 @@ export const processTicketInbound = async ({
     return new Response("Missing From email", { status: 403 });
   }
 
+  const workspaceSettings = await loadOrgTicketWorkspaceSettings(inbox.org_id);
+  const normalizedFrom = normalizeEmail(fromEmail);
+  if (shouldIgnoreInboundSender(normalizedFrom, workspaceSettings)) {
+    return new Response(JSON.stringify({ ok: true, ignored: "auto_responder" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (!passesInboundDomainRules(normalizedFrom, workspaceSettings)) {
+    return new Response(JSON.stringify({ ok: true, ignored: "domain_rule" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const fromName = payload.FromFull?.Name?.trim() || null;
   const subject = payload.Subject?.trim() || "(No subject)";
   const textBody = payload.StrippedTextReply?.trim()
@@ -401,17 +425,33 @@ export const processTicketInbound = async ({
 
   if (!ticketId) {
     isNewTicket = true;
+    const routingRule = matchRoutingRule(subject, workspaceSettings);
+    let assigneeId = workspaceSettings.default_assignee_member_id;
+    if (routingRule?.assignee_member_id) {
+      assigneeId = routingRule.assignee_member_id;
+    } else if (workspaceSettings.round_robin_enabled) {
+      assigneeId = resolveRoundRobinAssignee(workspaceSettings);
+    }
+    const priority =
+      routingRule?.priority?.trim() ||
+      workspaceSettings.default_priority ||
+      "normal";
+    const tags = routingRule?.tag?.trim()
+      ? [routingRule.tag.trim()]
+      : [];
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from("tickets")
       .insert({
         org_id: inbox.org_id,
         company_id: contact?.company_id ?? null,
         contact_id: contact?.id ?? null,
+        assignee_id: assigneeId,
         subject,
-        status: "new",
-        priority: "normal",
+        status: workspaceSettings.default_status || "new",
+        priority,
+        tags,
         inbox_address: inbox.email,
-        requester_email: normalizeEmail(fromEmail),
+        requester_email: normalizedFrom,
         requester_name: fromName,
         external_thread_id: messageId,
         created_at: now,
@@ -424,6 +464,12 @@ export const processTicketInbound = async ({
       throw new Error(ticketError?.message ?? "Could not create ticket");
     }
     ticketId = ticket.id;
+
+    if (workspaceSettings.round_robin_enabled) {
+      await saveOrgTicketWorkspaceSettings(inbox.org_id, {
+        round_robin_index: nextRoundRobinIndex(workspaceSettings),
+      });
+    }
   } else {
     const { data: existingTicket } = await supabaseAdmin
       .from("tickets")
@@ -474,25 +520,36 @@ export const processTicketInbound = async ({
 
   if (isNewTicket) {
     try {
-      const configured = await isOrgTransactionalEmailConfigured(inbox.org_id);
-      if (configured) {
-        const fromName =
-          inbox.from_name?.trim() ||
-          inbox.display_name?.trim() ||
-          "LBS Supplements";
-        const { data: org } = await supabaseAdmin
-          .from("organizations")
-          .select("name")
-          .eq("id", inbox.org_id)
-          .maybeSingle();
-        await sendNewTicketAutoReply({
-          orgId: inbox.org_id,
-          orgName: org?.name?.trim() || INVOICE_ORGANIZATION_NAME,
-          ticketId: Number(ticketId),
-          toEmail: normalizeEmail(fromEmail),
-          fromEmail: normalizeEmail(inbox.email),
-          fromName,
-        });
+      const inboxRow = inbox as {
+        auto_reply_enabled?: boolean;
+        auto_reply_subject?: string | null;
+        auto_reply_html?: string | null;
+        auto_reply_text?: string | null;
+      };
+      if (inboxRow.auto_reply_enabled !== false) {
+        const configured = await isOrgTransactionalEmailConfigured(inbox.org_id);
+        if (configured) {
+          const replyFromName =
+            inbox.from_name?.trim() ||
+            inbox.display_name?.trim() ||
+            "Support";
+          const { data: org } = await supabaseAdmin
+            .from("organizations")
+            .select("name")
+            .eq("id", inbox.org_id)
+            .maybeSingle();
+          await sendNewTicketAutoReply({
+            orgId: inbox.org_id,
+            orgName: org?.name?.trim() || INVOICE_ORGANIZATION_NAME,
+            ticketId: Number(ticketId),
+            toEmail: normalizedFrom,
+            fromEmail: normalizeEmail(inbox.email),
+            fromName: replyFromName,
+            subject: inboxRow.auto_reply_subject,
+            textTemplate: inboxRow.auto_reply_text,
+            htmlTemplate: inboxRow.auto_reply_html,
+          });
+        }
       }
     } catch (error) {
       console.error("processTicketInbound.auto_reply", error);

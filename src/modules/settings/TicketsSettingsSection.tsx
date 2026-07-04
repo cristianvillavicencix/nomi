@@ -4,22 +4,39 @@ import { useDataProvider, useGetIdentity } from "ra-core";
 
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import {
-  buildEmailSendersTableData,
-  EmailSendersTable,
-} from "@/modules/settings/integrations/EmailSendersTable";
-import { IntegrationPanelHeader } from "@/modules/settings/integrations/IntegrationPanelHeader";
+import { TicketInboundPanel } from "@/modules/settings/integrations/TicketInboundPanel";
+import { TicketOutboundPanel } from "@/modules/settings/integrations/TicketOutboundPanel";
 import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
-import { TicketEmailInboundSetupCard } from "@/modules/settings/TicketEmailInboundSetupCard";
+import { TicketAutomationsPanel } from "@/modules/settings/tickets/TicketAutomationsPanel";
+import { TicketBillingDefaultsPanel } from "@/modules/settings/tickets/TicketBillingDefaultsPanel";
+import { TicketInboxesManagePanel } from "@/modules/settings/tickets/TicketInboxesManagePanel";
+import { TicketMacrosPanel } from "@/modules/settings/tickets/TicketMacrosPanel";
+import { TicketNotificationsPanel } from "@/modules/settings/tickets/TicketNotificationsPanel";
+import { TicketSlaPanel } from "@/modules/settings/tickets/TicketSlaPanel";
+import { TicketSpamRoutingPanel } from "@/modules/settings/tickets/TicketSpamRoutingPanel";
+import { TicketTemplatesExtrasPanel } from "@/modules/settings/tickets/TicketTemplatesExtrasPanel";
+import { TicketWorkflowPanel } from "@/modules/settings/tickets/TicketWorkflowPanel";
 import { TicketInboxReplySignatureSection } from "@/modules/settings/TicketInboxReplySignatureSection";
 import { TicketInboxReplyTemplatesSection } from "@/modules/settings/TicketInboxReplyTemplatesSection";
 import type { TicketsSectionId } from "@/modules/settings/settingsNavigation";
-import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
 
 type Props = {
   activeSection: TicketsSectionId;
   onSectionChange: (section: TicketsSectionId) => void;
 };
+
+const ADMIN_MAIL_SECTIONS: TicketsSectionId[] = ["outbound", "inbound"];
+const WORKSPACE_SECTIONS: TicketsSectionId[] = [
+  "automations",
+  "notifications",
+  "inboxes",
+  "workflow",
+  "billing",
+  "spam",
+  "sla",
+  "macros",
+  "templates",
+];
 
 export const TicketsSettingsSection = ({
   activeSection,
@@ -35,10 +52,12 @@ export const TicketsSettingsSection = ({
   const canAccess =
     isAdmin || canManageSettings || canManageTickets;
 
-  const { data, isPending } = useQuery({
+  const needsEmailSettings = ADMIN_MAIL_SECTIONS.includes(activeSection);
+
+  const { data: emailData, isPending: emailPending } = useQuery({
     queryKey: ["email-delivery-settings"],
     queryFn: () => dataProvider.getEmailDeliverySettings(),
-    enabled: isAdmin,
+    enabled: isAdmin && needsEmailSettings,
   });
 
   if (!canAccess) {
@@ -49,71 +68,89 @@ export const TicketsSettingsSection = ({
     );
   }
 
-  const configured = data?.configured === true;
-  const inboxEmail =
-    data?.ticket_inbound?.support_email?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
-  const inboxStatus = data?.ticket_inbound?.webhook_configured
-    ? ("connected" as const)
-    : configured
-      ? ("partial" as const)
-      : ("off" as const);
+  const configured = emailData?.configured === true;
 
-  const inboxPanel = isAdmin ? (
-    isPending ? (
-      <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        Loading inbox settings…
-      </div>
-    ) : (
-      <div className="space-y-6">
-        <IntegrationPanelHeader
-          title="Support inbox"
-          description={`Clients email ${inboxEmail}. Outbound ticket replies send from the same address via Twilio.`}
-          status={inboxStatus}
-          meta={inboxEmail}
-        />
-
-        {!configured ? (
-          <p className="text-sm text-muted-foreground">
-            Connect Twilio under Integrations → Twilio first. Outbound ticket
-            replies use the same email credentials as system mail.
-          </p>
-        ) : null}
-
-        <EmailSendersTable
-          configured={configured}
-          data={buildEmailSendersTableData(data!)}
-          channels={["ticket"]}
-        />
-
-        <TicketEmailInboundSetupCard setup={data?.ticket_inbound ?? null} />
-      </div>
-    )
-  ) : (
+  const adminMailMessage = (
     <p className="text-sm text-muted-foreground">
-      Inbox address and inbound DNS require an administrator. You can still edit
-      reply signature and templates in the other tabs.
+      Outbound and inbound mail settings require an administrator.
     </p>
   );
+
+  const mailLoading = (
+    <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" />
+      Loading ticket mail settings…
+    </div>
+  );
+
+  const renderContent = () => {
+    if (activeSection === "outbound") {
+      if (!isAdmin) return adminMailMessage;
+      if (emailPending || !emailData) return mailLoading;
+      return <TicketOutboundPanel data={emailData} configured={configured} />;
+    }
+    if (activeSection === "inbound") {
+      if (!isAdmin) return adminMailMessage;
+      if (emailPending || !emailData) return mailLoading;
+      return <TicketInboundPanel data={emailData} />;
+    }
+    if (WORKSPACE_SECTIONS.includes(activeSection)) {
+      if (!canManageTickets && !isAdmin && !canManageSettings) {
+        return (
+          <p className="text-sm text-muted-foreground">
+            Ticket workspace settings require manage permission.
+          </p>
+        );
+      }
+      switch (activeSection) {
+        case "automations":
+          return <TicketAutomationsPanel />;
+        case "notifications":
+          return <TicketNotificationsPanel />;
+        case "inboxes":
+          return <TicketInboxesManagePanel />;
+        case "workflow":
+          return <TicketWorkflowPanel />;
+        case "billing":
+          return <TicketBillingDefaultsPanel />;
+        case "spam":
+          return <TicketSpamRoutingPanel />;
+        case "sla":
+          return <TicketSlaPanel />;
+        case "macros":
+          return <TicketMacrosPanel />;
+        case "templates":
+          return <TicketTemplatesExtrasPanel />;
+        default:
+          return null;
+      }
+    }
+    if (activeSection === "signature") {
+      return <TicketInboxReplySignatureSection />;
+    }
+    return <TicketInboxReplyTemplatesSection />;
+  };
 
   return (
     <SettingsSubNav
       value={activeSection}
       onValueChange={onSectionChange}
       items={[
-        { id: "inbox", label: "Inbox" },
+        { id: "outbound", label: "Outbound (Twilio)" },
+        { id: "inbound", label: "Inbound (SendGrid)" },
+        { id: "automations", label: "Automations" },
+        { id: "notifications", label: "Notifications" },
+        { id: "inboxes", label: "Inboxes" },
+        { id: "workflow", label: "Workflow" },
+        { id: "billing", label: "Billing" },
+        { id: "spam", label: "Spam & routing" },
+        { id: "sla", label: "SLA & hours" },
+        { id: "macros", label: "Macros" },
+        { id: "templates", label: "Template library" },
         { id: "signature", label: "Reply signature" },
-        { id: "templates", label: "Reply templates" },
+        { id: "reply_templates", label: "Reply templates" },
       ]}
-      content={
-        activeSection === "inbox" ? (
-          inboxPanel
-        ) : activeSection === "signature" ? (
-          <TicketInboxReplySignatureSection />
-        ) : (
-          <TicketInboxReplyTemplatesSection />
-        )
-      }
+      content={renderContent()}
     />
   );
 };

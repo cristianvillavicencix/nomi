@@ -7,7 +7,9 @@ export type TicketWorkflowStatus =
 export const requiresTicketStatusNote = (
   fromStatus: string,
   toStatus: string,
+  options?: { required?: boolean },
 ) => {
+  if (options?.required === false) return false;
   if (fromStatus === toStatus) return false;
   if (toStatus === "waiting" || toStatus === "resolved") return true;
   if (fromStatus === "resolved") return true;

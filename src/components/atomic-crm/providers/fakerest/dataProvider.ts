@@ -1446,6 +1446,37 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
       : null,
   }),
   sendTestTransactionalEmail: async () => ({ ok: true }),
+  getTicketWorkspaceSettings: async () => ({
+    workspace: {
+      ...(
+        await import("@/modules/settings/tickets/ticketWorkspaceSettings")
+      ).DEFAULT_TICKET_WORKSPACE_SETTINGS,
+    },
+    inboxes: [],
+    health: {
+      webhook_configured: false,
+      outbound_configured: false,
+      last_inbound_at: null,
+      last_inbound_inbox_email: null,
+    },
+  }),
+  updateTicketWorkspaceSettings: async (params) => {
+    const base = await (
+      await import("@/modules/settings/tickets/ticketWorkspaceSettings")
+    ).DEFAULT_TICKET_WORKSPACE_SETTINGS;
+    return {
+      workspace: { ...base, ...(params.workspace ?? {}) },
+      inboxes: [],
+      health: {
+        webhook_configured: false,
+        outbound_configured: true,
+        last_inbound_at: null,
+        last_inbound_inbox_email: null,
+      },
+    };
+  },
+  sendTestTicketOutboundEmail: async () => ({ ok: true }),
+  sendTicketCsatEmail: async () => ({ ok: true }),
   getStripeClientSettings: async () => ({
     org_id: 1,
     stripe_credential_mode: "server" as const,

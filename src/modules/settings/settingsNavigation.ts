@@ -54,8 +54,27 @@ export const COMMUNICATIONS_SECTION_IDS = ["templates", "signature"] as const;
 export type CommunicationsSectionId =
   (typeof COMMUNICATIONS_SECTION_IDS)[number];
 
-export const TICKETS_SECTION_IDS = ["inbox", "signature", "templates"] as const;
+export const TICKETS_SECTION_IDS = [
+  "outbound",
+  "inbound",
+  "automations",
+  "notifications",
+  "inboxes",
+  "workflow",
+  "billing",
+  "spam",
+  "sla",
+  "macros",
+  "templates",
+  "signature",
+  "reply_templates",
+] as const;
 export type TicketsSectionId = (typeof TICKETS_SECTION_IDS)[number];
+
+const LEGACY_TICKETS_SECTION: Record<string, TicketsSectionId> = {
+  inbox: "outbound",
+  templates: "reply_templates",
+};
 
 export const FORMS_SECTION_IDS = ["list"] as const;
 export type FormsSectionId = (typeof FORMS_SECTION_IDS)[number];
@@ -140,7 +159,7 @@ const DEFAULT_SECTION_BY_TAB: Partial<Record<SettingsTabId, string>> = {
   workflows: "pipelines",
   connectors: "twilio",
   communications: "templates",
-  tickets: "inbox",
+  tickets: "outbound",
   forms: "list",
   notifications: "personal",
   data: "zoho",
@@ -244,11 +263,13 @@ export const resolveSettingsRoute = (searchParams: URLSearchParams) => {
     communicationsSection = "templates";
   }
 
-  let ticketsSection: TicketsSectionId = "inbox";
+  let ticketsSection: TicketsSectionId = "outbound";
   if (isTicketsSectionId(sectionParam ?? "")) {
     ticketsSection = sectionParam as TicketsSectionId;
+  } else if (sectionParam && LEGACY_TICKETS_SECTION[sectionParam]) {
+    ticketsSection = LEGACY_TICKETS_SECTION[sectionParam];
   } else if (rawTab === "connectors" && sectionParam === "tickets") {
-    ticketsSection = "inbox";
+    ticketsSection = "outbound";
   }
 
   let formsSection: FormsSectionId = "list";

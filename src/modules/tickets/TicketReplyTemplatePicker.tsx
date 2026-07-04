@@ -44,9 +44,11 @@ export const TicketReplyTemplatePicker = ({
     [inbox?.reply_templates],
   );
 
+  const disabledBuiltinIds = inbox?.disabled_builtin_reply_template_ids ?? [];
+
   const templates = useMemo(
-    () => mergeTicketReplyTemplates(customTemplates),
-    [customTemplates],
+    () => mergeTicketReplyTemplates(customTemplates, disabledBuiltinIds),
+    [customTemplates, disabledBuiltinIds],
   );
 
   const customReplyTemplates = useMemo(
