@@ -1,3 +1,8 @@
+import {
+  TICKET_STATUS_FILTERS,
+  type TicketStatusFilterId,
+} from "@/modules/tickets/ticketInboxConfig";
+
 export const ACTIVE_TICKET_STATUSES = ["new", "open", "waiting"] as const;
 
 export type TicketWorkflowStatus =
@@ -39,6 +44,32 @@ export const buildTicketInboxStatusFilter = (
     return { "status@neq": "resolved" };
   }
   return { "status@eq": status };
+};
+
+export const isTicketStatusFilterId = (
+  value: string | null | undefined,
+): value is TicketStatusFilterId =>
+  TICKET_STATUS_FILTERS.some((item) => item.id === value);
+
+export const parseTicketInboxStatusFilterFromValues = (
+  filterValues: Record<string, unknown>,
+): TicketStatusFilterId => {
+  const eq = filterValues["status@eq"];
+  if (typeof eq === "string" && isTicketStatusFilterId(eq) && eq !== "all") {
+    return eq;
+  }
+  return "all";
+};
+
+export const ticketShowPath = (
+  ticketId: string | number,
+  status?: string | null,
+) => {
+  const base = `/tickets/${ticketId}/show`;
+  if (status && isTicketStatusFilterId(status) && status !== "all") {
+    return `${base}?status=${status}`;
+  }
+  return base;
 };
 
 export const countTicketsByInboxFilter = (

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGetList, useGetOne, useUpdate } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket, TicketMessage } from "@/modules/types";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
@@ -18,10 +18,12 @@ import { TicketThreadQuoteProvider } from "@/modules/tickets/TicketThreadQuoteCo
 import { useAutoLinkTicketRequester } from "@/modules/tickets/useAutoLinkTicketRequester";
 import { useTicketMemberRead } from "@/modules/tickets/useTicketInboxReads";
 import { useTicketThreadMessages } from "@/modules/tickets/useTicketThreadMessages";
+import { isTicketStatusFilterId } from "@/modules/tickets/ticketStatusWorkflow";
 import { refreshTicketInboxLists } from "@/modules/tickets/ticketsRealtimeCache";
 
 export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const refreshInbox = useCallback(() => {
@@ -151,7 +153,14 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
             canManage={canManage}
             onUpdated={refreshInbox}
             showBack={isMobile}
-            onBack={() => navigate("/tickets")}
+            onBack={() => {
+              const status = searchParams.get("status");
+              navigate(
+                status && isTicketStatusFilterId(status) && status !== "all"
+                  ? `/tickets?status=${status}`
+                  : "/tickets",
+              );
+            }}
             contextAction={
               isMobile ? (
                 <TicketContextSheet

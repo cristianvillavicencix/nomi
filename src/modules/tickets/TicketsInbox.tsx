@@ -9,7 +9,7 @@ import {
   useNotify,
   useRefresh,
 } from "ra-core";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { List } from "@/components/admin/list";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -45,6 +45,9 @@ import {
 import {
   buildTicketInboxStatusFilter,
   countTicketsByInboxFilter,
+  isTicketStatusFilterId,
+  parseTicketInboxStatusFilterFromValues,
+  ticketShowPath,
 } from "@/modules/tickets/ticketStatusWorkflow";
 import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
 import { useTicketListAttachments } from "@/modules/tickets/useTicketListAttachments";
@@ -63,6 +66,11 @@ export const TicketsInbox = () => {
   const { identity } = useGetIdentity();
   const { id } = useParams();
   const isMobile = useIsMobile();
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get("status");
+  const initialStatus: TicketStatusFilterId = isTicketStatusFilterId(statusParam)
+    ? statusParam
+    : "all";
 
   useTicketsInboxRealtime(Boolean(identity));
   useMarkTicketNotificationsReadOnVisit();
@@ -89,9 +97,7 @@ export const TicketsInbox = () => {
       filter={{
         "merged_into_ticket_id@is": null,
       }}
-      filterDefaultValues={{
-        "status@neq": "resolved",
-      }}
+      filterDefaultValues={buildTicketInboxStatusFilter(initialStatus)}
       queryOptions={{ refetchInterval: 30_000 }}
       actions={
         <PageActions>
@@ -113,12 +119,12 @@ export const TicketsInbox = () => {
 
 const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const notify = useNotify();
   const refresh = useRefresh();
   const [deleteOne] = useDelete();
   const isMobile = useIsMobile();
   const canManage = useMemberCapability("support.tickets.manage");
-  const [statusFilter, setStatusFilter] = useState<TicketStatusFilterId>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
@@ -126,6 +132,11 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const [deletePending, setDeletePending] = useState(false);
   const { filterValues, setFilters } = useListFilterContext();
   const { data: tickets = [] } = useListContext<Ticket>();
+
+  const statusFilter = useMemo(
+    () => parseTicketInboxStatusFilterFromValues(filterValues),
+    [filterValues],
+  );
 
   const { data: allTickets = [] } = useGetList<Ticket>("tickets", {
     pagination: { page: 1, perPage: 200 },
@@ -351,7 +362,7 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const clearSelection = () => setSelectedTicketIds([]);
 
   const handleBulkMerged = (primaryTicketId: string | number) => {
-    navigate(`/tickets/${primaryTicketId}/show`);
+    navigate(ticketShowPath(primaryTicketId, statusFilter));
   };
 
   const handleSearch = (value: string) => {
@@ -366,12 +377,19 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   };
 
   const handleStatusFilter = (status: TicketStatusFilterId) => {
-    setStatusFilter(status);
     const next = { ...filterValues };
     delete next["status@eq"];
     delete next["status@neq"];
     Object.assign(next, buildTicketInboxStatusFilter(status));
     setFilters(next, {});
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (status === "all") {
+      nextParams.delete("status");
+    } else {
+      nextParams.set("status", status);
+    }
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handleDeleteTicket = async () => {
@@ -384,7 +402,11 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
       });
       notify("Ticket deleted", { type: "success" });
       if (String(selectedId) === String(ticketToDelete.id)) {
-        navigate("/tickets");
+        navigate(
+          statusFilter === "all"
+            ? "/tickets"
+            : `/tickets?status=${statusFilter}`,
+        );
       }
       setSelectedTicketIds((current) =>
         current.filter((id) => id !== String(ticketToDelete.id)),
@@ -482,7 +504,9 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
                         }
                         invoices={invoicesByTicketId.get(ticketId) ?? []}
                         messagePreview={messagePreviewMap.get(ticketId)}
-                        onSelect={() => navigate(`/tickets/${ticket.id}/show`)}
+                        onSelect={() =>
+                          navigate(ticketShowPath(ticket.id, statusFilter))
+                        }
                         onToggleBulkSelect={(checked) =>
                           toggleTicketSelection(ticketId, checked)
                         }
