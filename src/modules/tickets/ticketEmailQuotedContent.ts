@@ -9,6 +9,8 @@ export {
   prepareQuotedPlainForDisplay,
   hasSubstantialQuotedContent,
   hasRichHtmlStructure,
+  hasHtmlForwardMarker,
+  hasPlainForwardMarker,
   isForwardedStyleEmail,
   isForwardedStylePlainEmail,
   isPlainTextSimilar,

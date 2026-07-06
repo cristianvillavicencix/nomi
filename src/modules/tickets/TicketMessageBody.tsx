@@ -82,9 +82,19 @@ export const TicketMessageBody = ({
   const plain = body?.trim();
 
   if (html) {
-    // Inbound mail (especially forwards) stores the real body in the quoted block.
-    // Show the full HTML like a normal mail client instead of hiding it behind "···".
-    if (emailVariant === "inbound" || isForwardedStyleEmail(html)) {
+    if (emailVariant === "inbound") {
+      return (
+        <HtmlTicketBody
+          html={html}
+          stripHrefs={stripHrefs}
+          attachmentSrcs={attachmentSrcs}
+          attachmentTitles={attachmentTitles}
+          preserveOriginalLayout
+        />
+      );
+    }
+
+    if (isForwardedStyleEmail(html)) {
       if (plain && isForwardedStylePlainEmail(plain)) {
         return <PlainTicketText text={plain} />;
       }

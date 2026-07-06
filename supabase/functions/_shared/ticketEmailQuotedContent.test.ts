@@ -4,6 +4,8 @@ import {
   splitPlainTextEmail,
   stripQuotedHtml,
   stripQuotedPlainText,
+  hasHtmlForwardMarker,
+  hasPlainForwardMarker,
   isForwardedStyleEmail,
 } from "./ticketEmailQuotedContent.ts";
 
@@ -46,5 +48,26 @@ El 25/06/2026 a las 11:56, LBS Supplements escribió:
 
     expect(isForwardedStyleEmail(input)).toBe(true);
     expect(splitHtmlEmail(input).quoted).toContain("Forwarded message");
+  });
+
+  it("splits Apple and Hotmail Begin forwarded message threads", () => {
+    const plain = `Hola Cristian,
+
+Mira esto nos respondio el seguro.
+
+Begin forwarded message:
+
+From: USAA Claims <claims@usaa.com>
+Subject: Certificate of Competition`;
+
+    const split = splitPlainTextEmail(plain);
+    expect(split.content).toContain("Mira esto nos respondio el seguro");
+    expect(split.quoted).toContain("USAA Claims");
+    expect(hasPlainForwardMarker(plain)).toBe(true);
+
+    const html = `<div>Hola Cristian,<br>Mira esto nos respondio el seguro.</div><div>Begin forwarded message:<br><br>From: USAA Claims</div><p>Claim Message</p>`;
+    const htmlSplit = splitHtmlEmail(html);
+    expect(htmlSplit.quoted).toContain("USAA Claims");
+    expect(hasHtmlForwardMarker(html)).toBe(true);
   });
 });

@@ -5,7 +5,7 @@ export type SplitEmailContent = {
 };
 
 const PLAIN_QUOTE_HEADER =
-  /(?:^|\n)\s*(?:On .+wrote:|El .+escribi[oó]:|Le .+écrit\s?:|Am .+schrieb:|-----Original Message-----|_{5,})/im;
+  /(?:^|\n)\s*(?:On .+wrote:|El .+escribi[oó]:|Le .+écrit\s?:|Am .+schrieb:|-----Original Message-----|Begin forwarded message:|[-]{5,}\s*Forwarded message|_{5,})/im;
 
 const PLAIN_QUOTED_LINES = /\n>{1,}\s/m;
 
@@ -16,6 +16,9 @@ const GMAIL_EXTRA_HTML =
 const BLOCKQUOTE_CITE_HTML =
   /<blockquote[^>]*type=["']?cite["']?[\s\S]*/i;
 const OUTLOOK_REPLY_HTML = /<div[^>]*id=["']?divRplyFwdMsg["']?[\s\S]*/i;
+const APPLE_FORWARD_HTML = /Begin forwarded message:\s*(?:<br\s*\/?>|\r?\n|<\/div>)/i;
+const GMAIL_FORWARD_HTML =
+  /[-]{5,}\s*Forwarded message[\s\S]*/i;
 const WROTE_HEADER_HTML =
   /<(?:div|p)[^>]*>[\s\S]*?(?:On .+wrote:|El .+escribi[oó]:)[\s\S]*/i;
 
@@ -80,6 +83,16 @@ export const visibleEmailTextLength = (value: string) =>
 
 const THIN_MAIN_CONTENT_THRESHOLD = 80;
 const SUBSTANTIAL_QUOTED_THRESHOLD = 80;
+
+export const hasPlainForwardMarker = (text: string) =>
+  /(?:^|\n)\s*(?:Begin forwarded message:|[-]{5,}\s*Forwarded message)/im.test(
+    text.trim(),
+  );
+
+export const hasHtmlForwardMarker = (html: string) =>
+  /Begin forwarded message:|[-]{5,}\s*Forwarded message|divRplyFwdMsg|gmail_quote/i.test(
+    html,
+  );
 
 /** Forwarded emails often keep only logos/signatures in the main block. */
 export const isForwardedStyleEmail = (html: string) => {
@@ -166,7 +179,7 @@ export const splitHtmlEmail = (html: string): SplitEmailContent => {
     WROTE_HEADER_HTML,
   ];
 
-  for (const pattern of patterns) {
+  for (const pattern of [APPLE_FORWARD_HTML, GMAIL_FORWARD_HTML, ...patterns]) {
     const match = pattern.exec(trimmed);
     if (match && match.index > 0) {
       const content = trimmed.slice(0, match.index).trim();
@@ -178,6 +191,19 @@ export const splitHtmlEmail = (html: string): SplitEmailContent => {
           quoteHeader: extractQuoteHeaderFromHtml(quoted),
         };
       }
+    }
+  }
+
+  const appleForwardIndex = trimmed.search(/Begin forwarded message:/i);
+  if (appleForwardIndex > 0) {
+    const content = trimmed.slice(0, appleForwardIndex).trim();
+    const quoted = trimmed.slice(appleForwardIndex).trim();
+    if (hasVisibleText(content) && hasVisibleText(quoted)) {
+      return {
+        content,
+        quoted,
+        quoteHeader: "Begin forwarded message:",
+      };
     }
   }
 

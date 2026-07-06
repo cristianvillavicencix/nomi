@@ -18,6 +18,8 @@ import {
   splitHtmlEmail,
   splitPlainTextEmail,
   hasSubstantialQuotedContent,
+  hasHtmlForwardMarker,
+  hasPlainForwardMarker,
   isForwardedStyleEmail,
   isForwardedStylePlainEmail,
 } from "../_shared/ticketEmailQuotedContent.ts";
@@ -229,6 +231,7 @@ const chooseBestInboundTextBody = (raw: string, stripped: string) => {
   const rawTrimmed = raw.trim();
   const cleaned = stripped.trim();
   if (isForwardedStylePlainEmail(rawTrimmed)) return rawTrimmed;
+  if (hasPlainForwardMarker(rawTrimmed)) return rawTrimmed;
   if (cleaned) return cleaned;
   const fallback = splitPlainTextEmail(rawTrimmed).content.trim();
   return fallback || rawTrimmed;
@@ -240,6 +243,7 @@ const chooseBestInboundHtmlBody = (rawHtml: string, strippedHtml: string) => {
   if (!raw) return null;
   if (!stripped) return raw;
   if (isForwardedStyleEmail(raw)) return raw;
+  if (hasHtmlForwardMarker(raw)) return raw;
 
   const strippedLen = visibleHtmlTextLength(stripped);
   if (strippedLen >= 80) return stripped;
