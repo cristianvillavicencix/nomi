@@ -9,6 +9,9 @@ export {
   prepareQuotedPlainForDisplay,
   hasSubstantialQuotedContent,
   hasRichHtmlStructure,
+  isForwardedStyleEmail,
+  isForwardedStylePlainEmail,
   isPlainTextSimilar,
+  visibleEmailTextLength,
   type SplitEmailContent,
 } from "../../../supabase/functions/_shared/ticketEmailQuotedContent.ts";

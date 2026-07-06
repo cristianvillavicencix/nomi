@@ -14,11 +14,13 @@ export const TicketMessageContent = ({
   htmlBody,
   attachments,
   className,
+  emailVariant = "outbound",
 }: {
   body?: string | null;
   htmlBody?: string | null;
   attachments?: FileAttachment[];
   className?: string;
+  emailVariant?: "inbound" | "outbound";
 }) => {
   const fileAttachments = Array.isArray(attachments) ? attachments : [];
 
@@ -45,6 +47,7 @@ export const TicketMessageContent = ({
         body={body}
         htmlBody={htmlBody}
         stripHrefs={stripHrefs}
+        emailVariant={emailVariant}
       />
       <TicketMessageAttachments
         documents={documents}

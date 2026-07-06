@@ -61,6 +61,16 @@ export const parseTicketInboxStatusFilterFromValues = (
   return "all";
 };
 
+/** URL wins; otherwise infer from the open ticket's status. */
+export const resolveTicketInboxStatusFilter = (
+  urlStatus: string | null,
+  ticketStatus?: string | null,
+): TicketStatusFilterId => {
+  if (urlStatus && isTicketStatusFilterId(urlStatus)) return urlStatus;
+  if (ticketStatus && isTicketStatusFilterId(ticketStatus)) return ticketStatus;
+  return "all";
+};
+
 export const ticketShowPath = (
   ticketId: string | number,
   status?: string | null,

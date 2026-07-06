@@ -258,6 +258,7 @@ const TicketThreadMessage = ({
               htmlBody={message.html_body}
               attachments={attachments}
               className="mt-2 text-foreground"
+              emailVariant={inbound ? "inbound" : "outbound"}
             />
             {isLatest && outbound ? (
               <div className="mt-2">

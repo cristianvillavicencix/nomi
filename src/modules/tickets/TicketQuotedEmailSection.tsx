@@ -71,7 +71,7 @@ export const TicketQuotedEmailSection = ({
               className={cn(
                 "ticket-email-html border-l-2 border-border/80 pl-3 text-sm leading-relaxed text-muted-foreground",
                 "[&_a]:text-blue-700 [&_a]:underline",
-                "[&_img]:my-2 [&_img]:block [&_img]:h-auto [&_img]:max-w-full",
+                "[&_img]:my-2 [&_img]:block [&_img]:!h-auto [&_img]:!max-w-full [&_img]:!max-h-[420px] [&_img]:!object-contain",
                 "[&_table]:my-2 [&_table]:max-w-full",
                 "[&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
               )}

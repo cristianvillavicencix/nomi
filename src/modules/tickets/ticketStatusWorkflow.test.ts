@@ -4,6 +4,7 @@ import {
   buildTicketInboxStatusFilter,
   isTicketStatusFilterId,
   parseTicketInboxStatusFilterFromValues,
+  resolveTicketInboxStatusFilter,
   ticketShowPath,
 } from "./ticketStatusWorkflow";
 
@@ -25,6 +26,12 @@ describe("ticket inbox status filter", () => {
   it("validates status filter ids", () => {
     expect(isTicketStatusFilterId("open")).toBe(true);
     expect(isTicketStatusFilterId("bogus")).toBe(false);
+  });
+
+  it("resolves status from ticket when url is missing", () => {
+    expect(resolveTicketInboxStatusFilter(null, "open")).toBe("open");
+    expect(resolveTicketInboxStatusFilter("waiting", "open")).toBe("waiting");
+    expect(resolveTicketInboxStatusFilter(null, null)).toBe("all");
   });
 
   it("builds ticket show paths with optional status", () => {

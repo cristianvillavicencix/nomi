@@ -1,10 +1,15 @@
 import { cn } from "@/lib/utils";
 import { stripTrailingDuplicateOfQuoted } from "@/modules/tickets/dedupeQuotedEmailDisplay";
-import { sanitizeTicketEmailHtml } from "@/modules/tickets/sanitizeTicketEmailHtml";
+import {
+  sanitizeTicketEmailHtml,
+  sanitizeTicketEmailHtmlOriginal,
+} from "@/modules/tickets/sanitizeTicketEmailHtml";
 import { TicketQuotedEmailSection } from "@/modules/tickets/TicketQuotedEmailSection";
 import {
   hasRichHtmlStructure,
   hasSubstantialQuotedContent,
+  isForwardedStyleEmail,
+  isForwardedStylePlainEmail,
   isPlainTextSimilar,
   splitHtmlEmail,
   splitPlainTextEmail,
@@ -14,8 +19,8 @@ import { htmlToPlainText } from "@/modules/tickets/ticketReplyRichText";
 const emailHtmlClassName = cn(
   "ticket-email-html leading-relaxed break-words text-sm text-foreground",
   "[&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline",
-  "[&_img]:my-2 [&_img]:block [&_img]:h-auto [&_img]:max-w-full",
-  "[&_table]:my-2 [&_table]:max-w-full [&_table]:table-fixed",
+  "[&_img]:my-2 [&_img]:block [&_img]:!h-auto [&_img]:!max-w-full [&_img]:!max-h-[420px] [&_img]:!object-contain",
+  "[&_table]:my-2 [&_table]:!max-w-full [&_table]:table-fixed",
   "[&_td]:break-words [&_th]:break-words",
   "[&_*]:!float-none [&_*]:!clear-both [&_*]:max-w-full",
   "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
@@ -33,23 +38,30 @@ const HtmlTicketBody = ({
   stripHrefs,
   attachmentSrcs,
   attachmentTitles,
+  preserveOriginalLayout = false,
 }: {
   html: string;
   stripHrefs?: string[];
   attachmentSrcs?: string[];
   attachmentTitles?: string[];
-}) => (
-  <div
-    className={emailHtmlClassName}
-    dangerouslySetInnerHTML={{
-      __html: sanitizeTicketEmailHtml(html, {
-        stripHrefs,
-        attachmentSrcs,
-        attachmentTitles,
-      }),
-    }}
-  />
-);
+  preserveOriginalLayout?: boolean;
+}) => {
+  const sanitizeOptions = {
+    stripHrefs,
+    attachmentSrcs,
+    attachmentTitles,
+  };
+  return (
+    <div
+      className={emailHtmlClassName}
+      dangerouslySetInnerHTML={{
+        __html: preserveOriginalLayout
+          ? sanitizeTicketEmailHtmlOriginal(html, sanitizeOptions)
+          : sanitizeTicketEmailHtml(html, sanitizeOptions),
+      }}
+    />
+  );
+};
 
 export const TicketMessageBody = ({
   body,
@@ -57,17 +69,37 @@ export const TicketMessageBody = ({
   stripHrefs,
   attachmentSrcs,
   attachmentTitles,
+  emailVariant = "outbound",
 }: {
   body?: string | null;
   htmlBody?: string | null;
   stripHrefs?: string[];
   attachmentSrcs?: string[];
   attachmentTitles?: string[];
+  emailVariant?: "inbound" | "outbound";
 }) => {
   const html = htmlBody?.trim();
   const plain = body?.trim();
 
   if (html) {
+    // Inbound mail (especially forwards) stores the real body in the quoted block.
+    // Show the full HTML like a normal mail client instead of hiding it behind "···".
+    if (emailVariant === "inbound" || isForwardedStyleEmail(html)) {
+      if (plain && isForwardedStylePlainEmail(plain)) {
+        return <PlainTicketText text={plain} />;
+      }
+
+      return (
+        <HtmlTicketBody
+          html={html}
+          stripHrefs={stripHrefs}
+          attachmentSrcs={attachmentSrcs}
+          attachmentTitles={attachmentTitles}
+          preserveOriginalLayout
+        />
+      );
+    }
+
     const split = splitHtmlEmail(html);
     const hasQuoted =
       Boolean(split.quoted) && hasSubstantialQuotedContent(split.quoted);
@@ -130,6 +162,10 @@ export const TicketMessageBody = ({
   }
 
   if (plain) {
+    if (emailVariant === "inbound" && isForwardedStylePlainEmail(plain)) {
+      return <PlainTicketText text={plain} />;
+    }
+
     const split = splitPlainTextEmail(plain);
     const displayContent =
       split.quoted && hasSubstantialQuotedContent(split.quoted)

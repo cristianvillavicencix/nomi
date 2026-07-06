@@ -74,6 +74,40 @@ export const stripQuoteHeaderFromHtmlQuoted = (
 const hasSubstantialQuotedContent = (value: string) =>
   value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().length > 20;
 
+/** Visible characters after stripping tags — used for forward/signature detection. */
+export const visibleEmailTextLength = (value: string) =>
+  value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().length;
+
+const THIN_MAIN_CONTENT_THRESHOLD = 80;
+const SUBSTANTIAL_QUOTED_THRESHOLD = 80;
+
+/** Forwarded emails often keep only logos/signatures in the main block. */
+export const isForwardedStyleEmail = (html: string) => {
+  const split = splitHtmlEmail(html);
+  if (!split.quoted || !hasSubstantialQuotedContent(split.quoted)) {
+    return false;
+  }
+  const mainLen = visibleEmailTextLength(split.content || "");
+  const quotedLen = visibleEmailTextLength(split.quoted);
+  return (
+    mainLen < THIN_MAIN_CONTENT_THRESHOLD &&
+    quotedLen >= SUBSTANTIAL_QUOTED_THRESHOLD
+  );
+};
+
+export const isForwardedStylePlainEmail = (text: string) => {
+  const split = splitPlainTextEmail(text);
+  if (!split.quoted || !hasSubstantialQuotedContent(split.quoted)) {
+    return false;
+  }
+  const mainLen = visibleEmailTextLength(split.content || "");
+  const quotedLen = visibleEmailTextLength(split.quoted);
+  return (
+    mainLen < THIN_MAIN_CONTENT_THRESHOLD &&
+    quotedLen >= SUBSTANTIAL_QUOTED_THRESHOLD
+  );
+};
+
 export const splitPlainTextEmail = (text: string): SplitEmailContent => {
   const trimmed = text.trim();
   if (!trimmed) {

@@ -1,9 +1,10 @@
 import { Inbox, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useDelete,
   useGetIdentity,
   useGetList,
+  useGetOne,
   useListContext,
   useListFilterContext,
   useNotify,
@@ -46,7 +47,6 @@ import {
   buildTicketInboxStatusFilter,
   countTicketsByInboxFilter,
   isTicketStatusFilterId,
-  parseTicketInboxStatusFilterFromValues,
   ticketShowPath,
 } from "@/modules/tickets/ticketStatusWorkflow";
 import { getTicketListMeta } from "@/modules/tickets/ticketListMeta";
@@ -66,11 +66,47 @@ export const TicketsInbox = () => {
   const { identity } = useGetIdentity();
   const { id } = useParams();
   const isMobile = useIsMobile();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
-  const initialStatus: TicketStatusFilterId = isTicketStatusFilterId(statusParam)
+  const statusFilter: TicketStatusFilterId = isTicketStatusFilterId(statusParam)
     ? statusParam
     : "all";
+  const inferredStatusForTicketRef = useRef<string | null>(null);
+
+  const { data: deepLinkTicket } = useGetOne<Ticket>(
+    "tickets",
+    { id: id ?? "" },
+    { enabled: Boolean(id) && !statusParam },
+  );
+
+  // Deep-link /tickets/:id/show with no ?status= → add status once from ticket row.
+  useEffect(() => {
+    if (!id || statusParam || !deepLinkTicket) return;
+    if (inferredStatusForTicketRef.current === id) return;
+
+    const ticketStatus = deepLinkTicket.status?.trim();
+    if (
+      !ticketStatus ||
+      !isTicketStatusFilterId(ticketStatus) ||
+      ticketStatus === "all"
+    ) {
+      inferredStatusForTicketRef.current = id;
+      return;
+    }
+
+    inferredStatusForTicketRef.current = id;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("status", ticketStatus);
+    setSearchParams(nextParams, { replace: true });
+  }, [id, statusParam, deepLinkTicket, searchParams, setSearchParams]);
+
+  const listFilter = useMemo(
+    () => ({
+      "merged_into_ticket_id@is": null,
+      ...buildTicketInboxStatusFilter(statusFilter),
+    }),
+    [statusFilter],
+  );
 
   useTicketsInboxRealtime(Boolean(identity));
   useMarkTicketNotificationsReadOnVisit();
@@ -94,10 +130,9 @@ export const TicketsInbox = () => {
       pagination={false}
       perPage={50}
       sort={{ field: "updated_at", order: "DESC" }}
-      filter={{
-        "merged_into_ticket_id@is": null,
-      }}
-      filterDefaultValues={buildTicketInboxStatusFilter(initialStatus)}
+      filter={listFilter}
+      disableSyncWithLocation
+      storeKey={`tickets.inbox.${statusFilter}`}
       queryOptions={{ refetchInterval: 30_000 }}
       actions={
         <PageActions>
@@ -112,12 +147,18 @@ export const TicketsInbox = () => {
         </PageActions>
       }
     >
-      <TicketsInboxLayout selectedId={id ?? null} />
+      <TicketsInboxLayout selectedId={id ?? null} statusFilter={statusFilter} />
     </List>
   );
 };
 
-const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
+const TicketsInboxLayout = ({
+  selectedId,
+  statusFilter,
+}: {
+  selectedId: string | null;
+  statusFilter: TicketStatusFilterId;
+}) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const notify = useNotify();
@@ -130,13 +171,8 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
   const [ticketToEdit, setTicketToEdit] = useState<Ticket | null>(null);
   const [deletePending, setDeletePending] = useState(false);
-  const { filterValues, setFilters } = useListFilterContext();
+  const { setFilters } = useListFilterContext();
   const { data: tickets = [] } = useListContext<Ticket>();
-
-  const statusFilter = useMemo(
-    () => parseTicketInboxStatusFilterFromValues(filterValues),
-    [filterValues],
-  );
 
   const { data: allTickets = [] } = useGetList<Ticket>("tickets", {
     pagination: { page: 1, perPage: 200 },
@@ -367,22 +403,14 @@ const TicketsInboxLayout = ({ selectedId }: { selectedId: string | null }) => {
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    const next = { ...filterValues };
+    const next: Record<string, string> = {};
     if (value.trim()) {
       next["subject@ilike"] = `%${value.trim()}%`;
-    } else {
-      delete next["subject@ilike"];
     }
     setFilters(next, {});
   };
 
   const handleStatusFilter = (status: TicketStatusFilterId) => {
-    const next = { ...filterValues };
-    delete next["status@eq"];
-    delete next["status@neq"];
-    Object.assign(next, buildTicketInboxStatusFilter(status));
-    setFilters(next, {});
-
     const nextParams = new URLSearchParams(searchParams);
     if (status === "all") {
       nextParams.delete("status");

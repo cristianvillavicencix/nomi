@@ -15,6 +15,11 @@ import {
 import {
   stripQuotedHtml,
   stripQuotedPlainText,
+  splitHtmlEmail,
+  splitPlainTextEmail,
+  hasSubstantialQuotedContent,
+  isForwardedStyleEmail,
+  isForwardedStylePlainEmail,
 } from "../_shared/ticketEmailQuotedContent.ts";
 
 type PostmarkAddress = {
@@ -217,6 +222,38 @@ const collectAddressEmails = (rows: PostmarkAddress[] | undefined) =>
     .filter((email): email is string => Boolean(email))
     .map(normalizeEmail);
 
+const visibleHtmlTextLength = (html: string) =>
+  html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().length;
+
+const chooseBestInboundTextBody = (raw: string, stripped: string) => {
+  const rawTrimmed = raw.trim();
+  const cleaned = stripped.trim();
+  if (isForwardedStylePlainEmail(rawTrimmed)) return rawTrimmed;
+  if (cleaned) return cleaned;
+  const fallback = splitPlainTextEmail(rawTrimmed).content.trim();
+  return fallback || rawTrimmed;
+};
+
+const chooseBestInboundHtmlBody = (rawHtml: string, strippedHtml: string) => {
+  const raw = rawHtml.trim();
+  const stripped = strippedHtml.trim();
+  if (!raw) return null;
+  if (!stripped) return raw;
+  if (isForwardedStyleEmail(raw)) return raw;
+
+  const strippedLen = visibleHtmlTextLength(stripped);
+  if (strippedLen >= 80) return stripped;
+
+  const split = splitHtmlEmail(raw);
+  const quoted = split.quoted?.trim() || "";
+  const quotedLen = visibleHtmlTextLength(quoted);
+  if (quoted && hasSubstantialQuotedContent(quoted) && quotedLen >= 80) {
+    return raw;
+  }
+
+  return stripped;
+};
+
 /** Replace cid: inline image references with uploaded attachment URLs. */
 export const rewriteInlineAttachmentImages = (
   htmlBody: string | null | undefined,
@@ -273,6 +310,7 @@ const mergeHtmlWithInlineImages = (
 
   const block = `<div>${inline}</div>`;
   if (!htmlBody?.trim()) return block;
+  if (/<img\b/i.test(htmlBody)) return htmlBody;
   if (htmlBody.includes(inline.slice(0, 40))) return htmlBody;
   return `${htmlBody}${block}`;
 };
@@ -374,11 +412,18 @@ export const processTicketInbound = async ({
 
   const fromName = payload.FromFull?.Name?.trim() || null;
   const subject = payload.Subject?.trim() || "(No subject)";
-  const textBody = payload.StrippedTextReply?.trim()
-    || stripQuotedPlainText(payload.TextBody?.trim() || "")
-    || "";
-  const htmlBody = payload.StrippedHtmlReply?.trim()
-    || (payload.HtmlBody?.trim() ? stripQuotedHtml(payload.HtmlBody) : null);
+  const rawTextBody = payload.TextBody?.trim() || "";
+  const rawHtmlBody = payload.HtmlBody?.trim() || "";
+  const strippedTextBody =
+    payload.StrippedTextReply?.trim() || stripQuotedPlainText(rawTextBody) || "";
+  const strippedHtmlBody =
+    payload.StrippedHtmlReply?.trim() ||
+    (rawHtmlBody ? stripQuotedHtml(rawHtmlBody) : "");
+
+  const textBody = chooseBestInboundTextBody(rawTextBody, strippedTextBody);
+  const htmlBody = rawHtmlBody
+    ? chooseBestInboundHtmlBody(rawHtmlBody, strippedHtmlBody)
+    : null;
   const messageId = payload.MessageID?.trim() || null;
   const inReplyTo = headerValue(payload.Headers, "In-Reply-To");
   const references = headerValue(payload.Headers, "References");

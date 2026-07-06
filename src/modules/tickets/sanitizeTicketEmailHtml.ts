@@ -98,6 +98,18 @@ const installEmailSanitizeHooks = () => {
         node.remove();
         return;
       }
+      node.removeAttribute("width");
+      node.removeAttribute("height");
+      node.style.setProperty("max-width", "100%", "important");
+      node.style.setProperty("max-height", "420px", "important");
+      node.style.setProperty("height", "auto", "important");
+      node.style.setProperty("width", "auto", "important");
+      node.style.setProperty("object-fit", "contain", "important");
+    }
+
+    if (node.tagName === "TABLE") {
+      node.style.setProperty("max-width", "100%", "important");
+      node.removeAttribute("width");
     }
 
     if (node.tagName === "A") {
@@ -192,5 +204,11 @@ export const sanitizeTicketEmailHtml = (
 ) => runSanitize(html, { ...options, mode: "safe" });
 
 /** Minimal sanitization for "view original" — keeps marketing email layout. */
-export const sanitizeTicketEmailHtmlOriginal = (html: string) =>
-  runSanitize(html, { mode: "original" });
+export const sanitizeTicketEmailHtmlOriginal = (
+  html: string,
+  options?: {
+    stripHrefs?: string[];
+    attachmentSrcs?: string[];
+    attachmentTitles?: string[];
+  },
+) => runSanitize(html, { ...options, mode: "original" });
