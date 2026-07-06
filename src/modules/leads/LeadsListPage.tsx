@@ -7,7 +7,7 @@ import {
   Plus,
   UserCheck,
 } from "lucide-react";
-import { useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable } from "@/components/admin/data-table";
@@ -27,6 +27,10 @@ import { Status } from "@/components/atomic-crm/misc/Status";
 import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
 import { LeadActivitySheet } from "@/modules/leads/LeadActivitySheet";
 import { LeadsKanban } from "@/modules/leads/LeadsKanban";
+import { LeadsKanbanSplitLayout } from "@/modules/leads/LeadsKanbanSplitLayout";
+import { LeadShowStandalone } from "@/modules/leads/LeadShowStandalone";
+import { parseKanbanStageParam } from "@/modules/leads/leadKanbanNavigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   formatFollowUpDate,
   isFollowUpOverdue,
@@ -34,8 +38,8 @@ import {
 import {
   getLeadStageDef,
   normalizeLeadStage,
+  type LeadStageId,
 } from "@/modules/leads/leadStages";
-import { cn } from "@/lib/utils";
 
 const VIEW_STORAGE_KEY = "lbs.leads.view";
 const LEGACY_FOLLOW_UP_FILTER_KEYS = [
@@ -61,9 +65,24 @@ const getPrimaryEmail = (contact: Contact) =>
 
 export const LeadsListPage = () => {
   const { identity } = useGetIdentity();
+  const { id: selectedLeadId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const kanbanStage = parseKanbanStageParam(searchParams.get("stage"));
+  const isMobile = useIsMobile();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [view, setView] = useState<LeadsView>(() => readPersistedView());
+
+  const isKanbanSplit =
+    Boolean(selectedLeadId) && Boolean(kanbanStage) && !isMobile;
+  const isStandaloneShow = Boolean(selectedLeadId) && !kanbanStage;
+  const isMobileKanbanShow =
+    Boolean(selectedLeadId) && Boolean(kanbanStage) && isMobile;
+
+  useEffect(() => {
+    if (kanbanStage && view !== "kanban") {
+      setView("kanban");
+    }
+  }, [kanbanStage, view]);
 
   useEffect(() => {
     if (searchParams.get("create") === "lead") {
@@ -81,11 +100,22 @@ export const LeadsListPage = () => {
 
   if (!identity) return null;
 
+  if (isStandaloneShow && selectedLeadId) {
+    return <LeadShowStandalone contactId={selectedLeadId} />;
+  }
+
+  if (isMobileKanbanShow && selectedLeadId && kanbanStage) {
+    return (
+      <LeadShowStandalone contactId={selectedLeadId} kanbanStage={kanbanStage} />
+    );
+  }
+
   return (
     <>
       <List
         resource="contacts"
         storeKey="leads.listParams"
+        disableSyncWithLocation
         title={false}
         disableBreadcrumb
         perPage={view === "kanban" ? 200 : 25}
@@ -105,7 +135,11 @@ export const LeadsListPage = () => {
         }
       >
         <LeadsListFilterCleanup />
-        <LeadsListLayout view={view} />
+        <LeadsListLayout
+          view={view}
+          selectedLeadId={isKanbanSplit ? selectedLeadId! : null}
+          kanbanStage={isKanbanSplit ? kanbanStage : null}
+        />
       </List>
       <NewLeadDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </>
@@ -219,7 +253,15 @@ const LeadsListActions = ({
   );
 };
 
-const LeadsListLayout = ({ view }: { view: LeadsView }) => {
+const LeadsListLayout = ({
+  view,
+  selectedLeadId,
+  kanbanStage,
+}: {
+  view: LeadsView;
+  selectedLeadId?: string | null;
+  kanbanStage?: LeadStageId | null;
+}) => {
   const { data, isPending } = useListContext<Contact>();
   const [activityLead, setActivityLead] = useState<Contact | null>(null);
   const [activityOpen, setActivityOpen] = useState(false);
@@ -231,6 +273,15 @@ const LeadsListLayout = ({ view }: { view: LeadsView }) => {
 
   if (isPending) return null;
   if (view === "kanban") {
+    if (selectedLeadId && kanbanStage) {
+      return (
+        <LeadsKanbanSplitLayout
+          selectedLeadId={selectedLeadId}
+          stage={kanbanStage}
+        />
+      );
+    }
+
     return (
       <div className="h-full min-h-0">
         <LeadsKanban />

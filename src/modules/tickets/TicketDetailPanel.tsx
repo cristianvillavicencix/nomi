@@ -21,10 +21,17 @@ import { useTicketThreadMessages } from "@/modules/tickets/useTicketThreadMessag
 import { isTicketStatusFilterId } from "@/modules/tickets/ticketStatusWorkflow";
 import { refreshTicketInboxLists } from "@/modules/tickets/ticketsRealtimeCache";
 
-export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
+export const TicketDetailPanel = ({
+  ticketId,
+  layout = "default",
+}: {
+  ticketId: string;
+  layout?: "default" | "inbox-split";
+}) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
+  const useContextSheet = isMobile || layout === "inbox-split";
   const queryClient = useQueryClient();
   const refreshInbox = useCallback(() => {
     refreshTicketInboxLists(queryClient);
@@ -162,7 +169,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
               );
             }}
             contextAction={
-              isMobile ? (
+              useContextSheet ? (
                 <TicketContextSheet
                   ticket={ticket}
                   company={company}
@@ -203,7 +210,7 @@ export const TicketDetailPanel = ({ ticketId }: { ticketId: string }) => {
           </div>
         </div>
 
-        {!isMobile ? (
+        {!useContextSheet ? (
           <TicketContextPanel
             ticket={ticket}
             company={company}

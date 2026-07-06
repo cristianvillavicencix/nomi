@@ -30,6 +30,11 @@ export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 
 export const getLeadsListPath = () => "/leads";
 
+export const getLeadKanbanShowPath = (
+  contactId: string | number,
+  stage: string,
+) => `/leads/${contactId}/show?stage=${encodeURIComponent(stage)}`;
+
 export const getLeadCreatePath = (params?: Record<string, string>) => {
   const search = new URLSearchParams({ create: "lead" });
   if (params) {

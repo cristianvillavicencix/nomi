@@ -559,7 +559,11 @@ const TicketsInboxLayout = ({
           )}
         >
           {selectedId ? (
-            <TicketDetailPanel key={selectedId} ticketId={selectedId} />
+            <TicketDetailPanel
+              key={selectedId}
+              ticketId={selectedId}
+              layout="inbox-split"
+            />
           ) : (
             <TicketEmptyDetailState />
           )}

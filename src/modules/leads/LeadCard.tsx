@@ -1,5 +1,8 @@
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
-import { Draggable } from "@hello-pangea/dnd";
+import {
+  Draggable,
+  type DraggableProvidedDraggableProps,
+} from "@hello-pangea/dnd";
 import { useNavigate } from "react-router";
 import { useDelete, useNotify, useRefresh } from "ra-core";
 import {
@@ -7,6 +10,7 @@ import {
   History,
   Mail,
   MessageSquare,
+  Pencil,
   Phone,
   PhoneCall,
   Trash2,
@@ -22,12 +26,13 @@ import { cn } from "@/lib/utils";
 import type { Contact } from "@/components/atomic-crm/types";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
-import { getLeadShowPath } from "@/app/routing";
+import { getLeadKanbanShowPath } from "@/app/routing";
 import { LeadActivitySheet } from "@/modules/leads/LeadActivitySheet";
+import { LeadEditDialog } from "@/modules/leads/LeadEditDialog";
+import { assignedMemberIdsFromContact } from "@/modules/leads/leadAssignments";
 import { useLeadKanbanContext } from "@/modules/leads/LeadKanbanContext";
 import {
   formatLeadActivityFooter,
-  getLeadAssigneeMemberId,
   getLeadDisplayName,
   getLeadInitials,
   getLeadPrimaryEmail,
@@ -61,11 +66,19 @@ const cardToolbarIconClassName =
 export type LeadCardProps = {
   lead: Contact;
   index: number;
+  layout?: "board" | "sidebar";
+  selected?: boolean;
 };
 
-export const LeadCard = ({ lead, index }: LeadCardProps) => {
+export const LeadCard = ({
+  lead,
+  index,
+  layout = "board",
+  selected = false,
+}: LeadCardProps) => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const navigate = useNavigate();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -82,8 +95,10 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
   const email = getLeadPrimaryEmail(lead);
   const source = getLeadSourceIcon(lead.lead_source);
   const SourceIcon = source.Icon;
-  const assigneeId = getLeadAssigneeMemberId(lead);
-  const assignee = assigneeId ? membersById[String(assigneeId)] : undefined;
+  const assigneeIds = assignedMemberIdsFromContact(lead);
+  const assignees = assigneeIds
+    .map((id) => membersById[String(id)])
+    .filter((member): member is NonNullable<typeof member> => Boolean(member));
   const conversation = conversationsByContactId[String(lead.id)];
   const activity = resolveLeadLastActivity(lead, conversation);
   const activityStale = isLeadActivityStale(activity.at);
@@ -137,54 +152,66 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
     notify("Open Messages to text this lead", { type: "info" });
   };
 
-  return (
-    <Draggable draggableId={String(lead.id)} index={index}>
-      {(provided, snapshot) => {
-        const openLead = () => {
-          if (snapshot.isDragging) return;
-          navigate(getLeadShowPath(lead.id));
-        };
+  const openLead = (isDragging = false) => {
+    if (isDragging) return;
+    navigate(getLeadKanbanShowPath(lead.id, stage));
+  };
 
-        return (
-          <div ref={provided.innerRef} {...provided.draggableProps}>
-            <Card
+  const renderCard = ({
+    isDragging,
+    dragHandleProps,
+    draggableProps,
+    innerRef,
+  }: {
+    isDragging: boolean;
+    dragHandleProps?: DraggableProvidedDraggableProps["dragHandleProps"];
+    draggableProps?: DraggableProvidedDraggableProps;
+    innerRef?: DraggableProvidedDraggableProps["innerRef"];
+  }) => (
+    <div ref={innerRef} {...draggableProps}>
+      <Card
+        role="button"
+        tabIndex={0}
+        onClick={() => openLead(isDragging)}
+        onKeyDown={(event: KeyboardEvent) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openLead(isDragging);
+          }
+        }}
+        className={cn(
+          "group relative cursor-pointer gap-0 rounded-lg border-[0.5px] border-border/80 p-2 shadow-none transition-shadow",
+          isDragging
+            ? "rotate-1 shadow-xl ring-2 ring-primary/40"
+            : "hover:shadow-sm",
+          layout === "sidebar" &&
+            selected &&
+            "ring-2 ring-primary/40 bg-primary/5",
+        )}
+      >
+        <div className="absolute right-0.5 top-0.5 z-10 flex flex-col gap-0.5">
+          {layout === "board" && dragHandleProps ? (
+            <div
+              {...dragHandleProps}
+              onClick={stopDragHandleClick}
+              onMouseDown={stopDragHandleClick}
+              className={cn(
+                cardActionClassName(isDragging),
+                "cursor-grab active:cursor-grabbing",
+              )}
+              aria-label="Drag lead"
               role="button"
               tabIndex={0}
-              onClick={openLead}
-              onKeyDown={(event: KeyboardEvent) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  openLead();
-                }
-              }}
-              className={cn(
-                "group relative cursor-pointer gap-0 rounded-lg border-[0.5px] border-border/80 p-2 shadow-none transition-shadow",
-                snapshot.isDragging
-                  ? "rotate-1 shadow-xl ring-2 ring-primary/40"
-                  : "hover:shadow-sm",
-              )}
             >
-              <div className="absolute right-0.5 top-0.5 z-10 flex flex-col gap-0.5">
-                <div
-                  {...provided.dragHandleProps}
-                  onClick={stopDragHandleClick}
-                  onMouseDown={stopDragHandleClick}
-                  className={cn(
-                    cardActionClassName(snapshot.isDragging),
-                    "cursor-grab active:cursor-grabbing",
-                  )}
-                  aria-label="Drag lead"
-                  role="button"
-                  tabIndex={0}
-                >
-                  <GripVertical className="size-3.5" />
-                </div>
-                <Button
+              <GripVertical className="size-3.5" />
+            </div>
+          ) : null}
+          <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    cardActionClassName(snapshot.isDragging),
+                    cardActionClassName(isDragging),
                     "size-6",
                   )}
                   title="Activity history"
@@ -201,7 +228,7 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    cardActionClassName(snapshot.isDragging),
+                    cardActionClassName(isDragging),
                     "size-6 hover:text-destructive",
                   )}
                   title="Delete lead"
@@ -213,6 +240,23 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                 >
                   <Trash2 className="size-3.5" />
                   <span className="sr-only">Delete lead</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    cardActionClassName(isDragging),
+                    "size-6",
+                  )}
+                  title="Edit lead"
+                  onClick={(event) => {
+                    stopCardAction(event);
+                    setEditOpen(true);
+                  }}
+                >
+                  <Pencil className="size-3.5" />
+                  <span className="sr-only">Edit lead</span>
                 </Button>
               </div>
 
@@ -265,22 +309,31 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                   ) : null}
 
                   <div className="flex items-center gap-1.5">
-                    {assignee ? (
+                    {assignees.length > 0 ? (
                       <>
-                        <Avatar className="size-5">
-                          <AvatarFallback
-                            className="text-[9px] font-semibold text-white"
-                            style={{
-                              backgroundColor: getMemberAccentColor(
-                                assignee.id,
-                              ),
-                            }}
-                          >
-                            {getMemberInitials(assignee)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="flex -space-x-1">
+                          {assignees.slice(0, 3).map((assignee) => (
+                            <Avatar
+                              key={assignee.id}
+                              className="size-5 ring-1 ring-background"
+                            >
+                              <AvatarFallback
+                                className="text-[9px] font-semibold text-white"
+                                style={{
+                                  backgroundColor: getMemberAccentColor(
+                                    assignee.id,
+                                  ),
+                                }}
+                              >
+                                {getMemberInitials(assignee)}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
                         <span className="truncate text-[11px] leading-snug text-muted-foreground">
-                          {getMemberDisplayName(assignee)}
+                          {assignees.length === 1
+                            ? getMemberDisplayName(assignees[0]!)
+                            : `${getMemberDisplayName(assignees[0]!)} +${assignees.length - 1}`}
                         </span>
                       </>
                     ) : (
@@ -388,6 +441,11 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
                 open={historyOpen}
                 onOpenChange={setHistoryOpen}
               />
+              <LeadEditDialog
+                open={editOpen}
+                onOpenChange={setEditOpen}
+                contactId={lead.id}
+              />
               <Confirm
                 isOpen={deleteOpen}
                 title="Delete this lead?"
@@ -400,8 +458,22 @@ export const LeadCard = ({ lead, index }: LeadCardProps) => {
               />
             </Card>
           </div>
-        );
-      }}
+  );
+
+  if (layout === "sidebar") {
+    return renderCard({ isDragging: false });
+  }
+
+  return (
+    <Draggable draggableId={String(lead.id)} index={index}>
+      {(provided, snapshot) =>
+        renderCard({
+          isDragging: snapshot.isDragging,
+          dragHandleProps: provided.dragHandleProps,
+          draggableProps: provided.draggableProps,
+          innerRef: provided.innerRef,
+        })
+      }
     </Draggable>
   );
 };

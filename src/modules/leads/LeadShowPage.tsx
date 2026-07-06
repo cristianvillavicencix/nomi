@@ -1,14 +1,4 @@
-import { ShowBase } from "ra-core";
-import { useParams } from "react-router";
-import { LeadShowContent } from "@/modules/leads/LeadShowContent";
+import { LeadsListPage } from "@/modules/leads/LeadsListPage";
 
-export const LeadShowPage = () => {
-  const { id } = useParams();
-  if (!id) return null;
-
-  return (
-    <ShowBase resource="contacts" id={id}>
-      <LeadShowContent />
-    </ShowBase>
-  );
-};
+/** Same shell as the leads list — enables Kanban split view on desktop. */
+export const LeadShowPage = () => <LeadsListPage />;
