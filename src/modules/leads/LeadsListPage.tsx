@@ -23,6 +23,7 @@ import { ContactEmpty } from "@/components/atomic-crm/contacts/ContactEmpty";
 import type { Contact } from "@/components/atomic-crm/types";
 import { LBS_LEAD_STATUSES_FOR_FILTER } from "@/app/navigation";
 import { getLeadShowPath } from "@/app/routing";
+import { cn } from "@/lib/utils";
 import { Status } from "@/components/atomic-crm/misc/Status";
 import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
 import { LeadActivitySheet } from "@/modules/leads/LeadActivitySheet";
