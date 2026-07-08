@@ -17,7 +17,7 @@ import {
 } from "@/modules/billing/invoiceEmailTemplate";
 import {
   formatOrganizationMemberName,
-  resolveInvoiceRecipientPhone,
+  resolveTicketInvoiceRecipientPhone,
 } from "@/modules/billing/billingUtils";
 import type { ClientInvoice, Ticket, TicketDeliverable } from "@/modules/types";
 import {
@@ -141,7 +141,7 @@ export const TicketInvoiceReminderDialog = ({
     setSubject(copy.subject);
     setEmailMessage(copy.message);
     setServiceLines(copy.serviceLines);
-    const defaultPhone = resolveInvoiceRecipientPhone({ company, contact });
+    const defaultPhone = resolveTicketInvoiceRecipientPhone({ company, contact });
     setPhone(defaultPhone);
     setSendSms(Boolean(defaultPhone.trim()));
   }, [

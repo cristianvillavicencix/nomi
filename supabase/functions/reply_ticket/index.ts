@@ -308,7 +308,7 @@ Deno.serve(
         const outboundHtmlBody = htmlBody
           ? stripCidFromHtml(htmlBody)
           : undefined;
-        const emailAttachments =
+        const { attachments: emailAttachments } =
           await loadStorageAttachmentsForEmail(attachments);
 
         let emailResult;

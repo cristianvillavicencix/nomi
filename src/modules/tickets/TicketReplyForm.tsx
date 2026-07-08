@@ -811,6 +811,8 @@ export const TicketReplyForm = ({
 
     setSubmittingAs("charge");
     try {
+      await chargeTicketAfterReply();
+
       const result = await dataProvider.replyTicket({
         ticketId: ticket.id,
         body: textBody,
@@ -820,8 +822,6 @@ export const TicketReplyForm = ({
         nextStatus: "waiting",
       });
 
-      await chargeTicketAfterReply();
-
       setIsExpanded(false);
       setIsMinimized(false);
       resetDraft();
@@ -829,22 +829,21 @@ export const TicketReplyForm = ({
       onSent?.();
 
       if (result.email_sent) {
-        notify("Reply sent and payment invoice sent", { type: "success" });
+        notify("Invoice sent and reply delivered", { type: "success" });
       } else if (result.email_skipped) {
         notify(
-          "Reply saved and invoice sent. Email was not sent — check Communications settings.",
+          "Invoice sent. Reply saved but email was not sent — check Communications settings.",
           { type: "warning" },
         );
       } else {
-        notify("Reply sent and payment invoice sent", { type: "success" });
+        notify("Invoice sent and reply delivered", { type: "success" });
       }
     } catch (error) {
-      notify(
+      const message =
         error instanceof Error
           ? error.message
-          : "Failed to send reply and charge",
-        { type: "error" },
-      );
+          : "Failed to send invoice and reply";
+      notify(message, { type: "error" });
     } finally {
       setSubmittingAs(null);
     }

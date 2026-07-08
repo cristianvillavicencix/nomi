@@ -9,6 +9,14 @@ export type StoredAttachment = {
   size?: number;
 };
 
+export type LoadedEmailAttachments = {
+  attachments: EmailAttachment[];
+  requestedCount: number;
+  loadedCount: number;
+  totalBytes: number;
+  missingCount: number;
+};
+
 const uint8ToBase64 = (bytes: Uint8Array) => {
   let binary = "";
   const chunkSize = 0x8000;
@@ -24,14 +32,26 @@ const uint8ToBase64 = (bytes: Uint8Array) => {
 export const loadStorageAttachmentsForEmail = async (
   attachments: StoredAttachment[] | undefined,
   bucket = "attachments",
-): Promise<EmailAttachment[]> => {
-  if (!attachments?.length) return [];
+): Promise<LoadedEmailAttachments> => {
+  if (!attachments?.length) {
+    return {
+      attachments: [],
+      requestedCount: 0,
+      loadedCount: 0,
+      totalBytes: 0,
+      missingCount: 0,
+    };
+  }
 
   const emailAttachments: EmailAttachment[] = [];
+  let totalBytes = 0;
+  let requestedCount = 0;
 
   for (const file of attachments) {
     const path = file.path?.trim();
     if (!path) continue;
+
+    requestedCount += 1;
 
     const { data, error } = await supabaseAdmin.storage
       .from(bucket)
@@ -42,6 +62,7 @@ export const loadStorageAttachmentsForEmail = async (
     }
 
     const bytes = new Uint8Array(await data.arrayBuffer());
+    totalBytes += bytes.byteLength;
     emailAttachments.push({
       name: file.title?.trim() || path.split("/").pop() || "attachment",
       contentType: file.type?.trim() || "application/octet-stream",
@@ -49,5 +70,11 @@ export const loadStorageAttachmentsForEmail = async (
     });
   }
 
-  return emailAttachments;
+  return {
+    attachments: emailAttachments,
+    requestedCount,
+    loadedCount: emailAttachments.length,
+    totalBytes,
+    missingCount: Math.max(requestedCount - emailAttachments.length, 0),
+  };
 };

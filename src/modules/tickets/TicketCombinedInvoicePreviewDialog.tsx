@@ -17,7 +17,7 @@ import {
   formatInvoiceDueDate,
   resolveInvoiceOrganizationName,
 } from "@/modules/billing/invoiceEmailTemplate";
-import { resolveInvoiceRecipientPhone } from "@/modules/billing/billingUtils";
+import { resolveTicketInvoiceRecipientPhone } from "@/modules/billing/billingUtils";
 import { getInvoiceOrganizationBranding } from "@/modules/billing/invoiceOrganizationInfo";
 import type {
   ClientInvoice,
@@ -242,7 +242,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
     setSubject("");
     setDeliverySubject("");
     setServiceLines([]);
-    const defaultPhone = resolveInvoiceRecipientPhone({ company, contact });
+    const defaultPhone = resolveTicketInvoiceRecipientPhone({ company, contact });
     setPhone(defaultPhone);
     setSendSms(Boolean(defaultPhone.trim()));
     setEditingTo(false);

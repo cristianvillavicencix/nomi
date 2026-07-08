@@ -214,6 +214,19 @@ export const resolveInvoiceRecipientPhone = ({
   return display.phone?.trim() ?? "";
 };
 
+/** Ticket invoices bill a specific contact — prefer their phone over company billing overrides. */
+export const resolveTicketInvoiceRecipientPhone = ({
+  company,
+  contact,
+}: {
+  company?: Company | null;
+  contact?: Contact | null;
+}) => {
+  const contactPhone = getContactPhone(contact);
+  if (contactPhone) return contactPhone;
+  return resolveInvoiceRecipientPhone({ company, contact });
+};
+
 const invoiceEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const parseInvoiceEmailList = (value: string) =>

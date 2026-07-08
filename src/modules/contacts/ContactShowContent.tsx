@@ -24,6 +24,7 @@ import { ContactShowActions } from "@/modules/contacts/ContactShowActions";
 import { ContactSummaryCard } from "@/modules/contacts/ContactSummaryCard";
 import { ContactMarketingPreferencesCard } from "@/modules/marketing/ContactMarketingPreferencesCard";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { useContactTabCounts } from "@/modules/contacts/useContactTabCounts";
 
 export const ContactShowContent = ({
   embedded = false,

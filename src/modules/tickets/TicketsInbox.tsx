@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -610,11 +611,11 @@ const TicketsInboxLayout = ({
             <DialogTitle>
               Delete ticket #{ticketToDelete?.id ?? ""}?
             </DialogTitle>
+            <DialogDescription>
+              This permanently deletes the ticket and its messages. This action
+              cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            This permanently deletes the ticket and its messages. This action
-            cannot be undone.
-          </p>
           <DialogFooter>
             <Button
               type="button"

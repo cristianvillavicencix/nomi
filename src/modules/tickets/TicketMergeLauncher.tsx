@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -96,6 +97,10 @@ export const TicketMergeLauncher = ({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Choose ticket to merge</DialogTitle>
+            <DialogDescription>
+              Select another ticket with the same requester email to compare and
+              merge.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Select

@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -163,11 +164,11 @@ export const TicketInboxBulkBar = ({
             <DialogTitle>
               Delete {count} ticket{count === 1 ? "" : "s"}?
             </DialogTitle>
+            <DialogDescription>
+              This permanently deletes the selected tickets and their messages.
+              This action cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            This permanently deletes the selected tickets and their messages.
-            This action cannot be undone.
-          </p>
           <DialogFooter>
             <Button
               type="button"

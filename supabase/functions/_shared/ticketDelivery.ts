@@ -11,6 +11,20 @@ import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
 const buildMessageId = (ticketId: number) =>
   `<ticket-${ticketId}-${crypto.randomUUID()}@nomicrm.com>`;
 
+/** Postmark and most providers cap total message size around 10 MB. */
+const MAX_DELIVERY_EMAIL_BYTES = 10 * 1024 * 1024;
+
+const deliveryEmailFailureReason = (emailResult: {
+  skipped?: boolean;
+  reason?: string | null;
+}) => {
+  if (!emailResult.skipped) return null;
+  if (emailResult.reason === "channel_paused") {
+    return "Ticket email channel is paused. Re-enable it under Settings → Integrations → Mail.";
+  }
+  return "Delivery email was skipped. Check Communications settings and try Deliver now.";
+};
+
 async function deliverOneTicketForInvoicePayment(
   supabase: SupabaseClient,
   params: {
@@ -143,7 +157,20 @@ async function deliverOneTicketForInvoicePayment(
     fileNames,
   });
   const outboundMessageId = buildMessageId(ticket.id);
-  const emailAttachments = await loadStorageAttachmentsForEmail(deliverables);
+  const loadedAttachments = await loadStorageAttachmentsForEmail(deliverables);
+
+  if (loadedAttachments.missingCount > 0) {
+    throw new Error(
+      `Could not load ${loadedAttachments.missingCount} of ${loadedAttachments.requestedCount} delivery file(s). Files were not marked as delivered.`,
+    );
+  }
+
+  if (loadedAttachments.totalBytes > MAX_DELIVERY_EMAIL_BYTES) {
+    const sizeMb = Math.round(loadedAttachments.totalBytes / (1024 * 1024));
+    throw new Error(
+      `Delivery files are too large for email (${sizeMb} MB). Maximum is 10 MB. Contact support for manual delivery.`,
+    );
+  }
 
   const emailResult = await sendTransactionalEmail({
     orgId: params.orgId,
@@ -154,8 +181,13 @@ async function deliverOneTicketForInvoicePayment(
     fromEmail: inboxAddress,
     fromName,
     replyTo: inboxAddress,
-    attachments: emailAttachments,
+    attachments: loadedAttachments.attachments,
   });
+
+  const deliveryFailure = deliveryEmailFailureReason(emailResult);
+  if (deliveryFailure) {
+    throw new Error(deliveryFailure);
+  }
 
   const { data: message, error: messageError } = await supabase
     .from("ticket_messages")

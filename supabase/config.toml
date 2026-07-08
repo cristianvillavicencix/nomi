@@ -403,3 +403,6 @@ verify_jwt = false
 
 [functions.google_places]
 verify_jwt = false
+
+[functions.ingest_lbs_lead]
+verify_jwt = false
