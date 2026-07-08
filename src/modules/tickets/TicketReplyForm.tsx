@@ -8,6 +8,7 @@ import {
   Paperclip,
   Reply,
   Save,
+  Send,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -82,6 +83,12 @@ import {
 import { isTicketReplyAttachmentTooLarge } from "@/modules/tickets/ticketReplyAttachmentLimits";
 import { TicketPendingAttachmentItem } from "@/modules/tickets/TicketPendingAttachmentItem";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -94,6 +101,7 @@ import { isValidRecordId } from "@/lib/isValidRecordId";
 import { cn } from "@/lib/utils";
 
 type ComposeMode = "reply" | "forward" | "internal";
+type ReplySendIntent = "reply" | "reply_and_invoice";
 
 type ForwardContext = {
   message: ForwardMessage;
@@ -115,6 +123,8 @@ export const TicketReplyForm = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [composeMode, setComposeMode] = useState<ComposeMode>("reply");
+  const [replySendIntent, setReplySendIntent] =
+    useState<ReplySendIntent>("reply");
   const [forwardContext, setForwardContext] = useState<ForwardContext | null>(
     null,
   );
@@ -310,7 +320,10 @@ export const TicketReplyForm = ({
     );
 
     return {
-      title: "Reply",
+      title:
+        replySendIntent === "reply_and_invoice"
+          ? "Reply & Invoice"
+          : "Reply",
       context: recipient.includes("@") ? `To ${recipient}` : recipient,
       preview: preview || attachmentHint || "Empty draft",
     };
@@ -322,6 +335,7 @@ export const TicketReplyForm = ({
     pendingFiles.length,
     readyPendingFiles.length,
     attachmentsUploading,
+    replySendIntent,
     toRecipients,
   ]);
 
@@ -329,6 +343,7 @@ export const TicketReplyForm = ({
     setBodyHtml(defaultReplyHtml);
     setInternalNoteText("");
     setForwardContext(null);
+    setReplySendIntent("reply");
     setToRecipients(defaultRecipientEmail);
     setCcRecipients("");
     setPendingFiles((current) => {
@@ -357,8 +372,14 @@ export const TicketReplyForm = ({
     });
   };
 
-  const openComposer = (mode: ComposeMode) => {
+  const openComposer = (
+    mode: ComposeMode,
+    options?: { replyIntent?: ReplySendIntent },
+  ) => {
     setComposeMode(mode);
+    setReplySendIntent(
+      mode === "reply" ? (options?.replyIntent ?? "reply") : "reply",
+    );
     setIsExpanded(true);
     setIsMinimized(false);
     setCcRecipients("");
@@ -894,15 +915,53 @@ export const TicketReplyForm = ({
           </TooltipTrigger>
           <TooltipContent>Internal note</TooltipContent>
         </Tooltip>
-        <Button
-          type="button"
-          size="sm"
-          className="h-9 rounded-md px-5"
-          onClick={() => openComposer("reply")}
-        >
-          <Reply className="size-4" />
-          Reply
-        </Button>
+        {canReplyAndCharge ? (
+          <div className="inline-flex items-stretch rounded-md shadow-xs">
+            <Button
+              type="button"
+              size="sm"
+              className="h-9 rounded-r-none border-r border-primary-foreground/15 px-5"
+              onClick={() => openComposer("reply")}
+            >
+              <Reply className="size-4" />
+              Reply
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 rounded-l-none px-2"
+                  aria-label="More reply options"
+                >
+                  <ChevronDown className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  onClick={() =>
+                    openComposer("reply", {
+                      replyIntent: "reply_and_invoice",
+                    })
+                  }
+                >
+                  <Send className="size-4" />
+                  Reply & Invoice
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            className="h-9 rounded-md px-5"
+            onClick={() => openComposer("reply")}
+          >
+            <Reply className="size-4" />
+            Reply
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"
@@ -1220,6 +1279,7 @@ export const TicketReplyForm = ({
           hasContent={hasContent}
           submittingAs={submittingAs}
           showReplyAndCharge={canReplyAndCharge}
+          preferReplyAndCharge={replySendIntent === "reply_and_invoice"}
           onCancel={collapseComposer}
           onSendReply={(nextStatus) =>
             handleSend({ isInternalNote: false, nextStatus })

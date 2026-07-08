@@ -6,7 +6,6 @@ import {
   useGetList,
   useGetOne,
   useListContext,
-  useListFilterContext,
   useNotify,
   useRefresh,
 } from "ra-core";
@@ -171,7 +170,6 @@ const TicketsInboxLayout = ({
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
   const [ticketToEdit, setTicketToEdit] = useState<Ticket | null>(null);
   const [deletePending, setDeletePending] = useState(false);
-  const { setFilters } = useListFilterContext();
   const { data: tickets = [] } = useListContext<Ticket>();
 
   const { data: allTickets = [] } = useGetList<Ticket>("tickets", {
@@ -181,14 +179,22 @@ const TicketsInboxLayout = ({
     queryOptions: { refetchInterval: 30_000 },
   });
 
+  const trimmedSearch = searchQuery.trim();
+  const isSearching = Boolean(trimmedSearch);
+
+  const listSourceTickets = useMemo(
+    () => (isSearching ? allTickets : tickets),
+    [isSearching, allTickets, tickets],
+  );
+
   const counts = useMemo(
     () => countTicketsByInboxFilter(allTickets),
     [allTickets],
   );
 
   const ticketIds = useMemo(
-    () => tickets.map((ticket) => ticket.id),
-    [tickets],
+    () => listSourceTickets.map((ticket) => ticket.id),
+    [listSourceTickets],
   );
   const ticketIdStrings = useMemo(
     () => ticketIds.map((id) => String(id)),
@@ -198,22 +204,22 @@ const TicketsInboxLayout = ({
   const companyIds = useMemo(
     () => [
       ...new Set(
-        tickets
+        listSourceTickets
           .map((ticket) => ticket.company_id)
           .filter((id): id is NonNullable<typeof id> => id != null),
       ),
     ],
-    [tickets],
+    [listSourceTickets],
   );
   const contactIds = useMemo(
     () => [
       ...new Set(
-        tickets
+        listSourceTickets
           .map((ticket) => ticket.contact_id)
           .filter((id): id is NonNullable<typeof id> => id != null),
       ),
     ],
-    [tickets],
+    [listSourceTickets],
   );
   const attachmentMap = useTicketListAttachments(ticketIds);
   const messagePreviewMap = useTicketListMessagePreviews(ticketIds);
@@ -252,13 +258,13 @@ const TicketsInboxLayout = ({
   const linkedInvoiceIds = useMemo(
     () => [
       ...new Set(
-        tickets
+        listSourceTickets
           .map((ticket) => ticket.invoice_id)
           .filter((id): id is number | string => id != null)
           .map((id) => String(id)),
       ),
     ],
-    [tickets],
+    [listSourceTickets],
   );
 
   const { data: ticketInvoices = [] } = useGetList<ClientInvoice>(
@@ -308,7 +314,7 @@ const TicketsInboxLayout = ({
       }
     }
 
-    for (const ticket of tickets) {
+    for (const ticket of listSourceTickets) {
       if (ticket.invoice_id == null) continue;
       const invoice = invoiceById.get(String(ticket.invoice_id));
       if (invoice) {
@@ -317,7 +323,7 @@ const TicketsInboxLayout = ({
     }
 
     return map;
-  }, [ticketInvoices, linkedInvoices, tickets]);
+  }, [ticketInvoices, linkedInvoices, listSourceTickets]);
 
   const companyById = useMemo(() => {
     const map = new Map<string, Company>();
@@ -342,9 +348,9 @@ const TicketsInboxLayout = ({
   }, [members]);
 
   const visibleTickets = useMemo(() => {
-    if (!searchQuery.trim()) return tickets;
+    if (!isSearching) return tickets;
 
-    return tickets.filter((ticket) => {
+    return listSourceTickets.filter((ticket) => {
       const company = ticket.company_id
         ? companyById.get(String(ticket.company_id))
         : null;
@@ -363,7 +369,14 @@ const TicketsInboxLayout = ({
         contactName,
       });
     });
-  }, [tickets, companyById, contactById, searchQuery]);
+  }, [
+    tickets,
+    listSourceTickets,
+    companyById,
+    contactById,
+    searchQuery,
+    isSearching,
+  ]);
 
   const selectedTickets = useMemo(
     () =>
@@ -403,11 +416,6 @@ const TicketsInboxLayout = ({
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    const next: Record<string, string> = {};
-    if (value.trim()) {
-      next["subject@ilike"] = `%${value.trim()}%`;
-    }
-    setFilters(next, {});
   };
 
   const handleStatusFilter = (status: TicketStatusFilterId) => {
@@ -477,9 +485,11 @@ const TicketsInboxLayout = ({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {!visibleTickets.length ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                {tickets.length
-                  ? "No tickets match this filter."
-                  : "No tickets in this inbox yet."}
+                {isSearching
+                  ? "No tickets match this search."
+                  : tickets.length
+                    ? "No tickets match this filter."
+                    : "No tickets in this inbox yet."}
               </p>
             ) : (
               <>

@@ -23,7 +23,7 @@ import { refreshTicketInboxLists } from "@/modules/tickets/ticketsRealtimeCache"
 
 export const TicketDetailPanel = ({
   ticketId,
-  layout = "default",
+  layout: _layout = "default",
 }: {
   ticketId: string;
   layout?: "default" | "inbox-split";
@@ -31,7 +31,9 @@ export const TicketDetailPanel = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
-  const useContextSheet = isMobile || layout === "inbox-split";
+  // Desktop (including inbox split): collapsible icon rail.
+  // Mobile: sheet trigger in the header.
+  const useContextSheet = isMobile;
   const queryClient = useQueryClient();
   const refreshInbox = useCallback(() => {
     refreshTicketInboxLists(queryClient);

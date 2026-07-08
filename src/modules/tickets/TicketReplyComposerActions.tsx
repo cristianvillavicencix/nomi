@@ -1,4 +1,4 @@
-import { ChevronDown, Loader2, Send } from "lucide-react";
+import { ChevronDown, FileText, Loader2, Send } from "lucide-react";
 import type { TicketWorkflowStatus } from "@/modules/tickets/ticketStatusWorkflow";
 import {
   ticketReplyStatusDotClass,
@@ -29,6 +29,8 @@ type TicketReplyComposerActionsProps = {
   hasContent: boolean;
   submittingAs: TicketReplySubmittingAs;
   showReplyAndCharge?: boolean;
+  /** When true, primary button becomes Reply & Invoice (chosen before composing). */
+  preferReplyAndCharge?: boolean;
   className?: string;
   onCancel: () => void;
   onSendReply: (nextStatus: TicketWorkflowStatus) => void;
@@ -43,6 +45,7 @@ export const TicketReplyComposerActions = ({
   hasContent,
   submittingAs,
   showReplyAndCharge = false,
+  preferReplyAndCharge = false,
   className,
   onCancel,
   onSendReply,
@@ -60,6 +63,9 @@ export const TicketReplyComposerActions = ({
     submittingAs !== "internal" &&
     submittingAs !== "forward";
   const isChargeSubmitting = submittingAs === "charge";
+  const replyAndChargeEnabled =
+    showReplyAndCharge && typeof onSendReplyAndCharge === "function";
+  const primaryIsCharge = preferReplyAndCharge && replyAndChargeEnabled;
 
   return (
     <div
@@ -88,79 +94,86 @@ export const TicketReplyComposerActions = ({
           <Button
             type="button"
             size="sm"
-            disabled={sendDisabled}
+            disabled={sendDisabled || (primaryIsCharge && isChargeSubmitting)}
             className="h-9 rounded-r-none border-r border-primary-foreground/15 pr-3 pl-3"
-            onClick={() => onSendReply(primaryAction.status)}
+            onClick={() => {
+              if (primaryIsCharge) {
+                onSendReplyAndCharge?.();
+                return;
+              }
+              onSendReply(primaryAction.status);
+            }}
           >
-            {isReplySubmitting && submittingAs === primaryAction.status ? (
+            {primaryIsCharge ? (
+              isChargeSubmitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <FileText className="size-4" />
+              )
+            ) : isReplySubmitting && submittingAs === primaryAction.status ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <Send className="size-4" />
             )}
-            {primaryAction.label}
+            {primaryIsCharge ? "Reply & Invoice" : primaryAction.label}
           </Button>
 
-          {alternateActions.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={sendDisabled}
-                  className="h-9 rounded-l-none px-2"
-                  aria-label="More send options"
-                >
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  onClick={() => onSendReply(primaryAction.status)}
-                >
-                  <Send className="size-4" />
-                  {primaryAction.label}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                  Send and update status
-                </DropdownMenuLabel>
-                {alternateActions.map((action) => (
-                  <DropdownMenuItem
-                    key={action.status}
-                    onClick={() => onSendReply(action.status)}
-                  >
-                    <span
-                      className={cn(
-                        "size-2 shrink-0 rounded-full",
-                        ticketReplyStatusDotClass(action.status),
-                      )}
-                      aria-hidden
-                    />
-                    {action.label}
-                  </DropdownMenuItem>
-                ))}
-                {showReplyAndCharge && onSendReplyAndCharge ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                      Billing
-                    </DropdownMenuLabel>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                disabled={sendDisabled}
+                className="h-9 rounded-l-none px-2"
+                aria-label="More send options"
+              >
+                <ChevronDown className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {alternateActions.length > 0 ? (
+                <>
+                  <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    Send and update status
+                  </DropdownMenuLabel>
+                  {alternateActions.map((action) => (
                     <DropdownMenuItem
-                      onClick={onSendReplyAndCharge}
-                      disabled={isChargeSubmitting}
+                      key={action.status}
+                      onClick={() => onSendReply(action.status)}
                     >
-                      {isChargeSubmitting ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Send className="size-4" />
-                      )}
-                      Reply & Charge
+                      <span
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          ticketReplyStatusDotClass(action.status),
+                        )}
+                        aria-hidden
+                      />
+                      {action.label}
                     </DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+                  ))}
+                </>
+              ) : null}
+              {replyAndChargeEnabled && !primaryIsCharge ? (
+                <>
+                  {alternateActions.length > 0 ? <DropdownMenuSeparator /> : null}
+                  <DropdownMenuLabel className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    Billing
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    onClick={onSendReplyAndCharge}
+                    disabled={isChargeSubmitting}
+                  >
+                    {isChargeSubmitting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <FileText className="size-4" />
+                    )}
+                    Reply & Invoice
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ) : null}
 

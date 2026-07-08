@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket } from "@/modules/types";
 import { getClientShowPath } from "@/app/routing";
-import { TicketMergeLauncher } from "@/modules/tickets/TicketMergeLauncher";
 import { TicketMetaSep } from "@/modules/tickets/TicketMetaSep";
 import { resolveTicketRequesterName } from "@/modules/tickets/ticketRequester";
 import { TicketSubjectField } from "@/modules/tickets/TicketSubjectField";
@@ -173,10 +172,9 @@ export const TicketCompactHeader = ({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
-          <TicketMergeLauncher ticket={ticket} onMerged={onUpdated} />
-          {contextAction}
-        </div>
+        {contextAction ? (
+          <div className="flex shrink-0 items-center gap-1">{contextAction}</div>
+        ) : null}
       </div>
     </div>
   );
