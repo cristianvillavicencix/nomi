@@ -24,7 +24,7 @@ import { Note } from "@/components/atomic-crm/notes/Note";
 import { NoteCreate } from "@/components/atomic-crm/notes";
 import { findDealLabel } from "@/components/atomic-crm/deals/deal";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import type { Company, ContactNote, Deal } from "@/components/atomic-crm/types";
+import type { Company, Contact, ContactNote, Deal } from "@/components/atomic-crm/types";
 import type {
   ClientInvoice,
   Contract,
@@ -44,6 +44,8 @@ import { MoneyText } from "@/lib/permissions/MoneyText";
 import { isPipelineTransitionNote } from "@/modules/leads/leadFollowUpUtils";
 import { PipelineUpdateBadge } from "@/modules/shared/ContactActivityFeed";
 import { buildOpenDealsFilter } from "@/modules/deals/openDealFilters";
+import { ClientTicketsHub } from "@/modules/tickets/ClientTicketsHub";
+import type { ClientTicketScope } from "@/modules/tickets/clientTicketScope";
 
 const TabLoading = () => (
   <div className="space-y-2">
@@ -423,71 +425,19 @@ export const ClientContractsTab = ({
 
 export const ClientTicketsTab = ({
   companyId,
+  contactId,
+  scope = "company",
 }: {
-  companyId: Company["id"];
-}) => {
-  const { data = [], isPending } = useGetList<Ticket>(
-    "tickets",
-    {
-      filter: { "company_id@eq": companyId },
-      pagination: { page: 1, perPage: 50 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
-
-  if (isPending) return <TabLoading />;
-
-  if (data.length === 0) {
-    return (
-      <ClientTabEmpty message="No support tickets for this client yet. Use the + button above to create one." />
-    );
-  }
-
-  return (
-    <div className={clientTableWrapperClassName}>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Subject</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="hidden md:table-cell">Priority</TableHead>
-            <TableHead className="hidden lg:table-cell">Updated</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((ticket) => (
-            <TableRow key={ticket.id}>
-              <TableCell>
-                <Link
-                  to={`/tickets/${ticket.id}/show`}
-                  className="link-action font-medium"
-                >
-                  {ticket.subject ?? `Ticket #${ticket.id}`}
-                </Link>
-              </TableCell>
-              <TableCell>
-                {ticket.status ? (
-                  <Badge variant="outline" className="capitalize">
-                    {ticket.status.replace(/_/g, " ")}
-                  </Badge>
-                ) : (
-                  "—"
-                )}
-              </TableCell>
-              <TableCell className="hidden md:table-cell capitalize text-muted-foreground">
-                {ticket.priority || "—"}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell text-muted-foreground">
-                {formatDateTime(ticket.updated_at)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-};
+  companyId?: Company["id"];
+  contactId?: Contact["id"];
+  scope?: ClientTicketScope;
+}) => (
+  <ClientTicketsHub
+    companyId={companyId}
+    contactId={contactId}
+    scope={scope}
+  />
+);
 
 export const ClientSupportTab = ({
   companyId,

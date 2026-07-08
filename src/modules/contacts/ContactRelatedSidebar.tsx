@@ -377,8 +377,12 @@ export const ContactRelatedSidebar = ({
             {panel === "projects" ? (
               <ClientProjectsTab contactId={contact.id} />
             ) : null}
-            {panel === "tickets" && contact.company_id ? (
-              <ClientTicketsTab companyId={contact.company_id} />
+            {panel === "tickets" ? (
+              <ClientTicketsTab
+                companyId={contact.company_id ?? undefined}
+                contactId={contact.id}
+                scope="contact"
+              />
             ) : null}
             {panel === "referrals" ? (
               <ReferralsTab referrerContactId={contact.id} />
