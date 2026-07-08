@@ -11,21 +11,35 @@ const escapeHtml = (value: string) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+const BLOCK_BREAK_TAG =
+  /<\/?(?:p|div|li|tr|h[1-6]|blockquote|section|article|header|footer|pre)(?:\s[^>]*)?>/gi;
+
+const collapsePlainTextWhitespace = (text: string) =>
+  text
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
 export const htmlToPlainText = (html: string) => {
   if (!html.trim()) return "";
+
+  const normalizedHtml = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(BLOCK_BREAK_TAG, "\n");
+
   if (typeof document === "undefined") {
-    return html
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    return collapsePlainTextWhitespace(
+      normalizedHtml.replace(/<[^>]+>/g, ""),
+    );
   }
 
   const container = document.createElement("div");
-  container.innerHTML = html;
-  return (container.innerText || container.textContent || "")
-    .replace(/\u00a0/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  container.innerHTML = normalizedHtml;
+  const text = container.innerText || container.textContent || "";
+  return collapsePlainTextWhitespace(text);
 };
 
 export const plainTextToEditorHtml = (text: string) => {

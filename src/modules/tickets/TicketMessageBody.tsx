@@ -135,7 +135,12 @@ export const TicketMessageBody = ({
       );
     }
 
-    if (plain && !hasQuoted && !hasRichHtmlStructure(html)) {
+    if (
+      emailVariant !== "outbound" &&
+      plain &&
+      !hasQuoted &&
+      !hasRichHtmlStructure(html)
+    ) {
       if (isPlainTextSimilar(plain, htmlMainText)) {
         return (
           <div className="space-y-1">
