@@ -59,6 +59,21 @@ export type TicketPaymentCopy = {
 const billedDeliverables = (deliverables: DeliverableBillingInput[]) =>
   deliverables.filter((item) => item.billing_kind);
 
+const humanizeBillingKind = (kind: string) =>
+  kind.replace(/_/g, " ").replace(/\s+/g, " ").trim() || "services";
+
+const resolveSingleItemCopy = (kind: DeliverableBillingKind) => {
+  const known = SINGLE_ITEM_COPY[kind as keyof typeof SINGLE_ITEM_COPY];
+  if (known) return known;
+
+  const label = humanizeBillingKind(String(kind));
+  return {
+    subjectLabel: `Invoice for ${label}`,
+    readyMessage: `Your ${label} is ready.`,
+    deliverySubject: `Your ${label} files are ready`,
+  };
+};
+
 export const buildTicketPaymentCopyFromDeliverables = (
   deliverables: DeliverableBillingInput[],
   propertyAddress: string,
@@ -75,7 +90,7 @@ export const buildTicketPaymentCopyFromDeliverables = (
 
   if (billed.length === 1) {
     const kind = billed[0].billing_kind as DeliverableBillingKind;
-    const copy = SINGLE_ITEM_COPY[kind];
+    const copy = resolveSingleItemCopy(kind);
     return {
       subject: `${copy.subjectLabel} (${address})`,
       message: `${copy.readyMessage}\n\n${PAYMENT_CTA}`,
@@ -107,9 +122,11 @@ export const resolveTicketSmsServiceSubject = (
 ) => {
   const billed = billedDeliverables(deliverables);
   if (billed.length === 1) {
-    return SMS_SERVICE_SUBJECT[
-      billed[0].billing_kind as DeliverableBillingKind
-    ];
+    const kind = billed[0].billing_kind as DeliverableBillingKind;
+    return (
+      SMS_SERVICE_SUBJECT[kind as keyof typeof SMS_SERVICE_SUBJECT] ??
+      humanizeBillingKind(String(kind))
+    );
   }
   if (billed.length > 1) return "project deliverables";
   const address = propertyAddress?.trim();
