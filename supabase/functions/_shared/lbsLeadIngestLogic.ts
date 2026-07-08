@@ -282,8 +282,7 @@ export const normalizeLbsLeadPayload = (
     trimOrNull(payload.referido?.serviceLabel) ??
     null;
 
-  const shouldCreateDeal =
-    Boolean(trimOrNull(payload.toolKey)) || source === "lbs-quote";
+  const shouldCreateDeal = false;
   const dealName =
     businessName ||
     trimOrNull(payload.toolLabel) ||

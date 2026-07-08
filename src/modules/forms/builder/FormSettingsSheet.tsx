@@ -38,6 +38,7 @@ import {
   buildFormShortUrl,
 } from "@/modules/forms/share/formLinkUtils";
 import { MemberPhoneStatus } from "@/modules/settings/MemberPhoneStatus";
+import { useOrganizationLeadSettings } from "@/modules/settings/useOrganizationLeadSettings";
 
 type GeneratedFormLink = {
   token: string;
@@ -86,6 +87,9 @@ export const FormSettingsSheet = ({
   });
 
   const orgDefaults = orgSettings?.default_form_notify_member_ids ?? [];
+
+  const { data: leadSettings } = useOrganizationLeadSettings();
+  const formAutoDealAllowed = leadSettings?.allow_form_auto_create_deal ?? false;
 
   const { data: members = [] } = useGetList<OrganizationMember>(
     "organization_members",
@@ -413,19 +417,34 @@ export const FormSettingsSheet = ({
             <div className="space-y-2 rounded-lg border p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Auto-create lead</Label>
+                  <Label>Auto-create opportunity</Label>
                   <p className="text-xs text-muted-foreground">
-                    Create a deal in the lead stage when a contact is linked.
+                    Also create a pre-sale opportunity in Projects (stage
+                    Lead). Does not start delivery. Requires{" "}
+                    <span className="font-medium">
+                      Settings → Pipelines & fields → Lead statuses → Inbound
+                      lead automation
+                    </span>
+                    .
                   </p>
                 </div>
                 <Switch
                   checked={Boolean(formInstance.auto_create_lead)}
-                  disabled={!formInstance.auto_create_contact}
+                  disabled={
+                    !formInstance.auto_create_contact || !formAutoDealAllowed
+                  }
                   onCheckedChange={(checked) =>
                     setFormInstance({ auto_create_lead: checked })
                   }
                 />
               </div>
+              {!formAutoDealAllowed ? (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Organization policy keeps form submissions in Pipeline only.
+                  Enable &quot;Allow forms to auto-create opportunities&quot; in
+                  Settings to use this per form.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-3 rounded-lg border p-3">
               <div className="flex items-center justify-between">

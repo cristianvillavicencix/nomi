@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
+import { AUTOMATED_OPPORTUNITY_DEAL_FIELDS } from "./dealLifecycle.ts";
+import {
+  normalizeOrganizationLeadSettings,
+  shouldCreateDealFromWebLead,
+} from "./leadSettings.ts";
 import {
   formatPhoneForStorage,
   mergeBackground,
@@ -352,6 +357,7 @@ async function createDealIfNeeded(
     contact_ids: [contactId],
     company_id: companyId,
     description: lead.dealDescription,
+    ...AUTOMATED_OPPORTUNITY_DEAL_FIELDS,
   };
 
   if (organizationMemberId != null) {
@@ -393,6 +399,18 @@ export async function ingestLbsLead(
 
   const organizationMemberId = params.organizationMemberId ?? null;
 
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("lead_settings")
+    .eq("id", params.orgId)
+    .maybeSingle();
+
+  const leadSettings = normalizeOrganizationLeadSettings(orgRow?.lead_settings);
+  const shouldCreateDeal = shouldCreateDealFromWebLead(leadSettings, {
+    source: params.payload.source,
+    toolKey: params.payload.toolKey,
+  });
+
   const { company, created: createdCompany } = await upsertCompany(
     supabase,
     params.orgId,
@@ -416,14 +434,16 @@ export async function ingestLbsLead(
     company.primary_contact_id,
   );
 
-  const { dealId, created: createdDeal } = await createDealIfNeeded(
-    supabase,
-    params.orgId,
-    lead,
-    contact.id,
-    company.id,
-    organizationMemberId,
-  );
+  const { dealId, created: createdDeal } = shouldCreateDeal
+    ? await createDealIfNeeded(
+        supabase,
+        params.orgId,
+        lead,
+        contact.id,
+        company.id,
+        organizationMemberId,
+      )
+    : { dealId: null, created: false };
 
   return {
     contactId: contact.id,

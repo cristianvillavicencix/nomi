@@ -84,7 +84,7 @@ describe("normalizeLbsLeadPayload", () => {
 
     expect(lead.leadSource).toBe("WebSite Visit");
     expect(lead.website).toBe("https://example-roofing.com");
-    expect(lead.shouldCreateDeal).toBe(true);
+    expect(lead.shouldCreateDeal).toBe(false);
     expect(lead.background).toContain("Google Audit");
     expect(lead.background).toContain("- Score: 72");
   });

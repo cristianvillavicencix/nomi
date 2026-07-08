@@ -10,6 +10,7 @@ import { toSlug } from "@/lib/toSlug";
 import type { DealPipeline } from "@/components/atomic-crm/types";
 import { validateItemsInUse } from "@/components/atomic-crm/settings/SettingsPage";
 import { PipelinesEditor } from "@/modules/settings/workflows/PipelinesEditor";
+import { InboundLeadAutomationPanel } from "@/modules/settings/leads/InboundLeadAutomationPanel";
 import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
 import { SettingsTabPanel } from "@/modules/settings/SettingsTabPanel";
 import type { WorkflowsSectionId } from "@/modules/settings/settingsNavigation";
@@ -109,12 +110,18 @@ export const WorkflowsSettingsSection = ({
       </SettingsTabPanel>
 
       <SettingsTabPanel value="leads" title="Lead statuses">
-        <ArrayInput source="noteStatuses" label={false} helperText={false}>
-          <SimpleFormIterator inline disableReordering disableClear>
-            <TextInput source="label" label={false} className="flex-1" />
-            <ColorInput source="color" />
-          </SimpleFormIterator>
-        </ArrayInput>
+        <div className="space-y-8">
+          <InboundLeadAutomationPanel />
+          <div className="border-t pt-6">
+            <h4 className="mb-3 text-sm font-medium">Lead status colors</h4>
+            <ArrayInput source="noteStatuses" label={false} helperText={false}>
+              <SimpleFormIterator inline disableReordering disableClear>
+                <TextInput source="label" label={false} className="flex-1" />
+                <ColorInput source="color" />
+              </SimpleFormIterator>
+            </ArrayInput>
+          </div>
+        </div>
       </SettingsTabPanel>
 
       <SettingsTabPanel value="tasks" title="Task types">

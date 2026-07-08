@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { extractFieldValue } from "./formV2Schema.ts";
 import { createProposalFromQuoteRequest } from "./quoteRequestToProposal.ts";
+import { AUTOMATED_OPPORTUNITY_DEAL_FIELDS } from "./dealLifecycle.ts";
+import type { OrganizationLeadSettings } from "./leadSettings.ts";
 
 type FormInstance = {
   id: number;
@@ -50,6 +52,7 @@ export async function handlePostSubmitActions(
   instance: FormInstance,
   submission: Submission,
   answers: Record<string, unknown>,
+  leadSettings?: OrganizationLeadSettings,
 ) {
   let contactId = submission.contact_id ?? null;
   let dealId = submission.deal_id ?? null;
@@ -111,7 +114,11 @@ export async function handlePostSubmitActions(
     }
   }
 
-  if (instance.auto_create_lead && contactId && !dealId) {
+  const canAutoCreateDeal =
+    Boolean(instance.auto_create_lead) &&
+    Boolean(leadSettings?.allow_form_auto_create_deal);
+
+  if (canAutoCreateDeal && contactId && !dealId) {
     const leadName = extractFieldValue(answers, [
       "name",
       "full_name",
@@ -128,6 +135,7 @@ export async function handlePostSubmitActions(
         contact_id: contactId,
         company_id: submission.company_id ?? null,
         description: `Created from form submission: ${instance.name ?? instance.slug ?? "form"}`,
+        ...AUTOMATED_OPPORTUNITY_DEAL_FIELDS,
       })
       .select("id")
       .single();

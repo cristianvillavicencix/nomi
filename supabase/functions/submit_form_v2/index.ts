@@ -8,6 +8,7 @@ import {
   type FormSchema,
 } from "../_shared/formV2Schema.ts";
 import { handlePostSubmitActions } from "../_shared/formV2PostSubmit.ts";
+import { normalizeOrganizationLeadSettings } from "../_shared/leadSettings.ts";
 import {
   createProjectResourcesLeadDeal,
   processProjectResourcesSubmission,
@@ -285,6 +286,15 @@ Deno.serve(
         user_agent: userAgent,
       });
 
+      const { data: orgRow } = await supabaseAdmin
+        .from("organizations")
+        .select("lead_settings")
+        .eq("id", formInstance.org_id)
+        .maybeSingle();
+      const leadSettings = normalizeOrganizationLeadSettings(
+        orgRow?.lead_settings,
+      );
+
       await handlePostSubmitActions(
         supabaseAdmin,
         formInstance as {
@@ -301,6 +311,7 @@ Deno.serve(
         },
         submission,
         answers,
+        leadSettings,
       );
 
       if (formInstance.template_id && submission.deal_id) {
