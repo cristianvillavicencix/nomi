@@ -58,6 +58,9 @@ export const isLeadStatus = (status?: string | null) =>
 
 export const getWebMonitorPath = () => "/web-monitor";
 
+export const getHostingerPath = (tab?: string) =>
+  tab ? `/hostinger?tab=${encodeURIComponent(tab)}` : "/hostinger";
+
 export const getClientProposalCreatePath = (
   companyId?: string | number | null,
   contactId?: string | number | null,

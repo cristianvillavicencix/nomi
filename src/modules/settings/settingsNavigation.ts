@@ -34,8 +34,14 @@ export type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];
 export const WORKFLOWS_SECTION_IDS = ["pipelines", "leads", "tasks"] as const;
 export type WorkflowsSectionId = (typeof WORKFLOWS_SECTION_IDS)[number];
 
-/** Integrations sub-tabs: Twilio, Mail, Google, Stripe. */
-export const CONNECTORS_SECTION_IDS = ["twilio", "mail", "google", "stripe"] as const;
+/** Integrations sub-tabs: Twilio, Mail, Google, Stripe, Hostinger. */
+export const CONNECTORS_SECTION_IDS = [
+  "twilio",
+  "mail",
+  "google",
+  "stripe",
+  "hostinger",
+] as const;
 export type ConnectorsSectionId = (typeof CONNECTORS_SECTION_IDS)[number];
 
 const LEGACY_CONNECTORS_SECTION: Record<string, ConnectorsSectionId> = {
@@ -47,6 +53,7 @@ const LEGACY_CONNECTORS_SECTION: Record<string, ConnectorsSectionId> = {
   search: "google",
   stripe: "stripe",
   billing: "stripe",
+  hostinger: "hostinger",
 };
 
 /** In-app Messages composer content (CRM database, not external). */

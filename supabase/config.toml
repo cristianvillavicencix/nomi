@@ -406,3 +406,18 @@ verify_jwt = false
 
 [functions.ingest_lbs_lead]
 verify_jwt = false
+
+[functions.hostinger_settings]
+verify_jwt = false
+
+[functions.hostinger_sync]
+verify_jwt = false
+
+[functions.hostinger_availability]
+verify_jwt = false
+
+[functions.hostinger_sync_cron]
+verify_jwt = false
+
+[functions.hostinger_domain_details]
+verify_jwt = false

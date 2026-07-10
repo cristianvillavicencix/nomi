@@ -481,6 +481,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
         <Resource name="conversations" />
         <Resource name="calendar_events" />
         <Resource name="monitored_websites" />
+        <Resource name="hostinger_domains" />
         <Resource name="proposal_payment_installments" />
         <Resource name="client_invoices" />
         <Resource name="forms" />

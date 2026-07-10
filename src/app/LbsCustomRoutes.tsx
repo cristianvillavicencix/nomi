@@ -49,6 +49,7 @@ import { CalendarPage } from "@/modules/calendar/CalendarPage";
 import { MeetingsPage } from "@/modules/meetings/MeetingsPage";
 import { MarketingHubPage } from "@/modules/marketing/MarketingHubPage";
 import { WebsiteMonitorQuickCheckPage } from "@/modules/web-monitor/WebsiteMonitorQuickCheckPage";
+import { HostingerHubPage } from "@/modules/hostinger/HostingerHubPage";
 const MessagesPage = lazy(() =>
   import("@/modules/messages/MessagesPage").then((module) => ({
     default: module.MessagesPage,
@@ -244,6 +245,14 @@ export const renderLbsCustomRoutes = ({
         element={
           <ProtectedRoute resource="monitored_websites" action="list">
             <WebsiteMonitorQuickCheckPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hostinger"
+        element={
+          <ProtectedRoute resource="hostinger_domains" action="list">
+            <HostingerHubPage />
           </ProtectedRoute>
         }
       />

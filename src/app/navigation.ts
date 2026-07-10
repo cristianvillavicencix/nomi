@@ -11,6 +11,7 @@ import {
   ListChecks,
   Megaphone,
   Receipt,
+  Server,
   Ticket,
   UserPlus,
   Users,
@@ -233,6 +234,15 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
         activePattern: "/web-monitor/*",
         capability: "crm.companies.view",
         resource: "monitored_websites",
+        action: "list",
+      },
+      {
+        to: "/hostinger",
+        label: "Hostinger",
+        icon: Server,
+        activePattern: "/hostinger/*",
+        capability: "crm.companies.view",
+        resource: "hostinger_domains",
         action: "list",
       },
       {

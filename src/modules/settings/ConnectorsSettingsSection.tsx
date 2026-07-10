@@ -7,6 +7,7 @@ import { GoogleIntegrationPanel } from "@/modules/settings/integrations/GoogleIn
 import { MailIntegrationPanel } from "@/modules/settings/integrations/MailIntegrationPanel";
 import { StripeIntegrationPanel } from "@/modules/settings/integrations/StripeIntegrationPanel";
 import { TwilioIntegrationPanel } from "@/modules/settings/integrations/TwilioIntegrationPanel";
+import { HostingerIntegrationPanel } from "@/modules/settings/integrations/HostingerIntegrationPanel";
 import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
 import type { ConnectorsSectionId } from "@/modules/settings/settingsNavigation";
 
@@ -46,6 +47,7 @@ export const ConnectorsSettingsSection = ({
         { id: "mail", label: "Mail" },
         { id: "google", label: "Google" },
         { id: "stripe", label: "Stripe" },
+        { id: "hostinger", label: "Hostinger" },
       ]}
       content={
         activeSection === "twilio" ? (
@@ -64,6 +66,8 @@ export const ConnectorsSettingsSection = ({
           <MailIntegrationPanel />
         ) : activeSection === "stripe" ? (
           <StripeIntegrationPanel />
+        ) : activeSection === "hostinger" ? (
+          <HostingerIntegrationPanel />
         ) : (
           <GoogleIntegrationPanel />
         )

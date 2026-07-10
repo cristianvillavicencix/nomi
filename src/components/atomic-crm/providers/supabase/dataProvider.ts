@@ -34,6 +34,7 @@ import { ticketsProvider } from "./modules/ticketsProvider";
 import { proposalsProvider } from "./modules/proposalsProvider";
 import { messagingProvider } from "./modules/messagingProvider";
 import { webMonitorProvider } from "./modules/webMonitorProvider";
+import { hostingerProvider } from "./modules/hostingerProvider";
 import { formsProvider } from "./modules/formsProvider";
 import { bookingProvider } from "./modules/bookingProvider";
 import { orgProvider } from "./modules/orgProvider";
@@ -269,6 +270,9 @@ const dataProviderWithCustomMethods = {
     if (resource === "monitored_websites") {
       return baseDataProvider.getList("monitored_websites_summary", request);
     }
+    if (resource === "hostinger_domains") {
+      return baseDataProvider.getList("hostinger_domains_summary", request);
+    }
 
     return baseDataProvider.getList(resource, request);
   },
@@ -313,6 +317,16 @@ const dataProviderWithCustomMethods = {
         return { data: summaryRecord };
       }
       return baseDataProvider.getOne("monitored_websites", params);
+    }
+    if (resource === "hostinger_domains") {
+      const summaryRecord = await getOneFromResourceMaybeSingle(
+        "hostinger_domains_summary",
+        params.id,
+      );
+      if (summaryRecord) {
+        return { data: summaryRecord };
+      }
+      return baseDataProvider.getOne("hostinger_domains", params);
     }
     if (resource === "client_invoices") {
       const invoiceRecord = await getOneFromResourceMaybeSingle(
@@ -363,6 +377,7 @@ const dataProviderWithCustomMethods = {
   ...proposalsProvider,
   ...messagingProvider,
   ...webMonitorProvider,
+  ...hostingerProvider,
   ...formsProvider,
   ...bookingProvider,
   ...orgProvider,
