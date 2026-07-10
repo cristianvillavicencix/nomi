@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDataProvider } from "ra-core";
-import { ChevronLeft, ChevronRight, ExternalLink, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Globe,
+  Search,
+  Settings2,
+} from "lucide-react";
 import { Link } from "react-router";
 
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,27 +32,49 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import {
+  ATTENTION_EXPIRING_DAYS,
   formatExpiryLabel,
   formatHostingerStatus,
+  isExpiredDomain,
+  isExpiringWithinDays,
   matchesHostingerDomainFilter,
 } from "@/modules/hostinger/hostingerDomainUtils";
-import { getHostingerDomainManageUrl } from "@/modules/hostinger/hostingerHpanelLinks";
+import { readDomainDnsHealth } from "@/modules/hostinger/hostingerDnsHealth";
+import { HostingerDnsHealthBadges } from "@/modules/hostinger/HostingerDnsHealthBadges";
+import {
+  getHostingerDomainManageUrl,
+  getHostingerHpanelHomeUrl,
+} from "@/modules/hostinger/hostingerHpanelLinks";
 import type {
   HostingerDomain,
   HostingerDomainFilter,
 } from "@/modules/hostinger/types";
 import { HostingerDomainDetailSheet } from "@/modules/hostinger/HostingerDomainDetailSheet";
 import { getClientShowPath } from "@/app/routing";
+import { buildSettingsSearchParams } from "@/modules/settings/settingsNavigation";
 
-const FILTER_OPTIONS: { value: HostingerDomainFilter; label: string }[] = [
-  { value: "all", label: "All domains" },
-  { value: "expiring_30", label: "Expiring in 30 days" },
-  { value: "expiring_60", label: "Expiring in 60 days" },
-  { value: "expiring_90", label: "Expiring in 90 days" },
+const QUICK_FILTERS: {
+  value: HostingerDomainFilter;
+  label: string;
+  tone?: "warning" | "danger";
+}[] = [
+  { value: "all", label: "All" },
+  { value: "expiring_14", label: `${ATTENTION_EXPIRING_DAYS}d`, tone: "warning" },
+  { value: "expired", label: "Expired", tone: "danger" },
+  { value: "unlinked", label: "Unassigned" },
+  { value: "clients", label: "Clients" },
+];
+
+const MORE_FILTERS: {
+  value: HostingerDomainFilter;
+  label: string;
+}[] = [
+  { value: "expiring_30", label: "Exp. 30d" },
+  { value: "expiring_60", label: "Exp. 60d" },
+  { value: "expiring_90", label: "Exp. 90d" },
   { value: "active", label: "Active" },
-  { value: "expired", label: "Expired" },
-  { value: "unlinked", label: "Unlinked" },
 ];
 
 const PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
@@ -55,6 +86,56 @@ const formatExpiresAt = (value?: string | null) => {
   return date.toLocaleDateString();
 };
 
+const isMoreFilter = (filter: HostingerDomainFilter) =>
+  MORE_FILTERS.some((option) => option.value === filter);
+
+const getDomainRowClass = (domain: HostingerDomain) => {
+  if (isExpiredDomain(domain)) {
+    return "bg-destructive/5 hover:bg-destructive/10";
+  }
+  if (isExpiringWithinDays(domain, ATTENTION_EXPIRING_DAYS)) {
+    return "bg-amber-500/5 hover:bg-amber-500/10";
+  }
+  return undefined;
+};
+
+const FilterChip = ({
+  label,
+  count,
+  active,
+  tone,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active?: boolean;
+  tone?: "warning" | "danger";
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
+      active
+        ? "border-primary bg-primary text-primary-foreground"
+        : "bg-background hover:bg-muted/60",
+      !active && tone === "warning" && count > 0 && "border-amber-500/40",
+      !active && tone === "danger" && count > 0 && "border-destructive/40",
+    )}
+  >
+    <span>{label}</span>
+    <span
+      className={cn(
+        "tabular-nums",
+        active ? "text-primary-foreground/80" : "text-muted-foreground",
+      )}
+    >
+      {count}
+    </span>
+  </button>
+);
+
 export const HostingerDomainsTab = () => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const [filter, setFilter] = useState<HostingerDomainFilter>("all");
@@ -65,6 +146,11 @@ export const HostingerDomainsTab = () => {
     null,
   );
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const settingsQuery = useQuery({
+    queryKey: ["hostinger_settings"],
+    queryFn: () => dataProvider.getHostingerSettings(),
+  });
 
   const domainsQuery = useQuery({
     queryKey: ["hostinger_domains", "list"],
@@ -79,11 +165,29 @@ export const HostingerDomainsTab = () => {
       );
       return response.data;
     },
+    enabled: settingsQuery.data?.has_api_token === true,
   });
+
+  const domains = domainsQuery.data ?? [];
+
+  const filterCounts = useMemo(() => {
+    const allFilters = [...QUICK_FILTERS, ...MORE_FILTERS];
+    return allFilters.reduce(
+      (counts, option) => {
+        counts[option.value] = domains.filter((domain) =>
+          matchesHostingerDomainFilter(domain, option.value),
+        ).length;
+        return counts;
+      },
+      {} as Record<HostingerDomainFilter, number>,
+    );
+  }, [domains]);
+
+  const moreFilterValue = isMoreFilter(filter) ? filter : "none";
 
   const filteredDomains = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return (domainsQuery.data ?? []).filter((domain) => {
+    return domains.filter((domain) => {
       if (!matchesHostingerDomainFilter(domain, filter)) return false;
       if (!needle) return true;
       return (
@@ -91,7 +195,7 @@ export const HostingerDomainsTab = () => {
         domain.company_name?.toLowerCase().includes(needle)
       );
     });
-  }, [domainsQuery.data, filter, search]);
+  }, [domains, filter, search]);
 
   const total = filteredDomains.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -118,42 +222,140 @@ export const HostingerDomainsTab = () => {
     setDetailOpen(true);
   };
 
+  if (settingsQuery.isLoading) {
+    return (
+      <p className="text-sm text-muted-foreground">Loading domains…</p>
+    );
+  }
+
+  if (!settingsQuery.data?.has_api_token) {
+    return (
+      <Alert>
+        <AlertDescription>
+          Connect your Hostinger API token in{" "}
+          <Link
+            to={`/settings?${buildSettingsSearchParams("connectors", "hostinger").toString()}`}
+            className="font-medium underline"
+          >
+            Settings → Integrations → Hostinger
+          </Link>{" "}
+          to sync your domain portfolio.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+      {settingsQuery.data.last_sync_error ? (
+        <Alert variant="destructive">
+          <AlertTriangle className="size-4" />
+          <AlertDescription>
+            Last sync failed: {settingsQuery.data.last_sync_error}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="space-y-2 rounded-lg border bg-muted/20 p-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search domain or client…"
-            className="pl-9"
+            className="h-9 border-0 bg-background pl-8 shadow-none"
           />
         </div>
-        <Select
-          value={filter}
-          onValueChange={(value) => setFilter(value as HostingerDomainFilter)}
-        >
-          <SelectTrigger className="w-full sm:w-[220px]">
-            <SelectValue placeholder="Filter" />
-          </SelectTrigger>
-          <SelectContent>
-            {FILTER_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
+
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <div className="flex shrink-0 items-center gap-1">
+            {QUICK_FILTERS.map((option) => (
+              <FilterChip
+                key={option.value}
+                label={option.label}
+                count={filterCounts[option.value] ?? 0}
+                active={filter === option.value}
+                tone={option.tone}
+                onClick={() => setFilter(option.value)}
+              />
             ))}
-          </SelectContent>
-        </Select>
+          </div>
+
+          <Select
+            value={moreFilterValue}
+            onValueChange={(value) => {
+              if (value === "none") {
+                setFilter("all");
+                return;
+              }
+              setFilter(value as HostingerDomainFilter);
+            }}
+          >
+            <SelectTrigger className="h-8 w-[7.5rem] shrink-0 border-dashed text-xs">
+              <SelectValue placeholder="More" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">More filters</SelectItem>
+              {MORE_FILTERS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label} ({filterCounts[option.value] ?? 0})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {settingsQuery.data.last_synced_at ? (
+              <span
+                className="hidden whitespace-nowrap text-[11px] text-muted-foreground lg:inline"
+                title={new Date(
+                  settingsQuery.data.last_synced_at,
+                ).toLocaleString()}
+              >
+                Synced{" "}
+                {new Date(settingsQuery.data.last_synced_at).toLocaleDateString()}
+              </span>
+            ) : null}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              asChild
+              title="Open hPanel"
+            >
+              <a
+                href={getHostingerHpanelHomeUrl()}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Globe className="size-4" />
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              asChild
+              title="Integration settings"
+            >
+              <Link
+                to={`/settings?${buildSettingsSearchParams("connectors", "hostinger").toString()}`}
+              >
+                <Settings2 className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Domain</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Expires</TableHead>
+              <TableHead>DNS</TableHead>
               <TableHead>Client</TableHead>
               <TableHead className="w-[120px] text-right">Actions</TableHead>
             </TableRow>
@@ -162,7 +364,7 @@ export const HostingerDomainsTab = () => {
             {domainsQuery.isLoading ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Loading domains…
@@ -171,7 +373,7 @@ export const HostingerDomainsTab = () => {
             ) : paginatedDomains.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   No domains match this filter. Sync your portfolio from
@@ -182,7 +384,7 @@ export const HostingerDomainsTab = () => {
               paginatedDomains.map((domain) => (
                 <TableRow
                   key={domain.id}
-                  className="cursor-pointer"
+                  className={cn("cursor-pointer", getDomainRowClass(domain))}
                   onClick={() => openDomainDetails(domain)}
                 >
                   <TableCell className="font-medium">
@@ -202,18 +404,31 @@ export const HostingerDomainsTab = () => {
                       <Badge variant="secondary" className="font-normal">
                         {formatHostingerStatus(domain.status)}
                       </Badge>
-                      {!domain.company_id ? (
+                      {!domain.company_id && !domain.is_owned ? (
                         <Badge variant="outline" className="font-normal">
-                          Unlinked
+                          Unassigned
+                        </Badge>
+                      ) : null}
+                      {domain.is_owned ? (
+                        <Badge variant="default" className="font-normal">
+                          Ours
                         </Badge>
                       ) : null}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{formatExpiresAt(domain.expires_at)}</div>
+                    <div className="text-sm">
+                      {formatExpiresAt(domain.expires_at)}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {formatExpiryLabel(domain.expires_at)}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <HostingerDnsHealthBadges
+                      health={readDomainDnsHealth(domain)}
+                      compact
+                    />
                   </TableCell>
                   <TableCell onClick={(event) => event.stopPropagation()}>
                     {domain.company_id && domain.company_name ? (

@@ -18,6 +18,7 @@ import { OrganizationMemberName } from "../organizationMembers/OrganizationMembe
 import type { Company } from "../types";
 import { sizes } from "./sizes";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
+import { HostingerCompanyDomainsSection } from "@/modules/hostinger/HostingerCompanyDomainsSection";
 
 interface CompanyAsideProps {
   link?: string;
@@ -44,6 +45,8 @@ export const CompanyAside = ({ link = "edit" }: CompanyAsideProps) => {
       <AddressInfo record={record} />
 
       <ContextInfo record={record} />
+
+      <HostingerCompanyDomainsSection companyId={record.id} />
 
       <AdditionalInfo record={record} />
 

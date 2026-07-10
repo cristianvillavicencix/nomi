@@ -11,6 +11,7 @@ export type HostingerDomain = {
   is_privacy_protected?: boolean | null;
   company_id?: number | null;
   company_name?: string | null;
+  is_owned?: boolean;
   metadata?: Record<string, unknown>;
   synced_at?: string;
   created_at?: string;
@@ -19,7 +20,9 @@ export type HostingerDomain = {
 
 export type HostingerDomainFilter =
   | "all"
+  | "clients"
   | "active"
+  | "expiring_14"
   | "expiring_30"
   | "expiring_60"
   | "expiring_90"
@@ -28,6 +31,7 @@ export type HostingerDomainFilter =
 
 export type HostingerOverviewStats = {
   total: number;
+  clients: number;
   expiring30: number;
   expiring60: number;
   expiring90: number;

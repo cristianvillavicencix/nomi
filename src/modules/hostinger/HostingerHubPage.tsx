@@ -13,7 +13,6 @@ import {
 } from "@/components/atomic-crm/layout/PageActions";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HostingerDomainsTab } from "@/modules/hostinger/HostingerDomainsTab";
-import { HostingerOverviewTab } from "@/modules/hostinger/HostingerOverviewTab";
 import { HostingerSearchTab } from "@/modules/hostinger/HostingerSearchTab";
 import {
   HOSTINGER_HUB_TAB_LABELS,
@@ -69,12 +68,10 @@ export const HostingerHubPage = () => {
 
 const TabPanel = ({ tab }: { tab: HostingerHubTab }) => {
   switch (tab) {
-    case "domains":
-      return <HostingerDomainsTab />;
     case "search":
       return <HostingerSearchTab />;
-    case "overview":
+    case "domains":
     default:
-      return <HostingerOverviewTab />;
+      return <HostingerDomainsTab />;
   }
 };

@@ -1,9 +1,11 @@
 import { supabaseAdmin } from "./supabaseAdmin.ts";
 import {
+  fetchHostingerDnsRecords,
   fetchHostingerPortfolio,
   hostnameFromWebsiteUrl,
   type HostingerDomainResource,
 } from "./hostingerApi.ts";
+import { analyzeHostingerDnsHealth } from "./hostingerDnsHealth.ts";
 import {
   getHostingerApiToken,
   updateHostingerSyncMetadata,
@@ -38,10 +40,17 @@ const toUpsertRow = (
   orgId: number,
   item: HostingerDomainResource,
   companyId: number | null,
+  isOwned: boolean,
   syncedAt: string,
+  dnsHealth?: ReturnType<typeof analyzeHostingerDnsHealth>,
 ) => {
   const domain = normalizeDomain(item.domain);
   if (!domain) return null;
+
+  const metadata = {
+    ...item,
+    ...(dnsHealth ? { dns_health: dnsHealth } : {}),
+  };
 
   return {
     org_id: orgId,
@@ -51,7 +60,8 @@ const toUpsertRow = (
     status: item.status ?? "active",
     expires_at: item.expires_at ?? null,
     company_id: companyId,
-    metadata: item,
+    is_owned: isOwned,
+    metadata,
     synced_at: syncedAt,
     updated_at: syncedAt,
   };
@@ -105,6 +115,37 @@ const dedupeDomainRows = (rows: HostingerUpsertRow[]) => {
   return Array.from(byDomain.values());
 };
 
+const DNS_ENRICH_CONCURRENCY = 4;
+
+const enrichRowsWithDnsHealth = async (
+  apiToken: string,
+  rows: HostingerUpsertRow[],
+) => {
+  const enriched: HostingerUpsertRow[] = [];
+  for (let index = 0; index < rows.length; index += DNS_ENRICH_CONCURRENCY) {
+    const batch = rows.slice(index, index + DNS_ENRICH_CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (row) => {
+        try {
+          const records = await fetchHostingerDnsRecords(apiToken, row.domain);
+          const dnsHealth = analyzeHostingerDnsHealth(records ?? []);
+          return {
+            ...row,
+            metadata: {
+              ...(row.metadata as Record<string, unknown>),
+              dns_health: dnsHealth,
+            },
+          };
+        } catch {
+          return row;
+        }
+      }),
+    );
+    enriched.push(...results);
+  }
+  return enriched;
+};
+
 export async function syncHostingerDomainsForOrg(
   _user: { id: string } | null,
   orgId: number,
@@ -118,9 +159,21 @@ export async function syncHostingerDomainsForOrg(
   const portfolio = await fetchHostingerPortfolio(apiToken);
   const companyByHostname = await buildCompanyHostnameMap(orgId);
 
+  const { data: orgRow, error: orgError } = await supabaseAdmin
+    .from("organizations")
+    .select("website")
+    .eq("id", orgId)
+    .maybeSingle();
+
+  if (orgError) {
+    throw new Error(orgError.message ?? "Failed to load organization website");
+  }
+
+  const orgHostname = hostnameFromWebsiteUrl(orgRow?.website);
+
   const { data: existingRows, error: existingError } = await supabaseAdmin
     .from("hostinger_domains")
-    .select("domain, company_id")
+    .select("domain, company_id, is_owned")
     .eq("org_id", orgId);
 
   if (existingError) {
@@ -132,6 +185,9 @@ export async function syncHostingerDomainsForOrg(
   const existingCompanyByDomain = new Map(
     (existingRows ?? []).map((row) => [row.domain, row.company_id as number | null]),
   );
+  const existingOwnedByDomain = new Map(
+    (existingRows ?? []).map((row) => [row.domain, row.is_owned === true]),
+  );
 
   const rows = dedupeDomainRows(
     (portfolio ?? [])
@@ -139,19 +195,25 @@ export async function syncHostingerDomainsForOrg(
         const domain = normalizeDomain(item.domain);
         if (!domain) return null;
         const preservedCompanyId = existingCompanyByDomain.get(domain) ?? null;
-        const companyId =
-          preservedCompanyId ?? companyByHostname.get(domain) ?? null;
-        return toUpsertRow(orgId, item, companyId, syncedAt);
+        const preservedIsOwned = existingOwnedByDomain.get(domain) ?? false;
+        const autoOwned = Boolean(orgHostname && domain === orgHostname);
+        const isOwned = preservedIsOwned || autoOwned;
+        const companyId = isOwned
+          ? null
+          : preservedCompanyId ?? companyByHostname.get(domain) ?? null;
+        return toUpsertRow(orgId, item, companyId, isOwned, syncedAt);
       })
       .filter((row): row is HostingerUpsertRow => row !== null),
   );
 
-  const activeDomainSet = new Set(rows.map((row) => row.domain));
+  const rowsWithDns = await enrichRowsWithDnsHealth(apiToken, rows);
 
-  if (rows.length > 0) {
+  const activeDomainSet = new Set(rowsWithDns.map((row) => row.domain));
+
+  if (rowsWithDns.length > 0) {
     const { error: upsertError } = await supabaseAdmin
       .from("hostinger_domains")
-      .upsert(rows, { onConflict: "org_id,domain" });
+      .upsert(rowsWithDns, { onConflict: "org_id,domain" });
 
     if (upsertError) {
       throw new Error(upsertError.message ?? "Failed to save Hostinger domains");
@@ -174,7 +236,7 @@ export async function syncHostingerDomainsForOrg(
         pruneError.message ?? "Failed to prune stale Hostinger domains",
       );
     }
-  } else if (rows.length === 0) {
+  } else if (rowsWithDns.length === 0) {
     const { error: clearError } = await supabaseAdmin
       .from("hostinger_domains")
       .delete()
@@ -192,7 +254,7 @@ export async function syncHostingerDomainsForOrg(
 
   return {
     ok: true as const,
-    synced: rows.length,
+    synced: rowsWithDns.length,
     synced_at: syncedAt,
   };
 }

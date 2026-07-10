@@ -6,6 +6,8 @@ import type {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+export const ATTENTION_EXPIRING_DAYS = 14;
+
 export const daysUntilExpiry = (expiresAt?: string | null) => {
   if (!expiresAt) return null;
   const expires = new Date(expiresAt).getTime();
@@ -44,10 +46,14 @@ export const matchesHostingerDomainFilter = (
   switch (filter) {
     case "all":
       return true;
+    case "clients":
+      return Boolean(domain.company_id) && domain.is_owned !== true;
     case "active":
       return domain.status === "active" && !isExpiredDomain(domain);
     case "expired":
       return isExpiredDomain(domain) || domain.status === "expired";
+    case "expiring_14":
+      return isExpiringWithinDays(domain, ATTENTION_EXPIRING_DAYS);
     case "expiring_30":
       return isExpiringWithinDays(domain, 30);
     case "expiring_60":
@@ -55,7 +61,7 @@ export const matchesHostingerDomainFilter = (
     case "expiring_90":
       return isExpiringWithinDays(domain, 90);
     case "unlinked":
-      return !domain.company_id;
+      return !domain.company_id && domain.is_owned !== true;
     default:
       return true;
   }
@@ -65,6 +71,7 @@ export const computeHostingerOverviewStats = (
   domains: HostingerDomain[],
 ): HostingerOverviewStats => ({
   total: domains.length,
+  clients: domains.filter((d) => matchesHostingerDomainFilter(d, "clients")).length,
   active: domains.filter((d) => matchesHostingerDomainFilter(d, "active"))
     .length,
   expiring30: domains.filter((d) => matchesHostingerDomainFilter(d, "expiring_30"))

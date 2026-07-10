@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useDataProvider } from "ra-core";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDataProvider, useNotify } from "ra-core";
 import {
   ExternalLink,
   Globe,
@@ -15,6 +15,7 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
   SheetContent,
@@ -33,6 +34,11 @@ import {
   formatExpiryLabel,
   formatHostingerStatus,
 } from "@/modules/hostinger/hostingerDomainUtils";
+import { HostingerDnsHealthBadges } from "@/modules/hostinger/HostingerDnsHealthBadges";
+import {
+  analyzeHostingerDnsHealth,
+  readDomainDnsHealth,
+} from "@/modules/hostinger/hostingerDnsHealth";
 import {
   getHostingerDomainDnsUrl,
   getHostingerDomainMailboxesUrl,
@@ -86,6 +92,8 @@ export const HostingerDomainDetailSheet = ({
   onOpenChange,
 }: Props) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const notify = useNotify();
+  const queryClient = useQueryClient();
 
   const detailsQuery = useQuery({
     queryKey: ["hostinger_domain_details", domain?.domain],
@@ -95,6 +103,36 @@ export const HostingerDomainDetailSheet = ({
     staleTime: 60_000,
   });
 
+  const ownedMutation = useMutation({
+    mutationFn: async (nextOwned: boolean) => {
+      const record = detailsQuery.data?.cached ?? domain;
+      if (!record) {
+        throw new Error("Domain not loaded");
+      }
+      return dataProvider.update("hostinger_domains", {
+        id: record.id,
+        data: {
+          is_owned: nextOwned,
+          ...(nextOwned ? { company_id: null } : {}),
+        },
+        previousData: record,
+      });
+    },
+    onSuccess: () => {
+      notify("Domain ownership updated", { type: "success" });
+      queryClient.invalidateQueries({ queryKey: ["hostinger_domains"] });
+      queryClient.invalidateQueries({
+        queryKey: ["hostinger_domain_details", domain?.domain],
+      });
+    },
+    onError: (error: unknown) => {
+      notify(
+        error instanceof Error ? error.message : "Failed to update ownership",
+        { type: "error" },
+      );
+    },
+  });
+
   if (!domain) return null;
 
   const details = detailsQuery.data?.details;
@@ -102,6 +140,11 @@ export const HostingerDomainDetailSheet = ({
   const dnsRecords = detailsQuery.data?.dns_records ?? [];
   const mailboxes = detailsQuery.data?.mailboxes ?? [];
   const hasMailApiToken = detailsQuery.data?.has_mail_api_token === true;
+  const isOwned = (detailsQuery.data?.cached ?? domain).is_owned === true;
+  const cachedDnsHealth = readDomainDnsHealth(cached);
+  const liveDnsHealth =
+    dnsRecords.length > 0 ? analyzeHostingerDnsHealth(dnsRecords) : null;
+  const dnsHealth = liveDnsHealth ?? cachedDnsHealth;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -112,9 +155,14 @@ export const HostingerDomainDetailSheet = ({
             <Badge variant="secondary" className="font-normal">
               {formatHostingerStatus(details?.status ?? domain.status)}
             </Badge>
-            {!cached.company_id ? (
+            {!cached.company_id && !isOwned ? (
               <Badge variant="outline" className="font-normal">
-                Unlinked
+                Unassigned
+              </Badge>
+            ) : null}
+            {isOwned ? (
+              <Badge variant="default" className="font-normal">
+                Ours
               </Badge>
             ) : null}
           </div>
@@ -156,9 +204,33 @@ export const HostingerDomainDetailSheet = ({
             </p>
           ) : (
             <div className="space-y-6">
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold">Ownership</h3>
+                <div className="flex items-start justify-between gap-4 rounded-lg border px-4 py-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Our domain</p>
+                    <p className="text-xs text-muted-foreground">
+                      Mark internal domains that belong to your organization, not
+                      a client. Sync also auto-marks your organization website.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isOwned}
+                    disabled={ownedMutation.isPending}
+                    onCheckedChange={(checked) => ownedMutation.mutate(checked)}
+                    aria-label="Mark as our domain"
+                  />
+                </div>
+              </section>
+
               <section className="space-y-1">
                 <h3 className="text-sm font-semibold">Client</h3>
-                {cached.company_id && cached.company_name ? (
+                {isOwned ? (
+                  <p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+                    This is marked as your organization&apos;s domain. Client
+                    linking is disabled while &quot;Our domain&quot; is on.
+                  </p>
+                ) : cached.company_id && cached.company_name ? (
                   <div className="rounded-lg border bg-muted/20 px-4 py-3">
                     <Link
                       to={getClientShowPath(cached.company_id)}
@@ -300,6 +372,23 @@ export const HostingerDomainDetailSheet = ({
                       <ExternalLink className="ml-1.5 size-3.5" />
                     </a>
                   </Button>
+                </div>
+              </section>
+
+              <section>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold">DNS health</h3>
+                  <Globe className="size-4 text-muted-foreground" />
+                </div>
+                <div className="rounded-lg border px-4 py-3">
+                  <HostingerDnsHealthBadges health={dnsHealth} />
+                  {dnsHealth?.checked_at ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Checked{" "}
+                      {new Date(dnsHealth.checked_at).toLocaleString()}
+                      {liveDnsHealth ? " (live)" : " (from last sync)"}
+                    </p>
+                  ) : null}
                 </div>
               </section>
 
