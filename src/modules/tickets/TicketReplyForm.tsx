@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronUp,
+  CloudUpload,
   Forward,
   Loader2,
   Lock,
@@ -24,6 +25,7 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type {
   ClientInvoice,
   Ticket,
+  TicketDeliverable,
   TicketInbox,
   TicketMessage,
 } from "@/modules/types";
@@ -97,6 +99,11 @@ import {
 } from "@/components/ui/tooltip";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
+import { allDeliverablesHaveBilling } from "@/modules/tickets/supplementPricing";
+import {
+  dispatchTicketFocusDeliverableUpload,
+  dispatchTicketOpenBilling,
+} from "@/modules/tickets/ticketComposerEvents";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 import { cn } from "@/lib/utils";
 
@@ -169,6 +176,25 @@ export const TicketReplyForm = ({
     { enabled: isValidRecordId(ticket.invoice_id) },
   );
   const invoice = invoiceRows[0] ?? null;
+
+  const { data: deliverables = [] } = useGetList<TicketDeliverable>(
+    "ticket_deliverables",
+    {
+      filter: { "ticket_id@eq": ticket.id },
+      sort: { field: "sort_order", order: "ASC" },
+      pagination: { page: 1, perPage: 50 },
+    },
+    { enabled: Boolean(ticket.id) },
+  );
+
+  const unbilledDeliverables = useMemo(
+    () => deliverables.filter((file) => !file.invoiced_invoice_id),
+    [deliverables],
+  );
+  const deliverablesReadyForInvoice =
+    allDeliverablesHaveBilling(unbilledDeliverables);
+  const isInvoiceReply =
+    composeMode === "reply" && replySendIntent === "reply_and_invoice";
 
   const awaitingPaidDelivery = isTicketAwaitingPaidDelivery(ticket, invoice);
   const outboundAttachmentsAllowed = canSendTicketOutboundAttachments(
@@ -394,6 +420,9 @@ export const TicketReplyForm = ({
       setForwardContext(null);
       setToRecipients(defaultRecipientEmail);
       setBodyHtml(buildReplyHtmlWithQuote(lastInboundMessage));
+      if (options?.replyIntent === "reply_and_invoice") {
+        dispatchTicketOpenBilling(ticket.id);
+      }
     } else if (mode === "internal") {
       setForwardContext(null);
       setInternalNoteText("");
@@ -762,6 +791,24 @@ export const TicketReplyForm = ({
   };
 
   const handleSendAndCharge = async () => {
+    if (unbilledDeliverables.length === 0) {
+      notify(
+        "Upload at least one delivery file before sending an invoice",
+        { type: "warning" },
+      );
+      dispatchTicketOpenBilling(ticket.id);
+      dispatchTicketFocusDeliverableUpload(ticket.id);
+      return;
+    }
+
+    if (!deliverablesReadyForInvoice) {
+      notify("Set billing type for each delivery file before sending", {
+        type: "warning",
+      });
+      dispatchTicketOpenBilling(ticket.id);
+      return;
+    }
+
     if (attachmentsUploading) {
       notify("Wait until attachments finish uploading", { type: "warning" });
       return;
@@ -868,6 +915,28 @@ export const TicketReplyForm = ({
     if (imageFiles.length === 0) return;
     event.preventDefault();
     imageFiles.forEach(addPendingFile);
+  };
+
+  const handleInvoiceDeliverableUpload = (files?: File[]) => {
+    dispatchTicketOpenBilling(ticket.id);
+    dispatchTicketFocusDeliverableUpload(ticket.id, files);
+  };
+
+  const handleComposerAttachClick = () => {
+    if (isInvoiceReply) {
+      handleInvoiceDeliverableUpload();
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleInvoiceDeliverableDrop = (
+    event: React.DragEvent<HTMLDivElement>,
+  ) => {
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (files.length === 0) return;
+    handleInvoiceDeliverableUpload(files);
   };
 
   const isPending = submitMutation.isPending;
@@ -1169,6 +1238,49 @@ export const TicketReplyForm = ({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {isInvoiceReply ? (
+            <div className="border-b border-primary/20 bg-primary/5 px-4 py-3 md:px-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Delivery files for invoice</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {unbilledDeliverables.length === 0
+                      ? "Upload the billable files here — they are not email attachments."
+                      : deliverablesReadyForInvoice
+                        ? `${unbilledDeliverables.length} file${unbilledDeliverables.length === 1 ? "" : "s"} ready to invoice.`
+                        : `${unbilledDeliverables.length} file${unbilledDeliverables.length === 1 ? "" : "s"} uploaded — set billing type for each.`}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => handleInvoiceDeliverableUpload()}
+                >
+                  <CloudUpload className="mr-1.5 size-4" />
+                  Upload files
+                </Button>
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => handleInvoiceDeliverableUpload()}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleInvoiceDeliverableUpload();
+                  }
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleInvoiceDeliverableDrop}
+                className="mt-2 cursor-pointer rounded-md border border-dashed border-primary/30 bg-background/80 px-3 py-2.5 text-center text-xs text-muted-foreground transition-colors hover:bg-background"
+              >
+                Drop .esx, PDF, or photos here to add them to the invoice
+              </div>
+            </div>
+          ) : null}
+
           {awaitingPaidDelivery ? (
             <p className="border-b border-warning/30 bg-warning/10 px-5 py-2 text-xs text-foreground">
               {TICKET_AWAITING_PAYMENT_ATTACHMENT_HINT}
@@ -1189,18 +1301,20 @@ export const TicketReplyForm = ({
             </div>
           ) : null}
 
-          <p className="border-b px-5 py-1.5 text-xs text-muted-foreground">
-            {TICKET_REPLY_ATTACHMENT_HINT_BEFORE}
-            <a
-              href={LARGE_FILE_TRANSFER_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              transfer.it
-            </a>
-            {TICKET_REPLY_ATTACHMENT_HINT_AFTER}
-          </p>
+          {!isInvoiceReply ? (
+            <p className="border-b px-5 py-1.5 text-xs text-muted-foreground">
+              {TICKET_REPLY_ATTACHMENT_HINT_BEFORE}
+              <a
+                href={LARGE_FILE_TRANSFER_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary underline underline-offset-2"
+              >
+                transfer.it
+              </a>
+              {TICKET_REPLY_ATTACHMENT_HINT_AFTER}
+            </p>
+          ) : null}
 
           <input
             ref={fileInputRef}
@@ -1234,7 +1348,11 @@ export const TicketReplyForm = ({
             contact={contact}
             company={company}
             onInsertTemplate={handleInsertTemplate}
-            onAttachClick={() => fileInputRef.current?.click()}
+            attachLabel={
+              isInvoiceReply ? "Upload delivery file" : "Attach files"
+            }
+            showLargeFileTransfer={!isInvoiceReply}
+            onAttachClick={handleComposerAttachClick}
             onLargeFileTransferClick={handleLargeFileTransferClick}
           />
 

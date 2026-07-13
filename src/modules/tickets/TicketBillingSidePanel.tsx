@@ -78,6 +78,10 @@ import {
 } from "@/modules/tickets/ticketInvoiceTabs";
 import { useTicketCatalogPackages } from "@/modules/catalog/useTicketCatalogPackages";
 import { cn } from "@/lib/utils";
+import {
+  TICKET_FOCUS_DELIVERABLE_UPLOAD_EVENT,
+  type TicketComposerEventDetail,
+} from "@/modules/tickets/ticketComposerEvents";
 
 const STORAGE_KEY = "tickets-tools-side-collapsed";
 
@@ -558,6 +562,30 @@ export const TicketBillingSidePanel = ({
     setBillingInitial(null);
     setBillingDialogOpen(true);
   };
+
+  useEffect(() => {
+    const handleFocusDeliverableUpload = (event: Event) => {
+      const detail = (event as CustomEvent<TicketComposerEventDetail>).detail;
+      if (detail.ticketId !== ticket.id) return;
+      setCollapsed(false);
+      setActiveView("invoice");
+      if (detail.files?.length) {
+        openBillingDialogForUpload(Array.from(detail.files));
+        return;
+      }
+      deliverableInputRef.current?.click();
+    };
+
+    window.addEventListener(
+      TICKET_FOCUS_DELIVERABLE_UPLOAD_EVENT,
+      handleFocusDeliverableUpload,
+    );
+    return () =>
+      window.removeEventListener(
+        TICKET_FOCUS_DELIVERABLE_UPLOAD_EVENT,
+        handleFocusDeliverableUpload,
+      );
+  }, [ticket.id]);
 
   const openBillingDialogForEdit = (deliverable: TicketDeliverable) => {
     setPendingUploads([]);

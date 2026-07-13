@@ -29,6 +29,8 @@ type TicketComposerToolbarProps = {
   company?: Company | null;
   onInsertTemplate: (text: string) => void;
   onAttachClick: () => void;
+  attachLabel?: string;
+  showLargeFileTransfer?: boolean;
   onLargeFileTransferClick?: () => void;
 };
 
@@ -42,6 +44,8 @@ export const TicketComposerToolbar = ({
   company,
   onInsertTemplate,
   onAttachClick,
+  attachLabel = "Attach files",
+  showLargeFileTransfer = true,
   onLargeFileTransferClick,
 }: TicketComposerToolbarProps) => {
   const syncEditor = () => {
@@ -94,12 +98,8 @@ export const TicketComposerToolbar = ({
 
       <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
 
-      {toolButton(
-        "Attach files",
-        <Paperclip className="size-4" />,
-        onAttachClick,
-      )}
-      {onLargeFileTransferClick
+      {toolButton(attachLabel, <Paperclip className="size-4" />, onAttachClick)}
+      {showLargeFileTransfer && onLargeFileTransferClick
         ? toolButton(
             "Large file via transfer.it",
             <ExternalLink className="size-4" />,

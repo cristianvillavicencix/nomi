@@ -4,6 +4,10 @@ import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { TicketBillingSidePanel } from "@/modules/tickets/TicketBillingSidePanel";
 import { TicketClientSummaryCard } from "@/modules/tickets/TicketClientSummaryCard";
+import {
+  TICKET_OPEN_BILLING_EVENT,
+  type TicketComposerEventDetail,
+} from "@/modules/tickets/ticketComposerEvents";
 import { cn } from "@/lib/utils";
 import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import {
@@ -210,6 +214,19 @@ export const TicketContextPanel = ({
     setCollapsed(true);
     setActiveTab(defaultContextTab(contextTabs));
   }, [ticket.id, contextTabs]);
+
+  useEffect(() => {
+    const handleOpenBilling = (event: Event) => {
+      const detail = (event as CustomEvent<TicketComposerEventDetail>).detail;
+      if (detail.ticketId !== ticket.id) return;
+      setActiveTab("billing");
+      setCollapsed(false);
+    };
+
+    window.addEventListener(TICKET_OPEN_BILLING_EVENT, handleOpenBilling);
+    return () =>
+      window.removeEventListener(TICKET_OPEN_BILLING_EVENT, handleOpenBilling);
+  }, [ticket.id]);
 
   const openTab = (tab: ContextTab) => {
     setActiveTab(tab);

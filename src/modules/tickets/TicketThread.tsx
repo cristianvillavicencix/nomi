@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { RefObject } from "react";
-import { ChevronDown, Lock, Reply } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, Lock, Reply } from "lucide-react";
 import type { FileAttachment } from "@/lib/fileAttachments";
 import type { TicketMessage } from "@/modules/types";
 import { EmailDeliveryBadge } from "@/modules/tickets/EmailDeliveryBadge";
@@ -78,7 +78,8 @@ const TicketThreadMessage = ({
     const author = senderName || "Team";
 
     return (
-      <article className="group/internal mx-auto w-full max-w-3xl border-b border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground last:border-b-0 md:px-5">
+      <article className="group/internal mx-auto w-full max-w-3xl">
+        <div className="rounded-lg border border-amber-500/35 bg-amber-50/90 px-4 py-3 text-sm text-foreground shadow-sm dark:border-amber-900/50 dark:bg-amber-950/30">
         <div className="flex items-start gap-2">
           <button
             type="button"
@@ -157,6 +158,7 @@ const TicketThreadMessage = ({
             />
           </>
         ) : null}
+        </div>
       </article>
     );
   }
@@ -172,12 +174,12 @@ const TicketThreadMessage = ({
     >
       <div
         className={cn(
-          "w-full max-w-[min(100%,42rem)] border-b px-4 py-3 text-sm transition-colors last:border-b-0 md:px-5",
+          "w-full max-w-[min(100%,38rem)] rounded-lg border px-4 py-3 text-sm shadow-sm transition-colors md:px-4",
           inbound
             ? unreadInbound
-              ? "border-info/40 bg-info/10"
-              : "border-border/70 bg-muted/20 dark:bg-muted/35"
-            : "border-info/30 bg-info/5",
+              ? "border-blue-300/70 border-l-4 border-l-blue-500 bg-blue-50/80 dark:border-blue-900/60 dark:bg-blue-950/25"
+              : "border-border/80 border-l-4 border-l-slate-400/70 bg-card dark:border-l-slate-500/70"
+            : "border-sky-300/60 border-r-4 border-r-sky-500 bg-sky-50/85 dark:border-sky-900/50 dark:bg-sky-950/30",
         )}
       >
         <div className="flex items-start gap-2">
@@ -187,14 +189,31 @@ const TicketThreadMessage = ({
             onClick={onToggle}
           >
             <div className="flex items-start justify-between gap-3 text-xs">
-              <span
-                className={cn(
-                  "min-w-0 truncate font-semibold",
-                  inbound ? "text-foreground" : "text-info",
-                )}
-              >
-                {senderLabel}
-              </span>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    inbound
+                      ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      : "bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300",
+                  )}
+                >
+                  {inbound ? (
+                    <ArrowDownLeft className="size-3" aria-hidden />
+                  ) : (
+                    <ArrowUpRight className="size-3" aria-hidden />
+                  )}
+                  {inbound ? "Received" : "Sent"}
+                </span>
+                <span
+                  className={cn(
+                    "min-w-0 truncate font-semibold",
+                    inbound ? "text-foreground" : "text-sky-800 dark:text-sky-200",
+                  )}
+                >
+                  {senderLabel}
+                </span>
+              </div>
               <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
                 {outbound ? (
                   <EmailDeliveryBadge message={message} compact />
@@ -329,7 +348,7 @@ export const TicketThread = ({
   const latestId = messageIds[messageIds.length - 1];
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-3">
       {messages.map((message) => {
         const messageId = Number(message.id);
         return (

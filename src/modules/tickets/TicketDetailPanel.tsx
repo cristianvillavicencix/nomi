@@ -190,7 +190,7 @@ export const TicketDetailPanel = ({
             </p>
           ) : null}
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 md:px-5">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/25 px-4 py-4 md:px-5">
             <TicketReadCutoffContext.Provider value={readCutoff}>
               <TicketThread
                 messages={messages}
