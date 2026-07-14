@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { RefObject } from "react";
-import { ArrowDownLeft, ArrowUpRight, ChevronDown, Lock, Reply } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronDown,
+  Lock,
+  Paperclip,
+  Reply,
+} from "lucide-react";
 import type { FileAttachment } from "@/lib/fileAttachments";
 import type { TicketMessage } from "@/modules/types";
 import { EmailDeliveryBadge } from "@/modules/tickets/EmailDeliveryBadge";
@@ -76,6 +83,7 @@ const TicketThreadMessage = ({
 
   if (isInternal) {
     const author = senderName || "Team";
+    const attachmentCount = attachments.length;
 
     return (
       <article className="group/internal mx-auto w-full max-w-3xl">
@@ -92,6 +100,12 @@ const TicketThreadMessage = ({
                 <Lock className="size-3.5 shrink-0" />
                 Internal note
               </span>
+              {attachmentCount > 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-background/70 px-1.5 py-0.5 text-[10px] font-medium normal-case tracking-normal text-foreground">
+                  <Paperclip className="size-3" />
+                  {attachmentCount} file{attachmentCount === 1 ? "" : "s"}
+                </span>
+              ) : null}
               <span aria-hidden>·</span>
               <span className="font-semibold normal-case tracking-normal text-foreground">
                 {author}
@@ -102,7 +116,9 @@ const TicketThreadMessage = ({
             </div>
             {collapsed && !isEditingInternal ? (
               <p className="mt-1 truncate text-xs text-muted-foreground">
-                {preview}
+                {preview === "No message content" && attachmentCount > 0
+                  ? `${attachmentCount} attached file${attachmentCount === 1 ? "" : "s"}`
+                  : preview}
               </p>
             ) : null}
           </button>
@@ -154,7 +170,7 @@ const TicketThreadMessage = ({
               body={message.body}
               htmlBody={message.html_body}
               attachments={attachments}
-              className="mt-2 text-foreground [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+              className="mt-2 text-foreground [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_section]:border-amber-500/30"
             />
           </>
         ) : null}

@@ -16,7 +16,8 @@ import {
 } from "@/modules/tickets/ticketEmailQuotedContent";
 import { htmlToPlainText } from "@/modules/tickets/ticketReplyRichText";
 
-const emailHtmlClassName = cn(
+/** Safe layout for our outbound HTML — flattens floats so CRM chrome stays clean. */
+const emailHtmlClassNameSafe = cn(
   "ticket-email-html leading-relaxed break-words text-sm text-foreground",
   "[&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline",
   "[&_img]:my-2 [&_img]:block [&_img]:!h-auto [&_img]:!max-w-full [&_img]:!max-h-[420px] [&_img]:!object-contain",
@@ -25,6 +26,17 @@ const emailHtmlClassName = cn(
   "[&_*]:!float-none [&_*]:!clear-both [&_*]:max-w-full",
   "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
   "[&_div]:relative [&_span]:relative",
+);
+
+/** Closer to Gmail for inbound marketing/client HTML — keeps floats/tables. */
+const emailHtmlClassNameOriginal = cn(
+  "ticket-email-html overflow-x-auto leading-relaxed break-words text-sm text-foreground",
+  "[&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline",
+  "[&_img]:!h-auto [&_img]:!max-w-full [&_img]:!max-h-[480px] [&_img]:!object-contain",
+  "[&_table]:!max-w-full",
+  "[&_td]:break-words [&_th]:break-words",
+  "[&_*]:max-w-full",
+  "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
 );
 
 const PlainTicketText = ({ text }: { text: string }) => (
@@ -53,7 +65,11 @@ const HtmlTicketBody = ({
   };
   return (
     <div
-      className={emailHtmlClassName}
+      className={
+        preserveOriginalLayout
+          ? emailHtmlClassNameOriginal
+          : emailHtmlClassNameSafe
+      }
       dangerouslySetInnerHTML={{
         __html: preserveOriginalLayout
           ? sanitizeTicketEmailHtmlOriginal(html, sanitizeOptions)

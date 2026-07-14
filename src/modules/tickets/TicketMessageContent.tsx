@@ -3,7 +3,6 @@ import type { FileAttachment } from "@/lib/fileAttachments";
 import { TicketMessageBody } from "@/modules/tickets/TicketMessageBody";
 import { TicketMessageAttachments } from "@/modules/tickets/TicketMessageAttachments";
 import {
-  collectStripHrefs,
   extractMessageAssets,
   partitionMessageAssets,
 } from "@/modules/tickets/ticketMessageAssets";
@@ -39,14 +38,14 @@ export const TicketMessageContent = ({
     [assets],
   );
 
-  const stripHrefs = useMemo(() => collectStripHrefs(assets), [assets]);
+  // Keep Drive/Dropbox links in the email body (Gmail-like). Still list them
+  // in Documents & Photos below for quick access — do not strip from HTML.
 
   return (
     <div className={cn(className)}>
       <TicketMessageBody
         body={body}
         htmlBody={htmlBody}
-        stripHrefs={stripHrefs}
         emailVariant={emailVariant}
       />
       <TicketMessageAttachments

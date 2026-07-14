@@ -215,6 +215,11 @@ export const extractMessageAssets = ({
   return [...fromFiles, ...fromHtml, ...fromText];
 };
 
+/**
+ * Previously used to remove Drive/Dropbox links from the email body after
+ * extracting them into Documents. Kept for callers that still want that
+ * behavior; ticket UI no longer strips body links (Gmail-like).
+ */
 export const collectStripHrefs = (assets: MessageAsset[]) =>
   assets
     .filter((asset) => asset.source === "link")

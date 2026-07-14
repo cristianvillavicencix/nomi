@@ -641,7 +641,7 @@ export const TicketReplyForm = ({
       refresh();
       onSent?.();
       if (result.is_internal_note) {
-        notify("Internal note added", { type: "success" });
+        notify("Internal note saved", { type: "success" });
         return;
       }
       if (result.email_sent) {
@@ -981,7 +981,7 @@ export const TicketReplyForm = ({
               <Lock className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Internal note</TooltipContent>
+          <TooltipContent>Internal note & documents</TooltipContent>
         </Tooltip>
         {canReplyAndCharge ? (
           <div className="inline-flex items-stretch rounded-md shadow-xs">
@@ -1095,30 +1095,25 @@ export const TicketReplyForm = ({
       <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
         <div
           className={cn(
-            "flex max-h-[min(75vh,52rem)] flex-col overflow-hidden bg-background",
+            "flex max-h-[min(75vh,52rem)] flex-col overflow-hidden bg-amber-50/40 dark:bg-amber-950/15",
             slideAnimationClass,
           )}
         >
-          <div className="flex shrink-0 items-center justify-between border-b bg-muted/10 px-4 py-2 md:px-5">
-            <span className="text-xs text-muted-foreground">Internal note</span>
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-amber-500/25 bg-amber-50/80 px-4 py-2.5 md:px-5 dark:bg-amber-950/30">
+            <div className="min-w-0">
+              <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                <Lock className="size-3.5 shrink-0" />
+                Internal note
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Team only — not emailed to the client. Add a note and optional
+                documents (PDF, photos, .esx).
+              </p>
+            </div>
             {minimizeButton}
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            {pendingFiles.length > 0 ? (
-              <div className="flex flex-col gap-2 border-b px-5 py-2">
-                {pendingFiles.map((pending) => (
-                  <TicketPendingAttachmentItem
-                    key={pending.id}
-                    pending={pending}
-                    disabled={isPending}
-                    onRemove={() => removePendingFile(pending.id)}
-                    onRetry={() => retryPendingFile(pending.id)}
-                  />
-                ))}
-              </div>
-            ) : null}
-
             <input
               ref={fileInputRef}
               type="file"
@@ -1135,52 +1130,101 @@ export const TicketReplyForm = ({
             <Textarea
               value={internalNoteText}
               onChange={(event) => setInternalNoteText(event.target.value)}
-              placeholder="Add an internal note for the team…"
+              placeholder="Write a note for the team… You can also attach documents below."
               rows={5}
               disabled={isPending}
-              className="min-h-32 resize-y rounded-none border-0 px-4 py-3 text-sm shadow-none focus-visible:ring-0 md:px-5"
+              className="min-h-28 resize-y rounded-none border-0 bg-transparent px-4 py-3 text-sm shadow-none focus-visible:ring-0 md:px-5"
               autoFocus
             />
+
+            <div className="space-y-2 border-t border-amber-500/20 px-4 py-3 md:px-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium text-foreground">
+                  Documents
+                  {pendingFiles.length > 0 ? (
+                    <span className="ml-1.5 font-normal text-muted-foreground">
+                      ({pendingFiles.length})
+                    </span>
+                  ) : null}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  disabled={isPending || attachmentsUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="size-3.5" />
+                  Add documents
+                </Button>
+              </div>
+
+              {pendingFiles.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {pendingFiles.map((pending) => (
+                    <TicketPendingAttachmentItem
+                      key={pending.id}
+                      pending={pending}
+                      disabled={isPending}
+                      onRemove={() => removePendingFile(pending.id)}
+                      onRetry={() => retryPendingFile(pending.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "copy";
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const files = Array.from(event.dataTransfer.files ?? []);
+                    files.forEach(addPendingFile);
+                  }}
+                  className="flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-amber-500/40 bg-background/70 px-3 py-4 text-center transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <CloudUpload className="size-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-foreground">
+                    Drop files here or click to browse
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Up to {MAX_TICKET_ATTACHMENTS} files · {Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB each · stays internal
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-background px-4 py-2.5 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)] md:px-5">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-amber-500/25 bg-background px-4 py-2.5 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)] md:px-5">
             <Button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="size-9"
+              variant="outline"
+              size="sm"
+              className="h-9"
               disabled={isPending}
-              aria-label="Attach files"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={collapseComposer}
             >
-              <Paperclip className="size-4" />
+              Cancel
             </Button>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                className="h-9 gap-2"
-                disabled={isPending || attachmentsUploading || !hasContent}
-                onClick={() => handleSend({ isInternalNote: true })}
-              >
-                {submittingAs === "internal" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Save className="size-4" />
-                )}
-                Save note
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9"
-                disabled={isPending}
-                onClick={collapseComposer}
-              >
-                Cancel
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="h-9 gap-2"
+              disabled={isPending || attachmentsUploading || !hasContent}
+              onClick={() => handleSend({ isInternalNote: true })}
+            >
+              {submittingAs === "internal" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Save className="size-4" />
+              )}
+              Save note
+            </Button>
           </div>
         </div>
       </div>

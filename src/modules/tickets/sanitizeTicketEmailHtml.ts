@@ -2,9 +2,10 @@ import DOMPurify from "dompurify";
 
 let emailHtmlHookInstalled = false;
 let preserveColorsInHook = false;
+let preserveLayoutInHook = false;
 
-/** Strip layout-breaking CSS; in safe mode also strip colors so dark mode stays readable. */
-const BLOCKED_STYLE_PROPS = new Set([
+/** Absolute positioning / floats that often break the ticket chrome. */
+const LAYOUT_BREAKING_STYLE_PROPS = new Set([
   "position",
   "float",
   "z-index",
@@ -22,7 +23,10 @@ const COLOR_STYLE_PROPS = new Set([
   "background-image",
 ]);
 
-const cleanInlineStyle = (raw: string, stripColors: boolean) =>
+const cleanInlineStyle = (
+  raw: string,
+  options: { stripColors: boolean; stripLayout: boolean },
+) =>
   raw
     .split(";")
     .map((chunk) => chunk.trim())
@@ -30,8 +34,10 @@ const cleanInlineStyle = (raw: string, stripColors: boolean) =>
     .filter((chunk) => {
       const prop = chunk.split(":")[0]?.trim().toLowerCase();
       if (!prop) return false;
-      if (BLOCKED_STYLE_PROPS.has(prop)) return false;
-      if (stripColors && COLOR_STYLE_PROPS.has(prop)) return false;
+      if (options.stripLayout && LAYOUT_BREAKING_STYLE_PROPS.has(prop)) {
+        return false;
+      }
+      if (options.stripColors && COLOR_STYLE_PROPS.has(prop)) return false;
       if (prop === "margin" && /-\d/.test(chunk)) return false;
       return true;
     })
@@ -123,10 +129,10 @@ const installEmailSanitizeHooks = () => {
     }
 
     if (node.hasAttribute("style")) {
-      const cleaned = cleanInlineStyle(
-        node.getAttribute("style") ?? "",
-        !preserveColorsInHook,
-      );
+      const cleaned = cleanInlineStyle(node.getAttribute("style") ?? "", {
+        stripColors: !preserveColorsInHook,
+        stripLayout: !preserveLayoutInHook,
+      });
       if (cleaned) {
         node.setAttribute("style", cleaned);
       } else {
@@ -134,9 +140,11 @@ const installEmailSanitizeHooks = () => {
       }
     }
 
-    node.style.position = "static";
-    node.style.float = "none";
-    node.style.zIndex = "auto";
+    if (!preserveLayoutInHook) {
+      node.style.position = "static";
+      node.style.float = "none";
+      node.style.zIndex = "auto";
+    }
   });
 };
 
@@ -151,6 +159,7 @@ const runSanitize = (
 ) => {
   const mode = options?.mode ?? "safe";
   preserveColorsInHook = mode === "original";
+  preserveLayoutInHook = mode === "original";
   installEmailSanitizeHooks();
 
   const sanitized = DOMPurify.sanitize(html, {
