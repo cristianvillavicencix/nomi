@@ -110,9 +110,9 @@ Deno.serve(
         }
 
         const baseUrl = resolveBaseUrl(body.base_url);
-        const path = `/portal/invoice/${tokenRow.token}`;
+        const path = `/portal/invoice/${tokenRow.token}?pay=1`;
         const url = baseUrl ? `${baseUrl}${path}` : path;
-        const shortPath = `/iv/${tokenRow.short_code}`;
+        const shortPath = `/iv/${tokenRow.short_code}?pay=1`;
         const short_url = baseUrl ? `${baseUrl}${shortPath}` : shortPath;
 
         return new Response(

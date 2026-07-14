@@ -576,6 +576,28 @@ const reusableCheckoutPaymentIntentStatuses = new Set([
   "requires_confirmation",
 ]);
 
+export class InvoicePaymentAlreadyCompletedError extends Error {
+  readonly paymentIntentId: string;
+
+  constructor(paymentIntentId: string) {
+    super("This invoice payment has already been completed");
+    this.name = "InvoicePaymentAlreadyCompletedError";
+    this.paymentIntentId = paymentIntentId;
+  }
+}
+
+export function isInvoicePaymentAlreadyCompletedError(
+  error: unknown,
+): error is InvoicePaymentAlreadyCompletedError {
+  return (
+    error instanceof InvoicePaymentAlreadyCompletedError ||
+    (typeof error === "object" &&
+      error !== null &&
+      (error as { name?: string }).name ===
+        "InvoicePaymentAlreadyCompletedError")
+  );
+}
+
 export async function tryReuseInvoiceCheckoutPaymentIntent(
   stripe: Stripe,
   params: {
@@ -606,6 +628,10 @@ export async function tryReuseInvoiceCheckoutPaymentIntent(
       return null;
     }
 
+    if (intent.status === "succeeded" || intent.status === "processing") {
+      throw new InvoicePaymentAlreadyCompletedError(intent.id);
+    }
+
     if (!reusableCheckoutPaymentIntentStatuses.has(intent.status)) {
       return null;
     }
@@ -618,6 +644,9 @@ export async function tryReuseInvoiceCheckoutPaymentIntent(
       metadata: params.metadata,
     });
   } catch (error) {
+    if (isInvoicePaymentAlreadyCompletedError(error)) {
+      throw error;
+    }
     console.warn(
       "tryReuseInvoiceCheckoutPaymentIntent.failed",
       paymentIntentId,
@@ -625,6 +654,17 @@ export async function tryReuseInvoiceCheckoutPaymentIntent(
     );
     return null;
   }
+}
+
+export function buildInvoiceCheckoutIdempotencyKey(params: {
+  invoiceId: number;
+  amountCents: number;
+  remainderInstallmentNumbers?: number[] | string | null;
+}) {
+  const remainderKey = Array.isArray(params.remainderInstallmentNumbers)
+    ? params.remainderInstallmentNumbers.join(",")
+    : String(params.remainderInstallmentNumbers ?? "").trim();
+  return `client-invoice-checkout-${params.invoiceId}-${params.amountCents}-${remainderKey || "checkout"}`;
 }
 
 export async function resolveInvoiceCheckoutPaymentIntent(
@@ -651,6 +691,7 @@ export async function resolveInvoiceCheckoutPaymentIntent(
         invoice_id: string;
         remainder_installment_numbers?: string;
       };
+      idempotencyKey?: string;
     };
   },
 ) {
@@ -670,7 +711,19 @@ export async function resolveInvoiceCheckoutPaymentIntent(
     if (reused) return reused;
   }
 
-  return createInvoiceCheckoutPaymentIntent(stripe, params.createParams);
+  const idempotencyKey =
+    params.createParams.idempotencyKey ??
+    buildInvoiceCheckoutIdempotencyKey({
+      invoiceId: params.invoiceId,
+      amountCents: params.amountCents,
+      remainderInstallmentNumbers:
+        params.metadata.remainder_installment_numbers,
+    });
+
+  return createInvoiceCheckoutPaymentIntent(stripe, {
+    ...params.createParams,
+    idempotencyKey,
+  });
 }
 
 export async function persistInvoiceStripeCheckoutSession(

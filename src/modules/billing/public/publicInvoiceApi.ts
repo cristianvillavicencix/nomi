@@ -23,13 +23,30 @@ const invokePublicFunction = async <T>(
   const payload = (await response.json()) as T & {
     message?: string;
     error?: string;
+    already_paid?: boolean;
   };
   if (!response.ok) {
     const detail =
       payload.message ?? payload.error ?? `Request failed (${response.status})`;
-    throw new Error(detail);
+    const error = new Error(detail) as Error & {
+      status?: number;
+      alreadyPaid?: boolean;
+    };
+    error.status = response.status;
+    error.alreadyPaid = Boolean(payload.already_paid) ||
+      /already paid/i.test(detail);
+    throw error;
   }
   return payload;
+};
+
+export const isPublicInvoiceAlreadyPaidError = (error: unknown) => {
+  if (!(error instanceof Error)) return false;
+  const withFlags = error as Error & {
+    status?: number;
+    alreadyPaid?: boolean;
+  };
+  return Boolean(withFlags.alreadyPaid) || /already paid/i.test(error.message);
 };
 
 export type PublicInvoicePayload = {

@@ -129,7 +129,7 @@ export const TicketToolsClientSms = ({
   const paymentUrl = useMemo(() => {
     if (!shareLink) return "";
     if (shareLink.short_code?.trim()) {
-      return `${window.location.origin.replace(/\/$/, "")}/iv/${shareLink.short_code}?sms=1`;
+      return `${window.location.origin.replace(/\/$/, "")}/iv/${shareLink.short_code}?pay=1&sms=1`;
     }
     if (shareLink.short_url?.trim()) return shareLink.short_url;
     if (shareLink.url?.trim()) return shareLink.url;

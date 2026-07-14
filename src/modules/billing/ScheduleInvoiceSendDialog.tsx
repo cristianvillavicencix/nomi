@@ -157,7 +157,12 @@ export const ScheduleInvoiceSendDialog = ({
       );
     }
     if (shareLink.short_code?.trim()) {
-      return `${window.location.origin.replace(/\/$/, "")}/iv/${shareLink.short_code}`;
+      return resolveClientInvoiceShareUrl(
+        {
+          url: `${window.location.origin.replace(/\/$/, "")}/iv/${shareLink.short_code}`,
+        },
+        window.location.origin,
+      );
     }
     return resolveClientInvoiceShareUrl(shareLink, window.location.origin);
   }, [shareLink]);

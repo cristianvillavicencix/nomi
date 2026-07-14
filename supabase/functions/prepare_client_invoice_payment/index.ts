@@ -4,8 +4,12 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import {
   amountToCents,
+  buildInvoiceCheckoutIdempotencyKey,
+  isInvoicePaymentAlreadyCompletedError,
   isStripeMockMode,
+  listSucceededClientInvoicePaymentIntents,
   persistInvoiceStripeCheckoutSession,
+  reconcileStuckClientInvoiceFromStripe,
   resolveContactEmail,
   resolveInvoiceCheckoutPaymentIntent,
   resolveOrCreateInvoiceStripeCustomer,
@@ -27,6 +31,25 @@ type PrepareBody = {
   payment_intent_id?: string;
 };
 
+const alreadyPaidResponse = (invoice: {
+  id: number;
+  status: string;
+  amount_paid?: number | null;
+}) =>
+  new Response(
+    JSON.stringify({
+      invoice_id: invoice.id,
+      status: invoice.status,
+      already_paid: true,
+      amount_paid: invoice.amount_paid,
+      message: "This invoice is already paid",
+    }),
+    {
+      status: 409,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
+
 Deno.serve(
   OptionsMiddleware(async (req) => {
     if (req.method !== "POST") {
@@ -41,6 +64,24 @@ Deno.serve(
         body,
       );
       if (!resolved.ok) {
+        if (resolved.status === 409) {
+          const token = String(body.public_token ?? "").trim();
+          if (token) {
+            const { data: tokenRow } = await supabaseAdmin
+              .from("public_client_invoice_tokens")
+              .select("invoice_id")
+              .eq("token", token)
+              .maybeSingle();
+            if (tokenRow?.invoice_id) {
+              const { data: invoice } = await supabaseAdmin
+                .from("client_invoices")
+                .select("id, status, amount_paid")
+                .eq("id", tokenRow.invoice_id)
+                .maybeSingle();
+              if (invoice) return alreadyPaidResponse(invoice);
+            }
+          }
+        }
         return createErrorResponse(resolved.status, resolved.message);
       }
 
@@ -114,6 +155,51 @@ Deno.serve(
         invoice.stripe_payment_intent_id?.trim() ?? "",
       ];
 
+      // If Stripe already captured payment for this invoice, sync CRM and stop
+      // creating another PaymentIntent (prevents duplicate charges on retry).
+      const succeededIntents = await listSucceededClientInvoicePaymentIntents(
+        stripe,
+        {
+          orgId: invoice.org_id,
+          invoiceId: invoice.id,
+          storedPaymentIntentId:
+            candidatePaymentIntentIds.find(Boolean) ?? undefined,
+        },
+      );
+
+      if (succeededIntents.length > 0) {
+        await reconcileStuckClientInvoiceFromStripe(supabaseAdmin, stripe, {
+          id: invoice.id,
+          org_id: invoice.org_id,
+          amount: Number(invoice.amount) || 0,
+          amount_paid: Number(invoice.amount_paid) || 0,
+          status: String(invoice.status),
+          stripe_payment_intent_id: invoice.stripe_payment_intent_id,
+        });
+
+        const { data: refreshed } = await supabaseAdmin
+          .from("client_invoices")
+          .select("id, status, amount, amount_paid")
+          .eq("id", invoice.id)
+          .eq("org_id", invoice.org_id)
+          .maybeSingle();
+
+        const total = Number(refreshed?.amount ?? invoice.amount) || 0;
+        const paid = Number(refreshed?.amount_paid ?? invoice.amount_paid) || 0;
+        if (
+          refreshed?.status === "paid" ||
+          paid >= total - 0.01
+        ) {
+          return alreadyPaidResponse(
+            refreshed ?? {
+              id: invoice.id,
+              status: "paid",
+              amount_paid: paid,
+            },
+          );
+        }
+      }
+
       const customer = await resolveOrCreateInvoiceStripeCustomer(stripe, {
         email,
         name: contactName || undefined,
@@ -125,20 +211,78 @@ Deno.serve(
           candidatePaymentIntentIds.find(Boolean) ?? undefined,
       });
 
-      const intent = await resolveInvoiceCheckoutPaymentIntent(stripe, {
-        candidatePaymentIntentIds,
-        amountCents,
-        invoiceId: invoice.id,
-        orgId: invoice.org_id,
-        metadata,
-        createParams: {
+      let intent;
+      try {
+        intent = await resolveInvoiceCheckoutPaymentIntent(stripe, {
+          candidatePaymentIntentIds,
           amountCents,
-          currency: invoice.currency ?? "usd",
-          customerId: customer.id,
-          saveForFutureUse: shouldSaveCard,
+          invoiceId: invoice.id,
+          orgId: invoice.org_id,
           metadata,
-        },
-      });
+          createParams: {
+            amountCents,
+            currency: invoice.currency ?? "usd",
+            customerId: customer.id,
+            saveForFutureUse: shouldSaveCard,
+            metadata,
+            idempotencyKey: buildInvoiceCheckoutIdempotencyKey({
+              invoiceId: invoice.id,
+              amountCents,
+              remainderInstallmentNumbers,
+            }),
+          },
+        });
+      } catch (error) {
+        if (isInvoicePaymentAlreadyCompletedError(error)) {
+          await reconcileStuckClientInvoiceFromStripe(supabaseAdmin, stripe, {
+            id: invoice.id,
+            org_id: invoice.org_id,
+            amount: Number(invoice.amount) || 0,
+            amount_paid: Number(invoice.amount_paid) || 0,
+            status: String(invoice.status),
+            stripe_payment_intent_id:
+              error.paymentIntentId || invoice.stripe_payment_intent_id,
+          });
+          const { data: refreshed } = await supabaseAdmin
+            .from("client_invoices")
+            .select("id, status, amount_paid")
+            .eq("id", invoice.id)
+            .maybeSingle();
+          return alreadyPaidResponse(
+            refreshed ?? {
+              id: invoice.id,
+              status: "paid",
+              amount_paid: invoice.amount_paid,
+            },
+          );
+        }
+        throw error;
+      }
+
+      // Idempotency can return a previously succeeded intent — never expose it
+      // as a new checkout session.
+      if (intent.status === "succeeded" || intent.status === "processing") {
+        await reconcileStuckClientInvoiceFromStripe(supabaseAdmin, stripe, {
+          id: invoice.id,
+          org_id: invoice.org_id,
+          amount: Number(invoice.amount) || 0,
+          amount_paid: Number(invoice.amount_paid) || 0,
+          status: String(invoice.status),
+          stripe_payment_intent_id: intent.id,
+        });
+        const { data: refreshed } = await supabaseAdmin
+          .from("client_invoices")
+          .select("id, status, amount_paid")
+          .eq("id", invoice.id)
+          .maybeSingle();
+        return alreadyPaidResponse(
+          refreshed ?? {
+            id: invoice.id,
+            status: "paid",
+            amount_paid: invoice.amount_paid,
+          },
+        );
+      }
 
       await persistInvoiceStripeCheckoutSession(supabaseAdmin, {
         invoiceId: invoice.id,
@@ -147,7 +291,9 @@ Deno.serve(
         stripeCustomerId: customer.id,
       });
 
-      const publishableKey = await resolveOrgStripePublishableKey(invoice.org_id);
+      const publishableKey = await resolveOrgStripePublishableKey(
+        invoice.org_id,
+      );
 
       return new Response(
         JSON.stringify({

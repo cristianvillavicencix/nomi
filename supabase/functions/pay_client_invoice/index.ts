@@ -8,6 +8,8 @@ import {
   createInvoicePaymentIntent,
   finalizeInvoicePaymentFromIntent,
   isStripeMockMode,
+  listSucceededClientInvoicePaymentIntents,
+  reconcileStuckClientInvoiceFromStripe,
   resolveContactEmail,
   resolveOrCreateInvoiceStripeCustomer,
 } from "../_shared/clientProposalBilling.ts";
@@ -105,6 +107,59 @@ Deno.serve(
         }
 
         const stripe = await getStripeForOrg(invoice.org_id);
+
+        // Recover a prior Stripe capture before charging a new PaymentIntent.
+        const succeededIntents = await listSucceededClientInvoicePaymentIntents(
+          stripe,
+          {
+            orgId: invoice.org_id,
+            invoiceId: invoice.id,
+            storedPaymentIntentId:
+              completedPaymentIntentId || invoice.stripe_payment_intent_id,
+          },
+        );
+        if (succeededIntents.length > 0) {
+          await reconcileStuckClientInvoiceFromStripe(supabaseAdmin, stripe, {
+            id: invoice.id,
+            org_id: invoice.org_id,
+            amount: Number(invoice.amount) || 0,
+            amount_paid: Number(invoice.amount_paid) || 0,
+            status: String(invoice.status),
+            stripe_payment_intent_id: invoice.stripe_payment_intent_id,
+          });
+          const { data: refreshed } = await supabaseAdmin
+            .from("client_invoices")
+            .select(
+              "id, org_id, proposal_id, ticket_id, contact_id, company_id, amount, amount_paid, currency, status, upfront_percent, save_card_for_future_charges, auto_charge_remainder, stripe_payment_intent_id, stripe_customer_id, stripe_payment_method_id, recipient_email, issue_date, due_date, remainder_schedule",
+            )
+            .eq("id", invoice.id)
+            .eq("org_id", invoice.org_id)
+            .maybeSingle();
+          const total = Number(refreshed?.amount ?? invoice.amount) || 0;
+          const paid =
+            Number(refreshed?.amount_paid ?? invoice.amount_paid) || 0;
+          if (refreshed?.status === "paid" || paid >= total - 0.01) {
+            return new Response(
+              JSON.stringify({
+                invoice_id: invoice.id,
+                status: refreshed?.status ?? "paid",
+                already_paid: true,
+                amount_paid: paid,
+                balance_due: 0,
+                paid_in_full: true,
+              }),
+              {
+                headers: {
+                  ...corsHeaders,
+                  "Content-Type": "application/json",
+                },
+              },
+            );
+          }
+          if (refreshed) {
+            Object.assign(invoice, refreshed);
+          }
+        }
 
         if (completedPaymentIntentId) {
           const finalized = await finalizeInvoicePaymentFromIntent(stripe, {

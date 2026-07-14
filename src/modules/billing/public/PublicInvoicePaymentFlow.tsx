@@ -42,6 +42,7 @@ import {
   resolveInvoicePaymentAmount,
 } from "@/modules/billing/public/invoicePaymentAmount";
 import {
+  isPublicInvoiceAlreadyPaidError,
   payPublicClientInvoice,
   preparePublicClientInvoicePayment,
   type PublicInvoicePayload,
@@ -357,6 +358,7 @@ const useStablePaymentCheckoutSession = (
   token: string,
   summary: InvoicePaymentSummary,
   paymentAmountState: ReturnType<typeof useInvoicePaymentAmountState>,
+  onAlreadyPaid?: () => void,
 ) => {
   const [session, setSession] = useState<PaymentCheckoutSession | null>(null);
   const [initialError, setInitialError] = useState<Error | null>(null);
@@ -366,6 +368,8 @@ const useStablePaymentCheckoutSession = (
   const syncPromiseRef = useRef<Promise<void> | null>(null);
   const initialPreparedRef = useRef(false);
   const prepareInFlightRef = useRef<Promise<unknown> | null>(null);
+  const onAlreadyPaidRef = useRef(onAlreadyPaid);
+  onAlreadyPaidRef.current = onAlreadyPaid;
 
   const selectedAmount = paymentAmountState.selectedAmount;
   const remainderKey = paymentAmountState.remainderInstallmentNumbers.join(",");
@@ -465,7 +469,13 @@ const useStablePaymentCheckoutSession = (
         }
       })
       .catch((error: Error) => {
-        if (!cancelled) setInitialError(error);
+        if (cancelled) return;
+        if (isPublicInvoiceAlreadyPaidError(error)) {
+          clearStoredInvoicePaymentIntentId(token);
+          onAlreadyPaidRef.current?.();
+          return;
+        }
+        setInitialError(error);
       })
       .finally(() => {
         if (!cancelled) setIsInitialLoading(false);
@@ -474,7 +484,7 @@ const useStablePaymentCheckoutSession = (
     return () => {
       cancelled = true;
     };
-  }, [token, summary.isPaid, paymentAmountState.amountValid, runPrepare]);
+  }, [token, summary.isPaid, paymentAmountState.amountValid, runPrepare, syncKey]);
 
   useEffect(() => {
     if (isInitialLoading || !session?.paymentIntentId || summary.isPaid) return;
@@ -487,6 +497,11 @@ const useStablePaymentCheckoutSession = (
           setSyncError(null);
         })
         .catch((error: Error) => {
+          if (isPublicInvoiceAlreadyPaidError(error)) {
+            clearStoredInvoicePaymentIntentId(token);
+            onAlreadyPaidRef.current?.();
+            return;
+          }
           setSyncError(error);
         });
       syncPromiseRef.current = promise.then(() => undefined);
@@ -507,14 +522,24 @@ const useStablePaymentCheckoutSession = (
       await syncPromiseRef.current;
     }
     if (syncKey === lastSyncedRef.current) return;
-    await runPrepare(session?.paymentIntentId || undefined);
-    lastSyncedRef.current = syncKey;
+    try {
+      await runPrepare(session?.paymentIntentId || undefined);
+      lastSyncedRef.current = syncKey;
+    } catch (error) {
+      if (isPublicInvoiceAlreadyPaidError(error)) {
+        clearStoredInvoicePaymentIntentId(token);
+        onAlreadyPaidRef.current?.();
+        return;
+      }
+      throw error;
+    }
   }, [
     summary.isPaid,
     paymentAmountState.amountValid,
     syncKey,
     runPrepare,
     session?.paymentIntentId,
+    token,
   ]);
 
   return { session, isInitialLoading, initialError, syncError, ensureSynced };
@@ -846,6 +871,7 @@ const InvoiceStripeCheckout = ({
     token,
     summary,
     paymentAmountState,
+    onSuccess,
   );
   const { invoice } = payload;
   const publishableKey = resolveStripePublishableKey(

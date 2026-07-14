@@ -62,7 +62,9 @@ export async function resolveInvoicePortalUrl(
     .maybeSingle();
 
   const baseUrl = resolvePublicAppBaseUrl();
-  const payQuery = options?.openPayment ? "?pay=1" : "";
+  // Default to ticket-style payment entry unless explicitly disabled.
+  const openPayment = options?.openPayment !== false;
+  const payQuery = openPayment ? "?pay=1" : "";
   if (tokenRow?.short_code) {
     return `${baseUrl}/iv/${tokenRow.short_code}${payQuery}`;
   }

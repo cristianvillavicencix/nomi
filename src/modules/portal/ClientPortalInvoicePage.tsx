@@ -136,7 +136,9 @@ export const ClientPortalInvoicePage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const payRequested =
-    searchParams.get("pay") === "1" || searchParams.get("pay") === "true";
+    searchParams.get("pay") === "1" ||
+    searchParams.get("pay") === "true" ||
+    searchParams.get("sms") === "1";
 
   const payModeActive = Boolean(
     payload &&

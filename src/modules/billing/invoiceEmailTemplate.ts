@@ -33,20 +33,24 @@ export const formatInvoiceDueDate = (dueDate: string) => {
   });
 };
 
+/** Opens the public invoice portal directly on Stripe payment entry. */
+export const withInvoicePaymentQuery = (url: string) => {
+  if (!url) return url;
+  if (/[?&]pay=1(?:&|$)/.test(url)) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}pay=1`;
+};
+
+/** Share/send URLs always open ticket-style payment entry (?pay=1). */
 export const resolveClientInvoiceShareUrl = (
   result: { url: string; short_url?: string | null },
   origin = typeof window !== "undefined" ? window.location.origin : "",
 ) => {
   const candidate = result.short_url?.trim() || result.url?.trim() || "";
   if (!candidate) return "";
-  return candidate.startsWith("http") ? candidate : `${origin}${candidate}`;
-};
-
-/** Opens the public invoice portal directly on Stripe payment entry. */
-export const withInvoicePaymentQuery = (url: string) => {
-  if (!url) return url;
-  if (/[?&]pay=1(?:&|$)/.test(url)) return url;
-  return `${url}${url.includes("?") ? "&" : "?"}pay=1`;
+  const resolved = candidate.startsWith("http")
+    ? candidate
+    : `${origin}${candidate}`;
+  return withInvoicePaymentQuery(resolved);
 };
 
 export const buildDefaultInvoiceEmailSubject = (

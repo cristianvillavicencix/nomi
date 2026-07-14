@@ -168,6 +168,35 @@ export async function applyClientInvoicePaymentUpdate(
   const paid = Number(invoice.amount_paid) || 0;
   const upfrontPercent = Number(invoice.upfront_percent ?? 100);
   const now = new Date().toISOString();
+  const alreadyPaidInFull =
+    invoice.status === "paid" || paid >= total - 0.01;
+
+  // Never stack a second charge onto an invoice that is already settled,
+  // even if Stripe returns a different PaymentIntent id.
+  if (alreadyPaidInFull) {
+    const balanceDue = Math.max(Math.round((total - paid) * 100) / 100, 0);
+    if (invoice.ticket_id) {
+      try {
+        await deliverTicketAfterInvoicePayment(supabase, {
+          invoiceId: invoice.id,
+          orgId: invoice.org_id,
+        });
+      } catch (error) {
+        console.error(
+          "applyClientInvoicePaymentUpdate.deliverTicket.alreadyPaid",
+          error,
+        );
+      }
+    }
+    return {
+      duplicate: true,
+      invoice,
+      charged_amount: 0,
+      amount_paid: paid,
+      balance_due: balanceDue,
+      paid_in_full: true,
+    };
+  }
 
   if (
     isInvoiceStripePaymentAlreadyApplied(invoice, {
