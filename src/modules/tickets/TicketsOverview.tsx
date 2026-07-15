@@ -1,52 +1,51 @@
-import { Inbox, KanbanSquare, List as ListIcon, Search } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import {
-  ListContextProvider,
-  useGetIdentity,
-  useListContext,
-} from "ra-core";
-import { useSearchParams } from "react-router";
+import { Inbox, KanbanSquare, List as ListIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useGetIdentity, useListContext } from "ra-core";
+import { useNavigate, useSearchParams } from "react-router";
 import { List } from "@/components/admin/list";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useMarkTicketNotificationsReadOnVisit } from "@/modules/notifications/useMarkTicketNotificationsReadOnVisit";
 import { CreateTicketButton } from "@/modules/tickets/CreateTicketButton";
-import {
-  DEFAULT_TICKET_INBOX_EMAIL,
-  TICKET_STATUS_FILTERS,
-  type TicketStatusFilterId,
-} from "@/modules/tickets/ticketInboxConfig";
+import { DEFAULT_TICKET_INBOX_EMAIL } from "@/modules/tickets/ticketInboxConfig";
 import {
   readPersistedTicketsOverviewView,
   TICKETS_OVERVIEW_VIEW_KEY,
   type TicketsOverviewView,
 } from "@/modules/tickets/ticketOverviewConfig";
-import {
-  buildTicketInboxStatusFilter,
-  isTicketStatusFilterId,
-} from "@/modules/tickets/ticketStatusWorkflow";
+import { TicketOverviewPreview } from "@/modules/tickets/TicketOverviewPreview";
+import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 import { TicketsKanban } from "@/modules/tickets/TicketsKanban";
 import { TicketsOverviewTable } from "@/modules/tickets/TicketsOverviewTable";
 import { useTicketsInboxRealtime } from "@/modules/tickets/useTicketsInboxRealtime";
 import type { Ticket } from "@/modules/types";
 
+const OVERVIEW_LIST_FILTER = { "merged_into_ticket_id@is": null };
+
 export const TicketsOverview = () => {
   const { identity } = useGetIdentity();
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const statusParam = searchParams.get("status");
-  const statusFilter: TicketStatusFilterId = isTicketStatusFilterId(statusParam)
-    ? statusParam
-    : "all";
   const [view, setView] = useState<TicketsOverviewView>(() =>
     readPersistedTicketsOverviewView(),
   );
-  const [searchQuery, setSearchQuery] = useState("");
+
+  const ticketParam = searchParams.get("ticket");
+  const selectedTicketId =
+    ticketParam && /^\d+$/.test(ticketParam) ? ticketParam : null;
 
   useTicketsInboxRealtime(Boolean(identity));
   useMarkTicketNotificationsReadOnVisit();
@@ -56,13 +55,29 @@ export const TicketsOverview = () => {
     window.localStorage.setItem(TICKETS_OVERVIEW_VIEW_KEY, view);
   }, [view]);
 
-  const listFilter = useMemo(
-    () => ({
-      "merged_into_ticket_id@is": null,
-      ...buildTicketInboxStatusFilter(statusFilter),
-    }),
-    [statusFilter],
-  );
+  // Drop legacy status filter query params on overview.
+  useEffect(() => {
+    if (!searchParams.has("status")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("status");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const setSelectedTicketId = (ticketId: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("status");
+    if (ticketId) next.set("ticket", ticketId);
+    else next.delete("ticket");
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleSelectTicket = (ticketId: string) => {
+    if (isMobile) {
+      navigate(ticketShowPath(ticketId));
+      return;
+    }
+    setSelectedTicketId(ticketId);
+  };
 
   if (!identity) return null;
 
@@ -75,28 +90,22 @@ export const TicketsOverview = () => {
       pagination={view === "table" ? undefined : false}
       perPage={view === "kanban" ? 200 : 50}
       sort={{ field: "updated_at", order: "DESC" }}
-      filter={listFilter}
+      filter={OVERVIEW_LIST_FILTER}
       disableSyncWithLocation
-      storeKey={`tickets.overview.${statusFilter}.${view}`}
+      storeKey={`tickets.overview.${view}`}
       queryOptions={{ refetchInterval: 30_000 }}
       className={view === "kanban" ? "mt-0 min-h-0 flex-1" : undefined}
       actions={
-        <TicketsOverviewActions
-          view={view}
-          onViewChange={setView}
-          statusFilter={statusFilter}
-          onStatusFilterChange={(next) => {
-            const params = new URLSearchParams(searchParams);
-            if (next === "all") params.delete("status");
-            else params.set("status", next);
-            setSearchParams(params, { replace: true });
-          }}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-        />
+        <TicketsOverviewActions view={view} onViewChange={setView} />
       }
     >
-      <TicketsOverviewBody view={view} searchQuery={searchQuery} />
+      <TicketsOverviewBody
+        view={view}
+        selectedTicketId={selectedTicketId}
+        onSelectTicket={handleSelectTicket}
+        onClearSelection={() => setSelectedTicketId(null)}
+        isMobile={isMobile}
+      />
     </List>
   );
 };
@@ -104,17 +113,9 @@ export const TicketsOverview = () => {
 const TicketsOverviewActions = ({
   view,
   onViewChange,
-  statusFilter,
-  onStatusFilterChange,
-  searchQuery,
-  onSearchQueryChange,
 }: {
   view: TicketsOverviewView;
   onViewChange: (view: TicketsOverviewView) => void;
-  statusFilter: TicketStatusFilterId;
-  onStatusFilterChange: (status: TicketStatusFilterId) => void;
-  searchQuery: string;
-  onSearchQueryChange: (value: string) => void;
 }) => {
   const { total } = useListContext<Ticket>();
 
@@ -143,32 +144,6 @@ const TicketsOverviewActions = ({
           Kanban
         </ToggleGroupItem>
       </ToggleGroup>
-      <div className="relative min-w-[160px] max-w-xs flex-1">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={searchQuery}
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-          placeholder="Search tickets…"
-          className="h-8 pl-8"
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-1">
-        {TICKET_STATUS_FILTERS.map((filter) => (
-          <button
-            key={filter.id}
-            type="button"
-            onClick={() => onStatusFilterChange(filter.id)}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-              statusFilter === filter.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/60 text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
       <div className="ml-auto">
         <CreateTicketButton />
       </div>
@@ -178,67 +153,96 @@ const TicketsOverviewActions = ({
 
 const TicketsOverviewBody = ({
   view,
-  searchQuery,
+  selectedTicketId,
+  onSelectTicket,
+  onClearSelection,
+  isMobile,
 }: {
   view: TicketsOverviewView;
-  searchQuery: string;
+  selectedTicketId: string | null;
+  onSelectTicket: (ticketId: string) => void;
+  onClearSelection: () => void;
+  isMobile: boolean;
+}) => (
+  <div
+    className={cn(
+      "flex min-h-0 flex-1 flex-col px-1 pt-1",
+      view === "kanban" ? "pb-2" : "pb-3",
+    )}
+  >
+    {view === "table" ? (
+      <TicketsOverviewTableLayout
+        selectedTicketId={selectedTicketId}
+        onSelectTicket={onSelectTicket}
+        onClearSelection={onClearSelection}
+        isMobile={isMobile}
+      />
+    ) : (
+      <>
+        <TicketsKanban
+          selectedTicketId={selectedTicketId}
+          onSelectTicket={onSelectTicket}
+        />
+        <Sheet
+          open={Boolean(selectedTicketId) && !isMobile}
+          onOpenChange={(open) => {
+            if (!open) onClearSelection();
+          }}
+        >
+          <SheetContent
+            side="right"
+            className="w-[min(55vw,44rem)] gap-0 p-0 sm:max-w-none [&>button]:hidden"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Ticket preview</SheetTitle>
+            </SheetHeader>
+            {selectedTicketId ? (
+              <TicketOverviewPreview
+                ticketId={selectedTicketId}
+                onClose={onClearSelection}
+              />
+            ) : null}
+          </SheetContent>
+        </Sheet>
+      </>
+    )}
+  </div>
+);
+
+const TicketsOverviewTableLayout = ({
+  selectedTicketId,
+  onSelectTicket,
+  onClearSelection,
+  isMobile,
+}: {
+  selectedTicketId: string | null;
+  onSelectTicket: (ticketId: string) => void;
+  onClearSelection: () => void;
+  isMobile: boolean;
 }) => {
-  const list = useListContext<Ticket>();
-  const trimmed = searchQuery.trim().toLowerCase();
-
-  const filteredData = useMemo(() => {
-    const rows = list.data ?? [];
-    if (!trimmed) return rows;
-    return rows.filter((ticket) => {
-      const haystack = [
-        ticket.subject,
-        ticket.requester_name,
-        ticket.requester_email,
-        String(ticket.id),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(trimmed);
-    });
-  }, [list.data, trimmed]);
-
-  const content =
-    view === "kanban" ? <TicketsKanban /> : <TicketsOverviewTable />;
+  const showPreview = Boolean(selectedTicketId) && !isMobile;
 
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col px-1 pt-1",
-        view === "kanban" ? "pb-2" : "pb-3",
+        "grid min-h-0 flex-1 gap-2",
+        showPreview
+          ? "grid-cols-1 md:grid-cols-[minmax(18rem,40%)_minmax(0,1fr)]"
+          : "grid-cols-1",
       )}
     >
-      {trimmed ? (
-        <FilteredListContext data={filteredData}>{content}</FilteredListContext>
-      ) : (
-        content
-      )}
+      <TicketsOverviewTable
+        selectedTicketId={selectedTicketId}
+        onSelectTicket={onSelectTicket}
+      />
+      {showPreview && selectedTicketId ? (
+        <div className="min-h-0 overflow-hidden rounded-xl border">
+          <TicketOverviewPreview
+            ticketId={selectedTicketId}
+            onClose={onClearSelection}
+          />
+        </div>
+      ) : null}
     </div>
-  );
-};
-
-const FilteredListContext = ({
-  data,
-  children,
-}: {
-  data: Ticket[];
-  children: ReactNode;
-}) => {
-  const parent = useListContext<Ticket>();
-  return (
-    <ListContextProvider
-      value={{
-        ...parent,
-        data,
-        total: data.length,
-      }}
-    >
-      {children}
-    </ListContextProvider>
   );
 };

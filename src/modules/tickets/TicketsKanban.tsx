@@ -4,27 +4,26 @@ import {
   Droppable,
   type OnDragEndResponder,
 } from "@hello-pangea/dnd";
-import { useListContext } from "ra-core";
+import { useGetList, useListContext } from "ra-core";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { useKanbanEdgeAutoScroll } from "@/hooks/useKanbanEdgeAutoScroll";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { Ticket } from "@/modules/types";
+import type { Company } from "@/components/atomic-crm/types";
+import type {
+  ClientInvoice,
+  OrganizationMember,
+  Ticket,
+} from "@/modules/types";
+import { TicketKanbanCard } from "@/modules/tickets/TicketKanbanCard";
 import {
   emptyTicketKanbanBuckets,
   TICKET_KANBAN_COLUMNS,
   ticketStatusForKanban,
   type TicketKanbanColumnId,
 } from "@/modules/tickets/ticketOverviewConfig";
-import { formatTicketListTime } from "@/modules/tickets/ticketInboxUi";
-import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
+import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
 import { useTicketStatusChange } from "@/modules/tickets/useTicketStatusChange";
-import {
-  isElevatedTicketPriority,
-  ticketPriorityLabel,
-} from "@/modules/tickets/ticketPriorityUi";
 
 type TicketsByStatus = Record<TicketKanbanColumnId, Ticket[]>;
 
@@ -36,13 +35,19 @@ const groupTicketsByStatus = (tickets: Ticket[]): TicketsByStatus => {
   return buckets;
 };
 
-export const TicketsKanban = () => {
+export const TicketsKanban = ({
+  selectedTicketId,
+  onSelectTicket,
+}: {
+  selectedTicketId?: string | null;
+  onSelectTicket: (ticketId: string) => void;
+}) => {
   const { data = [], isPending, refetch } = useListContext<Ticket>();
-  const navigate = useNavigate();
   const [ticketsByStatus, setTicketsByStatus] = useState<TicketsByStatus>(
     emptyTicketKanbanBuckets,
   );
   const [isDragging, setIsDragging] = useState(false);
+  const suppressClickRef = useRef(false);
   const boardRef = useRef<HTMLDivElement>(null);
   useHorizontalWheelScroll(boardRef);
   useKanbanEdgeAutoScroll(boardRef, isDragging);
@@ -57,12 +62,137 @@ export const TicketsKanban = () => {
     [data],
   );
 
+  const ticketIds = useMemo(
+    () => tickets.map((ticket) => String(ticket.id)),
+    [tickets],
+  );
+  const companyIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          tickets
+            .map((ticket) => ticket.company_id)
+            .filter((id) => id != null)
+            .map(Number),
+        ),
+      ],
+    [tickets],
+  );
+  const assigneeIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          tickets
+            .map(
+              (ticket) =>
+                ticket.assignee_id ?? ticket.organization_member_id ?? null,
+            )
+            .filter((id): id is number => id != null)
+            .map(Number),
+        ),
+      ],
+    [tickets],
+  );
+  const linkedInvoiceIds = useMemo(
+    () => [
+      ...new Set(
+        tickets
+          .map((ticket) => ticket.invoice_id)
+          .filter((id): id is number | string => id != null)
+          .map((id) => String(id)),
+      ),
+    ],
+    [tickets],
+  );
+
+  const { data: companies = [] } = useGetList<Company>(
+    "companies",
+    {
+      pagination: { page: 1, perPage: Math.max(companyIds.length, 1) },
+      filter: companyIds.length ? { "id@in": `(${companyIds.join(",")})` } : {},
+    },
+    { enabled: companyIds.length > 0 },
+  );
+  const { data: members = [] } = useGetList<OrganizationMember>(
+    "organization_members",
+    {
+      pagination: { page: 1, perPage: Math.max(assigneeIds.length, 1) },
+      filter: assigneeIds.length
+        ? { "id@in": `(${assigneeIds.join(",")})` }
+        : {},
+    },
+    { enabled: assigneeIds.length > 0 },
+  );
+  const { data: ticketInvoices = [] } = useGetList<ClientInvoice>(
+    "client_invoices",
+    {
+      pagination: { page: 1, perPage: Math.max(ticketIds.length * 4, 1) },
+      sort: { field: "id", order: "ASC" },
+      filter: ticketIds.length
+        ? { "ticket_id@in": `(${ticketIds.join(",")})` }
+        : undefined,
+    },
+    { enabled: ticketIds.length > 0 },
+  );
+  const { data: linkedInvoices = [] } = useGetList<ClientInvoice>(
+    "client_invoices",
+    {
+      pagination: { page: 1, perPage: Math.max(linkedInvoiceIds.length, 1) },
+      sort: { field: "id", order: "ASC" },
+      filter: linkedInvoiceIds.length
+        ? { "id@in": `(${linkedInvoiceIds.join(",")})` }
+        : undefined,
+    },
+    { enabled: linkedInvoiceIds.length > 0 },
+  );
+
+  const readMap = useTicketInboxReads(ticketIds);
+
+  const companiesById = useMemo(() => {
+    const map = new Map<number, Company>();
+    for (const company of companies) map.set(Number(company.id), company);
+    return map;
+  }, [companies]);
+  const membersById = useMemo(() => {
+    const map = new Map<number, OrganizationMember>();
+    for (const member of members) map.set(Number(member.id), member);
+    return map;
+  }, [members]);
+  const invoicesByTicketId = useMemo(() => {
+    const map = new Map<string, ClientInvoice[]>();
+    const push = (ticketId: string, invoice: ClientInvoice) => {
+      const list = map.get(ticketId) ?? [];
+      if (!list.some((row) => String(row.id) === String(invoice.id))) {
+        list.push(invoice);
+      }
+      map.set(ticketId, list);
+    };
+    for (const invoice of ticketInvoices) {
+      if (invoice.ticket_id != null) {
+        push(String(invoice.ticket_id), invoice);
+      }
+    }
+    for (const ticket of tickets) {
+      if (ticket.invoice_id == null) continue;
+      const linked = linkedInvoices.find(
+        (invoice) => String(invoice.id) === String(ticket.invoice_id),
+      );
+      if (linked) push(String(ticket.id), linked);
+    }
+    return map;
+  }, [linkedInvoices, ticketInvoices, tickets]);
+
   useEffect(() => {
     setTicketsByStatus(groupTicketsByStatus(tickets));
   }, [tickets]);
 
   const onDragEnd: OnDragEndResponder = (result) => {
     setIsDragging(false);
+    suppressClickRef.current = true;
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
+
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (
@@ -152,63 +282,59 @@ export const TicketsKanban = () => {
                             : "border-transparent",
                         )}
                       >
-                        {columnTickets.map((ticket, index) => (
-                          <Draggable
-                            key={ticket.id}
-                            draggableId={String(ticket.id)}
-                            index={index}
-                          >
-                            {(dragProvided, dragSnapshot) => (
-                              <button
-                                type="button"
-                                ref={dragProvided.innerRef}
-                                {...dragProvided.draggableProps}
-                                {...dragProvided.dragHandleProps}
-                                onClick={() =>
-                                  navigate(
-                                    ticketShowPath(ticket.id, ticket.status),
-                                  )
-                                }
-                                className={cn(
-                                  "w-full rounded-lg border bg-card px-3 py-2.5 text-left shadow-xs transition-shadow",
-                                  dragSnapshot.isDragging && "shadow-md",
-                                  "hover:border-border/80",
-                                )}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="line-clamp-2 text-sm font-medium leading-snug">
-                                    {ticket.subject?.trim() ||
-                                      `Ticket #${ticket.id}`}
-                                  </p>
-                                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                                    #{ticket.id}
-                                  </span>
-                                </div>
-                                <p className="mt-1 truncate text-xs text-muted-foreground">
-                                  {ticket.requester_name?.trim() ||
-                                    ticket.requester_email?.trim() ||
-                                    "Unknown requester"}
-                                </p>
-                                <div className="mt-2 flex items-center justify-between gap-2">
-                                  {isElevatedTicketPriority(ticket) &&
-                                  ticketPriorityLabel(ticket.priority) ? (
-                                    <Badge
-                                      variant="outline"
-                                      className="h-5 px-1.5 text-[10px]"
-                                    >
-                                      {ticketPriorityLabel(ticket.priority)}
-                                    </Badge>
-                                  ) : (
-                                    <span />
+                        {columnTickets.map((ticket, index) => {
+                          const ticketId = String(ticket.id);
+                          const assigneeId =
+                            ticket.assignee_id ??
+                            ticket.organization_member_id ??
+                            null;
+                          const selected = selectedTicketId === ticketId;
+                          return (
+                            <Draggable
+                              key={ticket.id}
+                              draggableId={ticketId}
+                              index={index}
+                            >
+                              {(dragProvided, dragSnapshot) => (
+                                <button
+                                  type="button"
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  {...dragProvided.dragHandleProps}
+                                  onClick={() => {
+                                    if (suppressClickRef.current) return;
+                                    onSelectTicket(ticketId);
+                                  }}
+                                  className={cn(
+                                    "w-full rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                    selected && "ring-2 ring-primary/40",
                                   )}
-                                  <span className="text-[11px] tabular-nums text-muted-foreground">
-                                    {formatTicketListTime(ticket.updated_at)}
-                                  </span>
-                                </div>
-                              </button>
-                            )}
-                          </Draggable>
-                        ))}
+                                >
+                                  <TicketKanbanCard
+                                    ticket={ticket}
+                                    company={
+                                      ticket.company_id != null
+                                        ? companiesById.get(
+                                            Number(ticket.company_id),
+                                          )
+                                        : null
+                                    }
+                                    assignee={
+                                      assigneeId != null
+                                        ? membersById.get(Number(assigneeId))
+                                        : null
+                                    }
+                                    invoices={
+                                      invoicesByTicketId.get(ticketId) ?? []
+                                    }
+                                    lastReadAt={readMap.get(ticketId) ?? null}
+                                    dragging={dragSnapshot.isDragging}
+                                  />
+                                </button>
+                              )}
+                            </Draggable>
+                          );
+                        })}
                         {columnTickets.length === 0 ? (
                           <p className="px-2 py-6 text-center text-xs text-muted-foreground">
                             Drop a ticket here

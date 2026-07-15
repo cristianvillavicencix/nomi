@@ -1,6 +1,5 @@
-import { useListContext, useGetList } from "ra-core";
+import { useGetList, useListContext } from "ra-core";
 import { useMemo } from "react";
-import { useNavigate } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Company, Contact } from "@/components/atomic-crm/types";
@@ -13,15 +12,20 @@ import {
   formatTicketListTime,
   memberDisplayName,
 } from "@/modules/tickets/ticketInboxUi";
-import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
+import { formatTicketCardSubject } from "@/modules/tickets/ticketOverviewConfig";
 import {
   isElevatedTicketPriority,
   ticketPriorityLabel,
 } from "@/modules/tickets/ticketPriorityUi";
 
-export const TicketsOverviewTable = () => {
+export const TicketsOverviewTable = ({
+  selectedTicketId,
+  onSelectTicket,
+}: {
+  selectedTicketId?: string | null;
+  onSelectTicket: (ticketId: string) => void;
+}) => {
   const { data = [], isPending } = useListContext<Ticket>();
-  const navigate = useNavigate();
 
   const tickets = useMemo(
     () =>
@@ -123,7 +127,7 @@ export const TicketsOverviewTable = () => {
   if (tickets.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
-        No tickets match this filter.
+        No tickets yet.
       </div>
     );
   }
@@ -143,6 +147,7 @@ export const TicketsOverviewTable = () => {
         </thead>
         <tbody>
           {tickets.map((ticket) => {
+            const ticketId = String(ticket.id);
             const company =
               ticket.company_id != null
                 ? companiesById.get(Number(ticket.company_id))
@@ -164,14 +169,16 @@ export const TicketsOverviewTable = () => {
               ticket.requester_name?.trim() ||
               ticket.requester_email?.trim() ||
               "—";
+            const selected = selectedTicketId === ticketId;
 
             return (
               <tr
                 key={ticket.id}
-                className="cursor-pointer border-b border-border/60 transition-colors hover:bg-muted/40"
-                onClick={() =>
-                  navigate(ticketShowPath(ticket.id, ticket.status))
-                }
+                className={cn(
+                  "cursor-pointer border-b border-border/60 transition-colors hover:bg-muted/40",
+                  selected && "bg-primary/5 hover:bg-primary/10",
+                )}
+                onClick={() => onSelectTicket(ticketId)}
               >
                 <td className="px-3 py-2.5 tabular-nums text-muted-foreground">
                   #{ticket.id}
@@ -179,7 +186,7 @@ export const TicketsOverviewTable = () => {
                 <td className="max-w-[280px] px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     <span className="truncate font-medium">
-                      {ticket.subject?.trim() || "No subject"}
+                      {formatTicketCardSubject(ticket.subject)}
                     </span>
                     {isElevatedTicketPriority(ticket) ? (
                       <Badge

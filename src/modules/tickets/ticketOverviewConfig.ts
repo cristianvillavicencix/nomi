@@ -40,3 +40,27 @@ export const emptyTicketKanbanBuckets = <T,>(): Record<
     },
     {} as Record<TicketKanbanColumnId, T[]>,
   );
+
+/** Display-only subject cleanup for board/table cards. */
+export const formatTicketCardSubject = (subject?: string | null) => {
+  const trimmed = subject?.trim() || "";
+  if (!trimmed) return "No subject";
+  return trimmed.replace(/^(?:(?:re|fw|fwd)\s*:\s*)+/i, "").trim() || trimmed;
+};
+
+export type TicketCardRailTone =
+  | "unpaid"
+  | "unread"
+  | "priority"
+  | "default";
+
+export const resolveTicketCardRailTone = (params: {
+  unpaid: boolean;
+  unread: boolean;
+  elevatedPriority: boolean;
+}): TicketCardRailTone => {
+  if (params.unpaid) return "unpaid";
+  if (params.unread) return "unread";
+  if (params.elevatedPriority) return "priority";
+  return "default";
+};
