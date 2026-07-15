@@ -42,7 +42,7 @@ import { ContractShow } from "@/modules/contracts/ContractShow";
 import { ClientBillingPage } from "@/modules/billing/ClientBillingPage";
 import { StandaloneInvoiceCreatePage } from "@/modules/billing/StandaloneInvoiceCreatePage";
 import { InvoiceWorkspaceRedirect } from "@/modules/billing/InvoiceRouteRedirects";
-import { TicketsList } from "@/modules/tickets/TicketsList";
+import { TicketsOverview } from "@/modules/tickets/TicketsOverview";
 import { TicketShow } from "@/modules/tickets/TicketShow";
 import { lazy, Suspense } from "react";
 import { CalendarPage } from "@/modules/calendar/CalendarPage";
@@ -424,7 +424,7 @@ export const renderLbsCustomRoutes = ({
         path="/tickets"
         element={
           <ProtectedRoute resource="tickets" action="list">
-            <TicketsList />
+            <TicketsOverview />
           </ProtectedRoute>
         }
       />

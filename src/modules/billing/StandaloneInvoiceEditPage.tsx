@@ -280,6 +280,22 @@ export const StandaloneInvoiceEditPage = ({
     setHydrated(true);
   }, [invoice, lineItems, linesPending, company, contact, hydrated]);
 
+  // Bill-to often loads after first hydrate; keep selection in sync without
+  // overwriting an in-progress picker change once the user has a selection.
+  useEffect(() => {
+    if (!hydrated || !invoice) return;
+    if (billTo?.companyId || billTo?.contactId) return;
+    const next = billToSelectionFromClient({ company, contact });
+    if (next) setBillTo(next);
+  }, [
+    hydrated,
+    invoice,
+    company,
+    contact,
+    billTo?.companyId,
+    billTo?.contactId,
+  ]);
+
   useEffect(() => {
     if (hydrated) {
       setDueDate(dueDateFromTerms(issueDate, terms));
@@ -320,7 +336,18 @@ export const StandaloneInvoiceEditPage = ({
     mutationFn: async (action: InvoiceCreateAction) => {
       setPendingAction(action);
       if (!invoice?.id) throw new Error("Missing invoice");
-      if (!billTo?.companyId && !billTo?.contactId) {
+      const resolvedCompanyId =
+        billTo?.companyId ??
+        activeCompany?.id ??
+        invoice.company_id ??
+        activeContact?.company_id ??
+        null;
+      const resolvedContactId =
+        billTo?.contactId ??
+        activeContact?.id ??
+        invoice.contact_id ??
+        null;
+      if (!resolvedCompanyId && !resolvedContactId) {
         throw new Error("Select a client to bill");
       }
       const validLines = lines.filter((line) => line.title.trim());
@@ -331,8 +358,8 @@ export const StandaloneInvoiceEditPage = ({
       const updated = (await dataProvider.updateStandaloneClientInvoice(
         invoice.id,
         {
-          company_id: billTo.companyId ?? activeContact?.company_id ?? null,
-          contact_id: billTo.contactId ?? activeContact?.id ?? null,
+          company_id: resolvedCompanyId,
+          contact_id: resolvedContactId,
           issue_date: issueDate,
           due_date: dueDate,
           terms,
@@ -555,7 +582,12 @@ export const StandaloneInvoiceEditPage = ({
       setSendDialogOpen(true);
       return;
     }
-    if (isPaidInvoice && (action === "print" || action === "share")) {
+    // Sent/paid invoices already have a client on the record — share/print
+    // must not require re-saving the form (avoids false "Select a client").
+    if (
+      (isSentInvoice || isPaidInvoice) &&
+      (action === "print" || action === "share")
+    ) {
       readOnlyActionMutation.mutate(action);
       return;
     }

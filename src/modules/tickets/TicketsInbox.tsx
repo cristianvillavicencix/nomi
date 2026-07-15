@@ -1,4 +1,4 @@
-import { Inbox, Search } from "lucide-react";
+import { ArrowLeft, Inbox, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useDelete,
@@ -65,6 +65,7 @@ import type {
 export const TicketsInbox = () => {
   const { identity } = useGetIdentity();
   const { id } = useParams();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
@@ -136,8 +137,18 @@ export const TicketsInbox = () => {
       queryOptions={{ refetchInterval: 30_000 }}
       actions={
         <PageActions>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="-ml-1 h-8 gap-1.5 px-2"
+            onClick={() => navigate("/tickets")}
+          >
+            <ArrowLeft className="size-3.5" />
+            All tickets
+          </Button>
           <Inbox className="size-4 shrink-0 text-muted-foreground" />
-          <PageTitle label="Tickets" />
+          <PageTitle label="Inbox" />
           <Badge variant="outline" className="font-mono text-xs font-normal">
             {DEFAULT_TICKET_INBOX_EMAIL}
           </Badge>

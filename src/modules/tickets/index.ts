@@ -1,11 +1,12 @@
-import { TicketsInbox } from "./TicketsInbox";
+import { TicketsOverview } from "./TicketsOverview";
 import { TicketShow } from "./TicketShow";
 
 export default {
-  list: TicketsInbox,
+  list: TicketsOverview,
   show: TicketShow,
 };
 
+export { TicketsOverview } from "./TicketsOverview";
 export { TicketsInbox } from "./TicketsInbox";
 export { TicketsList } from "./TicketsList";
 export { TicketShow } from "./TicketShow";
