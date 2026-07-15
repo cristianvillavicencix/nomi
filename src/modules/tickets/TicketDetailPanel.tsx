@@ -23,7 +23,7 @@ import { refreshTicketInboxLists } from "@/modules/tickets/ticketsRealtimeCache"
 
 export const TicketDetailPanel = ({
   ticketId,
-  layout: _layout = "default",
+  layout = "default",
 }: {
   ticketId: string;
   layout?: "default" | "inbox-split";
@@ -34,6 +34,7 @@ export const TicketDetailPanel = ({
   // Desktop (including inbox split): collapsible icon rail.
   // Mobile: sheet trigger in the header.
   const useContextSheet = isMobile;
+  const overlayContext = layout === "inbox-split";
   const queryClient = useQueryClient();
   const refreshInbox = useCallback(() => {
     refreshTicketInboxLists(queryClient);
@@ -152,7 +153,7 @@ export const TicketDetailPanel = ({
 
   return (
     <TicketThreadQuoteProvider onQuote={handleQuote}>
-      <div className="flex h-full min-h-0 overflow-hidden bg-background">
+      <div className="relative flex h-full min-h-0 overflow-hidden bg-background">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <TicketCompactHeader
             ticket={ticket}
@@ -217,6 +218,7 @@ export const TicketDetailPanel = ({
             ticket={ticket}
             company={company}
             contact={contact}
+            overlay={overlayContext}
           />
         ) : null}
       </div>

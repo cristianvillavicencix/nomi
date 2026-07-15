@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { FileText, Info, MessageSquare, PanelRightClose } from "lucide-react";
+import {
+  FileText,
+  Info,
+  MessageSquare,
+  PanelRightClose,
+  Paperclip,
+} from "lucide-react";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { TicketBillingSidePanel } from "@/modules/tickets/TicketBillingSidePanel";
 import { TicketClientSummaryCard } from "@/modules/tickets/TicketClientSummaryCard";
+import { TicketFilesSidePanel } from "@/modules/tickets/TicketFilesSidePanel";
 import { TicketRelatedTicketsList } from "@/modules/tickets/TicketRelatedTicketsList";
 import {
   TICKET_OPEN_BILLING_EVENT,
@@ -25,7 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-type ContextTab = "billing" | "sms" | "info";
+type ContextTab = "billing" | "sms" | "info" | "files";
 
 const ALL_CONTEXT_TABS: Array<{
   id: ContextTab;
@@ -35,6 +42,7 @@ const ALL_CONTEXT_TABS: Array<{
   { id: "billing", label: "Billing", icon: FileText },
   { id: "sms", label: "SMS", icon: MessageSquare },
   { id: "info", label: "Info", icon: Info },
+  { id: "files", label: "Files", icon: Paperclip },
 ];
 
 const defaultContextTab = (
@@ -60,24 +68,29 @@ const TicketContextTabs = ({
       className,
     )}
   >
-    <div className="flex min-w-0 flex-1 gap-1">
+    <div className="flex min-w-0 flex-1 gap-0.5">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            className={cn(
-              "inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
-              activeTab === tab.id
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-            )}
-          >
-            <Icon className="size-3.5 shrink-0" />
-            {tab.label}
-          </button>
+          <Tooltip key={tab.id}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => onChange(tab.id)}
+                aria-label={tab.label}
+                className={cn(
+                  "inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-1.5 text-[11px] font-medium transition-colors sm:gap-1.5 sm:px-2 sm:text-xs",
+                  activeTab === tab.id
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" />
+                <span className="truncate">{tab.label}</span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{tab.label}</TooltipContent>
+          </Tooltip>
         );
       })}
     </div>
@@ -139,6 +152,10 @@ const TicketContextBody = ({
     );
   }
 
+  if (activeTab === "files") {
+    return <TicketFilesSidePanel ticket={ticket} />;
+  }
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
       <TicketClientSummaryCard
@@ -193,11 +210,14 @@ export const TicketContextPanel = ({
   company,
   contact,
   className,
+  /** Overlay the panel over the thread instead of shrinking it (preview / split). */
+  overlay = false,
 }: {
   ticket: Ticket;
   company?: Company | null;
   contact?: Contact | null;
   className?: string;
+  overlay?: boolean;
 }) => {
   const canViewAmounts = useCanViewAmounts();
   const contextTabs = useMemo(
@@ -235,19 +255,8 @@ export const TicketContextPanel = ({
     setCollapsed(false);
   };
 
-  if (collapsed) {
-    return (
-      <TicketContextCollapsedRail tabs={contextTabs} onOpenTab={openTab} />
-    );
-  }
-
-  return (
-    <aside
-      className={cn(
-        "flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch overflow-hidden border-l bg-background",
-        className,
-      )}
-    >
+  const panelBody = (
+    <>
       <TicketContextTabs
         tabs={contextTabs}
         activeTab={activeTab}
@@ -262,6 +271,37 @@ export const TicketContextPanel = ({
           contact={contact}
         />
       </div>
+    </>
+  );
+
+  if (overlay) {
+    return (
+      <div className={cn("relative flex shrink-0 self-stretch", className)}>
+        {/* Rail keeps its width so the thread does not resize on open. */}
+        <TicketContextCollapsedRail tabs={contextTabs} onOpenTab={openTab} />
+        {!collapsed ? (
+          <aside className="absolute inset-y-0 right-0 z-30 flex w-[min(22rem,calc(100vw-3rem))] flex-col overflow-hidden border-l bg-background shadow-xl">
+            {panelBody}
+          </aside>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (collapsed) {
+    return (
+      <TicketContextCollapsedRail tabs={contextTabs} onOpenTab={openTab} />
+    );
+  }
+
+  return (
+    <aside
+      className={cn(
+        "flex w-[min(50%,22rem)] shrink-0 flex-col self-stretch overflow-hidden border-l bg-background",
+        className,
+      )}
+    >
+      {panelBody}
     </aside>
   );
 };
