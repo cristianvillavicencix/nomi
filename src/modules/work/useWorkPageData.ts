@@ -8,6 +8,7 @@ import {
 } from "@/components/atomic-crm/tasks/useScopedTasks";
 import {
   buildTaskCalendarEvent,
+  groupEventsByDate,
   toDateKey,
 } from "@/modules/calendar/calendarUtils";
 import { useCalendarEvents } from "@/modules/calendar/useCalendarEvents";
@@ -18,6 +19,7 @@ import {
   groupWorkItems,
 } from "@/modules/work/workCategoryUtils";
 import type { WorkPreferences } from "@/modules/work/useWorkPreferences";
+import type { WorkCategory } from "@/modules/work/workTypes";
 
 export const useWorkPageData = ({
   preferences,
@@ -38,11 +40,7 @@ export const useWorkPageData = ({
   const includeDoneForCalendar =
     preferences.status === "done" || preferences.includeDoneTasks;
 
-  const {
-    eventsByDate,
-    events,
-    isPending: isEventsPending,
-  } = useCalendarEvents({
+  const { events, isPending: isEventsPending } = useCalendarEvents({
     anchor,
     view: preferences.viewMode === "today" ? "week" : preferences.calendarView,
     includeDoneTasks: includeDoneForCalendar,
@@ -99,7 +97,7 @@ export const useWorkPageData = ({
     [deals],
   );
 
-  const workItems = useMemo(() => {
+  const allWorkItems = useMemo(() => {
     const taskIdsFromEvents = new Set<string>();
     const items = events.map((event) => {
       if (event.kind === "task") {
@@ -132,8 +130,32 @@ export const useWorkPageData = ({
       );
     }
 
-    return filterWorkItemsByCategories(items, preferences.categories);
-  }, [dealsById, events, preferences.categories, tasks]);
+    return items;
+  }, [dealsById, events, tasks]);
+
+  const workItems = useMemo(
+    () => filterWorkItemsByCategories(allWorkItems, preferences.categories),
+    [allWorkItems, preferences.categories],
+  );
+
+  const filteredEvents = useMemo(
+    () => workItems.map((item) => item.event),
+    [workItems],
+  );
+
+  /** Calendar / sidebar / day dialog — same category filter as the list. */
+  const eventsByDate = useMemo(
+    () => groupEventsByDate(filteredEvents),
+    [filteredEvents],
+  );
+
+  const categoryCounts = useMemo(() => {
+    const counts = {} as Record<WorkCategory, number>;
+    for (const item of allWorkItems) {
+      counts[item.category] = (counts[item.category] ?? 0) + 1;
+    }
+    return counts;
+  }, [allWorkItems]);
 
   const groupedItems = useMemo(
     () =>
@@ -154,9 +176,10 @@ export const useWorkPageData = ({
   return {
     memberId,
     tasks,
-    events,
+    events: filteredEvents,
     eventsByDate,
     workItems,
+    categoryCounts,
     groupedItems,
     stats,
     isPending,

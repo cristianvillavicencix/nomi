@@ -100,8 +100,15 @@ export const WorkPageContent = () => {
     setSearchParams(next, { replace: true });
   };
 
-  const { memberId, eventsByDate, workItems, groupedItems, stats, isPending } =
-    useWorkPageData({ preferences, anchor });
+  const {
+    memberId,
+    eventsByDate,
+    workItems,
+    categoryCounts,
+    groupedItems,
+    stats,
+    isPending,
+  } = useWorkPageData({ preferences, anchor });
 
   const taskIds = useMemo(
     () =>
@@ -384,6 +391,7 @@ export const WorkPageContent = () => {
           <WorkCategoryChips
             selected={preferences.categories}
             onChange={(categories) => setPreferences({ categories })}
+            counts={categoryCounts}
           />
 
           <Popover>

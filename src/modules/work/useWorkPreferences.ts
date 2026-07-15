@@ -24,13 +24,15 @@ export type WorkPreferences = {
   showSunday: boolean;
 };
 
-const ALL_CATEGORIES: WorkCategory[] = [
+export const ALL_WORK_CATEGORIES: WorkCategory[] = [
   "task",
   "meeting",
   "delivery",
   "activity",
   "follow_up",
 ];
+
+const ALL_CATEGORIES = ALL_WORK_CATEGORIES;
 
 const DEFAULT_PREFERENCES: WorkPreferences = {
   viewMode: "list",
@@ -189,3 +191,12 @@ export const toggleWorkCategory = (
   }
   return [...categories, category];
 };
+
+/** Show only one category (e.g. Meetings). */
+export const soloWorkCategory = (category: WorkCategory): WorkCategory[] => [
+  category,
+];
+
+export const areAllWorkCategoriesSelected = (categories: WorkCategory[]) =>
+  ALL_WORK_CATEGORIES.every((category) => categories.includes(category)) &&
+  categories.length === ALL_WORK_CATEGORIES.length;

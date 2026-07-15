@@ -18,31 +18,36 @@ export const WORK_CATEGORY_OPTIONS: Array<{
   {
     value: "task",
     label: "Task",
-    chipClass: "border-border bg-muted font-medium text-foreground",
+    chipClass:
+      "border-blue-300 bg-blue-50 font-medium text-blue-900 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-100",
     dotClass: "bg-blue-500",
   },
   {
     value: "meeting",
     label: "Meeting",
-    chipClass: "border-border bg-muted font-medium text-foreground",
+    chipClass:
+      "border-emerald-300 bg-emerald-50 font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100",
     dotClass: "bg-emerald-500",
   },
   {
     value: "delivery",
     label: "Delivery",
-    chipClass: "border-border bg-muted font-medium text-foreground",
+    chipClass:
+      "border-violet-300 bg-violet-50 font-medium text-violet-900 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-100",
     dotClass: "bg-violet-500",
   },
   {
     value: "activity",
     label: "Activity",
-    chipClass: "border-border bg-muted font-medium text-foreground",
+    chipClass:
+      "border-amber-300 bg-amber-50 font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100",
     dotClass: "bg-amber-500",
   },
   {
     value: "follow_up",
     label: "Follow up",
-    chipClass: "border-border bg-muted font-medium text-foreground",
+    chipClass:
+      "border-pink-300 bg-pink-50 font-medium text-pink-900 dark:border-pink-800 dark:bg-pink-950/50 dark:text-pink-100",
     dotClass: "bg-pink-500",
   },
 ];
