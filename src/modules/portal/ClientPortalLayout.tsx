@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import { cn } from "@/lib/utils";
 import {
   getPortalCopy,
   PORTAL_LOCALE_KEY,
@@ -42,13 +41,6 @@ export const ClientPortalLayout = ({
     </button>
   );
 
-  const invoiceNavItems = [
-    { id: "invoice" as const, label: "Invoice", href: null as string | null },
-    ...(fullPortalHref
-      ? [{ id: "portal" as const, label: "My project", href: fullPortalHref }]
-      : []),
-  ];
-
   if (!invoiceMode) {
     return (
       <div className="min-h-screen overflow-x-hidden bg-white">{children}</div>
@@ -60,35 +52,18 @@ export const ClientPortalLayout = ({
       <header className="border-b bg-white">
         <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <span className="text-sm font-medium text-brand-navy">Invoice</span>
-          {languageToggle}
-        </div>
-        <nav className="flex gap-1 overflow-x-auto border-t px-2 py-2 sm:px-4">
-          {invoiceNavItems.map((item) => {
-            const isActive = item.id === "invoice";
-            if (item.href) {
-              return (
-                <Link
-                  key={item.id}
-                  to={item.href}
-                  className="shrink-0 rounded-md px-3 py-2 text-[13px] text-brand-navy hover:bg-muted/40"
-                >
-                  {item.label}
-                </Link>
-              );
-            }
-            return (
-              <span
-                key={item.id}
-                className={cn(
-                  "shrink-0 rounded-md px-3 py-2 text-[13px] text-brand-navy",
-                  isActive ? "bg-muted/30 font-medium" : "",
-                )}
+          <div className="flex items-center gap-3">
+            {fullPortalHref ? (
+              <Link
+                to={fullPortalHref}
+                className="text-xs font-medium text-brand-navy underline-offset-4 hover:underline"
               >
-                {item.label}
-              </span>
-            );
-          })}
-        </nav>
+                My project
+              </Link>
+            ) : null}
+            {languageToggle}
+          </div>
+        </div>
       </header>
       <main className="min-w-0 overflow-x-hidden bg-slate-50 lg:bg-white">
         {children}
