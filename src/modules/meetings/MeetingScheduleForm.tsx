@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { DeleteButton } from "@/components/admin/delete-button";
+import { CalendarEventDeleteButton } from "@/modules/calendar/CalendarEventDeleteButton";
 import { DateInput } from "@/components/admin/date-input";
 import { SaveButton } from "@/components/admin/form";
 import { ReferenceInput } from "@/components/admin/reference-input";
@@ -206,12 +206,10 @@ export const MeetingScheduleForm = ({
 
     <DialogFooter className="w-full sm:justify-between gap-4">
       {isEdit ? (
-        <DeleteButton
-          mutationOptions={{
-            onSuccess: onDeleteSuccess,
-            onError: onDeleteError,
-          }}
-          redirect={false}
+        <CalendarEventDeleteButton
+          onSuccess={onDeleteSuccess}
+          onError={onDeleteError}
+          label="Delete meeting"
         />
       ) : (
         <span />

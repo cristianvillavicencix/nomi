@@ -12,7 +12,7 @@ import {
 } from "ra-core";
 import { useQuery } from "@tanstack/react-query";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import { DeleteButton } from "@/components/admin/delete-button";
+import { CalendarEventDeleteButton } from "@/modules/calendar/CalendarEventDeleteButton";
 import { DateInput } from "@/components/admin/date-input";
 import { SaveButton } from "@/components/admin/form";
 import { ReferenceInput } from "@/components/admin/reference-input";
@@ -169,12 +169,9 @@ const CalendarEventForm = ({
 
     <DialogFooter className="w-full sm:justify-between gap-4">
       {isEdit ? (
-        <DeleteButton
-          mutationOptions={{
-            onSuccess: onDeleteSuccess,
-            onError: onDeleteError,
-          }}
-          redirect={false}
+        <CalendarEventDeleteButton
+          onSuccess={onDeleteSuccess}
+          onError={onDeleteError}
         />
       ) : (
         <span />
@@ -284,7 +281,6 @@ export const CalendarReminderDialog = ({
   const handleDeleteSuccess = () => {
     refresh();
     closeDialog();
-    notify("Event deleted");
   };
 
   if (open && isEdit && reminderId != null) {
