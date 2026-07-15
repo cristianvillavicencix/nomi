@@ -4,6 +4,7 @@ import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { TicketBillingSidePanel } from "@/modules/tickets/TicketBillingSidePanel";
 import { TicketClientSummaryCard } from "@/modules/tickets/TicketClientSummaryCard";
+import { TicketRelatedTicketsList } from "@/modules/tickets/TicketRelatedTicketsList";
 import {
   TICKET_OPEN_BILLING_EVENT,
   type TicketComposerEventDetail,
@@ -146,6 +147,7 @@ const TicketContextBody = ({
         contact={contact}
         variant="panel"
       />
+      <TicketRelatedTicketsList ticket={ticket} />
     </div>
   );
 };

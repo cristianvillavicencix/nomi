@@ -1,5 +1,5 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Search, X } from "lucide-react";
+import { Inbox, Search, X } from "lucide-react";
 import { useGetIdentity, useGetList, type RaRecord } from "ra-core";
 import {
   useCallback,
@@ -25,6 +25,12 @@ import {
   getContactShowPath,
   getLeadShowPath,
 } from "@/app/routing";
+import type { Ticket } from "@/modules/types";
+import {
+  ticketStatusLabel,
+} from "@/modules/tickets/ticketInboxConfig";
+import { formatTicketCardSubject } from "@/modules/tickets/ticketOverviewConfig";
+import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 
 /**
  * Global Spotlight search. One button — searches across every module
@@ -57,7 +63,7 @@ export type SpotlightSearchButtonProps = {
   renderItem?: (record: RaRecord, isActive: boolean) => ReactNode;
 };
 
-type ModuleId = "leads" | "clients" | "contacts" | "deals";
+type ModuleId = "leads" | "clients" | "contacts" | "deals" | "tickets";
 
 type ResolvedSuggestion = {
   moduleId: ModuleId;
@@ -97,7 +103,7 @@ const primaryPhone = (contact: Contact) =>
   null;
 
 export const SpotlightSearchButton = ({
-  placeholder = "Search name, last name, phone, or email…",
+  placeholder = "Search name, phone, email, or ticket…",
   perModuleLimit = DEFAULT_LIMIT,
   variant = "default",
 }: SpotlightSearchButtonProps = {}) => {
@@ -123,6 +129,7 @@ export const SpotlightSearchButton = ({
       clients: modulePermissions.crm,
       contacts: modulePermissions.crm,
       deals: modulePermissions.deal_operations,
+      tickets: modulePermissions.support,
     }),
     [modulePermissions],
   );
@@ -134,6 +141,7 @@ export const SpotlightSearchButton = ({
     if (matchesPathByPrefix("/clients")(pathname)) return "clients";
     if (matchesPathByPrefix("/contacts")(pathname)) return "contacts";
     if (matchesPathByPrefix("/deals")(pathname)) return "deals";
+    if (matchesPathByPrefix("/tickets")(pathname)) return "tickets";
     return null;
   }, [pathname]);
 
@@ -200,6 +208,18 @@ export const SpotlightSearchButton = ({
       filter: trimmedQuery ? { q: trimmedQuery } : {},
     },
     { enabled: open && moduleAccess.deals, staleTime: 15_000 },
+  );
+
+  const ticketsQuery = useGetList<Ticket>(
+    "tickets",
+    {
+      pagination: { page: 1, perPage: perModuleLimit },
+      sort: { field: "updated_at", order: "DESC" },
+      filter: trimmedQuery
+        ? { q: trimmedQuery, "merged_into_ticket_id@is": null }
+        : { "merged_into_ticket_id@is": null },
+    },
+    { enabled: open && moduleAccess.tickets, staleTime: 15_000 },
   );
 
   // Build grouped suggestion list. Each group is the module's section.
@@ -311,6 +331,33 @@ export const SpotlightSearchButton = ({
       ),
     });
 
+    const buildTicketRow = (record: Ticket): ResolvedSuggestion => ({
+      moduleId: "tickets",
+      moduleLabel: "Tickets",
+      record,
+      href: ticketShowPath(record.id, record.status),
+      renderRow: () => (
+        <>
+          <div className="grid size-7 place-items-center rounded-md bg-muted text-muted-foreground">
+            <Inbox className="size-3.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">
+              {formatTicketCardSubject(record.subject)}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {truncatedJoin([
+                `#${record.id}`,
+                ticketStatusLabel(record.status),
+                record.requester_name,
+                record.requester_email,
+              ])}
+            </p>
+          </div>
+        </>
+      ),
+    });
+
     const all: { id: ModuleId; label: string; rows: ResolvedSuggestion[] }[] =
       [];
     if (moduleAccess.leads) {
@@ -360,6 +407,16 @@ export const SpotlightSearchButton = ({
         rows: (dealsQuery.data ?? []).map(buildDealRow),
       });
     }
+    if (moduleAccess.tickets) {
+      const ticketRows = (ticketsQuery.data ?? []).map(buildTicketRow);
+      if (ticketRows.length > 0) {
+        all.push({
+          id: "tickets",
+          label: "Tickets",
+          rows: ticketRows,
+        });
+      }
+    }
     // Sort so the current module's section is rendered first.
     if (currentModule) {
       const idx = all.findIndex((g) => g.id === currentModule);
@@ -376,10 +433,12 @@ export const SpotlightSearchButton = ({
     moduleAccess.contacts,
     moduleAccess.deals,
     moduleAccess.leads,
+    moduleAccess.tickets,
     clientsQuery.data,
     contactsQuery.data,
     dealsQuery.data,
     leadsQuery.data,
+    ticketsQuery.data,
     perModuleLimit,
     unifiedContactsQuery.data,
   ]);
@@ -456,6 +515,7 @@ export const SpotlightSearchButton = ({
       : leadsQuery.isFetching || contactsQuery.isFetching) ||
     clientsQuery.isFetching ||
     dealsQuery.isFetching ||
+    ticketsQuery.isFetching ||
     false;
 
   return (
@@ -475,7 +535,7 @@ export const SpotlightSearchButton = ({
           >
             <Search className="size-4 shrink-0" />
             <span className="hidden flex-1 truncate text-left sm:inline">
-              Search name, last name, phone…
+              Search name, phone, email, or ticket…
             </span>
             <kbd className="ml-auto hidden shrink-0 rounded border bg-background px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
               ⌘K

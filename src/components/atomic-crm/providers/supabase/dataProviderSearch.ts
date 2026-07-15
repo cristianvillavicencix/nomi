@@ -126,6 +126,34 @@ export const applyCompanyListSearch = (params: GetListParams) => {
   })(params);
 };
 
+/** Search tickets by #id / digits, subject, or requester fields. */
+export const applyTicketListSearch = (params: GetListParams) => {
+  if (!params.filter?.q) {
+    return params;
+  }
+  const { q, ...filter } = params.filter;
+  const trimmed = String(q).trim();
+  if (!trimmed) {
+    return { ...params, filter };
+  }
+
+  const idMatch = trimmed.match(/^#?(\d+)$/);
+  if (idMatch) {
+    return {
+      ...params,
+      filter: {
+        ...filter,
+        "id@eq": Number(idMatch[1]),
+      },
+    };
+  }
+
+  return applyFullTextSearch(
+    ["subject", "requester_name", "requester_email"],
+    { useContactFtsColumns: false },
+  )(params);
+};
+
 export const applyFullTextSearch =
   (columns: string[], options: { useContactFtsColumns?: boolean } = {}) =>
   (params: GetListParams) => {

@@ -44,6 +44,7 @@ import {
   applyContactListSearch,
   applyCompanyListSearch,
   applyFullTextSearch,
+  applyTicketListSearch,
 } from "./dataProviderSearch";
 import {
   assertMutationAllowed,
@@ -547,6 +548,10 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
   {
     resource: "contacts_summary",
     beforeGetList: async (params) => applyContactListSearch(params),
+  },
+  {
+    resource: "tickets",
+    beforeGetList: async (params) => applyTicketListSearch(params),
   },
   {
     resource: "deals",
