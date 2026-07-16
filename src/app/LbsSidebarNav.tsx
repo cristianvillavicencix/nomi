@@ -24,17 +24,21 @@ import { canAccess } from "@/components/atomic-crm/providers/commons/canAccess";
 import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import {
   filterLbsNavGroups,
+  LBS_ACCOUNTS_NAV_ITEM,
   LBS_CLIENTS_NAV_ITEM,
   LBS_MORE_NAV_COLLAPSIBLE,
   LBS_NAV_AFTER_CLIENTS,
   LBS_NAV_GROUPS,
   LBS_NAV_STANDALONE,
+  LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB,
   splitLbsNavGroups,
   type LbsNavCollapsibleSection,
   type LbsNavGroup,
   type LbsNavItem,
 } from "@/app/navigation";
 import { getAccessibleClientsHubTabs } from "@/modules/clients/clientsHubAccess";
+import { canAccessAccountsHub } from "@/modules/accounts/accountsHubAccess";
+import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 
 import {
@@ -87,6 +91,13 @@ const isClientsNavActive = (pathname: string) =>
   matchesNavPattern("/companies/*", pathname) ||
   matchesNavPattern("/contacts/*", pathname);
 
+const isAccountsNavActive = (pathname: string) =>
+  matchesNavPattern("/accounts/*", pathname) ||
+  matchesNavPattern("/leads/*", pathname) ||
+  matchesNavPattern("/clients/*", pathname) ||
+  matchesNavPattern("/companies/*", pathname) ||
+  matchesNavPattern("/contacts/*", pathname);
+
 type LbsSidebarNavProps = {
   websiteMonitorEnabled: boolean;
   messagesUnreadCount: number;
@@ -107,9 +118,15 @@ export const LbsSidebarNav = ({
     [location.pathname],
   );
 
+  const accountsHub = isAccountsHubEnabled();
+
   const standaloneItems = useMemo(
-    () => filterAccessibleItems(identity, LBS_NAV_STANDALONE),
-    [identity],
+    () =>
+      filterAccessibleItems(
+        identity,
+        accountsHub ? LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB : LBS_NAV_STANDALONE,
+      ),
+    [accountsHub, identity],
   );
 
   const afterClientsItems = useMemo(
@@ -117,12 +134,15 @@ export const LbsSidebarNav = ({
     [identity],
   );
 
-  const clientsNavItem = useMemo(() => {
+  const hubNavItem = useMemo(() => {
     if (!identity) return null;
+    if (accountsHub) {
+      return canAccessAccountsHub(identity) ? LBS_ACCOUNTS_NAV_ITEM : null;
+    }
     return getAccessibleClientsHubTabs(identity).length > 0
       ? LBS_CLIENTS_NAV_ITEM
       : null;
-  }, [identity]);
+  }, [accountsHub, identity]);
 
   const navGroups = useMemo(() => {
     const groups = filterLbsNavGroups(LBS_NAV_GROUPS, {
@@ -143,7 +163,7 @@ export const LbsSidebarNav = ({
 
   const hasPrimaryNav =
     standaloneItems.length > 0 ||
-    clientsNavItem != null ||
+    hubNavItem != null ||
     afterClientsItems.length > 0 ||
     primaryNavGroups.length > 0;
 
@@ -157,7 +177,7 @@ export const LbsSidebarNav = ({
 
   return (
     <SidebarGroup className="gap-0 p-2">
-      {standaloneItems.length > 0 || clientsNavItem ? (
+      {standaloneItems.length > 0 || hubNavItem ? (
         <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
           {standaloneItems.map((item) => (
             <SidebarNavLink
@@ -167,11 +187,15 @@ export const LbsSidebarNav = ({
               collapsed={sidebarState === "collapsed"}
             />
           ))}
-          {clientsNavItem ? (
+          {hubNavItem ? (
             <SidebarNavLink
-              key={clientsNavItem.to}
-              item={clientsNavItem}
-              active={isClientsNavActive(location.pathname)}
+              key={hubNavItem.to}
+              item={hubNavItem}
+              active={
+                accountsHub
+                  ? isAccountsNavActive(location.pathname)
+                  : isClientsNavActive(location.pathname)
+              }
               collapsed={sidebarState === "collapsed"}
             />
           ) : null}
@@ -201,7 +225,7 @@ export const LbsSidebarNav = ({
       {primaryNavGroups.map((group, index) => {
         const hasItemsAbove =
           standaloneItems.length > 0 ||
-          clientsNavItem != null ||
+          hubNavItem != null ||
           afterClientsItems.length > 0 ||
           index > 0;
         return (

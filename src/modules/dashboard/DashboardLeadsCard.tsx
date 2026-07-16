@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Contact } from "@/components/atomic-crm/types";
 import { LBS_LEAD_STATUSES_FOR_FILTER } from "@/modules/constants/contactStatus";
-import { getLeadShowPath } from "@/app/routing";
+import { getLeadShowPath, getLeadsListPath } from "@/app/routing";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
 import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
 import {
@@ -107,12 +107,12 @@ export const DashboardLeadsCard = () => {
     <>
       <DashboardModuleCard
         icon={UserCheck}
-        title="Leads"
+        title="Open pipeline"
         badges={badges}
         isPending={isPending}
         emptyMessage="No active leads in the pipeline."
-        viewAllHref="/leads"
-        viewAllLabel="View all leads"
+        viewAllHref={getLeadsListPath()}
+        viewAllLabel="View pipeline"
         addAction={
           <TooltipProvider>
             <Tooltip>

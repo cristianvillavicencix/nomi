@@ -27,13 +27,26 @@ import { ContactCreateSheet } from "../contacts/ContactCreateSheet";
 import { useState } from "react";
 import { NoteCreateSheet } from "../notes/NoteCreateSheet";
 import { TaskCreateSheet } from "../tasks/TaskCreateSheet";
+import { getAccountsHubPath } from "@/app/routing";
+import { isAccountsHubEnabled } from "@/lib/featureFlags";
 
 export const MobileNavigation = () => {
   const location = useLocation();
+  const accountsHub = isAccountsHubEnabled();
+  const accountsHref = getAccountsHubPath("list");
 
   let currentPath: string | boolean = "/";
   if (matchPath("/", location.pathname)) {
     currentPath = "/";
+  } else if (
+    accountsHub &&
+    (matchPath("/accounts/*", location.pathname) ||
+      matchPath("/contacts/*", location.pathname) ||
+      matchPath("/companies/*", location.pathname) ||
+      matchPath("/clients/*", location.pathname) ||
+      matchPath("/leads/*", location.pathname))
+  ) {
+    currentPath = accountsHref;
   } else if (matchPath("/contacts/*", location.pathname)) {
     currentPath = "/contacts";
   } else if (matchPath("/companies/*", location.pathname)) {
@@ -77,10 +90,14 @@ export const MobileNavigation = () => {
             isActive={currentPath === "/"}
           />
           <NavigationButton
-            href="/contacts"
+            href={accountsHub ? accountsHref : "/contacts"}
             Icon={Users}
-            label="Contacts"
-            isActive={currentPath === "/contacts"}
+            label={accountsHub ? "Accounts" : "Contacts"}
+            isActive={
+              accountsHub
+                ? currentPath === accountsHref
+                : currentPath === "/contacts"
+            }
           />
           <CreateButton />
           <NavigationButton

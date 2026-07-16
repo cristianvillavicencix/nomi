@@ -48,11 +48,11 @@ function presetFromMatrix(
 
 const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: boolean; matrix: RoleMatrix }> = [
   // Area 1 — CRM
-  { id: "crm.contacts.view", area: "CRM", label: "View contacts & leads", matrix: { super_admin: true, admin: true, user: false, read_only: true } },
+  { id: "crm.contacts.view", area: "CRM", label: "View people & pipeline", matrix: { super_admin: true, admin: true, user: false, read_only: true } },
   { id: "crm.contacts.create", area: "CRM", label: "Create contacts & leads", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "crm.contacts.edit", area: "CRM", label: "Edit contacts & leads", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "crm.contacts.delete", area: "CRM", label: "Delete contacts & leads", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
-  { id: "crm.companies.view", area: "CRM", label: "View clients & companies", matrix: { super_admin: true, admin: true, user: false, read_only: true } },
+  { id: "crm.companies.view", area: "CRM", label: "View accounts (companies)", matrix: { super_admin: true, admin: true, user: false, read_only: true } },
   { id: "crm.companies.create", area: "CRM", label: "Create clients & companies", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "crm.companies.edit", area: "CRM", label: "Edit clients & companies", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "crm.companies.delete", area: "CRM", label: "Delete clients & companies", matrix: { super_admin: true, admin: true, user: false, read_only: false } },

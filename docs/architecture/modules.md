@@ -1,10 +1,19 @@
 # Nomi CRM — module map
 
-**Last updated:** 2026-06-13 (after P5 restructure + orphan cleanup)
+**Last updated:** 2026-07-16 (Accounts hub Option A)
 
 Living reference for how the codebase is laid out today and where the
 old `src/lbs/` + `src/components/atomic-crm/` paths now live. Read this
 before searching for "where is X" or proposing further moves.
+
+### Accounts hub (UI only — no schema merge)
+
+With `VITE_ACCOUNTS_HUB=1`, the primary nav entry is **Accounts** (`/accounts`):
+List = company-first nested contacts; Board = existing leads Kanban
+(`contacts.lead_stage`). Tables remain `companies` + `contacts`. Legacy
+URLs `/leads`, `/clients`, `/companies`, `/contacts` redirect or alias the
+hub. See `docs/plans/00-accounts-hub-OVERVIEW.md`. Rollback:
+`VITE_ACCOUNTS_HUB=0` (no DB undo).
 
 ---
 
@@ -19,6 +28,7 @@ src/
 │   └── routing.ts                # Shared route helpers (getClientDealCreatePath, …)
 │
 ├── modules/                      # LBS product modules (was src/lbs/)
+│   ├── accounts/                 # Accounts hub (Option A UI over companies + contacts)
 │   ├── billing/                  # Client invoices, Stripe flows, public payment
 │   ├── calendar/                 # Calendar page
 │   ├── catalog/                  # Service packages + addons seeds
@@ -30,7 +40,7 @@ src/
 │   ├── deals/                    # Deal board, NewDealDialog, project workspace
 │   │   └── projects/             # Project delivery tabs (won-deal workspace)
 │   ├── forms/                    # Forms v2 list, builder, submissions, analytics
-│   ├── leads/                    # Leads list, create, show
+│   ├── leads/                    # Leads list, create, show, Kanban board panel
 │   ├── meetings/                 # Meetings page
 │   ├── messages/                 # Messages inbox, SMS, conversations, dialer
 │   ├── portal/                   # Client portal (public)

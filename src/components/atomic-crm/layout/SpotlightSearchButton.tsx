@@ -22,9 +22,10 @@ import {
 import { isLeadLifecycleStatus } from "@/modules/constants/contactStatus";
 import {
   getClientShowPath,
-  getContactShowPath,
   getLeadShowPath,
+  getPersonShowPath,
 } from "@/app/routing";
+import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import type { Ticket } from "@/modules/types";
 import {
   ticketStatusLabel,
@@ -34,8 +35,8 @@ import { ticketShowPath } from "@/modules/tickets/ticketStatusWorkflow";
 
 /**
  * Global Spotlight search. One button — searches across every module
- * the current user has access to (Leads, Clients, Contacts, Projects,
- * Projects) and renders results grouped by module. The module matching the
+ * the current user has access to (Accounts/Leads/Clients, Projects,
+ * Tickets) and renders results grouped by module. The module matching the
  * current URL is shown first so search "starts where you are".
  */
 export type SpotlightSearchButtonProps = {
@@ -63,7 +64,13 @@ export type SpotlightSearchButtonProps = {
   renderItem?: (record: RaRecord, isActive: boolean) => ReactNode;
 };
 
-type ModuleId = "leads" | "clients" | "contacts" | "deals" | "tickets";
+type ModuleId =
+  | "accounts"
+  | "leads"
+  | "clients"
+  | "contacts"
+  | "deals"
+  | "tickets";
 
 type ResolvedSuggestion = {
   moduleId: ModuleId;
@@ -135,15 +142,28 @@ export const SpotlightSearchButton = ({
   );
 
   // Detect the "home" module from the current URL.
+  const accountsHub = isAccountsHubEnabled();
   const currentModule: ModuleId | null = useMemo(() => {
-    if (matchesPathByPrefix("/leads")(pathname)) return "leads";
-    if (matchesPathByPrefix("/companies")(pathname)) return "clients";
-    if (matchesPathByPrefix("/clients")(pathname)) return "clients";
-    if (matchesPathByPrefix("/contacts")(pathname)) return "contacts";
+    if (accountsHub) {
+      if (
+        matchesPathByPrefix("/accounts")(pathname) ||
+        matchesPathByPrefix("/leads")(pathname) ||
+        matchesPathByPrefix("/companies")(pathname) ||
+        matchesPathByPrefix("/clients")(pathname) ||
+        matchesPathByPrefix("/contacts")(pathname)
+      ) {
+        return "accounts";
+      }
+    } else {
+      if (matchesPathByPrefix("/leads")(pathname)) return "leads";
+      if (matchesPathByPrefix("/companies")(pathname)) return "clients";
+      if (matchesPathByPrefix("/clients")(pathname)) return "clients";
+      if (matchesPathByPrefix("/contacts")(pathname)) return "contacts";
+    }
     if (matchesPathByPrefix("/deals")(pathname)) return "deals";
     if (matchesPathByPrefix("/tickets")(pathname)) return "tickets";
     return null;
-  }, [pathname]);
+  }, [accountsHub, pathname]);
 
   // Per-module queries (called in stable order — hooks rule).
   const unifiedContactsQuery = useGetList<Contact>(
@@ -229,8 +249,8 @@ export const SpotlightSearchButton = ({
     rows: ResolvedSuggestion[];
   }[] = useMemo(() => {
     const buildLeadRow = (record: Contact): ResolvedSuggestion => ({
-      moduleId: "leads",
-      moduleLabel: "Leads",
+      moduleId: accountsHub ? "accounts" : "leads",
+      moduleLabel: accountsHub ? "Accounts" : "Leads",
       record,
       href: getLeadShowPath(record.id),
       renderRow: () => (
@@ -238,7 +258,7 @@ export const SpotlightSearchButton = ({
           <Avatar record={record} width={28} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">
-              {fullName(record) || record.company_name || "Sin nombre"}
+              {fullName(record) || record.company_name || "Untitled"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
               {truncatedJoin([
@@ -254,8 +274,8 @@ export const SpotlightSearchButton = ({
     });
 
     const buildClientRow = (record: Company): ResolvedSuggestion => ({
-      moduleId: "clients",
-      moduleLabel: "Clientes",
+      moduleId: accountsHub ? "accounts" : "clients",
+      moduleLabel: accountsHub ? "Accounts" : "Companies",
       record,
       href: getClientShowPath(record.id),
       renderRow: () => (
@@ -263,7 +283,7 @@ export const SpotlightSearchButton = ({
           <CompanyAvatar record={record} width={28} height={28} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">
-              {record.name || "Sin nombre"}
+              {record.name || "Untitled"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
               {truncatedJoin([record.sector, record.website])}
@@ -274,16 +294,16 @@ export const SpotlightSearchButton = ({
     });
 
     const buildContactRow = (record: Contact): ResolvedSuggestion => ({
-      moduleId: "contacts",
-      moduleLabel: "Contactos",
+      moduleId: accountsHub ? "accounts" : "contacts",
+      moduleLabel: accountsHub ? "Accounts" : "People",
       record,
-      href: getContactShowPath(record.id),
+      href: getPersonShowPath(record),
       renderRow: () => (
         <>
           <Avatar record={record} width={28} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">
-              {fullName(record) || record.company_name || "Sin nombre"}
+              {fullName(record) || record.company_name || "Untitled"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
               {truncatedJoin([
@@ -291,6 +311,32 @@ export const SpotlightSearchButton = ({
                 primaryEmail(record),
                 primaryPhone(record),
                 record.title,
+              ])}
+            </p>
+          </div>
+        </>
+      ),
+    });
+
+    const buildPersonRow = (record: Contact): ResolvedSuggestion => ({
+      moduleId: "accounts",
+      moduleLabel: "Accounts",
+      record,
+      href: getPersonShowPath(record),
+      renderRow: () => (
+        <>
+          <Avatar record={record} width={28} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">
+              {fullName(record) || record.company_name || "Untitled"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {truncatedJoin([
+                record.company_name,
+                primaryEmail(record),
+                isLeadLifecycleStatus(record.status)
+                  ? record.lead_stage
+                  : record.status,
               ])}
             </p>
           </div>
@@ -307,7 +353,7 @@ export const SpotlightSearchButton = ({
       },
     ): ResolvedSuggestion => ({
       moduleId: "deals",
-      moduleLabel: "Proyectos",
+      moduleLabel: "Projects",
       record,
       href: `/deals/${record.id}/show`,
       renderRow: () => (
@@ -317,7 +363,7 @@ export const SpotlightSearchButton = ({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">
-              {record.name || "Sin nombre"}
+              {record.name || "Untitled"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
               {truncatedJoin([
@@ -360,50 +406,87 @@ export const SpotlightSearchButton = ({
 
     const all: { id: ModuleId; label: string; rows: ResolvedSuggestion[] }[] =
       [];
-    if (moduleAccess.leads) {
-      const leadRows = isSearching
-        ? (unifiedContactsQuery.data ?? [])
-            .filter((record) => isLeadLifecycleStatus(record.status))
-            .slice(0, perModuleLimit)
-            .map(buildLeadRow)
-        : (leadsQuery.data ?? []).map(buildLeadRow);
-      if (leadRows.length > 0) {
-        all.push({
-          id: "leads",
-          label: "Leads",
-          rows: leadRows,
-        });
+
+    if (accountsHub && (moduleAccess.leads || moduleAccess.contacts || moduleAccess.clients)) {
+      const accountRows: ResolvedSuggestion[] = [];
+      if (moduleAccess.clients) {
+        accountRows.push(...(clientsQuery.data ?? []).map(buildClientRow));
       }
-    }
-    if (moduleAccess.clients) {
-      const clientRows = (clientsQuery.data ?? []).map(buildClientRow);
-      if (clientRows.length > 0) {
-        all.push({
-          id: "clients",
-          label: "Clientes",
-          rows: clientRows,
-        });
+      if (moduleAccess.leads || moduleAccess.contacts) {
+        const peopleSource = isSearching
+          ? (unifiedContactsQuery.data ?? [])
+          : [
+              ...(moduleAccess.leads ? (leadsQuery.data ?? []) : []),
+              ...(moduleAccess.contacts ? (contactsQuery.data ?? []) : []),
+            ];
+        const seen = new Set<string>();
+        for (const record of peopleSource) {
+          const key = String(record.id);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          accountRows.push(buildPersonRow(record));
+        }
       }
-    }
-    if (moduleAccess.contacts) {
-      const contactRows = isSearching
-        ? (unifiedContactsQuery.data ?? [])
-            .filter((record) => !isLeadLifecycleStatus(record.status))
-            .slice(0, perModuleLimit)
-            .map(buildContactRow)
-        : (contactsQuery.data ?? []).map(buildContactRow);
-      if (contactRows.length > 0) {
-        all.push({
-          id: "contacts",
-          label: "Contactos",
-          rows: contactRows,
-        });
+      // Keep companies first, then people; soft-cap total rows
+      const companyRows = accountRows.filter((r) =>
+        r.href.startsWith("/companies/"),
+      );
+      const peopleRows = accountRows.filter(
+        (r) => !r.href.startsWith("/companies/"),
+      );
+      const merged = [
+        ...companyRows.slice(0, perModuleLimit),
+        ...peopleRows.slice(0, perModuleLimit),
+      ];
+      if (merged.length > 0) {
+        all.push({ id: "accounts", label: "Accounts", rows: merged });
+      }
+    } else {
+      if (moduleAccess.leads) {
+        const leadRows = isSearching
+          ? (unifiedContactsQuery.data ?? [])
+              .filter((record) => isLeadLifecycleStatus(record.status))
+              .slice(0, perModuleLimit)
+              .map(buildLeadRow)
+          : (leadsQuery.data ?? []).map(buildLeadRow);
+        if (leadRows.length > 0) {
+          all.push({
+            id: "leads",
+            label: "Leads",
+            rows: leadRows,
+          });
+        }
+      }
+      if (moduleAccess.clients) {
+        const clientRows = (clientsQuery.data ?? []).map(buildClientRow);
+        if (clientRows.length > 0) {
+          all.push({
+            id: "clients",
+            label: "Companies",
+            rows: clientRows,
+          });
+        }
+      }
+      if (moduleAccess.contacts) {
+        const contactRows = isSearching
+          ? (unifiedContactsQuery.data ?? [])
+              .filter((record) => !isLeadLifecycleStatus(record.status))
+              .slice(0, perModuleLimit)
+              .map(buildContactRow)
+          : (contactsQuery.data ?? []).map(buildContactRow);
+        if (contactRows.length > 0) {
+          all.push({
+            id: "contacts",
+            label: "People",
+            rows: contactRows,
+          });
+        }
       }
     }
     if (moduleAccess.deals) {
       all.push({
         id: "deals",
-        label: "Proyectos",
+        label: "Projects",
         rows: (dealsQuery.data ?? []).map(buildDealRow),
       });
     }
@@ -427,6 +510,7 @@ export const SpotlightSearchButton = ({
     }
     return all.filter((group) => group.rows.length > 0);
   }, [
+    accountsHub,
     currentModule,
     isSearching,
     moduleAccess.clients,

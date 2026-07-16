@@ -1,5 +1,7 @@
 # Leads
 
+> **UI entry superseded (2026-07):** With `VITE_ACCOUNTS_HUB=1`, the staff entry is **Accounts → Board** (`/accounts?view=board`). `/leads` redirects there. Tables and write paths are unchanged. See `docs/plans/00-accounts-hub-OVERVIEW.md`.
+
 ## 1. Purpose
 
 Pre-client pipeline for contacts with `status` in lead statuses (`lead`, `prospect`, etc.). Kanban and table views at `/leads`, lead detail at `/leads/:id/show`, creation via dialog/page. **Convert to client** promotes a lead to `status=client`, links/creates a company, optionally creates a **closed-won** deal. **Anti-Olvido** is the in-app follow-up radar using `lead_stage`, `snooze_until`, and deal-stage sync triggers (not a cron).

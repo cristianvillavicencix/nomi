@@ -1,5 +1,6 @@
 import { Navigate, useParams, useSearchParams } from "react-router";
 import {
+  getClientCreatePath,
   getClientEditPath,
   getClientShowPath,
   getCompaniesListPath,
@@ -40,5 +41,5 @@ export const LegacyCompanyEditRedirect = () => {
 
 /** Legacy `/companies/create` → open new-company dialog on list */
 export const LegacyCompanyCreateRedirect = () => (
-  <Navigate to="/companies?create=company" replace />
+  <Navigate to={getClientCreatePath()} replace />
 );

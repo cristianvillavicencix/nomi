@@ -13,9 +13,9 @@ export const CompanyEmpty = () => {
     >
       <img src="./img/empty.svg" alt="No companies found" />
       <div className="flex flex-col gap-0 items-center">
-        <h6 className="text-lg font-bold">No companies found</h6>
+        <h6 className="text-lg font-bold">No accounts yet</h6>
         <p className="text-sm text-center text-muted-foreground mb-4">
-          It seems your company list is empty.
+          Add a bill-to company to start managing accounts.
         </p>
       </div>
       <div className="flex space-x-2">

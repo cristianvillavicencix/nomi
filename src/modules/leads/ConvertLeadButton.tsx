@@ -82,9 +82,9 @@ export const ConvertLeadButton = ({ record }: { record: Contact }) => {
       }),
     onSuccess: ({ company_id, deal_id }) => {
       if (deal_id != null) {
-        notify("Lead converted to client and project created");
+        notify("Converted to client and project created");
       } else {
-        notify("Lead converted to client");
+        notify("Converted to client");
       }
       setOpen(false);
       navigate(getClientShowPath(company_id));
@@ -115,16 +115,17 @@ export const ConvertLeadButton = ({ record }: { record: Contact }) => {
             <DialogTitle>Convert lead to client</DialogTitle>
             {hasExistingCompany ? (
               <DialogDescription>
-                This lead is already linked to{" "}
+                This lead is already linked to the bill-to company{" "}
                 <span className="font-medium">
                   {resolvedCompanyName || "an existing company"}
                 </span>
-                . Converting promotes it to a client and sets this contact as
-                the primary.
+                . Converting promotes them into the client journey and sets this
+                contact as the primary.
               </DialogDescription>
             ) : (
               <DialogDescription>
-                A new client company will be created and linked to this contact.
+                Creates or links a bill-to company and moves this person into the
+                client journey. Invoices and tickets will use that company.
               </DialogDescription>
             )}
           </DialogHeader>

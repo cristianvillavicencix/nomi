@@ -1,19 +1,40 @@
 import { LBS_LEAD_STATUSES } from "@/app/navigation";
+import { isAccountsHubEnabled } from "@/lib/featureFlags";
 
 export type ClientsHubListTab = "companies" | "people";
+export type AccountsHubView = "list" | "board";
 
-/** Canonical Clients hub entry (`/clients`). */
+/** Canonical Accounts hub entry (`/accounts`). */
+export const getAccountsHubPath = (
+  view: AccountsHubView = "list",
+  tab?: ClientsHubListTab,
+) => {
+  const params = new URLSearchParams();
+  if (view === "board") params.set("view", "board");
+  if (tab === "people") params.set("tab", "people");
+  const query = params.toString();
+  return query ? `/accounts?${query}` : "/accounts";
+};
+
+/** Canonical Clients hub entry (`/clients` or Accounts List when hub enabled). */
 export const getClientsHubPath = (tab: ClientsHubListTab = "companies") => {
+  if (isAccountsHubEnabled()) {
+    return getAccountsHubPath("list", tab === "people" ? "people" : undefined);
+  }
   if (tab === "people") return "/clients?tab=people";
   return "/clients";
 };
 
 /** Bookmark-friendly list aliases — still mount the hub without redirecting. */
-export const getCompaniesListPath = () => "/companies";
+export const getCompaniesListPath = () =>
+  isAccountsHubEnabled() ? getAccountsHubPath("list") : "/companies";
 
-export const getContactsListPath = () => "/contacts";
+export const getContactsListPath = () =>
+  isAccountsHubEnabled()
+    ? getAccountsHubPath("list", "people")
+    : "/contacts";
 
-/** Preferred navigation target for the unified Clients hub. */
+/** Preferred navigation target for the unified Clients / Accounts list. */
 export const getClientsListPath = () => getClientsHubPath();
 
 export const getClientShowPath = (companyId: string | number) =>
@@ -22,13 +43,20 @@ export const getClientShowPath = (companyId: string | number) =>
 export const getClientEditPath = (companyId: string | number) =>
   `/companies/${companyId}?edit=1`;
 
-export const getClientCreatePath = () => "/clients?create=company";
+export const getClientCreatePath = () =>
+  isAccountsHubEnabled()
+    ? "/accounts?create=company"
+    : "/clients?create=company";
 
-export const getContactCreatePath = () => "/clients?tab=people&create=contact";
+export const getContactCreatePath = () =>
+  isAccountsHubEnabled()
+    ? "/accounts?create=contact"
+    : "/clients?tab=people&create=contact";
 
 export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 
-export const getLeadsListPath = () => "/leads";
+export const getLeadsListPath = () =>
+  isAccountsHubEnabled() ? getAccountsHubPath("board") : "/leads";
 
 export const getLeadKanbanShowPath = (
   contactId: string | number,
@@ -41,6 +69,10 @@ export const getLeadCreatePath = (params?: Record<string, string>) => {
     for (const [key, value] of Object.entries(params)) {
       if (value) search.set(key, value);
     }
+  }
+  if (isAccountsHubEnabled()) {
+    search.set("view", "board");
+    return `/accounts?${search.toString()}`;
   }
   return `/leads?${search.toString()}`;
 };

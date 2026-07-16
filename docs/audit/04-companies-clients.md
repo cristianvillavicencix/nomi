@@ -1,5 +1,7 @@
 # Companies (Clients)
 
+> **UI entry superseded (2026-07):** With `VITE_ACCOUNTS_HUB=1`, the staff entry is **Accounts → List** (`/accounts`). `/clients`, `/companies`, and `/contacts` redirect/alias the hub. Bill-to remains `companies` / `company_id`. See `docs/plans/00-accounts-hub-OVERVIEW.md`.
+
 ## 1. Purpose
 
 Client organizations at `/companies` and detail at `/companies/:id`. Company record holds business identity, website, structured addresses, primary contact link, and related sidebar (contacts, deals, leads, projects, tickets, web monitor widgets). Supports create/edit dialogs, duplicate finder, and quick actions (SMS, forms, new deal modal).

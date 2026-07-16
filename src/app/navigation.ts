@@ -93,7 +93,7 @@ export const filterLbsNavGroups = (
     }))
     .filter((group) => group.items.length > 0);
 
-/** Top-level links before the Clients section. */
+/** Top-level links before the Clients / Accounts section. */
 export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   {
     to: "/",
@@ -115,12 +115,36 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   },
 ];
 
-/** Single sidebar entry for the unified Clients hub. */
+/**
+ * Dashboard-only standalone items when Accounts hub is enabled
+ * (Pipeline is merged into Accounts).
+ */
+export const LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB: LbsNavItem[] = [
+  {
+    to: "/",
+    label: "Dashboard",
+    icon: Home,
+    activePattern: "/",
+    capability: "crm.pipeline.view",
+    resource: "deals",
+    action: "list",
+  },
+];
+
+/** Single sidebar entry for the unified Clients hub (legacy / flag off). */
 export const LBS_CLIENTS_NAV_ITEM: LbsNavItem = {
   to: "/clients",
   label: "Clients",
   icon: Users,
   activePattern: "/clients/*",
+};
+
+/** Single sidebar entry for the Accounts hub (companies + pipeline). */
+export const LBS_ACCOUNTS_NAV_ITEM: LbsNavItem = {
+  to: "/accounts",
+  label: "Accounts",
+  icon: Users,
+  activePattern: "/accounts/*",
 };
 
 /** Top-level links after Clients (no group header). */
@@ -295,6 +319,14 @@ export const LBS_PLACEHOLDER_MODULES = {
 export const LBS_NAV_ITEMS: LbsNavItem[] = [
   ...LBS_NAV_STANDALONE,
   LBS_CLIENTS_NAV_ITEM,
+  ...LBS_NAV_AFTER_CLIENTS,
+  ...LBS_NAV_GROUPS.flatMap((group) => group.items),
+];
+
+/** Flat list when Accounts hub replaces Pipeline + Clients. */
+export const LBS_NAV_ITEMS_WITH_ACCOUNTS_HUB: LbsNavItem[] = [
+  ...LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB,
+  LBS_ACCOUNTS_NAV_ITEM,
   ...LBS_NAV_AFTER_CLIENTS,
   ...LBS_NAV_GROUPS.flatMap((group) => group.items),
 ];

@@ -73,8 +73,8 @@ export const ConvertWonLeadDialog = ({
     onSuccess: ({ company_id, deal_id }) => {
       notify(
         deal_id != null
-          ? "Lead converted to client and project created"
-          : "Lead converted to client",
+          ? "Converted to client and project created"
+          : "Converted to client",
         { type: "info" },
       );
       onConverted(company_id);
@@ -106,8 +106,8 @@ export const ConvertWonLeadDialog = ({
             <span className="font-medium">
               {lead ? getLeadDisplayName(lead) : "this lead"}
             </span>{" "}
-            as <span className="font-medium">Won</span>. Promote them to a
-            client now?
+            as <span className="font-medium">Won</span>. Link or create a
+            bill-to company and move them into the client journey?
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
