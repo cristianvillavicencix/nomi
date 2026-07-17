@@ -7,17 +7,25 @@ import {
 } from "./ticketInvoiceFlow.ts";
 import { buildTicketDeliveryEmailHtml } from "./ticketEmailTemplates.ts";
 import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
+import { createStorageSignedUrl } from "./storageObjectUrl.ts";
+import { supabaseAdmin } from "./supabaseAdmin.ts";
 
 const buildMessageId = (ticketId: number) =>
   `<ticket-${ticketId}-${crypto.randomUUID()}@nomicrm.com>`;
 
 /**
- * Product cap for delivery attachments (raw bytes).
- * Twilio SendGrid allows ~30 MB total message after Base64; 25 MB of files
- * leaves headroom for body/headers on typical packs.
+ * Product / provider cap when attaching files in one email.
+ * Twilio SendGrid allows ~30 MB total message after Base64.
  */
 export const MAX_DELIVERY_EMAIL_BYTES = 25 * 1024 * 1024;
 const MAX_DELIVERY_EMAIL_MB = MAX_DELIVERY_EMAIL_BYTES / (1024 * 1024);
+
+/**
+ * Edge workers OOM when Base64-encoding multi-MB packs (HTTP 546).
+ * Prefer signed download links whenever the pack may exceed this.
+ */
+const EDGE_SAFE_ATTACH_BYTES = 3 * 1024 * 1024;
+const DOWNLOAD_LINK_EXPIRES_SEC = 60 * 60 * 24 * 7; // 7 days
 
 const deliveryEmailFailureReason = (emailResult: {
   skipped?: boolean;
@@ -52,6 +60,73 @@ export async function noteTicketDeliveryFailure(
   } catch (noteError) {
     console.error("noteTicketDeliveryFailure.failed", noteError);
   }
+}
+
+type DeliveryFile = {
+  id: number;
+  title: string;
+  type?: string | null;
+  path?: string | null;
+  src?: string | null;
+  sort_order?: number | null;
+};
+
+async function estimatePublicObjectBytes(file: DeliveryFile) {
+  const url = file.src?.trim();
+  if (!url?.startsWith("http")) return null;
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    const length = response.headers.get("content-length");
+    if (!response.ok || !length) return null;
+    const size = Number(length);
+    return Number.isFinite(size) && size >= 0 ? size : null;
+  } catch {
+    return null;
+  }
+}
+
+async function estimateDeliverableBytes(files: DeliveryFile[]) {
+  let total = 0;
+  for (const file of files) {
+    const size = await estimatePublicObjectBytes(file);
+    if (size == null) {
+      // Unknown size → avoid loading into the worker; use download links.
+      return Number.POSITIVE_INFINITY;
+    }
+    total += size;
+  }
+  return total;
+}
+
+async function buildDownloadLinks(files: DeliveryFile[]) {
+  const links: Array<{ name: string; url: string }> = [];
+  for (const file of files) {
+    const path = file.path?.trim();
+    const name = file.title?.trim() || path?.split("/").pop() || "file";
+    if (path) {
+      const signed = await createStorageSignedUrl(
+        supabaseAdmin,
+        "attachments",
+        path,
+        DOWNLOAD_LINK_EXPIRES_SEC,
+      );
+      if (signed) {
+        links.push({ name, url: signed });
+        continue;
+      }
+    }
+    if (file.src?.trim()) {
+      links.push({ name, url: file.src.trim() });
+      continue;
+    }
+    throw new Error(
+      `Could not create a download link for "${name}". Retry delivery or share the file manually.`,
+    );
+  }
+  if (links.length === 0) {
+    throw new Error("Could not create download links for delivery files.");
+  }
+  return links;
 }
 
 async function deliverOneTicketForInvoicePayment(
@@ -175,31 +250,54 @@ async function deliverOneTicketForInvoicePayment(
   const subject = buildTicketDeliveryEmailSubject(propertyAddress);
   const fileNames = deliverables.map((file) => file.title);
   const fileList = fileNames.join(", ");
-  const textBody =
-    `Thank you for your payment (${params.invoiceNumber}). ` +
-    `Your supplement files for ${propertyAddress} are attached` +
-    (fileList ? `: ${fileList}.` : " to this email.");
+  const estimatedBytes = await estimateDeliverableBytes(
+    deliverables as DeliveryFile[],
+  );
+  const useDownloadLinks =
+    !Number.isFinite(estimatedBytes) ||
+    estimatedBytes > EDGE_SAFE_ATTACH_BYTES;
+
+  let downloadLinks: Array<{ name: string; url: string }> | undefined;
+  let emailAttachments:
+    | Awaited<ReturnType<typeof loadStorageAttachmentsForEmail>>["attachments"]
+    | undefined;
+
+  if (useDownloadLinks) {
+    downloadLinks = await buildDownloadLinks(deliverables as DeliveryFile[]);
+  } else {
+    const loadedAttachments = await loadStorageAttachmentsForEmail(deliverables);
+    if (loadedAttachments.missingCount > 0) {
+      throw new Error(
+        `Could not load ${loadedAttachments.missingCount} of ${loadedAttachments.requestedCount} delivery file(s). Files were not marked as delivered.`,
+      );
+    }
+    if (loadedAttachments.totalBytes > EDGE_SAFE_ATTACH_BYTES) {
+      downloadLinks = await buildDownloadLinks(deliverables as DeliveryFile[]);
+    } else if (loadedAttachments.totalBytes > MAX_DELIVERY_EMAIL_BYTES) {
+      const sizeMb = Math.round(loadedAttachments.totalBytes / (1024 * 1024));
+      throw new Error(
+        `Delivery files are too large for email (${sizeMb} MB). Maximum is ${MAX_DELIVERY_EMAIL_MB} MB.`,
+      );
+    } else {
+      emailAttachments = loadedAttachments.attachments;
+    }
+  }
+
+  const textBody = downloadLinks?.length
+    ? `Thank you for your payment (${params.invoiceNumber}). ` +
+      `Your supplement files for ${propertyAddress} are ready to download (links expire in 7 days):\n` +
+      downloadLinks.map((file) => `- ${file.name}: ${file.url}`).join("\n")
+    : `Thank you for your payment (${params.invoiceNumber}). ` +
+      `Your supplement files for ${propertyAddress} are attached` +
+      (fileList ? `: ${fileList}.` : " to this email.");
   const htmlBody = buildTicketDeliveryEmailHtml({
     orgName: fromName,
     invoiceNumber: params.invoiceNumber,
     propertyAddress,
     fileNames,
+    downloadLinks,
   });
   const outboundMessageId = buildMessageId(ticket.id);
-  const loadedAttachments = await loadStorageAttachmentsForEmail(deliverables);
-
-  if (loadedAttachments.missingCount > 0) {
-    throw new Error(
-      `Could not load ${loadedAttachments.missingCount} of ${loadedAttachments.requestedCount} delivery file(s). Files were not marked as delivered.`,
-    );
-  }
-
-  if (loadedAttachments.totalBytes > MAX_DELIVERY_EMAIL_BYTES) {
-    const sizeMb = Math.round(loadedAttachments.totalBytes / (1024 * 1024));
-    throw new Error(
-      `Delivery files are too large for email (${sizeMb} MB). Maximum is ${MAX_DELIVERY_EMAIL_MB} MB. Reduce files or send via another channel, then use Retry delivery.`,
-    );
-  }
 
   const emailResult = await sendTransactionalEmail({
     orgId: params.orgId,
@@ -210,7 +308,7 @@ async function deliverOneTicketForInvoicePayment(
     fromEmail: inboxAddress,
     fromName,
     replyTo: inboxAddress,
-    attachments: loadedAttachments.attachments,
+    attachments: emailAttachments,
   });
 
   const deliveryFailure = deliveryEmailFailureReason(emailResult);
