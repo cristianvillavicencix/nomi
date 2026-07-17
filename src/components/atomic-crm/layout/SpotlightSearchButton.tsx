@@ -608,7 +608,7 @@ export const SpotlightSearchButton = ({
         <DialogPrimitive.Trigger asChild>
           <button
             type="button"
-            aria-label="Buscar"
+            aria-label="Search"
             className={cn(
               "group flex h-9 items-center gap-2 rounded-md border bg-muted/40 px-3",
               "text-sm text-muted-foreground transition-colors",
@@ -647,7 +647,7 @@ export const SpotlightSearchButton = ({
           )}
         >
           <DialogPrimitive.Title className="sr-only">
-            Buscar en NOMI
+            Search NOMI
           </DialogPrimitive.Title>
 
           <div className="relative flex items-center px-4 py-3">
@@ -685,7 +685,7 @@ export const SpotlightSearchButton = ({
             ) : flatSuggestions.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 {trimmedQuery
-                  ? "Sin coincidencias en los módulos a los que tienes acceso."
+                  ? "No matches in the modules you can access."
                   : "Empieza a escribir para buscar en NOMI."}
               </p>
             ) : (

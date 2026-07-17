@@ -1,0 +1,41 @@
+---
+description: CRM UX system layers — open protocol, hubs, dialogs, empty/back, status, actions
+globs:
+  - src/modules/**/*
+  - src/components/atomic-crm/**/*
+alwaysApply: false
+---
+
+# CRM UX system
+
+See `docs/ux/CRM-UX-SYSTEM.md` for the full roadmap. Prefer shared kits under `src/modules/shared/` over one-off UI.
+
+## Open protocol
+
+- Always use helpers in `src/app/routing.ts` (`getPersonShowPath`, `getClientShowPath`, …).
+- Hubs: Preview sheet or selection panel. Deep work: Full view. Side panels: Context card + link.
+- Do not hardcode stale paths like `/companies/:id/show` when a helper exists.
+
+## Dialog vs Sheet
+
+- **Dialog** — short create/edit forms (`CreateFormDialogShell`, `ContactFormDialog`, …).
+- **Sheet** — browse / detail / preview overlays.
+- Do not add a second create surface for the same entity (prefer one form shell).
+
+## Hub selection
+
+List + selection URL + Preview/panel; on mobile prefer full page. Converge Accounts / Tickets / Messages toward the same mental model; Deals may stay full-page if documented.
+
+## Chrome
+
+- Prefer shared empty / loading / back primitives when they exist under `src/modules/shared/chrome/`.
+- Right-rail collapse: use `CollapsibleRelatedPanel` (or future `CollapsibleRail`) with **right**-side affordances (`PanelRightOpen`), not left-drawer icons.
+
+## Atoms (when present)
+
+- `EntityQuickActions` for Call / Email / SMS / More — do not copy CircleButton stacks per module.
+- `StatusPill` + domain maps for stages/statuses — do not dump raw `status.replace(/_/g, " ")`.
+
+## Language
+
+CRM product chrome is English. Portal / proposal document i18n may stay bilingual.

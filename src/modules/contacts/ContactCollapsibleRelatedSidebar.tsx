@@ -41,10 +41,10 @@ export const ContactCollapsibleRelatedSidebar = (
           label: "Referred by",
         },
         {
-          key: "projects",
+          key: "deals",
           icon: <Briefcase className="size-4" />,
-          count: counts.projects,
-          label: "Projects",
+          count: counts.deals,
+          label: "Deals",
         },
         {
           key: "tickets",

@@ -80,9 +80,9 @@ export const SignupPage = () => {
     <div className="h-screen p-8">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild className="shrink-0 gap-1.5">
-          <Link to="/login" aria-label="Volver al inicio de sesión">
+          <Link to="/login" aria-label="Back to sign in">
             <ArrowLeft className="h-4 w-4" />
-            Volver
+            Back
           </Link>
         </Button>
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -182,7 +182,7 @@ export const SignupPage = () => {
                   className="w-full sm:w-auto"
                   onClick={() => navigate("/login")}
                 >
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button
                   type="button"
@@ -190,7 +190,7 @@ export const SignupPage = () => {
                   className="w-full text-muted-foreground sm:w-auto"
                   asChild
                 >
-                  <Link to="/login">Iniciar sesión</Link>
+                  <Link to="/login">Sign in</Link>
                 </Button>
               </div>
               {googleWorkplaceDomain ? (

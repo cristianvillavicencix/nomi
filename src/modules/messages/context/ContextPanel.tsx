@@ -1,19 +1,23 @@
 import { Link } from "react-router";
 import type { ReactNode } from "react";
-import { ExternalLink, Mail, Phone, UserRound, X } from "lucide-react";
+import { ExternalLink, Phone, X } from "lucide-react";
+import { useGetOne } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
+import type { Company } from "@/components/atomic-crm/types";
 import type { Contact, Conversation, LbsDeal } from "@/modules/types";
-import {
-  getContactDisplayName,
-  getContactPhoneEntries,
-} from "@/modules/messages/messageContactUtils";
+import { getContactPhoneEntries } from "@/modules/messages/messageContactUtils";
 import { StatusBadge } from "@/modules/messages/status/StatusBadge";
 import { useMaskedAmount } from "@/lib/permissions/useMaskedAmount";
-import { getPersonShowPath } from "@/app/routing";
+import { getClientShowPath } from "@/app/routing";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { cn } from "@/lib/utils";
 import { VoiceCallButton } from "@/modules/voice/VoiceCallButton";
 import { ConversationCallHistory } from "@/modules/voice/ConversationCallHistory";
+import {
+  CompanyContextCard,
+  PersonContextCard,
+} from "@/modules/shared/profile";
 
 const DetailSection = ({
   label,
@@ -43,6 +47,12 @@ export const ContextPanelContent = ({
 }) => {
   const maskedAmount = useMaskedAmount(deal?.amount ?? null);
 
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: contact?.company_id! },
+    { enabled: contact?.company_id != null },
+  );
+
   if (!conversation && !contact) {
     return (
       <div className="flex h-full min-h-[200px] items-center justify-center p-6 text-center text-sm text-muted-foreground">
@@ -57,8 +67,6 @@ export const ContextPanelContent = ({
     conversation?.external_phone ??
     phoneEntries[0]?.e164 ??
     null;
-  const emailEntries =
-    contact?.email_jsonb?.filter((entry) => entry.email?.trim()) ?? [];
 
   return (
     <div className="space-y-5 p-5">
@@ -87,91 +95,53 @@ export const ContextPanelContent = ({
         </div>
       ) : null}
 
-      {contact ? (
-        <div className="space-y-4">
-          <DetailSection label="Contact">
-            <p className="font-medium">{getContactDisplayName(contact)}</p>
-            {contact.title?.trim() ? (
-              <p className="text-sm text-muted-foreground">{contact.title}</p>
-            ) : null}
-            {contact.company_name ? (
-              <p className="text-sm text-muted-foreground">
-                {contact.company_name}
-              </p>
-            ) : null}
-          </DetailSection>
+      {contact ? <PersonContextCard contact={contact} /> : null}
 
-          {phoneEntries.length > 0 ? (
-            <DetailSection label="Phone numbers">
-              <ul className="space-y-1.5 text-sm">
-                {phoneEntries.map((entry) => {
-                  const isActive =
-                    activeSmsPhone != null && entry.e164 === activeSmsPhone;
-                  return (
-                    <li
-                      key={entry.e164}
-                      className={cn(
-                        "flex items-start gap-2",
-                        isActive && "font-medium text-foreground",
-                      )}
-                    >
-                      <Phone className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                      <span>
-                        {entry.display}
-                        {entry.label !== "Phone" ? (
-                          <span className="text-muted-foreground">
-                            {" "}
-                            · {entry.label}
-                          </span>
-                        ) : null}
-                        {isActive ? (
-                          <span className="ml-1 text-[11px] text-muted-foreground">
-                            (SMS)
-                          </span>
-                        ) : null}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </DetailSection>
-          ) : null}
+      {company ? (
+        <CompanyContextCard
+          companyId={company.id}
+          name={company.name}
+          website={company.website}
+          isClient={company.is_client}
+          viewProfileHref={getClientShowPath(company.id)}
+          avatar={<CompanyAvatar record={company} width={40} />}
+        />
+      ) : null}
 
-          {emailEntries.length > 0 ? (
-            <DetailSection label="Email">
-              <ul className="space-y-1.5 text-sm">
-                {emailEntries.map((entry, index) => (
-                  <li key={`${entry.email}-${index}`} className="flex gap-2">
-                    <Mail className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                    <a
-                      href={`mailto:${entry.email}`}
-                      className="break-all text-foreground hover:underline"
-                    >
-                      {entry.email}
-                    </a>
-                    {entry.type?.trim() ? (
-                      <span className="shrink-0 text-muted-foreground">
-                        · {entry.type}
+      {contact && phoneEntries.length > 1 ? (
+        <DetailSection label="Phone numbers">
+          <ul className="space-y-1.5 text-sm">
+            {phoneEntries.map((entry) => {
+              const isActive =
+                activeSmsPhone != null && entry.e164 === activeSmsPhone;
+              return (
+                <li
+                  key={entry.e164}
+                  className={cn(
+                    "flex items-start gap-2",
+                    isActive && "font-medium text-foreground",
+                  )}
+                >
+                  <Phone className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                  <span>
+                    {entry.display}
+                    {entry.label !== "Phone" ? (
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {entry.label}
                       </span>
                     ) : null}
-                  </li>
-                ))}
-              </ul>
-            </DetailSection>
-          ) : null}
-
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <Link to={getPersonShowPath(contact)}>
-              <UserRound className="mr-2 size-4" />
-              Open contact
-            </Link>
-          </Button>
-        </div>
+                    {isActive ? (
+                      <span className="ml-1 text-[11px] text-muted-foreground">
+                        (SMS)
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </DetailSection>
       ) : null}
 
       {deal ? (

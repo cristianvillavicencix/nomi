@@ -1,7 +1,7 @@
 # Accounts module — UX analysis
 
 **Date:** 2026-07-16  
-**Status:** Historical analysis. Current product decision: [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md) (People-only List + company preview; Board = active leads).
+**Status:** Historical analysis. Current product decision: [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md) (Company-first List + company preview; Board = active leads).
 
 ## Problem
 

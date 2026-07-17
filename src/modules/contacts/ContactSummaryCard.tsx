@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useGetOne } from "ra-core";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -10,8 +10,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
-import type { Contact } from "@/components/atomic-crm/types";
-import { cn } from "@/lib/utils";
+import { OrganizationMemberName } from "@/components/atomic-crm/organizationMembers/OrganizationMemberName";
+import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
 import { collectContactSocialLinks } from "@/modules/clients/clientSocialLinks";
 import {
   getSocialLinkLabel,
@@ -23,84 +23,25 @@ import {
   getContactEmail,
   getContactFullName,
   getContactPhoneRaw,
-  formatDateTime,
 } from "@/modules/clients/clientShowUtils";
 import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { ContactQuickActions } from "@/modules/contacts/ContactQuickActions";
 import { getClientShowPath } from "@/app/routing";
+import {
+  EntityIdentityHeader,
+  EntityMetaItem,
+  EntityMetaRow,
+} from "@/modules/shared/profile";
 
 type ContactSummaryCardProps = {
   record: Contact;
   hideCompanyLink?: boolean;
 };
 
-const ProfileSectionTitle = ({ children }: { children: ReactNode }) => (
-  <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-    {children}
-  </p>
-);
-
-const ProfileFadeText = ({
-  children,
-  className,
-  as: Tag = "div",
-}: {
-  children: ReactNode;
-  className?: string;
-  as?: "div" | "h1";
-}) => {
-  const contentRef = useRef<HTMLElement>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-
-  useEffect(() => {
-    const element = contentRef.current;
-    if (!element) return;
-
-    const checkOverflow = () => {
-      setIsOverflowing(element.scrollWidth > element.clientWidth + 1);
-    };
-
-    checkOverflow();
-    const observer = new ResizeObserver(checkOverflow);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [children]);
-
-  return (
-    <div className="relative min-w-0">
-      <Tag ref={contentRef as never} className={cn("truncate pr-6", className)}>
-        {children}
-      </Tag>
-      {isOverflowing ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-card via-card/80 to-transparent"
-        />
-      ) : null}
-    </div>
-  );
+const statusLabel = (status?: string | null) => {
+  if (!status) return "Active";
+  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
 };
-
-const ProfileInfoRow = ({
-  label,
-  value,
-  fade = true,
-}: {
-  label: string;
-  value: ReactNode;
-  fade?: boolean;
-}) => (
-  <div className="grid grid-cols-[minmax(5.5rem,auto)_minmax(0,1fr)] items-center gap-x-3 border-b border-border/60 py-2.5 text-sm last:border-b-0">
-    <span className="shrink-0 text-muted-foreground">{label}</span>
-    <div className="min-w-0 font-medium">
-      {fade ? (
-        <ProfileFadeText className="font-medium">{value}</ProfileFadeText>
-      ) : (
-        value
-      )}
-    </div>
-  </div>
-);
 
 const ProfileIconLink = ({
   href,
@@ -118,7 +59,7 @@ const ProfileIconLink = ({
         type="button"
         variant="outline"
         size="icon"
-        className="size-9 shrink-0 rounded-full"
+        className="size-8 shrink-0 rounded-full"
       >
         <a
           href={href}
@@ -149,103 +90,120 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
     { enabled: record.company_id != null },
   );
 
+  const { data: owner } = useGetOne<OrganizationMember>(
+    "organization_members",
+    { id: record.organization_member_id! },
+    { enabled: record.organization_member_id != null },
+  );
+
   const companyName = record.company_name?.trim() || company?.name?.trim();
 
-  return (
-    <Card
-      className={cn("gap-0 py-0", hideCompanyLink && "border-0 shadow-none")}
-    >
-      <CardContent className={hideCompanyLink ? "px-3 py-3" : "px-4 py-4"}>
-        <div className="flex flex-col items-center text-center">
-          <Avatar record={record} width={40} height={40} />
-
-          <div className="relative mt-3 w-full min-w-0 px-1">
-            <ProfileFadeText
-              as="h1"
-              className="text-lg font-semibold leading-tight"
-            >
-              {fullName}
-            </ProfileFadeText>
+  if (hideCompanyLink) {
+    return (
+      <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+        <div className="flex items-start gap-3">
+          <Avatar record={record} width={48} height={48} />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h1 className="truncate text-lg font-semibold">{fullName}</h1>
+              <Badge variant="secondary">{statusLabel(record.status)}</Badge>
+            </div>
+            {record.title ? (
+              <p className="truncate text-sm text-muted-foreground">
+                {record.title}
+              </p>
+            ) : null}
+            <ContactQuickActions
+              contactId={record.id}
+              contact={record}
+              iconRow
+            />
           </div>
         </div>
+      </div>
+    );
+  }
 
-        <div className={hideCompanyLink ? "mt-3" : "mt-4"}>
-          <ContactQuickActions
-            contactId={record.id}
-            contact={record}
-            compact={hideCompanyLink}
-          />
-        </div>
-
-        <div
-          className={
-            hideCompanyLink
-              ? "mt-3 border-t border-border/60 pt-3"
-              : "mt-4 border-t border-border/60 pt-3"
-          }
-        >
-          <ProfileSectionTitle>Key information</ProfileSectionTitle>
-          {!hideCompanyLink ? (
-            <ProfileInfoRow
-              label="Company"
-              fade={!companyName}
-              value={
-                record.company_id && companyName ? (
-                  <Link
-                    to={getClientShowPath(record.company_id)}
-                    className="link-action block truncate font-medium"
-                  >
-                    {companyName}
-                  </Link>
-                ) : (
-                  "—"
-                )
-              }
-            />
+  return (
+    <EntityIdentityHeader
+      tone="violet"
+      avatar={<Avatar record={record} width={64} height={64} />}
+      title={fullName}
+      badges={<Badge variant="secondary">{statusLabel(record.status)}</Badge>}
+      subtitle={
+        <>
+          {record.title?.trim() || "Contact"}
+          {companyName ? (
+            <>
+              {" at "}
+              {record.company_id ? (
+                <Link
+                  to={getClientShowPath(record.company_id)}
+                  className="link-action font-medium text-foreground"
+                >
+                  {companyName}
+                </Link>
+              ) : (
+                companyName
+              )}
+            </>
           ) : null}
-          <ProfileInfoRow
-            label="Phone"
-            value={
-              <CrmPhoneDisplay phone={getContactPhoneRaw(record)} contactId={record.id} />
-            }
-          />
-          <ProfileInfoRow label="Email" value={getContactEmail(record)} />
-          <ProfileInfoRow
-            label="Address"
-            value={record.address?.trim() || "—"}
-          />
-          <ProfileInfoRow
-            label="Created"
-            value={formatDateTime(record.first_seen)}
-          />
-        </div>
-
-        <div className="mt-4 border-t border-border/60 pt-3">
-          <ProfileSectionTitle>Social links</ProfileSectionTitle>
-          {socialLinks.length > 0 ? (
-            <TooltipProvider delayDuration={200}>
-              <div className="flex flex-wrap items-center gap-2">
-                {socialLinks.map((link: ClientSocialLinkValue) => {
-                  const { Icon } = getSocialNetworkOption(link.network);
-                  const label = getSocialLinkLabel(link);
-
-                  return (
-                    <ProfileIconLink
-                      key={`${link.url}-${link.network ?? "other"}`}
-                      href={normalizeSocialUrl(link.url)}
-                      label={label}
-                    >
-                      <Icon className="size-4" />
-                    </ProfileIconLink>
-                  );
-                })}
-              </div>
-            </TooltipProvider>
+        </>
+      }
+      actions={
+        <ContactQuickActions
+          contactId={record.id}
+          contact={record}
+          iconRow
+        />
+      }
+    >
+      <EntityMetaRow>
+        <EntityMetaItem label="Owner">
+          {owner ? <OrganizationMemberName member={owner} /> : "—"}
+        </EntityMetaItem>
+        <EntityMetaItem label="Company">
+          {record.company_id && companyName ? (
+            <Link
+              to={getClientShowPath(record.company_id)}
+              className="link-action"
+            >
+              {companyName}
+            </Link>
           ) : (
-            <p className="text-sm text-muted-foreground">No social links yet</p>
+            "—"
           )}
+        </EntityMetaItem>
+        <EntityMetaItem label="Phone">
+          <CrmPhoneDisplay
+            phone={getContactPhoneRaw(record)}
+            contactId={record.id}
+          />
+        </EntityMetaItem>
+        <EntityMetaItem label="Email">
+          {getContactEmail(record) || "—"}
+        </EntityMetaItem>
+      </EntityMetaRow>
+
+      {socialLinks.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border/60 px-5 py-3">
+          <TooltipProvider delayDuration={200}>
+            {socialLinks.map((link: ClientSocialLinkValue) => {
+              const { Icon } = getSocialNetworkOption(link.network);
+              const label = getSocialLinkLabel(link);
+              return (
+                <ProfileIconLink
+                  key={`${link.url}-${link.network ?? "other"}`}
+                  href={normalizeSocialUrl(link.url)}
+                  label={label}
+                >
+                  <Icon className="size-3.5" />
+                </ProfileIconLink>
+              );
+            })}
+          </TooltipProvider>
         </div>
-      </CardContent>
-    </Card>
+      ) : null}
+    </EntityIdentityHeader>
   );
 };

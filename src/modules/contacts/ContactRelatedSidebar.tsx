@@ -20,7 +20,6 @@ import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
 import { Badge } from "@/components/ui/badge";
 import {
   ClientOpenDealsTab,
-  ClientProjectsTab,
   ClientTicketsTab,
 } from "@/modules/clients/ClientTabPanels";
 import { ReferralsTab } from "@/modules/leads/ReferralsTab";
@@ -33,12 +32,12 @@ import {
   getContactFullName,
 } from "@/modules/clients/clientShowUtils";
 import {
-  getClientDealCreatePath,
   getClientShowPath,
   getPersonShowPath,
 } from "@/app/routing";
 import { relatedPreviewItemClassName } from "@/modules/shared/relatedFilters";
 import {
+  RelatedAccordion,
   RelatedEmptyState,
   RelatedSection,
 } from "@/modules/shared/RelatedSection";
@@ -47,7 +46,6 @@ import { MoneyText } from "@/lib/permissions/MoneyText";
 type SidebarPanel =
   | "company"
   | "deals"
-  | "projects"
   | "tickets"
   | "referrals"
   | "referrer"
@@ -102,16 +100,6 @@ export const ContactRelatedSidebar = ({
     { staleTime: 30_000 },
   );
 
-  const { data: deals = [] } = useGetList<Deal>(
-    "deals",
-    {
-      filter: { "contact_ids@cs": `{${contact.id}}` },
-      pagination: { page: 1, perPage: 3 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
-
   const { data: tickets = [] } = useGetList<Ticket>(
     "tickets",
     {
@@ -147,18 +135,17 @@ export const ContactRelatedSidebar = ({
       ? "Company"
       : panel === "deals"
         ? "Deals"
-        : panel === "projects"
-          ? "Projects"
-          : panel === "tickets"
-            ? "Tickets"
-            : panel === "referrals"
-              ? "Referrals"
-              : "Referred by";
+        : panel === "tickets"
+          ? "Tickets"
+          : panel === "referrals"
+            ? "Referrals"
+            : "Referred by";
 
   return (
     <>
-      <div className="space-y-6">
+      <RelatedAccordion defaultValue={["company", "deals"]}>
         <RelatedSection
+          value="company"
           title="Company"
           count={contact.company_id ? 1 : 0}
           empty={
@@ -198,6 +185,7 @@ export const ContactRelatedSidebar = ({
 
         {hasReferrer ? (
           <RelatedSection
+            value="referrer"
             title="Referred by"
             count={1}
             onViewAll={() => setPanel("referrer")}
@@ -242,6 +230,7 @@ export const ContactRelatedSidebar = ({
         ) : null}
 
         <RelatedSection
+          value="deals"
           title="Deals"
           count={counts.deals}
           onAdd={
@@ -272,36 +261,7 @@ export const ContactRelatedSidebar = ({
         </RelatedSection>
 
         <RelatedSection
-          title="Projects"
-          count={counts.projects}
-          addHref={
-            contact.company_id
-              ? getClientDealCreatePath(contact.company_id, contact.id)
-              : undefined
-          }
-          onViewAll={() => setPanel("projects")}
-          empty={
-            <RelatedEmptyState message="No projects linked to this contact yet." />
-          }
-        >
-          <div className="space-y-2">
-            {deals.map((deal) => (
-              <Link
-                key={deal.id}
-                to={`/deals/${deal.id}/show`}
-                className={relatedPreviewItemClassName}
-              >
-                <p className="font-medium">{deal.name}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span>{findDealLabel(dealStages, deal.stage)}</span>
-                  <MoneyText value={deal.amount} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </RelatedSection>
-
-        <RelatedSection
+          value="tickets"
           title="Tickets"
           count={counts.tickets}
           addHref={`/tickets/create?${ticketCreateParams.toString()}`}
@@ -331,6 +291,7 @@ export const ContactRelatedSidebar = ({
         </RelatedSection>
 
         <RelatedSection
+          value="referrals"
           title="Referrals"
           count={counts.referrals}
           onViewAll={() => setPanel("referrals")}
@@ -360,7 +321,7 @@ export const ContactRelatedSidebar = ({
             ))}
           </div>
         </RelatedSection>
-      </div>
+      </RelatedAccordion>
 
       <Sheet
         open={panel != null}
@@ -373,9 +334,6 @@ export const ContactRelatedSidebar = ({
           <div className="mt-4">
             {panel === "deals" ? (
               <ClientOpenDealsTab contactId={contact.id} />
-            ) : null}
-            {panel === "projects" ? (
-              <ClientProjectsTab contactId={contact.id} />
             ) : null}
             {panel === "tickets" ? (
               <ClientTicketsTab

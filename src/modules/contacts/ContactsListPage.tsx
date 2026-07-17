@@ -48,7 +48,7 @@ export const ContactsListPage = () => {
 
 const ContactsListActions = () => (
   <PageActions>
-    <PageTitle label="Contactos" />
+    <PageTitle label="Contacts" />
     <div className="ml-auto flex items-center gap-2">
       <SortButton fields={["first_name", "last_name", "company_name"]} />
       <ModuleInfoPopover

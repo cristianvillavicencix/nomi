@@ -24,13 +24,8 @@ export const TicketMessageContent = ({
   const fileAttachments = Array.isArray(attachments) ? attachments : [];
 
   const assets = useMemo(
-    () =>
-      extractMessageAssets({
-        htmlBody,
-        plainBody: body,
-        fileAttachments,
-      }),
-    [htmlBody, body, fileAttachments],
+    () => extractMessageAssets({ fileAttachments }),
+    [fileAttachments],
   );
 
   const { documents, videos, photos } = useMemo(
@@ -38,8 +33,8 @@ export const TicketMessageContent = ({
     [assets],
   );
 
-  // Keep Drive/Dropbox links in the email body (Gmail-like). Still list them
-  // in Documents & Photos below for quick access — do not strip from HTML.
+  const hasFileAssets =
+    documents.length > 0 || videos.length > 0 || photos.length > 0;
 
   return (
     <div className={cn(className)}>
@@ -48,11 +43,13 @@ export const TicketMessageContent = ({
         htmlBody={htmlBody}
         emailVariant={emailVariant}
       />
-      <TicketMessageAttachments
-        documents={documents}
-        videos={videos}
-        photos={photos}
-      />
+      {hasFileAssets ? (
+        <TicketMessageAttachments
+          documents={documents}
+          videos={videos}
+          photos={photos}
+        />
+      ) : null}
     </div>
   );
 };

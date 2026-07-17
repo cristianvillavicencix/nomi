@@ -25,6 +25,7 @@ import { ContactSummaryCard } from "@/modules/contacts/ContactSummaryCard";
 import { ContactMarketingPreferencesCard } from "@/modules/marketing/ContactMarketingPreferencesCard";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { useContactTabCounts } from "@/modules/contacts/useContactTabCounts";
+import { ProfileFullViewLayout } from "@/modules/shared/ProfileFullViewLayout";
 
 export const ContactShowContent = ({
   embedded = false,
@@ -54,7 +55,7 @@ export const ContactShowContent = ({
       return;
     }
     const next = new URLSearchParams(searchParams);
-    if (mapped.tab === "projects") {
+    if (mapped.tab === "activity") {
       next.delete("tab");
     } else {
       next.set("tab", mapped.tab);
@@ -76,7 +77,7 @@ export const ContactShowContent = ({
       return;
     }
     const nextSearchParams = new URLSearchParams(searchParams);
-    if (nextTab === "projects") {
+    if (nextTab === "activity") {
       nextSearchParams.delete("tab");
     } else {
       nextSearchParams.set("tab", nextTab);
@@ -96,18 +97,39 @@ export const ContactShowContent = ({
     <Card className={cn("gap-0 py-0", embedded && "border-0 shadow-none")}>
       <CardContent className="px-4 py-4">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <TabsList className="mb-4 inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-            <TabsTrigger value="projects" className="shrink-0">
+          <TabsList className="mb-4 h-auto w-full justify-start gap-0 overflow-x-auto rounded-none border-b border-border bg-transparent p-0">
+            <TabsTrigger
+              value="activity"
+              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              {tabLabel("activity", "Activity", activityCount)}
+            </TabsTrigger>
+            <TabsTrigger
+              value="projects"
+              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
               {tabLabel("projects", "Projects", counts.projects)}
             </TabsTrigger>
-            <TabsTrigger value="financial" className="shrink-0">
+            <TabsTrigger
+              value="financial"
+              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
               {tabLabel("financial", "Financial", financialCount)}
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="shrink-0">
-              {tabLabel("activity", "Activity", activityCount)}
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="activity" className="mt-0">
+            <ClientActivityTab
+              companyId={counts.hasCompany ? counts.companyId : undefined}
+              contactIds={counts.contactIds}
+              primaryContactId={record.id}
+              syncUrl={syncUrl}
+              counts={{
+                notes: counts.notes,
+                tasks: counts.tasks,
+              }}
+            />
+          </TabsContent>
           <TabsContent value="projects" className="mt-0">
             <ClientTabSectionCard
               title="Projects"
@@ -133,40 +155,16 @@ export const ContactShowContent = ({
               <ClientTabEmpty message="Link this contact to a company to view financial records." />
             )}
           </TabsContent>
-          <TabsContent value="activity" className="mt-0">
-            <ClientActivityTab
-              companyId={counts.hasCompany ? counts.companyId : undefined}
-              contactIds={counts.contactIds}
-              primaryContactId={record.id}
-              syncUrl={syncUrl}
-              counts={{
-                notes: counts.notes,
-                tasks: counts.tasks,
-              }}
-            />
-          </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
-  );
-
-  const leftColumn = (
-    <>
-      <ContactSummaryCard record={record} hideCompanyLink={embedded} />
-      {canViewMarketing && record.id != null ? (
-        <ContactMarketingPreferencesCard
-          contactId={Number(record.id)}
-          hasNewsletter={record.has_newsletter}
-        />
-      ) : null}
-    </>
   );
 
   if (embedded) {
     return (
       <div className="pb-2">
         <div className="space-y-3">
-          {leftColumn}
+          <ContactSummaryCard record={record} hideCompanyLink />
           {centerTabs}
         </div>
       </div>
@@ -189,6 +187,18 @@ export const ContactShowContent = ({
     <ContactCollapsibleRelatedSidebar {...sidebarProps} />
   );
 
+  const header = (
+    <div className="space-y-3">
+      <ContactSummaryCard record={record} />
+      {canViewMarketing && record.id != null ? (
+        <ContactMarketingPreferencesCard
+          contactId={Number(record.id)}
+          hasNewsletter={record.has_newsletter}
+        />
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="mt-2 pb-4">
       <ContactShowActions
@@ -196,19 +206,12 @@ export const ContactShowContent = ({
         onContactUpdated={() => void refetch()}
       />
 
-      {isMobile ? (
-        <div className="space-y-4">
-          {leftColumn}
-          {centerTabs}
-          {sidebar}
-        </div>
-      ) : (
-        <div className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)_auto]">
-          {leftColumn}
-          <div className="min-w-0">{centerTabs}</div>
-          {sidebar}
-        </div>
-      )}
+      <ProfileFullViewLayout
+        header={header}
+        main={centerTabs}
+        sidebar={sidebar}
+        stacked={isMobile}
+      />
     </div>
   );
 };

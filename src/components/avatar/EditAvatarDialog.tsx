@@ -102,7 +102,7 @@ export const EditAvatarDialog = ({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            Cancelar
+            Cancel
           </Button>
           <Button type="button" onClick={handleSave} disabled={saving}>
             {saving ? (
@@ -110,7 +110,7 @@ export const EditAvatarDialog = ({
             ) : (
               <Save className="size-4" />
             )}
-            Guardar
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

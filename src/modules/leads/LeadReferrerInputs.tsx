@@ -100,7 +100,7 @@ export const LeadReferrerInputs = ({
             }
             onCreate={handleCreateReferrerContact}
             createLabel="Empieza a escribir para crear un nuevo contacto"
-            createItemLabel="Crear %{item}"
+            createItemLabel="Create %{item}"
             helperText={false}
             modal={isMobile}
           />

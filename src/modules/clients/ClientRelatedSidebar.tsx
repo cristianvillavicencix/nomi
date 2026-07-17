@@ -16,7 +16,6 @@ import type { Ticket } from "@/modules/types";
 import { ClientContactsTab } from "@/modules/clients/ClientContactsTab";
 import {
   ClientOpenDealsTab,
-  ClientProjectsTab,
   ClientTicketsTab,
 } from "@/modules/clients/ClientTabPanels";
 import { ReferralsTab } from "@/modules/leads/ReferralsTab";
@@ -26,11 +25,7 @@ import {
   getContactEmail,
   getContactFullName,
 } from "@/modules/clients/clientShowUtils";
-import {
-  getClientDealCreatePath,
-  getLeadShowPath,
-  getPersonShowPath,
-} from "@/app/routing";
+import { getLeadShowPath, getPersonShowPath } from "@/app/routing";
 import { getLeadStageDef } from "@/modules/leads/leadStages";
 import {
   CONTACT_STATUS_FILTER,
@@ -38,6 +33,7 @@ import {
   relatedPreviewItemClassName,
 } from "@/modules/shared/relatedFilters";
 import {
+  RelatedAccordion,
   RelatedEmptyState,
   RelatedSection,
 } from "@/modules/shared/RelatedSection";
@@ -47,7 +43,6 @@ type SidebarPanel =
   | "contacts"
   | "deals"
   | "leads"
-  | "projects"
   | "tickets"
   | "referrals"
   | null;
@@ -115,16 +110,6 @@ export const ClientRelatedSidebar = ({
     { staleTime: 30_000 },
   );
 
-  const { data: deals = [] } = useGetList<Deal>(
-    "deals",
-    {
-      filter: { "company_id@eq": companyId },
-      pagination: { page: 1, perPage: 3 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
-
   const { data: tickets = [] } = useGetList<Ticket>(
     "tickets",
     {
@@ -159,16 +144,15 @@ export const ClientRelatedSidebar = ({
         ? "Deals"
         : panel === "leads"
           ? "Leads"
-          : panel === "projects"
-            ? "Projects"
-            : panel === "tickets"
-              ? "Tickets"
-              : "Referrals";
+          : panel === "tickets"
+            ? "Tickets"
+            : "Referrals";
 
   return (
     <>
-      <div className="space-y-6">
+      <RelatedAccordion defaultValue={["contacts", "deals"]}>
         <RelatedSection
+          value="contacts"
           title="Contacts"
           count={counts.contacts}
           onAdd={onAddContact}
@@ -215,6 +199,7 @@ export const ClientRelatedSidebar = ({
         </RelatedSection>
 
         <RelatedSection
+          value="deals"
           title="Deals"
           count={counts.deals}
           onAdd={() => setNewDealOpen(true)}
@@ -243,6 +228,7 @@ export const ClientRelatedSidebar = ({
         </RelatedSection>
 
         <RelatedSection
+          value="leads"
           title="Leads"
           count={counts.leads}
           onViewAll={() => setPanel("leads")}
@@ -288,32 +274,7 @@ export const ClientRelatedSidebar = ({
         </RelatedSection>
 
         <RelatedSection
-          title="Projects"
-          count={counts.projects}
-          addHref={getClientDealCreatePath(companyId, primaryContactId)}
-          onViewAll={() => setPanel("projects")}
-          empty={
-            <RelatedEmptyState message="No projects for this company yet." />
-          }
-        >
-          <div className="space-y-2">
-            {deals.map((deal) => (
-              <Link
-                key={deal.id}
-                to={`/deals/${deal.id}/show`}
-                className={relatedPreviewItemClassName}
-              >
-                <p className="font-medium">{deal.name}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span>{findDealLabel(dealStages, deal.stage)}</span>
-                  <MoneyText value={deal.amount} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </RelatedSection>
-
-        <RelatedSection
+          value="tickets"
           title="Tickets"
           count={counts.tickets}
           addHref={`/tickets/create?${ticketCreateParams.toString()}`}
@@ -343,6 +304,7 @@ export const ClientRelatedSidebar = ({
         </RelatedSection>
 
         <RelatedSection
+          value="referrals"
           title="Referrals"
           count={counts.referrals}
           onViewAll={() => setPanel("referrals")}
@@ -372,7 +334,7 @@ export const ClientRelatedSidebar = ({
             ))}
           </div>
         </RelatedSection>
-      </div>
+      </RelatedAccordion>
 
       <Sheet
         open={panel != null}
@@ -398,9 +360,6 @@ export const ClientRelatedSidebar = ({
                 primaryContactId={primaryContactId}
                 statusFilter="leads"
               />
-            ) : null}
-            {panel === "projects" ? (
-              <ClientProjectsTab companyId={companyId} />
             ) : null}
             {panel === "tickets" ? (
               <ClientTicketsTab companyId={companyId} />

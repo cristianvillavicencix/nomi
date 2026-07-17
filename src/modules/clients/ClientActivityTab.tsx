@@ -18,6 +18,7 @@ import {
 import {
   ACTIVITY_SECTIONS,
   getValidActivitySection,
+  getValidClientTab,
   type ActivitySection,
 } from "@/modules/clients/clientShowUtils";
 
@@ -40,8 +41,10 @@ export const ClientActivityTab = ({
   syncUrl = true,
 }: ClientActivityTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const isActivityTab =
+    getValidClientTab(searchParams.get("tab")) === "activity";
   const sectionFromUrl =
-    syncUrl && searchParams.get("tab") === "activity"
+    syncUrl && isActivityTab
       ? getValidActivitySection(searchParams.get("section"))
       : "feed";
 
@@ -51,7 +54,7 @@ export const ClientActivityTab = ({
 
   useEffect(() => {
     if (!syncUrl) return;
-    if (searchParams.get("tab") !== "activity") return;
+    if (getValidClientTab(searchParams.get("tab")) !== "activity") return;
     setOpenSections([getValidActivitySection(searchParams.get("section"))]);
   }, [syncUrl, searchParams.get("tab"), searchParams.get("section")]);
 
@@ -59,13 +62,14 @@ export const ClientActivityTab = ({
     setOpenSections(values);
     if (!syncUrl) return;
     const next = new URLSearchParams(searchParams);
-    next.set("tab", "activity");
     const focused =
       values.find((value) => value !== "feed") ??
       (values.includes("feed") ? "feed" : undefined);
     if (!focused || focused === "feed") {
       next.delete("section");
+      next.delete("tab");
     } else if (ACTIVITY_SECTIONS.includes(focused as ActivitySection)) {
+      next.delete("tab");
       next.set("section", focused);
     }
     setSearchParams(next, { replace: true });

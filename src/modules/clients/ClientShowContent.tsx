@@ -24,6 +24,7 @@ import {
 } from "@/modules/clients/clientShowUtils";
 import { useClientTabCounts } from "@/modules/clients/useClientTabCounts";
 import { deriveClientServiceType } from "@/modules/clients/clientServiceType";
+import { ProfileFullViewLayout } from "@/modules/shared/ProfileFullViewLayout";
 
 export const ClientShowContent = () => {
   const { record, isPending } = useShowContext<CompanyWithPrimaryContact>();
@@ -72,7 +73,7 @@ export const ClientShowContent = () => {
       return;
     }
     const next = new URLSearchParams(searchParams);
-    if (mapped.tab === "projects") {
+    if (mapped.tab === "activity") {
       next.delete("tab");
     } else {
       next.set("tab", mapped.tab);
@@ -90,7 +91,7 @@ export const ClientShowContent = () => {
   const handleTabChange = (tab: string) => {
     const nextTab = getValidClientTab(tab);
     const nextSearchParams = new URLSearchParams(searchParams);
-    if (nextTab === "projects") {
+    if (nextTab === "activity") {
       nextSearchParams.delete("tab");
     } else {
       nextSearchParams.set("tab", nextTab);
@@ -114,18 +115,38 @@ export const ClientShowContent = () => {
     <Card className="gap-0 border-0 py-0 shadow-none">
       <CardContent className="px-4 py-4">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <TabsList className="mb-4 inline-flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-            <TabsTrigger value="projects" className="shrink-0">
+          <TabsList className="mb-4 h-auto w-full justify-start gap-0 overflow-x-auto rounded-none border-b border-border bg-transparent p-0">
+            <TabsTrigger
+              value="activity"
+              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              {tabLabel("activity", "Activity", activityCount)}
+            </TabsTrigger>
+            <TabsTrigger
+              value="projects"
+              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
               {tabLabel("projects", "Projects", counts.projects)}
             </TabsTrigger>
-            <TabsTrigger value="financial" className="shrink-0">
+            <TabsTrigger
+              value="financial"
+              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
               {tabLabel("financial", "Financial", financialCount)}
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="shrink-0">
-              {tabLabel("activity", "Activity", activityCount)}
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="activity" className="mt-0">
+            <ClientActivityTab
+              companyId={record.id}
+              contactIds={counts.contactIds}
+              primaryContactId={record.primary_contact_id}
+              counts={{
+                notes: counts.notes,
+                tasks: counts.tasks,
+              }}
+            />
+          </TabsContent>
           <TabsContent value="projects" className="mt-0">
             <ClientTabSectionCard
               title="Projects"
@@ -143,17 +164,6 @@ export const ClientShowContent = () => {
                 proposals: counts.proposals,
                 contracts: counts.contracts,
                 payments: counts.payments,
-              }}
-            />
-          </TabsContent>
-          <TabsContent value="activity" className="mt-0">
-            <ClientActivityTab
-              companyId={record.id}
-              contactIds={counts.contactIds}
-              primaryContactId={record.primary_contact_id}
-              counts={{
-                notes: counts.notes,
-                tasks: counts.tasks,
               }}
             />
           </TabsContent>
@@ -186,31 +196,22 @@ export const ClientShowContent = () => {
     <ClientCollapsibleRelatedSidebar {...sidebarProps} />
   );
 
-  const leftColumn = (
-    <ClientSummaryCard
-      record={record}
-      serviceType={serviceType}
-      onOpenPrimaryContact={openPrimaryContact}
-    />
-  );
-
   return (
     <div className="mt-2 pb-4">
       <ClientShowActions record={record} onEdit={() => setEditOpen(true)} />
 
-      {isMobile ? (
-        <div className="space-y-4">
-          {leftColumn}
-          {centerTabs}
-          {sidebar}
-        </div>
-      ) : (
-        <div className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)_auto]">
-          {leftColumn}
-          <div className="min-w-0">{centerTabs}</div>
-          {sidebar}
-        </div>
-      )}
+      <ProfileFullViewLayout
+        header={
+          <ClientSummaryCard
+            record={record}
+            serviceType={serviceType}
+            onOpenPrimaryContact={openPrimaryContact}
+          />
+        }
+        main={centerTabs}
+        sidebar={sidebar}
+        stacked={isMobile}
+      />
 
       <ClientEditDialog
         companyId={record.id}

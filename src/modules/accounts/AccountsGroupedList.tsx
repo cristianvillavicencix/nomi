@@ -1,7 +1,7 @@
-import { AccountsPeopleList } from "@/modules/accounts/AccountsPeopleList";
+import { AccountsCompaniesList } from "@/modules/accounts/AccountsCompaniesList";
 
 /**
- * Accounts List — people-only flat directory (no By company mode).
+ * Accounts List — company-first bill-to directory.
  * @see docs/plans/accounts-hub-DESIGN-DECISION.md
  */
-export const AccountsGroupedList = () => <AccountsPeopleList />;
+export const AccountsGroupedList = () => <AccountsCompaniesList />;

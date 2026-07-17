@@ -14,7 +14,7 @@ The data model already matches the journey correctly (`companies` = bill-to, `co
 ## Goals
 
 1. Present **one primary nav module** (“Accounts”) that covers know → close → bill.
-2. Keep **list** people-first (flat contacts); company as row context + preview; bill-to remains `company_id`.
+2. Keep **list** company-first (flat companies); people via primary contact + preview Contacts tab; bill-to remains `company_id`.
 3. Keep **board/Kanban** as opportunities/people via existing `contacts.lead_stage` (not company columns).
 4. Preserve deep links and aliases: `/leads`, `/clients`, `/companies`, `/contacts` (redirect or mount hub).
 5. Zero breakage for billing (`client_invoices`), tickets, portal, deals, convert, Anti-Olvido, RLS, capabilities, Zoho/CSV import.
@@ -35,14 +35,14 @@ The data model already matches the journey correctly (`companies` = bill-to, `co
 |----------|--------|
 | Architecture | **Option A** — UI/nav hub over existing tables (`companies` + `contacts`) |
 | Schema merge | **Forbidden** |
-| List view (default) | **People-only** flat `contacts` table. Company via column + Sheet preview (`?company=`). See [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md). |
+| List view (default) | **Company-first** flat `companies` table. Primary contact + channels on the row; Sheet preview (`?company=`) with Contacts tab. See [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md). |
 | Board view | Active leads Kanban only (`lead`/`prospect` + board stages; no Client column). Convert drops cards off the board. Pipeline = `contacts.status` / `lead_stage`. |
 | Bill-to | Always `companies.id` / `company_id`. **`companies.is_client`** = derived bill-to signal (not pipeline). |
 | New commercial work | **Deals** (incl. existing clients): `company_id`, contact(s), owner, deal stage — not company-as-pipeline. |
 | URLs | Preserve `/leads`, `/clients`, `/companies`, `/contacts` |
 | Phasing | Nav shell → list → board reuse → polish |
 
-> **Note (2026-07-16):** Early phases described List as company-first, then a People \| By company toggle. Refined decision: **People-only List + company preview drawer**; Board stays active-pipeline; Client badge + New Deal from company preview. Analysis: [accounts-hub-UX-ANALYSIS.md](./accounts-hub-UX-ANALYSIS.md). Full commercial model: [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md).
+> **Note (2026-07-16):** Early phases described List as company-first, then people-only + By company toggle. Current decision: **Company-first List + company preview drawer**; Board stays active-pipeline; Client badge + New Deal from company preview. Analysis: [accounts-hub-UX-ANALYSIS.md](./accounts-hub-UX-ANALYSIS.md). Full commercial model: [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md).
 
 
 ## Current codebase anchors (do not invent paths)

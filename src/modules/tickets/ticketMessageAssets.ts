@@ -1,4 +1,3 @@
-import DOMPurify from "dompurify";
 import { getFileKind, type FileAttachment } from "@/lib/fileAttachments";
 
 export type MessageAssetCategory = "document" | "video" | "photo";
@@ -140,79 +139,18 @@ export const partitionMessageAssets = (assets: MessageAsset[]) => {
   return { documents, videos, photos };
 };
 
-const parseHtmlForLinks = (html: string): MessageAsset[] => {
-  const sanitized = DOMPurify.sanitize(html, {
-    ADD_ATTR: ["target", "href", "title"],
-  });
-  const container = document.createElement("div");
-  container.innerHTML = sanitized;
-
-  const assets: MessageAsset[] = [];
-  container.querySelectorAll("a[href]").forEach((node) => {
-    const href = (node as HTMLAnchorElement).href?.trim();
-    if (!href || !/^https?:\/\//i.test(href)) return;
-
-    const label =
-      node.textContent?.replace(/\s+/g, " ").trim() ||
-      node.getAttribute("title")?.trim() ||
-      inferLinkLabel(href);
-
-    if (!isAssetLikeLink(href, label)) return;
-
-    assets.push({
-      href,
-      label,
-      category: classifyLink(href, label),
-      source: "link",
-      previewSrc: classifyLink(href, label) === "photo" ? href : undefined,
-    });
-  });
-
-  return assets;
-};
-
-const parsePlainTextForLinks = (text: string): MessageAsset[] => {
-  const matches = text.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? [];
-  return matches
-    .map((href) => {
-      const clean = href.replace(/[.,;:!?)]+$/, "");
-      const label = inferLinkLabel(clean);
-      if (!isAssetLikeLink(clean, label)) return null;
-      return {
-        href: clean,
-        label,
-        category: classifyLink(clean, label),
-        source: "link" as const,
-        previewSrc: classifyLink(clean, label) === "photo" ? clean : undefined,
-      };
-    })
-    .filter((asset): asset is MessageAsset => asset != null);
-};
-
 export const extractMessageAssets = ({
-  htmlBody,
-  plainBody,
   fileAttachments,
 }: {
   htmlBody?: string | null;
   plainBody?: string | null;
   fileAttachments: FileAttachment[];
 }): MessageAsset[] => {
-  const fromFiles = fileAttachments
+  // Only real file attachments (MIME / uploads). Links already in the email
+  // HTML stay in the body — do not mirror them under Documents & links.
+  return fileAttachments
     .map(fileAttachmentToAsset)
     .filter((asset): asset is MessageAsset => asset != null);
-
-  if (typeof document === "undefined") {
-    return fromFiles;
-  }
-
-  const fromHtml = htmlBody?.trim() ? parseHtmlForLinks(htmlBody) : [];
-  const fromText =
-    !htmlBody?.trim() && plainBody?.trim()
-      ? parsePlainTextForLinks(plainBody)
-      : [];
-
-  return [...fromFiles, ...fromHtml, ...fromText];
 };
 
 /**

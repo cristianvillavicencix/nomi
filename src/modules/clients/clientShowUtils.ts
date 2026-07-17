@@ -1,11 +1,11 @@
 import type { Contact } from "@/components/atomic-crm/types";
 import { formatPhoneDisplay } from "@/utils/phone";
 
-export const CLIENT_TABS = ["projects", "financial", "activity"] as const;
+export const CLIENT_TABS = ["activity", "projects", "financial"] as const;
 
 export type ClientTab = (typeof CLIENT_TABS)[number];
 
-export const DEFAULT_CLIENT_TAB: ClientTab = "projects";
+export const DEFAULT_CLIENT_TAB: ClientTab = "activity";
 
 export const FINANCIAL_SECTIONS = [
   "summary",

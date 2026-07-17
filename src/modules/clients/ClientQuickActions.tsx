@@ -51,7 +51,7 @@ const LabeledAction = ({
   label: string;
   children: ReactNode;
 }) => (
-  <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+  <div className="flex min-w-0 flex-col items-center gap-1.5">
     {children}
     <span className="text-[10px] text-muted-foreground">{label}</span>
   </div>
@@ -139,7 +139,7 @@ export const ClientQuickActions = ({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex items-start justify-between gap-1">
+      <div className="flex items-start justify-end gap-2">
         <LabeledAction label="Note">
           <CircleButton
             label="Note"

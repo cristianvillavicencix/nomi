@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Globe } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
 import { useGetOne } from "ra-core";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +12,8 @@ import { getCompanyAvatarFallback } from "@/components/atomic-crm/companies/Comp
 import { getCompanyFaviconSources } from "@/components/atomic-crm/providers/commons/getCompanyAvatar";
 import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
 import { AvatarFallback, Avatar as UiAvatar } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
-import type { Contact } from "@/components/atomic-crm/types";
+import { OrganizationMemberName } from "@/components/atomic-crm/organizationMembers/OrganizationMemberName";
+import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import {
   collectBusinessSocialLinks,
@@ -32,11 +30,16 @@ import {
   normalizeSocialUrl,
   type ClientSocialLinkValue,
 } from "@/modules/clients/clientSocialLinks";
-import { formatDateTime } from "@/modules/clients/clientShowUtils";
 import {
   CLIENT_SERVICE_TYPE_LABELS,
   type ClientServiceType,
 } from "@/modules/clients/clientServiceType";
+import {
+  EntityIdentityHeader,
+  EntityMetaItem,
+  EntityMetaRow,
+  formatCompanyLocation,
+} from "@/modules/shared/profile";
 
 type ClientSummaryCardProps = {
   record: CompanyWithPrimaryContact;
@@ -57,118 +60,6 @@ const getServiceTypeBadgeLabels = (
   return [CLIENT_SERVICE_TYPE_LABELS[serviceType]];
 };
 
-const ProfileSectionTitle = ({ children }: { children: ReactNode }) => (
-  <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-    {children}
-  </p>
-);
-
-const ProfileFadeText = ({
-  children,
-  className,
-  as: Tag = "div",
-}: {
-  children: ReactNode;
-  className?: string;
-  as?: "div" | "h1";
-}) => {
-  const contentRef = useRef<HTMLElement>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-
-  useEffect(() => {
-    const element = contentRef.current;
-    if (!element) return;
-
-    const checkOverflow = () => {
-      setIsOverflowing(element.scrollWidth > element.clientWidth + 1);
-    };
-
-    checkOverflow();
-    const observer = new ResizeObserver(checkOverflow);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [children]);
-
-  return (
-    <div className="relative min-w-0">
-      <Tag ref={contentRef as never} className={cn("truncate pr-6", className)}>
-        {children}
-      </Tag>
-      {isOverflowing ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-card via-card/80 to-transparent"
-        />
-      ) : null}
-    </div>
-  );
-};
-
-const ProfileFadeLink = ({
-  children,
-  onClick,
-}: {
-  children: ReactNode;
-  onClick: () => void;
-}) => {
-  const contentRef = useRef<HTMLButtonElement>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-
-  useEffect(() => {
-    const element = contentRef.current;
-    if (!element) return;
-
-    const checkOverflow = () => {
-      setIsOverflowing(element.scrollWidth > element.clientWidth + 1);
-    };
-
-    checkOverflow();
-    const observer = new ResizeObserver(checkOverflow);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [children]);
-
-  return (
-    <div className="relative min-w-0">
-      <button
-        ref={contentRef}
-        type="button"
-        className="link-action block w-full min-w-0 truncate pr-6 text-left font-medium"
-        onClick={onClick}
-      >
-        {children}
-      </button>
-      {isOverflowing ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-card via-card/80 to-transparent"
-        />
-      ) : null}
-    </div>
-  );
-};
-
-const ProfileInfoRow = ({
-  label,
-  value,
-  fade = true,
-}: {
-  label: string;
-  value: ReactNode;
-  fade?: boolean;
-}) => (
-  <div className="grid grid-cols-[minmax(5.5rem,auto)_minmax(0,1fr)] items-center gap-x-3 border-b border-border/60 py-2.5 text-sm last:border-b-0">
-    <span className="shrink-0 text-muted-foreground">{label}</span>
-    <div className="min-w-0 font-medium">
-      {fade ? (
-        <ProfileFadeText className="font-medium">{value}</ProfileFadeText>
-      ) : (
-        value
-      )}
-    </div>
-  </div>
-);
-
 const ProfileIconLink = ({
   href,
   label,
@@ -185,7 +76,7 @@ const ProfileIconLink = ({
         type="button"
         variant="outline"
         size="icon"
-        className="size-9 shrink-0 rounded-full"
+        className="size-8 shrink-0 rounded-full"
       >
         <a
           href={href}
@@ -233,6 +124,12 @@ export const ClientSummaryCard = ({
     { enabled: !!record.primary_contact_id },
   );
 
+  const { data: owner } = useGetOne<OrganizationMember>(
+    "organization_members",
+    { id: record.organization_member_id! },
+    { enabled: record.organization_member_id != null },
+  );
+
   const sectorLabel = useMemo(() => {
     if (!record.sector) return "—";
     return (
@@ -262,6 +159,7 @@ export const ClientSummaryCard = ({
   const canOpenPrimary = Boolean(
     onOpenPrimaryContact && record.primary_contact_id,
   );
+  const locationLabel = formatCompanyLocation(record);
 
   const serviceTypeLabels = useMemo(
     () => getServiceTypeBadgeLabels(serviceType),
@@ -269,138 +167,110 @@ export const ClientSummaryCard = ({
   );
 
   return (
-    <Card className="gap-0 py-0">
-      <CardContent className="px-4 py-4">
-        <div className="flex flex-col items-center text-center">
-          <UiAvatar className="size-16">
-            <FaviconAvatarImage
-              sources={faviconSources}
-              alt={businessName}
-              className="object-contain"
-            />
-            <AvatarFallback className="text-base">
-              {getCompanyAvatarFallback({
-                name: businessName !== "—" ? businessName : undefined,
-              })}
-            </AvatarFallback>
-          </UiAvatar>
-
-          <div className="relative mt-3 w-full min-w-0 px-1">
-            <ProfileFadeText
-              as="h1"
-              className="text-lg font-semibold leading-tight"
-            >
-              {businessName}
-            </ProfileFadeText>
-          </div>
-
-          {serviceTypeLabels.length > 0 ? (
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 px-1">
-              {serviceTypeLabels.map((label) => (
-                <Badge key={label} variant="secondary" className="text-xs">
-                  {label}
-                </Badge>
-              ))}
-            </div>
+    <EntityIdentityHeader
+      tone="sky"
+      avatar={
+        <UiAvatar className="size-16 shrink-0">
+          <FaviconAvatarImage
+            sources={faviconSources}
+            alt={businessName}
+            className="object-contain"
+          />
+          <AvatarFallback className="text-base">
+            {getCompanyAvatarFallback({
+              name: businessName !== "—" ? businessName : undefined,
+            })}
+          </AvatarFallback>
+        </UiAvatar>
+      }
+      title={businessName}
+      badges={
+        <>
+          {record.is_client ? (
+            <Badge variant="default" className="text-xs">
+              Client
+            </Badge>
           ) : null}
-
-          {websiteHref ? (
-            <a
-              href={websiteHref}
-              target="_blank"
-              rel="noreferrer"
-              className="link-action mt-2 inline-block max-w-full truncate px-1 text-sm"
+          {serviceTypeLabels.map((label) => (
+            <Badge key={label} variant="secondary" className="text-xs">
+              {label}
+            </Badge>
+          ))}
+        </>
+      }
+      subtitle={
+        websiteHref ? (
+          <a
+            href={websiteHref}
+            target="_blank"
+            rel="noreferrer"
+            className="link-action inline-block max-w-full truncate"
+          >
+            {website}
+          </a>
+        ) : (
+          <span>No website</span>
+        )
+      }
+      actions={
+        <ClientQuickActions
+          record={record}
+          primaryContactId={record.primary_contact_id}
+        />
+      }
+    >
+      <EntityMetaRow>
+        <EntityMetaItem label="Primary contact">
+          {canOpenPrimary ? (
+            <button
+              type="button"
+              className="link-action truncate text-left"
+              onClick={onOpenPrimaryContact}
             >
-              {website}
-            </a>
+              {primaryName}
+              {contactTitle ? (
+                <span className="font-normal text-muted-foreground">
+                  {" · "}
+                  {contactTitle}
+                </span>
+              ) : null}
+            </button>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground">Sin sitio web</p>
+            primaryName
           )}
-        </div>
+        </EntityMetaItem>
+        <EntityMetaItem label="Owner">
+          {owner ? <OrganizationMemberName member={owner} /> : "—"}
+        </EntityMetaItem>
+        <EntityMetaItem label="Location">{locationLabel}</EntityMetaItem>
+        <EntityMetaItem label="Phone">
+          <CrmPhoneDisplay
+            phone={getPrimaryContactPhoneRaw(record)}
+            contactId={record.primary_contact_id}
+          />
+        </EntityMetaItem>
+        <EntityMetaItem label="Sector">{sectorLabel}</EntityMetaItem>
+      </EntityMetaRow>
 
-        <div className="mt-4">
-          <ClientQuickActions
-            record={record}
-            primaryContactId={record.primary_contact_id}
-          />
+      {socialOnlyLinks.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border/60 px-5 py-3">
+          <TooltipProvider delayDuration={200}>
+            {socialOnlyLinks.map((link) => {
+              const { Icon } = getSocialNetworkOption(link.network);
+              const label = getSocialLinkLabel(link);
+              return (
+                <ProfileIconLink
+                  key={`${link.url}-${link.network ?? "other"}`}
+                  href={normalizeSocialUrl(link.url)}
+                  label={label}
+                >
+                  <Icon className="size-3.5" />
+                </ProfileIconLink>
+              );
+            })}
+          </TooltipProvider>
         </div>
-
-        <div className="mt-4 border-t border-border/60 pt-3">
-          <ProfileSectionTitle>Información clave</ProfileSectionTitle>
-          <ProfileInfoRow
-            label="Propietario"
-            fade={!canOpenPrimary}
-            value={
-              canOpenPrimary ? (
-                <ProfileFadeLink onClick={onOpenPrimaryContact!}>
-                  {primaryName}
-                </ProfileFadeLink>
-              ) : (
-                primaryName
-              )
-            }
-          />
-          {contactTitle ? (
-            <ProfileInfoRow label="Cargo" value={contactTitle} />
-          ) : null}
-          <ProfileInfoRow
-            label="Teléfono"
-            value={
-              <CrmPhoneDisplay
-                phone={getPrimaryContactPhoneRaw(record)}
-                contactId={record.primary_contact_id}
-              />
-            }
-          />
-          <ProfileInfoRow label="Ciudad" value={record.city?.trim() || "—"} />
-          <ProfileInfoRow
-            label="Estado"
-            value={record.state_abbr?.trim() || "—"}
-          />
-          <ProfileInfoRow label="País" value={record.country?.trim() || "—"} />
-          <ProfileInfoRow label="Sector" value={sectorLabel} />
-          <ProfileInfoRow
-            label="Creada"
-            value={formatDateTime(record.created_at)}
-          />
-        </div>
-
-        <div className="mt-4 border-t border-border/60 pt-3">
-          <ProfileSectionTitle>Redes sociales</ProfileSectionTitle>
-          {websiteHref || socialOnlyLinks.length > 0 ? (
-            <TooltipProvider delayDuration={200}>
-              <div className="flex flex-wrap items-center gap-2">
-                {websiteHref ? (
-                  <ProfileIconLink
-                    href={websiteHref}
-                    label={website ?? "Sitio web"}
-                  >
-                    <Globe className="size-4" />
-                  </ProfileIconLink>
-                ) : null}
-                {socialOnlyLinks.map((link) => {
-                  const { Icon } = getSocialNetworkOption(link.network);
-                  const label = getSocialLinkLabel(link);
-
-                  return (
-                    <ProfileIconLink
-                      key={`${link.url}-${link.network ?? "other"}`}
-                      href={normalizeSocialUrl(link.url)}
-                      label={label}
-                    >
-                      <Icon className="size-4" />
-                    </ProfileIconLink>
-                  );
-                })}
-              </div>
-            </TooltipProvider>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Sin redes registradas
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      ) : null}
+    </EntityIdentityHeader>
   );
 };

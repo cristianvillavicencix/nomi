@@ -25,7 +25,7 @@ import { AccountsLeadPreviewSheet } from "@/modules/accounts/AccountsLeadPreview
 import { AccountsCompanyPreviewSheet } from "@/modules/accounts/AccountsCompanyPreviewSheet";
 import { LeadsBoardPanel } from "@/modules/leads/LeadsBoardPanel";
 
-/** Accounts hub — List (people-first) | Board (leads Kanban). */
+/** Accounts hub — List (company-first) | Board (leads Kanban). */
 export const AccountsHubPage = () => {
   const { data: identity } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();

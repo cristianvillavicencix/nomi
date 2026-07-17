@@ -100,7 +100,7 @@ export const LeadContactSection = () => {
       <LeadChannelsInput
         source="phone_jsonb"
         kind="phone"
-        label="Teléfono"
+        label="Phone"
         typeChoices={[...LEAD_PHONE_TYPES]}
       />
 

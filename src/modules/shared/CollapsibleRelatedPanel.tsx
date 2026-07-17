@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { PanelLeftOpen, PanelRightClose } from "lucide-react";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -45,10 +45,10 @@ export const CollapsibleRelatedPanel = ({
               aria-label="Show related panel"
               onClick={() => setCollapsed(false)}
             >
-              <PanelLeftOpen className="size-4" />
+              <PanelRightOpen className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left">Show panel</TooltipContent>
+          <TooltipContent side="left">Show related panel</TooltipContent>
         </Tooltip>
 
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -72,7 +72,7 @@ export const CollapsibleRelatedPanel = ({
           ))}
         </div>
 
-        <span className="mt-1 rotate-180 text-[10px] uppercase tracking-wide text-muted-foreground [writing-mode:vertical-rl]">
+        <span className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground [writing-mode:vertical-rl]">
           Related
         </span>
       </aside>

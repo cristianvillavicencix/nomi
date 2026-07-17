@@ -83,7 +83,7 @@ const CompanyShowContentMobile = () => {
           onClick={() => navigate(location.state?.from ?? -1)}
         >
           <ChevronLeft className="size-4" />
-          Volver
+          Back
         </Button>
         <div className="mb-6">
           <div className="flex items-center mb-4">
@@ -158,7 +158,7 @@ export const CompanyShowContent = () => {
               onClick={() => navigate(location.state?.from ?? -1)}
             >
               <ChevronLeft className="size-4" />
-              Volver
+              Back
             </Button>
             <div className="flex mb-3">
               <CompanyAvatar />

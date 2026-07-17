@@ -584,7 +584,7 @@ export const LeadStageChangeDialog = ({
               disabled={isSubmitting}
               onClick={() => onOpenChange(false)}
             >
-              Cancelar
+              Cancel
             </Button>
             <Button
               type="button"
