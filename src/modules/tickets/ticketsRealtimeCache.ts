@@ -14,7 +14,7 @@ const getTicketMessagesQueryKey = (ticketId: string) =>
     "getList",
     {
       pagination: { page: 1, perPage: 500 },
-      sort: { field: "created_at", order: "ASC" },
+      sort: { field: "created_at", order: "DESC" },
       filter: { "ticket_id@eq": ticketId },
       meta: undefined,
     },
@@ -39,9 +39,10 @@ const mergeMessageIntoList = (
     return { ...old, data: nextData };
   }
 
+  // Newest-first thread: new messages go to the top.
   return {
     ...old,
-    data: [...old.data, message],
+    data: [message, ...old.data],
     total: old.total + 1,
   };
 };

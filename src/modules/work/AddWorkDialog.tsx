@@ -18,8 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { normalizeTaskCreateData } from "@/components/atomic-crm/tasks/taskConstants";
 import { prepareCalendarEventWriteData } from "@/modules/calendar/calendarEventWriteData";
-import { DEFAULT_MEETING_DURATION_MINUTES } from "@/modules/calendar/calendarReminderOptions";
-import { MeetingScheduleForm } from "@/modules/meetings/MeetingScheduleForm";
 import {
   isMeetingWorkCategory,
   isTaskWorkCategory,
@@ -36,11 +34,14 @@ export const AddWorkDialog = ({
   onOpenChange,
   dueDate,
   dealId,
+  onScheduleMeeting,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dueDate?: string;
   dealId?: Identifier;
+  /** Use the shared Schedule meeting dialog instead of a second form. */
+  onScheduleMeeting?: (dateKey: string) => void;
 }) => {
   const { identity } = useGetIdentity();
   const dataProvider = useDataProvider();
@@ -51,7 +52,21 @@ export const AddWorkDialog = ({
 
   if (!identity) return null;
 
-  const closeDialog = () => onOpenChange(false);
+  const closeDialog = () => {
+    setCategory("task");
+    onOpenChange(false);
+  };
+
+  const handleCategoryChange = (next: WorkCategory) => {
+    if (isMeetingWorkCategory(next) && onScheduleMeeting) {
+      const dateKey = defaultDate;
+      setCategory("task");
+      onOpenChange(false);
+      onScheduleMeeting(dateKey);
+      return;
+    }
+    setCategory(next);
+  };
 
   const handleTaskSuccess = async (data: Record<string, unknown>) => {
     closeDialog();
@@ -74,11 +89,7 @@ export const AddWorkDialog = ({
   const handleEventSuccess = () => {
     closeDialog();
     refresh();
-    notify(
-      isMeetingWorkCategory(category)
-        ? "Meeting scheduled"
-        : "Added to calendar",
-    );
+    notify("Added to calendar");
   };
 
   const categoryHint = (() => {
@@ -86,7 +97,7 @@ export const AddWorkDialog = ({
       return "Task shows due date and priority.";
     }
     if (category === "meeting") {
-      return "Meeting uses start time and duration.";
+      return "Meeting opens the shared schedule form.";
     }
     if (category === "delivery") {
       return "Delivery uses date only — no time or priority.";
@@ -98,6 +109,11 @@ export const AddWorkDialog = ({
   })();
 
   if (!open) return null;
+
+  // Meeting uses CalendarReminderDialog (same form as day → Schedule meeting).
+  if (isMeetingWorkCategory(category) && onScheduleMeeting) {
+    return null;
+  }
 
   if (isTaskWorkCategory(category)) {
     return (
@@ -130,7 +146,13 @@ export const AddWorkDialog = ({
         }}
         mutationOptions={{ onSuccess: handleTaskSuccess }}
       >
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+          open={open}
+          onOpenChange={(next) => {
+            if (!next) closeDialog();
+            else onOpenChange(next);
+          }}
+        >
           <DialogContent className="top-1/20 max-h-9/10 translate-y-0 overflow-y-auto lg:max-w-xl">
             <Form className="flex flex-col gap-4">
               <DialogHeader>
@@ -138,7 +160,7 @@ export const AddWorkDialog = ({
               </DialogHeader>
               <WorkCreateCategoryPicker
                 value={category}
-                onChange={setCategory}
+                onChange={handleCategoryChange}
               />
               <WorkCreateTaskFields
                 category={category}
@@ -151,46 +173,6 @@ export const AddWorkDialog = ({
                 <DialogSaveButton label="Create" />
               </DialogFooter>
             </Form>
-          </DialogContent>
-        </Dialog>
-      </CreateBase>
-    );
-  }
-
-  if (isMeetingWorkCategory(category)) {
-    return (
-      <CreateBase
-        key={`meeting-${defaultDate}`}
-        resource="calendar_events"
-        record={{
-          title: "",
-          event_date: defaultDate,
-          event_time: null,
-          duration_minutes: DEFAULT_MEETING_DURATION_MINUTES,
-          remind_before_minutes: 15,
-          description: "",
-          meeting_url: null,
-          contact_id: null,
-          deal_id: dealId ?? null,
-          organization_member_id: identity.id,
-          completed_at: null,
-        }}
-        transform={prepareCalendarEventWriteData}
-        mutationMode="pessimistic"
-        mutationOptions={{ onSuccess: handleEventSuccess }}
-      >
-        <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="top-1/20 max-h-9/10 translate-y-0 overflow-y-auto lg:max-w-xl">
-            <div className="mb-4">
-              <DialogHeader className="mb-4">
-                <DialogTitle>Add to Calendar</DialogTitle>
-              </DialogHeader>
-              <WorkCreateCategoryPicker
-                value={category}
-                onChange={setCategory}
-              />
-            </div>
-            <MeetingScheduleForm isEdit={false} />
           </DialogContent>
         </Dialog>
       </CreateBase>
@@ -217,13 +199,22 @@ export const AddWorkDialog = ({
       mutationMode="pessimistic"
       mutationOptions={{ onSuccess: handleEventSuccess }}
     >
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) closeDialog();
+          else onOpenChange(next);
+        }}
+      >
         <DialogContent className="top-1/20 max-h-9/10 translate-y-0 overflow-y-auto lg:max-w-xl">
           <Form className="flex flex-col gap-4">
             <DialogHeader>
               <DialogTitle>Add to Calendar</DialogTitle>
             </DialogHeader>
-            <WorkCreateCategoryPicker value={category} onChange={setCategory} />
+            <WorkCreateCategoryPicker
+              value={category}
+              onChange={handleCategoryChange}
+            />
             <WorkCreateEventFields category={category} />
             <p className="rounded-sm border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
               {categoryHint}

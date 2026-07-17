@@ -637,6 +637,7 @@ export const WorkPageContent = () => {
         open={createTaskOpen}
         onOpenChange={setCreateTaskOpen}
         dueDate={createTaskDueDate}
+        onScheduleMeeting={openScheduleMeeting}
       />
 
       {editTaskId != null ? (

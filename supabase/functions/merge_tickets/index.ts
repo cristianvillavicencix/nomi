@@ -146,14 +146,16 @@ Deno.serve(
           .join(" ")
           .trim();
 
-        const summary = merged
-          .map((ticket) => `#${ticket.id} (${ticket.subject})`)
-          .join(", ");
+        const mergedIds = merged.map((ticket) => `#${ticket.id}`).join(", ");
+        const mergeAuditBody =
+          merged.length === 1
+            ? `Merged 1 ticket into this thread (${mergedIds}).`
+            : `Merged ${merged.length} tickets into this thread (${mergedIds}).`;
 
         await supabaseAdmin.from("ticket_messages").insert({
           ticket_id: primaryTicketId,
           author_member_id: member.id,
-          body: `Merged tickets: ${summary}`,
+          body: mergeAuditBody,
           direction: "internal",
           from_name: memberName || member.email || "Team",
           created_at: now,

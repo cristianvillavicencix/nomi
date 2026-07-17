@@ -7,6 +7,8 @@ export type StoredAttachment = {
   path?: string;
   src?: string;
   size?: number;
+  /** When true, never load bytes into Edge — email a signed download link. */
+  send_as_download_link?: boolean;
 };
 
 export type LoadedEmailAttachments = {

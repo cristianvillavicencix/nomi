@@ -98,7 +98,10 @@ export const TicketRelatedTicketsList = ({
   }
 
   return (
-    <section className="mt-5 border-t border-border/60 pt-4" aria-label="Related tickets">
+    <section
+      className="border-t border-border/60 pt-4"
+      aria-label="Related tickets"
+    >
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Related tickets

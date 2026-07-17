@@ -107,7 +107,7 @@ export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
       </div>
 
       <div className="space-y-2 rounded-xl border bg-muted/10 p-4">
-        <Label>Max reply attachment size (MB)</Label>
+        <Label>Max email-embedded attachment size (MB)</Label>
         <Input
           type="number"
           min={1}
@@ -121,6 +121,10 @@ export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
             });
           }}
         />
+        <p className="text-xs text-muted-foreground">
+          Files up to this size are attached to the email. Larger files (up to
+          25 MB) are uploaded and sent as download links that expire in 7 days.
+        </p>
       </div>
     </>
   );

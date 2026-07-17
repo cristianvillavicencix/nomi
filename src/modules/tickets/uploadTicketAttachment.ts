@@ -1,10 +1,7 @@
+import * as tus from "tus-js-client";
+
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import { buildStorageObjectReference } from "@/lib/supabase/storageObjectUrl";
-import {
-  isTicketReplyAttachmentTooLarge,
-  MAX_TICKET_REPLY_ATTACHMENT_BYTES,
-} from "@/modules/tickets/ticketReplyAttachmentLimits";
-import { ticketReplyAttachmentTooLargeMessage } from "@/modules/tickets/ticketLargeFileTransfer";
 
 /** Max size per deliverable / ticket attachment upload (matches delivery email cap). */
 export const MAX_TICKET_ATTACHMENT_BYTES = 25 * 1024 * 1024;
@@ -12,12 +9,19 @@ export const MAX_TICKET_ATTACHMENT_MB =
   MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024);
 export const MAX_TICKET_ATTACHMENTS = 10;
 
+/** Above this size, use chunked resumable (TUS) uploads to avoid TLS flakiness. */
+const RESUMABLE_UPLOAD_THRESHOLD_BYTES = 4 * 1024 * 1024;
+const STANDARD_UPLOAD_MAX_ATTEMPTS = 3;
+const TUS_CHUNK_SIZE_BYTES = 6 * 1024 * 1024;
+
 export type TicketReplyAttachment = {
   title: string;
   type: string;
   path: string;
   src: string;
   size?: number;
+  /** Oversized-for-email files: edge sends a 7-day signed link instead of MIME. */
+  send_as_download_link?: boolean;
 };
 
 export type PendingTicketAttachmentStatus = "uploading" | "ready" | "error";
@@ -59,36 +63,64 @@ const getUploadAccessToken = async () => {
   return token;
 };
 
-export async function uploadTicketReplyAttachmentWithProgress(
-  file: File,
-  onProgress?: (percent: number) => void,
-): Promise<TicketReplyAttachment> {
-  if (isTicketReplyAttachmentTooLarge(file.size)) {
-    throw new Error(ticketReplyAttachmentTooLargeMessage(file.name));
-  }
-  return uploadTicketAttachmentWithProgress(file, onProgress, {
-    maxBytes: MAX_TICKET_REPLY_ATTACHMENT_BYTES,
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
   });
-}
 
-export async function uploadTicketAttachmentWithProgress(
-  file: File,
-  onProgress?: (percent: number) => void,
-  options?: { maxBytes?: number },
-): Promise<TicketReplyAttachment> {
-  const maxBytes = options?.maxBytes ?? MAX_TICKET_ATTACHMENT_BYTES;
-  if (file.size > maxBytes) {
-    const limitMb = Math.round(maxBytes / (1024 * 1024));
-    throw new Error(`"${file.name}" exceeds the ${limitMb} MB limit`);
+const isRetryableUploadError = (error: unknown) => {
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error);
+  return (
+    message.includes("network") ||
+    message.includes("ssl") ||
+    message.includes("tls") ||
+    message.includes("failed to fetch") ||
+    message.includes("timeout") ||
+    message.includes("abort") ||
+    message.includes("err_ssl") ||
+    message.includes("bad_record_mac")
+  );
+};
+
+const getStorageProjectRef = () => {
+  const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL ?? "");
+  try {
+    const host = new URL(supabaseUrl).hostname;
+    const match = host.match(/^([a-z0-9-]+)\.supabase\.co$/i);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
   }
+};
 
-  const path = buildAttachmentPath(file);
+const getResumableEndpoint = () => {
+  const projectRef = getStorageProjectRef();
+  if (projectRef) {
+    // Direct storage hostname is recommended for large uploads.
+    return `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
+  }
+  const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(
+    /\/$/,
+    "",
+  );
+  return `${supabaseUrl}/storage/v1/upload/resumable`;
+};
+
+const uploadViaXhrOnce = async (
+  file: File,
+  path: string,
+  onProgress?: (percent: number) => void,
+): Promise<void> => {
   const token = await getUploadAccessToken();
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const apiKey = import.meta.env.VITE_SB_PUBLISHABLE_KEY;
+  const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(
+    /\/$/,
+    "",
+  );
+  const apiKey = String(import.meta.env.VITE_SB_PUBLISHABLE_KEY ?? "");
   const uploadUrl = `${supabaseUrl}/storage/v1/object/attachments/${encodeURIComponent(path)}`;
 
-  return new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", uploadUrl);
     xhr.setRequestHeader("Authorization", `Bearer ${token}`);
@@ -103,7 +135,7 @@ export async function uploadTicketAttachmentWithProgress(
       if (!onProgress) return;
       if (event.lengthComputable && event.total > 0) {
         onProgress(
-          Math.min(100, Math.round((event.loaded / event.total) * 100)),
+          Math.min(99, Math.round((event.loaded / event.total) * 100)),
         );
         return;
       }
@@ -113,7 +145,7 @@ export async function uploadTicketAttachmentWithProgress(
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         onProgress?.(100);
-        resolve(toTicketReplyAttachment(file, path));
+        resolve();
         return;
       }
 
@@ -131,11 +163,147 @@ export async function uploadTicketAttachmentWithProgress(
     };
 
     xhr.onerror = () => {
-      reject(new Error("Network error while uploading attachment"));
+      reject(
+        new Error(
+          "Network error while uploading attachment (connection interrupted). Retrying…",
+        ),
+      );
     };
 
     xhr.send(file);
   });
+};
+
+const uploadViaXhrWithRetries = async (
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<TicketReplyAttachment> => {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= STANDARD_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
+    const path = buildAttachmentPath(file);
+    try {
+      await uploadViaXhrOnce(file, path, onProgress);
+      return toTicketReplyAttachment(file, path);
+    } catch (error) {
+      lastError = error;
+      if (
+        attempt >= STANDARD_UPLOAD_MAX_ATTEMPTS ||
+        !isRetryableUploadError(error)
+      ) {
+        break;
+      }
+      onProgress?.(Math.max(5, Math.round((attempt / STANDARD_UPLOAD_MAX_ATTEMPTS) * 20)));
+      await sleep(500 * attempt);
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw new Error(
+      lastError.message.includes("Network error")
+        ? `Could not upload "${file.name}". Check your connection and try again.`
+        : lastError.message,
+    );
+  }
+  throw new Error(`Could not upload "${file.name}"`);
+};
+
+const uploadViaResumableTus = async (
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<TicketReplyAttachment> => {
+  const path = buildAttachmentPath(file);
+  const token = await getUploadAccessToken();
+  const apiKey = String(import.meta.env.VITE_SB_PUBLISHABLE_KEY ?? "");
+
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      endpoint: getResumableEndpoint(),
+      retryDelays: [0, 1000, 3000, 5000, 10000],
+      headers: {
+        authorization: `Bearer ${token}`,
+        apikey: apiKey,
+        "x-upsert": "false",
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: TUS_CHUNK_SIZE_BYTES,
+      metadata: {
+        bucketName: "attachments",
+        objectName: path,
+        contentType: file.type || "application/octet-stream",
+        cacheControl: "3600",
+      },
+      onError: (error) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Network error while uploading attachment";
+        reject(
+          new Error(
+            message.toLowerCase().includes("network") ||
+              message.toLowerCase().includes("ssl")
+              ? `Could not upload "${file.name}". Check your connection and try again.`
+              : message,
+          ),
+        );
+      },
+      onProgress: (bytesUploaded, bytesTotal) => {
+        if (!onProgress || bytesTotal <= 0) return;
+        onProgress(
+          Math.min(99, Math.round((bytesUploaded / bytesTotal) * 100)),
+        );
+      },
+      onSuccess: () => {
+        onProgress?.(100);
+        resolve();
+      },
+    });
+
+    void upload.findPreviousUploads().then((previousUploads) => {
+      if (previousUploads.length > 0) {
+        upload.resumeFromPreviousUpload(previousUploads[0]);
+      }
+      upload.start();
+    });
+  });
+
+  return toTicketReplyAttachment(file, path);
+};
+
+export async function uploadTicketReplyAttachmentWithProgress(
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<TicketReplyAttachment> {
+  // Reply uploads share the 25 MB storage cap. Oversized-for-email files are
+  // sent as 7-day signed download links by reply_ticket (not MIME attachments).
+  return uploadTicketAttachmentWithProgress(file, onProgress, {
+    maxBytes: MAX_TICKET_ATTACHMENT_BYTES,
+  });
+}
+
+export async function uploadTicketAttachmentWithProgress(
+  file: File,
+  onProgress?: (percent: number) => void,
+  options?: { maxBytes?: number },
+): Promise<TicketReplyAttachment> {
+  const maxBytes = options?.maxBytes ?? MAX_TICKET_ATTACHMENT_BYTES;
+  if (file.size > maxBytes) {
+    const limitMb = Math.round(maxBytes / (1024 * 1024));
+    throw new Error(`"${file.name}" exceeds the ${limitMb} MB limit`);
+  }
+
+  if (file.size >= RESUMABLE_UPLOAD_THRESHOLD_BYTES) {
+    try {
+      return await uploadViaResumableTus(file, onProgress);
+    } catch (error) {
+      // Fall back to standard upload with retries if TUS endpoint is unavailable.
+      if (!isRetryableUploadError(error)) throw error;
+      return uploadViaXhrWithRetries(file, onProgress);
+    }
+  }
+
+  return uploadViaXhrWithRetries(file, onProgress);
 }
 
 export async function uploadTicketAttachment(

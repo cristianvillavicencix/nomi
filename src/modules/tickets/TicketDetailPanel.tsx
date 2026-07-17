@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useGetList, useGetOne, useUpdate } from "ra-core";
+import { useGetOne, useUpdate } from "ra-core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router";
 import type { Company, Contact } from "@/components/atomic-crm/types";
@@ -11,7 +11,11 @@ import {
   TicketContextPanel,
   TicketContextSheet,
 } from "@/modules/tickets/TicketContextPanel";
-import { TicketReplyForm } from "@/modules/tickets/TicketReplyForm";
+import { TicketComposeActionBar } from "@/modules/tickets/TicketComposeActionBar";
+import {
+  TicketReplyForm,
+  type TicketReplyFormHandle,
+} from "@/modules/tickets/TicketReplyForm";
 import { TicketRetryDeliveryBanner } from "@/modules/tickets/TicketRetryDeliveryBanner";
 import { TicketThread } from "@/modules/tickets/TicketThread";
 import { TicketReadCutoffContext } from "@/modules/tickets/TicketReadCutoffContext";
@@ -41,6 +45,8 @@ export const TicketDetailPanel = ({
     refreshTicketInboxLists(queryClient);
   }, [queryClient]);
   const canManage = useMemberCapability("support.tickets.manage");
+  const canSendInvoices = useMemberCapability("proposals.send");
+  const canReplyAndCharge = canManage && canSendInvoices;
   const {
     lastReadAt,
     isLoading: isReadLoading,
@@ -52,6 +58,7 @@ export const TicketDetailPanel = ({
   const [quoteMessage, setQuoteMessage] = useState<TicketMessage | null>(null);
   const markedTicketRef = useRef<string | null>(null);
   const openedStatusRef = useRef<string | null>(null);
+  const replyFormRef = useRef<TicketReplyFormHandle>(null);
   const [update] = useUpdate();
 
   const { data: ticket, isPending } = useGetOne<Ticket>("tickets", {
@@ -72,17 +79,6 @@ export const TicketDetailPanel = ({
     "contacts",
     { id: ticket?.contact_id ?? "" },
     { enabled: Boolean(ticket?.contact_id) },
-  );
-  const { data: mergedChildren = [] } = useGetList<Ticket>(
-    "tickets",
-    {
-      pagination: { page: 1, perPage: 50 },
-      sort: { field: "updated_at", order: "DESC" },
-      filter: ticket?.id
-        ? { "merged_into_ticket_id@eq": ticket.id }
-        : { "id@eq": -1 },
-    },
-    { enabled: Boolean(ticket?.id) },
   );
   const {
     messages,
@@ -172,6 +168,14 @@ export const TicketDetailPanel = ({
                   : "/tickets",
               );
             }}
+            composeActions={
+              <TicketComposeActionBar
+                canReplyAndCharge={canReplyAndCharge}
+                onOpen={(mode, options) =>
+                  replyFormRef.current?.openComposer(mode, options)
+                }
+              />
+            }
             contextAction={
               useContextSheet ? (
                 <TicketContextSheet
@@ -185,16 +189,19 @@ export const TicketDetailPanel = ({
 
           <TicketRetryDeliveryBanner ticket={ticket} />
 
-          {mergedChildren.length > 0 ? (
-            <p className="shrink-0 border-b border-info/30 bg-info/10 px-4 py-2 text-xs text-info md:px-5">
-              Includes merged tickets:{" "}
-              {mergedChildren
-                .map((child) => `#${child.id} (${child.subject})`)
-                .join(", ")}
-            </p>
-          ) : null}
+          <div className="shrink-0 bg-background">
+            <TicketReplyForm
+              key={`reply-${ticket.id}`}
+              ref={replyFormRef}
+              ticket={ticket}
+              placement="top"
+              quoteMessage={quoteMessage}
+              onQuoteApplied={() => setQuoteMessage(null)}
+              onSent={() => scrollToBottom()}
+            />
+          </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/25 px-4 py-4 md:px-5">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background px-4 py-2 md:px-5">
             <TicketReadCutoffContext.Provider value={readCutoff}>
               <TicketThread
                 messages={messages}
@@ -202,17 +209,6 @@ export const TicketDetailPanel = ({
                 threadEndRef={threadEndRef}
               />
             </TicketReadCutoffContext.Provider>
-          </div>
-
-          <div className="shrink-0 bg-background">
-            <TicketReplyForm
-              key={`reply-${ticket.id}`}
-              ticket={ticket}
-              placement="bottom"
-              quoteMessage={quoteMessage}
-              onQuoteApplied={() => setQuoteMessage(null)}
-              onSent={() => scrollToBottom()}
-            />
           </div>
         </div>
 

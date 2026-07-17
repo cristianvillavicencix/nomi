@@ -3,16 +3,21 @@ import {
   ChevronDown,
   ChevronUp,
   CloudUpload,
-  Forward,
   Loader2,
   Lock,
   Paperclip,
-  Reply,
   Save,
-  Send,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   useDataProvider,
   useGetList,
@@ -74,29 +79,13 @@ import {
   type TicketReplyAttachment,
 } from "@/modules/tickets/uploadTicketAttachment";
 import {
-  buildLargeFileTransferComposerHtml,
-  insertHtmlAboveSignatureHtml,
-  LARGE_FILE_TRANSFER_URL,
-  openLargeFileTransferUpload,
-  TICKET_REPLY_ATTACHMENT_HINT_AFTER,
-  TICKET_REPLY_ATTACHMENT_HINT_BEFORE,
-  ticketReplyAttachmentTooLargeMessage,
-} from "@/modules/tickets/ticketLargeFileTransfer";
-import { isTicketReplyAttachmentTooLarge } from "@/modules/tickets/ticketReplyAttachmentLimits";
+  shouldSendTicketReplyAttachmentAsLink,
+  ticketAttachmentLimitLabel,
+  useTicketAttachmentLimitBytes,
+} from "@/modules/tickets/ticketReplyAttachmentLimits";
 import { TicketPendingAttachmentItem } from "@/modules/tickets/TicketPendingAttachmentItem";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { allDeliverablesHaveBilling } from "@/modules/tickets/supplementPricing";
@@ -114,19 +103,32 @@ type ForwardContext = {
   message: ForwardMessage;
 };
 
-export const TicketReplyForm = ({
-  ticket,
-  placement = "bottom",
-  quoteMessage,
-  onQuoteApplied,
-  onSent,
-}: {
-  ticket: Ticket;
-  placement?: "top" | "bottom";
-  quoteMessage?: TicketMessage | null;
-  onQuoteApplied?: () => void;
-  onSent?: () => void;
-}) => {
+export type TicketReplyFormHandle = {
+  openComposer: (
+    mode: ComposeMode,
+    options?: { replyIntent?: ReplySendIntent },
+  ) => void;
+};
+
+export const TicketReplyForm = forwardRef<
+  TicketReplyFormHandle,
+  {
+    ticket: Ticket;
+    placement?: "top" | "bottom";
+    quoteMessage?: TicketMessage | null;
+    onQuoteApplied?: () => void;
+    onSent?: () => void;
+  }
+>(function TicketReplyForm(
+  {
+    ticket,
+    placement = "bottom",
+    quoteMessage,
+    onQuoteApplied,
+    onSent,
+  },
+  ref,
+) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [composeMode, setComposeMode] = useState<ComposeMode>("reply");
@@ -139,9 +141,11 @@ export const TicketReplyForm = ({
   const [internalNoteText, setInternalNoteText] = useState("");
   const [toRecipients, setToRecipients] = useState("");
   const [ccRecipients, setCcRecipients] = useState("");
+  const [showCc, setShowCc] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<PendingTicketAttachment[]>(
     [],
   );
+  const replyAttachmentLimitBytes = useTicketAttachmentLimitBytes();
   const [submittingAs, setSubmittingAs] =
     useState<TicketReplySubmittingAs>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -202,11 +206,6 @@ export const TicketReplyForm = ({
     invoice,
   );
 
-  const defaultRecipientEmail = useMemo(
-    () => resolveTicketRequesterEmail(ticket, company, contact) ?? "",
-    [ticket, company, contact],
-  );
-
   const { data: recentMessages = [] } = useGetList<TicketMessage>(
     "ticket_messages",
     {
@@ -258,6 +257,15 @@ export const TicketReplyForm = ({
     [recentMessages],
   );
 
+  /** Prefer the sender of the latest inbound email (Gmail-style Reply). */
+  const defaultRecipientEmail = useMemo(() => {
+    const lastFrom = lastInboundMessage?.from_email?.trim().toLowerCase();
+    if (lastFrom && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lastFrom)) {
+      return lastFrom;
+    }
+    return resolveTicketRequesterEmail(ticket, company, contact) ?? "";
+  }, [lastInboundMessage, ticket, company, contact]);
+
   const buildReplyHtmlWithQuote = useCallback(
     (quotedMessage?: TicketMessage | null) => {
       const quotedHtml = quotedMessage
@@ -277,8 +285,8 @@ export const TicketReplyForm = ({
     recentMessages.find((message) => message.direction === "inbound") ??
     recentMessages[0];
 
-  const replyMinHeight = composeMode === "forward" ? 96 : 200;
-  const replyMaxHeight = composeMode === "forward" ? 280 : 720;
+  const replyMinHeight = composeMode === "forward" ? 80 : 140;
+  const replyMaxHeight = composeMode === "forward" ? 240 : 480;
 
   const fromAddress =
     ticket.inbox_address?.trim() || DEFAULT_TICKET_INBOX_EMAIL;
@@ -383,6 +391,7 @@ export const TicketReplyForm = ({
   const collapseComposer = () => {
     setIsExpanded(false);
     setIsMinimized(false);
+    setShowCc(false);
     resetDraft();
   };
 
@@ -398,44 +407,54 @@ export const TicketReplyForm = ({
     });
   };
 
-  const openComposer = (
-    mode: ComposeMode,
-    options?: { replyIntent?: ReplySendIntent },
-  ) => {
-    setComposeMode(mode);
-    setReplySendIntent(
-      mode === "reply" ? (options?.replyIntent ?? "reply") : "reply",
-    );
-    setIsExpanded(true);
-    setIsMinimized(false);
-    setCcRecipients("");
-    setPendingFiles((current) => {
-      current.forEach((entry) => {
-        if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
-      });
-      return [];
-    });
-
-    if (mode === "reply") {
-      setForwardContext(null);
-      setToRecipients(defaultRecipientEmail);
-      setBodyHtml(buildReplyHtmlWithQuote(lastInboundMessage));
-      if (options?.replyIntent === "reply_and_invoice") {
-        dispatchTicketOpenBilling(ticket.id);
-      }
-    } else if (mode === "internal") {
-      setForwardContext(null);
-      setInternalNoteText("");
-    } else {
-      setForwardContext(
-        forwardSourceMessage ? { message: forwardSourceMessage } : null,
+  const openComposer = useCallback(
+    (mode: ComposeMode, options?: { replyIntent?: ReplySendIntent }) => {
+      setComposeMode(mode);
+      setReplySendIntent(
+        mode === "reply" ? (options?.replyIntent ?? "reply") : "reply",
       );
-      setToRecipients("");
-      setBodyHtml(defaultReplyHtml);
-    }
+      setIsExpanded(true);
+      setIsMinimized(false);
+      setCcRecipients("");
+      setShowCc(false);
+      setPendingFiles((current) => {
+        current.forEach((entry) => {
+          if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+        });
+        return [];
+      });
 
-    requestAnimationFrame(() => editorRef.current?.focus());
-  };
+      if (mode === "reply") {
+        setForwardContext(null);
+        setToRecipients(defaultRecipientEmail);
+        setBodyHtml(buildReplyHtmlWithQuote(lastInboundMessage));
+        if (options?.replyIntent === "reply_and_invoice") {
+          dispatchTicketOpenBilling(ticket.id);
+        }
+      } else if (mode === "internal") {
+        setForwardContext(null);
+        setInternalNoteText("");
+      } else {
+        setForwardContext(
+          forwardSourceMessage ? { message: forwardSourceMessage } : null,
+        );
+        setToRecipients("");
+        setBodyHtml(defaultReplyHtml);
+      }
+
+      requestAnimationFrame(() => editorRef.current?.focus());
+    },
+    [
+      buildReplyHtmlWithQuote,
+      defaultRecipientEmail,
+      defaultReplyHtml,
+      forwardSourceMessage,
+      lastInboundMessage,
+      ticket.id,
+    ],
+  );
+
+  useImperativeHandle(ref, () => ({ openComposer }), [openComposer]);
 
   useEffect(() => {
     if (!defaultRecipientEmail) return;
@@ -445,6 +464,7 @@ export const TicketReplyForm = ({
   useEffect(() => {
     setIsExpanded(false);
     setIsMinimized(false);
+    setShowCc(false);
     setComposeMode("reply");
     resetDraft();
   }, [ticket.id, defaultRecipientEmail, defaultReplyHtml]);
@@ -507,28 +527,6 @@ export const TicketReplyForm = ({
     }
   }, []);
 
-  const insertLargeFileTransferBlock = useCallback((fileName?: string) => {
-    setComposeMode("reply");
-    setIsExpanded(true);
-    setIsMinimized(false);
-    setBodyHtml((current) =>
-      insertHtmlAboveSignatureHtml(
-        current,
-        buildLargeFileTransferComposerHtml(fileName),
-      ),
-    );
-    openLargeFileTransferUpload();
-    requestAnimationFrame(() => editorRef.current?.focus());
-  }, []);
-
-  const handleLargeFileTransferClick = () => {
-    insertLargeFileTransferBlock();
-    notify(
-      "Upload at transfer.it, then replace the download link placeholder in your message.",
-      { type: "info" },
-    );
-  };
-
   const addPendingFile = (file: File) => {
     if (pendingFiles.length >= MAX_TICKET_ATTACHMENTS) {
       notify(`You can attach up to ${MAX_TICKET_ATTACHMENTS} files`, {
@@ -536,17 +534,21 @@ export const TicketReplyForm = ({
       });
       return;
     }
-    if (composeMode === "internal") {
-      if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-        notify(`"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`, { type: "error" });
-        return;
-      }
-    } else if (isTicketReplyAttachmentTooLarge(file.size)) {
-      insertLargeFileTransferBlock(file.name);
-      notify(ticketReplyAttachmentTooLargeMessage(file.name), {
-        type: "warning",
-      });
+    if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
+      notify(
+        `"${file.name}" exceeds the ${ticketAttachmentLimitLabel(MAX_TICKET_ATTACHMENT_BYTES)} limit`,
+        { type: "error" },
+      );
       return;
+    }
+    if (
+      composeMode !== "internal" &&
+      shouldSendTicketReplyAttachmentAsLink(file.size, replyAttachmentLimitBytes)
+    ) {
+      notify(
+        `"${file.name}" will be sent as a download link (expires in 7 days)`,
+        { type: "info" },
+      );
     }
 
     const id = crypto.randomUUID();
@@ -620,7 +622,19 @@ export const TicketReplyForm = ({
       nextStatus?: TicketWorkflowStatus;
     }) => {
       const uploadedAttachments: TicketReplyAttachment[] = readyPendingFiles
-        .map((entry) => entry.uploaded)
+        .map((entry) => {
+          const uploaded = entry.uploaded;
+          if (!uploaded) return null;
+          const asLink =
+            !isInternalNote &&
+            shouldSendTicketReplyAttachmentAsLink(
+              entry.file.size,
+              replyAttachmentLimitBytes,
+            );
+          return asLink
+            ? { ...uploaded, send_as_download_link: true }
+            : uploaded;
+        })
         .filter((entry): entry is TicketReplyAttachment => Boolean(entry));
 
       return dataProvider.replyTicket({
@@ -960,92 +974,16 @@ export const TicketReplyForm = ({
       aria-label="Minimize"
       onClick={minimizeComposer}
     >
-      <ChevronDown className="size-4" />
+      {placement === "top" ? (
+        <ChevronUp className="size-4" />
+      ) : (
+        <ChevronDown className="size-4" />
+      )}
     </Button>
   );
 
   if (!isExpanded) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-end gap-2 bg-background px-5 py-2.5",
-          edgeBorderClass,
-        )}
-      >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="size-9 shrink-0"
-              aria-label="Internal note"
-              onClick={() => openComposer("internal")}
-            >
-              <Lock className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Internal note & documents</TooltipContent>
-        </Tooltip>
-        {canReplyAndCharge ? (
-          <div className="inline-flex items-stretch rounded-md shadow-xs">
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 rounded-r-none border-r border-primary-foreground/15 px-5"
-              onClick={() => openComposer("reply")}
-            >
-              <Reply className="size-4" />
-              Reply
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-9 rounded-l-none px-2"
-                  aria-label="More reply options"
-                >
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  onClick={() =>
-                    openComposer("reply", {
-                      replyIntent: "reply_and_invoice",
-                    })
-                  }
-                >
-                  <Send className="size-4" />
-                  Reply & Invoice
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 rounded-md px-5"
-            onClick={() => openComposer("reply")}
-          >
-            <Reply className="size-4" />
-            Reply
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 rounded-md px-5"
-          onClick={() => openComposer("forward")}
-        >
-          <Forward className="size-4" />
-          Forward
-        </Button>
-      </div>
-    );
+    return null;
   }
 
   if (isMinimized) {
@@ -1099,136 +1037,108 @@ export const TicketReplyForm = ({
       <div className={cn("shrink-0 bg-background", edgeBorderClass)}>
         <div
           className={cn(
-            "flex max-h-[min(75vh,52rem)] flex-col overflow-hidden bg-amber-50/40 dark:bg-amber-950/15",
+            "overflow-hidden bg-amber-50/50 dark:bg-amber-950/20",
             slideAnimationClass,
           )}
         >
-          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-amber-500/25 bg-amber-50/80 px-4 py-2.5 md:px-5 dark:bg-amber-950/30">
-            <div className="min-w-0">
-              <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-                <Lock className="size-3.5 shrink-0" />
-                Internal note
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Team only — not emailed to the client. Add a note and optional
-                documents (PDF, photos, .esx).
-              </p>
-            </div>
+          <div className="flex items-center justify-between gap-2 px-4 py-2 md:px-5">
+            <p className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-200">
+              <Lock className="size-3.5 shrink-0" />
+              Internal note
+              <span className="font-normal text-muted-foreground">
+                · team only
+              </span>
+            </p>
             {minimizeButton}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              multiple
-              onChange={(event) => {
-                const files = event.target.files;
-                if (!files) return;
-                Array.from(files).forEach(addPendingFile);
-                event.target.value = "";
-              }}
-            />
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            onChange={(event) => {
+              const files = event.target.files;
+              if (!files) return;
+              Array.from(files).forEach(addPendingFile);
+              event.target.value = "";
+            }}
+          />
 
-            <Textarea
-              value={internalNoteText}
-              onChange={(event) => setInternalNoteText(event.target.value)}
-              placeholder="Write a note for the team… You can also attach documents below."
-              rows={5}
-              disabled={isPending}
-              className="min-h-28 resize-y rounded-none border-0 bg-transparent px-4 py-3 text-sm shadow-none focus-visible:ring-0 md:px-5"
-              autoFocus
-            />
+          <Textarea
+            value={internalNoteText}
+            onChange={(event) => setInternalNoteText(event.target.value)}
+            placeholder="Add a note…"
+            rows={3}
+            disabled={isPending}
+            className="min-h-[4.5rem] resize-y rounded-none border-0 border-t border-amber-500/20 bg-background px-4 py-2.5 text-sm shadow-none focus-visible:ring-0 md:px-5"
+            autoFocus
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "copy";
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const files = Array.from(event.dataTransfer.files ?? []);
+              files.forEach(addPendingFile);
+            }}
+          />
 
-            <div className="space-y-2 border-t border-amber-500/20 px-4 py-3 md:px-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-medium text-foreground">
-                  Documents
-                  {pendingFiles.length > 0 ? (
-                    <span className="ml-1.5 font-normal text-muted-foreground">
-                      ({pendingFiles.length})
-                    </span>
-                  ) : null}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5"
-                  disabled={isPending || attachmentsUploading}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Paperclip className="size-3.5" />
-                  Add documents
-                </Button>
-              </div>
-
-              {pendingFiles.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {pendingFiles.map((pending) => (
-                    <TicketPendingAttachmentItem
-                      key={pending.id}
-                      pending={pending}
-                      disabled={isPending}
-                      onRemove={() => removePendingFile(pending.id)}
-                      onRetry={() => retryPendingFile(pending.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <button
-                  type="button"
+          {pendingFiles.length > 0 ? (
+            <div className="flex flex-col gap-1.5 border-t border-amber-500/20 bg-background px-4 py-2 md:px-5">
+              {pendingFiles.map((pending) => (
+                <TicketPendingAttachmentItem
+                  key={pending.id}
+                  pending={pending}
                   disabled={isPending}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "copy";
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    const files = Array.from(event.dataTransfer.files ?? []);
-                    files.forEach(addPendingFile);
-                  }}
-                  className="flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-amber-500/40 bg-background/70 px-3 py-4 text-center transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <CloudUpload className="size-5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-foreground">
-                    Drop files here or click to browse
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    Up to {MAX_TICKET_ATTACHMENTS} files · {Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB each · stays internal
-                  </span>
-                </button>
-              )}
+                  onRemove={() => removePendingFile(pending.id)}
+                  onRetry={() => retryPendingFile(pending.id)}
+                />
+              ))}
             </div>
-          </div>
+          ) : null}
 
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-amber-500/25 bg-background px-4 py-2.5 shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.35)] md:px-5">
+          <div className="flex items-center justify-between gap-2 border-t border-amber-500/20 bg-background px-4 py-2 md:px-5">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="h-9"
-              disabled={isPending}
-              onClick={collapseComposer}
+              className="h-8 gap-1.5 text-muted-foreground"
+              disabled={isPending || attachmentsUploading}
+              onClick={() => fileInputRef.current?.click()}
             >
-              Cancel
+              <Paperclip className="size-3.5" />
+              Attach
+              {pendingFiles.length > 0 ? (
+                <span className="tabular-nums">({pendingFiles.length})</span>
+              ) : null}
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 gap-2"
-              disabled={isPending || attachmentsUploading || !hasContent}
-              onClick={() => handleSend({ isInternalNote: true })}
-            >
-              {submittingAs === "internal" ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Save className="size-4" />
-              )}
-              Save note
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                disabled={isPending}
+                onClick={collapseComposer}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 gap-1.5"
+                disabled={isPending || attachmentsUploading || !hasContent}
+                onClick={() => handleSend({ isInternalNote: true })}
+              >
+                {submittingAs === "internal" ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Save className="size-3.5" />
+                )}
+                Save
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -1243,45 +1153,60 @@ export const TicketReplyForm = ({
           slideAnimationClass,
         )}
       >
-        <div className="shrink-0 border-b bg-muted/10 px-4 py-2.5 md:px-5">
-          <div className="flex items-start gap-1">
-            <div className="min-w-0 flex-1 grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 text-sm">
-              <span className="text-xs text-muted-foreground">From</span>
-              <span className="min-w-0 truncate font-medium text-foreground">
-                {fromAddress}
-              </span>
+        <div className="shrink-0 border-b px-4 py-2 md:px-5">
+          <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 text-sm">
+            <span className="text-xs text-muted-foreground">From</span>
+            <span className="min-w-0 truncate text-sm text-foreground">
+              {fromAddress}
+            </span>
+            {minimizeButton}
 
-              <label
-                htmlFor={`ticket-reply-to-${ticket.id}`}
-                className="self-center text-xs text-muted-foreground"
-              >
-                To
-              </label>
-              <TicketRecipientInput
-                id={`ticket-reply-to-${ticket.id}`}
-                value={toRecipients}
-                onChange={setToRecipients}
-                placeholder="email@example.com, another@example.com"
+            <label
+              htmlFor={`ticket-reply-to-${ticket.id}`}
+              className="self-center text-xs text-muted-foreground"
+            >
+              To
+            </label>
+            <TicketRecipientInput
+              id={`ticket-reply-to-${ticket.id}`}
+              value={toRecipients}
+              onChange={setToRecipients}
+              placeholder="Add recipient"
+              disabled={isPending}
+              className="min-w-0 w-full shadow-none"
+            />
+            {!showCc ? (
+              <button
+                type="button"
+                className="justify-self-end px-1 text-xs font-medium text-muted-foreground hover:text-foreground"
                 disabled={isPending}
-                className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-none focus-visible:ring-1"
-              />
-
-              <label
-                htmlFor={`ticket-reply-cc-${ticket.id}`}
-                className="self-center text-xs text-muted-foreground"
+                onClick={() => setShowCc(true)}
               >
                 Cc
-              </label>
-              <TicketRecipientInput
-                id={`ticket-reply-cc-${ticket.id}`}
-                value={ccRecipients}
-                onChange={setCcRecipients}
-                placeholder="Optional, comma-separated"
-                disabled={isPending}
-                className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-none focus-visible:ring-1"
-              />
-            </div>
-            {minimizeButton}
+              </button>
+            ) : (
+              <span />
+            )}
+
+            {showCc ? (
+              <>
+                <label
+                  htmlFor={`ticket-reply-cc-${ticket.id}`}
+                  className="self-center text-xs text-muted-foreground"
+                >
+                  Cc
+                </label>
+                <TicketRecipientInput
+                  id={`ticket-reply-cc-${ticket.id}`}
+                  value={ccRecipients}
+                  onChange={setCcRecipients}
+                  placeholder="Add Cc"
+                  disabled={isPending}
+                  className="min-w-0 w-full shadow-none"
+                />
+                <span />
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -1336,7 +1261,7 @@ export const TicketReplyForm = ({
           ) : null}
 
           {pendingFiles.length > 0 ? (
-            <div className="flex flex-col gap-2 border-b px-5 py-2">
+            <div className="flex flex-col gap-1.5 border-b px-4 py-2 md:px-5">
               {pendingFiles.map((pending) => (
                 <TicketPendingAttachmentItem
                   key={pending.id}
@@ -1344,24 +1269,13 @@ export const TicketReplyForm = ({
                   disabled={isPending}
                   onRemove={() => removePendingFile(pending.id)}
                   onRetry={() => retryPendingFile(pending.id)}
+                  sendAsDownloadLink={shouldSendTicketReplyAttachmentAsLink(
+                    pending.file.size,
+                    replyAttachmentLimitBytes,
+                  )}
                 />
               ))}
             </div>
-          ) : null}
-
-          {!isInvoiceReply ? (
-            <p className="border-b px-5 py-1.5 text-xs text-muted-foreground">
-              {TICKET_REPLY_ATTACHMENT_HINT_BEFORE}
-              <a
-                href={LARGE_FILE_TRANSFER_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary underline underline-offset-2"
-              >
-                transfer.it
-              </a>
-              {TICKET_REPLY_ATTACHMENT_HINT_AFTER}
-            </p>
           ) : null}
 
           <input
@@ -1397,11 +1311,10 @@ export const TicketReplyForm = ({
             company={company}
             onInsertTemplate={handleInsertTemplate}
             attachLabel={
-              isInvoiceReply ? "Upload delivery file" : "Attach files"
+              isInvoiceReply ? "Upload delivery file" : "Attach"
             }
-            showLargeFileTransfer={!isInvoiceReply}
+            showLargeFileTransfer={false}
             onAttachClick={handleComposerAttachClick}
-            onLargeFileTransferClick={handleLargeFileTransferClick}
           />
 
           <TicketReplyRichComposer
@@ -1418,7 +1331,7 @@ export const TicketReplyForm = ({
             minHeight={replyMinHeight}
             maxHeight={replyMaxHeight}
             resizeTrigger={isExpanded}
-            className={composeMode === "forward" ? "min-h-24" : "min-h-[12.5rem]"}
+            className={composeMode === "forward" ? "min-h-20" : "min-h-[9rem]"}
           />
 
           {composeMode === "forward" && forwardContext ? (
@@ -1455,4 +1368,4 @@ export const TicketReplyForm = ({
       </div>
     </div>
   );
-};
+});

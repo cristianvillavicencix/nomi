@@ -16,8 +16,16 @@ import {
 } from "../_shared/ticketOutboundAttachments.ts";
 import {
   isTicketReplyAttachmentTooLarge,
+  resolveInlineReplyAttachmentMaxBytes,
+  shouldSendReplyAttachmentAsDownloadLink,
   TICKET_REPLY_ATTACHMENT_TOO_LARGE_MESSAGE,
 } from "../_shared/ticketReplyAttachmentLimits.ts";
+import {
+  appendReplyDownloadLinksToHtml,
+  appendReplyDownloadLinksToText,
+  buildReplyAttachmentDownloadLinks,
+} from "../_shared/ticketReplyDownloadLinks.ts";
+import { loadOrgTicketWorkspaceSettings } from "../_shared/ticketWorkspaceSettings.ts";
 import { buildEmailThreadHeaders } from "../_shared/emailThreading.ts";
 import { stripCidFromHtml } from "../_shared/stripCidFromHtml.ts";
 import {
@@ -180,6 +188,11 @@ Deno.serve(
           );
         }
 
+        const workspace = await loadOrgTicketWorkspaceSettings(member.org_id);
+        const inlineAttachmentMaxBytes = resolveInlineReplyAttachmentMaxBytes(
+          workspace.max_reply_attachment_bytes,
+        );
+
         if (attachments.length > 0) {
           const oversized = attachments.find(
             (file) =>
@@ -234,16 +247,23 @@ Deno.serve(
               "Ticket email sending is paused. Re-enable it under Settings → Integrations → Mail.",
             );
           }
-          if (inbox?.from_name?.trim()) fromName = inbox.from_name.trim();
-          else if (inbox?.display_name?.trim()) {
+          if (!inbox?.email?.trim()) {
+            // Inbox was removed after the ticket was created — fall back below.
+            inboxAddress = "";
+          } else if (inbox.from_name?.trim()) {
+            fromName = inbox.from_name.trim();
+          } else if (inbox.display_name?.trim()) {
             fromName = inbox.display_name.trim();
           }
-        } else {
+        }
+
+        if (!inboxAddress) {
           const { data: defaultInbox } = await supabaseAdmin
             .from("ticket_inboxes")
             .select("email, from_name, display_name, is_active")
             .eq("org_id", member.org_id)
             .eq("is_active", true)
+            .order("is_default", { ascending: false })
             .order("id", { ascending: true })
             .limit(1)
             .maybeSingle();
@@ -265,6 +285,8 @@ Deno.serve(
           inboxAddress = defaultInbox?.email?.trim().toLowerCase() ?? "";
           if (defaultInbox?.from_name?.trim()) {
             fromName = defaultInbox.from_name.trim();
+          } else if (defaultInbox?.display_name?.trim()) {
+            fromName = defaultInbox.display_name.trim();
           }
         }
 
@@ -304,12 +326,53 @@ Deno.serve(
         });
 
         const subject = replySubject(ticket.subject);
-        const textBody = body || "(See attachments)";
-        const outboundHtmlBody = htmlBody
+
+        const linkAttachments = attachments.filter((file) =>
+          shouldSendReplyAttachmentAsDownloadLink(
+            file.size,
+            inlineAttachmentMaxBytes,
+            file.send_as_download_link === true,
+          ),
+        );
+        const inlineAttachments = attachments.filter(
+          (file) =>
+            !shouldSendReplyAttachmentAsDownloadLink(
+              file.size,
+              inlineAttachmentMaxBytes,
+              file.send_as_download_link === true,
+            ),
+        );
+
+        let downloadLinks: Awaited<
+          ReturnType<typeof buildReplyAttachmentDownloadLinks>
+        > = [];
+        if (linkAttachments.length > 0) {
+          try {
+            downloadLinks =
+              await buildReplyAttachmentDownloadLinks(linkAttachments);
+          } catch (linkError) {
+            const message =
+              linkError instanceof Error
+                ? linkError.message
+                : "Could not create download links for large attachments";
+            return createErrorResponse(502, message);
+          }
+        }
+
+        const textBody = appendReplyDownloadLinksToText(
+          body || (attachments.length > 0 ? "(See attachments)" : ""),
+          downloadLinks,
+        );
+        let outboundHtmlBody = htmlBody
           ? stripCidFromHtml(htmlBody)
           : undefined;
+        outboundHtmlBody = appendReplyDownloadLinksToHtml(
+          outboundHtmlBody,
+          downloadLinks,
+        );
+
         const { attachments: emailAttachments } =
-          await loadStorageAttachmentsForEmail(attachments);
+          await loadStorageAttachmentsForEmail(inlineAttachments);
 
         let emailResult;
         try {

@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import type { Identifier } from "ra-core";
+import { Form, useFormContext } from "ra-core";
+import { UserPlus } from "lucide-react";
 import { CalendarEventDeleteButton } from "@/modules/calendar/CalendarEventDeleteButton";
 import { DateInput } from "@/components/admin/date-input";
 import { SaveButton } from "@/components/admin/form";
@@ -7,6 +10,7 @@ import { TextInput } from "@/components/admin/text-input";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { SelectInput } from "@/components/admin/select-input";
+import { Button } from "@/components/ui/button";
 import {
   DialogFooter,
   DialogHeader,
@@ -25,7 +29,7 @@ import {
 import { MeetingContactTitleSync } from "@/modules/meetings/meetingFormUtils";
 import { MeetingShareOptions } from "@/modules/meetings/MeetingShareOptions";
 import { MeetingVideoCallSection } from "@/modules/meetings/MeetingVideoCallSection";
-import { Form } from "ra-core";
+import { QuickMeetingContactCreateDialog } from "@/modules/meetings/QuickMeetingContactCreateDialog";
 
 const dealOptionText = (choice: {
   name?: string | null;
@@ -66,6 +70,211 @@ const MeetingFormRow = ({
   </TableRow>
 );
 
+const MeetingScheduleFormFields = ({
+  isEdit,
+  onDeleteSuccess,
+  onDeleteError,
+  emailConfigured = false,
+  shareEmail = false,
+  shareSms = false,
+  onShareEmailChange,
+  onShareSmsChange,
+  showShareOptions = false,
+}: {
+  isEdit: boolean;
+  onDeleteSuccess?: () => void;
+  onDeleteError?: (error: unknown) => void;
+  emailConfigured?: boolean;
+  shareEmail?: boolean;
+  shareSms?: boolean;
+  onShareEmailChange?: (value: boolean) => void;
+  onShareSmsChange?: (value: boolean) => void;
+  showShareOptions?: boolean;
+}) => {
+  const { setValue } = useFormContext();
+  const [createContactOpen, setCreateContactOpen] = useState(false);
+  const [createContactSeed, setCreateContactSeed] = useState("");
+
+  const openCreateContact = (searchText?: string) => {
+    setCreateContactSeed(searchText?.trim() ?? "");
+    setCreateContactOpen(true);
+  };
+
+  return (
+    <>
+      <MeetingContactTitleSync />
+
+      <DialogHeader>
+        <DialogTitle>{isEdit ? "Edit meeting" : "Schedule meeting"}</DialogTitle>
+      </DialogHeader>
+
+      <Table>
+        <TableBody>
+          <MeetingFormRow label="Contact">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <ReferenceInput source="contact_id" reference="contacts_summary">
+                  <AutocompleteInput
+                    label={false}
+                    optionText={contactOptionText}
+                    inputText={contactOptionText}
+                    helperText={false}
+                    modal
+                    placeholder="Search or add contact…"
+                    validate={(value) => (value ? undefined : "Required")}
+                    filterToQuery={(searchText) => ({ q: searchText })}
+                    createLabel="Add new contact"
+                    createItemLabel={(filter) =>
+                      `Add "${filter}" as new contact`
+                    }
+                    onCreate={(filter) => {
+                      openCreateContact(filter);
+                      return undefined;
+                    }}
+                  />
+                </ReferenceInput>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="mt-0.5 shrink-0"
+                title="Add new contact"
+                aria-label="Add new contact"
+                onClick={() => openCreateContact()}
+              >
+                <UserPlus className="size-4" />
+              </Button>
+            </div>
+          </MeetingFormRow>
+
+          <MeetingFormRow label="Project">
+            <ReferenceInput source="deal_id" reference="deals">
+              <AutocompleteInput
+                label={false}
+                optionText={dealOptionText}
+                helperText={false}
+                modal
+                filterToQuery={(searchText) => ({ q: searchText })}
+              />
+            </ReferenceInput>
+          </MeetingFormRow>
+
+          <MeetingFormRow label="Title">
+            <TextInput
+              source="title"
+              label={false}
+              helperText={false}
+              validate={(value) => (value?.trim() ? undefined : "Required")}
+            />
+          </MeetingFormRow>
+
+          <MeetingFormRow label="Date">
+            <DateInput
+              source="event_date"
+              label={false}
+              validate={(value) => (value ? undefined : "Required")}
+            />
+          </MeetingFormRow>
+
+          <MeetingFormRow label="Start time">
+            <CalendarTimeInput
+              source="event_time"
+              label={false}
+              helperText={false}
+            />
+          </MeetingFormRow>
+
+          <MeetingFormRow label="Duration">
+            <SelectInput
+              source="duration_minutes"
+              label={false}
+              choices={[...DURATION_CHOICES]}
+              format={formatDuration}
+              parse={parseDuration}
+              helperText={false}
+            />
+          </MeetingFormRow>
+
+          <MeetingFormRow label="Remind me">
+            <SelectInput
+              source="remind_before_minutes"
+              label={false}
+              choices={[...REMIND_BEFORE_CHOICES]}
+              format={formatRemindBefore}
+              parse={parseRemindBefore}
+              helperText={false}
+            />
+          </MeetingFormRow>
+
+          <MeetingFormRow label="Notes">
+            <TextInput
+              source="description"
+              label={false}
+              multiline
+              helperText={false}
+            />
+          </MeetingFormRow>
+
+          <MeetingFormRow label="Video call">
+            <MeetingVideoCallSection />
+          </MeetingFormRow>
+        </TableBody>
+      </Table>
+
+      {showShareOptions && onShareEmailChange && onShareSmsChange ? (
+        <MeetingShareOptions
+          emailConfigured={emailConfigured}
+          shareEmail={shareEmail}
+          shareSms={shareSms}
+          onShareEmailChange={onShareEmailChange}
+          onShareSmsChange={onShareSmsChange}
+        />
+      ) : null}
+
+      {isEdit ? (
+        <BooleanInput
+          source="completed_at"
+          label="Mark as done"
+          format={(value) => Boolean(value)}
+          parse={(value) => (value ? new Date().toISOString() : null)}
+          helperText={false}
+        />
+      ) : null}
+
+      <DialogFooter className="w-full sm:justify-between gap-4">
+        {isEdit ? (
+          <CalendarEventDeleteButton
+            onSuccess={onDeleteSuccess}
+            onError={onDeleteError}
+            label="Delete meeting"
+          />
+        ) : (
+          <span />
+        )}
+        <SaveButton
+          type="button"
+          label={isEdit ? "Save meeting" : "Schedule meeting"}
+        />
+      </DialogFooter>
+
+      <QuickMeetingContactCreateDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+        initialName={createContactSeed}
+        leadSourceOther="Schedule meeting"
+        description="Save and select them for this meeting"
+        onCreated={(created) => {
+          setValue("contact_id", created.id as Identifier, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }}
+      />
+    </>
+  );
+};
+
 export const MeetingScheduleForm = ({
   isEdit,
   onDeleteSuccess,
@@ -88,136 +297,16 @@ export const MeetingScheduleForm = ({
   showShareOptions?: boolean;
 }) => (
   <Form className="flex flex-col gap-4">
-    <MeetingContactTitleSync />
-
-    <DialogHeader>
-      <DialogTitle>{isEdit ? "Edit meeting" : "Schedule meeting"}</DialogTitle>
-    </DialogHeader>
-
-    <Table>
-      <TableBody>
-        <MeetingFormRow label="Contact">
-          <ReferenceInput source="contact_id" reference="contacts_summary">
-            <AutocompleteInput
-              label={false}
-              optionText={contactOptionText}
-              inputText={contactOptionText}
-              helperText={false}
-              modal
-              validate={(value) => (value ? undefined : "Required")}
-              filterToQuery={(searchText) => ({ q: searchText })}
-            />
-          </ReferenceInput>
-        </MeetingFormRow>
-
-        <MeetingFormRow label="Project">
-          <ReferenceInput source="deal_id" reference="deals">
-            <AutocompleteInput
-              label={false}
-              optionText={dealOptionText}
-              helperText={false}
-              modal
-              filterToQuery={(searchText) => ({ q: searchText })}
-            />
-          </ReferenceInput>
-        </MeetingFormRow>
-
-        <MeetingFormRow label="Title">
-          <TextInput
-            source="title"
-            label={false}
-            helperText={false}
-            validate={(value) => (value?.trim() ? undefined : "Required")}
-          />
-        </MeetingFormRow>
-
-        <MeetingFormRow label="Date">
-          <DateInput
-            source="event_date"
-            label={false}
-            validate={(value) => (value ? undefined : "Required")}
-          />
-        </MeetingFormRow>
-
-        <MeetingFormRow label="Start time">
-          <CalendarTimeInput
-            source="event_time"
-            label={false}
-            helperText={false}
-          />
-        </MeetingFormRow>
-
-        <MeetingFormRow label="Duration">
-          <SelectInput
-            source="duration_minutes"
-            label={false}
-            choices={[...DURATION_CHOICES]}
-            format={formatDuration}
-            parse={parseDuration}
-            helperText={false}
-          />
-        </MeetingFormRow>
-
-        <MeetingFormRow label="Remind me">
-          <SelectInput
-            source="remind_before_minutes"
-            label={false}
-            choices={[...REMIND_BEFORE_CHOICES]}
-            format={formatRemindBefore}
-            parse={parseRemindBefore}
-            helperText={false}
-          />
-        </MeetingFormRow>
-
-        <MeetingFormRow label="Notes">
-          <TextInput
-            source="description"
-            label={false}
-            multiline
-            helperText={false}
-          />
-        </MeetingFormRow>
-
-        <MeetingFormRow label="Video call">
-          <MeetingVideoCallSection />
-        </MeetingFormRow>
-      </TableBody>
-    </Table>
-
-    {showShareOptions && onShareEmailChange && onShareSmsChange ? (
-      <MeetingShareOptions
-        emailConfigured={emailConfigured}
-        shareEmail={shareEmail}
-        shareSms={shareSms}
-        onShareEmailChange={onShareEmailChange}
-        onShareSmsChange={onShareSmsChange}
-      />
-    ) : null}
-
-    {isEdit ? (
-      <BooleanInput
-        source="completed_at"
-        label="Mark as done"
-        format={(value) => Boolean(value)}
-        parse={(value) => (value ? new Date().toISOString() : null)}
-        helperText={false}
-      />
-    ) : null}
-
-    <DialogFooter className="w-full sm:justify-between gap-4">
-      {isEdit ? (
-        <CalendarEventDeleteButton
-          onSuccess={onDeleteSuccess}
-          onError={onDeleteError}
-          label="Delete meeting"
-        />
-      ) : (
-        <span />
-      )}
-      <SaveButton
-        type="button"
-        label={isEdit ? "Save meeting" : "Schedule meeting"}
-      />
-    </DialogFooter>
+    <MeetingScheduleFormFields
+      isEdit={isEdit}
+      onDeleteSuccess={onDeleteSuccess}
+      onDeleteError={onDeleteError}
+      emailConfigured={emailConfigured}
+      shareEmail={shareEmail}
+      shareSms={shareSms}
+      onShareEmailChange={onShareEmailChange}
+      onShareSmsChange={onShareSmsChange}
+      showShareOptions={showShareOptions}
+    />
   </Form>
 );

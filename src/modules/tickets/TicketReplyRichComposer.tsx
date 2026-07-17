@@ -41,6 +41,7 @@ export const TicketReplyRichComposer = ({
   const userEditorRef = useRef<HTMLDivElement | null>(null);
   const { userNoteHtml, signatureHtml, quotedReplyHtml } =
     extractReplyComposerParts(value);
+  const editableHtml = `${userNoteHtml}${signatureHtml}`;
 
   const setUserEditorRef = (node: HTMLDivElement | null) => {
     userEditorRef.current = node;
@@ -53,23 +54,25 @@ export const TicketReplyRichComposer = ({
   useLayoutEffect(() => {
     const el = userEditorRef.current;
     if (!el || document.activeElement === el) return;
-    const sanitized = sanitizeComposerHtml(userNoteHtml || "<p><br></p>");
+    const sanitized = sanitizeComposerHtml(editableHtml || "<p><br></p>");
     if (el.innerHTML !== sanitized) {
       el.innerHTML = sanitized;
     }
-  }, [userNoteHtml]);
+  }, [editableHtml]);
 
-  useAutoGrowTextarea(userEditorRef, userNoteHtml, {
+  useAutoGrowTextarea(userEditorRef, editableHtml, {
     minHeight: Math.min(minHeight, 160),
     maxHeight: Math.min(maxHeight, 280),
     resizeTrigger,
   });
 
-  const updateUserHtml = (nextUserHtml: string) => {
+  const updateEditableHtml = (nextEditableHtml: string) => {
+    const sanitized = sanitizeComposerHtml(nextEditableHtml);
+    const parts = extractReplyComposerParts(sanitized);
     onChange(
       assembleReplyComposerHtml({
-        userNoteHtml: sanitizeComposerHtml(nextUserHtml),
-        signatureHtml,
+        userNoteHtml: parts.userNoteHtml || "<p><br></p>",
+        signatureHtml: parts.signatureHtml,
         quotedReplyHtml,
       }),
     );
@@ -90,26 +93,18 @@ export const TicketReplyRichComposer = ({
           contentEditable={!disabled}
           suppressContentEditableWarning
           onInput={() => {
-            updateUserHtml(userEditorRef.current?.innerHTML ?? "");
+            updateEditableHtml(userEditorRef.current?.innerHTML ?? "");
           }}
           onPaste={onPaste}
           className={cn(
             "ticket-reply-rich-editor min-h-[5.5rem] overflow-hidden rounded-none border-0 p-0 text-sm leading-relaxed shadow-none outline-none focus-visible:ring-0",
             "[&_a]:text-primary [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_p+p]:mt-3 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
+            "[&_[data-ticket-reply-signature]]:text-[13px] [&_[data-ticket-reply-signature]]:leading-relaxed [&_[data-ticket-reply-signature]_p]:my-0",
             disabled && "cursor-not-allowed opacity-60",
             className,
           )}
         />
       </div>
-
-      {signatureHtml ? (
-        <div
-          className="ticket-reply-rich-meta mt-4 border-t border-border/80 pt-4 text-[13px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_p]:my-0 [&_p+p]:mt-1"
-          contentEditable={false}
-          suppressContentEditableWarning
-          dangerouslySetInnerHTML={{ __html: signatureHtml }}
-        />
-      ) : null}
 
       {quotedReplyHtml ? (
         <div

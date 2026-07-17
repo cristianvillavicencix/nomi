@@ -42,6 +42,9 @@ export type QuickMeetingContactCreateDialogProps = {
   onOpenChange: (open: boolean) => void;
   onCreated: (contact: Contact) => void;
   initialName?: string;
+  /** Stored on the lead as lead_source_other (default: Quick call). */
+  leadSourceOther?: string;
+  description?: string;
 };
 
 export const QuickMeetingContactCreateDialog = ({
@@ -49,6 +52,8 @@ export const QuickMeetingContactCreateDialog = ({
   onOpenChange,
   onCreated,
   initialName = "",
+  leadSourceOther = "Quick call",
+  description = "Save and use them for this call",
 }: QuickMeetingContactCreateDialogProps) => {
   const [formKey, setFormKey] = useState(0);
   const { identity } = useGetIdentity();
@@ -78,7 +83,9 @@ export const QuickMeetingContactCreateDialog = ({
     const contact = (await create(
       "contacts",
       {
-        data: buildQuickMeetingContactPayload(values, identity?.id),
+        data: buildQuickMeetingContactPayload(values, identity?.id, {
+          leadSourceOther,
+        }),
       },
       { returnPromise: true },
     )) as Contact;
@@ -150,9 +157,7 @@ export const QuickMeetingContactCreateDialog = ({
                 </div>
                 <div>
                   <DialogTitle>New contact</DialogTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Save and use them for this call
-                  </p>
+                  <p className="text-sm text-muted-foreground">{description}</p>
                 </div>
               </div>
             </DialogHeader>

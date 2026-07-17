@@ -55,26 +55,29 @@ export const plainTextToEditorHtml = (text: string) => {
     .join("");
 };
 
+const SIGNATURE_WRAPPER_STYLE =
+  "margin-top:12px;color:#374151;font-size:13px;line-height:1.5;";
+
 export const buildReplySignatureEditorHtml = (
   signatureHtml?: string | null,
 ) => {
   if (signatureHtml?.trim()) {
     const trimmed = signatureHtml.trim();
     if (trimmed.includes("<")) {
-      return `<div data-ticket-reply-signature="true" style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;">${trimmed}</div>`;
+      return `<div data-ticket-reply-signature="true" style="${SIGNATURE_WRAPPER_STYLE}">${trimmed}</div>`;
     }
     const lines = trimmed
       .split("\n")
       .map((line) => `<p style="margin:0;">${escapeHtml(line)}</p>`)
       .join("");
-    return `<div data-ticket-reply-signature="true" style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;color:#374151;font-size:13px;line-height:1.5;">${lines}</div>`;
+    return `<div data-ticket-reply-signature="true" style="${SIGNATURE_WRAPPER_STYLE}">${lines}</div>`;
   }
 
   const lines = LBS_SUPPORT_SIGNATURE.split("\n")
     .map((line) => `<p style="margin:0;">${escapeHtml(line)}</p>`)
     .join("");
 
-  return `<div data-ticket-reply-signature="true" style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;color:#374151;font-size:13px;line-height:1.5;">${lines}</div>`;
+  return `<div data-ticket-reply-signature="true" style="${SIGNATURE_WRAPPER_STYLE}">${lines}</div>`;
 };
 
 export const createDefaultReplyHtml = (

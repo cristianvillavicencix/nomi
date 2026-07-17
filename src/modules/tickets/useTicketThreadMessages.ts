@@ -9,7 +9,7 @@ export const useTicketThreadMessages = (
   ticketId: Identifier | null | undefined,
 ) => {
   const queryClient = useQueryClient();
-  const threadEndRef = useRef<HTMLDivElement | null>(null);
+  const threadTopRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data: messages = [],
@@ -20,19 +20,19 @@ export const useTicketThreadMessages = (
     {
       filter: ticketId ? { "ticket_id@eq": ticketId } : {},
       pagination: { page: 1, perPage: 500 },
-      sort: { field: "created_at", order: "ASC" },
+      sort: { field: "created_at", order: "DESC" },
     },
     { enabled: ticketId != null, staleTime: 5_000 },
   );
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    threadEndRef.current?.scrollIntoView({ behavior, block: "end" });
+  const scrollToLatest = useCallback((behavior: ScrollBehavior = "smooth") => {
+    threadTopRef.current?.scrollIntoView({ behavior, block: "start" });
   }, []);
 
   useEffect(() => {
     if (!ticketId || isPending) return;
-    scrollToBottom("auto");
-  }, [ticketId, isPending, messages.length, scrollToBottom]);
+    scrollToLatest("auto");
+  }, [ticketId, isPending, messages.length, scrollToLatest]);
 
   useEffect(() => {
     if (ticketId == null) return;
@@ -45,7 +45,7 @@ export const useTicketThreadMessages = (
       if (String(row.ticket_id) !== String(ticketId)) return;
       appendTicketMessageToCache(queryClient, row as TicketMessage);
       if (payload.eventType === "INSERT") {
-        requestAnimationFrame(() => scrollToBottom());
+        requestAnimationFrame(() => scrollToLatest());
       }
     };
 
@@ -76,7 +76,7 @@ export const useTicketThreadMessages = (
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [queryClient, scrollToBottom, ticketId]);
+  }, [queryClient, scrollToLatest, ticketId]);
 
   const sortedMessages = useMemo(() => messages, [messages]);
 
@@ -84,7 +84,10 @@ export const useTicketThreadMessages = (
     messages: sortedMessages,
     isPending: ticketId != null && isPending,
     refetch,
-    threadEndRef,
-    scrollToBottom,
+    /** @deprecated Use threadTopRef — kept for callers that still name it threadEndRef. */
+    threadEndRef: threadTopRef,
+    threadTopRef,
+    scrollToBottom: scrollToLatest,
+    scrollToLatest,
   };
 };

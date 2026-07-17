@@ -217,7 +217,8 @@ export const CatalogLineItemField = ({
 
   const createCatalogMutation = useMutation({
     mutationFn: async (draft: CatalogItemDraft) => {
-      const { data } = await createPackage(
+      // useCreate(..., { returnPromise: true }) resolves to the record itself.
+      const created = (await createPackage(
         "service_packages",
         {
           data: {
@@ -231,11 +232,19 @@ export const CatalogLineItemField = ({
             billing_interval: draft.billing_interval,
             active: draft.active,
             sort_order: draft.sort_order,
+            booking_enabled: Boolean(draft.booking_enabled),
+            ticket_billing_enabled: Boolean(draft.ticket_billing_enabled),
+            ticket_pricing_mode: draft.ticket_pricing_mode ?? "flat",
+            ticket_billing_slug: draft.ticket_billing_slug?.trim() || null,
           },
         },
         { returnPromise: true },
-      );
-      return data as ServicePackage;
+      )) as ServicePackage;
+
+      if (!created?.id) {
+        throw new Error("Catalog item was created but no record was returned");
+      }
+      return created;
     },
     onSuccess: async (record) => {
       await queryClient.invalidateQueries({ queryKey: ["service_packages"] });
@@ -402,11 +411,13 @@ export const CatalogLineItemField = ({
       <ServiceCatalogItemDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title="Create catalog item"
+        title="New catalog item"
+        mode="quick"
         sortOrder={nextSortOrder}
         initial={{
           name: trimmedQuery || line.title,
-          description: line.item_detail ?? "",
+          // Keep catalog note short; invoice line already has its own detail.
+          description: "",
           suggested_price: line.unit_price || 0,
         }}
         onSave={(draft) => createCatalogMutation.mutateAsync(draft)}

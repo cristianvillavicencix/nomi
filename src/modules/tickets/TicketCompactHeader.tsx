@@ -36,6 +36,7 @@ export const TicketCompactHeader = ({
   onUpdated,
   onBack,
   showBack = false,
+  composeActions,
   contextAction,
 }: {
   ticket: Ticket;
@@ -46,6 +47,7 @@ export const TicketCompactHeader = ({
   onUpdated?: () => void;
   onBack?: () => void;
   showBack?: boolean;
+  composeActions?: ReactNode;
   contextAction?: ReactNode;
 }) => {
   const meta = getTicketListMeta(ticket, company, contact);
@@ -172,8 +174,11 @@ export const TicketCompactHeader = ({
           ) : null}
         </div>
 
-        {contextAction ? (
-          <div className="flex shrink-0 items-center gap-1">{contextAction}</div>
+        {composeActions || contextAction ? (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {composeActions}
+            {contextAction}
+          </div>
         ) : null}
       </div>
     </div>

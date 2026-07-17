@@ -14,11 +14,14 @@ export const TicketPendingAttachmentItem = ({
   disabled = false,
   onRemove,
   onRetry,
+  sendAsDownloadLink = false,
 }: {
   pending: PendingTicketAttachment;
   disabled?: boolean;
   onRemove: () => void;
   onRetry?: () => void;
+  /** Large reply files are emailed as 7-day signed links. */
+  sendAsDownloadLink?: boolean;
 }) => {
   const isUploading = pending.status === "uploading";
   const isError = pending.status === "error";
@@ -76,7 +79,9 @@ export const TicketPendingAttachmentItem = ({
           {isReady ? (
             <p className="mt-1.5 flex items-center gap-1.5 text-emerald-700 dark:text-emerald-600">
               <CheckCircle2 className="size-3.5 shrink-0" />
-              Ready to send
+              {sendAsDownloadLink
+                ? "Ready · download link (7 days)"
+                : "Ready to send"}
             </p>
           ) : null}
         </div>
