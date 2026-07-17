@@ -78,16 +78,38 @@ Deno.serve(
           );
         }
 
+        const { data: invoice } = await supabaseAdmin
+          .from("client_invoices")
+          .select("id, status")
+          .eq("id", invoiceId)
+          .eq("org_id", member.org_id)
+          .maybeSingle();
+
+        if (!invoice || invoice.status !== "paid") {
+          return createErrorResponse(
+            400,
+            "Invoice must be paid before delivering files",
+          );
+        }
+
         const result = await deliverTicketAfterInvoicePayment(supabaseAdmin, {
           invoiceId,
           orgId: member.org_id,
         });
 
         if (!result.delivered && !result.duplicate) {
-          return createErrorResponse(
-            400,
-            result.reason ?? "Could not deliver files",
-          );
+          const reason = String(result.reason ?? "");
+          const reasonMessage =
+            reason === "no_deliverables"
+              ? "No undelivered files found for this invoice"
+              : reason === "missing_recipient"
+                ? "Add a requester email on the ticket before delivering"
+                : reason === "missing_inbox" || reason === "inbox_paused"
+                  ? "Ticket inbox is missing or paused. Check Settings → Tickets."
+                  : reason === "ticket_missing_or_merged"
+                    ? "Ticket was merged or no longer available"
+                    : reason || "Could not deliver files";
+          return createErrorResponse(400, reasonMessage);
         }
 
         return new Response(JSON.stringify(result), {

@@ -9,7 +9,10 @@ import {
 } from "./clientInvoicePayment.ts";
 import { parseRemainderInstallmentNumbersFromMetadata } from "./publicClientInvoicePaymentContext.ts";
 import { notifyInvoicePaymentReceipt } from "./invoicePaymentEmails.ts";
-import { deliverTicketAfterInvoicePayment } from "./ticketDelivery.ts";
+import {
+  deliverTicketAfterInvoicePayment,
+  noteTicketDeliveryFailure,
+} from "./ticketDelivery.ts";
 
 export type ClientPaymentMetadataType =
   | "proposal_deposit"
@@ -219,6 +222,10 @@ export async function applyClientInvoicePaymentFromStripe(
           "applyClientInvoicePaymentFromStripe.deliverTicket",
           error,
         );
+        await noteTicketDeliveryFailure(supabase, {
+          ticketId: Number(invoice.ticket_id),
+          error,
+        });
       }
     }
     return { handled: true, skipped: true, already_paid: true };

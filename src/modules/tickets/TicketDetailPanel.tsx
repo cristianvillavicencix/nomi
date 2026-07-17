@@ -12,6 +12,7 @@ import {
   TicketContextSheet,
 } from "@/modules/tickets/TicketContextPanel";
 import { TicketReplyForm } from "@/modules/tickets/TicketReplyForm";
+import { TicketRetryDeliveryBanner } from "@/modules/tickets/TicketRetryDeliveryBanner";
 import { TicketThread } from "@/modules/tickets/TicketThread";
 import { TicketReadCutoffContext } from "@/modules/tickets/TicketReadCutoffContext";
 import { TicketThreadQuoteProvider } from "@/modules/tickets/TicketThreadQuoteContext";
@@ -181,6 +182,8 @@ export const TicketDetailPanel = ({
               ) : null
             }
           />
+
+          <TicketRetryDeliveryBanner ticket={ticket} />
 
           {mergedChildren.length > 0 ? (
             <p className="shrink-0 border-b border-info/30 bg-info/10 px-4 py-2 text-xs text-info md:px-5">

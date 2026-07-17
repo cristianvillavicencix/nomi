@@ -538,7 +538,7 @@ export const TicketReplyForm = ({
     }
     if (composeMode === "internal") {
       if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-        notify(`"${file.name}" exceeds the 10 MB limit`, { type: "error" });
+        notify(`"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`, { type: "error" });
         return;
       }
     } else if (isTicketReplyAttachmentTooLarge(file.size)) {

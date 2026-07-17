@@ -258,7 +258,7 @@ export const ticketsProvider = {
       body: { ticket_id: Number(ticketId) },
     });
 
-    if (error || !data?.delivered) {
+    if (error || !(data?.delivered || data?.duplicate)) {
       throw new Error(
         error
           ? await readEdgeFunctionErrorMessage(error, "Could not deliver files")

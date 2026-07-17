@@ -11,8 +11,13 @@ import { loadCombinedInvoiceTicketIds } from "./combinedTicketInvoiceFlow.ts";
 const buildMessageId = (ticketId: number) =>
   `<ticket-${ticketId}-${crypto.randomUUID()}@nomicrm.com>`;
 
-/** Postmark and most providers cap total message size around 10 MB. */
-const MAX_DELIVERY_EMAIL_BYTES = 10 * 1024 * 1024;
+/**
+ * Product cap for delivery attachments (raw bytes).
+ * Twilio SendGrid allows ~30 MB total message after Base64; 25 MB of files
+ * leaves headroom for body/headers on typical packs.
+ */
+export const MAX_DELIVERY_EMAIL_BYTES = 25 * 1024 * 1024;
+const MAX_DELIVERY_EMAIL_MB = MAX_DELIVERY_EMAIL_BYTES / (1024 * 1024);
 
 const deliveryEmailFailureReason = (emailResult: {
   skipped?: boolean;
@@ -22,8 +27,32 @@ const deliveryEmailFailureReason = (emailResult: {
   if (emailResult.reason === "channel_paused") {
     return "Ticket email channel is paused. Re-enable it under Settings → Integrations → Mail.";
   }
-  return "Delivery email was skipped. Check Communications settings and try Deliver now.";
+  return "Delivery email was skipped. Check Communications settings and try Retry delivery.";
 };
+
+export async function noteTicketDeliveryFailure(
+  supabase: SupabaseClient,
+  params: { ticketId: number; error: unknown },
+) {
+  const detail =
+    params.error instanceof Error && params.error.message.trim()
+      ? params.error.message.trim()
+      : "Unknown error";
+  const body =
+    `**Automatic delivery failed**\n\n${detail}\n\n` +
+    `Open Billing and use **Retry delivery** to send the files again.`;
+  try {
+    await supabase.from("ticket_messages").insert({
+      ticket_id: params.ticketId,
+      body,
+      direction: "internal",
+      from_name: "System",
+      created_at: new Date().toISOString(),
+    });
+  } catch (noteError) {
+    console.error("noteTicketDeliveryFailure.failed", noteError);
+  }
+}
 
 async function deliverOneTicketForInvoicePayment(
   supabase: SupabaseClient,
@@ -168,7 +197,7 @@ async function deliverOneTicketForInvoicePayment(
   if (loadedAttachments.totalBytes > MAX_DELIVERY_EMAIL_BYTES) {
     const sizeMb = Math.round(loadedAttachments.totalBytes / (1024 * 1024));
     throw new Error(
-      `Delivery files are too large for email (${sizeMb} MB). Maximum is 10 MB. Contact support for manual delivery.`,
+      `Delivery files are too large for email (${sizeMb} MB). Maximum is ${MAX_DELIVERY_EMAIL_MB} MB. Reduce files or send via another channel, then use Retry delivery.`,
     );
   }
 

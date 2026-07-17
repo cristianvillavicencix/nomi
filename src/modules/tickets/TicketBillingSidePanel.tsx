@@ -552,7 +552,9 @@ export const TicketBillingSidePanel = ({
       refresh();
     },
     onError: (error: Error) =>
-      notify(error.message || "Could not deliver files", { type: "error" }),
+      notify(error.message || "Could not deliver files. Try Retry delivery again.", {
+        type: "error",
+      }),
   });
 
   const markDeliveryReady = async () => {
@@ -669,7 +671,9 @@ export const TicketBillingSidePanel = ({
     setUploadingDeliverables(true);
     try {
       if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-        throw new Error(`"${file.name}" exceeds the 10 MB limit`);
+        throw new Error(
+          `"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`,
+        );
       }
 
       const uploaded = await uploadTicketAttachment(file);
@@ -723,7 +727,7 @@ export const TicketBillingSidePanel = ({
     }
     for (const file of fileArray) {
       if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-        notify(`"${file.name}" exceeds the 10 MB limit`, { type: "warning" });
+        notify(`"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`, { type: "warning" });
         return;
       }
     }
@@ -953,7 +957,7 @@ export const TicketBillingSidePanel = ({
           ) : (
             <Send className="mr-1.5 size-4" />
           )}
-          Deliver now (manual)
+          Retry delivery
         </Button>
       ) : null}
     </div>
@@ -1093,7 +1097,7 @@ export const TicketBillingSidePanel = ({
             ) : (
               <Send className="mr-1.5 size-4" />
             )}
-            Send files to client
+            Retry delivery
           </Button>
         ) : null}
       </div>

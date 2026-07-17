@@ -6,7 +6,10 @@ import {
 } from "@/modules/tickets/ticketReplyAttachmentLimits";
 import { ticketReplyAttachmentTooLargeMessage } from "@/modules/tickets/ticketLargeFileTransfer";
 
-export const MAX_TICKET_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+/** Max size per deliverable / ticket attachment upload (matches delivery email cap). */
+export const MAX_TICKET_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+export const MAX_TICKET_ATTACHMENT_MB =
+  MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024);
 export const MAX_TICKET_ATTACHMENTS = 10;
 
 export type TicketReplyAttachment = {

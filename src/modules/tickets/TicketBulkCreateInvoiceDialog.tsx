@@ -209,7 +209,9 @@ export const TicketBulkCreateInvoiceDialog = ({
     }
     for (const file of fileArray) {
       if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-        notify(`"${file.name}" exceeds the 10 MB limit`, { type: "warning" });
+        notify(`"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`, {
+          type: "warning",
+        });
         return;
       }
     }
@@ -478,8 +480,9 @@ export const TicketBulkCreateInvoiceDialog = ({
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-medium">Delivery files</p>
                     <p className="text-xs text-muted-foreground">
-                      {currentDeliverables.length}/{MAX_TICKET_ATTACHMENTS} · 10
-                      MB max
+                      {currentDeliverables.length}/{MAX_TICKET_ATTACHMENTS} ·{" "}
+                      {Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB
+                      max
                     </p>
                   </div>
 

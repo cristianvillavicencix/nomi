@@ -6,7 +6,7 @@ import {
   rescheduleRemainderAfterEarlyPayments,
 } from "./invoiceRemainderSchedule.ts";
 import { markInstallmentPaidFromStripe } from "./proposalFlow.ts";
-import { deliverTicketAfterInvoicePayment } from "./ticketDelivery.ts";
+import { deliverTicketAfterInvoicePayment, noteTicketDeliveryFailure } from "./ticketDelivery.ts";
 
 const isDepositInstallment = (row: {
   installment_number?: number | null;
@@ -186,6 +186,10 @@ export async function applyClientInvoicePaymentUpdate(
           "applyClientInvoicePaymentUpdate.deliverTicket.alreadyPaid",
           error,
         );
+        await noteTicketDeliveryFailure(supabase, {
+          ticketId: Number(invoice.ticket_id),
+          error,
+        });
       }
     }
     return {
@@ -230,6 +234,10 @@ export async function applyClientInvoicePaymentUpdate(
             "applyClientInvoicePaymentUpdate.deliverTicket.duplicate",
             error,
           );
+          await noteTicketDeliveryFailure(supabase, {
+            ticketId: Number(invoice.ticket_id),
+            error,
+          });
         }
       }
     }
@@ -342,6 +350,10 @@ export async function applyClientInvoicePaymentUpdate(
         });
       } catch (error) {
         console.error("applyClientInvoicePaymentUpdate.deliverTicket", error);
+        await noteTicketDeliveryFailure(supabase, {
+          ticketId: Number(updated.ticket_id),
+          error,
+        });
       }
     }
   }
