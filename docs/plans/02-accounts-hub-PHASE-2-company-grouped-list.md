@@ -1,6 +1,6 @@
 # Phase 2 — Company-grouped list
 
-**Status:** Plan only  
+**Status:** Superseded for product UX by [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md) (People-only List + company preview). Kept as historical Phase 2 plan.  
 **Risk:** Medium (performance + empty states)  
 **Depends on:** Phase 1 hub shell (List mode host)  
 **Parallel with:** Phase 3 (Board) after Phase 1  

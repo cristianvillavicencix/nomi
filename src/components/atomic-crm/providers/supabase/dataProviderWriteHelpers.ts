@@ -208,6 +208,7 @@ const COMPANY_READ_ONLY_WRITE_FIELDS = [
   "primary_contact_phone_jsonb",
   "primary_contact_lead_source",
   "primary_contact_interested_service",
+  "is_client",
 ] as const;
 
 export const prepareCompanyWriteData = <T extends Record<string, unknown>>(

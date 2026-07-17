@@ -101,6 +101,8 @@ export const TicketInvoiceReminderDialog = ({
     return name?.split(/\s+/)[0] ?? null;
   }, [identity]);
 
+  const invoiceAlreadyPaid = invoice.status === "paid";
+
   const { data: shareLink, isPending: shareLinkPending } = useQuery({
     queryKey: ["ticket-invoice-reminder-share", invoice.id],
     queryFn: () =>
@@ -108,7 +110,7 @@ export const TicketInvoiceReminderDialog = ({
         invoiceId: invoice.id,
         baseUrl: window.location.origin,
       }),
-    enabled: open && Boolean(invoice.id),
+    enabled: open && Boolean(invoice.id) && !invoiceAlreadyPaid,
     staleTime: 0,
   });
 
@@ -217,7 +219,29 @@ export const TicketInvoiceReminderDialog = ({
     Boolean(subject.trim()) &&
     Boolean(paymentUrl) &&
     (!sendSms || Boolean(phone.trim())) &&
-    !shareLinkPending;
+    !shareLinkPending &&
+    !invoiceAlreadyPaid;
+
+  if (invoiceAlreadyPaid) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invoice already paid</DialogTitle>
+            <DialogDescription>
+              {invoice.invoice_number} is already paid. No payment reminder or
+              payment link is needed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

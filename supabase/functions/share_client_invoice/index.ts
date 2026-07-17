@@ -62,6 +62,10 @@ Deno.serve(
           return createErrorResponse(404, "Invoice not found");
         }
 
+        if (invoice.status === "paid") {
+          return createErrorResponse(409, "This invoice is already paid");
+        }
+
         if (invoice.status === "void") {
           return createErrorResponse(400, "Cannot share a void invoice");
         }

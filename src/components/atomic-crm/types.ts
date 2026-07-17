@@ -134,6 +134,8 @@ export type Company = {
   primary_contact_phone_jsonb?: PhoneNumberAndType[] | null;
   primary_contact_lead_source?: string | null;
   primary_contact_interested_service?: string | null;
+  /** Derived: any client contact or closed_won/won deal. Not a pipeline field. */
+  is_client?: boolean;
 } & Pick<RaRecord, "id">;
 
 export type EmailAndType = {

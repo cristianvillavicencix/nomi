@@ -21,11 +21,11 @@ import {
   syncAccountsHubSearchParams,
   type AccountsHubView,
 } from "@/modules/accounts/accountsHubSearchParams";
-import { canAccessClientsHubTab } from "@/modules/clients/clientsHubAccess";
-import { ContactsListPage } from "@/modules/clients/ContactsListPage";
+import { AccountsLeadPreviewSheet } from "@/modules/accounts/AccountsLeadPreviewSheet";
+import { AccountsCompanyPreviewSheet } from "@/modules/accounts/AccountsCompanyPreviewSheet";
 import { LeadsBoardPanel } from "@/modules/leads/LeadsBoardPanel";
 
-/** Accounts hub — List (company-first) | Board (leads Kanban). */
+/** Accounts hub — List (people-first) | Board (leads Kanban). */
 export const AccountsHubPage = () => {
   const { data: identity } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,10 +36,6 @@ export const AccountsHubPage = () => {
   );
   const canBoard = useMemo(
     () => canAccessAccountsBoard(identity),
-    [identity],
-  );
-  const canCompanies = useMemo(
-    () => canAccessClientsHubTab(identity, "companies"),
     [identity],
   );
 
@@ -68,9 +64,12 @@ export const AccountsHubPage = () => {
     if (view === "list" && !canList) return;
     if (view === "board" && !canBoard) return;
     persistAccountsView(view);
-    setSearchParams(buildAccountsHubViewChangeParams(view, searchParams), {
-      replace: true,
-    });
+    const next = buildAccountsHubViewChangeParams(view, searchParams);
+    next.delete("contact");
+    next.delete("lead");
+    next.delete("stage");
+    next.delete("company");
+    setSearchParams(next, { replace: true });
   };
 
   if (!identity || !activeView) return null;
@@ -112,12 +111,11 @@ export const AccountsHubPage = () => {
           <LeadsBoardPanel embedded />
         </div>
       ) : canList ? (
-        canCompanies ? (
-          <AccountsGroupedList />
-        ) : (
-          <ContactsListPage embedded />
-        )
+        <AccountsGroupedList />
       ) : null}
+
+      <AccountsLeadPreviewSheet />
+      <AccountsCompanyPreviewSheet />
     </div>
   );
 };

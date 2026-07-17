@@ -41,7 +41,13 @@ import {
 type ContactQuickActionsProps = {
   contactId: Identifier;
   contact: Contact;
+  /** Smaller icons with labels under each action (centered wrap). */
   compact?: boolean;
+  /**
+   * Icon-only circular buttons in a single row (no labels).
+   * Primary: Email, Call, Message, More (Note / Task / Meeting).
+   */
+  iconRow?: boolean;
 };
 
 const LabeledAction = ({
@@ -116,6 +122,7 @@ export const ContactQuickActions = ({
   contactId,
   contact,
   compact = false,
+  iconRow = false,
 }: ContactQuickActionsProps) => {
   const [noteOpen, setNoteOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
@@ -133,110 +140,137 @@ export const ContactQuickActions = ({
   const canSms =
     smsEnabled && contactHasSmsPhone(contact) && messagesQuickAccess;
 
+  const emailButton = (
+    <CircleButton
+      label="Email"
+      href={email ? mailtoHref(email) : undefined}
+      disabled={!email}
+    >
+      <Mail className="size-4" />
+    </CircleButton>
+  );
+
+  const callButton = (
+    <CircleButton
+      label="Call"
+      onClick={() => {
+        if (phoneLink?.e164) {
+          void callPhone({ to: phoneLink.e164, contactId });
+        }
+      }}
+      disabled={!canCallPhone}
+    >
+      <Phone className="size-4" />
+    </CircleButton>
+  );
+
+  const messageButton = (
+    <CircleButton
+      label="Message"
+      disabled={!canSms}
+      onClick={() => {
+        if (messagesQuickAccess) {
+          void messagesQuickAccess.openSms(contact);
+        }
+      }}
+    >
+      <MessageSquare className="size-4" />
+    </CircleButton>
+  );
+
+  const moreMenu = (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-10 rounded-full"
+              aria-label="More actions"
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>More</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setNoteOpen(true)}>
+          <StickyNote className="size-4" />
+          Note
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTaskOpen(true)}>
+          <ListTodo className="size-4" />
+          Task
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setMeetingOpen(true)}>
+          <Calendar className="size-4" />
+          Meeting
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <TooltipProvider delayDuration={200}>
-      <div
-        className={cn(
-          "flex items-start",
-          compact
-            ? "flex-wrap justify-center gap-2.5"
-            : "justify-between gap-1",
-        )}
-      >
-        <LabeledAction label="Note" compact={compact}>
-          <CircleButton label="Note" onClick={() => setNoteOpen(true)}>
-            <StickyNote className="size-4" />
-          </CircleButton>
-        </LabeledAction>
-
-        <LabeledAction label="Email" compact={compact}>
-          <CircleButton
-            label="Email"
-            href={email ? mailtoHref(email) : undefined}
-            disabled={!email}
-          >
-            <Mail className="size-4" />
-          </CircleButton>
-        </LabeledAction>
-
-        <LabeledAction label="Call" compact={compact}>
-          <CircleButton
-            label="Call"
-            onClick={() => {
-              if (phoneLink?.e164) {
-                void callPhone({ to: phoneLink.e164, contactId });
-              }
-            }}
-            disabled={!canCallPhone}
-          >
-            <Phone className="size-4" />
-          </CircleButton>
-        </LabeledAction>
-
-        <LabeledAction label="Message" compact={compact}>
-          <CircleButton
-            label="Message"
-            disabled={!canSms}
-            onClick={() => {
-              if (messagesQuickAccess) {
-                void messagesQuickAccess.openSms(contact);
-              }
-            }}
-          >
-            <MessageSquare className="size-4" />
-          </CircleButton>
-        </LabeledAction>
-
-        {compact ? (
-          <>
-            <LabeledAction label="Task" compact={compact}>
-              <CircleButton label="Task" onClick={() => setTaskOpen(true)}>
-                <ListTodo className="size-4" />
-              </CircleButton>
-            </LabeledAction>
-
-            <LabeledAction label="Meeting" compact={compact}>
-              <CircleButton
-                label="Meeting"
-                onClick={() => setMeetingOpen(true)}
-              >
-                <Calendar className="size-4" />
-              </CircleButton>
-            </LabeledAction>
-          </>
-        ) : (
-          <LabeledAction label="More">
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="size-10 rounded-full"
-                      aria-label="More actions"
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>More</TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="center">
-                <DropdownMenuItem onClick={() => setTaskOpen(true)}>
-                  <ListTodo className="size-4" />
-                  Task
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setMeetingOpen(true)}>
-                  <Calendar className="size-4" />
-                  Meeting
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+      {iconRow ? (
+        <div className="flex shrink-0 items-center gap-1.5">
+          {emailButton}
+          {callButton}
+          {messageButton}
+          {moreMenu}
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "flex items-start",
+            compact
+              ? "flex-wrap justify-center gap-2.5"
+              : "justify-between gap-1",
+          )}
+        >
+          <LabeledAction label="Note" compact={compact}>
+            <CircleButton label="Note" onClick={() => setNoteOpen(true)}>
+              <StickyNote className="size-4" />
+            </CircleButton>
           </LabeledAction>
-        )}
-      </div>
+
+          <LabeledAction label="Email" compact={compact}>
+            {emailButton}
+          </LabeledAction>
+
+          <LabeledAction label="Call" compact={compact}>
+            {callButton}
+          </LabeledAction>
+
+          <LabeledAction label="Message" compact={compact}>
+            {messageButton}
+          </LabeledAction>
+
+          {compact ? (
+            <>
+              <LabeledAction label="Task" compact={compact}>
+                <CircleButton label="Task" onClick={() => setTaskOpen(true)}>
+                  <ListTodo className="size-4" />
+                </CircleButton>
+              </LabeledAction>
+
+              <LabeledAction label="Meeting" compact={compact}>
+                <CircleButton
+                  label="Meeting"
+                  onClick={() => setMeetingOpen(true)}
+                >
+                  <Calendar className="size-4" />
+                </CircleButton>
+              </LabeledAction>
+            </>
+          ) : (
+            <LabeledAction label="More">{moreMenu}</LabeledAction>
+          )}
+        </div>
+      )}
 
       <NoteCreateSheet
         open={noteOpen}

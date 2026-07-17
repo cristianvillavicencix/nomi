@@ -58,10 +58,26 @@ export const getFindDuplicatesPath = () => "/companies/find-duplicates";
 export const getLeadsListPath = () =>
   isAccountsHubEnabled() ? getAccountsHubPath("board") : "/leads";
 
+/**
+ * Board card click target. When the Accounts hub is enabled, stays on
+ * `/accounts?view=board` and opens the lead as a Sheet preview instead of
+ * navigating to the standalone show page.
+ */
 export const getLeadKanbanShowPath = (
   contactId: string | number,
   stage: string,
-) => `/leads/${contactId}/show?stage=${encodeURIComponent(stage)}`;
+) => {
+  if (isAccountsHubEnabled()) {
+    const params = new URLSearchParams({
+      view: "board",
+      lead: String(contactId),
+      contact: String(contactId),
+      stage,
+    });
+    return `/accounts?${params.toString()}`;
+  }
+  return `/leads/${contactId}/show?stage=${encodeURIComponent(stage)}`;
+};
 
 export const getLeadCreatePath = (params?: Record<string, string>) => {
   const search = new URLSearchParams({ create: "lead" });

@@ -14,7 +14,7 @@ The data model already matches the journey correctly (`companies` = bill-to, `co
 ## Goals
 
 1. Present **one primary nav module** (“Accounts”) that covers know → close → bill.
-2. Keep **list** company-first (bill-to rows) with **representatives nested**; bill-to remains `company_id`.
+2. Keep **list** people-first (flat contacts); company as row context + preview; bill-to remains `company_id`.
 3. Keep **board/Kanban** as opportunities/people via existing `contacts.lead_stage` (not company columns).
 4. Preserve deep links and aliases: `/leads`, `/clients`, `/companies`, `/contacts` (redirect or mount hub).
 5. Zero breakage for billing (`client_invoices`), tickets, portal, deals, convert, Anti-Olvido, RLS, capabilities, Zoho/CSV import.
@@ -22,23 +22,28 @@ The data model already matches the journey correctly (`companies` = bill-to, `co
 ## Non-goals
 
 - **Do not** merge `companies` + `contacts` into a single Account entity (Option C forbidden).
-- **Do not** add database migrations for phases 1–4 (none required).
-- **Do not** put companies as Kanban columns.
+- **Do not** put companies as Kanban columns or treat company as the pipeline entity.
 - **Do not** change bill-to FK (`company_id` on invoices, tickets, deals, proposals, contracts, portal).
-- **Do not** rewrite `convertLeadToClient`, deal↔`lead_stage` triggers, or RLS policies as part of this hub work.
+- **Do not** rewrite `convertLeadToClient`, deal↔`lead_stage` triggers, or RLS policies as part of this hub work (except additive `companies.is_client` sync — see commercial model).
 - **Do not** remove legacy URL paths; redirect or alias them.
+
+> **Migrations note:** Original phases 1–4 assumed no DB changes. Later work added derived `companies.is_client` (bill-to signal only). Pipeline remains on contacts.
 
 ## Locked product decisions
 
 | Decision | Choice |
 |----------|--------|
-| Architecture | **Option A** — UI/nav hub over existing tables |
+| Architecture | **Option A** — UI/nav hub over existing tables (`companies` + `contacts`) |
 | Schema merge | **Forbidden** |
-| List view | Company-first rows; contacts nested; orphan leads (no `company_id`) in an explicit section |
-| Board view | Existing leads Kanban (`lead_stage` on contacts) |
-| Bill-to | Always `companies.id` / `company_id` |
+| List view (default) | **People-only** flat `contacts` table. Company via column + Sheet preview (`?company=`). See [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md). |
+| Board view | Active leads Kanban only (`lead`/`prospect` + board stages; no Client column). Convert drops cards off the board. Pipeline = `contacts.status` / `lead_stage`. |
+| Bill-to | Always `companies.id` / `company_id`. **`companies.is_client`** = derived bill-to signal (not pipeline). |
+| New commercial work | **Deals** (incl. existing clients): `company_id`, contact(s), owner, deal stage — not company-as-pipeline. |
 | URLs | Preserve `/leads`, `/clients`, `/companies`, `/contacts` |
-| Phasing | Nav shell → grouped list → board reuse → polish |
+| Phasing | Nav shell → list → board reuse → polish |
+
+> **Note (2026-07-16):** Early phases described List as company-first, then a People \| By company toggle. Refined decision: **People-only List + company preview drawer**; Board stays active-pipeline; Client badge + New Deal from company preview. Analysis: [accounts-hub-UX-ANALYSIS.md](./accounts-hub-UX-ANALYSIS.md). Full commercial model: [accounts-hub-DESIGN-DECISION.md](./accounts-hub-DESIGN-DECISION.md).
+
 
 ## Current codebase anchors (do not invent paths)
 
@@ -60,9 +65,9 @@ The data model already matches the journey correctly (`companies` = bill-to, `co
 ## Success criteria
 
 - One primary sidebar entry for the Accounts journey; Pipeline + Clients are no longer two competing top-level doors (legacy URLs still work).
-- List: companies with nested contacts; filters for pipeline vs clients without schema changes.
-- Board: same stage change, convert-to-client, Anti-Olvido behavior as today’s `/leads` kanban.
-- Invoices, tickets, portal, deals continue to resolve by `company_id`.
+- List: **people-only** flat contacts; company Sheet preview on Company click; person Sheet on person click; **No company** filter; **Client** badge when `is_client`; **New Deal** from company preview.
+- Board: active lead pipeline only (no Client column); convert-to-client drops cards; Anti-Olvido for client follow-up.
+- Invoices, tickets, portal, deals continue to resolve by `company_id`; new work for existing clients uses **Deals**.
 - Capability matrix unchanged in meaning: users who can list companies and/or contacts still can; hub hides inaccessible modes.
 - Manual QA checklist (`05-…`) passes; rollback (`06-…`) does not require data undo.
 

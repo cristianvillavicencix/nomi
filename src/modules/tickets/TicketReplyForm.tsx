@@ -778,7 +778,11 @@ export const TicketReplyForm = ({
       return;
     }
 
-    if (invoice?.status === "sent" || invoice?.status === "paid") {
+    if (invoice?.status === "paid") {
+      throw new Error("This invoice is already paid");
+    }
+
+    if (invoice?.status === "sent") {
       throw new Error(
         "This ticket already has a sent invoice. Use Remind on the invoice panel.",
       );

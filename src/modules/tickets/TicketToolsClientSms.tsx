@@ -122,7 +122,12 @@ export const TicketToolsClientSms = ({
         invoiceId: activeInvoice!.id,
         baseUrl: window.location.origin,
       }),
-    enabled: Boolean(activeInvoice?.id && canUseQuickActions),
+    // Only unpaid invoices need a payment link for SMS quick actions.
+    enabled: Boolean(
+      activeInvoice?.id &&
+        canViewAmounts &&
+        activeInvoice.status === "sent",
+    ),
     staleTime: 60_000,
   });
 

@@ -120,11 +120,25 @@ const TicketInvoicePaymentLink = ({
         invoiceId,
         baseUrl: window.location.origin,
       }),
-    enabled: status === "sent" || status === "paid",
+    // Paid invoices must not generate payment links — only unpaid (sent) ones.
+    enabled: status === "sent",
     staleTime: 60_000,
   });
 
-  if (status !== "sent" && status !== "paid") return null;
+  if (status === "paid") {
+    return (
+      <div className="space-y-1 rounded-none border border-success/30 bg-success/5 px-3 py-2.5">
+        <p className="text-xs font-medium text-success">
+          This invoice is already paid
+        </p>
+        <p className="text-xs text-muted-foreground">
+          No payment link is needed.
+        </p>
+      </div>
+    );
+  }
+
+  if (status !== "sent") return null;
 
   const paymentUrl = shareLink
     ? buildInvoicePaymentUrl(shareLink, window.location.origin)
