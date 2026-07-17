@@ -37,7 +37,7 @@ export default defineConfig({
     keepNames: true,
   },
   build: {
-    chunkSizeWarningLimit: 3000,
+    chunkSizeWarningLimit: 10000,
     sourcemap: true,
   },
   resolve: {

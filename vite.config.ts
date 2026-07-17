@@ -77,7 +77,8 @@ export default defineConfig(({ mode }) => {
       keepNames: true,
     },
     build: {
-      chunkSizeWarningLimit: 3000,
+      // Main CRM chunk is large (pdfmake, jsPDF, etc.). Workbox allows up to 10 MiB.
+      chunkSizeWarningLimit: 10000,
       sourcemap: true,
     },
     resolve: {
