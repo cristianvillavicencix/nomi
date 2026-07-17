@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { Identifier } from "ra-core";
-import { Form, useFormContext } from "ra-core";
+import { Form } from "ra-core";
+import { useFormContext } from "react-hook-form";
 import { UserPlus } from "lucide-react";
 import { CalendarEventDeleteButton } from "@/modules/calendar/CalendarEventDeleteButton";
 import { DateInput } from "@/components/admin/date-input";
