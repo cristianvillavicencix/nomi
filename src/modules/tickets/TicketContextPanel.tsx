@@ -22,6 +22,7 @@ import { useCanViewAmounts } from "@/lib/permissions/useMaskedAmount";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -353,6 +354,9 @@ export const TicketContextSheet = ({
       >
         <SheetHeader className="border-b px-4 py-3 text-left">
           <SheetTitle>Ticket context</SheetTitle>
+          <SheetDescription className="sr-only">
+            Billing, messaging, files, and related ticket information.
+          </SheetDescription>
         </SheetHeader>
         <TicketContextTabs
           tabs={contextTabs}

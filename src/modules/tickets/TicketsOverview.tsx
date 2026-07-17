@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -195,6 +196,9 @@ const TicketsOverviewBody = ({
           >
             <SheetHeader className="sr-only">
               <SheetTitle>Ticket preview</SheetTitle>
+              <SheetDescription>
+                Preview of the selected ticket details.
+              </SheetDescription>
             </SheetHeader>
             {selectedTicketId ? (
               <TicketOverviewPreview

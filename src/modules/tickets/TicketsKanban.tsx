@@ -35,6 +35,31 @@ const groupTicketsByStatus = (tickets: Ticket[]): TicketsByStatus => {
   return buckets;
 };
 
+/** Stable signature so unstable list array refs don't retrigger sync. */
+const ticketsKanbanSyncKey = (tickets: Ticket[]) =>
+  tickets
+    .map(
+      (ticket) =>
+        `${ticket.id}:${ticketStatusForKanban(ticket.status)}:${ticket.updated_at ?? ""}`,
+    )
+    .sort()
+    .join("|");
+
+const isSameTicketsByStatus = (a: TicketsByStatus, b: TicketsByStatus) => {
+  for (const column of TICKET_KANBAN_COLUMNS) {
+    const left = a[column.id];
+    const right = b[column.id];
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i += 1) {
+      if (String(left[i]?.id) !== String(right[i]?.id)) return false;
+      if (ticketStatusForKanban(left[i]?.status) !== ticketStatusForKanban(right[i]?.status)) {
+        return false;
+      }
+    }
+  }
+  return true;
+};
+
 export const TicketsKanban = ({
   selectedTicketId,
   onSelectTicket,
@@ -182,9 +207,16 @@ export const TicketsKanban = ({
     return map;
   }, [linkedInvoices, ticketInvoices, tickets]);
 
+  const syncKey = useMemo(() => ticketsKanbanSyncKey(tickets), [tickets]);
+
   useEffect(() => {
-    setTicketsByStatus(groupTicketsByStatus(tickets));
-  }, [tickets]);
+    const next = groupTicketsByStatus(tickets);
+    setTicketsByStatus((prev) =>
+      isSameTicketsByStatus(prev, next) ? prev : next,
+    );
+    // syncKey captures id/status/updated_at; tickets is read for fresh grouping.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid loops from unstable `data` refs
+  }, [syncKey]);
 
   const onDragEnd: OnDragEndResponder = (result) => {
     setIsDragging(false);
