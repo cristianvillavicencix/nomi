@@ -28,6 +28,11 @@ import {
 import { resolveOrgGeneralFrom } from "./organizationEmailSenders.ts";
 import { resolveContactEmail } from "./clientProposalBilling.ts";
 import { sendTwilioSms } from "./twilio.ts";
+import {
+  ensureClientConversation,
+  insertSmsMessage,
+  touchConversationFirstResponse,
+} from "./messagingConversations.ts";
 
 type MeetingEventRow = {
   id: number;
@@ -40,6 +45,7 @@ type MeetingEventRow = {
   meeting_url?: string | null;
   timezone?: string | null;
   contact_id?: number | null;
+  deal_id?: number | null;
   organization_member_id?: number | null;
   completed_at?: string | null;
   host_confirmation_sent_at?: string | null;
@@ -181,6 +187,14 @@ async function sendOrgSms(
   orgId: number,
   to: string,
   body: string,
+  options?: {
+    /** When set, also write the SMS into Messages (client conversation). */
+    logToConversation?: boolean;
+    contactId?: number | null;
+    dealId?: number | null;
+    memberId?: number | null;
+    contactTitle?: string | null;
+  },
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   let settings;
   try {
@@ -195,13 +209,42 @@ async function sendOrgSms(
     return { ok: false, reason: "sms_not_configured" };
   }
   try {
-    await sendTwilioSms({
+    const twilioResponse = await sendTwilioSms({
       accountSid,
       authToken,
       from: fromNumber,
       to,
       body,
     });
+
+    if (options?.logToConversation && options.contactId) {
+      try {
+        const conversation = await ensureClientConversation({
+          orgId,
+          externalPhone: to,
+          contactId: options.contactId,
+          dealId: options.dealId ?? null,
+          createdByMemberId: options.memberId ?? null,
+          title: options.contactTitle ?? null,
+        });
+        const message = await insertSmsMessage({
+          conversationId: Number(conversation.id),
+          body,
+          direction: "outbound",
+          authorMemberId: options.memberId ?? null,
+          externalId: twilioResponse.sid ?? null,
+          smsDeliveryStatus: twilioResponse.status?.trim() || "queued",
+        });
+        await touchConversationFirstResponse(
+          Number(conversation.id),
+          message.created_at ?? new Date().toISOString(),
+        );
+      } catch (logError) {
+        // SMS already delivered — do not fail the invite over inbox logging.
+        console.error("notifyMeeting.log_conversation_failed", logError);
+      }
+    }
+
     return { ok: true };
   } catch (error) {
     console.error("notifyMeeting.sms_failed", error);
@@ -245,7 +288,7 @@ export async function notifyMeetingScheduled(
   const { data: event } = await supabase
     .from("calendar_events")
     .select(
-      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, organization_member_id, completed_at, host_confirmation_sent_at, meeting_client_invite_sent_at",
+      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, deal_id, organization_member_id, completed_at, host_confirmation_sent_at, meeting_client_invite_sent_at",
     )
     .eq("id", params.calendarEventId)
     .eq("org_id", params.orgId)
@@ -473,7 +516,13 @@ export async function notifyMeetingScheduled(
         orgName,
         notes: row.description,
       });
-      const sms = await sendOrgSms(params.orgId, phone, body);
+      const sms = await sendOrgSms(params.orgId, phone, body, {
+        logToConversation: true,
+        contactId: contact?.id ?? row.contact_id,
+        dealId: row.deal_id ?? null,
+        memberId: params.memberId,
+        contactTitle: contactName,
+      });
       result.client_sms = sms.ok
         ? { sent: true }
         : { sent: false, reason: sms.reason };
@@ -542,7 +591,7 @@ export async function processDueMeetingReminders(
   const { data: events, error } = await supabase
     .from("calendar_events")
     .select(
-      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, organization_member_id, completed_at, host_reminder_15_sent_at, host_reminder_5_sent_at, client_reminder_15_sent_at, client_reminder_5_sent_at",
+      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, deal_id, organization_member_id, completed_at, host_reminder_15_sent_at, host_reminder_5_sent_at, client_reminder_15_sent_at, client_reminder_5_sent_at",
     )
     .is("completed_at", null)
     .not("meeting_url", "is", null)
@@ -708,7 +757,20 @@ export async function processDueMeetingReminders(
           continue;
         }
 
-        const sms = await sendOrgSms(event.org_id, to, body);
+        const sms = await sendOrgSms(
+          event.org_id,
+          to,
+          body,
+          audience === "client"
+            ? {
+                logToConversation: true,
+                contactId: contact?.id ?? event.contact_id,
+                dealId: event.deal_id ?? null,
+                memberId: event.organization_member_id,
+                contactTitle: contactName,
+              }
+            : undefined,
+        );
         if (sms.ok) {
           await supabase
             .from("calendar_events")
