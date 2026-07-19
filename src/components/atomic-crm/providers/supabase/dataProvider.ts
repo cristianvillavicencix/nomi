@@ -22,6 +22,7 @@ import {
 } from "../../tasks/persistTaskAssignmentSideEffects";
 import { invalidateResourceQueries } from "../queryInvalidation";
 import { isValidRecordId } from "@/lib/isValidRecordId";
+import { resolveOrgTimezoneFromAddress } from "@/lib/timezone/usTimezone";
 import { prepareCalendarEventWriteData } from "@/modules/calendar/calendarEventWriteData";
 import { supabase } from "./supabase";
 import {
@@ -216,7 +217,28 @@ const dataProviderWithCustomMethods = {
         nested != null && typeof nested === "object"
           ? (nested as ConfigurationContextValue)
           : (params?.data as ConfigurationContextValue);
-      const data = await patchSingletonConfigurationRow(nextConfig);
+      const withTimezone: ConfigurationContextValue = {
+        ...nextConfig,
+        companyTimezone: resolveOrgTimezoneFromAddress({
+          timezone: nextConfig.companyTimezone,
+          stateAbbr: nextConfig.companyState,
+          zipcode: nextConfig.companyPostalCode,
+          country: nextConfig.companyCountry,
+        }),
+      };
+      const data = await patchSingletonConfigurationRow(withTimezone);
+      const tz = String(
+        (data.config as ConfigurationContextValue)?.companyTimezone ??
+          withTimezone.companyTimezone ??
+          "",
+      ).trim();
+      if (tz) {
+        try {
+          await orgProvider.syncOrganizationBookingTimezone(tz);
+        } catch (error) {
+          console.error("configuration.update.syncTimezone", error);
+        }
+      }
       return { data };
     }
 

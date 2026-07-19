@@ -77,8 +77,16 @@ export const leadEditTransform = (
     ...assigned,
     ...leadValues,
     interested_service:
-      leadValues.interested_services[0] ?? normalized.interested_service ?? null,
+      leadValues.interested_services.filter(Boolean).join(", ") ||
+      normalized.interested_service ||
+      null,
   } as Record<string, unknown>) as Partial<Contact>;
+
+  // Belt-and-suspenders: never send form-only array to PostgREST
+  delete (prepared as Record<string, unknown>).interested_services;
+  delete (prepared as Record<string, unknown>).person_kind;
+  delete (prepared as Record<string, unknown>).add_primary_contact;
+  delete (prepared as Record<string, unknown>).use_company_contact_info;
 
   return {
     ...prepared,

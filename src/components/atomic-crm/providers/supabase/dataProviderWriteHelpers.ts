@@ -3,6 +3,7 @@ import type { EmailAndType, PhoneNumberAndType } from "../../types";
 import type { ConfigurationContextValue } from "../../root/ConfigurationContext";
 import { isValidEmail } from "@/utils/email";
 import { normalizeUsPhoneToE164 } from "@/utils/phone";
+import { inferUsTimezoneFromAddress } from "@/lib/timezone/usTimezone";
 import { canMutateCrmResource } from "../commons/crmPermissions";
 import { supabase } from "./supabase";
 import { uploadToBucket } from "./modules/uploadToBucket";
@@ -251,6 +252,33 @@ export const prepareContactWriteData = <T extends Record<string, unknown>>(
     delete rest[field];
   }
 
+  // Form array → DB text column
+  if (Array.isArray(rest.interested_services)) {
+    const joined = (rest.interested_services as unknown[])
+      .map((entry) => String(entry ?? "").trim())
+      .filter(Boolean)
+      .join(", ");
+    if (joined) {
+      rest.interested_service = joined;
+    }
+    delete rest.interested_services;
+  }
+
+  // Infer timezone from US address when missing
+  const existingTz = String(rest.timezone ?? "").trim();
+  if (!existingTz) {
+    const inferred = inferUsTimezoneFromAddress({
+      stateAbbr: rest.state_abbr as string | null | undefined,
+      zipcode: rest.zipcode as string | null | undefined,
+      country: rest.country as string | null | undefined,
+    });
+    if (inferred) {
+      rest.timezone = inferred;
+    }
+  }
+
+  stripContactFormMetaFields(rest);
+
   return normalizeContactData(
     rest as T & {
       email_jsonb?: EmailAndType[];
@@ -269,6 +297,11 @@ const CONTACT_FORM_META_FIELDS = [
   "company_draft_sector",
   "_company_draft_name",
   "_company_draft_sector",
+  // UI-only person / lead form fields (DB uses interested_service text)
+  "interested_services",
+  "person_kind",
+  "add_primary_contact",
+  "use_company_contact_info",
 ] as const;
 
 export const stripContactFormMetaFields = (

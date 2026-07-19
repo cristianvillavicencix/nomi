@@ -1,6 +1,7 @@
 import { PersonalDesktopNotificationsPanel } from "@/modules/notifications/settings/PersonalDesktopNotificationsPanel";
 import { PersonalSmsPhonePanel } from "@/modules/notifications/settings/PersonalSmsPhonePanel";
 import { WorkspaceFormNotificationsPanel } from "@/modules/notifications/settings/WorkspaceFormNotificationsPanel";
+import { WorkspaceMeetingNotificationsPanel } from "@/modules/notifications/settings/WorkspaceMeetingNotificationsPanel";
 import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
 import type { NotificationsSectionId } from "@/modules/settings/settingsNavigation";
 
@@ -27,7 +28,10 @@ export const NotificationsSettingsSection = ({
           <PersonalDesktopNotificationsPanel />
         </div>
       ) : (
-        <WorkspaceFormNotificationsPanel />
+        <div className="space-y-10">
+          <WorkspaceFormNotificationsPanel />
+          <WorkspaceMeetingNotificationsPanel />
+        </div>
       )
     }
   />

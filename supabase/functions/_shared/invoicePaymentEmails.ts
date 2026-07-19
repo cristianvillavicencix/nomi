@@ -24,8 +24,11 @@ import {
   buildPaymentReceiptFilename,
   generatePaymentReceiptPdfBase64,
 } from "./invoicePaymentReceiptPdf.ts";
+import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
+import { normalizeUsPhoneToE164 } from "./phone.ts";
 import { getStripeForOrg } from "./stripeClient.ts";
 import { resolvePublicAppBaseUrl } from "./publicAppUrl.ts";
+import { sendTwilioSms } from "./twilio.ts";
 
 const formatMoney = (amount: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", {
@@ -157,12 +160,44 @@ async function hasEmailBeenSent(
   return data?.delivery_status === "sent";
 }
 
+type InvoiceNotificationLogType =
+  | "payment_receipt"
+  | "payment_reminder"
+  | "payment_receipt_sms";
+
+const extractPrimaryPhoneE164 = (phoneJsonb: unknown): string | null => {
+  if (!Array.isArray(phoneJsonb)) return null;
+  for (const entry of phoneJsonb) {
+    if (!entry || typeof entry !== "object") continue;
+    const number = (entry as { number?: string }).number;
+    if (typeof number === "string" && number.trim()) {
+      const normalized = normalizeUsPhoneToE164(number);
+      if (normalized) return normalized;
+    }
+  }
+  return null;
+};
+
+async function resolveInvoiceRecipientPhone(
+  supabase: SupabaseClient,
+  invoice: InvoiceEmailRow,
+): Promise<string | null> {
+  if (!invoice.contact_id) return null;
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("phone_jsonb")
+    .eq("id", invoice.contact_id)
+    .eq("org_id", invoice.org_id)
+    .maybeSingle();
+  return extractPrimaryPhoneE164(contact?.phone_jsonb);
+}
+
 async function logEmailAttempt(
   supabase: SupabaseClient,
   params: {
     orgId: number;
     invoiceId: number;
-    emailType: "payment_receipt" | "payment_reminder";
+    emailType: InvoiceNotificationLogType;
     referenceKey: string;
     recipientEmail: string;
     deliveryStatus: "sent" | "failed" | "skipped";
@@ -234,7 +269,7 @@ export async function notifyInvoicePaymentReceipt(
   const paid = Number(invoice.amount_paid) || 0;
   const balanceDue = Math.max(Math.round((total - paid) * 100) / 100, 0);
 
-  return sendClientInvoicePaymentReceipt(supabase, {
+  const emailResult = await sendClientInvoicePaymentReceipt(supabase, {
     invoice,
     chargedAmount: params.chargedAmount,
     stripePaymentIntentId: params.stripePaymentIntentId,
@@ -242,6 +277,132 @@ export async function notifyInvoicePaymentReceipt(
     balanceDue,
     forceResend: params.forceResend,
   });
+
+  // SMS only when a receipt email was sent (now or earlier for this payment).
+  const shouldNotifySms =
+    emailResult.sent === true || emailResult.reason === "duplicate";
+
+  let sms: Awaited<ReturnType<typeof notifyInvoicePaymentReceiptSms>> | undefined;
+  if (shouldNotifySms) {
+    sms = await notifyInvoicePaymentReceiptSms(supabase, {
+      invoice,
+      stripePaymentIntentId: params.stripePaymentIntentId,
+      forceResend: params.forceResend,
+    });
+  }
+
+  return { ...emailResult, sms };
+}
+
+/**
+ * Post-payment SMS: points the client at the receipt email (inbox/spam).
+ * Failures are logged and never block payment.
+ */
+export async function notifyInvoicePaymentReceiptSms(
+  supabase: SupabaseClient,
+  params: {
+    invoice: InvoiceEmailRow;
+    stripePaymentIntentId: string;
+    forceResend?: boolean;
+  },
+) {
+  const referenceKey = `receipt_sms:${params.stripePaymentIntentId}`;
+  try {
+    if (
+      !params.forceResend &&
+      (await hasEmailBeenSent(supabase, params.invoice.id, referenceKey))
+    ) {
+      return { sent: false, skipped: true, reason: "duplicate" as const };
+    }
+
+    const toPhone = await resolveInvoiceRecipientPhone(supabase, params.invoice);
+    if (!toPhone) {
+      await logEmailAttempt(supabase, {
+        orgId: params.invoice.org_id,
+        invoiceId: params.invoice.id,
+        emailType: "payment_receipt_sms",
+        referenceKey,
+        recipientEmail: "unknown",
+        deliveryStatus: "skipped",
+        errorMessage: "no_phone",
+      });
+      return { sent: false, skipped: true, reason: "no_phone" as const };
+    }
+
+    const settings = await getMessagingSettingsSecrets(params.invoice.org_id);
+    if (!settings?.sms_enabled) {
+      await logEmailAttempt(supabase, {
+        orgId: params.invoice.org_id,
+        invoiceId: params.invoice.id,
+        emailType: "payment_receipt_sms",
+        referenceKey,
+        recipientEmail: toPhone,
+        deliveryStatus: "skipped",
+        errorMessage: "sms_disabled",
+      });
+      return { sent: false, skipped: true, reason: "sms_disabled" as const };
+    }
+
+    const accountSid = settings.twilio_account_sid?.trim();
+    const authToken = settings.twilio_auth_token?.trim();
+    const fromNumber = settings.twilio_phone_number?.trim();
+    if (!accountSid || !authToken || !fromNumber) {
+      await logEmailAttempt(supabase, {
+        orgId: params.invoice.org_id,
+        invoiceId: params.invoice.id,
+        emailType: "payment_receipt_sms",
+        referenceKey,
+        recipientEmail: toPhone,
+        deliveryStatus: "skipped",
+        errorMessage: "sms_not_configured",
+      });
+      return {
+        sent: false,
+        skipped: true,
+        reason: "sms_not_configured" as const,
+      };
+    }
+
+    const body =
+      `Thanks for your payment on ${params.invoice.invoice_number}. ` +
+      "We emailed your receipt and PDF attachments — please check your inbox/spam.";
+
+    await sendTwilioSms({
+      accountSid,
+      authToken,
+      from: fromNumber,
+      to: toPhone,
+      body,
+    });
+
+    await logEmailAttempt(supabase, {
+      orgId: params.invoice.org_id,
+      invoiceId: params.invoice.id,
+      emailType: "payment_receipt_sms",
+      referenceKey,
+      recipientEmail: toPhone,
+      deliveryStatus: "sent",
+    });
+    return { sent: true, skipped: false, to: toPhone };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "sms_send_failed";
+    console.error("invoicePaymentEmails.receipt_sms_failed", error);
+    await logEmailAttempt(supabase, {
+      orgId: params.invoice.org_id,
+      invoiceId: params.invoice.id,
+      emailType: "payment_receipt_sms",
+      referenceKey,
+      recipientEmail: "unknown",
+      deliveryStatus: "failed",
+      errorMessage: message,
+    });
+    return {
+      sent: false,
+      skipped: true,
+      reason: "send_failed" as const,
+      error: message,
+    };
+  }
 }
 
 export async function sendClientInvoicePaymentReceipt(

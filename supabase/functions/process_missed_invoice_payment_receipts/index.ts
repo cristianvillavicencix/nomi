@@ -129,6 +129,7 @@ Deno.serve(
         if (!piId) continue;
 
         const referenceKey = `receipt:${piId}`;
+        const smsReferenceKey = `receipt_sms:${piId}`;
         const { data: existing } = await supabaseAdmin
           .from("client_invoice_email_logs")
           .select("id, delivery_status")
@@ -136,7 +137,16 @@ Deno.serve(
           .eq("reference_key", referenceKey)
           .maybeSingle();
 
-        if (existing?.delivery_status === "sent") {
+        const { data: existingSms } = await supabaseAdmin
+          .from("client_invoice_email_logs")
+          .select("id, delivery_status")
+          .eq("invoice_id", invoice.id)
+          .eq("reference_key", smsReferenceKey)
+          .maybeSingle();
+
+        const emailAlreadySent = existing?.delivery_status === "sent";
+        const smsAlreadySent = existingSms?.delivery_status === "sent";
+        if (emailAlreadySent && smsAlreadySent) {
           results.push({
             invoice_id: invoice.id,
             payment_intent_id: piId,
@@ -168,15 +178,17 @@ Deno.serve(
           invoiceId: invoice.id,
           stripePaymentIntentId: piId,
           chargedAmount,
-          forceResend: existing?.delivery_status !== "sent",
+          forceResend: !emailAlreadySent,
         });
 
         results.push({
           invoice_id: invoice.id,
           payment_intent_id: piId,
-          sent: receipt.sent,
-          reason: receipt.reason,
-          error: receipt.error,
+          sent: receipt.sent || Boolean(receipt.sms?.sent),
+          reason: receipt.sms?.sent
+            ? "sms_sent"
+            : receipt.reason ?? receipt.sms?.reason,
+          error: receipt.error ?? receipt.sms?.error,
         });
       }
 

@@ -22,6 +22,7 @@ import { LbsContactShowPage } from "@/modules/contacts/ContactShowPage";
 import { TicketCreate } from "@/modules/tickets/TicketCreate";
 import { PublicBookingPage } from "@/modules/booking/public/PublicBookingPage";
 import { BookingShortUrlRedirect } from "@/modules/booking/public/BookingShortUrlRedirect";
+import { PublicCalendarEventPage } from "@/modules/meetings/public/PublicCalendarEventPage";
 import { FormPublicEntry } from "@/modules/forms/public/FormPublicEntry";
 import { ShortUrlRedirect } from "@/modules/forms/public/ShortUrlRedirect";
 import { PublicProposalPage } from "@/modules/proposals/public/PublicProposalPage";
@@ -108,6 +109,8 @@ export const renderLbsPublicFormRoute = () => (
   <Route element={<PublicShareLayout />}>
     <Route path="/b/:shortCode" element={<BookingShortUrlRedirect />} />
     <Route path="/book/:token" element={<PublicBookingPage />} />
+    <Route path="/c/:shortCode" element={<PublicCalendarEventPage />} />
+    <Route path="/cal/:token" element={<PublicCalendarEventPage />} />
     <Route path="/f/:shortCode" element={<ShortUrlRedirect />} />
     <Route path="/pr/:shortCode" element={<ProposalShortUrlRedirect />} />
     <Route path="/iv/:shortCode" element={<InvoiceShortUrlRedirect />} />

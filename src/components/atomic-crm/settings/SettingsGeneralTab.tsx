@@ -1,11 +1,20 @@
+import { useEffect } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
+import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
+import { isGooglePlacesEnabled } from "@/lib/googlePlaces";
+import {
+  inferUsTimezoneFromAddress,
+  US_TIMEZONE_CHOICES,
+} from "@/lib/timezone/usTimezone";
 import {
   defaultCompanySectors,
   primaryBusinessSectorUnsetToken,
 } from "../root/defaultConfiguration";
 import ImageEditorField from "../misc/ImageEditorField";
 import { isTenantBrandingEditorVisible } from "./tenantBrandingFlags";
+import { applyGoogleAddressToOrgProfileForm } from "./applyGooglePlaceToOrgProfileForm";
 import { SettingsSubNav } from "@/modules/settings/SettingsSubNav";
 import { SettingsTabPanel } from "@/modules/settings/SettingsTabPanel";
 import type { CompanySectionId } from "@/modules/settings/settingsNavigation";
@@ -64,36 +73,99 @@ export const SettingsGeneralTab = ({
   );
 };
 
-const CompanyProfileFields = () => (
-  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <TextInput source="companyLegalName" label="Business name" />
-    <TextInput source="companyPhone" label="Phone" />
-    <TextInput source="companyEmail" label="Email" type="email" />
-    <TextInput
-      source="companyWebsite"
-      label="Website"
-      type="url"
-      placeholder="https://example.com"
-      validate={optionalWebsite}
-    />
-    <div className="sm:col-span-2 lg:col-span-3">
+/** Fill timezone from address only when the field is still empty. */
+const CompanyTimezoneAutoFill = () => {
+  const { setValue, getValues } = useFormContext();
+  const state = useWatch({ name: "companyState" });
+  const postal = useWatch({ name: "companyPostalCode" });
+  const country = useWatch({ name: "companyCountry" });
+
+  useEffect(() => {
+    const current = String(getValues("companyTimezone") ?? "").trim();
+    if (current) return;
+    const inferred = inferUsTimezoneFromAddress({
+      stateAbbr: typeof state === "string" ? state : null,
+      zipcode: typeof postal === "string" ? postal : null,
+      country: typeof country === "string" ? country : null,
+    });
+    if (inferred) {
+      setValue("companyTimezone", inferred, { shouldDirty: false });
+    }
+  }, [state, postal, country, getValues, setValue]);
+
+  return null;
+};
+
+const CompanyProfileFields = () => {
+  const { setValue } = useFormContext();
+  const placesEnabled = isGooglePlacesEnabled();
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <CompanyTimezoneAutoFill />
+      <TextInput source="companyLegalName" label="Business name" />
+      <TextInput source="companyPhone" label="Phone" />
+      <TextInput source="companyEmail" label="Email" type="email" />
       <TextInput
-        source="companyAddressLine1"
-        label="Address"
-        className="w-full"
-        multiline
-        rows={2}
+        source="companyWebsite"
+        label="Website"
+        type="url"
+        placeholder="https://example.com"
+        validate={optionalWebsite}
       />
-    </div>
-    <div className="sm:col-span-2 lg:col-span-1">
+      <div className="sm:col-span-2 lg:col-span-3">
+        {placesEnabled ? (
+          <GooglePlacesAutocompleteInput
+            source="companyAddressLine1"
+            label="Address"
+            mode="address"
+            multiline
+            className="w-full"
+            helperText="Used for invoices and to set your workspace timezone"
+            onPlaceDetails={(details) =>
+              applyGoogleAddressToOrgProfileForm(setValue, details)
+            }
+          />
+        ) : (
+          <TextInput
+            source="companyAddressLine1"
+            label="Address"
+            className="w-full"
+            multiline
+            rows={2}
+            helperText="Used for invoices and to set your workspace timezone"
+          />
+        )}
+      </div>
+      <TextInput source="companyCity" label="City" />
+      <TextInput
+        source="companyState"
+        label="State"
+        placeholder="TX"
+        helperText="Two-letter US state (e.g. TX)"
+      />
+      <TextInput
+        source="companyPostalCode"
+        label="ZIP / Postal code"
+        placeholder="78640"
+      />
+      <TextInput source="companyCountry" label="Country" />
       <SelectInput
-        source="primaryBusinessSector"
-        label="Your sector (industry)"
-        choices={SECTOR_CHOICES}
+        source="companyTimezone"
+        label="Workspace timezone"
+        choices={US_TIMEZONE_CHOICES}
+        helperText="Host timezone for meetings, booking links, and calendar invites. Auto-filled from your address; you can override."
       />
+      <div className="sm:col-span-2 lg:col-span-1">
+        <SelectInput
+          source="primaryBusinessSector"
+          label="Your sector (industry)"
+          choices={SECTOR_CHOICES}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const BrandingFields = () => (
   <div className="space-y-4">

@@ -406,13 +406,15 @@ export async function processDueCalendarFollowUpReminders(
 ) {
   const now = Date.now();
 
+  // Exclude video meetings (meeting_url set) — those use processDueMeetingReminders.
   const { data: events, error } = await supabase
     .from("calendar_events")
     .select(
-      "id, event_date, event_time, remind_before_minutes, completed_at, follow_up_reminder_sent_at, contact_id, organization_member_id",
+      "id, event_date, event_time, remind_before_minutes, completed_at, follow_up_reminder_sent_at, contact_id, organization_member_id, meeting_url",
     )
     .is("completed_at", null)
     .is("follow_up_reminder_sent_at", null)
+    .is("meeting_url", null)
     .not("contact_id", "is", null)
     .not("organization_member_id", "is", null);
 

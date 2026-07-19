@@ -28,6 +28,8 @@ export interface ConfigurationContextValue {
   companyState?: string;
   companyPostalCode?: string;
   companyCountry?: string;
+  /** IANA workspace timezone (meetings, booking, calendar). Synced to booking_settings.timezone_label. */
+  companyTimezone?: string;
   companyPhone?: string;
   companyEmail?: string;
   /** Public website URL for the tenant (optional). */

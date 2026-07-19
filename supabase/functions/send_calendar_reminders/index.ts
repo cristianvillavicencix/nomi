@@ -6,6 +6,7 @@ import {
   processDueCalendarFollowUpReminders,
 } from "../_shared/notifyFollowUp.ts";
 import { processDueBookingGuestReminders } from "../_shared/notifyBooking.ts";
+import { processDueMeetingReminders } from "../_shared/notifyMeeting.ts";
 
 type CronBody = {
   app_base_url?: string | null;
@@ -46,24 +47,31 @@ Deno.serve((req: Request) =>
         { appBaseUrl: payload.app_base_url },
       );
       const guestResults = await processDueBookingGuestReminders(supabaseAdmin);
+      const meetingResults = await processDueMeetingReminders(supabaseAdmin, {
+        appBaseUrl: payload.app_base_url,
+      });
 
       const sent =
         hostResults.filter((entry) => entry.ok && entry.sent).length +
-        guestResults.filter((entry) => entry.sent).length;
+        guestResults.filter((entry) => entry.sent).length +
+        meetingResults.filter((entry) => entry.sent).length;
       const skipped =
         hostResults.filter((entry) => entry.ok && !entry.sent).length +
-        guestResults.filter((entry) => !entry.sent).length;
+        guestResults.filter((entry) => !entry.sent).length +
+        meetingResults.filter((entry) => !entry.sent).length;
       const failed = hostResults.filter((entry) => !entry.ok).length;
 
       return new Response(
         JSON.stringify({
           ok: true,
-          processed: hostResults.length + guestResults.length,
+          processed:
+            hostResults.length + guestResults.length + meetingResults.length,
           sent,
           skipped,
           failed,
           host_results: hostResults,
           guest_results: guestResults,
+          meeting_results: meetingResults,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

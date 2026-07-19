@@ -166,6 +166,7 @@ export const defaultConfiguration: ConfigurationContextValue = {
   companyState: "",
   companyPostalCode: "",
   companyCountry: "United States",
+  companyTimezone: "",
   companyPhone: "",
   companyEmail: "",
   companyWebsite: "",

@@ -159,6 +159,7 @@ export type Contact = {
   state_abbr?: string | null;
   zipcode?: string | null;
   country?: string | null;
+  timezone?: string | null;
   company_id?: Identifier | null;
   email_jsonb: EmailAndType[];
   avatar?: Partial<RAFile>;
@@ -305,6 +306,7 @@ export type CalendarEventRecord = {
   remind_before_minutes?: number | null;
   description?: string | null;
   meeting_url?: string | null;
+  timezone?: string | null;
   deal_id?: Identifier | null;
   contact_id?: Identifier | null;
   company_id?: Identifier | null;

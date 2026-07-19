@@ -1,3 +1,8 @@
+import {
+  DEFAULT_ORG_TIMEZONE,
+  zonedWallTimeToUtcMs,
+} from "@/lib/timezone/usTimezone";
+
 export type BookingCalendarEventInput = {
   title: string;
   date: string;
@@ -5,13 +10,17 @@ export type BookingCalendarEventInput = {
   durationMinutes: number;
   description?: string;
   location?: string;
+  /** IANA timezone for wall-clock date/time (e.g. America/New_York). */
+  timezone?: string | null;
 };
 
-const pad2 = (value: number) => String(value).padStart(2, "0");
-
-const toLocalDate = (date: string, time: string) => {
-  const normalized = time.trim().slice(0, 5);
-  return new Date(`${date}T${normalized}:00`);
+const toUtcDate = (input: BookingCalendarEventInput) => {
+  const tz = input.timezone?.trim() || DEFAULT_ORG_TIMEZONE;
+  const ms = zonedWallTimeToUtcMs(input.date, input.time, tz);
+  if (ms == null) {
+    return new Date(`${input.date}T${input.time.trim().slice(0, 5)}:00`);
+  }
+  return new Date(ms);
 };
 
 const formatGoogleCalendarStamp = (date: Date) =>
@@ -21,7 +30,7 @@ const formatGoogleCalendarStamp = (date: Date) =>
     .replace(/\.\d{3}/, "");
 
 export const buildGoogleCalendarUrl = (input: BookingCalendarEventInput) => {
-  const start = toLocalDate(input.date, input.time);
+  const start = toUtcDate(input);
   const end = new Date(start.getTime() + input.durationMinutes * 60_000);
   const params = new URLSearchParams({
     action: "TEMPLATE",
@@ -42,18 +51,13 @@ const escapeIcs = (value: string) =>
     .replace(/,/g, "\\,")
     .replace(/;/g, "\\;");
 
-const formatIcsStamp = (date: Date) => {
-  const year = date.getFullYear();
-  const month = pad2(date.getMonth() + 1);
-  const day = pad2(date.getDate());
-  const hours = pad2(date.getHours());
-  const minutes = pad2(date.getMinutes());
-  const seconds = pad2(date.getSeconds());
-  return `${year}${month}${day}T${hours}${minutes}${seconds}`;
+const formatIcsUtcStamp = (date: Date) => {
+  const iso = date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return iso.endsWith("Z") ? iso : `${iso}Z`;
 };
 
 export const buildBookingIcs = (input: BookingCalendarEventInput) => {
-  const start = toLocalDate(input.date, input.time);
+  const start = toUtcDate(input);
   const end = new Date(start.getTime() + input.durationMinutes * 60_000);
   const uid = `booking-${input.date}-${input.time.replace(":", "")}@nomicrm.com`;
 
@@ -65,9 +69,9 @@ export const buildBookingIcs = (input: BookingCalendarEventInput) => {
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
     `UID:${uid}`,
-    `DTSTAMP:${formatIcsStamp(new Date())}`,
-    `DTSTART:${formatIcsStamp(start)}`,
-    `DTEND:${formatIcsStamp(end)}`,
+    `DTSTAMP:${formatIcsUtcStamp(new Date())}`,
+    `DTSTART:${formatIcsUtcStamp(start)}`,
+    `DTEND:${formatIcsUtcStamp(end)}`,
     `SUMMARY:${escapeIcs(input.title)}`,
     input.description ? `DESCRIPTION:${escapeIcs(input.description)}` : null,
     input.location ? `LOCATION:${escapeIcs(input.location)}` : null,
@@ -99,5 +103,5 @@ export const openAndroidCalendar = (input: BookingCalendarEventInput) => {
 };
 
 export const openAppleCalendar = (input: BookingCalendarEventInput) => {
-  downloadBookingIcs(input);
+  downloadBookingIcs(input, "meeting.ics");
 };

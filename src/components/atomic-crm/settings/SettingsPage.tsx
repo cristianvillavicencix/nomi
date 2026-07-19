@@ -13,6 +13,7 @@ import { useSearchParams } from "react-router";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { toSlug } from "@/lib/toSlug";
+import { resolveOrgTimezoneFromAddress } from "@/lib/timezone/usTimezone";
 
 import {
   useConfigurationContext,
@@ -125,6 +126,12 @@ const transformFormValues = (
       companyState: data.companyState,
       companyPostalCode: data.companyPostalCode,
       companyCountry: data.companyCountry,
+      companyTimezone: resolveOrgTimezoneFromAddress({
+        timezone: data.companyTimezone,
+        stateAbbr: data.companyState,
+        zipcode: data.companyPostalCode,
+        country: data.companyCountry,
+      }),
       companyPhone: data.companyPhone,
       companyEmail: data.companyEmail,
       companyWebsite:
@@ -232,6 +239,12 @@ const SettingsForm = ({ config }: { config: ConfigurationContextValue }) => {
       companyState: config.companyState,
       companyPostalCode: config.companyPostalCode,
       companyCountry: config.companyCountry,
+      companyTimezone: resolveOrgTimezoneFromAddress({
+        timezone: config.companyTimezone,
+        stateAbbr: config.companyState,
+        zipcode: config.companyPostalCode,
+        country: config.companyCountry,
+      }),
       companyPhone: config.companyPhone,
       companyEmail: config.companyEmail,
       companyWebsite: config.companyWebsite,

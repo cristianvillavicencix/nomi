@@ -1351,6 +1351,7 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     return config;
   },
   syncOrganizationPipelineStages: async () => undefined,
+  syncOrganizationBookingTimezone: async () => undefined,
   stripeCreateCheckoutSession: async () => {
     throw new Error("Stripe billing is not available in demo mode");
   },
@@ -1628,6 +1629,13 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     sent: true,
     to: to ?? "client@example.com",
     meeting_url: meetingUrl,
+  }),
+  notifyMeetingScheduled: async () => ({
+    ok: true,
+    calendar_url: "https://example.com/c/demo",
+    host_sms: { sent: true },
+    client_email: { sent: true },
+    client_sms: { sent: true },
   }),
   sendClientSms: async ({
     conversationId,

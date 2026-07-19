@@ -818,6 +818,45 @@ export const messagingProvider = {
     }
     return data ?? { ok: true, sent: false };
   },
+  async notifyMeetingScheduled(params: {
+    calendarEventId: Identifier;
+    shareEmail?: boolean;
+    shareSms?: boolean;
+    appBaseUrl?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      calendar_url?: string | null;
+      host_sms?: { sent: boolean; reason?: string };
+      client_email?: { sent: boolean; reason?: string };
+      client_sms?: { sent: boolean; reason?: string };
+    }>("notify_meeting_scheduled", {
+      method: "POST",
+      body: {
+        calendar_event_id: Number(params.calendarEventId),
+        share_email: params.shareEmail === true,
+        share_sms: params.shareSms === true,
+        app_base_url: params.appBaseUrl ?? undefined,
+      },
+    });
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to send meeting notifications",
+        ),
+      );
+    }
+    return (
+      data ?? {
+        ok: true,
+        calendar_url: null,
+        host_sms: { sent: false },
+        client_email: { sent: false },
+        client_sms: { sent: false },
+      }
+    );
+  },
   async ensureTeamDmConversation(params: { otherMemberId: Identifier }) {
     const { data, error } = await supabase.rpc("ensure_team_dm_conversation", {
       p_other_member_id: Number(params.otherMemberId),

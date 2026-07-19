@@ -22,7 +22,6 @@ import {
 import { InvoiceSendDeliveryPreview } from "@/modules/billing/InvoiceSendDeliveryPreview";
 import { getContactEmail } from "@/modules/billing/billingUtils";
 import { getContactPhone } from "@/modules/clients/clientShowUtils";
-import { useSendClientSms } from "@/modules/messages/useClientSms";
 import {
   buildMeetingInviteEmailHtml,
   buildMeetingInviteSubject,
@@ -47,7 +46,6 @@ export const MeetingResendInviteDialog = ({
   const notify = useNotify();
   const { identity } = useGetIdentity();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const sendClientSms = useSendClientSms();
   const [sending, setSending] = useState(false);
 
   const contactId = meeting.contact_id as Identifier | null | undefined;
@@ -100,9 +98,6 @@ export const MeetingResendInviteDialog = ({
         shareEmail: channel === "email",
         shareSms: channel === "sms",
         dataProvider,
-        sendClientSms,
-        identity,
-        orgName,
       });
       if (errors.length > 0) {
         notify(errors.join(". "), { type: "warning" });

@@ -55,13 +55,14 @@ import {
   contactHasSmsPhone,
   getContactPhoneLabel,
 } from "@/modules/messages/messageContactUtils";
-import { useSendClientSms } from "@/modules/messages/useClientSms";
 import { useMessagingEnabled } from "@/modules/messages/useMessagingEnabled";
 import { MeetingContactTitleSync } from "@/modules/meetings/meetingFormUtils";
 import { MeetingVideoCallSection } from "@/modules/meetings/MeetingVideoCallSection";
 import { QuickMeetingContactCreateDialog } from "@/modules/meetings/QuickMeetingContactCreateDialog";
 import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingShareNotifications";
 import { cn } from "@/lib/utils";
+import { useOrganizationMeetingNotificationSettings } from "@/modules/settings/useOrganizationMeetingNotificationSettings";
+import { DEFAULT_MEETING_NOTIFICATION_SETTINGS } from "@/modules/meetings/meetingNotificationSettings";
 
 const dealOptionText = (choice: {
   name?: string | null;
@@ -174,11 +175,16 @@ export const QuickMeetingDialog = ({
   const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
   const refresh = useRefresh();
-  const sendClientSms = useSendClientSms();
   const { smsEnabled } = useMessagingEnabled();
+  const { data: meetingNotifySettings } =
+    useOrganizationMeetingNotificationSettings(open);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [shareEmail, setShareEmail] = useState(true);
-  const [shareSms, setShareSms] = useState(true);
+  const [shareEmail, setShareEmail] = useState(
+    DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_email_default,
+  );
+  const [shareSms, setShareSms] = useState(
+    DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_sms_default,
+  );
   const [formKey, setFormKey] = useState(0);
 
   const { data: emailSettings } = useQuery({
@@ -212,10 +218,13 @@ export const QuickMeetingDialog = ({
   useEffect(() => {
     if (!open) {
       setFormKey((value) => value + 1);
-      setShareEmail(true);
-      setShareSms(true);
+      return;
     }
-  }, [open]);
+    const defaults =
+      meetingNotifySettings ?? DEFAULT_MEETING_NOTIFICATION_SETTINGS;
+    setShareEmail(defaults.client_invite_email_default);
+    setShareSms(defaults.client_invite_sms_default);
+  }, [open, meetingNotifySettings]);
 
   if (!identity || !open) return null;
 
@@ -253,9 +262,6 @@ export const QuickMeetingDialog = ({
         shareEmail,
         shareSms,
         dataProvider,
-        sendClientSms,
-        identity,
-        orgName: emailSettings?.org_name,
         notify,
       });
 

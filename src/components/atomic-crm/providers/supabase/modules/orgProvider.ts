@@ -9,6 +9,7 @@ import type { ConfigurationContextValue } from "../../../root/ConfigurationConte
 import { withCurrentProductName } from "../../../root/defaultConfiguration";
 import { invalidateResourceQueries } from "../../queryInvalidation";
 import { isValidEmail } from "@/utils/email";
+import { resolveOrgTimezoneFromAddress } from "@/lib/timezone/usTimezone";
 import { supabase } from "../supabase";
 import { invokeEdgeFunction } from "../invokeEdgeFunction";
 import { uploadToBucket } from "./uploadToBucket";
@@ -72,6 +73,60 @@ const patchSingletonConfigurationRow = async (
   }
 
   return data;
+};
+
+const syncOrgBookingTimezone = async (timezone: string): Promise<void> => {
+  const tz = timezone.trim();
+  if (!tz) {
+    throw new Error("Timezone is required");
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const authUserId = sessionData.session?.user?.id;
+  if (!authUserId) {
+    throw new Error("Not authenticated");
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from("organization_members")
+    .select("org_id")
+    .eq("user_id", authUserId)
+    .single();
+
+  if (memberError || !member?.org_id) {
+    throw new Error("Organization member not found");
+  }
+
+  const { data: org, error: orgError } = await supabase
+    .from("organizations")
+    .select("booking_settings")
+    .eq("id", member.org_id)
+    .single();
+
+  if (orgError) {
+    console.error("syncOrganizationBookingTimezone.read", orgError);
+    throw new Error("Failed to load booking settings");
+  }
+
+  const prev =
+    org?.booking_settings != null && typeof org.booking_settings === "object"
+      ? (org.booking_settings as Record<string, unknown>)
+      : {};
+
+  const { error: updateError } = await supabase
+    .from("organizations")
+    .update({
+      booking_settings: {
+        ...prev,
+        timezone_label: tz,
+      },
+    })
+    .eq("id", member.org_id);
+
+  if (updateError) {
+    console.error("syncOrganizationBookingTimezone.update", updateError);
+    throw new Error("Failed to save workspace timezone");
+  }
 };
 
 export const orgProvider = {
@@ -240,13 +295,65 @@ export const orgProvider = {
       return withCurrentProductName({}) as ConfigurationContextValue;
     }
     const raw = (data.config as ConfigurationContextValue) ?? {};
-    return withCurrentProductName(raw) as ConfigurationContextValue;
+    const config = withCurrentProductName(raw) as ConfigurationContextValue;
+
+    if (!String(config.companyTimezone ?? "").trim()) {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const authUserId = sessionData.session?.user?.id;
+        if (authUserId) {
+          const { data: member } = await supabase
+            .from("organization_members")
+            .select("org_id")
+            .eq("user_id", authUserId)
+            .maybeSingle();
+          if (member?.org_id) {
+            const { data: org } = await supabase
+              .from("organizations")
+              .select("booking_settings")
+              .eq("id", member.org_id)
+              .maybeSingle();
+            const booking =
+              org?.booking_settings != null &&
+              typeof org.booking_settings === "object"
+                ? (org.booking_settings as { timezone_label?: string })
+                : null;
+            const fromBooking = String(booking?.timezone_label ?? "").trim();
+            if (fromBooking) {
+              config.companyTimezone = fromBooking;
+            }
+          }
+        }
+      } catch {
+        // Keep config as-is if booking settings are unavailable.
+      }
+    }
+
+    return config;
   },
   async updateConfiguration(
     config: ConfigurationContextValue,
   ): Promise<ConfigurationContextValue> {
-    const row = await patchSingletonConfigurationRow(config);
-    return row.config as ConfigurationContextValue;
+    const withTimezone: ConfigurationContextValue = {
+      ...config,
+      companyTimezone: resolveOrgTimezoneFromAddress({
+        timezone: config.companyTimezone,
+        stateAbbr: config.companyState,
+        zipcode: config.companyPostalCode,
+        country: config.companyCountry,
+      }),
+    };
+    const row = await patchSingletonConfigurationRow(withTimezone);
+    const saved = row.config as ConfigurationContextValue;
+    const tz = String(saved.companyTimezone ?? withTimezone.companyTimezone ?? "").trim();
+    if (tz) {
+      try {
+        await syncOrgBookingTimezone(tz);
+      } catch (error) {
+        console.error("updateConfiguration.syncTimezone", error);
+      }
+    }
+    return saved;
   },
   async syncOrganizationPipelineStages(
     pipelines: DealPipeline[],
@@ -309,6 +416,9 @@ export const orgProvider = {
     }
 
     invalidateResourceQueries("organization_pipeline_stages");
+  },
+  async syncOrganizationBookingTimezone(timezone: string): Promise<void> {
+    await syncOrgBookingTimezone(timezone);
   },
   async ensureCalendarFeedToken(options?: { regenerate?: boolean }) {
     const { data, error } = await invokeEdgeFunction<{

@@ -43,7 +43,8 @@ import {
 } from "@/modules/calendar/calendarReminderOptions";
 import { MeetingScheduleForm } from "@/modules/meetings/MeetingScheduleForm";
 import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingShareNotifications";
-import { useSendClientSms } from "@/modules/messages/useClientSms";
+import { useOrganizationMeetingNotificationSettings } from "@/modules/settings/useOrganizationMeetingNotificationSettings";
+import { DEFAULT_MEETING_NOTIFICATION_SETTINGS } from "@/modules/meetings/meetingNotificationSettings";
 
 const dealOptionText = (choice: {
   name?: string | null;
@@ -200,10 +201,15 @@ export const CalendarReminderDialog = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
-  const sendClientSms = useSendClientSms();
   const isEdit = reminderId != null;
-  const [shareEmail, setShareEmail] = useState(true);
-  const [shareSms, setShareSms] = useState(true);
+  const { data: meetingNotifySettings } =
+    useOrganizationMeetingNotificationSettings(open && variant === "meeting");
+  const [shareEmail, setShareEmail] = useState(
+    DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_email_default,
+  );
+  const [shareSms, setShareSms] = useState(
+    DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_sms_default,
+  );
 
   const { data: emailSettings } = useQuery({
     queryKey: ["email-delivery-settings"],
@@ -213,11 +219,12 @@ export const CalendarReminderDialog = ({
   });
 
   useEffect(() => {
-    if (!open) {
-      setShareEmail(true);
-      setShareSms(true);
-    }
-  }, [open]);
+    if (!open) return;
+    const defaults =
+      meetingNotifySettings ?? DEFAULT_MEETING_NOTIFICATION_SETTINGS;
+    setShareEmail(defaults.client_invite_email_default);
+    setShareSms(defaults.client_invite_sms_default);
+  }, [open, meetingNotifySettings]);
 
   if (!identity) return null;
 
@@ -230,16 +237,13 @@ export const CalendarReminderDialog = ({
   };
 
   const notifyMeetingShare = async (record: Record<string, unknown>) => {
-    if (variant !== "meeting" || (!shareEmail && !shareSms)) return;
+    if (variant !== "meeting") return;
 
     const { errors } = await sendMeetingShareNotifications({
       record,
       shareEmail,
       shareSms,
       dataProvider,
-      sendClientSms,
-      identity,
-      orgName: emailSettings?.org_name,
       notify,
     });
 
