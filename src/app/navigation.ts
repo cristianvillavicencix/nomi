@@ -4,6 +4,7 @@ import {
   CalendarBlank,
   ChartBar,
   ChatCircle,
+  EnvelopeSimple,
   FileText,
   Globe,
   HardDrives,
@@ -25,6 +26,8 @@ export type LbsNavItem = {
   icon: Icon;
   activePattern: string;
   capability?: string;
+  /** If set, access if the member has any of these capabilities. */
+  anyOfCapabilities?: string[];
   resource?: string;
   action?: string;
 };
@@ -201,6 +204,15 @@ export const LBS_NAV_AFTER_CLIENTS: LbsNavItem[] = [
     activePattern: "/messages/*",
     capability: "messaging.conversations.view",
     resource: "conversations",
+    action: "list",
+  },
+  {
+    to: "/mail",
+    label: "Mail",
+    icon: EnvelopeSimple,
+    activePattern: "/mail/*",
+    anyOfCapabilities: ["mail.org.view", "mail.personal.view"],
+    resource: "mail_threads",
     action: "list",
   },
   {

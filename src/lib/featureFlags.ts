@@ -23,3 +23,10 @@ export const isAccountsHubEnabled = (): boolean =>
  */
 export const isCrmAssistantEnvEnabled = (): boolean =>
   isTruthyEnv(import.meta.env.VITE_CRM_ASSISTANT_ENABLED);
+
+/**
+ * Optional CRM bridge: show “Create ticket” from a mail thread.
+ * Off by default until the tickets bridge ships.
+ */
+export const isMailTicketBridgeEnabled = (): boolean =>
+  isTruthyEnv(import.meta.env.VITE_MAIL_TICKET_BRIDGE);

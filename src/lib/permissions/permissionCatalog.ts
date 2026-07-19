@@ -84,6 +84,13 @@ const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: 
   { id: "messaging.assign", area: "Messaging", label: "Assign conversations", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "messaging.status.change", area: "Messaging", label: "Change conversation status", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "messaging.settings.manage", area: "Messaging", label: "Configure communications (Twilio, WhatsApp, Voice)", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  // Area 3d — Mail (multi-account inbox; separate from ticket inbound)
+  { id: "mail.org.view", area: "Mail", label: "View organization mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
+  { id: "mail.org.send", area: "Mail", label: "Send from organization mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "mail.org.manage", area: "Mail", label: "Connect organization mailboxes", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
+  { id: "mail.personal.view", area: "Mail", label: "View personal mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
+  { id: "mail.personal.send", area: "Mail", label: "Send from personal mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "mail.personal.manage", area: "Mail", label: "Connect personal mailboxes", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   // Area 3c — Marketing (bulk SMS & email; separate from 1:1 Messages)
   { id: "marketing.view", area: "Marketing", label: "View marketing hub", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "marketing.campaigns.manage", area: "Marketing", label: "Create & edit campaigns", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
@@ -294,6 +301,27 @@ export const RESOURCE_ACTION_TO_CAPABILITY: Record<
     create: "messaging.send",
     edit: "messaging.send",
     delete: "messaging.send",
+  },
+  mail_accounts: {
+    list: "mail.org.view",
+    show: "mail.org.view",
+    create: "mail.org.manage",
+    edit: "mail.org.manage",
+    delete: "mail.org.manage",
+  },
+  mail_threads: {
+    list: "mail.org.view",
+    show: "mail.org.view",
+    create: "mail.org.send",
+    edit: "mail.org.send",
+    delete: "mail.org.send",
+  },
+  mail_messages: {
+    list: "mail.org.view",
+    show: "mail.org.view",
+    create: "mail.org.send",
+    edit: "mail.org.send",
+    delete: "mail.org.send",
   },
   conversation_participants: {
     list: "messaging.conversations.view",

@@ -34,10 +34,11 @@ export type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];
 export const WORKFLOWS_SECTION_IDS = ["pipelines", "leads", "tasks"] as const;
 export type WorkflowsSectionId = (typeof WORKFLOWS_SECTION_IDS)[number];
 
-/** Integrations sub-tabs: Twilio, Mail, Google, Stripe, Hostinger, Ask Sigma. */
+/** Integrations sub-tabs: Twilio, Mail (ESP), Mailboxes (CRM Mail), Google, Stripe, Hostinger, Ask Sigma. */
 export const CONNECTORS_SECTION_IDS = [
   "twilio",
   "mail",
+  "mailboxes",
   "google",
   "stripe",
   "hostinger",
@@ -51,6 +52,8 @@ const LEGACY_CONNECTORS_SECTION: Record<string, ConnectorsSectionId> = {
   voice: "twilio",
   whatsapp: "twilio",
   email: "mail",
+  "mail-accounts": "mailboxes",
+  mailbox: "mailboxes",
   search: "google",
   stripe: "stripe",
   billing: "stripe",

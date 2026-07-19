@@ -37,6 +37,7 @@ import { canAccessAccountsHub } from "@/modules/accounts/accountsHubAccess";
 import { isAccountsHubEnabled } from "@/lib/featureFlags";
 import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 import { useMessagesUnreadCounts } from "@/modules/messages/useMessagesUnreadCounts";
+import { useMailUnreadCount } from "@/modules/mail/useMailUnreadCount";
 import { useNotificationUnreadCounts } from "@/modules/notifications/useNotificationUnreadCounts";
 import { useWebsiteMonitorEnabled } from "@/modules/settings/useWebsiteMonitorSettings";
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -91,6 +92,7 @@ const Header = () => {
   const { data: identity } = useGetIdentity();
   const { enabled: websiteMonitorEnabled } = useWebsiteMonitorEnabled(true);
   const { totalUnread: messagesUnreadCount } = useMessagesUnreadCounts();
+  const { data: mailUnreadCount = 0 } = useMailUnreadCount();
   const { tickets: ticketsNotificationUnread } = useNotificationUnreadCounts();
 
   const isActive = useCallback(
@@ -145,6 +147,7 @@ const Header = () => {
   const badgeFor = (item: LbsNavItem) => {
     if (item.to === "/messages") return messagesUnreadCount;
     if (item.to === "/tickets") return ticketsNotificationUnread;
+    if (item.to === "/mail") return mailUnreadCount;
     return 0;
   };
 

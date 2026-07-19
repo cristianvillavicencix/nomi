@@ -8,6 +8,12 @@ Implementation plans for product migrations. Documents are English; chat with th
 |-----|---------|
 | [crm-assistant.md](./crm-assistant.md) | Global Ask Nomi chat: Anthropic Claude + tools, RLS, phased roadmap |
 
+## CRM Mail Inbox
+
+| Doc | Summary |
+|-----|---------|
+| [crm-mail-inbox.md](./crm-mail-inbox.md) | Mail module: OAuth/IMAP connect in Settings, unified inbox, sync/send, ops |
+
 ---
 
 ## Accounts hub (Leads + Clients consolidation)

@@ -63,6 +63,11 @@ const MessagesPage = lazy(() =>
     default: module.MessagesPage,
   })),
 );
+const MailPage = lazy(() =>
+  import("@/modules/mail/MailPage").then((module) => ({
+    default: module.MailPage,
+  })),
+);
 import {
   LegacyCompanyCreateRedirect,
   LegacyCompanyEditRedirect,
@@ -240,6 +245,22 @@ export const renderLbsCustomRoutes = ({
               }
             >
               <MessagesPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mail"
+        element={
+          <ProtectedRoute resource="mail_threads" action="list">
+            <Suspense
+              fallback={
+                <div className="p-6 text-sm text-muted-foreground">
+                  Loading mail…
+                </div>
+              }
+            >
+              <MailPage />
             </Suspense>
           </ProtectedRoute>
         }

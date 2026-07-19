@@ -1,0 +1,436 @@
+import { useMemo, useState } from "react";
+import { Link } from "react-router";
+import { PencilSimple, GearSix, Plus } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNotify } from "ra-core";
+import { MailEmptyState } from "./MailEmptyState";
+import { MailThreadList } from "./MailThreadList";
+import { MailMessagePane } from "./MailMessagePane";
+import {
+  MailComposeDialog,
+  type MailComposeMode,
+} from "./MailComposeDialog";
+import { MailSyncRangeDialog } from "./MailSyncRangeDialog";
+import {
+  MailFolderRail,
+  type MailFolderId,
+} from "./MailFolderRail";
+import { MailToolbar } from "./MailToolbar";
+import { mailboxesSettingsPath } from "./mailSettingsPath";
+import { syncMailAccount } from "./mailApi";
+import { useMailThreads, useMailMessages } from "./useMailThreads";
+import { useMailLabels } from "./useMailLabels";
+import type { MailSyncRange } from "./mailSyncRange";
+import type { MailAccount, MailThread } from "./types";
+
+const MOBILE_FOLDERS: Array<{ id: MailFolderId; label: string }> = [
+  { id: "inbox", label: "Inbox" },
+  { id: "unread", label: "Unread" },
+  { id: "starred", label: "Starred" },
+  { id: "archived", label: "Archived" },
+  { id: "trash", label: "Trash" },
+];
+
+export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
+  const notify = useNotify();
+  const queryClient = useQueryClient();
+  const [accountFilter, setAccountFilter] = useState<number | "all">("all");
+  const [folder, setFolder] = useState<MailFolderId>("inbox");
+  const [labelId, setLabelId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<MailThread | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeMode, setComposeMode] = useState<MailComposeMode>("new");
+  const [composeTo, setComposeTo] = useState("");
+  const [composeCc, setComposeCc] = useState("");
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeBody, setComposeBody] = useState("");
+  const [syncTarget, setSyncTarget] = useState<MailAccount | null>(null);
+  const [mobileShowThread, setMobileShowThread] = useState(false);
+
+  const { data: threads = [], isPending } = useMailThreads({
+    accountId: accountFilter,
+    folder,
+    search,
+    labelId,
+  });
+  const { data: labels = [] } = useMailLabels(accountFilter);
+  const { data: selectedMessages = [] } = useMailMessages(selected?.id ?? null);
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
+    void queryClient.invalidateQueries({ queryKey: ["mail_unread_count"] });
+    void queryClient.invalidateQueries({ queryKey: ["mail_messages"] });
+  };
+
+  const updateThread = async (
+    thread: MailThread,
+    patch: Partial<MailThread>,
+  ) => {
+    const { error } = await supabase
+      .from("mail_threads")
+      .update(patch)
+      .eq("id", thread.id);
+    if (error) {
+      notify(error.message, { type: "error" });
+      return;
+    }
+    if (patch.is_unread === false) {
+      await supabase
+        .from("mail_messages")
+        .update({ is_read: true })
+        .eq("thread_id", thread.id);
+    }
+    if (selected?.id === thread.id) {
+      setSelected({ ...thread, ...patch });
+    }
+    invalidate();
+  };
+
+  const bulkUpdate = async (patch: Partial<MailThread>) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0 && selected) ids.push(selected.id);
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("mail_threads")
+      .update(patch)
+      .in("id", ids);
+    if (error) {
+      notify(error.message, { type: "error" });
+      return;
+    }
+    setSelectedIds(new Set());
+    if (selected && ids.includes(selected.id)) {
+      if (patch.is_trashed || patch.is_archived) {
+        setSelected(null);
+        setMobileShowThread(false);
+      } else {
+        setSelected({ ...selected, ...patch });
+      }
+    }
+    invalidate();
+  };
+
+  const openCompose = (mode: MailComposeMode) => {
+    setComposeMode(mode);
+    if (mode === "new") {
+      setComposeTo("");
+      setComposeCc("");
+      setComposeSubject("");
+      setComposeBody("");
+    } else if (selected) {
+      const last = selectedMessages[selectedMessages.length - 1];
+      const participants = selected.participants ?? [];
+      const fromEmail = last?.from_email || participants[0]?.email || "";
+      const others = [
+        ...(last?.to_emails ?? []),
+        ...(last?.cc_emails ?? []),
+        ...participants.map((p) => p.email).filter(Boolean),
+      ].filter((e): e is string => Boolean(e) && e !== fromEmail);
+
+      if (mode === "reply") {
+        setComposeTo(fromEmail);
+        setComposeCc("");
+        setComposeSubject("");
+        setComposeBody("");
+      } else if (mode === "reply_all") {
+        setComposeTo(fromEmail);
+        setComposeCc([...new Set(others)].join(", "));
+        setComposeSubject("");
+        setComposeBody("");
+      } else if (mode === "forward") {
+        setComposeTo("");
+        setComposeCc("");
+        setComposeSubject("");
+        const quoted =
+          last?.body_html ||
+          (last?.body_text
+            ? `<p>${last.body_text.replace(/\n/g, "<br/>")}</p>`
+            : selected.snippet
+              ? `<p>${selected.snippet}</p>`
+              : "");
+        setComposeBody(
+          `<p><br></p><p>---------- Forwarded message ----------</p>${quoted}`,
+        );
+      }
+    }
+    setComposeOpen(true);
+  };
+
+  const syncAccount = useMemo(() => {
+    if (accountFilter === "all") return accounts[0] ?? null;
+    return accounts.find((a) => a.id === accountFilter) ?? accounts[0] ?? null;
+  }, [accountFilter, accounts]);
+
+  const runSync = async (range: MailSyncRange) => {
+    if (!syncTarget) return;
+    try {
+      const result = await syncMailAccount(syncTarget.id, {
+        since: range.since,
+        max_results: range.max_results,
+      });
+      notify(
+        `Synced ${result.synced ?? 0} message${
+          (result.synced ?? 0) === 1 ? "" : "s"
+        }`,
+        { type: "success" },
+      );
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Sync failed", { type: "error" });
+      throw e;
+    }
+  };
+
+  if (accounts.length === 0) {
+    return <MailEmptyState />;
+  }
+
+  return (
+    <div className="flex h-full min-h-0 overflow-hidden rounded-lg border bg-background">
+      <MailFolderRail
+        className="hidden md:flex"
+        folder={folder}
+        onFolderChange={(f) => {
+          setFolder(f);
+          setSelected(null);
+          setMobileShowThread(false);
+        }}
+        accounts={accounts}
+        accountFilter={accountFilter}
+        onAccountFilterChange={(id) => {
+          setAccountFilter(id);
+          setSelected(null);
+          setLabelId(null);
+        }}
+        labels={labels}
+        labelId={labelId}
+        onLabelChange={setLabelId}
+      />
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+          <Select
+            value={folder}
+            onValueChange={(v) => {
+              setFolder(v as MailFolderId);
+              setLabelId(null);
+              setSelected(null);
+              setMobileShowThread(false);
+            }}
+          >
+            <SelectTrigger className="h-8 w-[120px] md:hidden">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MOBILE_FOLDERS.map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {f.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            className="h-8 max-w-sm flex-1"
+            placeholder="Search mail…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Button type="button" size="sm" variant="secondary" asChild>
+            <Link to={mailboxesSettingsPath()}>
+              <GearSix className="size-4" />
+              Mailboxes
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => openCompose("new")}
+          >
+            <Plus className="size-4" />
+            Compose
+          </Button>
+        </div>
+
+        <MailToolbar
+          thread={selected}
+          onReply={() => openCompose("reply")}
+          onReplyAll={() => openCompose("reply_all")}
+          onForward={() => openCompose("forward")}
+          onToggleStar={() => {
+            if (!selected) return;
+            void updateThread(selected, { is_starred: !selected.is_starred });
+          }}
+          onArchive={() => {
+            if (!selected) return;
+            void updateThread(selected, { is_archived: true });
+            setSelected(null);
+            setMobileShowThread(false);
+          }}
+          onTrash={() => {
+            if (!selected) return;
+            void updateThread(selected, { is_trashed: true });
+            setSelected(null);
+            setMobileShowThread(false);
+          }}
+          onToggleRead={() => {
+            if (!selected) return;
+            void updateThread(selected, { is_unread: !selected.is_unread });
+          }}
+          onSync={() => {
+            if (syncAccount) setSyncTarget(syncAccount);
+          }}
+        />
+
+        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(260px,340px)_1fr]">
+          <div
+            className={cn(
+              "flex min-h-0 flex-col border-r",
+              mobileShowThread && "hidden md:flex",
+            )}
+          >
+            {threads.length > 0 ? (
+              <div className="flex items-center gap-2 border-b px-3 py-1.5 text-xs text-muted-foreground">
+                <Checkbox
+                  checked={
+                    selectedIds.size > 0 &&
+                    selectedIds.size === threads.length
+                  }
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedIds(new Set(threads.map((t) => t.id)));
+                    } else {
+                      setSelectedIds(new Set());
+                    }
+                  }}
+                />
+                <span className="flex-1">
+                  {folder.charAt(0).toUpperCase() + folder.slice(1)}
+                  {selectedIds.size > 0
+                    ? ` · ${selectedIds.size} selected`
+                    : ` · ${threads.length}`}
+                </span>
+                {selectedIds.size > 0 ? (
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => void bulkUpdate({ is_starred: true })}
+                    >
+                      Star
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => void bulkUpdate({ is_archived: true })}
+                    >
+                      Archive
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => void bulkUpdate({ is_trashed: true })}
+                    >
+                      Trash
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {isPending ? (
+              <p className="p-4 text-sm text-muted-foreground">Loading…</p>
+            ) : (
+              <MailThreadList
+                threads={threads}
+                selectedId={selected?.id ?? null}
+                selectedIds={selectedIds}
+                onToggleSelect={(id, on) => {
+                  setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    if (on) next.add(id);
+                    else next.delete(id);
+                    return next;
+                  });
+                }}
+                onSelect={(thread) => {
+                  setSelected(thread);
+                  setMobileShowThread(true);
+                  if (thread.is_unread) {
+                    void updateThread(thread, { is_unread: false });
+                  }
+                }}
+              />
+            )}
+          </div>
+
+          <div
+            className={cn(
+              "min-h-0",
+              !mobileShowThread && "hidden md:block",
+            )}
+          >
+            <MailMessagePane
+              thread={selected}
+              onBack={() => setMobileShowThread(false)}
+              onReply={() => openCompose("reply")}
+              onReplyAll={() => openCompose("reply_all")}
+              onForward={() => openCompose("forward")}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Floating compose on small screens when rail hidden */}
+      <Button
+        type="button"
+        size="icon"
+        className="fixed bottom-20 right-4 z-20 size-12 rounded-full shadow-lg md:hidden"
+        aria-label="Compose"
+        onClick={() => openCompose("new")}
+      >
+        <PencilSimple className="size-5" />
+      </Button>
+
+      <MailComposeDialog
+        open={composeOpen}
+        onOpenChange={setComposeOpen}
+        accounts={accounts}
+        replyTo={composeMode === "new" ? null : selected}
+        mode={composeMode}
+        initialTo={composeTo}
+        initialCc={composeCc}
+        initialSubject={composeSubject}
+        initialBody={composeBody}
+      />
+
+      <MailSyncRangeDialog
+        open={syncTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setSyncTarget(null);
+        }}
+        accountEmail={syncTarget?.email}
+        onConfirm={runSync}
+      />
+    </div>
+  );
+}

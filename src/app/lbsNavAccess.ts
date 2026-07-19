@@ -13,6 +13,11 @@ export const matchesNavPattern = (pattern: string, pathname: string) => {
 };
 
 export const canAccessNavItem = (identity: unknown, item: LbsNavItem) => {
+  if (item.anyOfCapabilities?.length) {
+    return item.anyOfCapabilities.some((capability) =>
+      hasMemberCapability(identity as any, capability),
+    );
+  }
   if (item.capability) {
     return hasMemberCapability(identity as any, item.capability);
   }

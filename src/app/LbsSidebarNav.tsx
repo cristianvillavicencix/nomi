@@ -74,12 +74,14 @@ type LbsSidebarNavProps = {
   websiteMonitorEnabled: boolean;
   messagesUnreadCount: number;
   ticketsNotificationUnread: number;
+  mailUnreadCount?: number;
 };
 
 export const LbsSidebarNav = ({
   websiteMonitorEnabled,
   messagesUnreadCount,
   ticketsNotificationUnread,
+  mailUnreadCount = 0,
 }: LbsSidebarNavProps) => {
   const location = useLocation();
   const { data: identity } = useGetIdentity();
@@ -186,7 +188,9 @@ export const LbsSidebarNav = ({
                   ? messagesUnreadCount
                   : item.to === "/tickets"
                     ? ticketsNotificationUnread
-                    : 0
+                    : item.to === "/mail"
+                      ? mailUnreadCount
+                      : 0
               }
               collapsed={sidebarState === "collapsed"}
             />

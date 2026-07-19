@@ -130,6 +130,39 @@ export const canAccess = <
   if (LBS_DENIED_RESOURCES.has(params.resource)) {
     return false;
   }
+  if (
+    params.resource === "mail_accounts" ||
+    params.resource === "mail_threads" ||
+    params.resource === "mail_messages"
+  ) {
+    if (typeof identity !== "object") return false;
+    const perms = resolveEffectivePermissions(identity);
+    const opts = { administrator: identity.administrator };
+    if (params.action === "delete") {
+      return (
+        hasCapability(perms, "mail.org.manage", opts) ||
+        hasCapability(perms, "mail.personal.manage", opts)
+      );
+    }
+    if (params.action === "create" || params.action === "edit") {
+      if (params.resource === "mail_accounts") {
+        return (
+          hasCapability(perms, "mail.org.manage", opts) ||
+          hasCapability(perms, "mail.personal.manage", opts)
+        );
+      }
+      return (
+        hasCapability(perms, "mail.org.send", opts) ||
+        hasCapability(perms, "mail.personal.send", opts) ||
+        hasCapability(perms, "mail.org.manage", opts) ||
+        hasCapability(perms, "mail.personal.manage", opts)
+      );
+    }
+    return (
+      hasCapability(perms, "mail.org.view", opts) ||
+      hasCapability(perms, "mail.personal.view", opts)
+    );
+  }
   if (params.resource === "reports") {
     const hit = canAccessViaCatalog(identity, "reports", params.action);
     return hit ?? false;
