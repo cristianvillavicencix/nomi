@@ -69,7 +69,7 @@ const TopNavLink = ({
     state={LINK_STATE}
     aria-label={item.label}
     className={cn(
-      "relative inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+      "relative inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
       active
         ? "bg-secondary-foreground/10 text-secondary-foreground"
         : "text-secondary-foreground/70 hover:bg-secondary-foreground/5 hover:text-secondary-foreground",
@@ -150,99 +150,105 @@ const Header = () => {
 
   return (
     <header className="shrink-0 border-b bg-secondary print:hidden">
-      <div className="flex h-12 items-center gap-2 px-3">
+      <div className="relative flex h-14 items-center gap-3 px-3">
         <Link
           to="/"
           state={LINK_STATE}
-          className="flex shrink-0 items-center gap-2 text-secondary-foreground no-underline"
+          className="relative z-10 flex min-w-0 max-w-[40%] shrink-0 items-center gap-2 text-secondary-foreground no-underline sm:max-w-[28%]"
         >
           <img
-            className="[.light_&]:hidden h-5 w-5 rounded-sm object-cover"
+            className="[.light_&]:hidden h-7 w-7 shrink-0 rounded-sm object-cover"
             src={darkModeLogo}
             alt={title}
           />
           <img
-            className="[.dark_&]:hidden h-5 w-5 rounded-sm object-cover"
+            className="[.dark_&]:hidden h-7 w-7 shrink-0 rounded-sm object-cover"
             src={lightModeLogo}
             alt={title}
           />
           <BrandWordmark
             title={title}
-            showSubtitle={false}
-            titleClassName="hidden text-sm sm:block"
+            className="hidden min-[720px]:block"
+            titleClassName="text-sm text-secondary-foreground"
+            subtitleClassName="text-secondary-foreground/60"
           />
         </Link>
 
         <nav
           aria-label="CRM modules"
-          className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="absolute inset-x-0 flex justify-center px-28 sm:px-36 md:px-44"
         >
-          {primaryItems.map((item) => (
-            <TopNavLink
-              key={item.to}
-              item={item}
-              active={hubActive(item)}
-              badgeCount={badgeFor(item)}
-            />
-          ))}
+          <div className="flex max-w-full items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {primaryItems.map((item) => (
+              <TopNavLink
+                key={item.to}
+                item={item}
+                active={hubActive(item)}
+                badgeCount={badgeFor(item)}
+              />
+            ))}
 
-          {secondaryNavGroups.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "h-auto shrink-0 gap-1 px-2 py-1.5 text-xs font-medium",
-                    moreActive
-                      ? "bg-secondary-foreground/10 text-secondary-foreground"
-                      : "text-secondary-foreground/70 hover:text-secondary-foreground",
-                  )}
-                >
-                  <SidebarNavIcon
-                    icon={moreSection.icon}
-                    active={moreActive}
+            {secondaryNavGroups.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     className={cn(
-                      moreActive ? "text-secondary-foreground" : undefined,
+                      "h-auto shrink-0 gap-1.5 px-2.5 py-1.5 text-sm font-medium",
+                      moreActive
+                        ? "bg-secondary-foreground/10 text-secondary-foreground"
+                        : "text-secondary-foreground/70 hover:text-secondary-foreground",
                     )}
-                  />
-                  {moreSection.label}
-                  <CaretDown weight="bold" className="size-3 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-44">
-                {secondaryNavGroups.map((group, groupIndex) => (
-                  <div key={group.id}>
-                    {groupIndex > 0 ? (
-                      <div className="my-1 border-t border-border/60" />
-                    ) : null}
-                    <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {group.label}
+                  >
+                    <SidebarNavIcon
+                      icon={moreSection.icon}
+                      active={moreActive}
+                      className={cn(
+                        moreActive ? "text-secondary-foreground" : undefined,
+                      )}
+                    />
+                    {moreSection.label}
+                    <CaretDown weight="bold" className="size-3 opacity-70" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-44">
+                  {secondaryNavGroups.map((group, groupIndex) => (
+                    <div key={group.id}>
+                      {groupIndex > 0 ? (
+                        <div className="my-1 border-t border-border/60" />
+                      ) : null}
+                      <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {group.label}
+                      </div>
+                      {group.items.map((item) => {
+                        const active = isActive(item.activePattern);
+                        return (
+                          <DropdownMenuItem key={item.to} asChild>
+                            <Link
+                              to={item.to}
+                              state={LINK_STATE}
+                              className={sidebarNavDropdownItemClass(active)}
+                            >
+                              <SidebarNavIcon
+                                icon={item.icon}
+                                active={active}
+                              />
+                              {item.label}
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
                     </div>
-                    {group.items.map((item) => {
-                      const active = isActive(item.activePattern);
-                      return (
-                        <DropdownMenuItem key={item.to} asChild>
-                          <Link
-                            to={item.to}
-                            state={LINK_STATE}
-                            className={sidebarNavDropdownItemClass(active)}
-                          >
-                            <SidebarNavIcon icon={item.icon} active={active} />
-                            {item.label}
-                          </Link>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </div>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         </nav>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="relative z-10 ml-auto flex shrink-0 items-center gap-1">
           <ThemeModeToggle />
           <UserMenu>
             <CRMUserMenuItems />
