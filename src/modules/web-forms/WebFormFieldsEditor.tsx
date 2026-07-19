@@ -139,7 +139,7 @@ export const WebFormFieldsEditor = () => {
         ))}
       </div>
 
-      <Button type="button" variant="outline" size="sm" onClick={addField}>
+      <Button type="button" variant="secondary" size="sm" onClick={addField}>
         <Plus className="mr-1 size-4" />
         Add field
       </Button>

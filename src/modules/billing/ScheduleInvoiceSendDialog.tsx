@@ -35,6 +35,7 @@ import {
 } from "@/modules/billing/invoiceScheduleUtils";
 import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -55,7 +56,7 @@ const getContactEmail = (contact: Contact) =>
   "";
 
 const getContactLabel = (contact: Contact) =>
-  [contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
+  [contact.first_name, contact.last_name].filter(Boolean).join("") ||
   getContactEmail(contact) ||
   "Contact";
 
@@ -436,14 +437,13 @@ export const ScheduleInvoiceSendDialog = ({
                   Note: Emails will be sent at {formatSendTimeDisplay(sendTime)}
                   .
                 </span>
-                <button
-                  type="button"
-                  className="inline-flex text-muted-foreground hover:text-foreground"
+                <IconButton
+                  className="size-6 min-h-6 min-w-6 text-muted-foreground hover:text-foreground"
                   aria-label="Edit send time"
                   onClick={() => setEditingTime(true)}
                 >
                   <Pencil className="size-3.5" />
-                </button>
+                </IconButton>
               </div>
             )}
           </div>
@@ -452,7 +452,7 @@ export const ScheduleInvoiceSendDialog = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
           >
             Cancel

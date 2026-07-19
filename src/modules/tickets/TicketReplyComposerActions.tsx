@@ -179,7 +179,7 @@ export const TicketReplyComposerActions = ({
 
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         className="h-9"
         disabled={disabled}

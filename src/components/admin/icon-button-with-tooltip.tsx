@@ -2,7 +2,7 @@ import { useTranslate } from "ra-core";
 import * as React from "react";
 import type { MouseEvent } from "react";
 
-import { Button } from "@/components/ui/button";
+import { IconButton, type IconButtonProps } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -45,6 +45,9 @@ export const IconButtonWithTooltip = ({
     translatedLabel = translate(label, { _: label });
   }
 
+  const ariaLabel =
+    typeof translatedLabel === "string" ? translatedLabel : "Action";
+
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     handleClose();
     onClick?.(event);
@@ -54,13 +57,8 @@ export const IconButtonWithTooltip = ({
     <TooltipProvider>
       <Tooltip open={open} onOpenChange={setOpen}>
         <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={
-              typeof translatedLabel === "string" ? translatedLabel : undefined
-            }
+          <IconButton
+            aria-label={ariaLabel}
             onClick={handleClick}
             disabled={disabled}
             onMouseEnter={handleOpen}
@@ -68,7 +66,7 @@ export const IconButtonWithTooltip = ({
             {...props}
           >
             {children}
-          </Button>
+          </IconButton>
         </TooltipTrigger>
         <TooltipContent>
           <p>{translatedLabel}</p>
@@ -79,7 +77,7 @@ export const IconButtonWithTooltip = ({
 };
 
 export interface IconButtonWithTooltipProps
-  extends React.ComponentProps<"button"> {
+  extends Omit<IconButtonProps, "aria-label" | "children"> {
   label: React.ReactNode;
   children: React.ReactNode;
 }

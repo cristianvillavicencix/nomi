@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useGetIdentity, useListContext } from "ra-core";
 import { useNavigate } from "react-router";
 import { DataTable } from "@/components/admin/data-table";
@@ -9,8 +10,11 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { LBS_PLACEHOLDER_MODULES } from "@/app/navigation";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import type { Contract } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { getClientShowPath } from "@/app/routing";
@@ -37,7 +41,11 @@ export const ContractsList = () => {
       disableBreadcrumb
       perPage={25}
       sort={{ field: "updated_at", order: "DESC" }}
-      actions={<ContractsListActions />}
+      actions={
+        <PageActions>
+          <PageTitle label="Contracts" />
+        </PageActions>
+      }
       pagination={<ListPagination rowsPerPageOptions={[10, 25, 50]} />}
     >
       <ContractsListLayout />
@@ -45,79 +53,107 @@ export const ContractsList = () => {
   );
 };
 
-const ContractsListActions = () => (
-  <PageActions>
-    <PageTitle label="Contracts" />
-    <div className="ml-auto flex items-center gap-2">
-      <SortButton fields={["title", "status", "expires_at", "updated_at"]} />
-      <ModuleInfoPopover
-        title={LBS_PLACEHOLDER_MODULES.contracts.title}
-        description={LBS_PLACEHOLDER_MODULES.contracts.description}
-      />
-    </div>
-  </PageActions>
-);
-
 const ContractsListLayout = () => {
   const { data, isPending, filterValues } = useListContext<Contract>();
   const navigate = useNavigate();
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
+  const [searchQuery, setSearchQuery] = useState("");
 
-  if (isPending) return null;
+  const filteredData = useMemo(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return data;
+    return (data ?? []).filter((contract) =>
+      [contract.title, contract.status]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(trimmed),
+    );
+  }, [data, searchQuery]);
+
+  const toolbar = (
+    <ModuleToolbar className="shrink-0">
+      <ModuleSearchField
+        value={searchQuery}
+        onChange={setSearchQuery}
+        basePlaceholder="Search contracts by title"
+        total={data?.length}
+        itemSingular="contract"
+      />
+      <ModuleToolbarActions>
+        <SortButton fields={["title", "status", "expires_at", "updated_at"]} />
+      </ModuleToolbarActions>
+    </ModuleToolbar>
+  );
+
+  if (isPending) return toolbar;
 
   if (!data?.length && !hasFilters) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        No contracts yet.
-      </p>
+      <div className="space-y-3">
+        {toolbar}
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No contracts yet.
+        </p>
+      </div>
     );
   }
 
   return (
-    <DataTable
-      rowClick={(id) => navigate(`/contracts/${id}/show`)}
-      rowClassName={() => "[&_td]:py-2.5"}
-    >
-      <DataTable.Col source="title" label="Title" />
-      <DataTable.Col
-        source="status"
-        label="Status"
-        render={(record: Contract) => (
-          <Badge variant="outline" className="capitalize">
-            {record.status?.replace(/-/g, " ") ?? "draft"}
-          </Badge>
-        )}
-      />
-      <DataTable.Col
-        source="company_id"
-        label="Client"
-        render={(record: Contract) =>
-          record.company_id ? (
-            <ReferenceField
-              source="company_id"
-              reference="companies"
-              record={record}
-              link={(id) => getClientShowPath(id)}
-            />
-          ) : (
-            "—"
-          )
-        }
-      />
-      <DataTable.Col
-        source="expires_at"
-        label="Expires"
-        render={(record: Contract) => formatDate(record.expires_at)}
-      />
-      <DataTable.Col
-        source="signed_at"
-        label="Signed"
-        render={(record: Contract) =>
-          record.signed_at
-            ? new Date(record.signed_at).toLocaleDateString()
-            : "—"
-        }
-      />
-    </DataTable>
+    <div className="space-y-3">
+      {toolbar}
+      {!filteredData?.length ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No contracts match your search.
+        </p>
+      ) : (
+        <DataTable
+          data={filteredData}
+          rowClick={(id) => navigate(`/contracts/${id}/show`)}
+          rowClassName={() => "[&_td]:py-1.5"}
+        >
+          <DataTable.Col source="title" label="Title" />
+          <DataTable.Col
+            source="status"
+            label="Status"
+            render={(record: Contract) => (
+              <Badge variant="outline" className="capitalize">
+                {record.status?.replace(/-/g, " ") ?? "draft"}
+              </Badge>
+            )}
+          />
+          <DataTable.Col
+            source="company_id"
+            label="Client"
+            render={(record: Contract) =>
+              record.company_id ? (
+                <ReferenceField
+                  source="company_id"
+                  reference="companies"
+                  record={record}
+                  link={(id) => getClientShowPath(id)}
+                />
+              ) : (
+                "—"
+              )
+            }
+          />
+          <DataTable.Col
+            source="expires_at"
+            label="Expires"
+            render={(record: Contract) => formatDate(record.expires_at)}
+          />
+          <DataTable.Col
+            source="signed_at"
+            label="Signed"
+            render={(record: Contract) =>
+              record.signed_at
+                ? new Date(record.signed_at).toLocaleDateString()
+                : "—"
+            }
+          />
+        </DataTable>
+      )}
+    </div>
   );
 };

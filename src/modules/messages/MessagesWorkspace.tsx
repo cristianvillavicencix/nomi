@@ -218,7 +218,7 @@ export const MessagesWorkspace = ({
                 {unsavedSmsPhone && activeSmsPhone ? (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     className="shrink-0 gap-1.5"
                     onClick={() => setSaveContactOpen(true)}
@@ -266,7 +266,7 @@ export const MessagesWorkspace = ({
           <SheetHeader className="border-b border-border/40 px-4 py-3 text-left">
             <SheetTitle>Details</SheetTitle>
           </SheetHeader>
-          <div className="overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <ContextPanelContent
               conversation={activeConversation}
               contact={activeContact}

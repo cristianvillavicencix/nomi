@@ -43,6 +43,7 @@ import { buildTicketPaymentCopyFromDeliverables } from "@/modules/tickets/ticket
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -242,7 +243,10 @@ export const TicketCombinedInvoicePreviewDialog = ({
     setSubject("");
     setDeliverySubject("");
     setServiceLines([]);
-    const defaultPhone = resolveTicketInvoiceRecipientPhone({ company, contact });
+    const defaultPhone = resolveTicketInvoiceRecipientPhone({
+      company,
+      contact,
+    });
     setPhone(defaultPhone);
     setSendSms(Boolean(defaultPhone.trim()));
     setEditingTo(false);
@@ -403,9 +407,8 @@ export const TicketCombinedInvoicePreviewDialog = ({
                           className="max-w-full gap-1 bg-primary/10 font-normal text-primary hover:bg-primary/15"
                         >
                           <span className="truncate">{recipientEmail}</span>
-                          <button
-                            type="button"
-                            className="rounded-sm opacity-70 hover:opacity-100"
+                          <IconButton
+                            className="size-4 min-h-4 min-w-4 opacity-70 hover:bg-transparent hover:opacity-100"
                             aria-label="Clear recipient email"
                             onClick={() => {
                               setRecipientEmail("");
@@ -413,7 +416,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
                             }}
                           >
                             <X className="size-3" />
-                          </button>
+                          </IconButton>
                         </Badge>
                       </div>
                     ) : (
@@ -524,7 +527,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => handleClose(false)}
               >
                 Cancel
@@ -542,7 +545,7 @@ export const TicketCombinedInvoicePreviewDialog = ({
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setStep("invoice")}
                 >
                   <ChevronLeft className="size-4" />

@@ -1,4 +1,6 @@
 import { AlertCircle, CheckCircle2, Loader2, Paperclip, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Progress } from "@/components/ui/progress";
 import type { PendingTicketAttachment } from "@/modules/tickets/uploadTicketAttachment";
 import { cn } from "@/lib/utils";
@@ -88,24 +90,25 @@ export const TicketPendingAttachmentItem = ({
 
         <div className="flex shrink-0 items-center gap-1">
           {isError && onRetry ? (
-            <button
+            <Button
               type="button"
-              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive"
               disabled={disabled}
               onClick={onRetry}
             >
               Retry
-            </button>
+            </Button>
           ) : null}
-          <button
-            type="button"
-            className="rounded p-0.5 hover:bg-muted disabled:opacity-50"
+          <IconButton
+            className="size-6 min-h-6 min-w-6"
             disabled={disabled || isUploading}
             onClick={onRemove}
             aria-label="Remove attachment"
           >
             <X className="size-3.5" />
-          </button>
+          </IconButton>
         </div>
       </div>
     </div>

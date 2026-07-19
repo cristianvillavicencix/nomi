@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -30,11 +31,10 @@ const SocialIconLink = ({
 }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button
+      <IconButton
+        aria-label={label}
         asChild
-        type="button"
-        variant="outline"
-        size="icon"
+        variant="secondary"
         className="size-9 shrink-0 rounded-full"
       >
         <a
@@ -46,7 +46,7 @@ const SocialIconLink = ({
         >
           {children}
         </a>
-      </Button>
+      </IconButton>
     </TooltipTrigger>
     <TooltipContent>{label}</TooltipContent>
   </Tooltip>

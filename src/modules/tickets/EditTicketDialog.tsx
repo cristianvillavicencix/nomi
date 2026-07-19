@@ -9,7 +9,7 @@ import {
   useUpdate,
   type Identifier,
 } from "ra-core";
-import { Loader2, UserPlus, X } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-autocomplete-input";
@@ -604,12 +604,12 @@ const EditTicketDialogBody = ({
                   </p>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     className="mt-2 rounded-none"
                     onClick={() => setCreateContactOpen(true)}
                   >
-                    <UserPlus className="size-4" />
+                    <Plus className="size-4" />
                     Create contact from sender
                   </Button>
                 </div>
@@ -644,7 +644,7 @@ const EditTicketDialogBody = ({
       >
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           disabled={isSaving}
           className={cn(isMobile && "w-full")}
           onClick={() => guardedClose(false)}

@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Translate, useCreatePath, useResourceContext } from "ra-core";
 import { Link } from "react-router";
+import { ToolbarLabel } from "@/components/atomic-crm/layout/PageActions";
 import { cn } from "@/lib/utils";
 
 export type CreateButtonProps = {
@@ -43,16 +44,20 @@ export const CreateButton = ({
     resource: targetResource ?? resource,
     type: "create",
   });
+  const resolvedLabel = label ?? "Create";
   return (
     <Link
-      className={cn(buttonVariants({ variant: "outline" }), className)}
+      className={cn(buttonVariants({ variant: "secondary" }), className)}
       to={link}
+      aria-label={resolvedLabel}
       onClick={stopPropagation}
     >
       <Plus />
-      <Translate i18nKey={label ?? "ra.action.create"}>
-        {label ?? "Create"}
-      </Translate>
+      <ToolbarLabel priority="primary">
+        <Translate i18nKey={label ?? "ra.action.create"}>
+          {resolvedLabel}
+        </Translate>
+      </ToolbarLabel>
     </Link>
   );
 };

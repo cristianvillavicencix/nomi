@@ -92,7 +92,7 @@ export const AddSavedQueryDialog = ({
           </div>
         </form>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             {translate("ra.action.cancel")}
           </Button>
           <Button onClick={addQuery}>{translate("ra.action.save")}</Button>
@@ -157,7 +157,7 @@ export const RemoveSavedQueryDialog = ({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             {translate("ra.action.cancel")}
           </Button>
           <Button onClick={removeQuery} autoFocus>

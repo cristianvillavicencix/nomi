@@ -73,6 +73,50 @@ export const formatMessageTime = (value?: string | null) => {
   });
 };
 
+/** Local calendar day key for grouping thread messages (date dividers). */
+export const getMessageDayKey = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+};
+
+export const formatMessageDateDivider = (value?: string | null) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const startOfDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  );
+  const dayDiff = Math.round(
+    (startOfToday.getTime() - startOfDate.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (dayDiff === 0) return "Today";
+  if (dayDiff === 1) return "Yesterday";
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "long",
+      day: "numeric",
+    });
+  }
+  return date.toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 export const sortConversationsByActivity = <
   T extends {
     last_message_at?: string | null;

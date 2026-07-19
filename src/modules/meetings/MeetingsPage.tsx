@@ -1,9 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Plus, Video, Zap } from "lucide-react";
+import { ChevronDown, Plus, Video, Zap } from "lucide-react";
 import { useGetList, useGetMany, type Identifier } from "ra-core";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -16,11 +23,15 @@ import {
   PageLayout,
   ScrollableContentArea,
 } from "@/components/atomic-crm/layout/page-shell";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import type {
   CalendarEventRecord,
   Contact,
@@ -35,17 +46,20 @@ import {
 import { toDateKey } from "@/modules/calendar/calendarUtils";
 import { MeetingLinkActions } from "@/modules/meetings/MeetingLinkActions";
 import { MeetingResendInviteActions } from "@/modules/meetings/MeetingResendInviteActions";
-import { MeetingDoneSwitch } from "@/modules/meetings/MeetingDoneSwitch";
+import { MeetingDoneSwitch, MarkMeetingDoneButton } from "@/modules/meetings/MeetingDoneSwitch";
 import { QuickMeetingDialog } from "@/modules/meetings/QuickMeetingDialog";
 
 type MeetingsTab = "upcoming" | "past";
 
-const formatMeetingDate = (record: CalendarEventRecord) =>
-  new Date(`${record.event_date}T12:00:00`).toLocaleDateString(undefined, {
+const formatMeetingDate = (eventDate: string) => {
+  const date = new Date(`${eventDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
+};
 
 const getMeetingSortKey = (record: CalendarEventRecord) => {
   const time = record.event_time?.slice(0, 5) ?? "00:00";
@@ -64,6 +78,7 @@ export const MeetingsPage = () => {
   const [quickOpen, setQuickOpen] = useState(false);
   const [editId, setEditId] = useState<Identifier | null>(null);
   const [editDateKey, setEditDateKey] = useState(todayKey);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: meetings = [], isPending } = useGetList<CalendarEventRecord>(
     "calendar_events",
@@ -109,13 +124,27 @@ export const MeetingsPage = () => {
         : !isUpcomingMeeting(record, todayKey),
     );
 
-    return [...scoped].sort((left, right) => {
+    const sorted = [...scoped].sort((left, right) => {
       const diff = getMeetingSortKey(left).localeCompare(
         getMeetingSortKey(right),
       );
       return tab === "upcoming" ? diff : -diff;
     });
-  }, [meetings, tab, todayKey]);
+
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return sorted;
+
+    return sorted.filter((record) => {
+      const contactName = record.contact_id
+        ? contactNameById.get(String(record.contact_id))
+        : null;
+      const haystack = [record.title, contactName]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(trimmed);
+    });
+  }, [meetings, tab, todayKey, searchQuery, contactNameById]);
 
   const scheduleDefaults = useMemo(
     () => ({
@@ -134,44 +163,81 @@ export const MeetingsPage = () => {
   );
 
   return (
-    <PageLayout>
+    <PageLayout className="gap-3">
       <PageActions>
-        <PageTitle label="Meetings" count={filteredMeetings.length} />
-        <Tabs
-          value={tab}
-          onValueChange={(value) => setTab(value as MeetingsTab)}
-        >
-          <TabsList>
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="past">Past</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <div className="ml-auto flex items-center gap-2">
-          <Button type="button" size="sm" onClick={() => setQuickOpen(true)}>
-            <Zap className="size-4" />
-            Quick call
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setEditId(null);
-              setEditDateKey(todayKey);
-              setScheduleOpen(true);
-            }}
-          >
-            <Plus className="size-4" />
-            Schedule meeting
-          </Button>
-          <ModuleInfoPopover
-            title="Video meetings"
-            description="Schedule Jitsi video calls with clients. Pick a contact first — the title and link are generated from that person."
-          />
-        </div>
+        <PageTitle label="Meetings" />
       </PageActions>
 
-      <ScrollableContentArea>
+      <ModuleToolbar className="shrink-0">
+          <ModuleSearchField
+            value={searchQuery}
+            onChange={setSearchQuery}
+            basePlaceholder="Search meetings by title or contact"
+            total={filteredMeetings.length}
+            itemSingular="meeting"
+          />
+          <ModuleToolbarActions>
+            <ToggleGroup
+              type="single"
+              value={tab}
+              onValueChange={(value) => {
+                if (value === "upcoming" || value === "past") {
+                  setTab(value);
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="w-fit shrink-0"
+            >
+              <ToggleGroupItem value="upcoming" aria-label="Upcoming meetings">
+                Upcoming
+              </ToggleGroupItem>
+              <ToggleGroupItem value="past" aria-label="Past meetings">
+                Past
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <div className="flex shrink-0 items-stretch">
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                className="rounded-r-none"
+                onClick={() => setQuickOpen(true)}
+                aria-label="Quick call"
+              >
+                <Zap className="size-4" />
+                Quick call
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                    aria-label="More meeting options"
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setEditId(null);
+                      setEditDateKey(todayKey);
+                      setScheduleOpen(true);
+                    }}
+                  >
+                    <Plus className="size-4" />
+                    Schedule meeting
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </ModuleToolbarActions>
+        </ModuleToolbar>
+
+      <ScrollableContentArea className="min-h-0 flex-1">
         {isPending ? null : filteredMeetings.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <Video className="mx-auto size-8 text-muted-foreground" />
@@ -191,7 +257,7 @@ export const MeetingsPage = () => {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setScheduleOpen(true)}
                 >
                   Schedule meeting
@@ -209,7 +275,13 @@ export const MeetingsPage = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Time</TableHead>
                   <TableHead>Duration</TableHead>
-                  <TableHead className="w-[72px] text-center">Done</TableHead>
+                  <TableHead
+                    className={
+                      tab === "upcoming" ? "w-[72px] text-center" : "w-[88px]"
+                    }
+                  >
+                    {tab === "upcoming" ? "Done" : "Status"}
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -226,12 +298,10 @@ export const MeetingsPage = () => {
                   const durationLabel =
                     formatDurationLabel(meeting.duration_minutes) ?? "—";
                   const isDone = Boolean(meeting.completed_at);
+                  const isPastTab = tab === "past";
 
                   return (
-                    <TableRow
-                      key={String(meeting.id)}
-                      className={isDone ? "opacity-70" : undefined}
-                    >
+                    <TableRow key={String(meeting.id)}>
                       <TableCell className="font-medium">
                         {meeting.contact_id ? (
                           <Link
@@ -244,38 +314,72 @@ export const MeetingsPage = () => {
                           contactName
                         )}
                       </TableCell>
-                      <TableCell
-                        className={isDone ? "line-through" : undefined}
-                      >
-                        {meeting.title}
-                      </TableCell>
+                      <TableCell>{meeting.title}</TableCell>
                       <TableCell>
                         {formatMeetingDate(meeting.event_date)}
                       </TableCell>
                       <TableCell>{timeLabel}</TableCell>
                       <TableCell>{durationLabel}</TableCell>
-                      <TableCell>
-                        <MeetingDoneSwitch meeting={meeting} />
+                      <TableCell
+                        className={isPastTab ? undefined : "text-center"}
+                      >
+                        {isPastTab ? (
+                          isDone ? (
+                            <Badge variant="secondary">Done</Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              —
+                            </span>
+                          )
+                        ) : (
+                          <MeetingDoneSwitch meeting={meeting} />
+                        )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                          <MeetingLinkActions
-                            meetingUrl={meeting.meeting_url}
-                          />
-                          <MeetingResendInviteActions meeting={meeting} />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditId(meeting.id);
-                              setEditDateKey(meeting.event_date);
-                              setScheduleOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                        </div>
+                        {isPastTab ? (
+                          <div className="flex items-center justify-end gap-2">
+                            {isDone ? (
+                              <span className="text-sm text-muted-foreground">
+                                —
+                              </span>
+                            ) : (
+                              <>
+                                <MarkMeetingDoneButton meeting={meeting} />
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditId(meeting.id);
+                                    setEditDateKey(meeting.event_date);
+                                    setScheduleOpen(true);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <MeetingLinkActions
+                              meetingUrl={meeting.meeting_url}
+                            />
+                            <MeetingResendInviteActions meeting={meeting} />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => {
+                                setEditId(meeting.id);
+                                setEditDateKey(meeting.event_date);
+                                setScheduleOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

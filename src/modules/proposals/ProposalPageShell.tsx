@@ -3,7 +3,9 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   PageActions,
+  PAGE_ACTIONS_CLUSTER,
   PageTitle,
+  ToolbarLabel,
 } from "@/components/atomic-crm/layout/PageActions";
 import {
   PageLayout,
@@ -24,15 +26,13 @@ export const ProposalPageShell = ({
   <PageLayout>
     <PageActions>
       <Button variant="ghost" size="sm" asChild className="-ml-2">
-        <Link to={backTo}>
+        <Link to={backTo} aria-label="Back">
           <ArrowLeft className="size-4" />
-          Back
+          <ToolbarLabel>Back</ToolbarLabel>
         </Link>
       </Button>
       <PageTitle label={title} />
-      {actions ? (
-        <div className="ml-auto flex items-center gap-2">{actions}</div>
-      ) : null}
+      {actions ? <div className={PAGE_ACTIONS_CLUSTER}>{actions}</div> : null}
     </PageActions>
     <ScrollableContentArea className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 md:px-6 lg:overflow-hidden">
       {children}

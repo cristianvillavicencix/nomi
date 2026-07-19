@@ -108,7 +108,7 @@ const BriefLogoUpload = ({
     <div className="space-y-3 md:col-span-2">
       <Label htmlFor="brief-logo-upload">Logo</Label>
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="outline" size="sm" asChild>
+        <Button type="button" variant="secondary" size="sm" asChild>
           <label htmlFor="brief-logo-upload" className="cursor-pointer">
             {uploading ? (
               <Loader2 className="size-4 animate-spin" />

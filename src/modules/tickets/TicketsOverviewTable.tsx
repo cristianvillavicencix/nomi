@@ -17,17 +17,20 @@ import {
   isElevatedTicketPriority,
   ticketPriorityLabel,
 } from "@/modules/tickets/ticketPriorityUi";
+import { matchesTicketSearch } from "@/modules/tickets/ticketInboxQueue";
 
 export const TicketsOverviewTable = ({
   selectedTicketId,
   onSelectTicket,
+  searchQuery = "",
 }: {
   selectedTicketId?: string | null;
   onSelectTicket: (ticketId: string) => void;
+  searchQuery?: string;
 }) => {
   const { data = [], isPending } = useListContext<Ticket>();
 
-  const tickets = useMemo(
+  const allTickets = useMemo(
     () =>
       (data ?? []).filter((ticket) => ticket.merged_into_ticket_id == null),
     [data],
@@ -37,31 +40,31 @@ export const TicketsOverviewTable = ({
     () =>
       [
         ...new Set(
-          tickets
+          allTickets
             .map((ticket) => ticket.company_id)
             .filter((id) => id != null)
             .map(Number),
         ),
       ],
-    [tickets],
+    [allTickets],
   );
   const contactIds = useMemo(
     () =>
       [
         ...new Set(
-          tickets
+          allTickets
             .map((ticket) => ticket.contact_id)
             .filter((id) => id != null)
             .map(Number),
         ),
       ],
-    [tickets],
+    [allTickets],
   );
   const assigneeIds = useMemo(
     () =>
       [
         ...new Set(
-          tickets
+          allTickets
             .map(
               (ticket) =>
                 ticket.assignee_id ?? ticket.organization_member_id ?? null,
@@ -70,7 +73,7 @@ export const TicketsOverviewTable = ({
             .map(Number),
         ),
       ],
-    [tickets],
+    [allTickets],
   );
 
   const { data: companies = [] } = useGetList<Company>(
@@ -115,6 +118,31 @@ export const TicketsOverviewTable = ({
     for (const member of members) map.set(Number(member.id), member);
     return map;
   }, [members]);
+
+  const tickets = useMemo(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return allTickets;
+    return allTickets.filter((ticket) => {
+      const company =
+        ticket.company_id != null
+          ? companiesById.get(Number(ticket.company_id))
+          : null;
+      const contact =
+        ticket.contact_id != null
+          ? contactsById.get(Number(ticket.contact_id))
+          : null;
+      const contactName = contact
+        ? `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim()
+        : null;
+      return matchesTicketSearch(ticket, trimmed, {
+        email: company?.primary_contact_email_jsonb?.find((entry) =>
+          entry.email?.trim(),
+        )?.email,
+        phone: company?.phone_number,
+        contactName: contactName || company?.name,
+      });
+    });
+  }, [allTickets, companiesById, contactsById, searchQuery]);
 
   if (isPending) {
     return (

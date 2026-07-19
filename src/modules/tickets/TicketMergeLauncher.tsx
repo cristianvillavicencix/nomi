@@ -124,7 +124,7 @@ export const TicketMergeLauncher = ({
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setPickerOpen(false)}
               >
                 Cancel

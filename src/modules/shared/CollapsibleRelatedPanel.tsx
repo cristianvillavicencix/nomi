@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -37,16 +38,12 @@ export const CollapsibleRelatedPanel = ({
       <aside className="sticky top-2 flex w-10 shrink-0 flex-col items-center gap-3 self-start py-3">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8"
+            <IconButton
               aria-label="Show related panel"
               onClick={() => setCollapsed(false)}
             >
               <PanelRightOpen className="size-4" />
-            </Button>
+            </IconButton>
           </TooltipTrigger>
           <TooltipContent side="left">Show related panel</TooltipContent>
         </Tooltip>
@@ -85,16 +82,13 @@ export const CollapsibleRelatedPanel = ({
         <p className="text-xs font-medium text-muted-foreground">Related</p>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8 shrink-0"
+            <IconButton
+              className="shrink-0"
               aria-label="Hide related panel"
               onClick={() => setCollapsed(true)}
             >
               <PanelRightClose className="size-4" />
-            </Button>
+            </IconButton>
           </TooltipTrigger>
           <TooltipContent side="left">Hide panel</TooltipContent>
         </Tooltip>

@@ -17,7 +17,7 @@ import {
   insertRichEditorText,
   sanitizeComposerHtml,
 } from "@/modules/tickets/ticketReplyRichText";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 
 type TicketComposerToolbarProps = {
   editorRef: React.RefObject<HTMLDivElement | null>;
@@ -63,18 +63,15 @@ export const TicketComposerToolbar = ({
     icon: React.ReactNode,
     onClick: () => void,
   ) => (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="size-8 text-muted-foreground"
+    <IconButton
+      className="text-muted-foreground"
       disabled={disabled}
       title={label}
       aria-label={label}
       onClick={onClick}
     >
       {icon}
-    </Button>
+    </IconButton>
   );
 
   return (

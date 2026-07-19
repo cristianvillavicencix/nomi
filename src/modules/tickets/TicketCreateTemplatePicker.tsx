@@ -5,7 +5,8 @@ import {
   type TicketCreateTemplateContext,
   type TicketCreateTemplateId,
 } from "@/modules/tickets/ticketCreateTemplates";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Popover,
   PopoverContent,
@@ -30,16 +31,13 @@ export const TicketCreateTemplatePicker = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 text-muted-foreground"
+        <IconButton
+          className="text-muted-foreground"
           disabled={disabled}
           title="Insert template"
         >
           <LayoutTemplate className="size-4" />
-        </Button>
+        </IconButton>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 p-2">
         <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">

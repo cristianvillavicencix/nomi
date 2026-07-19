@@ -141,7 +141,7 @@ export const FormCanvas = () => {
         </section>
       ))}
 
-      <Button type="button" variant="outline" onClick={addSection}>
+      <Button type="button" variant="secondary" onClick={addSection}>
         <Plus className="size-4" />
         Add section
       </Button>

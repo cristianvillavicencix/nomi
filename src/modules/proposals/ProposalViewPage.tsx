@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router";
 import { useGetIdentity } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToolbarLabel } from "@/components/atomic-crm/layout/PageActions";
 import { ProposalDocumentView } from "@/modules/proposals/document/ProposalDocumentView";
 import { buildCrmDocumentSnapshot } from "@/modules/proposals/document/useProposalDocumentData";
 import { hydrateProposalContent } from "@/modules/proposals/document/proposalTemplateContent";
@@ -112,34 +113,35 @@ export const ProposalViewPage = () => {
 
   return (
     <div className="flex h-[calc(100svh-var(--header-height,0px))] min-h-0 flex-col overflow-hidden">
-      <div className="print:hidden shrink-0 flex flex-wrap items-center gap-2 border-b bg-card px-3 py-2">
+      <div className="print:hidden flex shrink-0 flex-col gap-2 border-b bg-card px-3 py-2 sm:flex-row sm:items-center sm:overflow-x-auto">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/proposals">
+          <Link to="/proposals" aria-label="Proposals">
             <ArrowLeft className="size-4" />
-            Proposals
+            <ToolbarLabel>Proposals</ToolbarLabel>
           </Link>
         </Button>
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:flex-nowrap sm:items-center">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={handlePrint}
+            aria-label="Print"
           >
             <Printer className="size-4" />
-            Print
+            <ToolbarLabel>Print</ToolbarLabel>
           </Button>
-          <Button type="button" variant="outline" size="sm" asChild>
-            <Link to={`/proposals/${proposalId}/preview`}>
+          <Button type="button" variant="secondary" size="sm" asChild>
+            <Link to={`/proposals/${proposalId}/preview`} aria-label="Edit">
               <Pencil className="size-4" />
-              Edit
+              <ToolbarLabel>Edit</ToolbarLabel>
             </Link>
           </Button>
-          <Button type="button" variant="outline" size="sm" asChild>
-            <Link to={`/proposals/${proposalId}/edit`}>
+          <Button type="button" variant="secondary" size="sm" asChild>
+            <Link to={`/proposals/${proposalId}/edit`} aria-label="Builder">
               <Wrench className="size-4" />
-              Builder
+              <ToolbarLabel>Builder</ToolbarLabel>
             </Link>
           </Button>
           <ProposalSendActions

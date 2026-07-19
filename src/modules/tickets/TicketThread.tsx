@@ -12,12 +12,18 @@ import { useMemberCapability } from "@/components/atomic-crm/providers/commons/u
 import type { TicketMessage } from "@/modules/types";
 import { EmailDeliveryBadge } from "@/modules/tickets/EmailDeliveryBadge";
 import { TicketInternalNoteEditor } from "@/modules/tickets/TicketInternalNoteEditor";
+import { TicketInvoiceSentNoteCard } from "@/modules/tickets/TicketInvoiceSentNoteCard";
 import { TicketMessageContent } from "@/modules/tickets/TicketMessageContent";
+import {
+  isInvoiceSentInternalNote,
+  previewInvoiceSentInternalNote,
+} from "@/modules/tickets/parseInvoiceSentInternalNote";
 import { useTicketReadCutoff } from "@/modules/tickets/TicketReadCutoffContext";
 import { useTicketThreadQuote } from "@/modules/tickets/TicketThreadQuoteContext";
 import { isInboundMessageUnread } from "@/modules/tickets/ticketReadState";
 import { formatTicketMessageTime } from "@/modules/tickets/ticketInboxUi";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +36,7 @@ import { cn } from "@/lib/utils";
 
 const PREVIEW_MAX_LENGTH = 140;
 
-/** Compact legacy "Merged tickets: #1 (long subject), …" audit notes. */
+/** Compact legacy"Merged tickets: #1 (long subject), …" audit notes. */
 const compactMergeAuditNote = (body?: string | null) => {
   const text = body?.trim();
   if (!text) return null;
@@ -41,10 +47,12 @@ const compactMergeAuditNote = (body?: string | null) => {
   if (ids.length === 1) {
     return `Merged 1 ticket into this thread (${ids[0]}).`;
   }
-  return `Merged ${ids.length} tickets into this thread (${ids.join(", ")}).`;
+  return `Merged ${ids.length} tickets into this thread (${ids.join(",")}).`;
 };
 
 const getMessageBodyText = (message: TicketMessage) => {
+  const invoicePreview = previewInvoiceSentInternalNote(message.body);
+  if (invoicePreview) return invoicePreview;
   const compact = compactMergeAuditNote(message.body);
   if (compact) return compact;
   return message.body?.trim() || message.html_body || "";
@@ -53,8 +61,8 @@ const getMessageBodyText = (message: TicketMessage) => {
 const getMessagePreview = (message: TicketMessage) => {
   const source = getMessageBodyText(message);
   const text = source
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, "")
     .trim();
   if (!text) return "No message content";
   if (text.length <= PREVIEW_MAX_LENGTH) return text;
@@ -64,10 +72,15 @@ const getMessagePreview = (message: TicketMessage) => {
 const formatRecipientList = (emails?: string[] | null) => {
   const list = (emails ?? []).map((email) => email.trim()).filter(Boolean);
   if (!list.length) return null;
-  return list.join(", ");
+  return list.join(",");
 };
 
-type ThreadTreeTone = "default" | "inbound" | "outbound" | "internal" | "unread";
+type ThreadTreeTone =
+  | "default"
+  | "inbound"
+  | "outbound"
+  | "internal"
+  | "unread";
 
 const ThreadTreeGuide = ({
   isFirst,
@@ -131,16 +144,13 @@ const MessageOverflowMenu = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <IconButton
           className="size-7 shrink-0 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 group-hover/message:opacity-100 data-[state=open]:opacity-100"
           aria-label="Message actions"
           onClick={(event) => event.stopPropagation()}
         >
           <MoreHorizontal className="size-4" />
-        </Button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuItem
@@ -176,13 +186,15 @@ const MessageOverflowMenu = ({
             <DropdownMenuLabel className="space-y-1 font-normal text-muted-foreground">
               {toLine ? (
                 <p className="truncate text-xs">
-                  <span className="font-medium text-foreground/80">To:</span>{" "}
+                  <span className="font-medium text-foreground/80">To:</span>
+                  {" "}
                   {toLine}
                 </p>
               ) : null}
               {ccLine ? (
                 <p className="truncate text-xs">
-                  <span className="font-medium text-foreground/80">Cc:</span>{" "}
+                  <span className="font-medium text-foreground/80">Cc:</span>
+                  {" "}
                   {ccLine}
                 </p>
               ) : null}
@@ -237,8 +249,7 @@ const TicketThreadMessage = ({
   const toLine = formatRecipientList(message.to_emails);
   const ccLine = formatRecipientList(message.cc_emails);
   const attachmentCount = attachments.length;
-  const unreadInbound =
-    inbound && isInboundMessageUnread(message, readCutoff);
+  const unreadInbound = inbound && isInboundMessageUnread(message, readCutoff);
 
   const handleQuote = () => {
     quoteContext?.quoteMessage(message);
@@ -262,6 +273,7 @@ const TicketThreadMessage = ({
   if (isInternal) {
     const author = senderName || "Team";
     const compactAuditBody = compactMergeAuditNote(message.body);
+    const invoiceSentNote = isInvoiceSentInternalNote(message.body);
 
     return (
       <article className="group/message flex w-full text-sm">
@@ -338,7 +350,8 @@ const TicketThreadMessage = ({
                     <p>
                       <span className="font-medium text-foreground/80">
                         To:
-                      </span>{" "}
+                      </span>
+                      {" "}
                       {toLine}
                     </p>
                   ) : null}
@@ -346,18 +359,23 @@ const TicketThreadMessage = ({
                     <p>
                       <span className="font-medium text-foreground/80">
                         Cc:
-                      </span>{" "}
+                      </span>
+                      {" "}
                       {ccLine}
                     </p>
                   ) : null}
                 </div>
               ) : null}
-              <TicketMessageContent
-                body={compactAuditBody ?? message.body}
-                htmlBody={compactAuditBody ? null : message.html_body}
-                attachments={attachments}
-                className="mt-3 text-foreground [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_section]:border-amber-500/30"
-              />
+              {invoiceSentNote ? (
+                <TicketInvoiceSentNoteCard body={message.body} />
+              ) : (
+                <TicketMessageContent
+                  body={compactAuditBody ?? message.body}
+                  htmlBody={compactAuditBody ? null : message.html_body}
+                  attachments={attachments}
+                  className="mt-3 text-foreground [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_section]:border-amber-500/30"
+                />
+              )}
             </>
           ) : null}
         </div>
@@ -436,13 +454,15 @@ const TicketThreadMessage = ({
               <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                 {toLine ? (
                   <p>
-                    <span className="font-medium text-foreground/80">To:</span>{" "}
+                    <span className="font-medium text-foreground/80">To:</span>
+                    {" "}
                     {toLine}
                   </p>
                 ) : null}
                 {ccLine ? (
                   <p>
-                    <span className="font-medium text-foreground/80">Cc:</span>{" "}
+                    <span className="font-medium text-foreground/80">Cc:</span>
+                    {" "}
                     {ccLine}
                   </p>
                 ) : null}

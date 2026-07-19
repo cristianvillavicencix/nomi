@@ -55,8 +55,7 @@ export const LbsDealHeaderOverview = ({ record }: { record: LbsDeal }) => {
     return null;
   }, [record.contact_id, record.contact_ids]);
 
-  const { data: mainContact } = useGetOne<Contact>(
-    "contacts_summary",
+  const { data: mainContact } = useGetOne<Contact>("contacts_summary",
     { id: mainContactId as number },
     { enabled: mainContactId != null },
   );

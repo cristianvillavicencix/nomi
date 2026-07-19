@@ -2,6 +2,7 @@ import { ArrowLeft, Eye, FileText, Save } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
+import { ToolbarLabel } from "@/components/atomic-crm/layout/PageActions";
 
 export const ProposalPreviewToolbar = ({
   proposalId,
@@ -31,11 +32,11 @@ export const ProposalPreviewToolbar = ({
         {unsavedHint}
       </p>
     ) : null}
-    <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+    <div className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:overflow-x-auto">
       <Button variant="ghost" size="sm" asChild>
-        <Link to={`/proposals/${proposalId}/edit`}>
+        <Link to={`/proposals/${proposalId}/edit`} aria-label="Back to builder">
           <ArrowLeft className="size-4" />
-          Back to builder
+          <ToolbarLabel>Back to builder</ToolbarLabel>
         </Link>
       </Button>
 
@@ -48,39 +49,44 @@ export const ProposalPreviewToolbar = ({
 
       {variablesHelp}
 
-      <Button type="button" variant="outline" size="sm" asChild>
-        <Link
-          to={`/proposals/${proposalId}/client-preview`}
-          target="_blank"
-          rel="noopener noreferrer"
+      <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:flex-nowrap sm:items-center">
+        <Button type="button" variant="secondary" size="sm" asChild>
+          <Link
+            to={`/proposals/${proposalId}/client-preview`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Preview as client"
+          >
+            <Eye className="size-4" />
+            <ToolbarLabel>Preview as client</ToolbarLabel>
+          </Link>
+        </Button>
+
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onSaveTemplate}
+          aria-label="Save as template"
         >
-          <Eye className="size-4" />
-          Preview as client
-        </Link>
-      </Button>
+          <FileText className="size-4" />
+          <ToolbarLabel>Save as template</ToolbarLabel>
+        </Button>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={onSaveTemplate}
-      >
-        <FileText className="size-4" />
-        Save as template
-      </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={isSaving}
+          onClick={onSaveContent}
+          aria-label="Save"
+        >
+          <Save className="size-4" />
+          <ToolbarLabel priority="primary">Save</ToolbarLabel>
+        </Button>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={isSaving}
-        onClick={onSaveContent}
-      >
-        <Save className="size-4" />
-        Save
-      </Button>
-
-      {sendActions}
+        {sendActions}
+      </div>
     </div>
   </div>
 );

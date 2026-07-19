@@ -60,7 +60,7 @@ export const ActiveCallBar = () => {
           <Button
             type="button"
             size="sm"
-            variant={busy ? "destructive" : "outline"}
+            variant={busy ? "destructive" : "secondary"}
             onClick={() => voice.hangUp()}
           >
             {voice.callState === "connecting" ? (

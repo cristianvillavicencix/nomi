@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 import type { Task as TaskRecord } from "@/modules/types";
 
@@ -97,10 +98,7 @@ export const ProjectTasksCalendar = ({
   return (
     <div className="bg-muted/30 rounded-md border p-2 text-xs">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <IconButton
           className="size-6"
           aria-label="Previous month"
           onClick={() =>
@@ -111,14 +109,11 @@ export const ProjectTasksCalendar = ({
           }
         >
           <ChevronLeft className="size-3.5" />
-        </Button>
+        </IconButton>
         <span className="text-[11px] font-semibold capitalize">
           {monthLabel}
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <IconButton
           className="size-6"
           aria-label="Next month"
           onClick={() =>
@@ -129,7 +124,7 @@ export const ProjectTasksCalendar = ({
           }
         >
           <ChevronRight className="size-3.5" />
-        </Button>
+        </IconButton>
       </div>
       <div className="grid grid-cols-7 gap-0.5">
         {WEEKDAY_LABELS.map((label, index) => (

@@ -11,6 +11,7 @@ import {
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Select,
   SelectContent,
@@ -278,16 +279,13 @@ export const ProgressiveMultiChannelInput = <T extends FieldValues>({
                     Make primary
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => handleRemove(index)}
                   aria-label={`Remove ${kind}`}
                 >
                   <X className="size-4" />
-                </Button>
+                </IconButton>
               </div>
             </div>
           );

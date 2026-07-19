@@ -11,6 +11,7 @@ import {
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -154,7 +155,7 @@ export const ServiceCatalogSettings = () => {
         {catalogEmpty ? (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={seedCatalog.isPending}
             onClick={() => seedCatalog.mutate()}
@@ -338,7 +339,7 @@ export const ServiceCatalogSettings = () => {
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => setDeleteTarget(null)}
             >
               Cancel
@@ -474,24 +475,18 @@ const CatalogTable = <
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-end gap-0.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  <IconButton
                     onClick={() => onEdit(row)}
                     aria-label={`Edit ${row.name}`}
                   >
                     <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  </IconButton>
+                  <IconButton
                     onClick={() => onDelete(row)}
                     aria-label={`Delete ${row.name}`}
                   >
                     <Trash2 className="size-4" />
-                  </Button>
+                  </IconButton>
                 </div>
               </TableCell>
             </TableRow>

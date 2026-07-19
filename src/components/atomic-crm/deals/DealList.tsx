@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useGetIdentity, useListContext, useListFilterContext } from "ra-core";
 import { matchPath, useLocation } from "react-router";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
@@ -10,8 +10,13 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { KanbanSquare, List as ListIcon } from "lucide-react";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { canUseCrmPermission } from "../providers/commons/crmPermissions";
@@ -53,18 +58,94 @@ const DealList = () => {
   return (
     <List
       perPage={100}
-      filter={{ "archived_at@is": null }}
+      filter={{"archived_at@is": null }}
       title={false}
       disableBreadcrumb
       sort={{ field: "index", order: "DESC" }}
       filters={dealFilters}
-      actions={<DealActions />}
+      actions={
+        <PageActions>
+          <PageTitle label="Deals" />
+        </PageActions>
+      }
       pagination={null}
       contentScrollable={view !== "board"}
       className={view === "board" ? "mt-0 min-h-0 flex-1" : undefined}
     >
       <DealLayout />
     </List>
+  );
+};
+
+const DealListSearchField = () => {
+  const { total } = useListContext();
+  const { filterValues, setFilters } = useListFilterContext();
+  const [searchDraft, setSearchDraft] = useState(
+    () => String(filterValues?.q ?? ""),
+  );
+
+  useEffect(() => {
+    setSearchDraft(String(filterValues?.q ?? ""));
+  }, [filterValues?.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = searchDraft.trim();
+      const current = String(filterValues?.q ?? "").trim();
+      if (next === current) return;
+      const nextFilters = { ...filterValues };
+      if (next) nextFilters.q = next;
+      else delete nextFilters.q;
+      setFilters(nextFilters, undefined, false);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filterValues, setFilters]);
+
+  return (
+    <ModuleSearchField
+      value={searchDraft}
+      onChange={setSearchDraft}
+      basePlaceholder="Search deals by name or company"
+      total={total}
+      itemSingular="deal"
+    />
+  );
+};
+
+const DealListToolbar = () => {
+  const { data: identity } = useGetIdentity();
+  const { view, setView } = useDealsViewPreference();
+  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
+
+  return (
+    <ModuleToolbar className="shrink-0">
+      <DealListSearchField />
+      <ModuleToolbarActions>
+        <ToggleGroup
+          type="single"
+          value={view}
+          onValueChange={(nextView) => {
+            if (nextView === "board" || nextView === "list") {
+              setView(nextView);
+            }
+          }}
+          variant="outline"
+          size="sm"
+          className="w-fit shrink-0"
+        >
+          <ToggleGroupItem value="list" aria-label="List view">
+            <ListIcon className="size-4" />
+            List
+          </ToggleGroupItem>
+          <ToggleGroupItem value="board" aria-label="Board view">
+            <KanbanSquare className="size-4" />
+            Board
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <FilterButton size="icon" showLabel={false} />
+        {canManageSales ? <NewDealCreateButton /> : null}
+      </ModuleToolbarActions>
+    </ModuleToolbar>
   );
 };
 
@@ -82,8 +163,7 @@ const DealLayout = () => {
   const config = useConfigurationContext();
   const selectedPipelineId =
     (filterValues?.pipeline_id as string | undefined) ||
-    getDefaultPipeline(config)?.id ||
-    "default";
+    getDefaultPipeline(config)?.id || "default";
 
   useEffect(() => {
     if (!listFilterValues.pipeline_id && selectedPipelineId) {
@@ -96,8 +176,11 @@ const DealLayout = () => {
 
   if (view === "board") {
     return (
-      <div className="flex h-full min-h-0 w-full flex-col">
-        <LbsDealBoardContent pipelineId={selectedPipelineId} />
+      <div className="flex h-full min-h-0 w-full flex-col gap-3">
+        <DealListToolbar />
+        <div className="min-h-0 flex-1">
+          <LbsDealBoardContent pipelineId={selectedPipelineId} />
+        </div>
         <DealArchivedList />
         <ProjectCreateFlow />
         <DealEdit
@@ -109,46 +192,13 @@ const DealLayout = () => {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-3">
+      <DealListToolbar />
       <DealTableView />
       <DealArchivedList />
       <ProjectCreateFlow />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />
     </div>
-  );
-};
-
-const DealActions = () => {
-  const { data: identity } = useGetIdentity();
-  const { view, setView } = useDealsViewPreference();
-  const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
-
-  return (
-    <PageActions>
-      <PageTitle label="Deals" />
-      <div className="ml-auto flex items-center gap-2">
-        <ToggleGroup
-          type="single"
-          value={view}
-          onValueChange={(nextView) => {
-            if (nextView === "board" || nextView === "list") {
-              setView(nextView);
-            }
-          }}
-          variant="outline"
-          size="sm"
-        >
-          <ToggleGroupItem value="board">Board</ToggleGroupItem>
-          <ToggleGroupItem value="list">List</ToggleGroupItem>
-        </ToggleGroup>
-        <FilterButton size="icon" showLabel={false} />
-        {canManageSales ? <NewDealCreateButton /> : null}
-        <ModuleInfoPopover
-          title="Deals"
-          description="Pipeline control for every deal, from setup to delivered."
-        />
-      </div>
-    </PageActions>
   );
 };
 

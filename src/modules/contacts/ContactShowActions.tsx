@@ -3,6 +3,7 @@ import { ChevronLeft, MoreHorizontal, Pencil } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import { RecordContextProvider } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,14 +58,9 @@ export const ContactShowActions = ({
         <RecordContextProvider value={record}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-9"
-                aria-label="More options"
-              >
+              <IconButton className="size-9" aria-label="More options">
                 <MoreHorizontal className="size-4" />
-              </Button>
+              </IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditOpen(true)}>

@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { Company } from "@/components/atomic-crm/types";
 import { getClientShowPath } from "@/app/routing";
+import { Button } from "@/components/ui/button";
 
 type CompanyNameDuplicateAlertProps = {
   company: Company;
@@ -18,13 +19,14 @@ export const CompanyNameDuplicateAlert = ({
     {onUseExisting ? (
       <>
         {" "}
-        <button
+        <Button
           type="button"
-          className="text-destructive underline hover:opacity-80"
+          variant="link"
+          className="h-auto p-0 text-sm text-destructive"
           onClick={() => onUseExisting(company)}
         >
           Use existing company
-        </button>
+        </Button>
       </>
     ) : null}
     {" · "}

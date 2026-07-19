@@ -48,7 +48,7 @@ export const EditButton = (props: EditButtonProps) => {
   });
   return (
     <Link
-      className={buttonVariants({ variant: "outline" })}
+      className={buttonVariants({ variant: "secondary" })}
       to={link}
       onClick={stopPropagation}
     >

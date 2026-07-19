@@ -1,5 +1,6 @@
 import { FileText, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,10 +41,7 @@ export const SmsWebFormPicker = ({
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <IconButton
           className="size-11 shrink-0 rounded-full"
           disabled={disabled || generateMutation.isPending}
           aria-label="Insert form link"
@@ -53,7 +51,7 @@ export const SmsWebFormPicker = ({
           ) : (
             <FileText className="size-4" />
           )}
-        </Button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuLabel>Insert form link</DropdownMenuLabel>

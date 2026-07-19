@@ -6,7 +6,8 @@ import { GooglePlacesAutocompleteInput } from "@/components/admin/google-places-
 import { NumberInput } from "@/components/admin/number-input";
 import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { BriefSocialLinksInput } from "@/modules/deals/BriefSocialLinksInput";
 import { detectSocialIconFromBriefEntry } from "@/modules/deals/briefSocialLinks";
@@ -122,16 +123,13 @@ export const BriefDynamicListInput = ({
               className="flex-1"
               onFocus={() => append("")}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <IconButton
               aria-label="Add entry"
               onClick={() => append("")}
-              className="size-8 shrink-0"
+              className="shrink-0"
             >
               <Plus className="size-4" />
-            </Button>
+            </IconButton>
           </li>
         ) : null}
         {fields.map((entry, index) => {
@@ -148,38 +146,29 @@ export const BriefDynamicListInput = ({
                 className="flex-1"
               />
               {isLast ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   aria-label="Add entry"
                   onClick={() => append("")}
-                  className="size-8 shrink-0"
+                  className="shrink-0"
                 >
                   <Plus className="size-4" />
-                </Button>
+                </IconButton>
               ) : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   aria-label="Insert below"
                   onClick={() => insert(index + 1, "")}
-                  className="size-8 shrink-0"
+                  className="shrink-0"
                 >
                   <Plus className="size-4" />
-                </Button>
+                </IconButton>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <IconButton
                 aria-label="Remove entry"
                 onClick={() => remove(index)}
-                className="size-8 shrink-0"
+                className="shrink-0"
               >
                 <XIcon className="size-4" />
-              </Button>
+              </IconButton>
             </li>
           );
         })}

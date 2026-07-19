@@ -439,7 +439,7 @@ const ProjectBriefPublicForm = ({
           {isContractorBrief && step > 0 ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               className="min-h-11"
               onClick={() => setStep((current) => Math.max(0, current - 1))}
             >
@@ -808,7 +808,7 @@ export const PublicFormRenderer = () => {
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               onClick={() => {
                 try {
                   localStorage.removeItem(formProgressStorageKey(token));
@@ -966,7 +966,7 @@ export const PublicFormRenderer = () => {
             {isWizard && step > 0 ? (
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => {
                   setStep((current) => current - 1);
                   setFieldErrors({});

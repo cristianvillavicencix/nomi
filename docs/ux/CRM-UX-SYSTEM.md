@@ -13,6 +13,7 @@ Layered reuse so modules do not fork the same jobs.
 - Profile kit + company/contact cleanup
 - Accounts preview aligned to shared identity
 - Messages context embeds person/company cards
+- **Buttons:** [BUTTON-SYSTEM.md](./BUTTON-SYSTEM.md) — `Button` / `IconButton`, variants, Create=`Plus`
 - Cursor rules: `.cursor/rules/profile-ux.mdc`, `.cursor/rules/crm-ux-system.mdc`
 
 ## Roadmap (Phase C+)

@@ -28,6 +28,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -99,16 +100,13 @@ const TicketContextTabs = ({
     {onCollapse ? (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
+          <IconButton
+            className="shrink-0"
             aria-label="Minimize context panel"
             onClick={onCollapse}
           >
             <PanelRightClose className="size-4" />
-          </Button>
+          </IconButton>
         </TooltipTrigger>
         <TooltipContent side="left">Minimize panel</TooltipContent>
       </Tooltip>
@@ -186,16 +184,13 @@ const TicketContextCollapsedRail = ({
         return (
           <Tooltip key={tab.id}>
             <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <IconButton
                 className="size-9"
                 aria-label={`Open ${tab.label}`}
                 onClick={() => onOpenTab(tab.id)}
               >
                 <Icon className="size-4" />
-              </Button>
+              </IconButton>
             </TooltipTrigger>
             <TooltipContent side="left">{tab.label}</TooltipContent>
           </Tooltip>
@@ -340,7 +335,7 @@ export const TicketContextSheet = ({
       <SheetTrigger asChild>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="h-8 gap-1.5"
         >

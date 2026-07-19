@@ -1,12 +1,12 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGetIdentity } from "ra-core";
-import { KanbanSquare, List as ListIcon } from "lucide-react";
 import { useSearchParams } from "react-router";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
+import { canAccess } from "@/components/atomic-crm/providers/commons/canAccess";
+import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
 import { AccountsGroupedList } from "@/modules/accounts/AccountsGroupedList";
 import {
   canAccessAccountsBoard,
@@ -21,14 +21,21 @@ import {
   syncAccountsHubSearchParams,
   type AccountsHubView,
 } from "@/modules/accounts/accountsHubSearchParams";
+import type { AccountsHubChrome } from "@/modules/accounts/AccountsModuleToolbar";
 import { AccountsLeadPreviewSheet } from "@/modules/accounts/AccountsLeadPreviewSheet";
 import { AccountsCompanyPreviewSheet } from "@/modules/accounts/AccountsCompanyPreviewSheet";
+import { NewClientDialog } from "@/modules/clients/NewClientDialog";
+import { NewContactDialog } from "@/modules/clients/NewContactDialog";
+import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
 import { LeadsBoardPanel } from "@/modules/leads/LeadsBoardPanel";
 
 /** Accounts hub — List (company-first) | Board (leads Kanban). */
 export const AccountsHubPage = () => {
   const { data: identity } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [leadDialogOpen, setLeadDialogOpen] = useState(false);
 
   const canList = useMemo(
     () => canAccessAccountsList(identity),
@@ -38,6 +45,15 @@ export const AccountsHubPage = () => {
     () => canAccessAccountsBoard(identity),
     [identity],
   );
+
+  const canCreateCompany = canAccess(identity as AccessIdentity, {
+    resource: "companies",
+    action: "create",
+  });
+  const canCreateContact = canAccess(identity as AccessIdentity, {
+    resource: "contacts",
+    action: "create",
+  });
 
   const requestedView = useMemo(() => {
     const fromUrl = parseAccountsHubView(searchParams.get("view"));
@@ -58,9 +74,18 @@ export const AccountsHubPage = () => {
     setSearchParams(next, { replace: true });
   }, [activeView, searchParams, setSearchParams]);
 
-  const handleViewChange = (value: string) => {
-    if (value !== "list" && value !== "board") return;
-    const view = value as AccountsHubView;
+  useEffect(() => {
+    const create = searchParams.get("create");
+    if (create === "company") setCompanyDialogOpen(true);
+    else if (create === "lead") setLeadDialogOpen(true);
+    else if (create === "contact") setContactDialogOpen(true);
+    else return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("create");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const handleViewChange = (view: AccountsHubView) => {
     if (view === "list" && !canList) return;
     if (view === "board" && !canBoard) return;
     persistAccountsView(view);
@@ -74,7 +99,16 @@ export const AccountsHubPage = () => {
 
   if (!identity || !activeView) return null;
 
-  const showToggle = canList && canBoard;
+  const chrome: AccountsHubChrome = {
+    activeView,
+    onViewChange: handleViewChange,
+    showToggle: canList && canBoard,
+    canCreateCompany,
+    canCreateContact,
+    onNewCompany: () => setCompanyDialogOpen(true),
+    onNewLead: () => setLeadDialogOpen(true),
+    onNewContact: () => setContactDialogOpen(true),
+  };
 
   return (
     <div
@@ -86,33 +120,25 @@ export const AccountsHubPage = () => {
     >
       <PageActions>
         <PageTitle label="Accounts" />
-        {showToggle ? (
-          <ToggleGroup
-            type="single"
-            value={activeView}
-            onValueChange={handleViewChange}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="list" aria-label="List view">
-              <ListIcon className="size-4" />
-              List
-            </ToggleGroupItem>
-            <ToggleGroupItem value="board" aria-label="Board view">
-              <KanbanSquare className="size-4" />
-              Board
-            </ToggleGroupItem>
-          </ToggleGroup>
-        ) : null}
       </PageActions>
 
       {activeView === "board" ? (
         <div className="min-h-0 flex-1">
-          <LeadsBoardPanel embedded />
+          <LeadsBoardPanel embedded accountsChrome={chrome} />
         </div>
       ) : canList ? (
-        <AccountsGroupedList />
+        <AccountsGroupedList accountsChrome={chrome} />
       ) : null}
+
+      <NewClientDialog
+        open={companyDialogOpen}
+        onOpenChange={setCompanyDialogOpen}
+      />
+      <NewLeadDialog open={leadDialogOpen} onOpenChange={setLeadDialogOpen} />
+      <NewContactDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+      />
 
       <AccountsLeadPreviewSheet />
       <AccountsCompanyPreviewSheet />

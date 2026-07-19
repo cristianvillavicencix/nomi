@@ -1,6 +1,6 @@
 import { useGetIdentity } from "ra-core";
-import { ChevronDown } from "lucide-react";
-import { Link, matchPath, useLocation } from "react-router";
+import { CaretDown } from "@phosphor-icons/react";
+import { Link, useLocation } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,9 +19,18 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { canAccess } from "@/components/atomic-crm/providers/commons/canAccess";
-import { hasMemberCapability } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
+import {
+  filterAccessibleNavItems,
+  isAccountsNavActive,
+  isClientsNavActive,
+  matchesNavPattern,
+} from "@/app/lbsNavAccess";
 import {
   filterLbsNavGroups,
   LBS_ACCOUNTS_NAV_ITEM,
@@ -36,6 +45,7 @@ import {
   type LbsNavGroup,
   type LbsNavItem,
 } from "@/app/navigation";
+import { SidebarNavIcon } from "@/app/SidebarNavIcon";
 import { getAccessibleClientsHubTabs } from "@/modules/clients/clientsHubAccess";
 import { canAccessAccountsHub } from "@/modules/accounts/accountsHubAccess";
 import { isAccountsHubEnabled } from "@/lib/featureFlags";
@@ -43,7 +53,6 @@ import { formatUnreadBadgeCount } from "@/modules/messages/messagesUnreadUtils";
 
 import {
   sidebarNavDropdownItemClass,
-  sidebarNavIconClass,
   sidebarNavLinkClass,
   sidebarNavLinkCollapsedClass,
   sidebarNavSubLinkClass,
@@ -54,49 +63,12 @@ import {
 // and re-run composeRefs in a loop. See React.Slot internals.
 const LINK_STATE = { _scrollToTop: true } as const;
 
-const matchesNavPattern = (pattern: string, pathname: string) => {
-  if (pattern === "/") return pathname === "/";
-  if (pattern.endsWith("/*")) {
-    const base = pattern.slice(0, -2);
-    return pathname === base || pathname.startsWith(`${base}/`);
-  }
-  return !!matchPath(pattern, pathname);
-};
-
-const canAccessNavItem = (identity: unknown, item: LbsNavItem) => {
-  if (item.capability) {
-    return hasMemberCapability(identity as any, item.capability);
-  }
-  if (item.resource) {
-    return canAccess(identity as any, {
-      resource: item.resource,
-      action: item.action ?? "list",
-    });
-  }
-  return true;
-};
-
-const filterAccessibleItems = (identity: unknown, items: LbsNavItem[]) =>
-  items.filter((item) => canAccessNavItem(identity, item));
-
 const readStoredOpen = (storageKey: string, fallback: boolean) => {
   if (typeof window === "undefined") return fallback;
   const stored = window.localStorage.getItem(storageKey);
   if (stored === null) return fallback;
   return stored === "true";
 };
-
-const isClientsNavActive = (pathname: string) =>
-  matchesNavPattern("/clients/*", pathname) ||
-  matchesNavPattern("/companies/*", pathname) ||
-  matchesNavPattern("/contacts/*", pathname);
-
-const isAccountsNavActive = (pathname: string) =>
-  matchesNavPattern("/accounts/*", pathname) ||
-  matchesNavPattern("/leads/*", pathname) ||
-  matchesNavPattern("/clients/*", pathname) ||
-  matchesNavPattern("/companies/*", pathname) ||
-  matchesNavPattern("/contacts/*", pathname);
 
 type LbsSidebarNavProps = {
   websiteMonitorEnabled: boolean;
@@ -122,7 +94,7 @@ export const LbsSidebarNav = ({
 
   const standaloneItems = useMemo(
     () =>
-      filterAccessibleItems(
+      filterAccessibleNavItems(
         identity,
         accountsHub ? LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB : LBS_NAV_STANDALONE,
       ),
@@ -130,7 +102,7 @@ export const LbsSidebarNav = ({
   );
 
   const afterClientsItems = useMemo(
-    () => filterAccessibleItems(identity, LBS_NAV_AFTER_CLIENTS),
+    () => filterAccessibleNavItems(identity, LBS_NAV_AFTER_CLIENTS),
     [identity],
   );
 
@@ -151,7 +123,7 @@ export const LbsSidebarNav = ({
     return groups
       .map((group) => ({
         ...group,
-        items: filterAccessibleItems(identity, group.items),
+        items: filterAccessibleNavItems(identity, group.items),
       }))
       .filter((group) => group.items.length > 0);
   }, [identity, websiteMonitorEnabled]);
@@ -315,13 +287,27 @@ const MoreCollapsibleNav = ({
       <SidebarMenu className="group-data-[collapsible=icon]:gap-1.5">
         <SidebarMenuItem>
           <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label={section.label}
-              title={section.label}
-              className={sidebarNavLinkCollapsedClass(sectionActive)}
-            >
-              <ParentIcon className={sidebarNavIconClass(sectionActive)} />
-            </DropdownMenuTrigger>
+            <Tooltip delayDuration={0}>
+              {/* Span owns the tooltip ref — avoid Slot nesting with DropdownMenuTrigger. */}
+              <TooltipTrigger asChild>
+                <span className="flex w-full">
+                  <DropdownMenuTrigger
+                    aria-label={section.label}
+                    className={sidebarNavLinkCollapsedClass(sectionActive)}
+                  >
+                    <SidebarNavIcon icon={ParentIcon} active={sectionActive} />
+                  </DropdownMenuTrigger>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                align="center"
+                sideOffset={8}
+                className="z-[100]"
+              >
+                {section.label}
+              </TooltipContent>
+            </Tooltip>
             <DropdownMenuContent
               side="right"
               align="start"
@@ -336,7 +322,6 @@ const MoreCollapsibleNav = ({
                     {group.label}
                   </div>
                   {group.items.map((item) => {
-                    const Icon = item.icon;
                     const active = isActive(item.activePattern);
                     return (
                       <DropdownMenuItem key={item.to} asChild>
@@ -345,7 +330,7 @@ const MoreCollapsibleNav = ({
                           state={LINK_STATE}
                           className={sidebarNavDropdownItemClass(active)}
                         >
-                          <Icon className="size-4" />
+                          <SidebarNavIcon icon={item.icon} active={active} />
                           {item.label}
                         </Link>
                       </DropdownMenuItem>
@@ -373,11 +358,12 @@ const MoreCollapsibleNav = ({
           )}
           aria-expanded={open}
         >
-          <ParentIcon className={sidebarNavIconClass(sectionActive)} />
+          <SidebarNavIcon icon={ParentIcon} active={sectionActive} />
           <span className="truncate">{section.label}</span>
-          <ChevronDown
+          <CaretDown
+            weight="bold"
             className={cn(
-              "ml-auto size-4 shrink-0 text-muted-foreground transition-transform",
+              "ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform duration-150 ease-out",
               open && "rotate-180",
             )}
           />
@@ -391,7 +377,6 @@ const MoreCollapsibleNav = ({
                 {group.label}
               </div>
               {group.items.map((item) => {
-                const Icon = item.icon;
                 const active = isActive(item.activePattern);
                 return (
                   <SidebarMenuSubItem key={item.to}>
@@ -401,7 +386,7 @@ const MoreCollapsibleNav = ({
                         state={LINK_STATE}
                         className={sidebarNavSubLinkClass(active)}
                       >
-                        <Icon className={sidebarNavIconClass(active)} />
+                        <SidebarNavIcon icon={item.icon} active={active} />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuSubButton>
@@ -427,26 +412,38 @@ const SidebarNavLink = ({
   badgeCount?: number;
   collapsed?: boolean;
 }) => {
-  const Icon = item.icon;
-
   if (collapsed) {
     return (
       <SidebarMenuItem>
-        <Link
-          to={item.to}
-          state={LINK_STATE}
-          aria-label={item.label}
-          title={item.label}
-          className={sidebarNavLinkCollapsedClass(active)}
-        >
-          <Icon className={sidebarNavIconClass(active)} />
-          {badgeCount > 0 ? (
-            <NavBadge
-              count={badgeCount}
-              className="absolute -top-0.5 -right-0.5"
-            />
-          ) : null}
-        </Link>
+        <Tooltip delayDuration={0}>
+          {/* Span owns the tooltip ref — Slot+Link can fail to show on hover. */}
+          <TooltipTrigger asChild>
+            <span className="flex w-full">
+              <Link
+                to={item.to}
+                state={LINK_STATE}
+                aria-label={item.label}
+                className={sidebarNavLinkCollapsedClass(active)}
+              >
+                <SidebarNavIcon icon={item.icon} active={active} />
+                {badgeCount > 0 ? (
+                  <NavBadge
+                    count={badgeCount}
+                    className="absolute -top-0.5 -right-0.5"
+                  />
+                ) : null}
+              </Link>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            align="center"
+            sideOffset={8}
+            className="z-[100]"
+          >
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
       </SidebarMenuItem>
     );
   }
@@ -458,7 +455,7 @@ const SidebarNavLink = ({
         state={LINK_STATE}
         className={sidebarNavLinkClass(active)}
       >
-        <Icon className={sidebarNavIconClass(active)} />
+        <SidebarNavIcon icon={item.icon} active={active} />
         <span className="truncate">{item.label}</span>
         {badgeCount > 0 ? (
           <NavBadge count={badgeCount} className="ml-auto" />

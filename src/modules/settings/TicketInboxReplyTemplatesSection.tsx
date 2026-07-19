@@ -13,6 +13,7 @@ import {
 } from "@/modules/tickets/ticketReplyTemplateStorage";
 import { TicketReplyTemplateEditDialog } from "@/modules/tickets/TicketReplyTemplateEditDialog";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Card,
   CardContent,
@@ -216,7 +217,7 @@ export const TicketInboxReplyTemplatesSection = ({
           </p>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-8"
             disabled={!selectedInbox}
@@ -248,21 +249,14 @@ export const TicketInboxReplyTemplatesSection = ({
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
+                  <IconButton
                     title="Edit template"
                     onClick={() => setEditingTemplate(template)}
                   >
                     <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-destructive hover:text-destructive"
+                  </IconButton>
+                  <IconButton
+                    className="text-destructive hover:text-destructive"
                     title="Delete template"
                     disabled={deleteMutation.isPending}
                     onClick={() => deleteMutation.mutate(template.id)}
@@ -272,7 +266,7 @@ export const TicketInboxReplyTemplatesSection = ({
                     ) : (
                       <Trash2 className="size-4" />
                     )}
-                  </Button>
+                  </IconButton>
                 </div>
               </li>
             ))}

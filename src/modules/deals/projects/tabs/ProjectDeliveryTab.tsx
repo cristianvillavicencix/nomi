@@ -122,7 +122,7 @@ export const ProjectDeliveryTab = ({ record }: { record: LbsDeal }) => {
           {hasPendingRequired ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               className="border-warning/50 hover:bg-warning/10"
               onClick={() => setOverrideOpen(true)}
             >

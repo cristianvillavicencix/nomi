@@ -419,5 +419,8 @@ verify_jwt = false
 [functions.hostinger_sync_cron]
 verify_jwt = false
 
+[functions.crm_assistant]
+verify_jwt = false
+
 [functions.hostinger_domain_details]
 verify_jwt = false

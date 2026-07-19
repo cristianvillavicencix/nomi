@@ -15,6 +15,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react"
 import { Button } from "@/components/ui/button"
+import { IconButton } from "@/components/ui/icon-button"
 import {
   Dialog,
   DialogOverlay,
@@ -213,62 +214,47 @@ export const ImageLightbox = ({
             </div>
             <div className="flex items-center gap-1">
               {onDownload ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   className="text-white hover:bg-white/10 hover:text-white"
                   onClick={onDownload}
                   aria-label="Download image"
                 >
                   <Download className="size-4" />
-                </Button>
+                </IconButton>
               ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <IconButton
                 className="text-white hover:bg-white/10 hover:text-white"
                 onClick={zoomOut}
                 aria-label="Zoom out"
               >
                 <ZoomOut className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              </IconButton>
+              <IconButton
                 className="text-white hover:bg-white/10 hover:text-white"
                 onClick={zoomIn}
                 aria-label="Zoom in"
               >
                 <ZoomIn className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              </IconButton>
+              <IconButton
                 className="text-white hover:bg-white/10 hover:text-white"
                 onClick={() => onOpenChange(false)}
                 aria-label="Close"
               >
                 <XIcon className="size-4" />
-              </Button>
+              </IconButton>
             </div>
           </div>
 
           <div className="relative flex min-h-0 flex-1 items-center justify-center px-14 pb-6">
             {hasMultiple ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <IconButton
                 className="absolute left-3 top-1/2 z-10 size-10 -translate-y-1/2 rounded-full text-white hover:bg-white/10 hover:text-white"
                 onClick={goPrev}
                 aria-label="Previous image"
               >
                 <ChevronLeft className="size-7" />
-              </Button>
+              </IconButton>
             ) : null}
 
             <div
@@ -297,16 +283,13 @@ export const ImageLightbox = ({
             </div>
 
             {hasMultiple ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <IconButton
                 className="absolute right-3 top-1/2 z-10 size-10 -translate-y-1/2 rounded-full text-white hover:bg-white/10 hover:text-white"
                 onClick={goNext}
                 aria-label="Next image"
               >
                 <ChevronRight className="size-7" />
-              </Button>
+              </IconButton>
             ) : null}
           </div>
 

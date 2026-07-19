@@ -229,7 +229,7 @@ export const ProjectScheduleTab = ({ record }: { record: LbsDeal }) => {
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => toggleComplete(milestone)}
                       >
                         {milestone.completed_at ? "Reopen" : "Complete"}
@@ -237,7 +237,7 @@ export const ProjectScheduleTab = ({ record }: { record: LbsDeal }) => {
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => handleDelete(milestone)}
                       >
                         Delete

@@ -3,7 +3,7 @@ import { CRM } from "@/components/atomic-crm/root/CRM";
 /**
  * Application entry point
  *
- * Customize Nomi CRM by passing props to the CRM component:
+ * Customize Sigma by Latino Business Support by passing props to the CRM component:
  *  - companySectors
  *  - darkTheme
  *  - dealCategories

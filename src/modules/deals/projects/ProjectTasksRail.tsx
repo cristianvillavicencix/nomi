@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useGetList } from "ra-core";
 import { ListChecks, PanelLeftOpen, PanelRightClose } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -72,16 +72,12 @@ export const ProjectTasksRail = ({
       >
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8"
+            <IconButton
               aria-label="Show project tasks"
               onClick={onToggleCollapsed}
             >
               <PanelLeftOpen className="size-4" />
-            </Button>
+            </IconButton>
           </TooltipTrigger>
           <TooltipContent side="left">Show tasks</TooltipContent>
         </Tooltip>
@@ -137,16 +133,13 @@ export const ProjectTasksRail = ({
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8 shrink-0"
+            <IconButton
+              className="shrink-0"
               onClick={onToggleCollapsed}
               aria-label="Collapse tasks panel"
             >
               <PanelRightClose className="size-4" />
-            </Button>
+            </IconButton>
           </TooltipTrigger>
           <TooltipContent side="left">Collapse panel</TooltipContent>
         </Tooltip>

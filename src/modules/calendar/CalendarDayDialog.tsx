@@ -132,7 +132,7 @@ export const CalendarDayDialog = ({
           <div className="grid gap-2 sm:grid-cols-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               className="justify-start"
               onClick={() => onCreateTask(dateKey)}
             >
@@ -141,7 +141,7 @@ export const CalendarDayDialog = ({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               className="justify-start"
               onClick={() => onCreateReminder(dateKey)}
             >
@@ -151,7 +151,7 @@ export const CalendarDayDialog = ({
             {onScheduleMeeting ? (
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 className="justify-start sm:col-span-2"
                 onClick={() => onScheduleMeeting(dateKey)}
               >

@@ -44,11 +44,11 @@ describe("resolveSettingsRoute", () => {
     expect(route.connectorsSection).toBe("twilio");
   });
 
-  it("maps legacy connectors search section to google", () => {
+  it("maps legacy connectors ai section to ask-nomi", () => {
     const route = resolveSettingsRoute(
-      new URLSearchParams("tab=connectors&section=search"),
+      new URLSearchParams("tab=connectors&section=ai"),
     );
-    expect(route.connectorsSection).toBe("google");
+    expect(route.connectorsSection).toBe("ask-nomi");
   });
 
   it("maps legacy connectors email section to mail", () => {

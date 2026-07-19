@@ -55,9 +55,9 @@ export const MarketingSettingsCard = ({
           </p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="marketing-email-from">Marketing email From</Label>
+          <Label htmlFor="marketing-email-from ">Marketing email From</Label>
           <Input
-            id="marketing-email-from"
+            id="marketing-email-from "
             value={marketingEmailFrom}
             onChange={(e) => setMarketingEmailFrom(e.target.value)}
             placeholder="Marketing <news@lbs.bz>"

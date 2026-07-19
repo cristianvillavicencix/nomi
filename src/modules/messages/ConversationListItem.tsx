@@ -1,3 +1,4 @@
+import { CheckCheck } from "lucide-react";
 import type { Identifier } from "ra-core";
 import type {
   Contact,
@@ -86,14 +87,20 @@ export const ConversationListItem = ({
             ) : null}
           </div>
         </div>
-        <p
+        <div
           className={cn(
-            "mt-0.5 truncate text-sm text-muted-foreground",
+            "mt-0.5 flex min-w-0 items-center gap-1 text-sm text-muted-foreground",
             hasUnread && "text-foreground/80",
           )}
         >
-          {display.preview}
-        </p>
+          {display.isOutboundPreview ? (
+            <CheckCheck
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-label="Sent"
+            />
+          ) : null}
+          <p className="min-w-0 truncate">{display.preview}</p>
+        </div>
       </div>
     </button>
   );

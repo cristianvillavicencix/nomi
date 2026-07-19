@@ -6,7 +6,7 @@ import {
   useRecordContext,
   type Identifier,
 } from "ra-core";
-import { Building2, Check } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -200,7 +200,7 @@ export const ContactCompanyPickerField = ({
           onSearchOpenChange={setSearchOpen}
           searchPlaceholder="Search existing company…"
           addButtonLabel="Add company"
-          addButtonIcon={<Building2 className="size-4" />}
+          addButtonIcon={<Plus className="size-4" />}
           onAddClick={() => openCompanyCreateDialog()}
           isFetching={isFetching}
           emptyMessage="Type to search companies."

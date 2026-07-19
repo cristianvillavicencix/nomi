@@ -1,9 +1,18 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource/lexend-deca/300.css";
+@import "@fontsource/lexend-deca/400.css";
+@import "@fontsource/lexend-deca/500.css";
+@import "@fontsource/lexend-deca/600.css";
+@import "@fontsource/lexend-deca/700.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans:
+    "Lexend Deca", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --font-heading: "Lexend Deca", ui-sans-serif, system-ui, sans-serif;
   --radius-sm: 0.125rem;
   --radius-md: 0.1875rem;
   --radius-lg: var(--radius);
@@ -246,8 +255,21 @@ input[type="time"] {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
   }
 }
 

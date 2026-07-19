@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   getMonthGridDays,
   getWeekdayLabel,
@@ -41,25 +42,13 @@ export const BookingDatePicker = ({
   return (
     <div className="rounded-xl border bg-card p-4">
       <div className="mb-4 flex items-center justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => shiftMonth(-1)}
-          aria-label="Previous month"
-        >
+        <IconButton onClick={() => shiftMonth(-1)} aria-label="Previous month">
           <ChevronLeft className="size-4" />
-        </Button>
+        </IconButton>
         <p className="text-sm font-semibold">{monthLabel}</p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => shiftMonth(1)}
-          aria-label="Next month"
-        >
+        <IconButton onClick={() => shiftMonth(1)} aria-label="Next month">
           <ChevronRight className="size-4" />
-        </Button>
+        </IconButton>
       </div>
 
       <div className="grid grid-cols-7 gap-1">

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Badge } from "@/components/ui/badge";
 import { Filter } from "lucide-react";
 
@@ -57,12 +58,7 @@ export const ResponsiveFilters = ({
         </FilterLiveForm>
         <Sheet>
           <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative size-9"
-              aria-label="Filter"
-            >
+            <IconButton className="relative size-9" aria-label="Filter">
               <Filter className="size-5" />
               {activeFiltersCount > 0 && (
                 <Badge
@@ -72,7 +68,7 @@ export const ResponsiveFilters = ({
                   {activeFiltersCount}
                 </Badge>
               )}
-            </Button>
+            </IconButton>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-dvh p-4 flex flex-col">
             <SheetHeader className="-p-4">

@@ -5,6 +5,7 @@ import { ReferenceField } from "@/components/admin/reference-field";
 import { DateField } from "@/components/admin/date-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -268,9 +269,9 @@ const TaskTableRow = ({
         <TableCell className="align-top text-right">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8">
+              <IconButton aria-label="More actions">
                 <MoreVertical className="size-4" />
-              </Button>
+              </IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditOpen(true)}>
@@ -309,7 +310,7 @@ const TaskTableRow = ({
             This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+            <Button variant="secondary" onClick={() => setDeleteOpen(false)}>
               Cancel
             </Button>
             <Button

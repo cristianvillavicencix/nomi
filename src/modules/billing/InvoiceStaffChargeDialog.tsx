@@ -275,7 +275,7 @@ export const InvoiceStaffChargeDialog = ({
               {hasCard ? (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   className="h-auto w-full justify-start gap-3 px-4 py-3 text-left"
                   disabled={isBusy}
                   onClick={() => chargeOnFileMutation.mutate()}
@@ -298,7 +298,7 @@ export const InvoiceStaffChargeDialog = ({
 
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 className="h-auto w-full justify-start gap-3 px-4 py-3 text-left"
                 disabled={isBusy}
                 onClick={() => prepareCheckoutMutation.mutate()}
@@ -318,7 +318,7 @@ export const InvoiceStaffChargeDialog = ({
 
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 className="h-auto w-full justify-start gap-3 px-4 py-3 text-left"
                 disabled={isBusy}
                 onClick={() => prepareLinkMutation.mutate()}
@@ -369,7 +369,7 @@ export const InvoiceStaffChargeDialog = ({
                 <Button
                   type="button"
                   className="w-full justify-start gap-2"
-                  variant="outline"
+                  variant="secondary"
                   disabled={sendEmailLinkMutation.isPending}
                   onClick={() => sendEmailLinkMutation.mutate()}
                 >
@@ -390,7 +390,7 @@ export const InvoiceStaffChargeDialog = ({
                 <Button
                   type="button"
                   className="w-full justify-start gap-2"
-                  variant="outline"
+                  variant="secondary"
                   disabled={isBusy}
                   onClick={() => void sendSmsLink()}
                 >
@@ -402,7 +402,7 @@ export const InvoiceStaffChargeDialog = ({
               <Button
                 type="button"
                 className="w-full justify-start gap-2"
-                variant="outline"
+                variant="secondary"
                 disabled={!paymentUrl}
                 onClick={() => void copyPaymentUrl()}
               >

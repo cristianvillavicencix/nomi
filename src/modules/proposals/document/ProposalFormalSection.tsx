@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { EditableBlock } from "@/modules/proposals/document/EditableBlock";
 import { ProposalFormattedBody } from "@/modules/proposals/document/proposalFormattedBody";
 import { ProposalImageDropZone } from "@/modules/proposals/document/ProposalImageDropZone";
@@ -112,17 +113,14 @@ const ItemRemoveButton = ({
   onClick: () => void;
 }) =>
   visible ? (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="absolute right-0 top-0 z-10 size-8 text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
+    <IconButton
+      className="absolute right-0 top-0 z-10 text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       aria-label={label}
     >
       <Trash2 className="size-4" />
-    </Button>
+    </IconButton>
   ) : null;
 
 const SectionHeader = ({
@@ -139,16 +137,13 @@ const SectionHeader = ({
   <div className="mb-4 flex items-start justify-between gap-2">
     <div className="pf-kicker">{title}</div>
     {editable && onRemove ? (
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8 shrink-0"
+      <IconButton
+        className="shrink-0"
         onClick={() => onRemove(sectionId)}
         aria-label="Remove section"
       >
         <Trash2 className="size-4" />
-      </Button>
+      </IconButton>
     ) : null}
   </div>
 );
@@ -321,7 +316,7 @@ export const ProposalFormalSection = ({
           {editable ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={addTeamMember}
             >
@@ -342,17 +337,14 @@ export const ProposalFormalSection = ({
               className="pf-team-card group/item relative rounded-xl px-2 py-3 text-center transition-colors hover:bg-muted/30"
             >
               {editable ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   className="absolute right-0 top-0 z-10 size-7 rounded-full bg-background opacity-0 shadow-sm transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => removeTeamMember(index)}
                   aria-label="Remove team member"
                 >
                   <Trash2 className="size-3.5" />
-                </Button>
+                </IconButton>
               ) : null}
               <ProposalImageDropZone
                 imageUrl={member.image_url}
@@ -443,7 +435,7 @@ export const ProposalFormalSection = ({
               {editable ? (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={addClientLogo}
                 >
@@ -464,16 +456,13 @@ export const ProposalFormalSection = ({
                     className="pf-client-logo-slot group/logo relative"
                   >
                     {editable ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
+                      <IconButton
                         className="absolute -right-2 -top-2 z-10 size-6 rounded-full bg-background opacity-0 shadow-sm transition-opacity group-hover/logo:opacity-100 focus-visible:opacity-100"
                         onClick={() => removeClientLogo(index)}
                         aria-label="Remove logo"
                       >
                         <Trash2 className="size-3" />
-                      </Button>
+                      </IconButton>
                     ) : null}
                     <ProposalImageDropZone
                       imageUrl={logo.image_url}
@@ -665,7 +654,7 @@ export const ProposalFormalSection = ({
         {editable ? (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="mt-4"
             onClick={() => patchItems([...items, { title: "", detail: "" }])}
@@ -760,7 +749,7 @@ export const ProposalFormalSection = ({
         {editable ? (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="mt-4"
             onClick={() => patchItems([...items, { title: "", detail: "" }])}
@@ -848,7 +837,7 @@ export const ProposalFormalSection = ({
           {editable ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="mt-2"
               onClick={() => patchSteps([...steps, { title: "", body: "" }])}

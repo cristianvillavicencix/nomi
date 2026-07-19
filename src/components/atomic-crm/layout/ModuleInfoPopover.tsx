@@ -1,6 +1,6 @@
 import { CircleHelp, Info } from "lucide-react";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Popover,
   PopoverContent,
@@ -26,11 +26,8 @@ export const ModuleInfoPopover = ({
     {contextDescription != null ? (
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 shrink-0"
+          <IconButton
+            variant="secondary"
             aria-label={
               contextTitle
                 ? `Module tip: ${contextTitle}`
@@ -39,7 +36,7 @@ export const ModuleInfoPopover = ({
             title={contextTitle ?? `About ${title}`}
           >
             <Info className="h-4 w-4" />
-          </Button>
+          </IconButton>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-80 space-y-2 p-3">
           {contextTitle ? (
@@ -53,16 +50,13 @@ export const ModuleInfoPopover = ({
     ) : null}
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="h-9 w-9 shrink-0"
+        <IconButton
+          variant="secondary"
           aria-label={`About ${title}`}
           title={`About ${title}`}
         >
           <CircleHelp className="h-4 w-4" />
-        </Button>
+        </IconButton>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 space-y-2 p-3">
         <p className="text-sm font-medium leading-tight">{title}</p>

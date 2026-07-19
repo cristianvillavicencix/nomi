@@ -1,7 +1,8 @@
 import { Copy, Globe } from "lucide-react";
 import type { MouseEvent } from "react";
 import { useNotify } from "ra-core";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -62,16 +63,13 @@ export const ProjectPortalLinkButton = ({ record }: { record: LbsDeal }) => {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <IconButton
               className="size-7 text-muted-foreground hover:text-foreground"
               onClick={(event) => void handleCopy(event)}
               aria-label="Copy client portal link"
             >
               <Copy className="size-3.5" />
-            </Button>
+            </IconButton>
           </TooltipTrigger>
           <TooltipContent>Copy portal link</TooltipContent>
         </Tooltip>

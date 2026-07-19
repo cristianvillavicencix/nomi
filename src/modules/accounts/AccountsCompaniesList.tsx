@@ -5,11 +5,9 @@ import {
   useListFilterContext,
   type Identifier,
 } from "ra-core";
-import { Building2, Plus, Search, UserPlus } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -20,27 +18,24 @@ import {
 } from "@/components/ui/table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import type { Company } from "@/components/atomic-crm/types";
 import {
   resolveCompanyEmailForDisplay,
   resolveCompanyPhoneRaw,
 } from "@/modules/clients/companyChannelResolvers";
-import { NewClientDialog } from "@/modules/clients/NewClientDialog";
-import { NewContactDialog } from "@/modules/clients/NewContactDialog";
-import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
 import { mailtoHref } from "@/lib/linking";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
-import { canAccess } from "@/components/atomic-crm/providers/commons/canAccess";
-import type { AccessIdentity } from "@/components/atomic-crm/providers/commons/canAccess";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getClientShowPath } from "@/app/routing";
 import { buildAccountsCompanyPreviewParams } from "@/modules/accounts/AccountsCompanyPreviewSheet";
 import { buildAccountsPersonPreviewParams } from "@/modules/accounts/AccountsLeadPreviewSheet";
+import {
+  AccountsModuleToolbar,
+  type AccountsHubChrome,
+} from "@/modules/accounts/AccountsModuleToolbar";
+import { ModuleSearchField } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { cn } from "@/lib/utils";
-import { extractDomainFromUrl } from "@/lib/faviconSources";
 
 const normalizeWebsiteHref = (website?: string | null) => {
   const trimmed = String(website ?? "").trim();
@@ -88,41 +83,14 @@ const statusBadgeClass = (company: Company, status: string) => {
   return "text-muted-foreground";
 };
 
-const companySubtitle = (company: Company) => {
-  const domain = extractDomainFromUrl(company.website);
-  if (domain) return domain;
-  const n = Number(company.nb_contacts ?? 0);
-  if (n > 0) return `${n} contact${n === 1 ? "" : "s"}`;
-  return null;
-};
-
 /** Company-first Accounts List — bill-to directory with primary contact context. */
-export const AccountsCompaniesList = () => {
+export const AccountsCompaniesList = ({
+  accountsChrome,
+}: {
+  accountsChrome: AccountsHubChrome;
+}) => {
   const { identity } = useGetIdentity();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
-  const [contactDialogOpen, setContactDialogOpen] = useState(false);
-  const [leadDialogOpen, setLeadDialogOpen] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get("create") === "company") {
-      setCompanyDialogOpen(true);
-      const next = new URLSearchParams(searchParams);
-      next.delete("create");
-      setSearchParams(next, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-
   if (!identity) return null;
-
-  const canCreateCompany = canAccess(identity as AccessIdentity, {
-    resource: "companies",
-    action: "create",
-  });
-  const canCreateContact = canAccess(identity as AccessIdentity, {
-    resource: "contacts",
-    action: "create",
-  });
 
   return (
     <div className="w-full space-y-3">
@@ -132,72 +100,27 @@ export const AccountsCompaniesList = () => {
         disableBreadcrumb
         perPage={25}
         sort={{ field: "name", order: "ASC" }}
-        actions={
-          <PageActions>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              {canCreateCompany ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCompanyDialogOpen(true)}
-                >
-                  <Building2 className="size-4" />
-                  New company
-                </Button>
-              ) : null}
-              {canCreateContact ? (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLeadDialogOpen(true)}
-                  >
-                    <Plus className="size-4" />
-                    New lead
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setContactDialogOpen(true)}
-                  >
-                    <UserPlus className="size-4" />
-                    New contact
-                  </Button>
-                </>
-              ) : null}
-              <ModuleInfoPopover
-                title="Accounts"
-                description="Companies (bill-to) with primary contact, phone, email, and website. Click a row to open the company preview; click the primary contact for their profile preview."
-              />
-            </div>
-          </PageActions>
-        }
+        actions={false}
         pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
       >
-        <AccountsCompaniesListBody />
+        <AccountsCompaniesListBody accountsChrome={accountsChrome} />
       </List>
-
-      <NewClientDialog
-        open={companyDialogOpen}
-        onOpenChange={setCompanyDialogOpen}
-      />
-      <NewLeadDialog open={leadDialogOpen} onOpenChange={setLeadDialogOpen} />
-      <NewContactDialog
-        open={contactDialogOpen}
-        onOpenChange={setContactDialogOpen}
-      />
     </div>
   );
 };
 
-const AccountsCompaniesListBody = () => {
+const AccountsCompaniesListBody = ({
+  accountsChrome,
+}: {
+  accountsChrome: AccountsHubChrome;
+}) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data = [], isPending, total } = useListContext<Company>();
+  const { data = [], total, isPending } = useListContext<Company>();
   const { filterValues, setFilters } = useListFilterContext();
   const [searchDraft, setSearchDraft] = useState(
-    String(filterValues?.q ?? ""),
+    () => String(filterValues?.q ?? ""),
   );
 
   useEffect(() => {
@@ -222,10 +145,9 @@ const AccountsCompaniesListBody = () => {
       navigate(getClientShowPath(companyId));
       return;
     }
-    setSearchParams(
-      buildAccountsCompanyPreviewParams(searchParams, companyId),
-      { replace: true },
-    );
+    setSearchParams(buildAccountsCompanyPreviewParams(searchParams, companyId), {
+      replace: true,
+    });
   };
 
   const openPerson = (
@@ -242,18 +164,37 @@ const AccountsCompaniesListBody = () => {
     );
   };
 
+  const toolbar = (
+    <AccountsModuleToolbar
+      {...accountsChrome}
+      leadingExtra={
+        <ModuleSearchField
+          value={searchDraft}
+          onChange={setSearchDraft}
+          basePlaceholder="Search business name, email, phone, or website"
+          total={total}
+          itemSingular="company"
+          itemPlural="companies"
+        />
+      }
+    />
+  );
+
   if (isPending) return null;
 
   if (!data.length && !String(filterValues?.q ?? "").trim()) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-        <Building2 className="size-10 text-muted-foreground" />
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold">No companies yet</h3>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Add a company to start your Accounts directory. People stay linked
-            under each company preview.
-          </p>
+      <div className="space-y-3">
+        {toolbar}
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <Building2 className="size-10 text-muted-foreground" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">No companies yet</h3>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Add a company to start your Accounts directory. People stay linked
+              under each company preview.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -261,22 +202,7 @@ const AccountsCompaniesListBody = () => {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-            placeholder="Search business name, email, phone, or website…"
-            className="pl-9"
-          />
-        </div>
-        {typeof total === "number" ? (
-          <p className="text-xs text-muted-foreground tabular-nums">
-            {total} compan{total === 1 ? "y" : "ies"}
-          </p>
-        ) : null}
-      </div>
+      {toolbar}
 
       {!data.length ? (
         <div className="py-12 text-center text-sm text-muted-foreground">
@@ -308,35 +234,27 @@ const AccountsCompaniesListBody = () => {
                 const websiteHref = normalizeWebsiteHref(website);
                 const contactName = primaryContactName(company);
                 const status = statusLabel(company);
-                const subtitle = companySubtitle(company);
 
                 return (
                   <TableRow
                     key={String(company.id)}
-                    className="cursor-pointer [&_td]:py-2.5 [&_td]:leading-normal"
+                    className="cursor-pointer [&_td]:py-1.5 [&_td]:leading-normal"
                     onClick={() => openCompany(company.id)}
                   >
                     <TableCell>
-                      <div className="flex min-w-0 items-center gap-3">
-                        <CompanyAvatar record={company} width={40} />
-                        <div className="min-w-0 space-y-0.5">
-                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                            <span className="truncate font-semibold text-foreground">
-                              {company.name?.trim() || "Untitled company"}
-                            </span>
-                            {company.is_client ? (
-                              <Badge
-                                variant="outline"
-                                className="shrink-0 border-emerald-300/70 bg-emerald-50 px-1.5 py-0 text-[10px] font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-100"
-                              >
-                                Client
-                              </Badge>
-                            ) : null}
-                          </div>
-                          {subtitle ? (
-                            <p className="truncate text-xs text-muted-foreground">
-                              {subtitle}
-                            </p>
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <CompanyAvatar record={company} width={32} />
+                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                          <span className="truncate font-semibold text-foreground">
+                            {company.name?.trim() || "Untitled company"}
+                          </span>
+                          {company.is_client ? (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 border-emerald-300/70 bg-emerald-50 px-1.5 py-0 text-[10px] font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-100"
+                            >
+                              Client
+                            </Badge>
                           ) : null}
                         </div>
                       </div>
@@ -395,7 +313,7 @@ const AccountsCompaniesListBody = () => {
                         <Badge
                           variant="outline"
                           className={cn(
-                            "rounded-md px-2 py-0.5 text-[11px] font-medium",
+                            "text-[10px] font-medium",
                             statusBadgeClass(company, status),
                           )}
                         >

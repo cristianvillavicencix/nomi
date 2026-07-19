@@ -2,6 +2,14 @@
 
 Implementation plans for product migrations. Documents are English; chat with the team may be Spanish.
 
+## CRM Claude Assistant
+
+| Doc | Summary |
+|-----|---------|
+| [crm-assistant.md](./crm-assistant.md) | Global Ask Nomi chat: Anthropic Claude + tools, RLS, phased roadmap |
+
+---
+
 ## Accounts hub (Leads + Clients consolidation)
 
 **Option A architecture** — UI/nav hub over `companies` + `contacts` (no schema merge).  

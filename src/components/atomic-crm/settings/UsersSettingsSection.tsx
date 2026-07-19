@@ -194,7 +194,7 @@ const UserModulesInput = ({
       </div>
       <div className="flex flex-wrap gap-2">
         {administrator && !canSetAdministrator ? (
-          <Button type="button" size="sm" variant="default" disabled>
+          <Button type="button" size="sm" variant="primary" disabled>
             Administrator
           </Button>
         ) : null}
@@ -202,7 +202,7 @@ const UserModulesInput = ({
           <Button
             type="button"
             size="sm"
-            variant={administrator ? "default" : "outline"}
+            variant={administrator ? "primary" : "secondary"}
             onClick={selectAdministrator}
           >
             Administrator
@@ -215,8 +215,8 @@ const UserModulesInput = ({
             size="sm"
             variant={
               !administrator && activePreset === presetKey
-                ? "default"
-                : "outline"
+                ? "primary"
+                : "secondary"
             }
             disabled={administrator}
             onClick={() => applyPreset(presetKey)}
@@ -339,7 +339,7 @@ const UserDialogFooter = ({
         ) : null}
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onCancel}
           disabled={isPending || isRemoving}
         >
@@ -582,7 +582,7 @@ const UserDialog = ({
           <div className="flex justify-end gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => setRemoveConfirmOpen(false)}
               disabled={isRemoving}
             >
@@ -1028,7 +1028,7 @@ export const UsersSettingsSection = () => {
                   <td className="px-4 py-3 text-right">
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -1137,7 +1137,7 @@ export const UsersSettingsSection = () => {
             <div className="flex shrink-0 flex-wrap gap-2 self-start">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setNewRolePresetOpen(true)}
                 disabled={orgLoading}
               >
@@ -1212,7 +1212,7 @@ export const UsersSettingsSection = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="outline" onClick={closeSeatGate}>
+            <Button type="button" variant="secondary" onClick={closeSeatGate}>
               {seatGateKind === "plan" && isOrgAdmin && canStartCheckout
                 ? "Not now"
                 : "Close"}

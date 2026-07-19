@@ -25,6 +25,7 @@ import { useTicketMemberRead } from "@/modules/tickets/useTicketInboxReads";
 import { useTicketThreadMessages } from "@/modules/tickets/useTicketThreadMessages";
 import { isTicketStatusFilterId } from "@/modules/tickets/ticketStatusWorkflow";
 import { refreshTicketInboxLists } from "@/modules/tickets/ticketsRealtimeCache";
+import { Button } from "@/components/ui/button";
 
 export const TicketDetailPanel = ({
   ticketId,
@@ -135,15 +136,16 @@ export const TicketDetailPanel = ({
             {ticket.merge_note}
           </p>
         ) : null}
-        <button
+        <Button
           type="button"
-          className="text-sm font-medium text-primary hover:underline"
+          variant="link"
+          className="h-auto px-0 text-sm font-medium"
           onClick={() =>
             navigate(`/tickets/${ticket.merged_into_ticket_id}/show`)
           }
         >
           Open primary ticket
-        </button>
+        </Button>
       </div>
     );
   }

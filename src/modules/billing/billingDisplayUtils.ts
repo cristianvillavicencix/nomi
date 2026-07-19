@@ -116,6 +116,36 @@ export const isClientInvoiceOverdue = (invoice: {
   Boolean(invoice.due_date) &&
   invoice.due_date! < todayIso();
 
+/** Counts aligned with `INVOICE_FILTER_OPTIONS` / list status filters. */
+export const countInvoicesByStatusFilter = (
+  invoices: Array<{
+    status?: string | null;
+    due_date?: string | null;
+  }>,
+): Record<InvoiceStatusFilter, number> => {
+  const counts: Record<InvoiceStatusFilter, number> = {
+    all: invoices.length,
+    draft: 0,
+    sent: 0,
+    paid: 0,
+    overdue: 0,
+    void: 0,
+  };
+
+  for (const invoice of invoices) {
+    const status = invoice.status?.toLowerCase() ?? "";
+    if (status === "draft") counts.draft += 1;
+    else if (status === "paid") counts.paid += 1;
+    else if (status === "void") counts.void += 1;
+    else if (status === "sent" || status === "overdue") {
+      counts.sent += 1;
+      if (isClientInvoiceOverdue(invoice)) counts.overdue += 1;
+    }
+  }
+
+  return counts;
+};
+
 export const invoiceStatusLabel = (
   status?: string | null,
   dueDate?: string | null,

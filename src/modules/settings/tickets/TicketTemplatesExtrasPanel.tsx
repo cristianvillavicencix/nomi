@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TICKET_REPLY_TEMPLATES } from "@/modules/tickets/ticketReplyTemplates";
 import { TICKET_CREATE_TEMPLATES } from "@/modules/tickets/ticketCreateTemplates";
@@ -93,13 +94,15 @@ export const TicketTemplatesExtrasPanel = () => {
           ))}
         </ul>
         {inbox.create_templates?.length === 0 ? (
-          <button
+          <Button
             type="button"
-            className="text-xs text-primary underline"
+            variant="link"
+            size="sm"
+            className="h-auto px-0 text-xs"
             onClick={seedCreateTemplates}
           >
             Copy defaults into this inbox (editable via API)
-          </button>
+          </Button>
         ) : null}
       </section>
     </TicketSettingsPanelShell>

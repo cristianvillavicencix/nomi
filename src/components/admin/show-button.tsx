@@ -40,7 +40,7 @@ export const ShowButton = (props: ShowButtonProps) => {
   const { label, icon, ...rest } = props;
   return (
     <Link
-      className={buttonVariants({ variant: "outline" })}
+      className={buttonVariants({ variant: "secondary" })}
       to={link}
       onClick={stopPropagation}
       {...rest}

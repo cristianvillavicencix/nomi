@@ -212,7 +212,7 @@ const ContactFormDialogChrome = ({
     >
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         onClick={onClose}
         disabled={isSaving}
         className={isMobile ? "w-full" : ""}

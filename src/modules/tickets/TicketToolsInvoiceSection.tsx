@@ -70,7 +70,7 @@ export const TicketToolsInvoiceSection = ({
 
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         className="w-full"
         onClick={onView}

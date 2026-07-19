@@ -57,7 +57,7 @@ const NonImageAttachment = ({
       <span className="min-w-0 flex-1 truncate">{alt ?? fileName}</span>
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         className="h-7 shrink-0 rounded-full px-2 text-xs"
         onClick={() => void downloadMediaUrl(storagePath)}

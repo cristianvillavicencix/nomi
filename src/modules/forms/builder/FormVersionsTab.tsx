@@ -167,7 +167,7 @@ export const FormVersionsTab = ({
                     <Button
                       type="button"
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       onClick={() => setDiffVersion(version)}
                     >
                       <GitCompare className="size-4" />
@@ -176,7 +176,7 @@ export const FormVersionsTab = ({
                     <Button
                       type="button"
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       disabled={restoreMutation.isPending}
                       onClick={() => {
                         if (

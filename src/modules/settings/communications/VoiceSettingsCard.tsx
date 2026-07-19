@@ -137,7 +137,7 @@ export const VoiceSettingsCard = ({ embedded = false }: { embedded?: boolean }) 
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => void copyUrl(data?.voice_twiml_url, "TwiML URL")}
               >
                 <Copy className="size-4" />
@@ -156,7 +156,7 @@ export const VoiceSettingsCard = ({ embedded = false }: { embedded?: boolean }) 
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() =>
                   void copyUrl(data?.voice_status_webhook_url, "Status URL")
                 }
@@ -177,7 +177,7 @@ export const VoiceSettingsCard = ({ embedded = false }: { embedded?: boolean }) 
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() =>
                   void copyUrl(data?.voice_inbound_url, "Inbound URL")
                 }

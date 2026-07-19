@@ -1,4 +1,5 @@
 import { useUpdate, useNotify } from "ra-core";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
@@ -55,5 +56,46 @@ export const MeetingDoneSwitch = ({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+};
+
+/** One-shot action to mark a past meeting complete (no undo switch). */
+export const MarkMeetingDoneButton = ({
+  meeting,
+}: {
+  meeting: CalendarEventRecord;
+}) => {
+  const [update, { isPending }] = useUpdate();
+  const notify = useNotify();
+
+  if (meeting.completed_at) return null;
+
+  const handleMarkDone = async () => {
+    try {
+      await update(
+        "calendar_events",
+        {
+          id: meeting.id,
+          data: { completed_at: new Date().toISOString() },
+          previousData: meeting,
+        },
+        { returnPromise: true },
+      );
+    } catch {
+      notify("Failed to update meeting", { type: "error" });
+    }
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      disabled={isPending}
+      onClick={() => void handleMarkDone()}
+      aria-label="Mark meeting as done"
+    >
+      Mark done
+    </Button>
   );
 };

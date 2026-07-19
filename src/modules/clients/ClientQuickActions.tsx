@@ -10,7 +10,8 @@ import {
   StickyNote,
 } from "lucide-react";
 import { useGetOne, type Identifier } from "ra-core";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,30 +72,27 @@ const CircleButton = ({
   children: ReactNode;
 }) => {
   const button = href ? (
-    <Button
+    <IconButton
+      aria-label={label}
       asChild
-      type="button"
-      variant="outline"
-      size="icon"
+      variant="secondary"
       className="size-10 shrink-0 rounded-full"
       disabled={disabled}
     >
       <a href={href} aria-label={label}>
         {children}
       </a>
-    </Button>
+    </IconButton>
   ) : (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon"
+    <IconButton
+      variant="secondary"
       className="size-10 shrink-0 rounded-full"
       disabled={disabled}
       aria-label={label}
       onClick={onClick}
     >
       {children}
-    </Button>
+    </IconButton>
   );
 
   return (
@@ -196,15 +194,13 @@ export const ClientQuickActions = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
+                  <IconButton
+                    variant="secondary"
                     className="size-10 rounded-full"
                     aria-label="More actions"
                   >
                     <MoreHorizontal className="size-4" />
-                  </Button>
+                  </IconButton>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent>More</TooltipContent>

@@ -12,6 +12,7 @@ import { useState } from "react";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { canUseCrmPermission } from "@/components/atomic-crm/providers/commons/crmPermissions";
 import { Button } from "@/components/ui/button";
+import { ToolbarLabel } from "@/components/atomic-crm/layout/PageActions";
 import {
   Dialog,
   DialogContent,
@@ -194,32 +195,36 @@ export const ProposalSendActions = ({
       ) : null}
       <Button
         type="button"
-        variant="default"
+        variant="primary"
         size="sm"
         disabled={!canSend || isSending || proposal.status === "accepted"}
         onClick={startSend}
+        aria-label={alreadySent ? "Resend" : "Send to client"}
       >
         {isSending ? (
           <Loader2 className="size-4 animate-spin" />
         ) : (
           <Send className="size-4" />
         )}
-        {alreadySent ? "Resend" : "Send to client"}
+        <ToolbarLabel priority="primary">
+          {alreadySent ? "Resend" : "Send to client"}
+        </ToolbarLabel>
       </Button>
       {showPdfExport ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           disabled={isExportingPdf}
           onClick={() => void handleExportPdf()}
+          aria-label="PDF"
         >
           {isExportingPdf ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
             <Download className="size-4" />
           )}
-          PDF
+          <ToolbarLabel>PDF</ToolbarLabel>
         </Button>
       ) : null}
 
@@ -248,7 +253,7 @@ export const ProposalSendActions = ({
                 <Input id="proposal-client-url" readOnly value={clientUrl} />
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => void copyLink()}
                 >
                   <Copy className="size-4" />
@@ -267,7 +272,7 @@ export const ProposalSendActions = ({
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => void copyLink()}
               >
                 <Copy className="size-4" />
@@ -275,7 +280,7 @@ export const ProposalSendActions = ({
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 disabled={!recipient.recipientEmail}
                 onClick={handleEmail}
               >

@@ -9,6 +9,7 @@ import { Error } from "@/components/admin/error";
 import { Notification } from "@/components/admin/notification";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sidebar,
@@ -23,6 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { BrandWordmark } from "./BrandWordmark";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
 import { CRMUserMenuItems } from "./UserMenuItems";
@@ -36,6 +38,7 @@ import {
   PageActionsSlot,
   PageActionsTrailingSlot,
 } from "@/components/atomic-crm/layout/PageActions";
+import { CrmAssistantButton } from "@/modules/assistant";
 import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { GlobalQuickCreateMenu } from "@/components/atomic-crm/layout/GlobalQuickCreateMenu";
 import { NotificationCenterButton } from "@/modules/notifications/NotificationCenterButton";
@@ -52,12 +55,10 @@ const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
   if (collapsed) {
     const nextTheme = activeTheme === "dark" ? "light" : "dark";
     return (
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={() => setTheme(nextTheme)}
+      <IconButton
         className="h-8 w-8"
+        aria-label="Toggle theme"
+        onClick={() => setTheme(nextTheme)}
       >
         {activeTheme === "dark" ? (
           <Moon className="h-4 w-4" />
@@ -65,7 +66,7 @@ const SidebarThemeSwitcher = ({ collapsed }: { collapsed: boolean }) => {
           <Sun className="h-4 w-4" />
         )}
         <span className="sr-only">Toggle theme</span>
-      </Button>
+      </IconButton>
     );
   }
 
@@ -174,18 +175,16 @@ const SidebarNavigation = () => {
               <SidebarMenuButton asChild className="h-auto py-2 pr-8">
                 <Link to="/" className="gap-2">
                   <img
-                    className="[.light_&]:hidden h-6"
+                    className="[.light_&]:hidden h-6 w-6 rounded-sm object-cover"
                     src={darkModeLogo}
                     alt={title}
                   />
                   <img
-                    className="[.dark_&]:hidden h-6"
+                    className="[.dark_&]:hidden h-6 w-6 rounded-sm object-cover"
                     src={lightModeLogo}
                     alt={title}
                   />
-                  <span className="text-base font-semibold truncate">
-                    {title}
-                  </span>
+                  <BrandWordmark title={title} titleClassName="text-base" />
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -196,12 +195,12 @@ const SidebarNavigation = () => {
               className="absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-150 ease-out group-hover:opacity-0 group-hover:scale-95"
             >
               <img
-                className="[.light_&]:hidden h-6"
+                className="[.light_&]:hidden h-6 w-6 rounded-sm object-cover"
                 src={darkModeLogo}
                 alt={title}
               />
               <img
-                className="[.dark_&]:hidden h-6"
+                className="[.dark_&]:hidden h-6 w-6 rounded-sm object-cover"
                 src={lightModeLogo}
                 alt={title}
               />
@@ -253,17 +252,20 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
     Boolean(currentDealId) && !isMessagesShell && !isProposalPreview;
   const isProjectShowShell = showDealExplorer;
   const hideGlobalHeaderOnProjectShow = showDealExplorer;
+  /** Full-bleed shells: no top header → FAB Ask Sigma + ⌘K listener still mounted. */
+  const shellHidesGlobalHeader =
+    hideGlobalHeader || hideGlobalHeaderOnProjectShow;
 
   const globalHeader =
-    hideGlobalHeader ||
-    hideGlobalHeaderOnProjectShow ? null : !hideGlobalSearch ? (
+    shellHidesGlobalHeader ? null : !hideGlobalSearch ? (
       <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
         <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
         <div className="flex shrink-0 items-center gap-2">
           <PageActionsTrailingSlot className="flex items-center" />
           <GlobalQuickCreateMenu />
-          <NotificationCenterButton />
+          <CrmAssistantButton />
           <SpotlightSearchButton />
+          <NotificationCenterButton />
         </div>
       </header>
     ) : (
@@ -271,8 +273,9 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
         <PageActionsTrailingSlot className="ml-auto flex items-center" />
         <GlobalQuickCreateMenu />
-        <NotificationCenterButton />
+        <CrmAssistantButton />
         <SpotlightSearchButton variant="hidden" />
+        <NotificationCenterButton />
       </header>
     );
 
@@ -282,13 +285,13 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
       ? "gap-2 p-2 pl-1"
       : isSettingsShell
         ? "gap-0 p-0 overflow-hidden"
-      : isProposalPreview
-        ? "gap-0 p-0"
-        : isBillingInvoiceShell
+        : isProposalPreview
           ? "gap-0 p-0"
-          : showDealExplorer
-            ? "flex min-h-0 flex-1 flex-col px-4 pt-0 pb-0"
-            : "gap-4 px-4 pt-2 pb-0",
+          : isBillingInvoiceShell
+            ? "gap-0 p-0"
+            : showDealExplorer
+              ? "flex min-h-0 flex-1 flex-col px-4 pt-0 pb-0"
+              : "gap-4 px-4 pt-2 pb-0",
   );
 
   const scrollableContent = (
@@ -323,7 +326,12 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
             showDealExplorer ? "flex-row" : "flex-col",
           )}
         >
-          {hideGlobalHeader ? <SpotlightSearchButton variant="hidden" /> : null}
+          {shellHidesGlobalHeader ? (
+            <SpotlightSearchButton variant="hidden" />
+          ) : null}
+          {shellHidesGlobalHeader ? (
+            <CrmAssistantButton variant="fab" />
+          ) : null}
 
           {showDealExplorer ? (
             <>

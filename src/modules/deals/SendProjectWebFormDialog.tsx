@@ -3,6 +3,7 @@ import { useGetList, useDataProvider, useNotify, useUpdate } from "ra-core";
 import { useMutation } from "@tanstack/react-query";
 import { Copy, ExternalLink, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -294,23 +295,22 @@ export const SendProjectWebFormDialog = ({
                   generateMutation.isPending ? "Generating link…" : formUrl
                 }
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
+              <IconButton
+                variant="secondary"
                 disabled={!formUrl}
                 onClick={handleCopy}
+                aria-label="Copy link"
               >
                 <Copy className="size-4" />
                 <span className="sr-only">Copy link</span>
-              </Button>
+              </IconButton>
               {formUrl ? (
-                <Button type="button" variant="outline" size="icon" asChild>
+                <IconButton aria-label="Open link" variant="secondary" asChild>
                   <a href={formUrl} target="_blank" rel="noreferrer">
                     <ExternalLink className="size-4" />
                     <span className="sr-only">Open link</span>
                   </a>
-                </Button>
+                </IconButton>
               ) : null}
             </div>
             {copied ? (
@@ -325,7 +325,7 @@ export const SendProjectWebFormDialog = ({
           </Button>
           <div className="flex gap-2">
             {emailHref ? (
-              <Button type="button" variant="outline" asChild>
+              <Button type="button" variant="secondary" asChild>
                 <a href={emailHref}>
                   <Mail className="size-4" />
                   Email client

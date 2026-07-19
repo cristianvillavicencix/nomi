@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import type { Deal, Ticket } from "@/modules/types";
 import { getClientShowPath } from "@/app/routing";
@@ -66,16 +67,13 @@ export const TicketCompactHeader = ({
     <div className="shrink-0 border-b bg-background px-4 py-3 md:px-5">
       <div className="flex flex-wrap items-start gap-2">
         {showBack && onBack ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0 lg:hidden"
+          <IconButton
+            className="shrink-0 lg:hidden"
             onClick={onBack}
             aria-label="Back to tickets"
           >
             <ArrowLeft className="size-4" />
-          </Button>
+          </IconButton>
         ) : null}
 
         <div className="min-w-0 flex-1 space-y-1.5">

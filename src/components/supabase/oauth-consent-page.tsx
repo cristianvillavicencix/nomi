@@ -205,7 +205,7 @@ export function OAuthConsentPage() {
         </CardContent>
         <CardFooter className="flex gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleDeny}
             disabled={submitting}
             className="flex-1"

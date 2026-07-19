@@ -26,7 +26,8 @@ import { XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FormError, FormField, FormLabel } from "@/components/admin/form";
 import { InputHelperText } from "@/components/admin/input-helper-text";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 
 /**
  * File upload input with drag-and-drop support and preview capabilities.
@@ -338,17 +339,14 @@ export const FileInputPreview = (props: FileInputPreviewProps) => {
 
   return (
     <div className={cn("flex flex-row gap-1", className)} {...rest}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
+      <IconButton
         className="h-6 w-6 rounded-full shadow-sm cursor-pointer"
         onClick={onRemove}
         aria-label={translate("ra.action.delete")}
         title={translate("ra.action.delete")}
       >
         <RemoveIcon className="h-4 w-4" />
-      </Button>
+      </IconButton>
       {children}
     </div>
   );

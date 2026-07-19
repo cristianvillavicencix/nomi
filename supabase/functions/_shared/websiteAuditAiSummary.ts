@@ -300,7 +300,7 @@ export const generateWebsiteAuditAiSummary = async (
   }
 
   const model =
-    Deno.env.get("ANTHROPIC_MODEL")?.trim() || "claude-sonnet-4-20250514";
+    Deno.env.get("ANTHROPIC_MODEL")?.trim() || "claude-sonnet-4-6";
 
   const systemPrompt = `Eres un consultor senior de sitios web para agencias digitales en español (Latinoamérica).
 Analiza el JSON del audit y produce contenido útil para clientes NO técnicos.

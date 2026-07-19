@@ -9,6 +9,7 @@ import {
 } from "ra-core";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +38,7 @@ type ButtonProps = React.ComponentProps<typeof Button>;
  * const PostList = () => (
  *   <List render={({ data }) => (
  *     <div>
- *       <SortButton fields={["title", "published_at"]} />
+ *       <SortButton fields={["title","published_at"]} />
  *       <ul>
  *         {data.map(post => (
  *           <li key={post.id}>{post.title}</li>
@@ -91,14 +92,13 @@ const SortButtonComponent = (props: SortButtonProps) => {
           <Tooltip>
             <DropdownMenuTrigger asChild>
               <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
+                <IconButton
+                  variant="secondary"
                   aria-label={buttonLabel}
                   {...rest}
                 >
                   {icon}
-                </Button>
+                </IconButton>
               </TooltipTrigger>
             </DropdownMenuTrigger>
             <TooltipContent>
@@ -108,7 +108,7 @@ const SortButtonComponent = (props: SortButtonProps) => {
         </TooltipProvider>
       ) : (
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9" {...rest}>
+          <Button variant="secondary" size="sm" className="h-9" {...rest}>
             {icon}
             <span className="ml-2">{buttonLabel}</span>
             <ChevronDown className="ml-2 h-4 w-4" />
@@ -121,7 +121,8 @@ const SortButtonComponent = (props: SortButtonProps) => {
             {translateLabel({
               resource,
               source: field,
-            })}{" "}
+            })}
+            {" "}
             {translate(
               `ra.sort.${
                 sort.field === field ? inverseOrder(sort.order) : "ASC"

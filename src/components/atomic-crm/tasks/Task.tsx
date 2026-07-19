@@ -4,6 +4,7 @@ import { ReferenceField } from "@/components/admin/reference-field";
 import { DateField } from "@/components/admin/date-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -133,7 +134,7 @@ export const Task = ({
               <DateField source="due_date" record={task} />
               {showAssignee ? (
                 <>
-                  {" · "}
+                  {" ·"}
                   {(task.assignee_person_ids?.length ?? 0) > 0 ||
                   (task.collaborator_person_ids?.length ?? 0) > 0 ||
                   (task.mentioned_member_ids?.length ?? 0) > 0 ? (
@@ -159,7 +160,7 @@ export const Task = ({
               ) : null}
               {showDeal && task.deal_id ? (
                 <>
-                  {" · "}
+                  {" ·"}
                   <ReferenceField<TData, Deal>
                     source="deal_id"
                     reference="deals"
@@ -206,14 +207,12 @@ export const Task = ({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 pr-0! size-8 cursor-pointer"
+            <IconButton
+              className="h-5 pr-0! cursor-pointer"
               aria-label="task actions"
             >
               <MoreVertical className="size-5 md:size-4" />
-            </Button>
+            </IconButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem

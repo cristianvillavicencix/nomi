@@ -97,7 +97,7 @@ export const FormAnalyticsPage = () => {
             {form.name} analytics
           </h1>
         </div>
-        <Button type="button" variant="outline" size="sm" asChild>
+        <Button type="button" variant="secondary" size="sm" asChild>
           <Link to={`/forms-v2/submissions?form=${form.id}`}>
             View submissions
           </Link>

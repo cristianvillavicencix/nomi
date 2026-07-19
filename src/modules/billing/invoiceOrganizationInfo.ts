@@ -1,9 +1,13 @@
 const PRODUCT_APP_TITLES = new Set([
+  "SIGMA",
+  "Sigma by Latino Business Support",
   "Nomi CRM",
   "LBS CRM",
   "Atomic CRM",
   "LBS",
   "Nomi",
+  "NOMI",
+  "NOMI CRM",
 ]);
 
 export const INVOICE_ORGANIZATION_NAME = "Latino Business Support";

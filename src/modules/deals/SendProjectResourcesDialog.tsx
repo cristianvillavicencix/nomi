@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useGetList, useDataProvider, useNotify } from "ra-core";
 import { Copy, ExternalLink, Loader2, Mail, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -156,28 +157,26 @@ export const SendProjectResourcesDialog = ({
                     : formUrl || "Form unavailable"
                 }
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
+              <IconButton
+                variant="secondary"
                 disabled={!formUrl}
                 onClick={() => void handleCopy()}
+                aria-label="Copy link"
               >
                 <Copy className="size-4" />
                 <span className="sr-only">Copy link</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
+              </IconButton>
+              <IconButton
+                variant="secondary"
                 disabled={!formUrl}
                 asChild
+                aria-label="Open link"
               >
                 <a href={formUrl || "#"} target="_blank" rel="noreferrer">
                   <ExternalLink className="size-4" />
                   <span className="sr-only">Open link</span>
                 </a>
-              </Button>
+              </IconButton>
             </div>
             {generateLink.isPending ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -197,14 +196,14 @@ export const SendProjectResourcesDialog = ({
           </Button>
           <div className="flex gap-2">
             {emailHref ? (
-              <Button type="button" variant="outline" asChild>
+              <Button type="button" variant="secondary" asChild>
                 <a href={emailHref}>
                   <Mail className="size-4" />
                   Email client
                 </a>
               </Button>
             ) : (
-              <Button type="button" variant="outline" disabled>
+              <Button type="button" variant="secondary" disabled>
                 <Mail className="size-4" />
                 Email client
               </Button>

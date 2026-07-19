@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Copy, RefreshCw, Video } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -31,28 +31,15 @@ const MeetingIconButton = ({
   className?: string;
 }) => {
   const button = href ? (
-    <Button
-      type="button"
-      size="icon"
-      variant="ghost"
-      className={cn("size-8 shrink-0", className)}
-      asChild
-    >
-      <a href={href} target="_blank" rel="noreferrer" aria-label={label}>
+    <IconButton className={className} asChild aria-label={label}>
+      <a href={href} target="_blank" rel="noreferrer">
         {children}
       </a>
-    </Button>
+    </IconButton>
   ) : (
-    <Button
-      type="button"
-      size="icon"
-      variant="ghost"
-      className={cn("size-8 shrink-0", className)}
-      onClick={onClick}
-      aria-label={label}
-    >
+    <IconButton className={className} onClick={onClick} aria-label={label}>
       {children}
-    </Button>
+    </IconButton>
   );
 
   return (

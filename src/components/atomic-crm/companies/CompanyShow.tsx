@@ -296,7 +296,7 @@ const ContactsIterator = () => {
 const CreateRelatedContactButton = () => {
   const company = useRecordContext<Company>();
   return (
-    <Button variant="outline" asChild size="sm" className="h-9">
+    <Button variant="secondary" asChild size="sm" className="h-9">
       <RouterLink
         to="/contacts/create"
         state={company ? { record: { company_id: company.id } } : undefined}

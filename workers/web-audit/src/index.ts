@@ -104,7 +104,7 @@ const startServer = async () => {
           service: "nomi-web-audit-worker",
           docs: "API worker — use POST /audit (Bearer) or GET /health",
           health: "/health",
-          note: "Los reportes se generan desde Nomi CRM (Web Monitor), no desde esta URL.",
+          note: "Reports are generated from Sigma by Latino Business Support (Web Monitor), not from this URL.",
         });
         return;
       }

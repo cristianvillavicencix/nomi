@@ -99,7 +99,7 @@ export const WebsiteBriefInlineSectionForm = ({
 
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           {onCancel ? (
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="secondary" onClick={onCancel}>
               Cancel
             </Button>
           ) : null}

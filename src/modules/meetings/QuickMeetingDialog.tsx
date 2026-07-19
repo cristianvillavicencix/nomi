@@ -25,6 +25,7 @@ import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -109,19 +110,16 @@ const QuickMeetingContactCard = ({
         <p className="truncate text-sm text-muted-foreground">
           {[email, phone !== "No phone" ? phone : null]
             .filter(Boolean)
-            .join(" · ")}
+            .join(" ·")}
         </p>
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8 shrink-0 text-muted-foreground"
+      <IconButton
+        className="shrink-0 text-muted-foreground"
         onClick={onClear}
         aria-label="Change contact"
       >
         <X className="size-4" />
-      </Button>
+      </IconButton>
     </div>
   );
 };
@@ -266,7 +264,7 @@ export const QuickMeetingDialog = ({
       window.open(meetingUrl, "_blank", "noopener,noreferrer");
 
       if (errors.length > 0) {
-        notify(errors.join(". "), { type: "warning" });
+        notify(errors.join("."), { type: "warning" });
       } else {
         notify("Call started", { type: "success" });
       }

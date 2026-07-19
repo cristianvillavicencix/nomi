@@ -20,6 +20,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -217,7 +218,7 @@ export const FormsListPage = ({ embedded = false }: { embedded?: boolean }) => {
             <Button
               type="button"
               className="mt-4"
-              variant="outline"
+              variant="secondary"
               onClick={() => setCreateOpen(true)}
             >
               Browse templates
@@ -295,9 +296,9 @@ export const FormsListPage = ({ embedded = false }: { embedded?: boolean }) => {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button type="button" variant="ghost" size="icon">
+                          <IconButton aria-label="More actions">
                             <MoreHorizontal className="size-4" />
-                          </Button>
+                          </IconButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem

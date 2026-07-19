@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, Plus, UserPlus } from "lucide-react";
 import {
   Form,
   useCreate,
@@ -209,7 +209,7 @@ export const QuickMeetingContactCreateDialog = ({
             <DialogFooter className="border-t px-6 py-4 sm:justify-end gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => handleOpenChange(false)}
                 disabled={isSaving}
               >
@@ -219,7 +219,7 @@ export const QuickMeetingContactCreateDialog = ({
                 {isSaving ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <UserPlus className="size-4" />
+                  <Plus className="size-4" />
                 )}
                 Save contact
               </Button>

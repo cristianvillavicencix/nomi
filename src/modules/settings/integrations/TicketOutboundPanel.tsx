@@ -119,7 +119,7 @@ export const TicketOutboundPanel = ({ data, configured, embedded }: Props) => {
             />
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={
                 !configured || !testEmail.trim() || testMutation.isPending
               }

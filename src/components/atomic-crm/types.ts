@@ -96,6 +96,8 @@ export type OrganizationMember = {
   /** E.164 SMS destination for forms and alerts; separate from auth.users.phone */
   notification_phone?: string | null;
   notification_prefs?: Record<string, unknown> | null;
+  /** Desktop chrome prefs (e.g. navigation_layout: sidebar | top). */
+  ui_prefs?: Record<string, unknown> | null;
 
   /**
    * This is used by the fake rest provider to store the password

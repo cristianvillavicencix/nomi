@@ -57,7 +57,7 @@ export const enrichBriefAnswers = (
     next.social_links = next.social_links
       .map((entry) => {
         if (typeof entry !== "string") return null;
-        const [platform, url] = entry.split("|");
+        const [platform, url] = entry.split("| ");
         if (!url?.trim()) return null;
         return `${platform}|${normalizeFlexibleUrl(url)}`;
       })

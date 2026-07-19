@@ -52,7 +52,7 @@ export const MeetingResendInviteActions = ({
       {canEmail ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="h-8 gap-1.5 px-2"
           onClick={() => setPreviewChannel("email")}
@@ -64,7 +64,7 @@ export const MeetingResendInviteActions = ({
       {canSms ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="h-8 gap-1.5 px-2"
           onClick={() => setPreviewChannel("sms")}

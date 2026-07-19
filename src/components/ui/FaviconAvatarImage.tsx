@@ -18,7 +18,7 @@ export const FaviconAvatarImage = ({
 
   useEffect(() => {
     setSourceIndex(0)
-  }, [stableSources.join("|")])
+  }, [stableSources.join("| ")])
 
   const exhausted = sourceIndex >= stableSources.length
   const src = exhausted ? undefined : stableSources[sourceIndex]

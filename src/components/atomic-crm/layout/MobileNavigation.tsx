@@ -1,5 +1,6 @@
 import { useTheme } from "@/components/admin/use-theme";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,17 +11,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
+import type { Icon } from "@phosphor-icons/react";
 import {
-  CalendarDays,
-  Home,
-  LogOut,
+  CalendarBlank,
+  DeviceMobile,
+  GearSix,
+  House,
   Moon,
   Plus,
-  Settings,
-  Smartphone,
+  SignOut,
   Sun,
   Users,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { Translate, useAuthProvider, useGetIdentity, useLogout } from "ra-core";
 import { Link, matchPath, useLocation, useMatch } from "react-router";
 import { ContactCreateSheet } from "../contacts/ContactCreateSheet";
@@ -29,6 +31,7 @@ import { NoteCreateSheet } from "../notes/NoteCreateSheet";
 import { TaskCreateSheet } from "../tasks/TaskCreateSheet";
 import { getAccountsHubPath } from "@/app/routing";
 import { isAccountsHubEnabled } from "@/lib/featureFlags";
+import { sidebarNavIconWeight } from "@/app/SidebarNavIcon";
 
 export const MobileNavigation = () => {
   const location = useLocation();
@@ -85,7 +88,7 @@ export const MobileNavigation = () => {
         <>
           <NavigationButton
             href="/"
-            Icon={Home}
+            Icon={House}
             label="Home"
             isActive={currentPath === "/"}
           />
@@ -102,7 +105,7 @@ export const MobileNavigation = () => {
           <CreateButton />
           <NavigationButton
             href="/tasks"
-            Icon={CalendarDays}
+            Icon={CalendarBlank}
             label="Calendar"
             isActive={currentPath === "/tasks"}
           />
@@ -120,7 +123,7 @@ const NavigationButton = ({
   isActive,
 }: {
   href: string;
-  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  Icon: Icon;
   label: string;
   isActive: boolean;
 }) => (
@@ -133,7 +136,7 @@ const NavigationButton = ({
     )}
   >
     <Link to={href}>
-      <Icon className="size-6" />
+      <Icon className="size-6" weight={sidebarNavIconWeight(isActive)} />
       <span className="text-[0.6rem] font-medium">{label}</span>
     </Link>
   </Button>
@@ -163,14 +166,13 @@ const CreateButton = () => {
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="default"
-            size="icon"
+          <IconButton
+            variant="primary"
             className="h-16 w-16 rounded-full -mt-3"
             aria-label="Create"
           >
-            <Plus className="size-10" />
-          </Button>
+            <Plus className="size-10" weight="bold" />
+          </IconButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem
@@ -215,7 +217,7 @@ const SettingsButton = () => {
           variant="ghost"
           className="flex-col gap-1 h-auto py-2 px-1 rounded-md w-16 text-muted-foreground"
         >
-          <Settings className="size-6" />
+          <GearSix className="size-6" weight="regular" />
           <span className="text-[0.6rem] font-medium">Settings</span>
         </Button>
       </DropdownMenuTrigger>
@@ -234,7 +236,7 @@ const SettingsButton = () => {
           onClick={() => logout()}
           className="cursor-pointer h-12 px-4 text-base"
         >
-          <LogOut />
+          <SignOut weight="regular" />
           <Translate i18nKey="ra.auth.logout">Log out</Translate>
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -261,7 +263,7 @@ const ThemeMenu = () => {
           aria-label="System theme"
           className="px-3"
         >
-          <Smartphone className="size-5 mx-2" />
+          <DeviceMobile className="size-5 mx-2" weight="regular" />
           <span className="sr-only">System</span>
         </ToggleGroupItem>
         <ToggleGroupItem
@@ -269,11 +271,11 @@ const ThemeMenu = () => {
           aria-label="Light theme"
           className="px-3"
         >
-          <Sun className="size-5 mx-2" />
+          <Sun className="size-5 mx-2" weight="regular" />
           <span className="sr-only">Light</span>
         </ToggleGroupItem>
         <ToggleGroupItem value="dark" aria-label="Dark theme" className="px-3">
-          <Moon className="size-5 mx-2" />
+          <Moon className="size-5 mx-2" weight="regular" />
           <span className="sr-only">Dark</span>
         </ToggleGroupItem>
       </ToggleGroup>

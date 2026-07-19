@@ -10,13 +10,24 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { List } from "@/components/admin/list";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  PageActions,
+  PageTitle,
+} from "@/components/atomic-crm/layout/PageActions";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import type { Contact } from "@/components/atomic-crm/types";
 import { LBS_LEAD_STATUSES_FOR_FILTER } from "@/app/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getLeadShowPath } from "@/app/routing";
 import { isAccountsHubEnabled } from "@/lib/featureFlags";
+import {
+  AccountsModuleToolbar,
+  type AccountsHubChrome,
+} from "@/modules/accounts/AccountsModuleToolbar";
 import { LeadOverviewPreview } from "@/modules/leads/LeadOverviewPreview";
 import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
 import { LeadsKanban } from "@/modules/leads/LeadsKanban";
@@ -31,23 +42,18 @@ const LEGACY_FOLLOW_UP_FILTER_KEYS = [
 type LeadsBoardPanelProps = {
   /** When true, omit page chrome that Accounts hub already provides. */
   embedded?: boolean;
+  /** Accounts hub in-page toolbar (view + creates). Required when embedded. */
+  accountsChrome?: AccountsHubChrome;
 };
 
 /**
  * Embeddable leads Kanban board. Same storeKey / filters as legacy `/leads`
  * so redirects from Pipeline bookmarks keep filter state coherent.
- *
- * Active pipeline only:
- * - List filter `status@in` = lead/prospect (+ legacy) — never `client`.
- * - Columns = `LBS_LEAD_KANBAN_BOARD_STAGES` (excludes terminal won/lost).
- * - Convert → `lead_stage=won` + status `client` (DB trigger) drops the card
- *   from this board; client follow-up stays on Anti-Olvido / company, not Kanban.
- *
- * Board card clicks set `lead`/`stage` query params. When embedded under
- * Accounts hub, the shared `AccountsLeadPreviewSheet` owns the overlay;
- * standalone `/leads` keeps a local Sheet.
  */
-export const LeadsBoardPanel = ({ embedded = false }: LeadsBoardPanelProps) => {
+export const LeadsBoardPanel = ({
+  embedded = false,
+  accountsChrome,
+}: LeadsBoardPanelProps) => {
   const { identity } = useGetIdentity();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -60,13 +66,14 @@ export const LeadsBoardPanel = ({ embedded = false }: LeadsBoardPanelProps) => {
   const selectedLeadId = leadParam && stageParam ? leadParam : null;
 
   useEffect(() => {
+    if (embedded) return;
     if (searchParams.get("create") === "lead") {
       setDialogOpen(true);
       const next = new URLSearchParams(searchParams);
       next.delete("create");
       setSearchParams(next, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [embedded, searchParams, setSearchParams]);
 
   const clearLeadSelection = () => {
     const next = new URLSearchParams(searchParams);
@@ -75,8 +82,6 @@ export const LeadsBoardPanel = ({ embedded = false }: LeadsBoardPanelProps) => {
     setSearchParams(next, { replace: true });
   };
 
-  // Sheet overlays don't fit the mobile viewport — go straight to full view.
-  // Hub-owned preview handles mobile redirect itself; skip here when embedded.
   useEffect(() => {
     if (hubOwnsPreview) return;
     if (isMobile && selectedLeadId && stageParam) {
@@ -106,16 +111,25 @@ export const LeadsBoardPanel = ({ embedded = false }: LeadsBoardPanelProps) => {
           "status@in": `(${LBS_LEAD_STATUSES_FOR_FILTER.map((status) => `"${status}"`).join(",")})`,
         }}
         actions={
-          <LeadsBoardActions
-            embedded={embedded}
-            onNewLead={() => setDialogOpen(true)}
-          />
+          embedded ? (
+            false
+          ) : (
+            <PageActions>
+              <PageTitle label="Leads" />
+            </PageActions>
+          )
         }
       >
         <LeadsBoardFilterCleanup />
-        <LeadsBoardLayout />
+        <LeadsBoardLayout
+          embedded={embedded}
+          accountsChrome={accountsChrome}
+          onNewLead={() => setDialogOpen(true)}
+        />
       </List>
-      <NewLeadDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      {!embedded ? (
+        <NewLeadDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      ) : null}
       {!hubOwnsPreview ? (
         <Sheet
           open={Boolean(selectedLeadId && stageParam) && !isMobile}
@@ -165,13 +179,7 @@ export const LeadsBoardFilterCleanup = () => {
   return null;
 };
 
-const LeadsBoardActions = ({
-  embedded,
-  onNewLead,
-}: {
-  embedded: boolean;
-  onNewLead: () => void;
-}) => {
+const MyLeadsFilterButton = () => {
   const { identity } = useGetIdentity();
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
 
@@ -194,48 +202,105 @@ const LeadsBoardActions = ({
   };
 
   return (
-    <PageActions>
-      <Button
-        type="button"
-        variant={myFilterActive ? "default" : "outline"}
-        size="sm"
-        onClick={toggleMyLeads}
-        disabled={identity?.id == null}
-        title={
-          myFilterActive
-            ? "Showing only your leads"
-            : "Filter to your leads only"
-        }
-      >
-        <UserCheck className="size-4" />
-        {myFilterActive ? "My leads" : "All"}
-      </Button>
-      <div className="ml-auto flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onNewLead}>
-          <Plus className="size-4" />
-          New lead
-        </Button>
-        <ModuleInfoPopover
-          title={embedded ? "Accounts pipeline" : "Leads"}
-          description={
-            embedded
-              ? "Leads to follow up. Columns are pipeline stages — drag cards to update. Use List for all people or bill-to companies."
-              : "Potential opportunities before they become client contacts."
-          }
-        />
-      </div>
-    </PageActions>
+    <Button
+      type="button"
+      variant={myFilterActive ? "primary" : "secondary"}
+      size="sm"
+      onClick={toggleMyLeads}
+      disabled={identity?.id == null}
+      aria-label={myFilterActive ? "My leads" : "All leads"}
+      title={
+        myFilterActive
+          ? "Showing only your leads"
+          : "Filter to your leads only"
+      }
+    >
+      <UserCheck className="size-4" />
+      {myFilterActive ? "My leads" : "All"}
+    </Button>
   );
 };
 
-const LeadsBoardLayout = () => {
+const LeadsBoardSearchField = () => {
+  const { total } = useListContext<Contact>();
+  const { filterValues, setFilters } = useListFilterContext();
+  const [searchDraft, setSearchDraft] = useState(
+    () => String(filterValues?.q ?? ""),
+  );
+
+  useEffect(() => {
+    setSearchDraft(String(filterValues?.q ?? ""));
+  }, [filterValues?.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = searchDraft.trim();
+      const current = String(filterValues?.q ?? "").trim();
+      if (next === current) return;
+      const nextFilters = { ...filterValues };
+      if (next) nextFilters.q = next;
+      else delete nextFilters.q;
+      setFilters(nextFilters, undefined, false);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filterValues, setFilters]);
+
+  return (
+    <ModuleSearchField
+      value={searchDraft}
+      onChange={setSearchDraft}
+      basePlaceholder="Search leads by name, company, or email"
+      total={total}
+      itemSingular="lead"
+    />
+  );
+};
+
+const LeadsBoardLayout = ({
+  embedded,
+  accountsChrome,
+  onNewLead,
+}: {
+  embedded: boolean;
+  accountsChrome?: AccountsHubChrome;
+  onNewLead: () => void;
+}) => {
   const { isPending } = useListContext<Contact>();
 
   if (isPending) return null;
 
   return (
-    <div className="h-full min-h-0">
-      <LeadsKanban />
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      {embedded && accountsChrome ? (
+        <AccountsModuleToolbar
+          {...accountsChrome}
+          leadingExtra={
+            <div className="flex min-w-0 items-center gap-2">
+              <LeadsBoardSearchField />
+              <MyLeadsFilterButton />
+            </div>
+          }
+        />
+      ) : !embedded ? (
+        <ModuleToolbar className="shrink-0">
+          <LeadsBoardSearchField />
+          <ModuleToolbarActions>
+            <MyLeadsFilterButton />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onNewLead}
+              aria-label="New lead"
+            >
+              <Plus className="size-4" />
+              New lead
+            </Button>
+          </ModuleToolbarActions>
+        </ModuleToolbar>
+      ) : null}
+      <div className="min-h-0 flex-1">
+        <LeadsKanban />
+      </div>
     </div>
   );
 };

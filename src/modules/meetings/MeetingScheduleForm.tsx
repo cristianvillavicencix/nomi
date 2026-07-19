@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { Identifier } from "ra-core";
 import { Form } from "ra-core";
 import { useFormContext } from "react-hook-form";
-import { UserPlus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { CalendarEventDeleteButton } from "@/modules/calendar/CalendarEventDeleteButton";
 import { DateInput } from "@/components/admin/date-input";
 import { SaveButton } from "@/components/admin/form";
@@ -11,7 +11,8 @@ import { TextInput } from "@/components/admin/text-input";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { BooleanInput } from "@/components/admin/boolean-input";
 import { SelectInput } from "@/components/admin/select-input";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DialogFooter,
   DialogHeader,
@@ -106,7 +107,9 @@ const MeetingScheduleFormFields = ({
       <MeetingContactTitleSync />
 
       <DialogHeader>
-        <DialogTitle>{isEdit ? "Edit meeting" : "Schedule meeting"}</DialogTitle>
+        <DialogTitle>
+          {isEdit ? "Edit meeting" : "Schedule meeting"}
+        </DialogTitle>
       </DialogHeader>
 
       <Table>
@@ -114,7 +117,10 @@ const MeetingScheduleFormFields = ({
           <MeetingFormRow label="Contact">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
-                <ReferenceInput source="contact_id" reference="contacts_summary">
+                <ReferenceInput
+                  source="contact_id"
+                  reference="contacts_summary"
+                >
                   <AutocompleteInput
                     label={false}
                     optionText={contactOptionText}
@@ -135,17 +141,15 @@ const MeetingScheduleFormFields = ({
                   />
                 </ReferenceInput>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
+              <IconButton
+                variant="secondary"
                 className="mt-0.5 shrink-0"
                 title="Add new contact"
                 aria-label="Add new contact"
                 onClick={() => openCreateContact()}
               >
-                <UserPlus className="size-4" />
-              </Button>
+                <Plus className="size-4" />
+              </IconButton>
             </div>
           </MeetingFormRow>
 

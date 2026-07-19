@@ -88,7 +88,7 @@ export const ProposalDocumentSidebar = ({
         {onAddSection ? (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="mt-3 w-full"
             onClick={onAddSection}
@@ -104,7 +104,7 @@ export const ProposalDocumentSidebar = ({
         {onDownloadPdf ? (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="w-full"
             onClick={onDownloadPdf}

@@ -108,7 +108,7 @@ export const AddTask = ({
         ) : (
           <div className="my-2">
             <Button
-              variant="outline"
+              variant="secondary"
               className="h-6 cursor-pointer"
               onClick={() => setOpen(true)}
               size="sm"

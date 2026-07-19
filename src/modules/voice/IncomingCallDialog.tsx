@@ -108,7 +108,7 @@ export const IncomingCallDialog = () => {
           <div className="flex w-full gap-2 sm:justify-between">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               className="flex-1"
               onClick={() => voice.rejectIncoming()}
             >

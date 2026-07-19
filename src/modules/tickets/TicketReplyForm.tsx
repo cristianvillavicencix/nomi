@@ -85,6 +85,7 @@ import {
 } from "@/modules/tickets/ticketReplyAttachmentLimits";
 import { TicketPendingAttachmentItem } from "@/modules/tickets/TicketPendingAttachmentItem";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import { TicketRecipientInput } from "@/modules/tickets/TicketRecipientInput";
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
@@ -120,13 +121,7 @@ export const TicketReplyForm = forwardRef<
     onSent?: () => void;
   }
 >(function TicketReplyForm(
-  {
-    ticket,
-    placement = "bottom",
-    quoteMessage,
-    onQuoteApplied,
-    onSent,
-  },
+  { ticket, placement = "bottom", quoteMessage, onQuoteApplied, onSent },
   ref,
 ) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -308,7 +303,7 @@ export const TicketReplyForm = forwardRef<
 
   const composerTabSummary = useMemo(() => {
     const truncate = (value: string, max = 72) => {
-      const normalized = value.replace(/\s+/g, " ").trim();
+      const normalized = value.replace(/\s+/g, "").trim();
       if (!normalized) return "";
       return normalized.length > max
         ? `${normalized.slice(0, max)}…`
@@ -355,9 +350,7 @@ export const TicketReplyForm = forwardRef<
 
     return {
       title:
-        replySendIntent === "reply_and_invoice"
-          ? "Reply & Invoice"
-          : "Reply",
+        replySendIntent === "reply_and_invoice" ? "Reply & Invoice" : "Reply",
       context: recipient.includes("@") ? `To ${recipient}` : recipient,
       preview: preview || attachmentHint || "Empty draft",
     };
@@ -543,7 +536,10 @@ export const TicketReplyForm = forwardRef<
     }
     if (
       composeMode !== "internal" &&
-      shouldSendTicketReplyAttachmentAsLink(file.size, replyAttachmentLimitBytes)
+      shouldSendTicketReplyAttachmentAsLink(
+        file.size,
+        replyAttachmentLimitBytes,
+      )
     ) {
       notify(
         `"${file.name}" will be sent as a download link (expires in 7 days)`,
@@ -810,10 +806,9 @@ export const TicketReplyForm = forwardRef<
 
   const handleSendAndCharge = async () => {
     if (unbilledDeliverables.length === 0) {
-      notify(
-        "Upload at least one delivery file before sending an invoice",
-        { type: "warning" },
-      );
+      notify("Upload at least one delivery file before sending an invoice", {
+        type: "warning",
+      });
       dispatchTicketOpenBilling(ticket.id);
       dispatchTicketFocusDeliverableUpload(ticket.id);
       return;
@@ -965,11 +960,8 @@ export const TicketReplyForm = forwardRef<
       : "animate-in slide-in-from-top-2 duration-200";
 
   const minimizeButton = (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="size-8 shrink-0 text-muted-foreground"
+    <IconButton
+      className="shrink-0 text-muted-foreground"
       disabled={isPending}
       aria-label="Minimize"
       onClick={minimizeComposer}
@@ -979,7 +971,7 @@ export const TicketReplyForm = forwardRef<
       ) : (
         <ChevronDown className="size-4" />
       )}
-    </Button>
+    </IconButton>
   );
 
   if (!isExpanded) {
@@ -1005,8 +997,7 @@ export const TicketReplyForm = forwardRef<
               <p className="truncate text-sm font-medium leading-snug text-foreground">
                 {composerTabSummary.title}
                 <span className="font-normal text-muted-foreground">
-                  {" "}
-                  · {composerTabSummary.context}
+                  {" "}· {composerTabSummary.context}
                 </span>
               </p>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -1014,10 +1005,7 @@ export const TicketReplyForm = forwardRef<
               </p>
             </div>
           </button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+          <IconButton
             className="size-auto w-9 shrink-0 rounded-none border-l border-border/60 hover:bg-muted/70"
             aria-label="Close draft"
             onClick={(event) => {
@@ -1026,7 +1014,7 @@ export const TicketReplyForm = forwardRef<
             }}
           >
             <X className="size-4" />
-          </Button>
+          </IconButton>
         </div>
       </div>
     );
@@ -1176,14 +1164,16 @@ export const TicketReplyForm = forwardRef<
               className="min-w-0 w-full shadow-none"
             />
             {!showCc ? (
-              <button
+              <Button
                 type="button"
-                className="justify-self-end px-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                variant="ghost"
+                size="sm"
+                className="justify-self-end h-auto px-1 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
                 disabled={isPending}
                 onClick={() => setShowCc(true)}
               >
                 Cc
-              </button>
+              </Button>
             ) : (
               <span />
             )}
@@ -1215,7 +1205,9 @@ export const TicketReplyForm = forwardRef<
             <div className="border-b border-primary/20 bg-primary/5 px-4 py-3 md:px-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">Delivery files for invoice</p>
+                  <p className="text-sm font-medium">
+                    Delivery files for invoice
+                  </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {unbilledDeliverables.length === 0
                       ? "Upload the billable files here — they are not email attachments."
@@ -1227,7 +1219,7 @@ export const TicketReplyForm = forwardRef<
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   className="shrink-0"
                   onClick={() => handleInvoiceDeliverableUpload()}
                 >
@@ -1240,7 +1232,7 @@ export const TicketReplyForm = forwardRef<
                 tabIndex={0}
                 onClick={() => handleInvoiceDeliverableUpload()}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
+                  if (event.key === "Enter" || event.key === "") {
                     event.preventDefault();
                     handleInvoiceDeliverableUpload();
                   }
@@ -1310,9 +1302,7 @@ export const TicketReplyForm = forwardRef<
             contact={contact}
             company={company}
             onInsertTemplate={handleInsertTemplate}
-            attachLabel={
-              isInvoiceReply ? "Upload delivery file" : "Attach"
-            }
+            attachLabel={isInvoiceReply ? "Upload delivery file" : "Attach"}
             showLargeFileTransfer={false}
             onAttachClick={handleComposerAttachClick}
           />

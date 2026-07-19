@@ -46,7 +46,7 @@ export const BulkExportButton = <T extends RaRecord>({
     <Button
       onClick={handleClick}
       role="button"
-      variant="outline"
+      variant="secondary"
       size="sm"
       className="flex items-center gap-2 h-9"
       {...sanitizeRestProps(props)}

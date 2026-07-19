@@ -133,7 +133,7 @@ export const Confirm = (props: ConfirmProps) => {
             disabled={loading}
             onClick={handleConfirm}
             className="gap-1"
-            variant={confirmColor === "warning" ? "destructive" : "default"}
+            variant={confirmColor === "warning" ? "destructive" : "primary"}
           >
             <ConfirmIcon className="h-5 w-5" />
             {translate(confirm, { _: confirm })}

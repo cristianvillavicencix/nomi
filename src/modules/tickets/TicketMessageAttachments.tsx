@@ -1,6 +1,7 @@
 import { Download, ExternalLink, FileText, Film } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   PhotoLightboxGrid,
   type PhotoLightboxGridItem,
@@ -76,10 +77,7 @@ const FileAssetRow = ({ asset }: { asset: MessageAsset }) => {
         file={{ title: asset.label, type: "", src: asset.href }}
       />
       {isDownloadableFileAsset(asset) ? (
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
+        <IconButton
           className="size-7 shrink-0 rounded-full"
           disabled={isDownloading}
           aria-label={`Download ${asset.label}`}
@@ -93,7 +91,7 @@ const FileAssetRow = ({ asset }: { asset: MessageAsset }) => {
           }}
         >
           <Download className="size-3.5" />
-        </Button>
+        </IconButton>
       ) : null}
     </div>
   );
@@ -195,7 +193,7 @@ export const TicketMessageAttachments = ({
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="secondary"
             className="h-8"
             disabled={isDownloadingAll}
             onClick={() => void handleDownloadAll()}

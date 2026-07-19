@@ -37,7 +37,7 @@ export const IncomingCallBanner = () => {
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="secondary"
             onClick={() => voice.rejectIncoming()}
             aria-label="Decline call"
           >

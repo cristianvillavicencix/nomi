@@ -2,7 +2,8 @@ import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useGetOne } from "ra-core";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -11,7 +12,10 @@ import {
 } from "@/components/ui/tooltip";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { OrganizationMemberName } from "@/components/atomic-crm/organizationMembers/OrganizationMemberName";
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import { collectContactSocialLinks } from "@/modules/clients/clientSocialLinks";
 import {
   getSocialLinkLabel,
@@ -54,13 +58,7 @@ const ProfileIconLink = ({
 }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button
-        asChild
-        type="button"
-        variant="outline"
-        size="icon"
-        className="size-8 shrink-0 rounded-full"
-      >
+      <IconButton aria-label={label} asChild variant="secondary" className="shrink-0 rounded-full">
         <a
           href={href}
           target="_blank"
@@ -70,7 +68,7 @@ const ProfileIconLink = ({
         >
           {children}
         </a>
-      </Button>
+      </IconButton>
     </TooltipTrigger>
     <TooltipContent>{label}</TooltipContent>
   </Tooltip>
@@ -151,11 +149,7 @@ export const ContactSummaryCard = (props: ContactSummaryCardProps) => {
         </>
       }
       actions={
-        <ContactQuickActions
-          contactId={record.id}
-          contact={record}
-          iconRow
-        />
+        <ContactQuickActions contactId={record.id} contact={record} iconRow />
       }
     >
       <EntityMetaRow>

@@ -84,7 +84,7 @@ export const MailIntegrationPanel = () => {
           />
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={!configured || !testEmail.trim() || testMutation.isPending}
             onClick={() => testMutation.mutate()}
           >

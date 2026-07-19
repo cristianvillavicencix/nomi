@@ -6,7 +6,8 @@ import {
   buildTicketReplyTemplateContext,
   TICKET_REPLY_VARIABLES,
 } from "@/modules/tickets/ticketReplyTemplates";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Popover,
   PopoverContent,
@@ -36,17 +37,14 @@ export const TicketReplyVariablePicker = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 text-muted-foreground"
+        <IconButton
+          className="text-muted-foreground"
           disabled={disabled}
           title="Insert variable"
           aria-label="Insert variable"
         >
           <Braces className="size-4" />
-        </Button>
+        </IconButton>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 p-2">
         <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">

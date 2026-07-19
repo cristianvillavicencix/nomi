@@ -144,7 +144,7 @@ export const DealColumn = ({
                 {hasMore ? (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     className="h-8 w-full text-xs"
                     disabled={isLoadingMore}

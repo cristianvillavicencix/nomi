@@ -189,7 +189,7 @@ export const BookNowShareDialog = ({
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={generateMutation.isPending}
               onClick={() => void handleCopy()}
             >

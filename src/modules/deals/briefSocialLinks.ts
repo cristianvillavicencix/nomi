@@ -63,7 +63,7 @@ export const getBriefSocialDisplay = (
 };
 
 export const extractBriefSocialUrl = (entry: string) => {
-  const pipeIndex = entry.indexOf("|");
+  const pipeIndex = entry.indexOf("| ");
   if (pipeIndex === -1) return entry.trim();
   return entry.slice(pipeIndex + 1).trim();
 };
@@ -92,7 +92,7 @@ export const cleanStoredBriefSocialLinks = (value: unknown): string[] =>
     .map((entry) => {
       const url = extractBriefSocialUrl(entry);
       if (!url.trim()) return "";
-      return entry.includes("|") ? entry : serializeBriefSocialUrl(url);
+      return entry.includes("| ") ? entry : serializeBriefSocialUrl(url);
     })
     .filter((entry) => Boolean(extractBriefSocialUrl(entry).trim()));
 

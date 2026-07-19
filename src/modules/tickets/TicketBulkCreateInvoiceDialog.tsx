@@ -33,6 +33,7 @@ import {
 } from "@/modules/tickets/uploadTicketAttachment";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -209,9 +210,12 @@ export const TicketBulkCreateInvoiceDialog = ({
     }
     for (const file of fileArray) {
       if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-        notify(`"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`, {
-          type: "warning",
-        });
+        notify(
+          `"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`,
+          {
+            type: "warning",
+          },
+        );
         return;
       }
     }
@@ -343,19 +347,16 @@ export const TicketBulkCreateInvoiceDialog = ({
                               </span>
                               {name ? (
                                 <span className="text-destructive/90">
-                                  {" "}
-                                  · {name}
+                                  {" "}· {name}
                                 </span>
                               ) : null}
                               {email ? (
                                 <span className="text-destructive/90">
-                                  {" "}
-                                  · {email}
+                                  {" "}· {email}
                                 </span>
                               ) : (
                                 <span className="text-destructive/80">
-                                  {" "}
-                                  · no email
+                                  {" "}· no email
                                 </span>
                               )}
                             </li>
@@ -367,7 +368,7 @@ export const TicketBulkCreateInvoiceDialog = ({
                   {clientIssueTicketId != null ? (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
                       onClick={() => {
@@ -416,9 +417,9 @@ export const TicketBulkCreateInvoiceDialog = ({
                         <p className="font-medium">{option.email}</p>
                         <p className="text-xs text-muted-foreground">
                           Tickets{" "}
-                          {option.ticketIds.map((id) => `#${id}`).join(", ")}
+                          {option.ticketIds.map((id) => `#${id}`).join(",")}
                           {option.names.length
-                            ? ` · ${option.names.join(", ")}`
+                            ? ` · ${option.names.join(",")}`
                             : ""}
                         </p>
                       </div>
@@ -480,9 +481,12 @@ export const TicketBulkCreateInvoiceDialog = ({
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-medium">Delivery files</p>
                     <p className="text-xs text-muted-foreground">
-                      {currentDeliverables.length}/{MAX_TICKET_ATTACHMENTS} ·{" "}
-                      {Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB
-                      max
+                      {currentDeliverables.length}/{MAX_TICKET_ATTACHMENTS} ·
+                      {" "}
+                      {Math.round(
+                        MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024),
+                      )}{" "}
+                      MB max
                     </p>
                   </div>
 
@@ -506,17 +510,14 @@ export const TicketBulkCreateInvoiceDialog = ({
                                 )}
                               </p>
                             </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                            <IconButton
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
                               disabled={uploading}
                               aria-label={`Remove ${file.title}`}
                               onClick={() => void handleDeleteDeliverable(file)}
                             >
                               <Trash2 className="size-4" />
-                            </Button>
+                            </IconButton>
                           </li>
                         ))}
                       </ul>
@@ -531,7 +532,7 @@ export const TicketBulkCreateInvoiceDialog = ({
                       >
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           className="min-w-0 flex-1 justify-start gap-2"
                           disabled={uploading}
@@ -544,17 +545,15 @@ export const TicketBulkCreateInvoiceDialog = ({
                           )}
                           Upload file
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="size-8 shrink-0"
+                        <IconButton
+                          variant="secondary"
+                          className="shrink-0"
                           disabled={uploading}
                           aria-label="Add another file"
                           onClick={openFilePicker}
                         >
                           <Plus className="size-4" />
-                        </Button>
+                        </IconButton>
                       </div>
                     ) : null}
                   </div>
@@ -582,7 +581,7 @@ export const TicketBulkCreateInvoiceDialog = ({
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => handleOpenChange(false)}
               >
                 Cancel

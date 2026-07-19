@@ -1,5 +1,6 @@
 import { ChevronDown, Forward, Lock, Reply, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,16 +30,14 @@ export const TicketComposeActionBar = ({
   <div className={className ?? "flex flex-wrap items-center justify-end gap-2"}>
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
+        <IconButton
+          variant="secondary"
           className="size-9 shrink-0"
           aria-label="Internal note"
           onClick={() => onOpen("internal")}
         >
           <Lock className="size-4" />
-        </Button>
+        </IconButton>
       </TooltipTrigger>
       <TooltipContent>Internal note</TooltipContent>
     </Tooltip>
@@ -89,7 +88,7 @@ export const TicketComposeActionBar = ({
     )}
     <Button
       type="button"
-      variant="outline"
+      variant="secondary"
       size="sm"
       className="h-9 rounded-md px-4"
       onClick={() => onOpen("forward")}

@@ -110,7 +110,7 @@ export const TicketBulkResolveDialog = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={pending}
             onClick={() => onOpenChange(false)}
           >

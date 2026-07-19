@@ -337,6 +337,11 @@ export const FilterButton = (props: FilterButtonProps) => {
             variant={variant}
             size={size}
             aria-haspopup="true"
+            aria-label={
+              size === "icon" || !showLabel
+                ? translate("ra.action.add_filter")
+                : undefined
+            }
           >
             <Filter className="h-4 w-4" />
             {showLabel ? (

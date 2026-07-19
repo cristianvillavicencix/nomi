@@ -224,7 +224,7 @@ export const SmsCampaignsPanel = () => {
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         disabled={isBusy}
                         onClick={() => {
                           setBusyId(campaign.id);

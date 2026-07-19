@@ -108,7 +108,7 @@ export const FormImageUpload = ({
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 disabled={uploading}
                 onClick={() => inputRef.current?.click()}
               >

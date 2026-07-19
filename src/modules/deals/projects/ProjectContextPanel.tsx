@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ListChecks, MessageSquare, PanelRightClose } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -79,16 +80,13 @@ const ProjectContextTabs = ({
     </div>
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 shrink-0"
+        <IconButton
+          className="shrink-0"
           aria-label="Collapse panel"
           onClick={onCollapse}
         >
           <PanelRightClose className="size-4" />
-        </Button>
+        </IconButton>
       </TooltipTrigger>
       <TooltipContent side="left">Collapse panel</TooltipContent>
     </Tooltip>
@@ -114,10 +112,7 @@ const ProjectContextCollapsedRail = ({
         return (
           <Tooltip key={tab.id}>
             <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <IconButton
                 className="relative size-9"
                 aria-label={`Open ${tab.label}`}
                 onClick={() => onOpenTab(tab.id)}
@@ -128,7 +123,7 @@ const ProjectContextCollapsedRail = ({
                     {taskCount > 9 ? "9+" : taskCount}
                   </span>
                 ) : null}
-              </Button>
+              </IconButton>
             </TooltipTrigger>
             <TooltipContent side="left">{tab.label}</TooltipContent>
           </Tooltip>
@@ -206,7 +201,10 @@ export const ProjectContextPanel = ({
           </div>
         ) : null}
         {activeTab === "messages" ? (
-          <ProjectMessagesPanel record={record} className="h-full min-h-0 flex-1" />
+          <ProjectMessagesPanel
+            record={record}
+            className="h-full min-h-0 flex-1"
+          />
         ) : null}
       </div>
     </aside>

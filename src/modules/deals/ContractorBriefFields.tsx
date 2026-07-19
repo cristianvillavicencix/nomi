@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, ImageIcon, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Command,
   CommandEmpty,
@@ -98,16 +99,13 @@ const FilePreviewGrid = ({
           <div className="flex items-center justify-between gap-2 border-t bg-background/90 px-2 py-1.5 text-xs">
             <span className="truncate">{file.name}</span>
             {onRemove ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <IconButton
                 className="size-6 shrink-0"
                 aria-label="Remove image"
                 onClick={() => onRemove(index)}
               >
                 <X className="size-3.5" />
-              </Button>
+              </IconButton>
             ) : null}
           </div>
         </div>
@@ -382,10 +380,8 @@ const SocialLinksField = ({
               />
             </div>
             {urls.length > 1 ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
+              <IconButton
+                variant="secondary"
                 aria-label="Remove social profile"
                 onClick={() => {
                   const next = urls.filter((_, rowIndex) => rowIndex !== index);
@@ -393,14 +389,14 @@ const SocialLinksField = ({
                 }}
               >
                 <X className="size-4" />
-              </Button>
+              </IconButton>
             ) : null}
           </div>
         );
       })}
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         onClick={() => onChange(serializeSocialLinks([...urls, ""]))}
       >
@@ -438,10 +434,8 @@ const ReferenceSitesField = ({
             }}
           />
           {rows.length > 1 || url.trim() ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
+            <IconButton
+              variant="secondary"
               aria-label="Remove reference"
               onClick={() => {
                 const next = rows.filter((_, rowIndex) => rowIndex !== index);
@@ -449,13 +443,13 @@ const ReferenceSitesField = ({
               }}
             >
               <X className="size-4" />
-            </Button>
+            </IconButton>
           ) : null}
         </div>
       ))}
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         onClick={() => onChange([...rows, ""])}
       >
@@ -598,34 +592,29 @@ const CertificationsField = ({
                     void handleImageUpload(index, e.target.files)
                   }
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-8 shrink-0 text-muted-foreground"
+                <IconButton
+                  variant="secondary"
+                  className="shrink-0 text-muted-foreground"
                   aria-label="Upload badge image"
                   onClick={() => fileInputRefs[index]?.current?.click()}
                 >
                   <ImageIcon className="size-4" />
-                </Button>
+                </IconButton>
               </>
             ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+            <IconButton
+              className="shrink-0 text-muted-foreground hover:text-destructive"
               aria-label="Remove certification"
               onClick={() => removeRow(index)}
             >
               <X className="size-4" />
-            </Button>
+            </IconButton>
           </div>
         );
       })}
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         onClick={() => onChange([...rows, { label: "", url: "", images: [] }])}
       >
@@ -842,22 +831,20 @@ const BulletListField = ({
               onChange={(e) => update(index, e.target.value)}
             />
             {visibleItems.length > 1 ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+              <IconButton
+                aria-label="Close"
+                className="shrink-0 text-muted-foreground hover:text-destructive"
                 onClick={() => remove(index)}
               >
                 <X className="size-4" />
-              </Button>
+              </IconButton>
             ) : null}
           </div>
         ))}
       </div>
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         onClick={() => onChange([...items, ""])}
       >
@@ -1110,7 +1097,7 @@ const BrandsField = ({
         <PopoverTrigger asChild>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between font-normal"
@@ -1240,7 +1227,7 @@ const CreatableMultiSelect = ({
         <PopoverTrigger asChild>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between font-normal"
@@ -1527,7 +1514,7 @@ const getServicesForCategories = (categories: string[]): string[] => {
 };
 
 const parseCategories = (value: unknown): string[] => {
-  // Keep empty strings — they represent pending "choose a specialty" slots in the UI.
+  // Keep empty strings — they represent pending"choose a specialty" slots in the UI.
   if (Array.isArray(value)) return value.map(String);
   if (typeof value === "string" && value.trim()) return [value.trim()];
   return [""];
@@ -1643,21 +1630,19 @@ const ServicesSection = (props: BriefSectionProps) => {
               </SelectContent>
             </Select>
             {categories.length > 1 ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+              <IconButton
+                aria-label="Close"
                 className="size-10 shrink-0 text-muted-foreground hover:text-destructive"
                 onClick={() => removeCategory(i)}
               >
                 <X className="size-4" />
-              </Button>
+              </IconButton>
             ) : null}
           </div>
         ))}
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={addCategory}
           disabled={categories[categories.length - 1] === ""}
@@ -1766,7 +1751,7 @@ export const ContractorBriefSectionFields = (props: BriefSectionProps) => {
           onChange={(next) => setField("warranties_guarantees", next)}
         />
         <BulletListField
-          label="What makes you different from competitors?"
+          label="What makes you different from competitors? "
           value={values.differentiators}
           placeholder="e.g. Family-owned since 1998, lifetime workmanship guarantee…"
           addLabel="Add differentiator"

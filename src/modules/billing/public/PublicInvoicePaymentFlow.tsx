@@ -18,6 +18,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { isClientBillingSkipped } from "@/modules/billing/clientBillingProvider";
 import {
@@ -652,29 +653,24 @@ const InvoicePaymentReviewActions = ({
         </p>
       ) : null}
 
-      <button
+      <Button
         type="button"
+        variant="primary"
+        size="lg"
         disabled={!canPay || isPending || !amountValid}
+        isLoading={isPending}
         onClick={onPay}
         className={cn(
-          "flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-base font-medium text-brand-foreground transition-colors",
+          "w-full rounded-xl text-base",
           focusPaymentEntry ? "py-3.5" : "py-4",
-          payDisabled
-            ? "cursor-not-allowed opacity-50"
-            : "cursor-pointer hover:bg-brand/90",
         )}
       >
-        {isPending ? (
-          <>
-            <Loader2 className="size-4 animate-spin" />
-            {focusLabels?.pendingLabel ?? "Processing…"}
-          </>
-        ) : focusLabels ? (
-          focusLabels.submitLabel
-        ) : (
-          `Pay ${selectedFormatted}`
-        )}
-      </button>
+        {isPending
+          ? (focusLabels?.pendingLabel ?? "Processing…")
+          : focusLabels
+            ? focusLabels.submitLabel
+            : `Pay ${selectedFormatted}`}
+      </Button>
 
       {!focusPaymentEntry ? (
         <p className="text-center text-xs text-muted-foreground">

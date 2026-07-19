@@ -2,7 +2,8 @@ import { Check, Plus } from "lucide-react";
 import { useGetList } from "ra-core";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
@@ -218,10 +219,8 @@ export const ProposalCatalogPanel = ({
                           )}
                         </p>
                       </div>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant={inCart ? "default" : "outline"}
+                      <IconButton
+                        variant={inCart ? "primary" : "secondary"}
                         className={cn(
                           "shrink-0",
                           inCart && "bg-success hover:bg-success/90",
@@ -236,7 +235,7 @@ export const ProposalCatalogPanel = ({
                         ) : (
                           <Plus className="size-4" />
                         )}
-                      </Button>
+                      </IconButton>
                     </div>
                   );
                 })}

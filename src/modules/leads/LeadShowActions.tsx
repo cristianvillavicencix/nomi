@@ -58,12 +58,12 @@ export const LeadShowActions = ({
         <CreateProposalButton
           contactId={record.id}
           companyId={record.company_id}
-          variant="outline"
+          variant="secondary"
         />
         <ConvertLeadButton record={record} />
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="h-9 gap-1.5"
           onClick={() => setEditOpen(true)}

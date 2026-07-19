@@ -60,7 +60,7 @@ export const buildBookingIcs = (input: BookingCalendarEventInput) => {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Nomi CRM//Booking//EN",
+    "PRODID:-//Sigma by Latino Business Support//Booking//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

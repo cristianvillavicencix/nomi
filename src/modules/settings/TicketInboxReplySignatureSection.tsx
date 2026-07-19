@@ -257,7 +257,7 @@ export const TicketInboxReplySignatureSection = ({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => setSignatureText(LBS_SUPPORT_SIGNATURE)}
             disabled={saveMutation.isPending}
           >

@@ -10,6 +10,7 @@ import {
 } from "ra-core";
 import { Download, ImagePlus, Link2, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -347,46 +348,37 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
         <div className="flex flex-wrap gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-8"
+              <IconButton
+                variant="secondary"
                 aria-label="Request this tab"
                 onClick={() =>
                   openRequestDialog(scopeForResourceTab(requestTarget))
                 }
               >
                 <Link2 className="size-4" />
-              </Button>
+              </IconButton>
             </TooltipTrigger>
             <TooltipContent>Request this tab</TooltipContent>
           </Tooltip>
           {tabId !== "document" ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-8"
+                <IconButton
+                  variant="secondary"
                   aria-label="Download ZIP"
                   disabled={downloadingTab || items.length === 0}
                   onClick={() => void handleDownloadItems(items, zipBaseName)}
                 >
                   <Download className="size-4" />
-                </Button>
+                </IconButton>
               </TooltipTrigger>
               <TooltipContent>Download ZIP</TooltipContent>
             </Tooltip>
           ) : null}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-8"
+              <IconButton
+                variant="secondary"
                 aria-label={uploadLabelText}
                 onClick={() => {
                   if (tabId === "service-photo" && activeServiceTabDef) {
@@ -403,7 +395,7 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                 }}
               >
                 <Upload className="size-4" />
-              </Button>
+              </IconButton>
             </TooltipTrigger>
             <TooltipContent>{uploadLabelText}</TooltipContent>
           </Tooltip>
@@ -425,30 +417,24 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
           <div className="flex flex-wrap gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-8"
+                <IconButton
+                  variant="secondary"
                   aria-label="Request all"
                   onClick={() => openRequestDialog(FULL_RESOURCE_REQUEST)}
                 >
                   <Link2 className="size-4" />
-                </Button>
+                </IconButton>
               </TooltipTrigger>
               <TooltipContent>Request all</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  size="icon"
-                  className="size-8"
+                <IconButton
                   aria-label="Upload files"
                   onClick={openUploadForCurrentView}
                 >
                   <ImagePlus className="size-4" />
-                </Button>
+                </IconButton>
               </TooltipTrigger>
               <TooltipContent>Upload files</TooltipContent>
             </Tooltip>
@@ -522,7 +508,7 @@ export const ProjectResourcesTab = ({ record }: { record: LbsDeal }) => {
                       <p>No service tabs yet.</p>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         className="mt-3"
                         onClick={() => setAddTabOpen(true)}

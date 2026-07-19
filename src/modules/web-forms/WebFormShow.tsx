@@ -106,7 +106,7 @@ const WebFormShowContent = () => {
             </p>
           ) : null}
         </div>
-        <Button type="button" variant="outline" asChild>
+        <Button type="button" variant="secondary" asChild>
           <Link to={`/web-forms/${record.id}/edit`}>Edit</Link>
         </Button>
       </div>

@@ -13,6 +13,7 @@ import {
   type TicketReplyTemplateId,
 } from "@/modules/tickets/ticketReplyTemplates";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Popover,
   PopoverContent,
@@ -79,16 +80,14 @@ export const TicketReplyTemplatePicker = ({
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground"
+          <IconButton
+            className="text-muted-foreground"
             disabled={disabled}
             title="Insert template"
+            aria-label="Insert template"
           >
             <LayoutTemplate className="size-4" />
-          </Button>
+          </IconButton>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-80 p-2">
           <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">

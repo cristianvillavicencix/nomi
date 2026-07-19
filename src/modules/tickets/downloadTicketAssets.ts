@@ -2,7 +2,7 @@ import { resolveStorageDisplayUrl } from "@/lib/supabase/storageObjectUrl";
 import type { MessageAsset } from "@/modules/tickets/ticketMessageAssets";
 
 const safeFilename = (value: string) =>
-  value.replace(/[/\\?%*:|"<>]/g, "-").trim() || "attachment";
+  value.replace(/[/\\?%*:| "<>]/g, "-").trim() || "attachment";
 
 const resolveTicketAssetUrl = async (asset: MessageAsset) =>
   (await resolveStorageDisplayUrl(asset.href, {

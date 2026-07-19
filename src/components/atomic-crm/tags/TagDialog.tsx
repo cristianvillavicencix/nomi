@@ -1,6 +1,6 @@
 import { SaveIcon } from "lucide-react";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -99,10 +99,9 @@ export function TagDialog({
 
           <div className="flex justify-end pt-4">
             <Button
-              variant="outline"
+              variant="secondary"
               disabled={disabled}
               className={cn(
-                buttonVariants({ variant: "outline" }),
                 "text-primary",
                 disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
               )}

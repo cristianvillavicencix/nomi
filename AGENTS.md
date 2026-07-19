@@ -112,6 +112,7 @@ supabase/
 
 - Profile modes (Full / Preview / Context): [`docs/ux/PROFILE-SYSTEM.md`](docs/ux/PROFILE-SYSTEM.md)
 - Broader CRM UX layers and roadmap: [`docs/ux/CRM-UX-SYSTEM.md`](docs/ux/CRM-UX-SYSTEM.md)
+- Buttons (`Button` / `IconButton`): [`docs/ux/BUTTON-SYSTEM.md`](docs/ux/BUTTON-SYSTEM.md)
 - Cursor rules: `.cursor/rules/profile-ux.mdc`, `.cursor/rules/crm-ux-system.mdc`
 - Shared kit: `src/modules/shared/profile/`
 

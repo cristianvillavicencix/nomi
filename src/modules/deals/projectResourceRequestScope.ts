@@ -40,7 +40,7 @@ export const appendRequestScopeToUrl = (
   const next = new URL(url, window.location.origin);
   next.searchParams.set("sections", buildRequestSectionsParam(scope.sections));
   if (scope.presetServices?.length) {
-    next.searchParams.set("services", scope.presetServices.join("|"));
+    next.searchParams.set("services", scope.presetServices.join("| "));
   }
   return next.toString();
 };
@@ -97,7 +97,7 @@ export const readRequestScopeFromLocation = (): {
   const presetServices =
     params
       .get("services")
-      ?.split("|")
+      ?.split("| ")
       .map((entry) => entry.trim())
       .filter(Boolean) ?? [];
   return { sections, presetServices };

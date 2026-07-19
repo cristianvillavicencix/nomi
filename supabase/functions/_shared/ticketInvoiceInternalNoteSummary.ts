@@ -186,11 +186,12 @@ export const buildTicketInvoiceSentInternalNoteBody = (
     firstActivityAt,
   });
 
-  const statusLines = ["new", "open", "waiting"].map((status) => {
+  const statusLines = ["new", "open", "waiting"].flatMap((status) => {
     const segment = statusSegments.find((row) => row.status === status);
-    if (!segment)
-      return `- **${status.charAt(0).toUpperCase()}${status.slice(1)}:** —`;
-    return `- **${status.charAt(0).toUpperCase()}${status.slice(1)}:** ${formatDuration(segment.endMs - segment.startMs)}`;
+    if (!segment) return [];
+    return [
+      `- **${status.charAt(0).toUpperCase()}${status.slice(1)}:** ${formatDuration(segment.endMs - segment.startMs)}`,
+    ];
   });
 
   const deliverableLines = params.deliverables.map((item) => {
@@ -215,15 +216,9 @@ export const buildTicketInvoiceSentInternalNoteBody = (
     return `- ${item.title} · ${label}${priceSuffix}`;
   });
 
-  const milestoneLines = [
-    `- Ticket opened · ${formatNoteDate(params.ticketCreatedAt) ?? "—"}`,
-    ...(lastDeliverableAt
-      ? [
-          `- Delivery package ready · ${params.deliverables.length} file${params.deliverables.length === 1 ? "" : "s"} · ${formatNoteDate(lastDeliverableAt) ?? "—"}`,
-        ]
-      : []),
-    `- Invoice sent for payment · ${formatNoteDate(params.sentAt) ?? "—"}`,
-  ];
+  const packageReadyLabel = lastDeliverableAt
+    ? formatNoteDate(lastDeliverableAt)
+    : null;
 
   return [
     "**Invoice sent for payment**",
@@ -240,7 +235,13 @@ export const buildTicketInvoiceSentInternalNoteBody = (
     ...statusLines,
     "",
     "**Timeline**",
-    ...milestoneLines,
+    `- Ticket opened · ${formatNoteDate(params.ticketCreatedAt) ?? "—"}`,
+    ...(packageReadyLabel
+      ? [
+          `- Delivery package ready · ${params.deliverables.length} file${params.deliverables.length === 1 ? "" : "s"} · ${packageReadyLabel}`,
+        ]
+      : []),
+    `- Invoice sent for payment · ${formatNoteDate(params.sentAt) ?? "—"}`,
     "",
     "**Sent by**",
     `- **From:** ${params.fromEmail}`,
@@ -251,9 +252,9 @@ export const buildTicketInvoiceSentInternalNoteBody = (
       smsSent: params.smsSent,
       smsSkipped: params.smsSkipped,
     })}`,
-    "",
-    "**Delivery package** (after payment)",
-    ...deliverableLines,
+    ...(deliverableLines.length
+      ? ["", "**Delivery package** (after payment)", ...deliverableLines]
+      : []),
   ].join("\n");
 };
 

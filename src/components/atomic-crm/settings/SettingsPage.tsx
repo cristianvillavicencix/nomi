@@ -417,7 +417,7 @@ const SettingsFormFields = () => {
         Reset to defaults
       </Button>
       <div className="flex gap-2">
-        <Button type="button" variant="outline" onClick={() => window.history.back()}>
+        <Button type="button" variant="secondary" onClick={() => window.history.back()}>
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>

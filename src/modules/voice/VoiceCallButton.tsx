@@ -2,6 +2,7 @@ import { Loader2, Phone, PhoneOff } from "lucide-react";
 import { useGetIdentity, useNotify } from "ra-core";
 import type { Identifier } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -96,14 +97,12 @@ export const VoiceCallButton = ({
     ? "Enable voice in Settings → Communications"
     : noPhone
       ? "No phone number for this conversation"
-      : errorMessage ?? label;
+      : (errorMessage ?? label);
 
   const button =
     variant === "icon" ? (
-      <Button
-        type="button"
+      <IconButton
         variant={isBusy ? "destructive" : "ghost"}
-        size="icon"
         className="size-9 shrink-0"
         disabled={(disabled && !isBusy) || voiceDisabled || noPhone}
         onClick={() => void handleClick()}
@@ -116,11 +115,11 @@ export const VoiceCallButton = ({
         ) : (
           <Phone className="size-4" />
         )}
-      </Button>
+      </IconButton>
     ) : (
       <Button
         type="button"
-        variant={isBusy ? "destructive" : "outline"}
+        variant={isBusy ? "destructive" : "secondary"}
         size="sm"
         className="w-full justify-start"
         disabled={(disabled && !isBusy) || voiceDisabled || noPhone}

@@ -58,7 +58,7 @@ export const TasksFilterPopover = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="gap-2">
+        <Button type="button" variant="secondary" size="sm" className="gap-2">
           <SlidersHorizontal className="size-4" />
           Filter
           {hasActiveFilters || showTaggedBadge ? (

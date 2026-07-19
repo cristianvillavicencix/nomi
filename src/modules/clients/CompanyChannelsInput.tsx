@@ -5,7 +5,8 @@ import { useFieldArray, useFormContext } from "react-hook-form";
 import { EmailInput } from "@/components/admin/email-input";
 import { PhoneInput } from "@/components/admin/phone-input";
 import { SelectInput } from "@/components/admin/select-input";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 import type { ClientCreateFormValues } from "@/modules/clients/ClientCreateForm";
 import { COMPANY_CHANNEL_TYPE_CHOICES } from "@/modules/clients/clientChannels";
@@ -115,25 +116,19 @@ const ChannelRow = ({
     />
     <div className={ACTION_COL}>
       {showAdd ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <IconButton
           className={cn(ACTION_SLOT, "text-muted-foreground")}
           onClick={onAdd}
           aria-label={`Add ${kind}`}
           title={`Add ${kind}`}
         >
           <Plus className="size-4" />
-        </Button>
+        </IconButton>
       ) : (
         <div aria-hidden className={ACTION_SLOT} />
       )}
       {canRemove ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <IconButton
           className={cn(
             ACTION_SLOT,
             "text-muted-foreground hover:text-destructive",
@@ -142,7 +137,7 @@ const ChannelRow = ({
           aria-label={`Remove ${kind}`}
         >
           <Trash2 className="size-4" />
-        </Button>
+        </IconButton>
       ) : (
         <div aria-hidden className={ACTION_SLOT} />
       )}

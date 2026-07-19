@@ -62,7 +62,7 @@ export const FormBuilderHeader = () => {
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => previewMutation.mutate()}
               disabled={previewMutation.isPending}
             >
@@ -75,7 +75,7 @@ export const FormBuilderHeader = () => {
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => setSettingsOpen(true)}
             >
               <Settings2 className="size-4" />

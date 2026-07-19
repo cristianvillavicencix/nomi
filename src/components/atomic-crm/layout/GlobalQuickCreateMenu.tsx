@@ -9,7 +9,8 @@ import {
   UserPlus,
   Briefcase,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,15 +112,13 @@ export const GlobalQuickCreateMenu = () => {
         <Tooltip>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
+              <IconButton
+                variant="secondary"
                 className="size-9 shrink-0"
                 aria-label="Quick create"
               >
                 <Plus className="size-4" />
-              </Button>
+              </IconButton>
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent side="bottom">Quick create</TooltipContent>

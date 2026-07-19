@@ -6,6 +6,7 @@ import { useOnboardingState } from "./useOnboardingState";
 import { DashboardHomeContent } from "@/modules/dashboard/DashboardHomeContent";
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
+import { BrandWordmark } from "../layout/BrandWordmark";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => {
@@ -15,16 +16,16 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => {
       <MobileHeader>
         <div className="flex items-center gap-2 text-secondary-foreground no-underline py-3">
           <img
-            className="[.light_&]:hidden h-6"
+            className="[.light_&]:hidden h-6 w-6 rounded-sm object-cover"
             src={darkModeLogo}
             alt={title}
           />
           <img
-            className="[.dark_&]:hidden h-6"
+            className="[.dark_&]:hidden h-6 w-6 rounded-sm object-cover"
             src={lightModeLogo}
             alt={title}
           />
-          <h1 className="text-xl font-semibold">{title}</h1>
+          <BrandWordmark title={title} titleClassName="text-xl" />
         </div>
       </MobileHeader>
       <MobileContent>{children}</MobileContent>

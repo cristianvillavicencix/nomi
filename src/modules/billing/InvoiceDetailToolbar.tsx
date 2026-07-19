@@ -118,7 +118,7 @@ export const InvoiceDraftWhatsNextBanner = ({
       <span className="font-medium text-foreground">What&apos;s next?</span>{" "}
       Send this invoice to your customer or mark it as sent.
     </p>
-    <div className="flex shrink-0 flex-wrap gap-2">
+    <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
       <Button type="button" size="sm" disabled={isPending} onClick={onSend}>
         <Send className="size-4" />
         Send invoice
@@ -126,7 +126,7 @@ export const InvoiceDraftWhatsNextBanner = ({
       <Button
         type="button"
         size="sm"
-        variant="outline"
+        variant="secondary"
         disabled={isPending}
         onClick={onMarkSent}
       >
@@ -167,12 +167,12 @@ export const InvoiceOverdueWhatsNextBanner = ({
           <> Record payment or resend the invoice.</>
         )}
       </p>
-      <div className="flex shrink-0 flex-wrap gap-2">
+      <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
         {onSend ? (
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="secondary"
             disabled={isPending}
             onClick={onSend}
           >

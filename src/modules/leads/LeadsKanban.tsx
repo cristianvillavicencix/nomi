@@ -185,7 +185,7 @@ export const LeadsKanban = () => {
           <span className="font-medium text-foreground">
             {closedLeadCount} won or lost
           </span>{" "}
-          — switch to Table view to see them.
+          — switch to List view to see them.
         </div>
       );
     }

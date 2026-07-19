@@ -1,6 +1,7 @@
 import { Mail, Paperclip, Pencil, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 import {
   TicketListAssigneeControl,
@@ -130,7 +131,7 @@ export const TicketListItem = ({
           tabIndex={0}
           onClick={onSelect}
           onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
+            if (event.key === "Enter" || event.key === "") {
               event.preventDefault();
               onSelect();
             }
@@ -255,28 +256,22 @@ export const TicketListItem = ({
                   onUpdated={onUpdated}
                 />
                 {canManage && onEdit ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  <IconButton
                     className="size-7 text-muted-foreground hover:text-foreground"
                     aria-label={`Edit ticket #${ticket.id}`}
                     onClick={() => onEdit(ticket)}
                   >
                     <Pencil className="size-3.5" />
-                  </Button>
+                  </IconButton>
                 ) : null}
                 {canManage && onDelete ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  <IconButton
                     className="size-7 text-muted-foreground hover:text-destructive"
                     aria-label={`Delete ticket #${ticket.id}`}
                     onClick={() => onDelete(ticket)}
                   >
                     <Trash2 className="size-3.5" />
-                  </Button>
+                  </IconButton>
                 ) : null}
               </div>
             </div>

@@ -687,7 +687,7 @@ export const StandaloneInvoiceEditPage = ({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-sm text-muted-foreground">
         <p>Invoice not found.</p>
-        <Button type="button" variant="outline" asChild>
+        <Button type="button" variant="secondary" asChild>
           <Link to="/billing">Back to Billing</Link>
         </Button>
       </div>

@@ -88,7 +88,7 @@ export const EmailIntegrationRow = () => {
             />
           )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
               Close
             </Button>
           </DialogFooter>

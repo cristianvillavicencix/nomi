@@ -158,7 +158,7 @@ export const ProfileCalendarSubscriptionSection = () => {
 
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setRegenerateOpen(true)}
                 disabled={regenerating}
               >
@@ -193,7 +193,7 @@ export const ProfileCalendarSubscriptionSection = () => {
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => setRegenerateOpen(false)}
               disabled={regenerating}
             >

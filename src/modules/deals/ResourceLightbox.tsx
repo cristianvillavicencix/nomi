@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -165,28 +166,26 @@ export const ResourceLightbox = ({
         <div className="relative min-h-0 flex-1 bg-[linear-gradient(45deg,hsl(var(--muted)/0.45)_25%,transparent_25%,transparent_75%,hsl(var(--muted)/0.45)_75%,hsl(var(--muted)/0.45)),linear-gradient(45deg,hsl(var(--muted)/0.45)_25%,transparent_25%,transparent_75%,hsl(var(--muted)/0.45)_75%,hsl(var(--muted)/0.45))] bg-[length:20px_20px] bg-[position:0_0,10px_10px]">
           {imageResources.length > 1 ? (
             <>
-              <Button
-                type="button"
-                size="icon"
+              <IconButton
                 variant="secondary"
                 className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full shadow-md"
                 disabled={!hasPrev}
                 onClick={goPrev}
+                aria-label="Previous image"
               >
                 <ChevronLeft className="size-5" />
                 <span className="sr-only">Previous image</span>
-              </Button>
-              <Button
-                type="button"
-                size="icon"
+              </IconButton>
+              <IconButton
                 variant="secondary"
                 className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full shadow-md"
                 disabled={!hasNext}
                 onClick={goNext}
+                aria-label="Next image"
               >
                 <ChevronRight className="size-5" />
                 <span className="sr-only">Next image</span>
-              </Button>
+              </IconButton>
             </>
           ) : null}
 
@@ -204,7 +203,7 @@ export const ResourceLightbox = ({
               <div className="flex max-w-sm flex-col items-center justify-center gap-3 rounded-md border bg-background/90 p-8 text-center shadow-sm">
                 <p className="text-sm text-muted-foreground">{file.title}</p>
                 {previewUrl ? (
-                  <Button type="button" variant="outline" asChild>
+                  <Button type="button" variant="secondary" asChild>
                     <a href={previewUrl} target="_blank" rel="noreferrer">
                       <ExternalLink className="size-4" />
                       Open file
@@ -220,7 +219,7 @@ export const ResourceLightbox = ({
           {isLogoTab && isImage && previewUrl ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={busyAction != null}
               onClick={() => {
                 setBusyAction("favicon");
@@ -233,7 +232,7 @@ export const ResourceLightbox = ({
             </Button>
           ) : null}
           {previewUrl ? (
-            <Button type="button" variant="outline" asChild>
+            <Button type="button" variant="secondary" asChild>
               <a
                 href={previewUrl}
                 download={file.title}

@@ -164,7 +164,7 @@ export const GoogleSearchConsoleSettings = ({
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 disabled={syncAllMutation.isPending}
                 onClick={() => syncAllMutation.mutate()}

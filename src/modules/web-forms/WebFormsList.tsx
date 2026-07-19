@@ -1,4 +1,5 @@
 // DEPRECATED - use forms-v2 instead (`src/lbs/forms-v2/`). Kept until v2 is fully verified.
+import { useMemo, useState } from "react";
 import { useGetIdentity, useListContext } from "ra-core";
 import { Link, useNavigate } from "react-router";
 import { Plus } from "lucide-react";
@@ -10,8 +11,11 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
-import { LBS_PLACEHOLDER_MODULES } from "@/app/navigation";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import type { Form } from "@/modules/types";
 import { getWebFormTypeLabel } from "@/modules/web-forms/webFormLinks";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +32,11 @@ export const WebFormsList = () => {
       disableBreadcrumb
       perPage={25}
       sort={{ field: "name", order: "ASC" }}
-      actions={<WebFormsListActions />}
+      actions={
+        <PageActions>
+          <PageTitle label="Web forms" />
+        </PageActions>
+      }
       pagination={<ListPagination rowsPerPageOptions={[10, 25, 50]} />}
     >
       <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
@@ -41,94 +49,122 @@ export const WebFormsList = () => {
   );
 };
 
-const WebFormsListActions = () => (
-  <PageActions>
-    <PageTitle label="Web forms" />
-    <div className="ml-auto flex items-center gap-2">
-      <SortButton fields={["name", "slug", "updated_at"]} />
-      <Button type="button" variant="outline" size="sm" asChild>
-        <Link to="/web-forms/create">
-          <Plus className="size-4" />
-          New form
-        </Link>
-      </Button>
-      <ModuleInfoPopover
-        title={LBS_PLACEHOLDER_MODULES.webForms.title}
-        description="Manage client-facing forms for project briefs and file uploads."
-      />
-    </div>
-  </PageActions>
-);
-
 const WebFormsListLayout = () => {
   const { data, isPending, filterValues } = useListContext<Form>();
   const navigate = useNavigate();
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
+  const [searchQuery, setSearchQuery] = useState("");
 
-  if (isPending) return null;
+  const filteredData = useMemo(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return data;
+    return (data ?? []).filter((form) =>
+      [form.name, form.description]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(trimmed),
+    );
+  }, [data, searchQuery]);
+
+  const toolbar = (
+    <ModuleToolbar className="shrink-0">
+      <ModuleSearchField
+        value={searchQuery}
+        onChange={setSearchQuery}
+        basePlaceholder="Search web forms by name"
+        total={data?.length}
+        itemSingular="form"
+      />
+      <ModuleToolbarActions>
+        <SortButton fields={["name", "slug", "updated_at"]} />
+        <Button type="button" variant="secondary" size="sm" asChild>
+          <Link to="/web-forms/create" aria-label="New form">
+            <Plus className="size-4" />
+            New form
+          </Link>
+        </Button>
+      </ModuleToolbarActions>
+    </ModuleToolbar>
+  );
+
+  if (isPending) return toolbar;
 
   if (!data?.length && !hasFilters) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        No web forms configured yet.
-      </p>
+      <div className="space-y-3">
+        {toolbar}
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No web forms configured yet.
+        </p>
+      </div>
     );
   }
 
   return (
-    <DataTable
-      rowClick={(id) => navigate(`/web-forms/${id}/show`)}
-      rowClassName={() => "[&_td]:py-2.5"}
-    >
-      <DataTable.Col source="name" label="Name" />
-      <DataTable.Col
-        source="slug"
-        label="Type"
-        render={(record: Form) => (
-          <Badge variant="outline">{getWebFormTypeLabel(record.slug)}</Badge>
-        )}
-      />
-      <DataTable.Col
-        source="active"
-        label="Status"
-        render={(record: Form) => (
-          <Badge variant={record.active ? "default" : "outline"}>
-            {record.active ? "Active" : "Inactive"}
-          </Badge>
-        )}
-      />
-      <DataTable.Col
-        source="description"
-        label="Description"
-        render={(record: Form) => record.description || "—"}
-      />
-      <DataTable.Col
-        label=""
-        render={(record: Form) => (
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={(event) => {
-                event.stopPropagation();
-                navigate(`/web-forms/${record.id}/show`);
-              }}
-            >
-              Send
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              asChild
-              onClick={(event) => event.stopPropagation()}
-            >
-              <Link to={`/web-forms/${record.id}/edit`}>Edit</Link>
-            </Button>
-          </div>
-        )}
-      />
-    </DataTable>
+    <div className="space-y-3">
+      {toolbar}
+      {!filteredData?.length ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No web forms match your search.
+        </p>
+      ) : (
+        <DataTable
+          data={filteredData}
+          rowClick={(id) => navigate(`/web-forms/${id}/show`)}
+          rowClassName={() => "[&_td]:py-1.5"}
+        >
+          <DataTable.Col source="name" label="Name" />
+          <DataTable.Col
+            source="slug"
+            label="Type"
+            render={(record: Form) => (
+              <Badge variant="outline">{getWebFormTypeLabel(record.slug)}</Badge>
+            )}
+          />
+          <DataTable.Col
+            source="active"
+            label="Status"
+            render={(record: Form) => (
+              <Badge variant={record.active ? "default" : "outline"}>
+                {record.active ? "Active" : "Inactive"}
+              </Badge>
+            )}
+          />
+          <DataTable.Col
+            source="description"
+            label="Description"
+            render={(record: Form) => record.description || "—"}
+          />
+          <DataTable.Col
+            label=""
+            render={(record: Form) => (
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/web-forms/${record.id}/show`);
+                  }}
+                >
+                  Send
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <Link to={`/web-forms/${record.id}/edit`}>Edit</Link>
+                </Button>
+              </div>
+            )}
+          />
+        </DataTable>
+      )}
+    </div>
   );
 };

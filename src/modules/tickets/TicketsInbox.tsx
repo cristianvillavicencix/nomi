@@ -1,4 +1,4 @@
-import { ArrowLeft, Inbox, Search } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useDelete,
@@ -11,7 +11,6 @@ import {
 } from "ra-core";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { List } from "@/components/admin/list";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -30,6 +28,11 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { CreateTicketButton } from "@/modules/tickets/CreateTicketButton";
 import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
@@ -40,7 +43,6 @@ import { TicketListItem } from "@/modules/tickets/TicketListItem";
 import { TicketStatusBreadcrumb } from "@/modules/tickets/TicketStatusBreadcrumb";
 import { matchesTicketSearch } from "@/modules/tickets/ticketInboxQueue";
 import {
-  DEFAULT_TICKET_INBOX_EMAIL,
   type TicketStatusFilterId,
 } from "@/modules/tickets/ticketInboxConfig";
 import {
@@ -137,24 +139,7 @@ export const TicketsInbox = () => {
       queryOptions={{ refetchInterval: 30_000 }}
       actions={
         <PageActions>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="-ml-1 h-8 gap-1.5 px-2"
-            onClick={() => navigate("/tickets")}
-          >
-            <ArrowLeft className="size-3.5" />
-            All tickets
-          </Button>
-          <Inbox className="size-4 shrink-0 text-muted-foreground" />
           <PageTitle label="Inbox" />
-          <Badge variant="outline" className="font-mono text-xs font-normal">
-            {DEFAULT_TICKET_INBOX_EMAIL}
-          </Badge>
-          <div className="ml-auto flex items-center gap-2">
-            <CreateTicketButton />
-          </div>
         </PageActions>
       }
     >
@@ -479,14 +464,29 @@ const TicketsInboxLayout = ({
           )}
         >
           <div className="shrink-0 space-y-3 border-b bg-background p-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search tickets, claims, clients..."
-                className="pl-9"
-                onChange={(event) => handleSearch(event.target.value)}
+            <ModuleToolbar>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="-ml-1 h-8 shrink-0 gap-1.5 px-2"
+                onClick={() => navigate("/tickets")}
+                aria-label="All tickets"
+              >
+                <ArrowLeft className="size-3.5" />
+                All tickets
+              </Button>
+              <ModuleSearchField
+                value={searchQuery}
+                onChange={handleSearch}
+                basePlaceholder="Search tickets, claims, clients"
+                total={counts.all}
+                itemSingular="ticket"
               />
-            </div>
+              <ModuleToolbarActions>
+                <CreateTicketButton alwaysShowLabel />
+              </ModuleToolbarActions>
+            </ModuleToolbar>
             <TicketStatusBreadcrumb
               active={statusFilter}
               counts={counts}
@@ -630,7 +630,7 @@ const TicketsInboxLayout = ({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={deletePending}
               onClick={() => setTicketToDelete(null)}
             >

@@ -177,7 +177,7 @@ export const ProposalSendExpiryDialog = ({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={isPending}
             onClick={() => {
               onOpenChange(false);

@@ -1,45 +1,33 @@
-import { ChevronDown, FileText, Plus } from "lucide-react";
-import { type ReactNode } from "react";
+import { FileText } from "lucide-react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { InvoiceBillingSummaryCards } from "@/modules/billing/InvoiceBillingSummaryCards";
 import { InvoiceListSidebar } from "@/modules/billing/InvoiceListSidebar";
 import { InvoiceListTable } from "@/modules/billing/InvoiceListTable";
+import { InvoiceListToolbar } from "@/modules/billing/InvoiceListToolbar";
 import { StandaloneInvoiceEditPage } from "@/modules/billing/StandaloneInvoiceEditPage";
-import {
-  INVOICE_FILTER_OPTIONS,
-  type InvoiceStatusFilter,
-} from "@/modules/billing/billingDisplayUtils";
+import { type InvoiceStatusFilter } from "@/modules/billing/billingDisplayUtils";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 type InvoiceBillingWorkspaceProps = {
   statusFilter: InvoiceStatusFilter;
   onStatusFilterChange: (next: InvoiceStatusFilter) => void;
-  /** Renders the "+ New invoice" / "From proposal" actions inside the sidebar header dropdown. */
-  createMenuItems: ReactNode;
+  onFromProposal: () => void;
+  /** Summary metric cards sit under the module toolbar (list view only). */
+  showSummaryCards?: boolean;
 };
-
-const filterLabel = (value: InvoiceStatusFilter) =>
-  INVOICE_FILTER_OPTIONS.find((option) => option.value === value)?.label ??
-  "All";
 
 export const InvoiceBillingWorkspace = ({
   statusFilter,
   onStatusFilterChange,
-  createMenuItems,
+  onFromProposal,
+  showSummaryCards = false,
 }: InvoiceBillingWorkspaceProps) => {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState("");
   const selectedInvoiceId = searchParams.get("invoice");
 
   const handleSelectInvoice = (invoiceId: string) => {
@@ -53,58 +41,6 @@ export const InvoiceBillingWorkspace = ({
   const hasSelection = Boolean(selectedInvoiceId);
   const showSidebar = !isMobile || !hasSelection;
   const showDetail = !isMobile || hasSelection;
-
-  const sidebarHeader = (
-    <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="-ml-2 h-8 gap-1 px-2 font-semibold"
-          >
-            {filterLabel(statusFilter)} invoices
-            <ChevronDown className="size-4 opacity-60" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={statusFilter}
-            onValueChange={(value) =>
-              onStatusFilterChange(value as InvoiceStatusFilter)
-            }
-          >
-            {INVOICE_FILTER_OPTIONS.map((option) => (
-              <DropdownMenuRadioItem key={option.value} value={option.value}>
-                {option.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <div className="ml-auto">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="default"
-              size="icon"
-              className="size-7"
-              aria-label="Create invoice"
-            >
-              <Plus className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {createMenuItems}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  );
 
   return (
     <div
@@ -125,16 +61,32 @@ export const InvoiceBillingWorkspace = ({
             (!hasSelection || isMobile) && "w-full",
           )}
         >
-          {sidebarHeader}
+          <InvoiceListToolbar
+            statusFilter={statusFilter}
+            onStatusFilterChange={onStatusFilterChange}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            onFromProposal={onFromProposal}
+          />
+          {showSummaryCards && !hasSelection ? (
+            <div className="shrink-0 border-b bg-background px-3 py-2">
+              <InvoiceBillingSummaryCards
+                statusFilter={statusFilter}
+                onStatusFilterChange={onStatusFilterChange}
+              />
+            </div>
+          ) : null}
           {hasSelection || isMobile ? (
             <InvoiceListSidebar
               selectedInvoiceId={selectedInvoiceId}
               onSelectInvoice={handleSelectInvoice}
+              searchQuery={searchQuery}
             />
           ) : (
             <InvoiceListTable
               selectedInvoiceId={selectedInvoiceId}
               onSelectInvoice={handleSelectInvoice}
+              searchQuery={searchQuery}
             />
           )}
         </aside>

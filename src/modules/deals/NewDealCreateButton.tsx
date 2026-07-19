@@ -8,11 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ToolbarLabel } from "@/components/atomic-crm/layout/PageActions";
 import { cn } from "@/lib/utils";
 import { getNewDealRequestFormPath } from "@/modules/deals/projectCreatePaths";
-
-const NEW_DEAL_BUTTON_CLASS =
-  "bg-black text-white hover:bg-black/90 border-black dark:bg-white dark:text-black dark:hover:bg-white/90";
 
 const stopPropagation = (event: MouseEvent) => event.stopPropagation();
 
@@ -34,21 +32,20 @@ export const NewDealCreateButton = ({
     <div className={cn("flex items-stretch", className)}>
       <Link
         to={manualTo}
+        aria-label="New deal"
         className={cn(
-          buttonVariants({ variant: "outline" }),
-          NEW_DEAL_BUTTON_CLASS,
+          buttonVariants({ variant: "primary", size: "md" }),
           "rounded-r-none border-r-0 pr-3",
         )}
         onClick={stopPropagation}
       >
         <Plus />
-        New deal
+        <ToolbarLabel priority="primary">New deal</ToolbarLabel>
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
-            buttonVariants({ variant: "outline", size: "default" }),
-            NEW_DEAL_BUTTON_CLASS,
+            buttonVariants({ variant: "primary", size: "md" }),
             "rounded-l-none px-2",
           )}
         >

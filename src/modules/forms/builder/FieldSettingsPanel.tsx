@@ -211,7 +211,7 @@ export const FieldSettingsPanel = () => {
       <div className="flex gap-2 pt-2">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => duplicateFieldByKey(field.key)}
         >
@@ -220,7 +220,7 @@ export const FieldSettingsPanel = () => {
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => removeField(field.key)}
         >

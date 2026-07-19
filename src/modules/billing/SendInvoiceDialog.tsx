@@ -69,6 +69,7 @@ import {
 } from "@/modules/billing/invoicePaymentUtils";
 import { formatUsPhoneDisplayFromAny } from "@/utils/phone";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -157,7 +158,8 @@ export const SendInvoiceDialog = ({
   const [showBcc, setShowBcc] = useState(false);
   const [editingTo, setEditingTo] = useState(false);
   const [phone, setPhone] = useState("");
-  const [channel, setChannel] = useState<InvoiceDeliveryChannel>(deliveryChannel);
+  const [channel, setChannel] =
+    useState<InvoiceDeliveryChannel>(deliveryChannel);
   const [subject, setSubject] = useState("");
   const [pdfPreviewPending, setPdfPreviewPending] = useState(false);
 
@@ -431,9 +433,7 @@ export const SendInvoiceDialog = ({
     !shareLinkPending &&
     Boolean(paymentUrl) &&
     Boolean(emailTemplateContext) &&
-    ((channel === "email" &&
-      Boolean(to.trim()) &&
-      Boolean(subject.trim())) ||
+    ((channel === "email" && Boolean(to.trim()) && Boolean(subject.trim())) ||
       (channel === "sms" && Boolean(phone.trim())) ||
       (channel === "both" &&
         Boolean(to.trim()) &&
@@ -509,7 +509,7 @@ export const SendInvoiceDialog = ({
                       key={option.id}
                       type="button"
                       size="sm"
-                      variant={selected ? "default" : "outline"}
+                      variant={selected ? "primary" : "secondary"}
                       className="gap-1.5"
                       onClick={() => setChannel(option.id)}
                     >
@@ -522,114 +522,116 @@ export const SendInvoiceDialog = ({
             </div>
 
             {sendEmail ? (
-            <div className="space-y-2">
-              <Label htmlFor="invoice-send-to">To</Label>
-              <div className="rounded-md border px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-                {to.trim() && !editingTo ? (
-                  <div className="flex min-h-8 items-center gap-1">
-                    <Badge
-                      variant="secondary"
-                      className="max-w-full gap-1 bg-primary/10 font-normal text-primary hover:bg-primary/15"
-                    >
-                      <span className="truncate">{to}</span>
-                      <button
-                        type="button"
-                        className="rounded-sm opacity-70 hover:opacity-100"
-                        aria-label="Clear recipient email"
-                        onClick={() => {
-                          setTo("");
-                          setEditingTo(true);
-                        }}
+              <div className="space-y-2">
+                <Label htmlFor="invoice-send-to">To</Label>
+                <div className="rounded-md border px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                  {to.trim() && !editingTo ? (
+                    <div className="flex min-h-8 items-center gap-1">
+                      <Badge
+                        variant="secondary"
+                        className="max-w-full gap-1 bg-primary/10 font-normal text-primary hover:bg-primary/15"
                       >
-                        <X className="size-3" />
-                      </button>
-                    </Badge>
-                    <button
-                      type="button"
-                      className="ml-auto text-xs text-muted-foreground hover:text-foreground"
-                      onClick={() => setEditingTo(true)}
-                    >
-                      Edit
-                    </button>
-                  </div>
-                ) : (
-                  <Input
-                    id="invoice-send-to"
-                    type="email"
-                    value={to}
-                    onChange={(event) => setTo(event.target.value)}
-                    onBlur={() => setEditingTo(false)}
-                    className="h-8 border-0 px-1 shadow-none focus-visible:ring-0"
-                    placeholder="Recipient email"
-                    autoFocus={editingTo}
-                  />
-                )}
-              </div>
-              {!showCc || !showBcc ? (
-                <div className="flex gap-3">
-                  {!showCc ? (
-                    <button
-                      type="button"
-                      className="text-sm text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowCc(true)}
-                    >
-                      + Cc
-                    </button>
-                  ) : null}
-                  {!showBcc ? (
-                    <button
-                      type="button"
-                      className="text-sm text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowBcc(true)}
-                    >
-                      + Bcc
-                    </button>
-                  ) : null}
+                        <span className="truncate">{to}</span>
+                        <IconButton
+                          className="size-4 min-h-4 min-w-4 opacity-70 hover:bg-transparent hover:opacity-100"
+                          aria-label="Clear recipient email"
+                          onClick={() => {
+                            setTo("");
+                            setEditingTo(true);
+                          }}
+                        >
+                          <X className="size-3" />
+                        </IconButton>
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto h-auto px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+                        onClick={() => setEditingTo(true)}
+                      >
+                        Edit
+                      </Button>
+                    </div>
+                  ) : (
+                    <Input
+                      id="invoice-send-to"
+                      type="email"
+                      value={to}
+                      onChange={(event) => setTo(event.target.value)}
+                      onBlur={() => setEditingTo(false)}
+                      className="h-8 border-0 px-1 shadow-none focus-visible:ring-0"
+                      placeholder="Recipient email"
+                      autoFocus={editingTo}
+                    />
+                  )}
                 </div>
-              ) : null}
-            </div>
+                {!showCc || !showBcc ? (
+                  <div className="flex gap-3">
+                    {!showCc ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                        onClick={() => setShowCc(true)}
+                      >
+                        + Cc
+                      </Button>
+                    ) : null}
+                    {!showBcc ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                        onClick={() => setShowBcc(true)}
+                      >
+                        + Bcc
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             ) : null}
 
             {sendEmail ? (
-            <div className="space-y-2">
-              <Label htmlFor="invoice-send-subject">Subject</Label>
-              <Input
-                id="invoice-send-subject"
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice-send-subject">Subject</Label>
+                <Input
+                  id="invoice-send-subject"
+                  value={subject}
+                  onChange={(event) => setSubject(event.target.value)}
+                />
+              </div>
             ) : null}
 
             {sendEmail ? (
-            <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-destructive/10">
-                <FileText className="size-4 text-destructive" />
+              <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-destructive/10">
+                  <FileText className="size-4 text-destructive" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {invoice.invoice_number}.pdf
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {pdfMeta?.sizeLabel ?? "PDF attachment"}
+                  </p>
+                </div>
+                <IconButton
+                  className="shrink-0"
+                  disabled={pdfPreviewPending || !invoicePdfContext}
+                  aria-label="Preview PDF attachment"
+                  onClick={() => void previewInvoicePdf()}
+                >
+                  {pdfPreviewPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </IconButton>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {invoice.invoice_number}.pdf
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {pdfMeta?.sizeLabel ?? "PDF attachment"}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                disabled={pdfPreviewPending || !invoicePdfContext}
-                onClick={() => void previewInvoicePdf()}
-                aria-label="Preview PDF attachment"
-              >
-                {pdfPreviewPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </Button>
-            </div>
             ) : null}
 
             {sendEmail && showCc ? (
@@ -661,22 +663,22 @@ export const SendInvoiceDialog = ({
             ) : null}
 
             {sendSms ? (
-            <div className="space-y-2">
-              <Label htmlFor="invoice-send-phone">Text message to</Label>
-              <Input
-                id="invoice-send-phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="(203) 555-0100"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                onBlur={() => {
-                  const formatted = formatUsPhoneDisplayFromAny(phone);
-                  if (formatted !== "—") setPhone(formatted);
-                }}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice-send-phone">Text message to</Label>
+                <Input
+                  id="invoice-send-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="(203) 555-0100"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  onBlur={() => {
+                    const formatted = formatUsPhoneDisplayFromAny(phone);
+                    if (formatted !== "—") setPhone(formatted);
+                  }}
+                />
+              </div>
             ) : null}
 
             {shareLinkPending ? (
@@ -971,20 +973,13 @@ export const InvoiceRowActions = ({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            aria-label="Invoice actions"
-            disabled={isBusy}
-          >
+          <IconButton aria-label="Invoice actions" disabled={isBusy}>
             {isBusy ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <MoreHorizontal className="size-4" />
             )}
-          </Button>
+          </IconButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem

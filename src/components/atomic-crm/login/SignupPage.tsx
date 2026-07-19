@@ -11,6 +11,8 @@ import type { CrmDataProvider } from "../providers/types";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { SignUpData } from "../types";
 import { Notification } from "@/components/admin/notification";
+import { BrandWordmark } from "../layout/BrandWordmark";
+import { PRODUCT_FULL_NAME } from "@/lib/branding";
 import { ConfirmationRequired } from "./ConfirmationRequired";
 import { SSOAuthButton } from "./SSOAuthButton";
 
@@ -88,16 +90,18 @@ export const SignupPage = () => {
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <img
             src={logo}
-            alt={title}
+            alt={PRODUCT_FULL_NAME}
             width={24}
-            className="shrink-0 filter brightness-0 invert"
+            className="h-6 w-6 shrink-0 rounded-sm object-cover filter brightness-0 invert"
           />
-          <h1 className="truncate text-xl font-semibold">{title}</h1>
+          <BrandWordmark title={title} titleClassName="text-xl" />
         </div>
       </div>
       <div className="h-full">
         <div className="mx-auto flex h-full max-w-sm flex-col justify-center gap-4">
-          <h1 className="mb-1 text-2xl font-bold">Welcome to {title}</h1>
+          <h1 className="mb-1 text-2xl font-bold">
+            Welcome to {PRODUCT_FULL_NAME}
+          </h1>
           <p className="mb-2 text-sm text-muted-foreground">
             ¿Ya tienes cuenta?{" "}
             <Link
@@ -178,7 +182,7 @@ export const SignupPage = () => {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   className="w-full sm:w-auto"
                   onClick={() => navigate("/login")}
                 >

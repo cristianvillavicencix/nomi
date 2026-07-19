@@ -29,6 +29,7 @@ import { Columns, Search } from "lucide-react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { FieldToggle } from "@/components/admin/field-toggle";
 import {
@@ -82,19 +83,14 @@ export const ColumnsButton = (props: ColumnsButtonProps) => {
           {isMobile ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={title}
-                  {...rest}
-                >
+                <IconButton aria-label={title} {...rest}>
                   <Columns className="size-4" />
-                </Button>
+                </IconButton>
               </TooltipTrigger>
               <TooltipContent>{title}</TooltipContent>
             </Tooltip>
           ) : (
-            <Button variant="outline" className="cursor-pointer" {...rest}>
+            <Button variant="secondary" className="cursor-pointer" {...rest}>
               <Columns />
               {title}
             </Button>
@@ -212,7 +208,7 @@ export const ColumnsSelector = ({ children }: ColumnsSelectorProps) => {
       </ul>
       <div className="text-center py-1">
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => {
             setColumnRanks(undefined);

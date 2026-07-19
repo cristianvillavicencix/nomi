@@ -3,6 +3,7 @@ import {
   useDelete,
   useGetIdentity,
   useListContext,
+  useListFilterContext,
   useNotify,
   useRefresh,
   type Identifier,
@@ -24,7 +25,11 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import type { Contact } from "@/components/atomic-crm/types";
 import { getContactFullName } from "@/modules/clients/clientShowUtils";
@@ -72,27 +77,20 @@ export const ContactsListPage = ({
           "status@in": `(${LBS_CONTACT_STATUSES_FOR_FILTER.map((s) => `"${s}"`).join(",")})`,
         }}
         actions={
-          <PageActions>
-            {!embedded ? <PageTitle label="Contacts" /> : null}
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setContactDialogOpen(true)}
-              >
-                <Plus className="size-4" />
-                New contact
-              </Button>
-              <ModuleInfoPopover
-                title="Contacts"
-                description="People linked to client companies. Click a column header to sort."
-              />
-            </div>
-          </PageActions>
+          embedded ? (
+            false
+          ) : (
+            <PageActions>
+              <PageTitle label="Contacts" />
+            </PageActions>
+          )
         }
         pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
       >
-        <ContactsLayout />
+        <ContactsLayout
+          embedded={embedded}
+          onNewContact={() => setContactDialogOpen(true)}
+        />
       </List>
       <NewContactDialog
         open={contactDialogOpen}
@@ -102,16 +100,66 @@ export const ContactsListPage = ({
   );
 };
 
-const ContactsLayout = () => {
+const ContactsLayout = ({
+  embedded,
+  onNewContact,
+}: {
+  embedded: boolean;
+  onNewContact: () => void;
+}) => {
   const notify = useNotify();
   const refresh = useRefresh();
-  const { data, isPending, filterValues } = useListContext<Contact>();
+  const { data, total, isPending, filterValues } = useListContext<Contact>();
+  const { setFilters } = useListFilterContext();
   const [editContactId, setEditContactId] = useState<Identifier | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
   const [deleteOne, { isPending: isDeleting }] = useDelete<Contact>();
+  const [searchDraft, setSearchDraft] = useState(
+    () => String(filterValues?.q ?? ""),
+  );
+
+  useEffect(() => {
+    setSearchDraft(String(filterValues?.q ?? ""));
+  }, [filterValues?.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = searchDraft.trim();
+      const current = String(filterValues?.q ?? "").trim();
+      if (next === current) return;
+      const nextFilters = { ...filterValues };
+      if (next) nextFilters.q = next;
+      else delete nextFilters.q;
+      setFilters(nextFilters, undefined, false);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filterValues, setFilters]);
 
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
+
+  const toolbar = !embedded ? (
+    <ModuleToolbar className="shrink-0">
+      <ModuleSearchField
+        value={searchDraft}
+        onChange={setSearchDraft}
+        basePlaceholder="Search contacts by name, email, or phone"
+        total={total}
+        itemSingular="contact"
+      />
+      <ModuleToolbarActions>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onNewContact}
+          aria-label="New contact"
+        >
+          <Plus className="size-4" />
+          New contact
+        </Button>
+      </ModuleToolbarActions>
+    </ModuleToolbar>
+  ) : null;
 
   const openEdit = (contactId: Identifier) => {
     setEditContactId(contactId);
@@ -136,22 +184,26 @@ const ContactsLayout = () => {
     );
   };
 
-  if (isPending) return null;
+  if (isPending) return toolbar;
   if (!data?.length && !hasFilters) {
     return (
-      <div className="rounded-md border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
-        No contacts yet. Add contacts from a company profile or create one here.
+      <div className="space-y-3">
+        {toolbar}
+        <div className="rounded-md border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
+          No contacts yet. Add contacts from a company profile or create one here.
+        </div>
       </div>
     );
   }
 
   return (
-    <>
+    <div className="space-y-3">
+      {toolbar}
       <DataTable
         rowClick={(_id, _resource, record) =>
           getPersonShowPath(record as Contact)
         }
-        rowClassName={() => "[&_td]:py-2.5 [&_td]:leading-normal"}
+        rowClassName={() => "[&_td]:py-1.5 [&_td]:leading-normal"}
       >
         <DataTable.Col
           source="last_name"
@@ -245,7 +297,7 @@ const ContactsLayout = () => {
         onClose={() => setDeleteTarget(null)}
         loading={isDeleting}
       />
-    </>
+    </div>
   );
 };
 

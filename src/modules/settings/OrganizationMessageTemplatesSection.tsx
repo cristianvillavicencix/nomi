@@ -10,6 +10,7 @@ import {
 } from "ra-core";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Card,
   CardContent,
@@ -296,7 +297,7 @@ export const OrganizationMessageTemplatesSection = () => {
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               onClick={() => loadSamplesMutation.mutate()}
               disabled={loadSamplesMutation.isPending}
             >
@@ -352,27 +353,20 @@ export const OrganizationMessageTemplatesSection = () => {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="size-8"
+                  <IconButton
                     onClick={() => openEdit(template)}
                     aria-label={`Edit ${template.name}`}
                   >
                     <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="size-8 text-destructive"
+                  </IconButton>
+                  <IconButton
+                    className="text-destructive"
                     onClick={() => deleteMutation.mutate(template)}
                     disabled={deleteMutation.isPending}
                     aria-label={`Delete ${template.name}`}
                   >
                     <Trash2 className="size-4" />
-                  </Button>
+                  </IconButton>
                 </div>
               </div>
             ))
@@ -527,7 +521,7 @@ export const OrganizationMessageTemplatesSection = () => {
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => setDialogOpen(false)}
             >
               Cancel

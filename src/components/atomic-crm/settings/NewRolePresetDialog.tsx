@@ -189,7 +189,7 @@ export const NewRolePresetDialog = ({
         <div className="flex justify-end gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={saveMutation.isPending}
           >

@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,9 +39,9 @@ export function LocalesMenuButton() {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
+        <IconButton aria-label="Change language" className="hidden sm:inline-flex">
           {locale.toUpperCase()}
-        </Button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {languages.map((language) => (

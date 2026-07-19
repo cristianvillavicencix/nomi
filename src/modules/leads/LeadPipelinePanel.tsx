@@ -122,7 +122,7 @@ export const LeadPipelinePanel = ({
                   {!isCurrent ? (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       className="h-8 shrink-0 px-3 text-xs"
                       onClick={() => openStageDialog(stage.id)}
@@ -155,7 +155,7 @@ export const LeadPipelinePanel = ({
               <Button
                 key={stage.id}
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="h-8 px-3 text-xs"
                 onClick={() => openStageDialog(stage.id)}

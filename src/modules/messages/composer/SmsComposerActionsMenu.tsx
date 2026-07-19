@@ -5,7 +5,8 @@ import {
   Paperclip,
   Plus,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -75,13 +76,10 @@ export const SmsComposerActionsMenu = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <IconButton
           className={cn(
             "shrink-0 rounded-lg text-foreground hover:bg-muted/80",
-            compact ? "size-8" : "size-9",
+            compact ? "" : "size-9",
           )}
           disabled={menuDisabled}
           aria-label="Message options"
@@ -91,7 +89,7 @@ export const SmsComposerActionsMenu = ({
           ) : (
             <Plus className={compact ? "size-4" : "size-5"} strokeWidth={2} />
           )}
-        </Button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
         <DropdownMenuLabel className="text-xs text-muted-foreground">

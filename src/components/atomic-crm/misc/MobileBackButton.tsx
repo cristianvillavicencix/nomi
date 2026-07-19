@@ -1,7 +1,8 @@
 import { useResourceContext, useCreatePath } from "ra-core";
 import { useNavigate } from "react-router";
 import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 
 export const MobileBackButton = (props: { resource?: string; to?: string }) => {
   const resource = useResourceContext(props);
@@ -14,20 +15,19 @@ export const MobileBackButton = (props: { resource?: string; to?: string }) => {
       resource,
       type: "list",
     });
+  const backLabel = to ? "Back" : "Back to list";
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="rounded-full size-5 pr-2"
+    <IconButton
+      className="size-5 rounded-full pr-2"
+      aria-label={backLabel}
       onClick={(e) => {
         e.preventDefault();
         navigate(finalTo);
       }}
     >
       <ChevronLeft className="size-6" />
-      <span className="sr-only">Back{to ? "" : " to list"}</span>
-    </Button>
+      <span className="sr-only">{backLabel}</span>
+    </IconButton>
   );
 };

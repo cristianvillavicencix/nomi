@@ -1,15 +1,12 @@
 import { useMemo, useState } from "react";
 import { useRefresh } from "ra-core";
-import { Link, useLocation } from "react-router";
-import { Plus } from "lucide-react";
+import { useLocation } from "react-router";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { CreateClientInvoiceDialog } from "@/modules/billing/CreateClientInvoiceDialog";
-import { InvoiceBillingSummaryCards } from "@/modules/billing/InvoiceBillingSummaryCards";
 import { InvoiceBillingWorkspace } from "@/modules/billing/InvoiceBillingWorkspace";
 import { type InvoiceStatusFilter } from "@/modules/billing/billingDisplayUtils";
 import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const buildInvoiceFilter = (statusFilter: InvoiceStatusFilter) => {
@@ -38,21 +35,6 @@ export const ClientInvoicesTab = () => {
     [statusFilter],
   );
 
-  const createMenuItems = (
-    <>
-      <DropdownMenuItem asChild>
-        <Link to="/billing/invoices/new" className="flex items-center gap-2">
-          <Plus className="size-4" />
-          New invoice
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => setFromProposalOpen(true)}>
-        <Plus className="size-4" />
-        From proposal
-      </DropdownMenuItem>
-    </>
-  );
-
   return (
     <div
       className={cn(
@@ -60,13 +42,6 @@ export const ClientInvoicesTab = () => {
         hasInvoiceOpen ? "h-full flex-1 gap-0 overflow-hidden" : "gap-3",
       )}
     >
-      {!hasInvoiceOpen ? (
-        <InvoiceBillingSummaryCards
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-        />
-      ) : null}
-
       <List
         resource="client_invoices"
         title={false}
@@ -88,7 +63,8 @@ export const ClientInvoicesTab = () => {
         <InvoiceBillingWorkspace
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
-          createMenuItems={createMenuItems}
+          onFromProposal={() => setFromProposalOpen(true)}
+          showSummaryCards={!hasInvoiceOpen}
         />
       </List>
 

@@ -163,7 +163,7 @@ export const ConvertLeadButton = ({ record }: { record: Contact }) => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button variant="secondary" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button onClick={() => convertLead()} disabled={!canSubmit}>

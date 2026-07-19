@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   addMonths,
   formatDayLabel,
@@ -145,26 +146,18 @@ export const WorkSidebarPanel = ({
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{formatMonthLabel(anchor)}</h2>
         <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
+          <IconButton
             onClick={() => onAnchorChange(addMonths(anchor, -1))}
             aria-label="Previous month"
           >
             <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
+          </IconButton>
+          <IconButton
             onClick={() => onAnchorChange(addMonths(anchor, 1))}
             aria-label="Next month"
           >
             <ChevronRight className="size-4" />
-          </Button>
+          </IconButton>
         </div>
       </div>
 

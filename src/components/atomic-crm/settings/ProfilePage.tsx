@@ -37,6 +37,11 @@ import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 import { useDebouncedSave } from "@/hooks/useDebouncedSave";
 import { ProfileCalendarSubscriptionSection } from "@/modules/calendar/ProfileCalendarSubscriptionSection";
 import { buildSettingsSearchParams } from "@/modules/settings/settingsNavigation";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
+import { useNavigationLayoutPreference } from "../layout/navigationLayoutPreference";
 
 import { supabase } from "../providers/supabase/supabase";
 import type { CrmDataProvider } from "../providers/types";
@@ -68,7 +73,7 @@ export const ProfilePage = () => {
       <Card>
         <CardContent className="flex items-center justify-between gap-3 pt-6">
           <h2 className="text-sm font-medium">Notifications</h2>
-          <Button type="button" size="sm" variant="outline" asChild>
+          <Button type="button" size="sm" variant="secondary" asChild>
               <Link
                 to={{
                   pathname: "/settings",
@@ -80,6 +85,7 @@ export const ProfilePage = () => {
             </Button>
         </CardContent>
       </Card>
+      <ProfileLayoutCard />
       <ProfileCalendarSubscriptionSection />
       {import.meta.env.VITE_INBOUND_EMAIL ? <InboundEmailCard /> : null}
     </div>
@@ -272,7 +278,7 @@ const ProfileIdentityCard = ({
           <div className="mt-6 flex justify-end">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => {
                 resetPasswordForm();
                 setPasswordDialogOpen(true);
@@ -335,7 +341,7 @@ const ProfileIdentityCard = ({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => setPasswordDialogOpen(false)}
               disabled={passwordSaving}
             >
@@ -377,7 +383,8 @@ const InboundEmailCard = () => (
         </h2>
         <p className="text-sm text-muted-foreground">
           You can start sending emails to your server&apos;s inbound email
-          address, e.g. by adding it to the <b> Cc: </b> field. Nomi CRM will
+          address, e.g. by adding it to the <b> Cc: </b> field. Sigma by Latino
+          Business Support will
           process the emails and add notes to the corresponding contacts.
         </p>
         <CopyPaste />
@@ -414,6 +421,42 @@ const CopyPaste = () => {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+};
+
+const ProfileLayoutCard = () => {
+  const [mode, setMode] = useNavigationLayoutPreference();
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 pt-6">
+        <div>
+          <h2 className="text-sm font-medium">Layout</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Choose where module links appear on desktop.
+          </p>
+        </div>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          value={mode}
+          onValueChange={(value) => {
+            if (value === "sidebar" || value === "top") {
+              setMode(value);
+            }
+          }}
+          className="w-full justify-stretch"
+        >
+          <ToggleGroupItem value="sidebar" className="flex-1">
+            Sidebar
+          </ToggleGroupItem>
+          <ToggleGroupItem value="top" className="flex-1">
+            Top navigation
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </CardContent>
+    </Card>
   );
 };
 

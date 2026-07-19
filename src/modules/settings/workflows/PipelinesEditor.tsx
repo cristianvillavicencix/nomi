@@ -141,13 +141,13 @@ export const PipelinesEditor = ({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" size="sm" variant="outline" onClick={addPipeline}>
+        <Button type="button" size="sm" variant="secondary" onClick={addPipeline}>
           Add pipeline
         </Button>
         <Button
           type="button"
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={deletePipeline}
           disabled={pipelines.length <= 1}
         >
@@ -156,7 +156,7 @@ export const PipelinesEditor = ({
         <Button
           type="button"
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={() => movePipeline("up")}
           disabled={
             pipelines.findIndex(
@@ -169,7 +169,7 @@ export const PipelinesEditor = ({
         <Button
           type="button"
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={() => movePipeline("down")}
           disabled={
             pipelines.findIndex(
@@ -207,7 +207,7 @@ export const PipelinesEditor = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">Stages</p>
-          <Button type="button" size="sm" variant="outline" onClick={addStage}>
+          <Button type="button" size="sm" variant="secondary" onClick={addStage}>
             Add stage
           </Button>
         </div>
@@ -240,7 +240,7 @@ export const PipelinesEditor = ({
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => swapStage(index, index - 1)}
                 disabled={index === 0}
               >
@@ -249,7 +249,7 @@ export const PipelinesEditor = ({
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => swapStage(index, index + 1)}
                 disabled={index === (selectedPipeline?.stages.length ?? 0) - 1}
               >
@@ -259,7 +259,7 @@ export const PipelinesEditor = ({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               onClick={() => removeStage(stage)}
             >
               Delete

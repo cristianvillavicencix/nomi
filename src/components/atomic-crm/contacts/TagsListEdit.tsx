@@ -121,7 +121,7 @@ export const TagsListEdit = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="h-9 md:h-6 cursor-pointer"
               >

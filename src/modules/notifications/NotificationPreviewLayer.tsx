@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 import {
   NOTIFICATION_CATEGORY_ACCENT,
@@ -121,14 +122,13 @@ export const NotificationPreviewLayer = () => {
                   <p className="text-sm font-medium leading-snug">
                     {row.title}
                   </p>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+                  <IconButton
+                    className="size-6 min-h-6 min-w-6"
                     aria-label="Dismiss"
                     onClick={() => dismissRow(row.id)}
                   >
                     <X className="size-3.5" />
-                  </button>
+                  </IconButton>
                 </div>
                 {row.body ? (
                   <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">

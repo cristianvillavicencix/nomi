@@ -35,7 +35,7 @@ export const BookingAddToCalendar = ({ event }: BookingAddToCalendarProps) => {
         </p>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           className="w-full"
           onClick={() => handlePick(platform)}
         >
@@ -53,7 +53,7 @@ export const BookingAddToCalendar = ({ event }: BookingAddToCalendarProps) => {
       <div className="grid gap-2 sm:grid-cols-2">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           className="h-auto justify-start px-4 py-3"
           onClick={() => handlePick("apple")}
         >
@@ -67,7 +67,7 @@ export const BookingAddToCalendar = ({ event }: BookingAddToCalendarProps) => {
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           className="h-auto justify-start px-4 py-3"
           onClick={() => handlePick("android")}
         >

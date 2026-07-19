@@ -83,7 +83,7 @@ export const TicketInboxesManagePanel = ({ embedded }: { embedded?: boolean }) =
                     <Button
                       type="button"
                       size="sm"
-                      variant="outline"
+                      variant="secondary"
                       disabled={saving}
                       onClick={() =>
                         void patchInbox({ id: inbox.id, is_default: true })

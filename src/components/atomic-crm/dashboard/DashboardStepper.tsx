@@ -53,7 +53,9 @@ export const DashboardStepper = ({
             <div className="flex flex-col gap-12">
               <div className="flex gap-8 items-center">
                 <CheckCircle className="text-green-600 w-5 h-5 shrink-0" />
-                <h4 className="font-bold">You&apos;re in Nomi CRM</h4>
+                <h4 className="font-bold">
+                  You&apos;re in Sigma by Latino Business Support
+                </h4>
               </div>
               <div className="flex gap-8 items-start">
                 {step > 1 ? (
@@ -70,7 +72,7 @@ export const DashboardStepper = ({
                       <Button
                         onClick={() => setContactCreateOpen(true)}
                         className="gap-2"
-                        variant="outline"
+                        variant="secondary"
                       >
                         <Plus className="h-4 w-4" />
                         New Contact

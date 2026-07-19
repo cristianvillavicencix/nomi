@@ -40,8 +40,25 @@ const buildAttachmentPath = (file: File) => {
   const ext = file.name.includes(".")
     ? file.name.slice(file.name.lastIndexOf("."))
     : "";
-  return `${Math.random()}${ext}`;
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${id}${ext}`;
 };
+
+const isAlreadyExistsUploadError = (error: unknown) => {
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error);
+  return (
+    message.includes("already exists") ||
+    message.includes("resource already exists") ||
+    message.includes("response code: 409") ||
+    message.includes("status code 409") ||
+    /\b409\b/.test(message)
+  );
+};
+
 
 const toTicketReplyAttachment = (
   file: File,
@@ -129,7 +146,7 @@ const uploadViaXhrOnce = async (
       "Content-Type",
       file.type || "application/octet-stream",
     );
-    xhr.setRequestHeader("x-upsert", "false");
+    xhr.setRequestHeader("x-upsert", "true");
 
     xhr.upload.onprogress = (event) => {
       if (!onProgress) return;
@@ -208,22 +225,23 @@ const uploadViaXhrWithRetries = async (
   throw new Error(`Could not upload "${file.name}"`);
 };
 
-const uploadViaResumableTus = async (
+const uploadViaResumableTusOnce = async (
   file: File,
+  path: string,
   onProgress?: (percent: number) => void,
-): Promise<TicketReplyAttachment> => {
-  const path = buildAttachmentPath(file);
+): Promise<void> => {
   const token = await getUploadAccessToken();
   const apiKey = String(import.meta.env.VITE_SB_PUBLISHABLE_KEY ?? "");
 
   await new Promise<void>((resolve, reject) => {
     const upload = new tus.Upload(file, {
       endpoint: getResumableEndpoint(),
-      retryDelays: [0, 1000, 3000, 5000, 10000],
+      retryDelays: [0, 1000, 3000, 5000],
       headers: {
         authorization: `Bearer ${token}`,
         apikey: apiKey,
-        "x-upsert": "false",
+        // Allow replace if a prior incomplete/failed attempt left the object.
+        "x-upsert": "true",
       },
       uploadDataDuringCreation: true,
       removeFingerprintOnSuccess: true,
@@ -239,14 +257,7 @@ const uploadViaResumableTus = async (
           error instanceof Error
             ? error.message
             : "Network error while uploading attachment";
-        reject(
-          new Error(
-            message.toLowerCase().includes("network") ||
-              message.toLowerCase().includes("ssl")
-              ? `Could not upload "${file.name}". Check your connection and try again.`
-              : message,
-          ),
-        );
+        reject(new Error(message));
       },
       onProgress: (bytesUploaded, bytesTotal) => {
         if (!onProgress || bytesTotal <= 0) return;
@@ -260,15 +271,64 @@ const uploadViaResumableTus = async (
       },
     });
 
-    void upload.findPreviousUploads().then((previousUploads) => {
-      if (previousUploads.length > 0) {
-        upload.resumeFromPreviousUpload(previousUploads[0]);
-      }
-      upload.start();
-    });
+    // Always start a fresh upload for a new objectName. Resuming a fingerprint
+    // from a previous failed attempt often hits Storage 409 (object exists).
+    upload.start();
   });
+};
 
-  return toTicketReplyAttachment(file, path);
+const objectExistsInAttachments = async (path: string) => {
+  const { data, error } = await supabase.storage
+    .from("attachments")
+    .createSignedUrl(path, 60);
+  return !error && Boolean(data?.signedUrl);
+};
+
+const uploadViaResumableTus = async (
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<TicketReplyAttachment> => {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const path = buildAttachmentPath(file);
+    try {
+      await uploadViaResumableTusOnce(file, path, onProgress);
+      return toTicketReplyAttachment(file, path);
+    } catch (error) {
+      lastError = error;
+
+      if (isAlreadyExistsUploadError(error)) {
+        // Race / leftover object: if it landed, treat as success; else new path.
+        if (await objectExistsInAttachments(path)) {
+          onProgress?.(100);
+          return toTicketReplyAttachment(file, path);
+        }
+        onProgress?.(Math.max(5, attempt * 10));
+        continue;
+      }
+
+      if (
+        attempt >= 3 ||
+        !isRetryableUploadError(error)
+      ) {
+        break;
+      }
+      onProgress?.(Math.max(5, attempt * 10));
+      await sleep(400 * attempt);
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw new Error(
+      isAlreadyExistsUploadError(lastError) ||
+        lastError.message.toLowerCase().includes("network") ||
+        lastError.message.toLowerCase().includes("ssl")
+        ? `Could not upload "${file.name}". Check your connection and try again.`
+        : lastError.message,
+    );
+  }
+  throw new Error(`Could not upload "${file.name}"`);
 };
 
 export async function uploadTicketReplyAttachmentWithProgress(
@@ -297,8 +357,13 @@ export async function uploadTicketAttachmentWithProgress(
     try {
       return await uploadViaResumableTus(file, onProgress);
     } catch (error) {
-      // Fall back to standard upload with retries if TUS endpoint is unavailable.
-      if (!isRetryableUploadError(error)) throw error;
+      // Fall back to standard upload with retries if TUS is flaky/unavailable.
+      if (
+        !isRetryableUploadError(error) &&
+        !isAlreadyExistsUploadError(error)
+      ) {
+        throw error;
+      }
       return uploadViaXhrWithRetries(file, onProgress);
     }
   }

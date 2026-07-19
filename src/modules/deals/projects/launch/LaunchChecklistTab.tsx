@@ -150,7 +150,7 @@ export const LaunchChecklistTab = ({ record }: { record: LbsDeal }) => {
               <>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   disabled={generating}
                   onClick={() => void handleGenerate()}

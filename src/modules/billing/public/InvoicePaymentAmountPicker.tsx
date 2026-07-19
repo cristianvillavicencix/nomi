@@ -6,6 +6,7 @@ import {
   findNextDueInstallment,
 } from "@/modules/billing/public/invoicePaymentAmount";
 import { publicInvoicePaymentSectionPadding } from "@/modules/billing/public/payInvoiceDialogLayout";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Check, ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -48,19 +49,21 @@ const InstallmentSchedule = ({
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen((value) => !value)}
-        className="mt-3 flex w-full items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="mt-3 h-auto w-full justify-start gap-1 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+        rightIcon={
+          <ChevronDown
+            className={cn("size-4 transition-transform", open && "rotate-180")}
+          />
+        }
       >
-        <span>
-          {open ? "Hide payment schedule" : "View payment schedule"} (
-          {upcomingInstallments.length})
-        </span>
-        <ChevronDown
-          className={cn("size-4 transition-transform", open && "rotate-180")}
-        />
-      </button>
+        {open ? "Hide payment schedule" : "View payment schedule"} (
+        {upcomingInstallments.length})
+      </Button>
 
       {open ? (
         <div className="mt-2 space-y-1">
@@ -183,15 +186,17 @@ export const InvoicePaymentAmountPicker = ({
 
   const payAllButton =
     hasInstallmentPlan || showDepositRow ? (
-      <button
+      <Button
         type="button"
+        variant="primary"
+        size="sm"
+        className="shrink-0"
         onClick={
           allSelected ? onClearSelectedInstallments : onSelectAllInstallments
         }
-        className="shrink-0 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700"
       >
         {`Pay all · ${formatMoney(balanceDue, currency)}`}
-      </button>
+      </Button>
     ) : null;
 
   if (!hasInstallmentPlan && !showDepositRow) {

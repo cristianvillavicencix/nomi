@@ -138,7 +138,7 @@ export const TicketStatusChangeDialog = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={pending}
             onClick={() => handleOpenChange(false)}
           >

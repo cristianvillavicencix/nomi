@@ -6,13 +6,18 @@ import {
   ChevronLeft,
   ChevronRight,
   List,
+  Plus,
   SlidersHorizontal,
   Sun,
 } from "lucide-react";
 import { useGetList } from "ra-core";
 import type { Deal } from "@/components/atomic-crm/types";
 import { AddWorkDialog } from "@/modules/work/AddWorkDialog";
-import { PageActionsTrailing } from "@/components/atomic-crm/layout/PageActions";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
 import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
 import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
@@ -22,6 +27,7 @@ import {
 } from "@/components/atomic-crm/tasks/useTaskTagNotifications";
 import type { TaskScopeFilter } from "@/components/atomic-crm/tasks/scopedTasks";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -37,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CalendarDayDialog } from "@/modules/calendar/CalendarDayDialog";
 import { CalendarReminderDialog } from "@/modules/calendar/CalendarReminderDialog";
 import { DEFAULT_MEETING_DURATION_MINUTES } from "@/modules/calendar/calendarReminderOptions";
@@ -46,8 +52,8 @@ import {
   addMonths,
   formatMonthLabel,
   formatWeekLabel,
+  groupEventsByDate,
   isCalendarEntryEvent,
-  startOfWeek,
   toDateKey,
   type CalendarEntryEvent,
   type CalendarEvent,
@@ -56,6 +62,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { WorkCalendarView } from "@/modules/work/WorkCalendarView";
 import { WorkCategoryChips } from "@/modules/work/WorkCategoryChips";
+import { groupWorkItems } from "@/modules/work/workCategoryUtils";
 import { WorkListView } from "@/modules/work/WorkListView";
 import { WorkSidebarPanel } from "@/modules/work/WorkSidebarPanel";
 import { WorkTodayView } from "@/modules/work/WorkTodayView";
@@ -81,6 +88,7 @@ export const WorkPageContent = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { preferences, setPreferences } = useWorkPreferences();
   const [anchor, setAnchor] = useState(() => new Date());
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const view = parseViewMode(searchParams.get("view"));
@@ -110,12 +118,42 @@ export const WorkPageContent = () => {
     isPending,
   } = useWorkPageData({ preferences, anchor });
 
+  const filteredWorkItems = useMemo(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return workItems;
+    return workItems.filter((item) => {
+      const haystack = [item.title, item.dealName]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(trimmed);
+    });
+  }, [workItems, searchQuery]);
+
+  const filteredEventsByDate = useMemo(
+    () =>
+      searchQuery.trim()
+        ? groupEventsByDate(filteredWorkItems.map((item) => item.event))
+        : eventsByDate,
+    [eventsByDate, filteredWorkItems, searchQuery],
+  );
+
+  const filteredGroupedItems = useMemo(
+    () =>
+      searchQuery.trim()
+        ? groupWorkItems(filteredWorkItems, toDateKey(new Date()), {
+            includeDone: preferences.status === "done",
+          })
+        : groupedItems,
+    [filteredWorkItems, groupedItems, preferences.status, searchQuery],
+  );
+
   const taskIds = useMemo(
     () =>
-      workItems
+      filteredWorkItems
         .filter((item) => item.event.kind === "task")
         .map((item) => item.event.task.id),
-    [workItems],
+    [filteredWorkItems],
   );
   const { participantsByTaskId } = useTaskParticipantsByTaskIds(taskIds);
 
@@ -275,7 +313,7 @@ export const WorkPageContent = () => {
   };
 
   const selectedDayEvents = selectedDateKey
-    ? (eventsByDate[selectedDateKey] ?? [])
+    ? (filteredEventsByDate[selectedDateKey] ?? [])
     : [];
 
   const hasAdvancedFilters =
@@ -297,40 +335,47 @@ export const WorkPageContent = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <PageActionsTrailing>
-        <div className="flex items-center gap-2">
-          <Tabs
+    <div className="space-y-3">
+      <ModuleToolbar className="shrink-0">
+        <ModuleSearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          basePlaceholder="Search tasks, meetings, or projects"
+          total={filteredWorkItems.length}
+          itemSingular="item"
+        />
+        <ModuleToolbarActions>
+          <ToggleGroup
+            type="single"
             value={preferences.viewMode}
-            onValueChange={(value) => setViewMode(value as WorkViewMode)}
+            onValueChange={(value) => {
+              if (value === "list" || value === "calendar" || value === "today") {
+                setViewMode(value);
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="w-fit shrink-0"
           >
-            <TabsList className="h-9 rounded-sm border bg-muted/20 p-1">
-              <TabsTrigger value="list" className="h-7 gap-1.5 rounded-sm px-3">
-                <List className="size-4" />
-                List
-              </TabsTrigger>
-              <TabsTrigger
-                value="calendar"
-                className="h-7 gap-1.5 rounded-sm px-3"
-              >
-                <CalendarDays className="size-4" />
-                Calendar
-              </TabsTrigger>
-              <TabsTrigger
-                value="today"
-                className="h-7 gap-1.5 rounded-sm px-3"
-              >
-                <Sun className="size-4" />
-                Today
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+            <ToggleGroupItem value="list" aria-label="List view">
+              <List className="size-4" />
+              List
+            </ToggleGroupItem>
+            <ToggleGroupItem value="calendar" aria-label="Calendar view">
+              <CalendarDays className="size-4" />
+              Calendar
+            </ToggleGroupItem>
+            <ToggleGroupItem value="today" aria-label="Today view">
+              <Sun className="size-4" />
+              Today
+            </ToggleGroupItem>
+          </ToggleGroup>
 
           {preferences.scope === "tagged" &&
           unreadTagNotifications.length > 0 ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={markAllTaggedRead}
             >
@@ -339,68 +384,13 @@ export const WorkPageContent = () => {
             </Button>
           ) : null}
 
-          <Button
-            type="button"
-            className="h-9 gap-2"
-            onClick={() => {
-              setCreateTaskDueDate(toDateKey(new Date()));
-              setCreateTaskOpen(true);
-            }}
-          >
-            + Add
-          </Button>
-        </div>
-      </PageActionsTrailing>
-
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">{stats.open} open</p>
-
-          {preferences.viewMode !== "today" ? (
-            <div className="flex items-center gap-1 rounded-sm border bg-background px-1 py-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() => shiftPeriod(-1)}
-                aria-label="Previous period"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <span className="min-w-[96px] text-center text-sm font-medium tabular-nums">
-                {periodLabel}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() => shiftPeriod(1)}
-                aria-label="Next period"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          ) : (
-            <span className="text-sm font-medium">{periodLabel}</span>
-          )}
-        </div>
-
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-          <WorkCategoryChips
-            selected={preferences.categories}
-            onChange={(categories) => setPreferences({ categories })}
-            counts={categoryCounts}
-          />
-
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
-                className="relative h-8 shrink-0 gap-2"
+                className="relative shrink-0"
               >
                 <SlidersHorizontal className="size-4" />
                 Filters
@@ -554,13 +544,61 @@ export const WorkPageContent = () => {
               </div>
             </PopoverContent>
           </Popover>
+
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setCreateTaskDueDate(toDateKey(new Date()));
+              setCreateTaskOpen(true);
+            }}
+            aria-label="Add to calendar"
+          >
+            <Plus className="size-4" />
+            Add
+          </Button>
+        </ModuleToolbarActions>
+      </ModuleToolbar>
+
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <p className="text-sm text-muted-foreground">{stats.open} open</p>
+
+          {preferences.viewMode !== "today" ? (
+            <div className="flex items-center gap-1 rounded-sm border bg-background px-1 py-0.5">
+              <IconButton
+                onClick={() => shiftPeriod(-1)}
+                aria-label="Previous period"
+              >
+                <ChevronLeft className="size-4" />
+              </IconButton>
+              <span className="min-w-[96px] text-center text-sm font-medium tabular-nums">
+                {periodLabel}
+              </span>
+              <IconButton
+                onClick={() => shiftPeriod(1)}
+                aria-label="Next period"
+              >
+                <ChevronRight className="size-4" />
+              </IconButton>
+            </div>
+          ) : (
+            <span className="text-sm font-medium">{periodLabel}</span>
+          )}
         </div>
+
+        <WorkCategoryChips
+          selected={preferences.categories}
+          onChange={(categories) => setPreferences({ categories })}
+          counts={categoryCounts}
+        />
       </div>
 
       {preferences.viewMode === "list" ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
           <WorkListView
-            groupedItems={groupedItems}
+            groupedItems={filteredGroupedItems}
             participantsByTaskId={participantsByTaskId}
             onSelectItem={handleSelectWorkItem}
             emptyMessage={emptyMessage}
@@ -570,10 +608,10 @@ export const WorkPageContent = () => {
             <WorkSidebarPanel
               anchor={anchor}
               onAnchorChange={setAnchor}
-              eventsByDate={eventsByDate}
+              eventsByDate={filteredEventsByDate}
               groupedCounts={{
-                overdue: groupedItems.overdue.length,
-                today: groupedItems.today.length,
+                overdue: filteredGroupedItems.overdue.length,
+                today: filteredGroupedItems.today.length,
               }}
               onSelectEvent={handleSelectEvent}
             />
@@ -585,7 +623,7 @@ export const WorkPageContent = () => {
         <WorkCalendarView
           anchor={anchor}
           view={preferences.calendarView}
-          eventsByDate={eventsByDate}
+          eventsByDate={filteredEventsByDate}
           displayOptions={displayOptions}
           onSelectDay={openDay}
           onSelectEvent={handleSelectEvent}
@@ -594,8 +632,8 @@ export const WorkPageContent = () => {
 
       {preferences.viewMode === "today" ? (
         <WorkTodayView
-          eventsByDate={eventsByDate}
-          workItems={workItems}
+          eventsByDate={filteredEventsByDate}
+          workItems={filteredWorkItems}
           participantsByTaskId={participantsByTaskId}
           onSelectEvent={handleSelectEvent}
           onSelectTask={(task) => {

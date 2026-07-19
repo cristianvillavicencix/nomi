@@ -421,7 +421,7 @@ const NewTicketDialogBody = ({
       >
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           disabled={isSaving}
           className={cn(isMobile && "w-full")}
           onClick={() => guardedClose(false)}

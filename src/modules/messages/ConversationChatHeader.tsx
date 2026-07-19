@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import type { Identifier } from "ra-core";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type {
   Contact,
@@ -127,16 +128,13 @@ export const ConversationChatHeader = ({
     >
       <div className="flex items-start gap-3">
         {showBackButton ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+          <IconButton
             className="mt-0.5 shrink-0 md:hidden"
             onClick={onBack}
             aria-label="Back to conversations"
           >
             <ArrowLeft className="size-4" />
-          </Button>
+          </IconButton>
         ) : null}
 
         <span className="relative inline-flex shrink-0">

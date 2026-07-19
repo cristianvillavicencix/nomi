@@ -23,6 +23,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Table,
   TableBody,
@@ -201,16 +202,14 @@ const AccessEntryRow = ({
         {entry.username?.trim() ? (
           <div className="flex items-center gap-1">
             <code className="truncate text-xs">{entry.username}</code>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <IconButton
               className="size-7 shrink-0"
               onClick={() => copyToClipboard(entry.username ?? "", notify)}
+              aria-label="Copy username"
             >
               <Copy className="size-3.5" />
               <span className="sr-only">Copy username</span>
-            </Button>
+            </IconButton>
           </div>
         ) : (
           <span className="text-muted-foreground">—</span>
@@ -222,12 +221,10 @@ const AccessEntryRow = ({
             <code className="truncate text-xs">
               {showPassword && revealedPassword ? revealedPassword : "••••••••"}
             </code>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <IconButton
               className="size-7 shrink-0"
               disabled={isRevealing}
+              aria-label={showPassword ? "Hide password" : "Reveal password"}
               onClick={() =>
                 showPassword ? hidePassword() : void revealPassword()
               }
@@ -242,18 +239,16 @@ const AccessEntryRow = ({
               <span className="sr-only">
                 {showPassword ? "Hide password" : "Reveal password"}
               </span>
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            </IconButton>
+            <IconButton
               className="size-7 shrink-0"
               disabled={isRevealing}
               onClick={() => void copyPassword()}
+              aria-label="Copy password"
             >
               <Copy className="size-3.5" />
               <span className="sr-only">Copy password</span>
-            </Button>
+            </IconButton>
           </div>
         ) : (
           <span className="text-muted-foreground">—</span>
@@ -261,34 +256,23 @@ const AccessEntryRow = ({
       </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
+          <IconButton
             onClick={() => void copyAll()}
+            aria-label="Copy all"
             title="Copy all credentials"
           >
             <Copy className="size-4" />
             <span className="sr-only">Copy all</span>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            onClick={onEdit}
-          >
+          </IconButton>
+          <IconButton onClick={onEdit} aria-label="Edit">
             <Pencil className="size-4" />
             <span className="sr-only">Edit</span>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 text-destructive"
+          </IconButton>
+          <IconButton
+            className="text-destructive"
             onClick={onDelete}
             disabled={isDeleting}
+            aria-label="Delete"
           >
             {isDeleting ? (
               <Loader2 className="size-4 animate-spin" />
@@ -296,7 +280,7 @@ const AccessEntryRow = ({
               <Trash2 className="size-4" />
             )}
             <span className="sr-only">Delete</span>
-          </Button>
+          </IconButton>
         </div>
       </TableCell>
     </TableRow>
@@ -539,10 +523,8 @@ const SecretRow = ({
             <code className="truncate text-xs">
               {show && revealed ? revealed : "••••••••"}
             </code>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <IconButton
+              aria-label="Loading"
               className="size-7 shrink-0"
               onClick={() => (show ? setShow(false) : void reveal())}
               disabled={isRevealing}
@@ -557,18 +539,16 @@ const SecretRow = ({
               <span className="sr-only">
                 {show ? "Hide secret" : "Reveal secret"}
               </span>
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            </IconButton>
+            <IconButton
               className="size-7 shrink-0"
               onClick={() => void copy()}
+              aria-label="Copy secret"
               disabled={isRevealing}
             >
               <Copy className="size-3.5" />
               <span className="sr-only">Copy secret</span>
-            </Button>
+            </IconButton>
           </div>
         ) : (
           <span className="text-muted-foreground">—</span>
@@ -576,23 +556,15 @@ const SecretRow = ({
       </TableCell>
       <TableCell className="w-[88px] text-right">
         <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            onClick={onEdit}
-          >
+          <IconButton onClick={onEdit} aria-label="Edit">
             <Pencil className="size-4" />
             <span className="sr-only">Edit</span>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 text-destructive"
+          </IconButton>
+          <IconButton
+            className="text-destructive"
             onClick={onDelete}
             disabled={isDeleting}
+            aria-label="Delete"
           >
             {isDeleting ? (
               <Loader2 className="size-4 animate-spin" />
@@ -600,7 +572,7 @@ const SecretRow = ({
               <Trash2 className="size-4" />
             )}
             <span className="sr-only">Delete</span>
-          </Button>
+          </IconButton>
         </div>
       </TableCell>
     </TableRow>
@@ -975,7 +947,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={openCreateSecret}
           className="shrink-0"
         >
@@ -1020,7 +992,7 @@ export const ProjectSecurityTab = ({ record }: { record: LbsDeal }) => {
 
       {entries.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
-          <KeyRound className="mx-auto size-8 text-muted-foreground" />
+          <KeyRound className="mx-auto text-muted-foreground" />
           <p className="mt-3 text-sm font-medium">No access entries yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Add hosting, WordPress, FTP, and other logins used to build this

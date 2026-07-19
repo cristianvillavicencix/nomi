@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { useGetIdentity, useListContext } from "ra-core";
+import { useEffect, useMemo, useState } from "react";
+import { useGetIdentity, useListContext, useListFilterContext } from "ra-core";
 import { CreateButton } from "@/components/admin/create-button";
 import { DataTable } from "@/components/admin/data-table";
 import { ExportButton } from "@/components/admin/export-button";
@@ -10,7 +10,11 @@ import { canUseCrmPermission } from "../providers/commons/crmPermissions";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
 
 import { PageActions, PageTitle } from "../layout/PageActions";
-import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "../layout/ModuleToolbar";
 import { CompanyEmpty } from "./CompanyEmpty";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { CompanyAvatar } from "./CompanyAvatar";
@@ -33,9 +37,14 @@ export const CompanyList = () => {
       disableBreadcrumb
       perPage={25}
       sort={{ field: "name", order: "ASC" }}
-      actions={<CompanyListActions />}
+      actions={
+        <PageActions>
+          <PageTitle label="Companies" />
+        </PageActions>
+      }
       pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
     >
+      <CompanyListToolbar />
       <CompanyListLayout />
     </List>
   );
@@ -63,7 +72,7 @@ const CompaniesRowsList = () => {
   );
 
   return (
-    <DataTable rowClick="show" rowClassName={() => "[&_td]:py-2.5"}>
+    <DataTable rowClick="show" rowClassName={() => "[&_td]:py-1.5"}>
       <DataTable.Col
         label=""
         disableSort
@@ -146,22 +155,47 @@ const CompaniesRowsList = () => {
   );
 };
 
-const CompanyListActions = () => {
+const CompanyListToolbar = () => {
   const { identity } = useGetIdentity();
   const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
+  const { total, filterValues } = useListContext();
+  const { setFilters } = useListFilterContext();
+  const [searchDraft, setSearchDraft] = useState(
+    () => String(filterValues?.q ?? ""),
+  );
+
+  useEffect(() => {
+    setSearchDraft(String(filterValues?.q ?? ""));
+  }, [filterValues?.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = searchDraft.trim();
+      const current = String(filterValues?.q ?? "").trim();
+      if (next === current) return;
+      const nextFilters = { ...filterValues };
+      if (next) nextFilters.q = next;
+      else delete nextFilters.q;
+      setFilters(nextFilters, undefined, false);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filterValues, setFilters]);
 
   return (
-    <PageActions>
-      <PageTitle label="Companies" />
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+    <ModuleToolbar className="mb-3 shrink-0">
+      <ModuleSearchField
+        value={searchDraft}
+        onChange={setSearchDraft}
+        basePlaceholder="Search companies by name, email, or website"
+        total={total}
+        itemSingular="company"
+        itemPlural="companies"
+      />
+      <ModuleToolbarActions>
         <SortButton fields={["name", "created_at", "nb_contacts"]} />
         <ExportButton />
         {canManageSales ? <CreateButton label="New Company" /> : null}
-        <ModuleInfoPopover
-          title="Companies"
-          description="A single source of truth for every company account."
-        />
-      </div>
-    </PageActions>
+      </ModuleToolbarActions>
+    </ModuleToolbar>
   );
 };

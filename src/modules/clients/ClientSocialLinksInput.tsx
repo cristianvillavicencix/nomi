@@ -1,7 +1,8 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { TextInput } from "@/components/admin/text-input";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 import type { ClientCreateFormValues } from "@/modules/clients/ClientCreateForm";
 import {
@@ -104,25 +105,19 @@ const SocialLinkRow = ({
       </div>
       <div className={ACTION_COL}>
         {showAdd ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+          <IconButton
             className={cn(ACTION_SLOT, "text-muted-foreground")}
             onClick={onAdd}
             aria-label="Add social media"
             title="Add social media"
           >
             <Plus className="size-4" />
-          </Button>
+          </IconButton>
         ) : (
           <div aria-hidden className={ACTION_SLOT} />
         )}
         {canRemove ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+          <IconButton
             className={cn(
               ACTION_SLOT,
               "text-muted-foreground hover:text-destructive",
@@ -131,7 +126,7 @@ const SocialLinkRow = ({
             aria-label="Remove social media"
           >
             <Trash2 className="size-4" />
-          </Button>
+          </IconButton>
         ) : (
           <div aria-hidden className={ACTION_SLOT} />
         )}

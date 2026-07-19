@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, Paperclip, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { useStorageSignedUrl } from "@/hooks/useStorageSignedUrl";
 import {
   isImageResource,
@@ -75,13 +76,7 @@ export const ResourceMediaCard = ({
       </div>
 
       <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          className="size-8"
-          asChild
-        >
+        <IconButton aria-label="Open link" variant="secondary" asChild>
           <a
             href={previewUrl}
             target="_blank"
@@ -91,18 +86,17 @@ export const ResourceMediaCard = ({
             <ExternalLink className="size-3.5" />
             <span className="sr-only">Open file</span>
           </a>
-        </Button>
-        <Button
-          type="button"
-          size="icon"
+        </IconButton>
+        <IconButton
           variant="secondary"
-          className="size-8 text-destructive"
+          className="text-destructive"
           onClick={onDelete}
           disabled={isDeleting}
+          aria-label="Delete"
         >
           <Trash2 className="size-3.5" />
           <span className="sr-only">Delete</span>
-        </Button>
+        </IconButton>
       </div>
     </div>
   );

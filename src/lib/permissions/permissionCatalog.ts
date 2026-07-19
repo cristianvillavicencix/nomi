@@ -61,6 +61,7 @@ const MATRIX_ROWS: Array<{ id: string; area: string; label: string; scopeable?: 
   { id: "crm.pipeline.edit", area: "CRM", label: "Edit projects", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
   { id: "crm.pipeline.delete", area: "CRM", label: "Delete / archive projects", matrix: { super_admin: true, admin: true, user: false, read_only: false } },
   { id: "crm.upload_images", area: "CRM", label: "Upload images & attachments", matrix: { super_admin: true, admin: true, user: true, read_only: false } },
+  { id: "crm.assistant.use", area: "CRM", label: "Use Ask Sigma assistant", matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   // Area 2 — Tasks, Notes, Calendar
   { id: "crm.tasks.view", area: "Tasks & calendar", label: "View tasks", scopeable: true, matrix: { super_admin: true, admin: true, user: true, read_only: true } },
   { id: "crm.tasks.create", area: "Tasks & calendar", label: "Create tasks", matrix: { super_admin: true, admin: true, user: true, read_only: false } },

@@ -3,6 +3,7 @@ import {
   useDelete,
   useGetIdentity,
   useListContext,
+  useListFilterContext,
   useNotify,
   useRefresh,
   type Identifier,
@@ -24,7 +25,11 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import { CompanyEmpty } from "@/components/atomic-crm/companies/CompanyEmpty";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import {
@@ -83,27 +88,20 @@ export const CompaniesListPage = ({
         perPage={25}
         sort={{ field: "name", order: "ASC" }}
         actions={
-          <PageActions>
-            {!embedded ? <PageTitle label="Companies" /> : null}
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setClientDialogOpen(true)}
-              >
-                <Plus className="size-4" />
-                New company
-              </Button>
-              <ModuleInfoPopover
-                title="Companies"
-                description="Client companies with contact details, website, and social links. Click a column header to sort."
-              />
-            </div>
-          </PageActions>
+          embedded ? (
+            false
+          ) : (
+            <PageActions>
+              <PageTitle label="Companies" />
+            </PageActions>
+          )
         }
         pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
       >
-        <CompaniesLayout />
+        <CompaniesLayout
+          embedded={embedded}
+          onNewCompany={() => setClientDialogOpen(true)}
+        />
       </List>
       <NewClientDialog
         open={clientDialogOpen}
@@ -113,18 +111,69 @@ export const CompaniesListPage = ({
   );
 };
 
-const CompaniesLayout = () => {
+const CompaniesLayout = ({
+  embedded,
+  onNewCompany,
+}: {
+  embedded: boolean;
+  onNewCompany: () => void;
+}) => {
   const notify = useNotify();
   const refresh = useRefresh();
-  const { data, isPending, filterValues } =
+  const { data, total, isPending, filterValues } =
     useListContext<CompanyWithPrimaryContact>();
+  const { setFilters } = useListFilterContext();
   const [editCompanyId, setEditCompanyId] = useState<Identifier | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] =
     useState<CompanyWithPrimaryContact | null>(null);
   const [deleteOne, { isPending: isDeleting }] = useDelete();
+  const [searchDraft, setSearchDraft] = useState(
+    () => String(filterValues?.q ?? ""),
+  );
+
+  useEffect(() => {
+    setSearchDraft(String(filterValues?.q ?? ""));
+  }, [filterValues?.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = searchDraft.trim();
+      const current = String(filterValues?.q ?? "").trim();
+      if (next === current) return;
+      const nextFilters = { ...filterValues };
+      if (next) nextFilters.q = next;
+      else delete nextFilters.q;
+      setFilters(nextFilters, undefined, false);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filterValues, setFilters]);
 
   const hasFilters = filterValues && Object.keys(filterValues).length > 0;
+
+  const toolbar = !embedded ? (
+    <ModuleToolbar className="shrink-0">
+      <ModuleSearchField
+        value={searchDraft}
+        onChange={setSearchDraft}
+        basePlaceholder="Search companies by name, email, or website"
+        total={total}
+        itemSingular="company"
+        itemPlural="companies"
+      />
+      <ModuleToolbarActions>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onNewCompany}
+          aria-label="New company"
+        >
+          <Plus className="size-4" />
+          New company
+        </Button>
+      </ModuleToolbarActions>
+    </ModuleToolbar>
+  ) : null;
 
   const openEdit = (companyId: Identifier) => {
     setEditCompanyId(companyId);
@@ -149,14 +198,22 @@ const CompaniesLayout = () => {
     );
   };
 
-  if (isPending) return null;
-  if (!data?.length && !hasFilters) return <CompanyEmpty />;
+  if (isPending) return toolbar;
+  if (!data?.length && !hasFilters) {
+    return (
+      <div className="space-y-3">
+        {toolbar}
+        <CompanyEmpty />
+      </div>
+    );
+  }
 
   return (
-    <>
+    <div className="space-y-3">
+      {toolbar}
       <DataTable
         rowClick={(_id, _resource, record) => getClientShowPath(record.id)}
-        rowClassName={() => "[&_td]:py-2.5 [&_td]:leading-normal"}
+        rowClassName={() => "[&_td]:py-1.5 [&_td]:leading-normal"}
       >
         <DataTable.Col
           label=""
@@ -276,7 +333,7 @@ const CompaniesLayout = () => {
         onClose={() => setDeleteTarget(null)}
         loading={isDeleting}
       />
-    </>
+    </div>
   );
 };
 

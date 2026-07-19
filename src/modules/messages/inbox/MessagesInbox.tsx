@@ -285,7 +285,7 @@ export const MessagesInbox = (props: {
               className="h-9 pl-9"
             />
           </div>
-          <VoiceDialButton variant="outline" size="icon" className="shrink-0" />
+          <VoiceDialButton variant="secondary" size="icon" className="shrink-0" />
         </div>
       </div>
       {activeTab === "team" ? (

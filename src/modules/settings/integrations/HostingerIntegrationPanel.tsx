@@ -197,13 +197,13 @@ export const HostingerIntegrationPanel = () => {
         actions={
           hasToken ? (
             <>
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="secondary" size="sm" asChild>
                 <Link to={getHostingerPath()}>
                   <Server className="mr-1.5 size-4" />
                   Open portfolio
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="secondary" size="sm" asChild>
                 <a href={getHostingerHpanelHomeUrl()} target="_blank" rel="noreferrer">
                   hPanel
                   <ExternalLink className="ml-1.5 size-3.5" />
@@ -286,7 +286,7 @@ export const HostingerIntegrationPanel = () => {
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => testMutation.mutate()}
               disabled={testMutation.isPending || !hasToken}
             >
@@ -352,7 +352,7 @@ export const HostingerIntegrationPanel = () => {
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => mailSaveMutation.mutate()}
               disabled={mailSaveMutation.isPending || !canSaveMail}
             >
@@ -363,7 +363,7 @@ export const HostingerIntegrationPanel = () => {
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => mailTestMutation.mutate()}
               disabled={mailTestMutation.isPending || !hasMailToken}
             >
@@ -414,7 +414,7 @@ export const HostingerIntegrationPanel = () => {
           </div>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => referralSaveMutation.mutate()}
             disabled={referralSaveMutation.isPending}
           >

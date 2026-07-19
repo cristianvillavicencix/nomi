@@ -1,32 +1,32 @@
+import type { Icon } from "@phosphor-icons/react";
 import {
   CreditCard,
   FolderOpen,
   Globe,
-  KeyRound,
-  LayoutDashboard,
+  HardDrives,
+  Key,
   ListChecks,
-  Server,
-  type LucideIcon,
-} from "lucide-react";
+  SquaresFour,
+} from "@phosphor-icons/react";
 import type { PortalCopy } from "@/modules/portal/portalI18n";
 import type { PortalView } from "@/modules/portal/portalTypes";
 
 export type PortalNavItem = {
   id: PortalView;
   label: (copy: PortalCopy) => string;
-  icon: LucideIcon;
+  icon: Icon;
 };
 
 export const PORTAL_DELIVERY_NAV: PortalNavItem[] = [
   {
     id: "overview",
     label: (copy) => copy.overviewTab,
-    icon: LayoutDashboard,
+    icon: SquaresFour,
   },
   {
     id: "hosting",
     label: (copy) => copy.hostingTab,
-    icon: Server,
+    icon: HardDrives,
   },
   {
     id: "domain",
@@ -36,7 +36,7 @@ export const PORTAL_DELIVERY_NAV: PortalNavItem[] = [
   {
     id: "credentials",
     label: (copy) => copy.credentialsTab,
-    icon: KeyRound,
+    icon: Key,
   },
   {
     id: "billing",

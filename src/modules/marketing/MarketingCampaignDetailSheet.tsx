@@ -178,7 +178,7 @@ export const MarketingCampaignDetailSheet = ({
 
           <div className="flex flex-wrap gap-2">
             {canEdit && onEdit ? (
-              <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+              <Button type="button" size="sm" variant="secondary" onClick={onEdit}>
                 Edit
               </Button>
             ) : null}
@@ -186,7 +186,7 @@ export const MarketingCampaignDetailSheet = ({
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 disabled={isBusy}
                 onClick={onBuild}
               >
@@ -202,7 +202,7 @@ export const MarketingCampaignDetailSheet = ({
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 disabled={isBusy}
                 onClick={onDuplicate}
               >

@@ -219,7 +219,7 @@ export const ConditionalLogicEditor = ({
 
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={priorFields.length === 0}
             onClick={() =>

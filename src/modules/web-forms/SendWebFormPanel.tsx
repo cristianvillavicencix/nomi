@@ -3,6 +3,7 @@ import { useGetList, useGetOne } from "ra-core";
 import { Copy, ExternalLink, Mail } from "lucide-react";
 import type { Deal } from "@/components/atomic-crm/types";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -170,23 +171,22 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
             value={formUrl}
             placeholder={requiresProject ? "Select a project first" : ""}
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
+          <IconButton
+            variant="secondary"
             disabled={!formUrl}
             onClick={handleCopy}
+            aria-label="Copy link"
           >
             <Copy className="size-4" />
             <span className="sr-only">Copy link</span>
-          </Button>
+          </IconButton>
           {formUrl ? (
-            <Button type="button" variant="outline" size="icon" asChild>
+            <IconButton aria-label="Open link" variant="secondary" asChild>
               <a href={formUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="size-4" />
                 <span className="sr-only">Open link</span>
               </a>
-            </Button>
+            </IconButton>
           ) : null}
         </div>
         {copied ? (
@@ -196,7 +196,7 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
 
       <div className="flex flex-wrap gap-2">
         {formUrl ? (
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button type="button" variant="secondary" size="sm" asChild>
             <a href={emailHref}>
               <Mail className="size-4" />
               Email link
@@ -204,7 +204,7 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
           </Button>
         ) : null}
         {!requiresProject && previewUrl ? (
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button type="button" variant="secondary" size="sm" asChild>
             <a href={previewUrl} target="_blank" rel="noreferrer">
               <ExternalLink className="size-4" />
               Preview generic form
@@ -245,7 +245,7 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
             />
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => handleCopyEmbed("iframe")}
             >
@@ -270,7 +270,7 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => handleCopyEmbed("script")}
               >
@@ -282,7 +282,7 @@ export const SendWebFormPanel = ({ form }: { form: Form }) => {
             </div>
           ) : null}
 
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button type="button" variant="secondary" size="sm" asChild>
             <a href={embedUrl} target="_blank" rel="noreferrer">
               <ExternalLink className="size-4" />
               Preview embed

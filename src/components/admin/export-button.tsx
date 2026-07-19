@@ -97,7 +97,7 @@ export const ExportButton = (props: ExportButtonProps) => {
 
   return (
     <Button
-      variant="outline"
+      variant="secondary"
       onClick={handleClick}
       disabled={total === 0}
       className={className}

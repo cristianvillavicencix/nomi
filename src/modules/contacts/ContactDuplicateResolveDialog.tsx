@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Loader2, UserCheck, UserPlus, UserRoundPlus } from "lucide-react";
+import { Loader2, Plus, UserCheck, UserRoundPlus } from "lucide-react";
 import { useNotify, useRefresh, useUpdate } from "ra-core";
 import { Button } from "@/components/ui/button";
 import {
@@ -220,14 +220,14 @@ export const ContactDuplicateResolveDialog = ({
           ) : null}
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={isBusy}
             onClick={() => void handleCreateAnyway()}
           >
             {isBusy ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <UserPlus className="size-4" />
+              <Plus className="size-4" />
             )}
             Create new contact anyway
           </Button>

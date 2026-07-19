@@ -250,7 +250,7 @@ const CheckResultCard = ({
           <WebsiteStatusBadge status={status} />
           <Button
             size="sm"
-            variant="outline"
+            variant="secondary"
             onClick={onPin}
             disabled={pinDisabled}
           >
@@ -350,7 +350,7 @@ const PinnedSiteRow = ({
       <div className="flex items-center gap-2">
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={onRecheck}
           disabled={recheckLoading}
         >

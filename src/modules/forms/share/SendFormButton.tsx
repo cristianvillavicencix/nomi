@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { SendFormDialog } from "@/modules/forms/share/SendFormDialog";
 import type {
@@ -51,22 +52,31 @@ export const SendFormButton = ({
     );
   }
 
-  return (
-    <>
+  const trigger =
+    variant === "icon" ? (
+      <IconButton
+        className={className}
+        aria-label={label}
+        onClick={() => setOpen(true)}
+      >
+        <FileText className="size-4" />
+      </IconButton>
+    ) : (
       <Button
         type="button"
-        variant={variant === "icon" ? "ghost" : "outline"}
-        size={variant === "icon" ? "icon" : "sm"}
+        variant="secondary"
+        size="sm"
         className={className}
         onClick={() => setOpen(true)}
       >
         <FileText className="size-4" />
-        {variant === "button" ? (
-          label
-        ) : (
-          <span className="sr-only">{label}</span>
-        )}
+        {label}
       </Button>
+    );
+
+  return (
+    <>
+      {trigger}
       <SendFormDialog
         open={open}
         onOpenChange={setOpen}

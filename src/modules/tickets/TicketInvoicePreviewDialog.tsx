@@ -38,6 +38,7 @@ import { buildTicketPaymentCopyFromDeliverables } from "@/modules/tickets/ticket
 import { resolveTicketRequesterEmail } from "@/modules/tickets/ticketRequester";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -203,7 +204,10 @@ export const TicketInvoicePreviewDialog = ({
     setSubject("");
     setDeliverySubject("");
     setServiceLines([]);
-    const defaultPhone = resolveTicketInvoiceRecipientPhone({ company, contact });
+    const defaultPhone = resolveTicketInvoiceRecipientPhone({
+      company,
+      contact,
+    });
     setPhone(defaultPhone);
     setSendSms(Boolean(defaultPhone.trim()));
     setEditingTo(false);
@@ -361,9 +365,8 @@ export const TicketInvoicePreviewDialog = ({
                           className="max-w-full gap-1 bg-primary/10 font-normal text-primary hover:bg-primary/15"
                         >
                           <span className="truncate">{recipientEmail}</span>
-                          <button
-                            type="button"
-                            className="rounded-sm opacity-70 hover:opacity-100"
+                          <IconButton
+                            className="size-4 min-h-4 min-w-4 opacity-70 hover:bg-transparent hover:opacity-100"
                             aria-label="Clear recipient email"
                             onClick={() => {
                               setRecipientEmail("");
@@ -371,15 +374,17 @@ export const TicketInvoicePreviewDialog = ({
                             }}
                           >
                             <X className="size-3" />
-                          </button>
+                          </IconButton>
                         </Badge>
-                        <button
+                        <Button
                           type="button"
-                          className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+                          variant="ghost"
+                          size="sm"
+                          className="ml-auto h-auto px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
                           onClick={() => setEditingTo(true)}
                         >
                           Edit
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <Input
@@ -498,7 +503,7 @@ export const TicketInvoicePreviewDialog = ({
             ) : step === "email" ? (
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setStep("invoice")}
                 disabled={sendMutation.isPending || isLoading}
               >
@@ -530,7 +535,7 @@ export const TicketInvoicePreviewDialog = ({
               <>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setStep("invoice")}
                   disabled={sendMutation.isPending}
                 >

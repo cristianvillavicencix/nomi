@@ -4,6 +4,11 @@ import {
   lbsProjectStages,
   LBS_WON_PIPELINE_STATUSES,
 } from "@/modules/deals/lbsProjectConstants";
+import {
+  LEGACY_PRODUCT_TITLES,
+  PRODUCT_FULL_NAME,
+  PRODUCT_NAME,
+} from "@/lib/branding";
 
 /** Logo paths must be root-absolute; `./logos/...` breaks on nested routes like `/contacts/1/show`. */
 export const normalizeLogoUrl = (url?: string | null): string => {
@@ -14,16 +19,20 @@ export const normalizeLogoUrl = (url?: string | null): string => {
   return url;
 };
 
-export const defaultDarkModeLogo = "/logos/logo_atomic_crm_dark.svg";
-export const defaultLightModeLogo = "/logos/logo_atomic_crm_light.svg";
+export const defaultDarkModeLogo = "/logos/sigma.png";
+export const defaultLightModeLogo = "/logos/sigma.png";
 
-export const defaultTitle = "LBS CRM";
+export const defaultTitle = PRODUCT_NAME;
 
-/** Older deployments may still store this as `title` / `companyLegalName` in `configuration.config`. */
+/** Long-form product name for emails, invites, and public copy. */
+export const defaultProductFullName = PRODUCT_FULL_NAME;
+
+/** Older deployments may still store these as `title` / `companyLegalName` in `configuration.config`. */
 export const LEGACY_DEFAULT_APP_TITLE = "Atomic CRM";
+export { LEGACY_PRODUCT_TITLES };
 
 /**
- * Maps the legacy product name in stored config to {@link defaultTitle} so all users
+ * Maps legacy product names in stored config to {@link defaultTitle} so all users
  * (including new signups and invites) see the current branding.
  */
 export function withCurrentProductName<
@@ -35,11 +44,28 @@ export function withCurrentProductName<
   },
 >(config: T): T {
   const out: T = { ...config };
-  if (out.title === LEGACY_DEFAULT_APP_TITLE) {
+  const legacyTitles = new Set<string>([
+    ...LEGACY_PRODUCT_TITLES,
+    PRODUCT_FULL_NAME,
+  ]);
+  if (out.title && out.title !== PRODUCT_NAME && legacyTitles.has(out.title)) {
     out.title = defaultTitle;
   }
-  if (out.companyLegalName === LEGACY_DEFAULT_APP_TITLE) {
+  if (
+    out.companyLegalName &&
+    out.companyLegalName !== PRODUCT_NAME &&
+    legacyTitles.has(out.companyLegalName)
+  ) {
     out.companyLegalName = defaultTitle;
+  }
+  // Prefer SIGMA mark when still on shipped Atomic CRM SVGs.
+  const isLegacyAtomicLogo = (url?: string) =>
+    Boolean(url?.includes("logo_atomic_crm"));
+  if (!out.darkModeLogo || isLegacyAtomicLogo(out.darkModeLogo)) {
+    out.darkModeLogo = defaultDarkModeLogo;
+  }
+  if (!out.lightModeLogo || isLegacyAtomicLogo(out.lightModeLogo)) {
+    out.lightModeLogo = defaultLightModeLogo;
   }
   if (out.darkModeLogo) {
     out.darkModeLogo = normalizeLogoUrl(out.darkModeLogo);

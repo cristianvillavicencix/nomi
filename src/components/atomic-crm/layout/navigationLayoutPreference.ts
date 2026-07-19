@@ -6,6 +6,8 @@ export type NavigationLayoutMode = "top" | "sidebar";
 
 const DEFAULT_MODE: NavigationLayoutMode = "sidebar";
 
+export const NAVIGATION_LAYOUT_UI_PREF_KEY = "navigation_layout";
+
 function readFromStorage(): NavigationLayoutMode {
   if (typeof window === "undefined") {
     return DEFAULT_MODE;
@@ -39,17 +41,56 @@ function subscribe(callback: () => void) {
   };
 }
 
-function setLayoutState(next: NavigationLayoutMode) {
+type AccountPersistFn = (mode: NavigationLayoutMode) => void;
+
+let accountPersist: AccountPersistFn | null = null;
+
+/**
+ * Register a callback that writes the layout preference to the signed-in
+ * member account. Used by NavigationLayoutAccountSync.
+ */
+export function registerNavigationLayoutAccountPersist(
+  fn: AccountPersistFn | null,
+) {
+  accountPersist = fn;
+  return () => {
+    if (accountPersist === fn) {
+      accountPersist = null;
+    }
+  };
+}
+
+export function parseNavigationLayoutFromUiPrefs(
+  uiPrefs: Record<string, unknown> | null | undefined,
+): NavigationLayoutMode | null {
+  if (!uiPrefs || typeof uiPrefs !== "object") return null;
+  const value = uiPrefs[NAVIGATION_LAYOUT_UI_PREF_KEY];
+  if (value === "sidebar" || value === "top") return value;
+  return null;
+}
+
+function setLayoutState(next: NavigationLayoutMode, options?: { persist?: boolean }) {
   if (next !== "top" && next !== "sidebar") return;
-  if (readFromStorage() === next) {
-    return;
+  const changed = readFromStorage() !== next;
+  if (changed) {
+    try {
+      localStorage.setItem(LS_KEY, next);
+    } catch {
+      return;
+    }
+    emit();
   }
-  try {
-    localStorage.setItem(LS_KEY, next);
-  } catch {
-    return;
+  if (options?.persist !== false) {
+    accountPersist?.(next);
   }
-  emit();
+}
+
+/**
+ * Apply account preference into localStorage without writing back to the account
+ * (avoids a save loop on hydrate).
+ */
+export function hydrateNavigationLayoutFromAccount(mode: NavigationLayoutMode) {
+  setLayoutState(mode, { persist: false });
 }
 
 if (typeof window !== "undefined") {
@@ -61,8 +102,8 @@ if (typeof window !== "undefined") {
 
 /**
  * One shared preference for the whole app (unlike a per-component useState).
- * Persists in localStorage. getSnapshot always reads from storage so it stays
- * the source of truth (no stale module-level state after reload or other writers).
+ * Instant UI uses localStorage; NavigationLayoutAccountSync mirrors it to the
+ * member `ui_prefs` so the choice follows the account across devices.
  */
 export const useNavigationLayoutPreference = () => {
   const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
@@ -79,7 +120,7 @@ export const useNavigationLayoutPreference = () => {
           ? (next as (p: NavigationLayoutMode) => NavigationLayoutMode)(prev)
           : next;
       if (resolved === "top" || resolved === "sidebar") {
-        setLayoutState(resolved);
+        setLayoutState(resolved, { persist: true });
       }
     },
     [],

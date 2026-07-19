@@ -30,7 +30,7 @@ export const LeaveWithoutSavingDialog = ({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogFooter className="gap-2 sm:gap-0">
-        <Button type="button" variant="outline" onClick={onStay}>
+        <Button type="button" variant="secondary" onClick={onStay}>
           Keep editing
         </Button>
         <Button type="button" variant="destructive" onClick={onLeave}>

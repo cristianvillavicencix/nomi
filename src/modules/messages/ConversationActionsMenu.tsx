@@ -62,7 +62,7 @@ export const ConversationActionsMenu = ({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="outline" size="sm">
+          <Button type="button" variant="secondary" size="sm">
             Actions
             <ChevronDown className="size-4 opacity-60" />
           </Button>

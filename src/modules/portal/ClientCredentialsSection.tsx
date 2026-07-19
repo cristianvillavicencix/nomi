@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Table,
   TableBody,
@@ -85,11 +86,8 @@ const CredentialRows = ({
             <div className="flex justify-end gap-1">
               {entry.has_password ? (
                 <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
+                  <IconButton
+                    variant="secondary"
                     disabled={busyId === entry.id}
                     aria-label={
                       isVisible ? copy.hidePassword : copy.viewPassword
@@ -101,28 +99,19 @@ const CredentialRows = ({
                     ) : (
                       <Eye className="size-4" />
                     )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
+                  </IconButton>
+                  <IconButton
+                    variant="secondary"
                     disabled={busyId === entry.id}
                     aria-label={copy.copyPassword}
                     onClick={() => onCopy(entry)}
                   >
                     <Copy className="size-4" />
-                  </Button>
+                  </IconButton>
                 </>
               ) : null}
               {entry.url ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-8"
-                  asChild
-                >
+                <IconButton aria-label="Open link" variant="secondary" asChild>
                   <a
                     href={
                       entry.url.startsWith("http")
@@ -135,7 +124,7 @@ const CredentialRows = ({
                   >
                     <ExternalLink className="size-4" />
                   </a>
-                </Button>
+                </IconButton>
               ) : null}
             </div>
           </TableCell>

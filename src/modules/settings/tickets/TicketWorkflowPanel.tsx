@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,18 +81,19 @@ export const TicketWorkflowPanel = ({ embedded }: { embedded?: boolean }) => {
             onChange={(e) => setTagDraft(e.target.value)}
             placeholder="billing"
           />
-          <Button type="button" variant="outline" onClick={addTag}>
+          <Button type="button" variant="secondary" onClick={addTag}>
             <Plus className="size-4" />
           </Button>
         </div>
         <ul className="space-y-1 text-xs">
           {workspace.allowed_ticket_tags.map((tag) => (
-            <li key={tag} className="flex items-center justify-between rounded border px-2 py-1">
+            <li
+              key={tag}
+              className="flex items-center justify-between rounded border px-2 py-1"
+            >
               {tag}
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
+              <IconButton
+                aria-label="Delete"
                 onClick={() =>
                   void patchWorkspace({
                     allowed_ticket_tags: workspace.allowed_ticket_tags.filter(
@@ -101,7 +103,7 @@ export const TicketWorkflowPanel = ({ embedded }: { embedded?: boolean }) => {
                 }
               >
                 <Trash2 className="size-3.5" />
-              </Button>
+              </IconButton>
             </li>
           ))}
         </ul>
@@ -121,14 +123,23 @@ export const TicketWorkflowPanel = ({ embedded }: { embedded?: boolean }) => {
             placeholder="Label"
           />
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={addCustomStatus}>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={addCustomStatus}
+        >
           Add status
         </Button>
         <ul className="space-y-1 text-xs">
           {workspace.custom_statuses.map((status) => (
-            <li key={status.value} className="flex items-center justify-between rounded border px-2 py-1">
+            <li
+              key={status.value}
+              className="flex items-center justify-between rounded border px-2 py-1"
+            >
               <span>
-                {status.label} <span className="text-muted-foreground">({status.value})</span>
+                {status.label}{" "}
+                <span className="text-muted-foreground">({status.value})</span>
               </span>
               <Button
                 type="button"
@@ -162,7 +173,9 @@ export const TicketWorkflowPanel = ({ embedded }: { embedded?: boolean }) => {
           <Label>CSAT subject</Label>
           <Input
             value={workspace.csat_subject}
-            onChange={(e) => void patchWorkspace({ csat_subject: e.target.value })}
+            onChange={(e) =>
+              void patchWorkspace({ csat_subject: e.target.value })
+            }
           />
         </div>
         <div className="space-y-2">
@@ -170,7 +183,9 @@ export const TicketWorkflowPanel = ({ embedded }: { embedded?: boolean }) => {
           <Textarea
             rows={4}
             value={workspace.csat_body_html}
-            onChange={(e) => void patchWorkspace({ csat_body_html: e.target.value })}
+            onChange={(e) =>
+              void patchWorkspace({ csat_body_html: e.target.value })
+            }
           />
         </div>
       </section>

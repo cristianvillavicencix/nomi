@@ -150,7 +150,7 @@ export const ClientBillingSection = ({
                       </TableCell>
                       <TableCell className="text-right">
                         {href ? (
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="secondary">
                             <a href={href} target="_blank" rel="noreferrer">
                               <ExternalLink className="size-4" />
                               {canPay

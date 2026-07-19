@@ -22,6 +22,7 @@ import {
   ticketStatusForKanban,
   type TicketKanbanColumnId,
 } from "@/modules/tickets/ticketOverviewConfig";
+import { matchesTicketSearch } from "@/modules/tickets/ticketInboxQueue";
 import { useTicketInboxReads } from "@/modules/tickets/useTicketInboxReads";
 import { useTicketStatusChange } from "@/modules/tickets/useTicketStatusChange";
 
@@ -43,7 +44,7 @@ const ticketsKanbanSyncKey = (tickets: Ticket[]) =>
         `${ticket.id}:${ticketStatusForKanban(ticket.status)}:${ticket.updated_at ?? ""}`,
     )
     .sort()
-    .join("|");
+    .join("| ");
 
 const isSameTicketsByStatus = (a: TicketsByStatus, b: TicketsByStatus) => {
   for (const column of TICKET_KANBAN_COLUMNS) {
@@ -63,9 +64,11 @@ const isSameTicketsByStatus = (a: TicketsByStatus, b: TicketsByStatus) => {
 export const TicketsKanban = ({
   selectedTicketId,
   onSelectTicket,
+  searchQuery = "",
 }: {
   selectedTicketId?: string | null;
   onSelectTicket: (ticketId: string) => void;
+  searchQuery?: string;
 }) => {
   const { data = [], isPending, refetch } = useListContext<Ticket>();
   const [ticketsByStatus, setTicketsByStatus] = useState<TicketsByStatus>(
@@ -81,33 +84,33 @@ export const TicketsKanban = ({
     void refetch();
   });
 
-  const tickets = useMemo(
+  const allTickets = useMemo(
     () =>
       (data ?? []).filter((ticket) => ticket.merged_into_ticket_id == null),
     [data],
   );
 
   const ticketIds = useMemo(
-    () => tickets.map((ticket) => String(ticket.id)),
-    [tickets],
+    () => allTickets.map((ticket) => String(ticket.id)),
+    [allTickets],
   );
   const companyIds = useMemo(
     () =>
       [
         ...new Set(
-          tickets
+          allTickets
             .map((ticket) => ticket.company_id)
             .filter((id) => id != null)
             .map(Number),
         ),
       ],
-    [tickets],
+    [allTickets],
   );
   const assigneeIds = useMemo(
     () =>
       [
         ...new Set(
-          tickets
+          allTickets
             .map(
               (ticket) =>
                 ticket.assignee_id ?? ticket.organization_member_id ?? null,
@@ -116,18 +119,18 @@ export const TicketsKanban = ({
             .map(Number),
         ),
       ],
-    [tickets],
+    [allTickets],
   );
   const linkedInvoiceIds = useMemo(
     () => [
       ...new Set(
-        tickets
+        allTickets
           .map((ticket) => ticket.invoice_id)
           .filter((id): id is number | string => id != null)
           .map((id) => String(id)),
       ),
     ],
-    [tickets],
+    [allTickets],
   );
 
   const { data: companies = [] } = useGetList<Company>(
@@ -197,7 +200,7 @@ export const TicketsKanban = ({
         push(String(invoice.ticket_id), invoice);
       }
     }
-    for (const ticket of tickets) {
+    for (const ticket of allTickets) {
       if (ticket.invoice_id == null) continue;
       const linked = linkedInvoices.find(
         (invoice) => String(invoice.id) === String(ticket.invoice_id),
@@ -205,7 +208,25 @@ export const TicketsKanban = ({
       if (linked) push(String(ticket.id), linked);
     }
     return map;
-  }, [linkedInvoices, ticketInvoices, tickets]);
+  }, [linkedInvoices, ticketInvoices, allTickets]);
+
+  const tickets = useMemo(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return allTickets;
+    return allTickets.filter((ticket) => {
+      const company =
+        ticket.company_id != null
+          ? companiesById.get(Number(ticket.company_id))
+          : null;
+      return matchesTicketSearch(ticket, trimmed, {
+        email: company?.primary_contact_email_jsonb?.find((entry) =>
+          entry.email?.trim(),
+        )?.email,
+        phone: company?.phone_number,
+        contactName: company?.name,
+      });
+    });
+  }, [allTickets, companiesById, searchQuery]);
 
   const syncKey = useMemo(() => ticketsKanbanSyncKey(tickets), [tickets]);
 

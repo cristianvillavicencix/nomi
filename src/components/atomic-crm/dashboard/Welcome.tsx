@@ -7,8 +7,9 @@ export const Welcome = () => (
     </CardHeader>
     <CardContent className="px-4">
       <p className="text-sm mb-4">
-        <span className="font-medium">Nomi CRM</span> helps you run your
-        business: contacts, projects, and team workflows in one place.
+        <span className="font-medium">Sigma by Latino Business Support</span>{" "}
+        helps you run your business: contacts, projects, and team workflows in
+        one place.
       </p>
       <p className="text-sm mb-4">
         This demo runs on a mock API, so you can explore and modify the data. It

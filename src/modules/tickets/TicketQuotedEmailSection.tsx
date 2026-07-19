@@ -9,6 +9,7 @@ import {
   prepareQuotedHtmlForDisplay,
   prepareQuotedPlainForDisplay,
 } from "@/modules/tickets/ticketEmailQuotedContent";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const TicketQuotedEmailSection = ({
@@ -43,24 +44,28 @@ export const TicketQuotedEmailSection = ({
   return (
     <div className={cn("mt-2", className)}>
       {!expanded ? (
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          variant="ghost"
+          size="sm"
+          className="h-auto gap-1 px-1 py-0.5 text-xs text-muted-foreground hover:text-foreground"
           onClick={() => setExpanded(true)}
           aria-label="Show quoted email"
         >
           <span className="font-medium tracking-widest">···</span>
-          <span>Show quoted text</span>
-        </button>
+          Show quoted text
+        </Button>
       ) : (
         <div className="space-y-1.5">
-          <button
+          <Button
             type="button"
-            className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            variant="link"
+            size="sm"
+            className="h-auto px-0 text-xs text-muted-foreground"
             onClick={() => setExpanded(false)}
           >
             Hide quoted text
-          </button>
+          </Button>
           {quoteHeader ? (
             <p className="text-[11px] leading-snug text-muted-foreground">
               {quoteHeader}

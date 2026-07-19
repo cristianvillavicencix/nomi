@@ -167,7 +167,7 @@ export const HostingerDomainDetailSheet = ({
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="secondary" size="sm" asChild>
               <a
                 href={getHostingerDomainManageUrl(domain.domain)}
                 target="_blank"
@@ -177,7 +177,7 @@ export const HostingerDomainDetailSheet = ({
                 <ExternalLink className="ml-1.5 size-3.5" />
               </a>
             </Button>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="secondary" size="sm" asChild>
               <a
                 href={getHostingerDomainDnsUrl(domain.domain)}
                 target="_blank"
@@ -362,7 +362,7 @@ export const HostingerDomainDetailSheet = ({
                   </div>
                 )}
                 <div className="mt-2">
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="secondary" size="sm" asChild>
                     <a
                       href={getHostingerDomainMailboxesUrl(domain.domain)}
                       target="_blank"

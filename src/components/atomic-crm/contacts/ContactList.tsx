@@ -1,10 +1,12 @@
 import jsonExport from "jsonexport/dist";
+import { useEffect, useState } from "react";
 import {
   downloadCSV,
   FilterLiveForm,
   InfiniteListBase,
   useGetIdentity,
   useListContext,
+  useListFilterContext,
   type Exporter,
 } from "ra-core";
 import { BulkActionsToolbar } from "@/components/admin/bulk-actions-toolbar";
@@ -26,7 +28,11 @@ import {
   ContactListFilter,
 } from "./ContactListFilter";
 import { PageActions, PageTitle } from "../layout/PageActions";
-import { ModuleInfoPopover } from "../layout/ModuleInfoPopover";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "../layout/ModuleToolbar";
 import { InfinitePagination } from "../misc/InfinitePagination";
 import MobileHeader from "../layout/MobileHeader";
 import { MobileContent } from "../layout/MobileContent";
@@ -48,11 +54,16 @@ export const ContactList = () => {
     <List
       title={false}
       disableBreadcrumb
-      actions={<ContactListActions />}
+      actions={
+        <PageActions>
+          <PageTitle label="Contacts" />
+        </PageActions>
+      }
       perPage={25}
       sort={{ field: "last_seen", order: "DESC" }}
       exporter={exporter}
     >
+      <ContactListToolbar />
       <ContactListLayoutDesktop />
     </List>
   );
@@ -71,7 +82,7 @@ const ContactListLayoutDesktop = () => {
     <div className="w-full flex flex-row gap-8">
       {showSidebar ? <ContactListFilter /> : null}
       <div className="w-full">
-        <DataTable rowClick="show" rowClassName={() => "[&_td]:py-2.5"}>
+        <DataTable rowClick="show" rowClassName={() => "[&_td]:py-1.5"}>
           <DataTable.Col
             label=""
             disableSort
@@ -124,24 +135,48 @@ const ContactListLayoutDesktop = () => {
   );
 };
 
-const ContactListActions = () => {
+const ContactListToolbar = () => {
   const { identity } = useGetIdentity();
   const canManageSales = canUseCrmPermission(identity as any, "sales.manage");
+  const { total, filterValues } = useListContext<Contact>();
+  const { setFilters } = useListFilterContext();
+  const [searchDraft, setSearchDraft] = useState(
+    () => String(filterValues?.q ?? ""),
+  );
+
+  useEffect(() => {
+    setSearchDraft(String(filterValues?.q ?? ""));
+  }, [filterValues?.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = searchDraft.trim();
+      const current = String(filterValues?.q ?? "").trim();
+      if (next === current) return;
+      const nextFilters = { ...filterValues };
+      if (next) nextFilters.q = next;
+      else delete nextFilters.q;
+      setFilters(nextFilters, undefined, false);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filterValues, setFilters]);
 
   return (
-    <PageActions>
-      <PageTitle label="Contacts" />
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+    <ModuleToolbar className="mb-3 shrink-0">
+      <ModuleSearchField
+        value={searchDraft}
+        onChange={setSearchDraft}
+        basePlaceholder="Search contacts by name, email, or phone"
+        total={total}
+        itemSingular="contact"
+      />
+      <ModuleToolbarActions>
         <SortButton fields={["first_name", "last_name", "last_seen"]} />
         {canManageSales ? <ContactImportButton /> : null}
         <ExportButton exporter={exporter} />
         {canManageSales ? <CreateButton /> : null}
-        <ModuleInfoPopover
-          title="Contacts"
-          description="Your clean, searchable directory of clients and stakeholders."
-        />
-      </div>
-    </PageActions>
+      </ModuleToolbarActions>
+    </ModuleToolbar>
   );
 };
 

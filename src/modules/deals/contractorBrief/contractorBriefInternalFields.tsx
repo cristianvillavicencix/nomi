@@ -225,7 +225,7 @@ export const TagAddField = ({
             }
           }}
         />
-        <Button type="button" variant="outline" onClick={addTag}>
+        <Button type="button" variant="secondary" onClick={addTag}>
           <Plus className="size-4" />
           Add
         </Button>

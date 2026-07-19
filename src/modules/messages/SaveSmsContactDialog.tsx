@@ -203,7 +203,7 @@ export const SaveSmsContactDialog = ({
           <DialogFooter className="border-t px-6 py-4">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => handleOpenChange(false)}
             >
               Cancel

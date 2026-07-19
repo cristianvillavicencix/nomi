@@ -508,7 +508,7 @@ export const PublicBookingPage = () => {
           <div className="flex items-center justify-between border-t px-6 py-4">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={step === 0 || submitMutation.isPending}
               onClick={() => {
                 if (step === 1 && rescheduleBookingId) {

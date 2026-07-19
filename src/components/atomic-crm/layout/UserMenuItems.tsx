@@ -1,14 +1,16 @@
-import { Settings, User } from "lucide-react";
+import { LayoutPanelLeft, LayoutPanelTop, Settings, User } from "lucide-react";
 import { useCanAccess, useUserMenu } from "ra-core";
 import { Link } from "react-router";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { SettingsPage } from "../settings/SettingsPage";
 import { ProfilePage } from "../settings/ProfilePage";
+import { useNavigationLayoutPreference } from "./navigationLayoutPreference";
 
 export const CRMUserMenuItems = () => (
   <>
     <SettingsMenu />
     <ProfileMenu />
+    <NavigationLayoutMenu />
   </>
 );
 
@@ -58,6 +60,39 @@ const ProfileMenu = () => {
         <User />
         Profile
       </Link>
+    </DropdownMenuItem>
+  );
+};
+
+const NavigationLayoutMenu = () => {
+  const userMenuContext = useUserMenu();
+  const [mode, setMode] = useNavigationLayoutPreference();
+
+  if (!userMenuContext) {
+    throw new Error("<NavigationLayoutMenu> must be used inside <UserMenu>");
+  }
+
+  const isSidebar = mode === "sidebar";
+
+  return (
+    <DropdownMenuItem
+      onClick={() => {
+        setMode(isSidebar ? "top" : "sidebar");
+        userMenuContext.onClose();
+      }}
+      className="gap-2"
+    >
+      {isSidebar ? (
+        <>
+          <LayoutPanelTop />
+          Use top navigation
+        </>
+      ) : (
+        <>
+          <LayoutPanelLeft />
+          Use sidebar navigation
+        </>
+      )}
     </DropdownMenuItem>
   );
 };

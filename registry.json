@@ -6,8 +6,8 @@
     {
       "name": "atomic-crm",
       "type": "registry:block",
-      "title": "Nomi CRM",
-      "description": "A fully fledged CRM application built with Shadcn Admin Kit",
+      "title": "Sigma by Latino Business Support",
+      "description": "CRM application for Latino Business Support (Sigma)",
       "registryDependencies": [
         "item",
         "progress",

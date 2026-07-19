@@ -178,7 +178,7 @@ export const PublicProposalAcceptPortal = ({
             </ul>
           </div>
         ) : null}
-        <Button variant="outline" asChild>
+        <Button variant="secondary" asChild>
           <Link to={`/proposal/${token}`}>{copy.backToProposal}</Link>
         </Button>
       </div>

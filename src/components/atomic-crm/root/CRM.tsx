@@ -255,13 +255,16 @@ const useCrmQueryClient = () => {
   return queryClient;
 };
 
+const DesktopLayoutWithProviders = withLbsMessagesProvider(DesktopLayout);
+const MobileLayoutWithProviders = withLbsMessagesProvider(MobileLayout);
+
 const DesktopAdmin = (props: CoreAdminProps) => {
   const queryClient = useCrmQueryClient();
 
   return (
     <Admin
       queryClient={queryClient}
-      layout={withLbsMessagesProvider(DesktopLayout)}
+      layout={DesktopLayoutWithProviders}
       dashboard={Dashboard}
       {...props}
     >
@@ -437,7 +440,7 @@ const MobileAdmin = (props: CoreAdminProps) => {
     >
       <Admin
         queryClient={queryClient}
-        layout={withLbsMessagesProvider(MobileLayout)}
+        layout={MobileLayoutWithProviders}
         dashboard={MobileDashboard}
         {...props}
       >

@@ -1,5 +1,6 @@
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { FormFieldDef } from "@/modules/forms/types";
@@ -65,23 +66,21 @@ export const DynamicListField = ({
               onChange={(event) => updateItem(index, event.target.value)}
             />
             {visibleItems.length > minItems ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
+              <IconButton
+                variant="secondary"
                 disabled={disabled}
                 aria-label={`Remove ${formatItemLabel(field, index)}`}
                 onClick={() => removeItem(index)}
               >
                 <X className="size-4" />
-              </Button>
+              </IconButton>
             ) : null}
           </div>
         </div>
       ))}
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         disabled={disabled}
         onClick={addItem}

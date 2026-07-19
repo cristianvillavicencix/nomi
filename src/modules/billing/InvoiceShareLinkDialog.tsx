@@ -151,7 +151,7 @@ export const InvoiceShareLinkDialog = ({
               <Input id="invoice-share-url" readOnly value={shareUrl} />
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => void copyLink()}
               >
                 <Copy className="size-4" />

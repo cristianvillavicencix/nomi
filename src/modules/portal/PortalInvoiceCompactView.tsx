@@ -144,7 +144,7 @@ export const PortalInvoiceCompactView = ({
         )}
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           className="h-12 shrink-0 rounded-xl px-4"
           disabled={downloading}
           onClick={onDownload}

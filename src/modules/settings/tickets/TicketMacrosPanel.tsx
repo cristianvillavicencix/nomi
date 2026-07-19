@@ -2,6 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,11 +46,19 @@ export const TicketMacrosPanel = ({ embedded }: { embedded?: boolean }) => {
         </div>
         <div className="space-y-2">
           <Label>Set status (optional)</Label>
-          <Input value={status} onChange={(e) => setStatus(e.target.value)} placeholder="waiting" />
+          <Input
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            placeholder="waiting"
+          />
         </div>
         <div className="space-y-2">
           <Label>Internal note (optional)</Label>
-          <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
+          <Textarea
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
         </div>
         <Button type="button" size="sm" disabled={saving} onClick={addMacro}>
           <Plus className="mr-1 size-4" />
@@ -59,28 +68,35 @@ export const TicketMacrosPanel = ({ embedded }: { embedded?: boolean }) => {
 
       <ul className="space-y-2 text-sm">
         {workspace.macros.map((macro) => (
-          <li key={macro.id} className="flex items-start justify-between rounded-lg border px-3 py-2">
+          <li
+            key={macro.id}
+            className="flex items-start justify-between rounded-lg border px-3 py-2"
+          >
             <div>
               <p className="font-medium">{macro.label}</p>
               {macro.status ? (
-                <p className="text-xs text-muted-foreground">Status → {macro.status}</p>
+                <p className="text-xs text-muted-foreground">
+                  Status → {macro.status}
+                </p>
               ) : null}
               {macro.internal_note ? (
-                <p className="text-xs text-muted-foreground">{macro.internal_note}</p>
+                <p className="text-xs text-muted-foreground">
+                  {macro.internal_note}
+                </p>
               ) : null}
             </div>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
+            <IconButton
+              aria-label="Delete"
               onClick={() =>
                 void patchWorkspace({
-                  macros: workspace.macros.filter((entry) => entry.id !== macro.id),
+                  macros: workspace.macros.filter(
+                    (entry) => entry.id !== macro.id,
+                  ),
                 })
               }
             >
               <Trash2 className="size-4" />
-            </Button>
+            </IconButton>
           </li>
         ))}
       </ul>

@@ -7,6 +7,7 @@ import {
   invoiceStatusSidebarLabel,
   invoiceStatusSidebarVariant,
 } from "@/modules/billing/invoiceStatusSidebarLabel";
+import { invoiceMatchesSearchQuery } from "@/modules/billing/invoiceListSearch";
 import type { ClientInvoice } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { MoneyText } from "@/lib/permissions/MoneyText";
@@ -15,11 +16,13 @@ import { cn } from "@/lib/utils";
 type InvoiceListSidebarProps = {
   selectedInvoiceId?: string | null;
   onSelectInvoice: (invoiceId: string) => void;
+  searchQuery?: string;
 };
 
 export const InvoiceListSidebar = ({
   selectedInvoiceId,
   onSelectInvoice,
+  searchQuery = "",
 }: InvoiceListSidebarProps) => {
   const { data: invoices = [], isPending } = useListContext<ClientInvoice>();
 
@@ -47,6 +50,21 @@ export const InvoiceListSidebar = ({
     [companies],
   );
 
+  const visibleInvoices = useMemo(
+    () =>
+      invoices.filter((invoice) => {
+        const company = invoice.company_id
+          ? companyById.get(String(invoice.company_id))
+          : null;
+        return invoiceMatchesSearchQuery(
+          invoice,
+          company?.name ?? null,
+          searchQuery,
+        );
+      }),
+    [companyById, invoices, searchQuery],
+  );
+
   if (isPending) {
     return (
       <div className="p-4 text-sm text-muted-foreground">Loading invoices…</div>
@@ -61,10 +79,18 @@ export const InvoiceListSidebar = ({
     );
   }
 
+  if (!visibleInvoices.length) {
+    return (
+      <div className="p-4 text-center text-sm text-muted-foreground">
+        No invoices match this search.
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <ul className="divide-y">
-        {invoices.map((invoice) => {
+        {visibleInvoices.map((invoice) => {
           const company = invoice.company_id
             ? companyById.get(String(invoice.company_id))
             : null;

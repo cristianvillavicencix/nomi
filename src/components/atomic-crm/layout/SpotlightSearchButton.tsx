@@ -14,6 +14,7 @@ import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import { resolveEffectiveModules } from "@/components/atomic-crm/providers/commons/memberModuleAccess";
 import type { Company, Contact } from "@/components/atomic-crm/types";
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 import {
   LBS_CONTACT_STATUSES_FOR_FILTER,
@@ -606,25 +607,14 @@ export const SpotlightSearchButton = ({
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       {variant === "hidden" ? null : (
         <DialogPrimitive.Trigger asChild>
-          <button
-            type="button"
-            aria-label="Search"
-            className={cn(
-              "group flex h-9 items-center gap-2 rounded-md border bg-muted/40 px-3",
-              "text-sm text-muted-foreground transition-colors",
-              "hover:bg-muted hover:text-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              "sm:min-w-[220px] md:min-w-[260px]",
-            )}
+          <IconButton
+            variant="secondary"
+            className="size-9"
+            aria-label="Search CRM (⌘K)"
+            title="Search CRM (⌘K)"
           >
-            <Search className="size-4 shrink-0" />
-            <span className="hidden flex-1 truncate text-left sm:inline">
-              Search name, phone, email, or ticket…
-            </span>
-            <kbd className="ml-auto hidden shrink-0 rounded border bg-background px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
-              ⌘K
-            </kbd>
-          </button>
+            <Search className="size-4" />
+          </IconButton>
         </DialogPrimitive.Trigger>
       )}
       <DialogPrimitive.Portal>
@@ -647,7 +637,7 @@ export const SpotlightSearchButton = ({
           )}
         >
           <DialogPrimitive.Title className="sr-only">
-            Search NOMI
+            Search Sigma
           </DialogPrimitive.Title>
 
           <div className="relative flex items-center px-4 py-3">
@@ -665,7 +655,7 @@ export const SpotlightSearchButton = ({
                 type="button"
                 onClick={() => setQuery("")}
                 className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Limpiar búsqueda"
+                aria-label="Clear search"
               >
                 <X className="size-4" />
               </button>
@@ -680,13 +670,13 @@ export const SpotlightSearchButton = ({
           <div className="max-h-[65vh] overflow-y-auto" role="listbox">
             {isFetching && flatSuggestions.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                Buscando…
+                Searching…
               </p>
             ) : flatSuggestions.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 {trimmedQuery
                   ? "No matches in the modules you can access."
-                  : "Empieza a escribir para buscar en NOMI."}
+                  : "Start typing to search Sigma."}
               </p>
             ) : (
               groupedSuggestions.map((group, groupIndex) => {
@@ -699,7 +689,7 @@ export const SpotlightSearchButton = ({
                       {group.label}
                       {group.id === currentModule ? (
                         <span className="ml-2 rounded-sm bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary">
-                          aquí
+                          here
                         </span>
                       ) : null}
                     </div>

@@ -16,6 +16,7 @@ import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -61,7 +62,11 @@ const QUICK_FILTERS: {
   tone?: "warning" | "danger";
 }[] = [
   { value: "all", label: "All" },
-  { value: "expiring_14", label: `${ATTENTION_EXPIRING_DAYS}d`, tone: "warning" },
+  {
+    value: "expiring_14",
+    label: `${ATTENTION_EXPIRING_DAYS}d`,
+    tone: "warning",
+  },
   { value: "expired", label: "Expired", tone: "danger" },
   { value: "unlinked", label: "Unassigned" },
   { value: "clients", label: "Clients" },
@@ -223,9 +228,7 @@ export const HostingerDomainsTab = () => {
   };
 
   if (settingsQuery.isLoading) {
-    return (
-      <p className="text-sm text-muted-foreground">Loading domains…</p>
-    );
+    return <p className="text-sm text-muted-foreground">Loading domains…</p>;
   }
 
   if (!settingsQuery.data?.has_api_token) {
@@ -238,7 +241,8 @@ export const HostingerDomainsTab = () => {
             className="font-medium underline"
           >
             Settings → Integrations → Hostinger
-          </Link>{" "}
+          </Link>
+          {" "}
           to sync your domain portfolio.
         </AlertDescription>
       </Alert>
@@ -313,16 +317,12 @@ export const HostingerDomainsTab = () => {
                 ).toLocaleString()}
               >
                 Synced{" "}
-                {new Date(settingsQuery.data.last_synced_at).toLocaleDateString()}
+                {new Date(
+                  settingsQuery.data.last_synced_at,
+                ).toLocaleDateString()}
               </span>
             ) : null}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 shrink-0"
-              asChild
-              title="Open hPanel"
-            >
+            <IconButton className="shrink-0" asChild title="Open hPanel">
               <a
                 href={getHostingerHpanelHomeUrl()}
                 target="_blank"
@@ -330,11 +330,9 @@ export const HostingerDomainsTab = () => {
               >
                 <Globe className="size-4" />
               </a>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 shrink-0"
+            </IconButton>
+            <IconButton
+              className="shrink-0"
               asChild
               title="Integration settings"
             >
@@ -343,7 +341,7 @@ export const HostingerDomainsTab = () => {
               >
                 <Settings2 className="size-4" />
               </Link>
-            </Button>
+            </IconButton>
           </div>
         </div>
       </div>
@@ -493,25 +491,19 @@ export const HostingerDomainsTab = () => {
               </Select>
             </div>
             <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-8"
+              <IconButton
+                variant="secondary"
                 disabled={page <= 1}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 aria-label="Previous page"
               >
                 <ChevronLeft className="size-4" />
-              </Button>
+              </IconButton>
               <span className="min-w-[4.5rem] text-center text-sm text-muted-foreground">
                 {page} / {totalPages}
               </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-8"
+              <IconButton
+                variant="secondary"
                 disabled={page >= totalPages}
                 onClick={() =>
                   setPage((current) => Math.min(totalPages, current + 1))
@@ -519,7 +511,7 @@ export const HostingerDomainsTab = () => {
                 aria-label="Next page"
               >
                 <ChevronRight className="size-4" />
-              </Button>
+              </IconButton>
             </div>
           </div>
         </div>

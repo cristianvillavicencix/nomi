@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useParams, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
@@ -17,7 +18,11 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { ContactEmpty } from "@/components/atomic-crm/contacts/ContactEmpty";
 import type { Contact } from "@/components/atomic-crm/types";
@@ -107,7 +112,10 @@ export const LeadsListPage = () => {
 
   if (isMobileKanbanShow && selectedLeadId && kanbanStage) {
     return (
-      <LeadShowStandalone contactId={selectedLeadId} kanbanStage={kanbanStage} />
+      <LeadShowStandalone
+        contactId={selectedLeadId}
+        kanbanStage={kanbanStage}
+      />
     );
   }
 
@@ -127,17 +135,13 @@ export const LeadsListPage = () => {
         filterDefaultValues={{
           "status@in": `(${LBS_LEAD_STATUSES_FOR_FILTER.map((status) => `"${status}"`).join(",")})`,
         }}
-        actions={
-          <LeadsListActions
-            onNewLead={() => setDialogOpen(true)}
-            view={view}
-            onViewChange={setView}
-          />
-        }
+        actions={<LeadsListTitle />}
       >
         <LeadsListFilterCleanup />
         <LeadsListLayout
           view={view}
+          onViewChange={setView}
+          onNewLead={() => setDialogOpen(true)}
           selectedLeadId={isKanbanSplit ? selectedLeadId! : null}
           kanbanStage={isKanbanSplit ? kanbanStage : null}
         />
@@ -147,7 +151,7 @@ export const LeadsListPage = () => {
   );
 };
 
-/** Drop persisted filters from the removed "Needs follow-up" control. */
+/** Drop persisted filters from the removed"Needs follow-up" control. */
 const LeadsListFilterCleanup = () => {
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
 
@@ -168,16 +172,13 @@ const LeadsListFilterCleanup = () => {
   return null;
 };
 
-const LeadsListActions = ({
-  onNewLead,
-  view,
-  onViewChange,
-}: {
-  onNewLead: () => void;
-  view: LeadsView;
-  onViewChange: (view: LeadsView) => void;
-}) => {
-  const { total } = useListContext<Contact>();
+const LeadsListTitle = () => (
+  <PageActions>
+    <PageTitle label="Leads" />
+  </PageActions>
+);
+
+const MyLeadsFilterButton = () => {
   const { identity } = useGetIdentity();
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
 
@@ -200,8 +201,49 @@ const LeadsListActions = ({
   };
 
   return (
-    <PageActions>
-      <PageTitle label="Leads" count={total ?? null} />
+    <Button
+      type="button"
+      variant={myFilterActive ? "primary" : "secondary"}
+      size="sm"
+      onClick={toggleMyLeads}
+      disabled={identity?.id == null}
+      aria-label={myFilterActive ? "My leads" : "All leads"}
+      title={
+        myFilterActive
+          ? "Showing only your leads"
+          : "Filter to your leads only"
+      }
+    >
+      <UserCheck className="size-4" />
+      {myFilterActive ? "My leads" : "All"}
+    </Button>
+  );
+};
+
+const LeadsListToolbar = ({
+  view,
+  onViewChange,
+  onNewLead,
+  searchDraft,
+  onSearchDraftChange,
+  total,
+}: {
+  view: LeadsView;
+  onViewChange: (view: LeadsView) => void;
+  onNewLead: () => void;
+  searchDraft: string;
+  onSearchDraftChange: (next: string) => void;
+  total?: number | null;
+}) => (
+  <ModuleToolbar className="shrink-0">
+    <ModuleSearchField
+      value={searchDraft}
+      onChange={onSearchDraftChange}
+      basePlaceholder="Search leads by name, company, or email"
+      total={total}
+      itemSingular="lead"
+    />
+    <ModuleToolbarActions>
       <ToggleGroup
         type="single"
         value={view}
@@ -212,90 +254,132 @@ const LeadsListActions = ({
         }}
         variant="outline"
         size="sm"
+        className="w-fit shrink-0"
       >
-        <ToggleGroupItem value="table" aria-label="Table view">
+        <ToggleGroupItem value="table" aria-label="List view">
           <ListIcon className="size-4" />
-          Table
+          List
         </ToggleGroupItem>
-        <ToggleGroupItem value="kanban" aria-label="Vista Kanban">
+        <ToggleGroupItem value="kanban" aria-label="Board view">
           <KanbanSquare className="size-4" />
-          Kanban
+          Board
         </ToggleGroupItem>
       </ToggleGroup>
+      <MyLeadsFilterButton />
+      {view === "table" ? (
+        <SortButton fields={["first_name", "last_name", "last_seen"]} />
+      ) : null}
       <Button
-        type="button"
-        variant={myFilterActive ? "default" : "outline"}
+        variant="secondary"
         size="sm"
-        onClick={toggleMyLeads}
-        disabled={identity?.id == null}
-        title={
-          myFilterActive
-            ? "Showing only your leads"
-            : "Filter to your leads only"
-        }
+        onClick={onNewLead}
+        aria-label="New lead"
       >
-        <UserCheck className="size-4" />
-        {myFilterActive ? "My leads" : "All"}
+        <Plus className="size-4" />
+        New lead
       </Button>
-      <div className="ml-auto flex items-center gap-2">
-        {view === "table" ? (
-          <SortButton fields={["first_name", "last_name", "last_seen"]} />
-        ) : null}
-        <Button variant="outline" size="sm" onClick={onNewLead}>
-          <Plus className="size-4" />
-          New lead
-        </Button>
-        <ModuleInfoPopover
-          title="Leads"
-          description="Potential opportunities before they become client contacts."
-        />
-      </div>
-    </PageActions>
-  );
-};
+    </ModuleToolbarActions>
+  </ModuleToolbar>
+);
 
 const LeadsListLayout = ({
   view,
+  onViewChange,
+  onNewLead,
   selectedLeadId,
   kanbanStage,
 }: {
   view: LeadsView;
+  onViewChange: (view: LeadsView) => void;
+  onNewLead: () => void;
   selectedLeadId?: string | null;
   kanbanStage?: LeadStageId | null;
 }) => {
-  const { data, isPending } = useListContext<Contact>();
+  const { data, total, isPending } = useListContext<Contact>();
+  const { filterValues, setFilters } = useListFilterContext();
   const [activityLead, setActivityLead] = useState<Contact | null>(null);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [searchDraft, setSearchDraft] = useState(
+    () => String(filterValues?.q ?? ""),
+  );
+
+  useEffect(() => {
+    setSearchDraft(String(filterValues?.q ?? ""));
+  }, [filterValues?.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = searchDraft.trim();
+      const current = String(filterValues?.q ?? "").trim();
+      if (next === current) return;
+      const nextFilters = { ...filterValues };
+      if (next) nextFilters.q = next;
+      else delete nextFilters.q;
+      setFilters(nextFilters, undefined, false);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filterValues, setFilters]);
 
   const openActivityHistory = (lead: Contact) => {
     setActivityLead(lead);
     setActivityOpen(true);
   };
 
-  if (isPending) return null;
+  const toolbar = (
+    <LeadsListToolbar
+      view={view}
+      onViewChange={onViewChange}
+      onNewLead={onNewLead}
+      searchDraft={searchDraft}
+      onSearchDraftChange={setSearchDraft}
+      total={total}
+    />
+  );
+
+  if (isPending) {
+    return toolbar;
+  }
+
   if (view === "kanban") {
     if (selectedLeadId && kanbanStage) {
       return (
-        <LeadsKanbanSplitLayout
-          selectedLeadId={selectedLeadId}
-          stage={kanbanStage}
-        />
+        <div className="flex h-full min-h-0 flex-col gap-3">
+          {toolbar}
+          <div className="min-h-0 flex-1">
+            <LeadsKanbanSplitLayout
+              selectedLeadId={selectedLeadId}
+              stage={kanbanStage}
+            />
+          </div>
+        </div>
       );
     }
 
     return (
-      <div className="h-full min-h-0">
-        <LeadsKanban />
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        {toolbar}
+        <div className="min-h-0 flex-1">
+          <LeadsKanban />
+        </div>
       </div>
     );
   }
-  if (!data?.length) return <ContactEmpty />;
+
+  if (!data?.length) {
+    return (
+      <div className="space-y-3">
+        {toolbar}
+        <ContactEmpty />
+      </div>
+    );
+  }
 
   return (
-    <>
+    <div className="space-y-3">
+      {toolbar}
       <DataTable
         rowClick={(_id, _resource, record) => getLeadShowPath(record.id)}
-        rowClassName={() => "[&_td]:py-2.5"}
+        rowClassName={() => "[&_td]:py-1.5"}
       >
         <DataTable.Col
           label=""
@@ -314,10 +398,7 @@ const LeadsListLayout = ({
             return (
               <div className="flex min-w-0 items-center gap-1">
                 <span className="min-w-0 flex-1 truncate">{fullName}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
                   title="Activity history"
                   onClick={(event) => {
@@ -327,7 +408,7 @@ const LeadsListLayout = ({
                 >
                   <History className="size-3.5" />
                   <span className="sr-only">Activity history</span>
-                </Button>
+                </IconButton>
               </div>
             );
           }}
@@ -404,6 +485,6 @@ const LeadsListLayout = ({
         open={activityOpen}
         onOpenChange={setActivityOpen}
       />
-    </>
+    </div>
   );
 };

@@ -3,7 +3,8 @@ import { RecordRepresentation, useGetOne, WithRecord } from "ra-core";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { ReferenceField } from "@/components/admin/reference-field";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 
 import { MobileContent } from "../layout/MobileContent";
 import MobileHeader from "../layout/MobileHeader";
@@ -54,16 +55,14 @@ export const NoteShowPage = () => {
             </h1>
           </Link>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <IconButton
           className="rounded-full"
+          aria-label="Edit note"
           onClick={() => setEditOpen(true)}
         >
           <Pencil className="size-5" />
           <span className="sr-only">Edit note</span>
-        </Button>
+        </IconButton>
       </MobileHeader>
       <MobileContent>
         <div className="mb-4">

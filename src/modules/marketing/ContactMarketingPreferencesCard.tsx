@@ -184,7 +184,7 @@ export const ContactMarketingPreferencesCard = ({
           </p>
         ) : null}
         {!loading && !smsOptedIn && !emailOptedIn ? (
-          <Button type="button" variant="outline" size="sm" disabled>
+          <Button type="button" variant="secondary" size="sm" disabled>
             No marketing consent on file
           </Button>
         ) : null}

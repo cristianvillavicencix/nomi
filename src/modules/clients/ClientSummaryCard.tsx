@@ -1,7 +1,8 @@
 import { useMemo, type ReactNode } from "react";
 import { useGetOne } from "ra-core";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -13,7 +14,10 @@ import { getCompanyFaviconSources } from "@/components/atomic-crm/providers/comm
 import { FaviconAvatarImage } from "@/components/ui/FaviconAvatarImage";
 import { AvatarFallback, Avatar as UiAvatar } from "@/components/ui/avatar";
 import { OrganizationMemberName } from "@/components/atomic-crm/organizationMembers/OrganizationMemberName";
-import type { Contact, OrganizationMember } from "@/components/atomic-crm/types";
+import type {
+  Contact,
+  OrganizationMember,
+} from "@/components/atomic-crm/types";
 import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import {
   collectBusinessSocialLinks,
@@ -71,13 +75,7 @@ const ProfileIconLink = ({
 }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button
-        asChild
-        type="button"
-        variant="outline"
-        size="icon"
-        className="size-8 shrink-0 rounded-full"
-      >
+      <IconButton aria-label={label} asChild variant="secondary" className="shrink-0 rounded-full">
         <a
           href={href}
           target="_blank"
@@ -87,7 +85,7 @@ const ProfileIconLink = ({
         >
           {children}
         </a>
-      </Button>
+      </IconButton>
     </TooltipTrigger>
     <TooltipContent>{label}</TooltipContent>
   </Tooltip>

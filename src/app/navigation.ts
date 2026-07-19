@@ -1,28 +1,28 @@
-import type { LucideIcon } from "lucide-react";
+import type { Icon } from "@phosphor-icons/react";
 import {
-  BarChart2,
   Briefcase,
-  CalendarDays,
-  FileSignature,
+  CalendarBlank,
+  ChartBar,
+  ChatCircle,
   FileText,
   Globe,
-  Home,
-  LayoutGrid,
+  HardDrives,
+  House,
   ListChecks,
   Megaphone,
+  PenNib,
   Receipt,
-  Server,
+  SquaresFour,
   Ticket,
   UserPlus,
   Users,
-  Video,
-  MessageSquare,
-} from "lucide-react";
+  VideoCamera,
+} from "@phosphor-icons/react";
 
 export type LbsNavItem = {
   to: string;
   label: string;
-  icon: LucideIcon;
+  icon: Icon;
   activePattern: string;
   capability?: string;
   resource?: string;
@@ -32,7 +32,7 @@ export type LbsNavItem = {
 export type LbsNavCollapsibleGroup = {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: Icon;
   storageKey: string;
   children: LbsNavItem[];
 };
@@ -40,14 +40,14 @@ export type LbsNavCollapsibleGroup = {
 export type LbsNavGroup = {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: Icon;
   items: LbsNavItem[];
 };
 
 export type LbsNavCollapsibleSection = {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: Icon;
   storageKey: string;
 };
 
@@ -61,7 +61,7 @@ export const LBS_NAV_SECONDARY_GROUP_IDS = [
 export const LBS_MORE_NAV_COLLAPSIBLE: LbsNavCollapsibleSection = {
   id: "more",
   label: "More",
-  icon: LayoutGrid,
+  icon: SquaresFour,
   storageKey: "sidebar_more_open",
 };
 
@@ -98,7 +98,7 @@ export const LBS_NAV_STANDALONE: LbsNavItem[] = [
   {
     to: "/",
     label: "Dashboard",
-    icon: Home,
+    icon: House,
     activePattern: "/",
     capability: "crm.pipeline.view",
     resource: "deals",
@@ -123,7 +123,7 @@ export const LBS_NAV_STANDALONE_WITH_ACCOUNTS_HUB: LbsNavItem[] = [
   {
     to: "/",
     label: "Dashboard",
-    icon: Home,
+    icon: House,
     activePattern: "/",
     capability: "crm.pipeline.view",
     resource: "deals",
@@ -179,7 +179,7 @@ export const LBS_NAV_AFTER_CLIENTS: LbsNavItem[] = [
   {
     to: "/tasks",
     label: "Calendar",
-    icon: CalendarDays,
+    icon: CalendarBlank,
     activePattern: "/tasks/*",
     capability: "crm.tasks.view",
     resource: "tasks",
@@ -188,7 +188,7 @@ export const LBS_NAV_AFTER_CLIENTS: LbsNavItem[] = [
   {
     to: "/meetings",
     label: "Meeting",
-    icon: Video,
+    icon: VideoCamera,
     activePattern: "/meetings/*",
     capability: "meetings.view",
     resource: "tasks",
@@ -197,7 +197,7 @@ export const LBS_NAV_AFTER_CLIENTS: LbsNavItem[] = [
   {
     to: "/messages",
     label: "Messages",
-    icon: MessageSquare,
+    icon: ChatCircle,
     activePattern: "/messages/*",
     capability: "messaging.conversations.view",
     resource: "conversations",
@@ -218,7 +218,7 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
   {
     id: "close-billing",
     label: "Close & bill",
-    icon: FileSignature,
+    icon: PenNib,
     items: [
       {
         to: "/proposals",
@@ -232,7 +232,7 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
       {
         to: "/contracts",
         label: "Contracts",
-        icon: FileSignature,
+        icon: PenNib,
         activePattern: "/contracts/*",
         capability: "contracts.view",
         resource: "contracts",
@@ -263,7 +263,7 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
       {
         to: "/hostinger",
         label: "Hostinger",
-        icon: Server,
+        icon: HardDrives,
         activePattern: "/hostinger/*",
         capability: "crm.companies.view",
         resource: "hostinger_domains",
@@ -272,7 +272,7 @@ export const LBS_NAV_GROUPS: LbsNavGroup[] = [
       {
         to: "/reports",
         label: "Reports",
-        icon: BarChart2,
+        icon: ChartBar,
         activePattern: "/reports/*",
         capability: "reports.view",
         resource: "reports",

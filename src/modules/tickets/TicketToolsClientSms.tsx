@@ -361,7 +361,7 @@ export const TicketToolsClientSms = ({
             <Button
               key={action.key}
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               className={QUICK_ACTION_BUTTON_CLASS}
               disabled={action.disabled}

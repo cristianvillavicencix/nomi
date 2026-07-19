@@ -16,7 +16,8 @@ import {
   useUpdate,
   type Identifier,
 } from "ra-core";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Badge } from "@/components/ui/badge";
 import { Confirm } from "@/components/admin/confirm";
 import {
@@ -219,14 +220,10 @@ export const ClientContactsTab = ({
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                          >
+                          <IconButton aria-label="Contact actions">
                             <MoreHorizontal className="size-4" />
                             <span className="sr-only">Contact actions</span>
-                          </Button>
+                          </IconButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem

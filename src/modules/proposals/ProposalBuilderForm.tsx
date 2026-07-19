@@ -115,7 +115,7 @@ const ProposalBuilderFields = ({
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
         <Badge variant="secondary">Draft</Badge>
         {proposalId ? (
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button type="button" variant="secondary" size="sm" asChild>
             <Link to={`/proposals/${proposalId}/preview`}>
               <Eye className="size-4" />
               Draft & review

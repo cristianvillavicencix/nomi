@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import type { ProposalTimelineBar } from "@/modules/proposals/document/proposalDocumentTypes";
 import {
@@ -172,7 +173,7 @@ export const ProposalTimelineGantt = ({
       {editable ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="mt-2"
           onClick={addBar}
@@ -213,17 +214,14 @@ const GanttRow = ({
   return (
     <div className="group/item relative rounded-lg pr-8 transition-colors hover:bg-muted/30">
       {canRemove ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="absolute right-0 top-0 z-10 size-8 text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
+        <IconButton
+          className="absolute right-0 top-0 z-10 text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
           onMouseDown={(event) => event.preventDefault()}
           onClick={onRemove}
           aria-label={removeLabel}
         >
           <Trash2 className="size-4" />
-        </Button>
+        </IconButton>
       ) : null}
       <div className="pf-gbar">
         {editable ? (

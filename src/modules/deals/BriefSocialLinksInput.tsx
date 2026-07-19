@@ -1,6 +1,7 @@
 import { Plus, X as XIcon } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import {
   getBriefSocialDisplay,
@@ -68,45 +69,36 @@ export const BriefSocialLinksInput = ({
                 onChange={(event) => updateUrl(index, event.target.value)}
               />
               {isLast ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   aria-label="Add social profile"
                   onClick={appendRow}
-                  className="size-8 shrink-0"
+                  className="shrink-0"
                 >
                   <Plus className="size-4" />
-                </Button>
+                </IconButton>
               ) : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   aria-label="Insert below"
                   onClick={() => {
                     const next = [...urls];
                     next.splice(index + 1, 0, "");
                     commitUrls(next);
                   }}
-                  className="size-8 shrink-0"
+                  className="shrink-0"
                 >
                   <Plus className="size-4" />
-                </Button>
+                </IconButton>
               )}
               {urls.length > 1 ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   aria-label="Remove social profile"
                   onClick={() => removeRow(index)}
-                  className="size-8 shrink-0"
+                  className="shrink-0"
                 >
                   <XIcon className="size-4" />
-                </Button>
+                </IconButton>
               ) : (
-                <div aria-hidden className="size-8 shrink-0" />
+                <div aria-hidden className="shrink-0" />
               )}
             </li>
           );

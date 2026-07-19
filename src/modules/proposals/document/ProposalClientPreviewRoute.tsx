@@ -95,7 +95,7 @@ const ProposalClientPreviewBody = () => {
         <div className="flex shrink-0 items-center gap-2">
           <ProposalLanguageToggle />
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="border-warning/40 hover:bg-warning/10"
             asChild

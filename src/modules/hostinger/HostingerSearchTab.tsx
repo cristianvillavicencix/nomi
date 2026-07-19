@@ -191,7 +191,7 @@ const AvailabilityRow = ({
       <TableCell className="text-right">
         <div className="flex flex-wrap justify-end gap-2">
           {available && buyUrl ? (
-            <Button variant="default" size="sm" asChild>
+            <Button variant="primary" size="sm" asChild>
               <a
                 href={buyUrl}
                 target="_blank"
@@ -204,7 +204,7 @@ const AvailabilityRow = ({
             </Button>
           ) : null}
           {available && referralUrl && referralCode ? (
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="secondary" size="sm" asChild>
               <a
                 href={referralUrl}
                 target="_blank"

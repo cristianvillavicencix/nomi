@@ -33,7 +33,7 @@ export const InvoicePortalActions = ({
           <div className="p-3">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               className="h-12 w-full rounded-xl text-base"
               disabled={downloading}
               onClick={onDownload}
@@ -85,7 +85,7 @@ export const InvoicePortalActions = ({
       ) : null}
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         disabled={downloading}
         onClick={onDownload}

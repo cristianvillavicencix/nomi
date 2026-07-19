@@ -383,7 +383,7 @@ export const ProjectDeliverWizard = ({
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     void navigator.clipboard.writeText(portalLink);
                     notify("Portal link copied", { type: "info" });
@@ -392,7 +392,7 @@ export const ProjectDeliverWizard = ({
                   <Copy className="size-4" />
                   Copy link
                 </Button>
-                <Button type="button" variant="outline" asChild>
+                <Button type="button" variant="secondary" asChild>
                   <a
                     href={portalLink}
                     target="_blank"
@@ -581,7 +581,7 @@ export const ProjectDeliverWizard = ({
               {step === "analysis" && pendingChecklistCount > 0 ? (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setOverrideOpen(true)}
                 >
                   <AlertTriangle className="size-4" />

@@ -90,7 +90,7 @@ export const AssignToUserDialog = ({
     <Dialog open={open} onOpenChange={setOpen}>
       {!hideTrigger ? (
         <DialogTrigger asChild>
-          <Button type="button" variant="outline" size="sm">
+          <Button type="button" variant="secondary" size="sm">
             <UserRound className="size-4" />
             Assign
           </Button>
@@ -120,7 +120,7 @@ export const AssignToUserDialog = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => setOpen(false)}
           >
             Cancel

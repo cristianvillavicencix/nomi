@@ -113,7 +113,7 @@ export const ContractTermsSettings = ({
   const fields = (
     <>
       {!activeTerms ? (
-        <Button type="button" variant="outline" onClick={loadDefaultSeed}>
+        <Button type="button" variant="secondary" onClick={loadDefaultSeed}>
           Load default LBS terms
         </Button>
       ) : null}

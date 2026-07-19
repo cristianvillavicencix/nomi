@@ -1,13 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useCreate, useGetIdentity, useNotify, type Identifier } from "ra-core";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import type {
   ClientSmsDraft,
   Contact,
   Conversation,
-  ConversationMessage,
 } from "@/modules/types";
 import { useConversationMessages } from "@/modules/messages/useConversationMessages";
 import { useMarkConversationRead } from "@/modules/messages/useMarkConversationRead";
@@ -19,6 +19,10 @@ import {
   ConversationSystemMessageNote,
 } from "@/modules/messages/ConversationMessageBubble";
 import { getClientSmsDraftLabel } from "@/modules/messages/messageContactUtils";
+import {
+  formatMessageDateDivider,
+  getMessageDayKey,
+} from "@/modules/messages/conversationUtils";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 import { cn } from "@/lib/utils";
 
@@ -199,7 +203,7 @@ export const ConversationThread = ({
           <div className="flex justify-center pb-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={loadingOlder}
               onClick={() => void loadOlder()}
@@ -247,27 +251,50 @@ export const ConversationThread = ({
             </p>
           </div>
         ) : (
-          messages.map((message) =>
-            message.kind === "system" ? (
-              <ConversationSystemMessageNote
-                key={String(message.id)}
-                message={message}
-              />
-            ) : (
-              <ConversationMessageBubble
-                key={String(message.id)}
-                message={message}
-                isOwn={
-                  isClientSms
-                    ? message.direction === "outbound"
-                    : String(message.author_member_id) === String(identity?.id)
-                }
-                compact={isSidebar}
-                onRetryDelivery={retryMessage}
-                retryingDelivery={String(retryingMessageId) === String(message.id)}
-              />
-            ),
-          )
+          messages.map((message, index) => {
+            const dayKey = getMessageDayKey(message.created_at);
+            const prevDayKey =
+              index > 0
+                ? getMessageDayKey(messages[index - 1]?.created_at)
+                : null;
+            const showDateDivider = dayKey != null && dayKey !== prevDayKey;
+
+            return (
+              <Fragment key={String(message.id)}>
+                {showDateDivider ? (
+                  <div
+                    className="flex items-center gap-3 py-1"
+                    role="separator"
+                    aria-label={formatMessageDateDivider(message.created_at)}
+                  >
+                    <div className="h-px flex-1 bg-border/60" />
+                    <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
+                      {formatMessageDateDivider(message.created_at)}
+                    </span>
+                    <div className="h-px flex-1 bg-border/60" />
+                  </div>
+                ) : null}
+                {message.kind === "system" ? (
+                  <ConversationSystemMessageNote message={message} />
+                ) : (
+                  <ConversationMessageBubble
+                    message={message}
+                    isOwn={
+                      isClientSms
+                        ? message.direction === "outbound"
+                        : String(message.author_member_id) ===
+                          String(identity?.id)
+                    }
+                    compact={isSidebar}
+                    onRetryDelivery={retryMessage}
+                    retryingDelivery={
+                      String(retryingMessageId) === String(message.id)
+                    }
+                  />
+                )}
+              </Fragment>
+            );
+          })
         )}
         <div ref={bottomRef} />
       </div>
@@ -316,15 +343,15 @@ export const ConversationThread = ({
               placeholder="Write a message…"
               className="h-10 flex-1 border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
             />
-            <Button
+            <IconButton
               type="submit"
-              size="icon"
-              className="mb-0.5 mr-0.5 size-9 shrink-0 rounded-full bg-foreground text-background hover:bg-foreground/90"
+              variant="primary"
+              className="mb-0.5 mr-0.5 size-9 shrink-0 rounded-full"
               disabled={isPending || !body.trim()}
               aria-label="Send message"
             >
               <Send className="size-4" strokeWidth={2.5} />
-            </Button>
+            </IconButton>
           </div>
         </form>
       ) : (

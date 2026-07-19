@@ -56,7 +56,7 @@ export const SelectAllButton = <RecordType extends RaRecord = RaRecord>({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="secondary"
       size="sm"
       className={cn("h-9", className)}
       onClick={handleClick}

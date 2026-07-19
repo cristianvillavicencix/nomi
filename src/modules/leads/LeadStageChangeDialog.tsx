@@ -580,7 +580,7 @@ export const LeadStageChangeDialog = ({
           <div className="flex gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={isSubmitting}
               onClick={() => onOpenChange(false)}
             >

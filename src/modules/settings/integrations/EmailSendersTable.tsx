@@ -5,6 +5,7 @@ import { useDataProvider, useNotify } from "ra-core";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -60,8 +61,7 @@ const ALL_ROWS: RowConfig[] = [
   {
     id: "billing",
     purpose: "Invoices & payment links",
-    purposeHint:
-      "Sender address (Mail). Card checkout: Integrations → Stripe.",
+    purposeHint: "Sender address (Mail). Card checkout: Integrations → Stripe.",
     getAddress: (data) =>
       parseDisplayEmail(data.billingFromEmail?.trim() || "Not configured"),
     getEnabled: (data) => data.billingEmailEnabled,
@@ -249,17 +249,14 @@ export const EmailSendersTable = ({
                         >
                           {address}
                         </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
+                        <IconButton
                           className="size-7 shrink-0"
                           disabled={!configured || saveMutation.isPending}
                           onClick={() => openEdit(row.id)}
                           aria-label={`Edit ${row.purpose}`}
                         >
                           <Pencil className="size-3.5" />
-                        </Button>
+                        </IconButton>
                       </div>
                     </td>
                     <td className="px-3 py-2 align-top text-right">
@@ -333,7 +330,7 @@ export const EmailSendersTable = ({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => setEditingChannel(null)}
             >
               Cancel

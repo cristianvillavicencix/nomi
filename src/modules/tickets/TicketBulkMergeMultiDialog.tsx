@@ -214,7 +214,7 @@ export const TicketBulkMergeMultiDialog = ({
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => handleOpenChange(false)}
               >
                 Cancel
@@ -231,7 +231,7 @@ export const TicketBulkMergeMultiDialog = ({
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 disabled={mergeMutation.isPending}
                 onClick={() => setStep("setup")}
               >

@@ -6,7 +6,7 @@ import {
   useListFilterContext,
   type Identifier,
 } from "ra-core";
-import { Building2, Plus, UserPlus, Users } from "lucide-react";
+import { Building2, Plus, Users } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,30 +17,28 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TableRow} from "@/components/ui/table";
 import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
-import { PageActions } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import {
   getContactEmail,
   getContactFullName,
-  getContactPhoneRaw,
-} from "@/modules/clients/clientShowUtils";
+  getContactPhoneRaw} from "@/modules/clients/clientShowUtils";
 import { NewContactDialog } from "@/modules/clients/NewContactDialog";
 import { NewLeadDialog } from "@/modules/leads/NewLeadDialog";
 import {
   getLeadStageDef,
-  normalizeLeadStage,
-} from "@/modules/leads/leadStages";
+  normalizeLeadStage} from "@/modules/leads/leadStages";
 import {
   isLeadLifecycleStatus,
   LBS_CONTACT_STATUSES_FOR_FILTER,
-  LBS_LEAD_STATUSES_FOR_FILTER,
-} from "@/modules/constants/contactStatus";
+  LBS_LEAD_STATUSES_FOR_FILTER} from "@/modules/constants/contactStatus";
 import { getClientShowPath, getPersonShowPath } from "@/app/routing";
 import { mailtoHref } from "@/lib/linking";
 import { CrmPhoneLink } from "@/modules/voice/CrmPhoneLink";
@@ -57,8 +55,7 @@ const PEOPLE_STATUS_FILTER = {
     ...LBS_CONTACT_STATUSES_FOR_FILTER,
   ]
     .map((s) => `"${s}"`)
-    .join(",")})`,
-};
+    .join(",")})`};
 
 const NO_COMPANY_FILTER_KEY = "company_id@is";
 
@@ -69,8 +66,7 @@ const sortPeopleForAccountsList = (people: Contact[]) =>
     const bHasCompany = b.company_id != null ? 0 : 1;
     if (aHasCompany !== bHasCompany) return aHasCompany - bHasCompany;
     return getContactFullName(a).localeCompare(getContactFullName(b), undefined, {
-      sensitivity: "base",
-    });
+      sensitivity: "base"});
   });
 
 /** Flat people directory (leads + contacts) — Accounts List. */
@@ -82,8 +78,7 @@ export const AccountsPeopleList = () => {
 
   const canCreateContact = canAccess(identity as AccessIdentity, {
     resource: "contacts",
-    action: "create",
-  });
+    action: "create"});
 
   useEffect(() => {
     const create = searchParams.get("create");
@@ -110,36 +105,7 @@ export const AccountsPeopleList = () => {
         perPage={25}
         sort={{ field: "last_name", order: "ASC" }}
         filter={PEOPLE_STATUS_FILTER}
-        actions={
-          <PageActions>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              {canCreateContact ? (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLeadDialogOpen(true)}
-                  >
-                    <UserPlus className="size-4" />
-                    New lead
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setContactDialogOpen(true)}
-                  >
-                    <Plus className="size-4" />
-                    New contact
-                  </Button>
-                </>
-              ) : null}
-              <ModuleInfoPopover
-                title="People"
-                description="Leads and contacts in one list. Company is context on each row. Use Board for pipeline follow-up."
-              />
-            </div>
-          </PageActions>
-        }
+        actions={false}
         pagination={<ListPagination rowsPerPageOptions={[10, 25, 50, 100]} />}
       >
         <AccountsPeopleListBody
@@ -160,8 +126,7 @@ export const AccountsPeopleList = () => {
 const AccountsPeopleListBody = ({
   canCreate,
   onNewLead,
-  onNewContact,
-}: {
+  onNewContact}: {
   canCreate: boolean;
   onNewLead: () => void;
   onNewContact: () => void;
@@ -209,8 +174,7 @@ const AccountsPeopleListBody = ({
       return;
     }
     setSearchParams(buildAccountsPersonPreviewParams(searchParams, contact), {
-      replace: true,
-    });
+      replace: true});
   };
 
   const openCompany = (companyId: string | number) => {
@@ -268,13 +232,13 @@ const AccountsPeopleListBody = ({
         </div>
         {canCreate ? (
           <div className="flex flex-wrap justify-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onNewLead}>
-              <UserPlus className="size-4" />
+            <Button type="button" variant="secondary" size="sm" onClick={onNewLead}>
+              <Plus className="size-4" />
               New lead
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={onNewContact}
             >
@@ -289,25 +253,49 @@ const AccountsPeopleListBody = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1">
+      <ModuleToolbar>
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
           <Button
             type="button"
             size="sm"
-            variant={noCompanyActive ? "default" : "outline"}
+            variant={noCompanyActive ? "primary" : "secondary"}
             onClick={toggleNoCompany}
           >
             No company
           </Button>
+          <Input
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
+            placeholder="Search people…"
+            className="w-full sm:max-w-xs"
+            aria-label="Search people"
+          />
         </div>
-        <Input
-          value={searchDraft}
-          onChange={(event) => setSearchDraft(event.target.value)}
-          placeholder="Search people…"
-          className="w-full sm:max-w-xs"
-          aria-label="Search people"
-        />
-      </div>
+        {canCreate ? (
+          <ModuleToolbarActions>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onNewLead}
+              aria-label="New lead"
+            >
+              <Plus className="size-4" />
+              New lead
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onNewContact}
+              aria-label="New contact"
+            >
+              <Plus className="size-4" />
+              New contact
+            </Button>
+          </ModuleToolbarActions>
+        ) : null}
+      </ModuleToolbar>
 
       {!people.length ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -318,7 +306,7 @@ const AccountsPeopleListBody = ({
           </p>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => {
               setSearchDraft("");
@@ -375,8 +363,7 @@ const PersonRow = ({
   contact,
   isClient,
   onOpenPerson,
-  onOpenCompany,
-}: {
+  onOpenCompany}: {
   contact: Contact;
   isClient: boolean;
   onOpenPerson: () => void;

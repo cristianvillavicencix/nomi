@@ -227,7 +227,7 @@ export const ProjectPaymentsTab = ({ record }: { record: LbsDeal }) => {
             <h3 className="text-sm font-semibold">Record payment</h3>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={isScheduling || isCreating}
               onClick={() => void addPaymentSchedule()}

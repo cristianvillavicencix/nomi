@@ -30,6 +30,7 @@ List + selection URL + Preview/panel; on mobile prefer full page. Converge Accou
 
 - Prefer shared empty / loading / back primitives when they exist under `src/modules/shared/chrome/`.
 - Right-rail collapse: use `CollapsibleRelatedPanel` (or future `CollapsibleRail`) with **right**-side affordances (`PanelRightOpen`), not left-drawer icons.
+- Buttons: `docs/ux/BUTTON-SYSTEM.md` — use `Button` / `IconButton`; Create CTAs use `Plus`; do not hand-roll CTA chrome.
 
 ## Atoms (when present)
 

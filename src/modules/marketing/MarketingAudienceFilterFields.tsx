@@ -152,7 +152,7 @@ export const MarketingAudienceFilterFields = ({
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           disabled={estimateMutation.isPending}
           onClick={() => estimateMutation.mutate()}

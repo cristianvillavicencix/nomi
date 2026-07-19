@@ -40,7 +40,7 @@ export const TestSmsButton = ({ disabled }: { disabled?: boolean }) => {
         />
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           disabled={disabled || mutation.isPending || !phone.trim()}
           onClick={() => mutation.mutate()}
         >

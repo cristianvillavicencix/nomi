@@ -340,13 +340,15 @@ export const DataImportSection = ({
                 <AlertTriangle className="h-4 w-4 mt-0.5" />
               )}
               <span className="flex-1">{oauthBanner.message}</span>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setOauthBanner(null)}
-                className="text-xs opacity-60 hover:opacity-100"
+                className="h-auto px-1.5 py-0.5 text-xs opacity-60 hover:bg-transparent hover:opacity-100"
               >
                 Dismiss
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -453,7 +455,7 @@ export const DataImportSection = ({
           matches can be merged in one click; shared inboxes are flagged so
           separate people are not combined.
         </p>
-        <Button asChild variant="outline">
+        <Button asChild variant="secondary">
           <Link to={getFindDuplicatesPath()}>Open duplicate finder</Link>
         </Button>
       </SettingsTabPanel>
@@ -536,18 +538,22 @@ const NotConnectedPanel = ({
         </div>
       </div>
 
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="h-auto gap-1 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+        leftIcon={
+          showAdvanced ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )
+        }
       >
-        {showAdvanced ? (
-          <ChevronDown className="h-4 w-4" />
-        ) : (
-          <ChevronRight className="h-4 w-4" />
-        )}
         Advanced: connect via Grant Token (manual fallback)
-      </button>
+      </Button>
 
       {showAdvanced ? (
         <div className="space-y-4 rounded-md border p-4">
@@ -609,7 +615,7 @@ const NotConnectedPanel = ({
 
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={busy !== null || !grantToken.trim()}
             onClick={() => onConnectGrantToken(grantToken.trim(), region)}
           >
@@ -833,7 +839,7 @@ const ConnectedPanel = ({
         </Button>
         <Button
           type="button"
-          variant="default"
+          variant="primary"
           onClick={() => runPromote(ALL_MODULES, false)}
           disabled={busy !== null || promotableTotal === 0}
           title={
@@ -849,7 +855,7 @@ const ConnectedPanel = ({
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={() => runPromote(ALL_MODULES, true)}
           disabled={busy !== null || stagingTotal === 0}
         >
@@ -903,7 +909,7 @@ const ConnectedPanel = ({
                   <Button
                     type="button"
                     size="sm"
-                    variant="outline"
+                    variant="secondary"
                     disabled={busy !== null}
                     onClick={() => runSync([mod.key])}
                   >

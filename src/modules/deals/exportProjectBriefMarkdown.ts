@@ -75,8 +75,8 @@ const formatBriefValueForMarkdown = (
         if (typeof entry === "string") {
           const trimmed = entry.trim();
           if (!trimmed) return "";
-          if (trimmed.includes("|")) {
-            const [platform = "", url = ""] = trimmed.split("|");
+          if (trimmed.includes("| ")) {
+            const [platform = "", url = ""] = trimmed.split("| ");
             const label = platform.trim() || "Link";
             const href = url.trim();
             return href ? `- **${label}:** ${href}` : `- ${trimmed}`;

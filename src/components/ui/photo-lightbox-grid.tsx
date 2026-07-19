@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { IconButton } from "@/components/ui/icon-button"
 import {
   ImageLightbox,
   type LightboxImage,
@@ -104,10 +105,8 @@ export const PhotoLightboxGrid = ({
               />
             </button>
             {onDownloadItem ? (
-              <Button
-                type="button"
+              <IconButton
                 variant="secondary"
-                size="icon"
                 className={cn(
                   "absolute bottom-1.5 right-1.5 size-7 rounded-full shadow-sm",
                   variant === "compact"
@@ -121,7 +120,7 @@ export const PhotoLightboxGrid = ({
                 }}
               >
                 <Download className="size-3.5" />
-              </Button>
+              </IconButton>
             ) : null}
             {showCaption && (item.title ?? item.alt) ? (
               <p className="truncate px-2 py-1.5 text-[11px] text-muted-foreground">

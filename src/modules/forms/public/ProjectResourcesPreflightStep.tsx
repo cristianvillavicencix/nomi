@@ -28,14 +28,14 @@ export const ProjectResourcesPreflightStep = ({
     <div className="flex flex-col gap-2 sm:flex-row">
       <Button
         type="button"
-        variant={mode === "new" ? "default" : "outline"}
+        variant={mode === "new" ? "primary" : "secondary"}
         onClick={() => onModeChange("new")}
       >
         Es un proyecto nuevo
       </Button>
       <Button
         type="button"
-        variant={mode === "existing" ? "default" : "outline"}
+        variant={mode === "existing" ? "primary" : "secondary"}
         onClick={() => onModeChange("existing")}
       >
         Ya tengo un proyecto

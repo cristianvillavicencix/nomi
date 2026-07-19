@@ -218,7 +218,7 @@ export const ClientWebsiteSection = ({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               className="h-9"
               disabled={!href}
               onClick={() => void handleCopy()}
@@ -229,7 +229,7 @@ export const ClientWebsiteSection = ({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               className="h-9"
               disabled={downloadingPdf}
               onClick={handleDownloadPdf}

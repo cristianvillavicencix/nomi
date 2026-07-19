@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { ExternalLink, Phone, X } from "lucide-react";
 import { useGetOne } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import type { Company } from "@/components/atomic-crm/types";
 import type { Contact, Conversation, LbsDeal } from "@/modules/types";
@@ -47,10 +49,11 @@ export const ContextPanelContent = ({
 }) => {
   const maskedAmount = useMaskedAmount(deal?.amount ?? null);
 
+  const companyId = contact?.company_id;
   const { data: company } = useGetOne<Company>(
     "companies",
-    { id: contact?.company_id! },
-    { enabled: contact?.company_id != null },
+    { id: companyId as NonNullable<typeof companyId> },
+    { enabled: companyId != null },
   );
 
   if (!conversation && !contact) {
@@ -68,22 +71,23 @@ export const ContextPanelContent = ({
     phoneEntries[0]?.e164 ??
     null;
 
+  const hasRelated =
+    deal != null || conversation?.id != null || callPhone != null;
+
   return (
-    <div className="space-y-5 p-5">
+    <div className="flex min-h-0 flex-1 flex-col">
       {conversation ? (
-        <div>
+        <div className="shrink-0 space-y-2 border-b border-border/40 px-5 py-4">
           <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Conversation
           </div>
-          <div className="mt-1 text-base font-semibold">
+          <div className="text-base font-semibold">
             {conversation.title ?? "Untitled"}
           </div>
-          <div className="mt-2">
-            <StatusBadge status={conversation.status} />
-          </div>
+          <StatusBadge status={conversation.status} />
           {conversation.type === "client" &&
           (activeSmsPhone ?? conversation.external_phone) ? (
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               SMS to{" "}
               <span className="font-medium text-foreground">
                 {formatUsPhoneDisplayFromAny(
@@ -95,94 +99,135 @@ export const ContextPanelContent = ({
         </div>
       ) : null}
 
-      {contact ? <PersonContextCard contact={contact} /> : null}
+      <Tabs defaultValue="about" className="min-h-0 flex-1 gap-0">
+        <div className="shrink-0 border-b border-border/40 px-4 pt-3">
+          <TabsList className="grid h-8 w-full grid-cols-2">
+            <TabsTrigger value="about" className="text-xs">
+              About
+            </TabsTrigger>
+            <TabsTrigger value="related" className="text-xs">
+              Related
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-      {company ? (
-        <CompanyContextCard
-          companyId={company.id}
-          name={company.name}
-          website={company.website}
-          isClient={company.is_client}
-          viewProfileHref={getClientShowPath(company.id)}
-          avatar={<CompanyAvatar record={company} width={40} />}
-        />
-      ) : null}
+        <TabsContent
+          value="about"
+          className="min-h-0 flex-1 overflow-y-auto p-5 data-[state=inactive]:hidden"
+        >
+          <div className="space-y-5">
+            {contact ? <PersonContextCard contact={contact} /> : null}
 
-      {contact && phoneEntries.length > 1 ? (
-        <DetailSection label="Phone numbers">
-          <ul className="space-y-1.5 text-sm">
-            {phoneEntries.map((entry) => {
-              const isActive =
-                activeSmsPhone != null && entry.e164 === activeSmsPhone;
-              return (
-                <li
-                  key={entry.e164}
-                  className={cn(
-                    "flex items-start gap-2",
-                    isActive && "font-medium text-foreground",
-                  )}
-                >
-                  <Phone className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                  <span>
-                    {entry.display}
-                    {entry.label !== "Phone" ? (
-                      <span className="text-muted-foreground">
-                        {" "}
-                        · {entry.label}
-                      </span>
-                    ) : null}
-                    {isActive ? (
-                      <span className="ml-1 text-[11px] text-muted-foreground">
-                        (SMS)
-                      </span>
-                    ) : null}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </DetailSection>
-      ) : null}
+            {company ? (
+              <CompanyContextCard
+                companyId={company.id}
+                name={company.name}
+                website={company.website}
+                isClient={company.is_client}
+                viewProfileHref={getClientShowPath(company.id)}
+                avatar={<CompanyAvatar record={company} width={40} />}
+              />
+            ) : null}
 
-      {deal ? (
-        <div>
-          <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Project
+            {contact && phoneEntries.length > 1 ? (
+              <DetailSection label="Phone numbers">
+                <ul className="space-y-1.5 text-sm">
+                  {phoneEntries.map((entry) => {
+                    const isActive =
+                      activeSmsPhone != null && entry.e164 === activeSmsPhone;
+                    return (
+                      <li
+                        key={entry.e164}
+                        className={cn(
+                          "flex items-start gap-2",
+                          isActive && "font-medium text-foreground",
+                        )}
+                      >
+                        <Phone className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                        <span>
+                          {entry.display}
+                          {entry.label !== "Phone" ? (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {entry.label}
+                            </span>
+                          ) : null}
+                          {isActive ? (
+                            <span className="ml-1 text-[11px] text-muted-foreground">
+                              (SMS)
+                            </span>
+                          ) : null}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </DetailSection>
+            ) : null}
+
+            {!contact && !company ? (
+              <p className="text-sm text-muted-foreground">
+                No linked contact for this conversation.
+              </p>
+            ) : null}
           </div>
-          <div className="mt-1 font-medium">{deal.name}</div>
-          {deal.amount != null ? (
-            <div className="text-sm text-muted-foreground">{maskedAmount}</div>
-          ) : null}
-        </div>
-      ) : null}
+        </TabsContent>
 
-      <div className="space-y-2">
-        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          Quick actions
-        </div>
-        {deal?.id != null ? (
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <Link to={`/deals/${deal.id}/show`}>
-              <ExternalLink className="mr-2 size-4" />
-              Open project
-            </Link>
-          </Button>
-        ) : null}
-        <VoiceCallButton
-          phoneNumber={callPhone}
-          contactId={contact?.id ?? conversation?.contact_id}
-          conversationId={conversation?.id}
-          dealId={deal?.id ?? conversation?.deal_id}
-        />
-        {conversation?.id != null ? (
-          <ConversationCallHistory conversationId={conversation.id} />
-        ) : null}
-      </div>
+        <TabsContent
+          value="related"
+          className="min-h-0 flex-1 overflow-y-auto p-5 data-[state=inactive]:hidden"
+        >
+          <div className="space-y-5">
+            {deal ? (
+              <div>
+                <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Project
+                </div>
+                <div className="mt-1 font-medium">{deal.name}</div>
+                {deal.amount != null ? (
+                  <div className="text-sm text-muted-foreground">
+                    {maskedAmount}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {hasRelated ? (
+              <div className="space-y-2">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Quick actions
+                </div>
+                {deal?.id != null ? (
+                  <Button
+                    asChild
+                    variant="secondary"
+                    size="sm"
+                    className="w-full justify-start"
+                  >
+                    <Link to={`/deals/${deal.id}/show`}>
+                      <ExternalLink className="mr-2 size-4" />
+                      Open project
+                    </Link>
+                  </Button>
+                ) : null}
+                <VoiceCallButton
+                  phoneNumber={callPhone}
+                  contactId={contact?.id ?? conversation?.contact_id}
+                  conversationId={conversation?.id}
+                  dealId={deal?.id ?? conversation?.deal_id}
+                />
+                {conversation?.id != null ? (
+                  <ConversationCallHistory conversationId={conversation.id} />
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No linked project or call history yet.
+              </p>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
@@ -211,23 +256,16 @@ export const ContextPanel = ({
   >
     <div
       className={cn(
-        "flex h-full w-[300px] flex-col overflow-y-auto xl:w-[320px]",
+        "flex h-full w-[300px] flex-col overflow-hidden xl:w-[320px]",
         !open && "pointer-events-none opacity-0",
       )}
     >
       <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-4 py-3">
         <span className="text-sm font-medium">Details</span>
         {onClose ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            onClick={onClose}
-            aria-label="Close details panel"
-          >
+          <IconButton onClick={onClose} aria-label="Close details panel">
             <X className="size-4" />
-          </Button>
+          </IconButton>
         ) : null}
       </div>
       <ContextPanelContent

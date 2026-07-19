@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -227,7 +228,7 @@ export const SubmissionsListPage = () => {
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={selectedSubmissions.length === 0}
             onClick={() => exportSubmissionsCsv(selectedSubmissions, formsById)}
@@ -237,7 +238,7 @@ export const SubmissionsListPage = () => {
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={selectedSubmissions.length === 0}
             onClick={() =>
@@ -247,7 +248,7 @@ export const SubmissionsListPage = () => {
             <FileSpreadsheet className="mr-2 size-4" />
             Export Excel
           </Button>
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button type="button" variant="secondary" size="sm" asChild>
             <Link to="/forms-v2">Back to forms</Link>
           </Button>
         </div>
@@ -261,7 +262,7 @@ export const SubmissionsListPage = () => {
               <PopoverTrigger asChild>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   className="w-full justify-between"
                 >
                   {filters.formIds.length
@@ -400,7 +401,7 @@ export const SubmissionsListPage = () => {
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               disabled={bulkPending}
               onClick={() => runBulk("reviewed")}
             >
@@ -410,7 +411,7 @@ export const SubmissionsListPage = () => {
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               disabled={bulkPending}
               onClick={() => runBulk("spam")}
             >
@@ -420,7 +421,7 @@ export const SubmissionsListPage = () => {
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               disabled={bulkPending}
               onClick={() => runBulk("delete")}
             >
@@ -542,36 +543,30 @@ export const SubmissionsListPage = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
+                        <IconButton
+                          aria-label="View"
                           onClick={() =>
                             navigate(`/forms-v2/submissions/${submission.id}`)
                           }
                         >
                           <Eye className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
+                        </IconButton>
+                        <IconButton
+                          aria-label="Confirm"
                           onClick={() =>
                             updateStatus(Number(submission.id), "reviewed")
                           }
                         >
                           <Check className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
+                        </IconButton>
+                        <IconButton
+                          aria-label="Archive"
                           onClick={() =>
                             updateStatus(Number(submission.id), "archived")
                           }
                         >
                           <Archive className="size-4" />
-                        </Button>
+                        </IconButton>
                       </div>
                     </TableCell>
                   </TableRow>

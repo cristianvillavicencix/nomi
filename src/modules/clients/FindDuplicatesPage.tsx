@@ -14,6 +14,7 @@ import {
 
 import { Confirm } from "@/components/admin/confirm";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Card,
   CardContent,
@@ -304,11 +305,8 @@ const DuplicateGroupCard = ({
                     {extractPhones(contact).join(", ") || "no phone"}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                <IconButton
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
                   disabled={isDeletingOne || isDeletingLosers || isPending}
                   aria-label={`Delete ${contact.first_name ?? ""} ${
                     contact.last_name ?? ""
@@ -316,7 +314,7 @@ const DuplicateGroupCard = ({
                   onClick={() => setDeleteTarget(contact)}
                 >
                   <Trash2 className="size-4" />
-                </Button>
+                </IconButton>
               </li>
             );
           })}
@@ -336,7 +334,7 @@ const DuplicateGroupCard = ({
         )}
         <div className="flex flex-wrap justify-end gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={
               isPending ||
@@ -350,7 +348,7 @@ const DuplicateGroupCard = ({
             Delete others ({losers.length})
           </Button>
           <Button
-            variant="default"
+            variant="primary"
             size="sm"
             disabled={isPending || losers.length === 0 || mergeDisabled}
             onClick={() => {

@@ -30,7 +30,7 @@ const UrlRow = ({
           {url}
         </div>
       </div>
-      <Button asChild size="sm" variant="outline" className="shrink-0">
+      <Button asChild size="sm" variant="secondary" className="shrink-0">
         <a href={href} target="_blank" rel="noreferrer">
           <ExternalLink className="size-4" />
           {copy.openLive}

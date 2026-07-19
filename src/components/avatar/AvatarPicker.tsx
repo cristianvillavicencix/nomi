@@ -272,7 +272,7 @@ export const AvatarPicker = ({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || !authUserId}
           >

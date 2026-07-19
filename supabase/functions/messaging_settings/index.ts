@@ -88,7 +88,7 @@ Deno.serve((req: Request) =>
             authToken,
             from: fromNumber,
             to: toNumber,
-            body: "Nomi CRM test SMS — your Twilio integration is working.",
+            body: "Sigma by Latino Business Support test SMS — your Twilio integration is working.",
           });
           return new Response(JSON.stringify({ ok: true }), {
             headers: { "Content-Type": "application/json", ...corsHeaders },

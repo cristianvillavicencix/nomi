@@ -87,7 +87,7 @@ export const TicketInboxBulkBar = ({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-8"
             disabled={count < 2 || pending}
@@ -98,7 +98,7 @@ export const TicketInboxBulkBar = ({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-8"
             disabled={count < 2 || pending}
@@ -109,7 +109,7 @@ export const TicketInboxBulkBar = ({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-8"
             disabled={pending}
@@ -120,7 +120,7 @@ export const TicketInboxBulkBar = ({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-8 text-destructive hover:text-destructive"
             disabled={pending}
@@ -172,7 +172,7 @@ export const TicketInboxBulkBar = ({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={pending}
               onClick={() => setDeleteOpen(false)}
             >

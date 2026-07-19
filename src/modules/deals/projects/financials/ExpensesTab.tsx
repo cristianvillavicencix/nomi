@@ -10,6 +10,7 @@ import {
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -439,20 +440,12 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
                             </>
                           ) : (
                             <>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8"
-                                onClick={() => startEdit(entry)}
-                              >
+                              <IconButton aria-label="Edit" onClick={() => startEdit(entry)}>
                                 <Pencil className="size-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 text-destructive"
+                              </IconButton>
+                              <IconButton
+                                aria-label="Delete"
+                                className="text-destructive"
                                 disabled={isDeleting}
                                 onClick={() =>
                                   deleteOne(
@@ -469,7 +462,7 @@ export const ExpensesTab = ({ record }: { record: LbsDeal }) => {
                                 }
                               >
                                 <Trash2 className="size-4" />
-                              </Button>
+                              </IconButton>
                             </>
                           )}
                         </div>

@@ -3,6 +3,7 @@ import { useDataProvider, useGetIdentity } from "ra-core";
 import { useQuery } from "@tanstack/react-query";
 
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { AskNomiIntegrationPanel } from "@/modules/settings/integrations/AskNomiIntegrationPanel";
 import { GoogleIntegrationPanel } from "@/modules/settings/integrations/GoogleIntegrationPanel";
 import { MailIntegrationPanel } from "@/modules/settings/integrations/MailIntegrationPanel";
 import { StripeIntegrationPanel } from "@/modules/settings/integrations/StripeIntegrationPanel";
@@ -48,6 +49,7 @@ export const ConnectorsSettingsSection = ({
         { id: "google", label: "Google" },
         { id: "stripe", label: "Stripe" },
         { id: "hostinger", label: "Hostinger" },
+        { id: "ask-nomi", label: "Ask Sigma" },
       ]}
       content={
         activeSection === "twilio" ? (
@@ -68,6 +70,8 @@ export const ConnectorsSettingsSection = ({
           <StripeIntegrationPanel />
         ) : activeSection === "hostinger" ? (
           <HostingerIntegrationPanel />
+        ) : activeSection === "ask-nomi" ? (
+          <AskNomiIntegrationPanel />
         ) : (
           <GoogleIntegrationPanel />
         )

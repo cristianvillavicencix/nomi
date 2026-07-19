@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useGetIdentity, useNotify, type Identifier } from "ra-core";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import type {
@@ -137,13 +138,7 @@ export const ClientSmsComposer = ({
       return `${trimmed}\n${signature}`;
     }
     return trimmed;
-  }, [
-    body,
-    includeSignature,
-    isInternalNote,
-    signature,
-    signatureRequired,
-  ]);
+  }, [body, includeSignature, isInternalNote, signature, signatureRequired]);
 
   const smsOverLimit = !isInternalNote && isSmsLengthOverLimit(outboundBody);
 
@@ -236,9 +231,7 @@ export const ClientSmsComposer = ({
       }
 
       if (!isInternalNote && finalBody && isSmsLengthOverLimit(finalBody)) {
-        throw new Error(
-          "SMS is too long. Shorten the message before sending.",
-        );
+        throw new Error("SMS is too long. Shorten the message before sending.");
       }
 
       const result = await sendClientSms({
@@ -462,13 +455,10 @@ export const ClientSmsComposer = ({
           }}
         />
 
-        <Button
+        <IconButton
           type="submit"
-          size="icon"
-          className={cn(
-            "shrink-0 rounded-lg bg-foreground text-background hover:bg-foreground/90",
-            compact ? "size-8" : "size-9",
-          )}
+          variant="primary"
+          className={cn("shrink-0 rounded-lg", compact ? "" : "size-9")}
           disabled={!canSend}
           aria-label={isInternalNote ? "Add internal note" : "Send SMS"}
         >
@@ -476,7 +466,7 @@ export const ClientSmsComposer = ({
             className={compact ? "size-4" : "size-[18px]"}
             strokeWidth={2.5}
           />
-        </Button>
+        </IconButton>
       </div>
 
       {!isInternalNote ? (

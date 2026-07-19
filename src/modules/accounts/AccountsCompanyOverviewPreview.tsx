@@ -25,6 +25,7 @@ import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoneyText } from "@/lib/permissions/MoneyText";
@@ -88,15 +89,16 @@ export const AccountsCompanyOverviewPreview = ({
     id: companyId,
   });
 
-  const { data: contacts = [], isPending: contactsPending } = useGetList<Contact>(
-    "contacts",
-    {
-      pagination: { page: 1, perPage: 100 },
-      sort: { field: "last_name", order: "ASC" },
-      filter: { "company_id@eq": companyId },
-    },
-    { enabled: Boolean(companyId) },
-  );
+  const { data: contacts = [], isPending: contactsPending } =
+    useGetList<Contact>(
+      "contacts",
+      {
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: "last_name", order: "ASC" },
+        filter: { "company_id@eq": companyId },
+      },
+      { enabled: Boolean(companyId) },
+    );
 
   const openDealsFilter = useMemo(
     () =>
@@ -249,7 +251,12 @@ export const AccountsCompanyOverviewPreview = ({
               </CrmPhoneLink>
             ) : null}
             {emailHref && email !== "—" ? (
-              <Button variant="outline" size="sm" className="h-8 gap-1.5" asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 gap-1.5"
+                asChild
+              >
                 <a href={emailHref}>
                   <Mail className="size-3.5" />
                   Email
@@ -307,7 +314,12 @@ export const AccountsCompanyOverviewPreview = ({
                   message="No open deals for this company yet."
                   action={
                     newDealPath ? (
-                      <Button variant="outline" size="sm" className="h-8" asChild>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-8"
+                        asChild
+                      >
                         <Link to={newDealPath}>
                           <Plus className="size-3.5" />
                           New Deal
@@ -323,12 +335,19 @@ export const AccountsCompanyOverviewPreview = ({
 
             <TabsContent value="tickets" className="mt-0 space-y-3">
               {ticketsPending ? (
-                <p className="text-sm text-muted-foreground">Loading tickets…</p>
+                <p className="text-sm text-muted-foreground">
+                  Loading tickets…
+                </p>
               ) : tickets.length === 0 ? (
                 <EmptyBlock
                   message="No support tickets for this company."
                   action={
-                    <Button variant="outline" size="sm" className="h-8" asChild>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-8"
+                      asChild
+                    >
                       <Link
                         to={`/tickets/create?company_id=${encodeURIComponent(String(company.id))}`}
                       >
@@ -345,7 +364,9 @@ export const AccountsCompanyOverviewPreview = ({
 
             <TabsContent value="contacts" className="mt-0">
               {contactsPending ? (
-                <p className="text-sm text-muted-foreground">Loading contacts…</p>
+                <p className="text-sm text-muted-foreground">
+                  Loading contacts…
+                </p>
               ) : contacts.length === 0 ? (
                 <EmptyBlock
                   icon={<Building2 className="size-8 opacity-50" />}
@@ -401,21 +422,18 @@ const PreviewChrome = ({
 }) => (
   <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
     <div className="flex min-w-0 items-center gap-1.5">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8 shrink-0"
+      <IconButton
+        className="shrink-0"
         onClick={onClose}
         aria-label="Close preview"
       >
         <PanelRightClose className="size-4" />
-      </Button>
+      </IconButton>
       <p className="truncate text-base font-semibold">{title}</p>
     </div>
     <div className="flex shrink-0 items-center gap-1.5">
       {newDealPath ? (
-        <Button variant="outline" size="sm" className="h-8 gap-1.5" asChild>
+        <Button variant="secondary" size="sm" className="h-8 gap-1.5" asChild>
           <Link to={newDealPath}>
             <Plus className="size-3.5" />
             New Deal
@@ -423,7 +441,7 @@ const PreviewChrome = ({
         </Button>
       ) : null}
       <Button
-        variant="default"
+        variant="primary"
         size="sm"
         className="h-8 shrink-0 gap-1.5"
         asChild
@@ -493,7 +511,7 @@ const TicketsList = ({ tickets }: { tickets: Ticket[] }) => (
           </p>
           {ticket.status ? (
             <p className="mt-1 text-xs capitalize text-muted-foreground">
-              {ticket.status.replace(/_/g, " ")}
+              {ticket.status.replace(/_/g, "")}
             </p>
           ) : null}
         </Link>
@@ -543,14 +561,13 @@ const CompanyContactRow = ({
               </span>
             ) : (
               <Badge variant="secondary" className="font-normal capitalize">
-                {contact.status?.replace("_", " ") || "contact"}
+                {contact.status?.replace("_", "") || "contact"}
               </Badge>
             )}
           </div>
           <p className="truncate text-xs text-muted-foreground">
-            {[phone, email !== "—" ? email : null]
-              .filter(Boolean)
-              .join(" · ") || "—"}
+            {[phone, email !== "—" ? email : null].filter(Boolean).join(" ·") ||
+              "—"}
           </p>
         </div>
       </button>

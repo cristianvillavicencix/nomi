@@ -2,7 +2,8 @@ import { CheckCircle2, Copy, ExternalLink } from "lucide-react";
 import { useNotify } from "ra-core";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -78,17 +79,15 @@ export const IntegrationCopyField = ({
       ) : null}
       <div className="flex gap-2">
         <Input readOnly value={value} className="font-mono text-xs" />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
+        <IconButton
+          variant="secondary"
           onClick={() => onCopy(value)}
           aria-label={`Copy ${label}`}
         >
           <Copy className="size-4" />
-        </Button>
+        </IconButton>
         {externalHref ? (
-          <Button type="button" variant="outline" size="icon" asChild>
+          <IconButton aria-label="Open link" variant="secondary" asChild>
             <a
               href={externalHref}
               target="_blank"
@@ -97,7 +96,7 @@ export const IntegrationCopyField = ({
             >
               <ExternalLink className="size-4" />
             </a>
-          </Button>
+          </IconButton>
         ) : null}
       </div>
     </div>

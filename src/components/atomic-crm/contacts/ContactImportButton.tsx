@@ -34,7 +34,7 @@ export const ContactImportButton = () => {
   return (
     <>
       <Button
-        variant="outline"
+        variant="secondary"
         onClick={handleOpenModal}
         className="flex items-center gap-2 cursor-pointer"
       >
@@ -159,7 +159,7 @@ export function ContactImportDialog({
                 <Alert>
                   <AlertDescription className="flex flex-col gap-4">
                     Here is a sample CSV file you can use as a template
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="secondary" size="sm">
                       <Link
                         to={SAMPLE_URL}
                         download={"crm_contacts_sample.csv"}
@@ -191,7 +191,7 @@ export function ContactImportDialog({
               </Button>
             ) : (
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={handleClose}
                 disabled={importer.state === "running"}
               >

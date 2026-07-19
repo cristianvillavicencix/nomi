@@ -4,6 +4,7 @@ import { ExternalLink, Loader2, Search, X } from "lucide-react";
 import { Link } from "react-router";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Command,
   CommandEmpty,
@@ -73,27 +74,15 @@ export const SelectedEntityRow = ({
     </div>
     <div className="flex shrink-0 items-center">
       {profileHref ? (
-        <Button asChild variant="ghost" size="icon" className="size-8 shrink-0">
-          <Link
-            to={profileHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open profile"
-          >
+        <IconButton asChild aria-label="Open profile">
+          <Link to={profileHref} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="size-4" />
           </Link>
-        </Button>
+        </IconButton>
       ) : null}
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8 shrink-0"
-        onClick={onRemove}
-        aria-label={removeAriaLabel}
-      >
+      <IconButton onClick={onRemove} aria-label={removeAriaLabel}>
         <X className="size-4" />
-      </Button>
+      </IconButton>
     </div>
   </div>
 );
@@ -214,7 +203,7 @@ export const EntitySearchToolbar = ({
 
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         className="shrink-0 gap-2 sm:w-auto"
         onClick={onAddClick}
       >

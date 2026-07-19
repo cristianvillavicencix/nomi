@@ -207,7 +207,7 @@ export const TicketInvoiceViewDialog = ({
                 <>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     className="rounded-none"
                     onClick={() => {
                       handleOpenChange(false);
@@ -219,7 +219,7 @@ export const TicketInvoiceViewDialog = ({
                   {canEdit ? (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       className="rounded-none"
                       onClick={() => setEditReasonOpen(true)}
                     >
@@ -230,7 +230,7 @@ export const TicketInvoiceViewDialog = ({
               ) : null}
               <Button
                 type="button"
-                variant={showTicketActions ? "default" : "outline"}
+                variant={showTicketActions ? "primary" : "secondary"}
                 className="rounded-none"
                 onClick={() => handleOpenChange(false)}
               >

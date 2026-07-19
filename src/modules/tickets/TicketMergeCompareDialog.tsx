@@ -430,7 +430,7 @@ export const TicketMergeCompareDialog = ({
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => handleOpenChange(false)}
               >
                 Cancel
@@ -444,7 +444,7 @@ export const TicketMergeCompareDialog = ({
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 disabled={mergeMutation.isPending}
                 onClick={() => setStep("compare")}
               >

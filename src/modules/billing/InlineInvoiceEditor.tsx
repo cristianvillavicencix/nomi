@@ -34,6 +34,7 @@ import type {
   OrganizationMember,
 } from "@/components/atomic-crm/types";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,11 +105,11 @@ export type InlineInvoiceEditorProps = {
   onTermsAndConditionsChange: (value: string) => void;
   company?: Company | null;
   contact?: Contact | null;
-  /** When set, shows the assigned invoice number instead of "Draft". */
+  /** When set, shows the assigned invoice number instead of"Draft". */
   invoiceNumber?: string | null;
   /** Payments already collected against this invoice. */
   amountPaid?: number;
-  /** Ribbon text on the document corner (defaults to "Draft" on create). */
+  /** Ribbon text on the document corner (defaults to"Draft" on create). */
   documentRibbon?: string | null;
   paymentMethodBrand?: string | null;
   paymentMethodLast4?: string | null;
@@ -415,16 +416,14 @@ export const InlineInvoiceEditor = ({
                       )}
                     </td>
                     <td className="px-0 py-2 align-middle">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
+                      <IconButton
+                        aria-label="Delete"
                         className="size-7 text-slate-400 hover:text-red-600"
                         disabled={lines.length <= 1}
                         onClick={() => removeLine(line.key)}
                       >
                         <Trash2 className="size-3.5" />
-                      </Button>
+                      </IconButton>
                     </td>
                   </tr>
                 ))}

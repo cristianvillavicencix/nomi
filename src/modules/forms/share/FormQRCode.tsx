@@ -52,7 +52,7 @@ export const FormQRCode = ({ formUrl, slug = "form" }: FormQRCodeProps) => {
       )}
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         size="sm"
         disabled={!qrDataUrl}
         onClick={handleDownload}

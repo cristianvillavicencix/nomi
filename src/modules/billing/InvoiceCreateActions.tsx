@@ -49,7 +49,7 @@ export const InvoiceCreateActions = ({
     isPending && pendingAction === action;
 
   return (
-    <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+    <div className="ml-auto flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
       {showUpdatedBadge ? (
         <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
           Updated — resend to client
@@ -58,7 +58,7 @@ export const InvoiceCreateActions = ({
       {onConfigurePayment ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           disabled={isPending}
           onClick={onConfigurePayment}
         >
@@ -70,7 +70,7 @@ export const InvoiceCreateActions = ({
       {showCharge && onCharge ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           disabled={isPending || chargeDisabled}
           onClick={onCharge}
         >
@@ -93,7 +93,7 @@ export const InvoiceCreateActions = ({
       </Button>
 
       {showCancel ? (
-        <Button type="button" variant="outline" asChild>
+        <Button type="button" variant="secondary" asChild>
           <Link
             to={cancelTo}
             aria-disabled={isPending}

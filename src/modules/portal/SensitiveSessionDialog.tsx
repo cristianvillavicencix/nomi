@@ -85,7 +85,7 @@ export const SensitiveSessionDialog = ({
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   disabled={confirming}
                   onClick={() => onRequestCode()}
                 >

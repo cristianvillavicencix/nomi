@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGetIdentity, useNotify, useRefresh, useUpdate } from "ra-core";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -163,7 +164,7 @@ export const BriefSectionApprovalActions = ({
             value={revisionNotes}
             onChange={(event) => setRevisionNotes(event.target.value)}
             rows={3}
-            placeholder="What should change?"
+            placeholder="What should change? "
           />
         </div>
         <DialogFooter>
@@ -221,16 +222,13 @@ export const BriefSectionApprovalActions = ({
         <div onClick={(event) => event.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground"
+              <IconButton
+                className="text-muted-foreground"
                 disabled={isPending}
                 aria-label={`More options for ${sectionTitle ?? "section"}`}
               >
                 <MoreHorizontal className="size-4" />
-              </Button>
+              </IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[7rem]">
               {approvalMenuItems}

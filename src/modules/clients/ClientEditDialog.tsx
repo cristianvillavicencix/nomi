@@ -183,7 +183,7 @@ const ClientEditDialogBody = ({
       >
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={() => guardedClose(false)}
           disabled={isSaving}
           className={isMobile ? "w-full" : ""}

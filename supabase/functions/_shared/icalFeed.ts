@@ -144,7 +144,7 @@ export const buildIcsCalendar = (
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Nomi CRM//Calendar Feed//EN",
+    "PRODID:-//Sigma by Latino Business Support//Calendar Feed//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escapeIcalText(calendarName)}`,

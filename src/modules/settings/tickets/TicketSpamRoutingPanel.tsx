@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
@@ -24,7 +25,11 @@ const loadMembers = async () => {
   }));
 };
 
-export const TicketSpamRoutingPanel = ({ embedded }: { embedded?: boolean }) => {
+export const TicketSpamRoutingPanel = ({
+  embedded,
+}: {
+  embedded?: boolean;
+}) => {
   const { data, patchWorkspace, saving } = useTicketWorkspaceSettingsContext();
   const workspace = data?.workspace;
   const [allowedDraft, setAllowedDraft] = useState("");
@@ -97,7 +102,11 @@ export const TicketSpamRoutingPanel = ({ embedded }: { embedded?: boolean }) => 
               onChange={(e) => setAllowedDraft(e.target.value)}
               placeholder="client.com"
             />
-            <Button type="button" variant="outline" onClick={() => pushDomain("allowed", allowedDraft)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => pushDomain("allowed", allowedDraft)}
+            >
               <Plus className="size-4" />
             </Button>
           </div>
@@ -105,9 +114,10 @@ export const TicketSpamRoutingPanel = ({ embedded }: { embedded?: boolean }) => 
             domains={workspace.allowed_inbound_domains}
             onRemove={(domain) =>
               void patchWorkspace({
-                allowed_inbound_domains: workspace.allowed_inbound_domains.filter(
-                  (entry) => entry !== domain,
-                ),
+                allowed_inbound_domains:
+                  workspace.allowed_inbound_domains.filter(
+                    (entry) => entry !== domain,
+                  ),
               })
             }
           />
@@ -120,7 +130,11 @@ export const TicketSpamRoutingPanel = ({ embedded }: { embedded?: boolean }) => 
               onChange={(e) => setBlockedDraft(e.target.value)}
               placeholder="spam.net"
             />
-            <Button type="button" variant="outline" onClick={() => pushDomain("blocked", blockedDraft)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => pushDomain("blocked", blockedDraft)}
+            >
               <Plus className="size-4" />
             </Button>
           </div>
@@ -128,9 +142,10 @@ export const TicketSpamRoutingPanel = ({ embedded }: { embedded?: boolean }) => 
             domains={workspace.blocked_inbound_domains}
             onRemove={(domain) =>
               void patchWorkspace({
-                blocked_inbound_domains: workspace.blocked_inbound_domains.filter(
-                  (entry) => entry !== domain,
-                ),
+                blocked_inbound_domains:
+                  workspace.blocked_inbound_domains.filter(
+                    (entry) => entry !== domain,
+                  ),
               })
             }
           />
@@ -153,27 +168,33 @@ export const TicketSpamRoutingPanel = ({ embedded }: { embedded?: boolean }) => 
             <option value="">No assignee override</option>
             {members.map((member) => (
               <option key={member.id} value={String(member.id)}>
-                {[member.first_name, member.last_name].filter(Boolean).join(" ")}
+                {[member.first_name, member.last_name].filter(Boolean).join("")}
               </option>
             ))}
           </select>
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={addRoutingRule}>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={addRoutingRule}
+        >
           Add rule
         </Button>
         <ul className="space-y-1 text-xs">
           {workspace.routing_rules.map((rule) => (
-            <li key={rule.id} className="flex items-center justify-between rounded border px-2 py-1">
+            <li
+              key={rule.id}
+              className="flex items-center justify-between rounded border px-2 py-1"
+            >
               <span>
                 &quot;{rule.match_subject_contains}&quot;
                 {rule.assignee_member_id
                   ? ` → member #${rule.assignee_member_id}`
                   : ""}
               </span>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
+              <IconButton
+                aria-label="Delete"
                 onClick={() =>
                   void patchWorkspace({
                     routing_rules: workspace.routing_rules.filter(
@@ -183,7 +204,7 @@ export const TicketSpamRoutingPanel = ({ embedded }: { embedded?: boolean }) => 
                 }
               >
                 <Trash2 className="size-3.5" />
-              </Button>
+              </IconButton>
             </li>
           ))}
         </ul>
@@ -224,11 +245,14 @@ const DomainList = ({
 }) => (
   <ul className="space-y-1 text-xs">
     {domains.map((domain) => (
-      <li key={domain} className="flex items-center justify-between rounded border px-2 py-1">
+      <li
+        key={domain}
+        className="flex items-center justify-between rounded border px-2 py-1"
+      >
         {domain}
-        <Button type="button" size="icon" variant="ghost" onClick={() => onRemove(domain)}>
+        <IconButton aria-label="Delete" onClick={() => onRemove(domain)}>
           <Trash2 className="size-3.5" />
-        </Button>
+        </IconButton>
       </li>
     ))}
   </ul>

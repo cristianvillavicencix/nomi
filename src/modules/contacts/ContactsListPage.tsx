@@ -1,4 +1,5 @@
-import { useGetIdentity, useListContext } from "ra-core";
+import { useEffect, useState } from "react";
+import { useGetIdentity, useListContext, useListFilterContext } from "ra-core";
 import { DataTable } from "@/components/admin/data-table";
 import { List } from "@/components/admin/list";
 import { SortButton } from "@/components/admin/sort-button";
@@ -6,7 +7,11 @@ import {
   PageActions,
   PageTitle,
 } from "@/components/atomic-crm/layout/PageActions";
-import { ModuleInfoPopover } from "@/components/atomic-crm/layout/ModuleInfoPopover";
+import {
+  ModuleSearchField,
+  ModuleToolbar,
+  ModuleToolbarActions,
+} from "@/components/atomic-crm/layout/ModuleToolbar";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { ContactEmpty } from "@/components/atomic-crm/contacts/ContactEmpty";
 import { InfinitePagination } from "@/components/atomic-crm/misc/InfinitePagination";
@@ -39,37 +44,72 @@ export const ContactsListPage = () => {
       filterDefaultValues={{
         "status@in": `(${LBS_CONTACT_STATUSES_FOR_FILTER.map((status) => `"${status}"`).join(",")})`,
       }}
-      actions={<ContactsListActions />}
+      actions={
+        <PageActions>
+          <PageTitle label="Contacts" />
+        </PageActions>
+      }
     >
       <ContactsListLayout />
     </List>
   );
 };
 
-const ContactsListActions = () => (
-  <PageActions>
-    <PageTitle label="Contacts" />
-    <div className="ml-auto flex items-center gap-2">
-      <SortButton fields={["first_name", "last_name", "company_name"]} />
-      <ModuleInfoPopover
-        title="Contacts"
-        description="People linked to client companies, including primary contacts."
-      />
-    </div>
-  </PageActions>
-);
-
 const ContactsListLayout = () => {
-  const { data, isPending } = useListContext<Contact>();
+  const { data, total, isPending, filterValues } = useListContext<Contact>();
+  const { setFilters } = useListFilterContext();
+  const [searchDraft, setSearchDraft] = useState(
+    () => String(filterValues?.q ?? ""),
+  );
 
-  if (isPending) return null;
-  if (!data?.length) return <ContactEmpty />;
+  useEffect(() => {
+    setSearchDraft(String(filterValues?.q ?? ""));
+  }, [filterValues?.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const next = searchDraft.trim();
+      const current = String(filterValues?.q ?? "").trim();
+      if (next === current) return;
+      const nextFilters = { ...filterValues };
+      if (next) nextFilters.q = next;
+      else delete nextFilters.q;
+      setFilters(nextFilters, undefined, false);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filterValues, setFilters]);
+
+  const toolbar = (
+    <ModuleToolbar className="shrink-0">
+      <ModuleSearchField
+        value={searchDraft}
+        onChange={setSearchDraft}
+        basePlaceholder="Search contacts by name, email, or phone"
+        total={total}
+        itemSingular="contact"
+      />
+      <ModuleToolbarActions>
+        <SortButton fields={["first_name", "last_name", "company_name"]} />
+      </ModuleToolbarActions>
+    </ModuleToolbar>
+  );
+
+  if (isPending) return toolbar;
+  if (!data?.length) {
+    return (
+      <div className="space-y-3">
+        {toolbar}
+        <ContactEmpty />
+      </div>
+    );
+  }
 
   return (
-    <>
+    <div className="space-y-3">
+      {toolbar}
       <DataTable
         rowClick={(_id, _resource, record) => getContactShowPath(record.id)}
-        rowClassName={() => "[&_td]:py-2.5"}
+        rowClassName={() => "[&_td]:py-1.5"}
       >
         <DataTable.Col
           label=""
@@ -114,6 +154,6 @@ const ContactsListLayout = () => {
         />
       </DataTable>
       <InfinitePagination />
-    </>
+    </div>
   );
 };

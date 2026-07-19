@@ -132,7 +132,7 @@ export const BillToClientSearch = ({
         ) : (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             role="combobox"
             aria-expanded={open}
             className="h-auto min-h-10 w-full justify-between py-2 font-normal"

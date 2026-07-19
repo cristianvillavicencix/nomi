@@ -7,6 +7,7 @@ import {
   invoiceStatusSidebarLabel,
   invoiceStatusSidebarVariant,
 } from "@/modules/billing/invoiceStatusSidebarLabel";
+import { invoiceMatchesSearchQuery } from "@/modules/billing/invoiceListSearch";
 import type { ClientInvoice } from "@/modules/types";
 import { Badge } from "@/components/ui/badge";
 import { MoneyText } from "@/lib/permissions/MoneyText";
@@ -23,11 +24,13 @@ import { cn } from "@/lib/utils";
 type InvoiceListTableProps = {
   selectedInvoiceId?: string | null;
   onSelectInvoice: (invoiceId: string) => void;
+  searchQuery?: string;
 };
 
 export const InvoiceListTable = ({
   selectedInvoiceId,
   onSelectInvoice,
+  searchQuery = "",
 }: InvoiceListTableProps) => {
   const { data: invoices = [], isPending } = useListContext<ClientInvoice>();
 
@@ -55,6 +58,21 @@ export const InvoiceListTable = ({
     [companies],
   );
 
+  const visibleInvoices = useMemo(
+    () =>
+      invoices.filter((invoice) => {
+        const company = invoice.company_id
+          ? companyById.get(String(invoice.company_id))
+          : null;
+        return invoiceMatchesSearchQuery(
+          invoice,
+          company?.name ?? null,
+          searchQuery,
+        );
+      }),
+    [companyById, invoices, searchQuery],
+  );
+
   if (isPending) {
     return (
       <div className="p-4 text-sm text-muted-foreground">Loading invoices…</div>
@@ -65,6 +83,14 @@ export const InvoiceListTable = ({
     return (
       <div className="p-8 text-center text-sm text-muted-foreground">
         No invoices yet.
+      </div>
+    );
+  }
+
+  if (!visibleInvoices.length) {
+    return (
+      <div className="p-8 text-center text-sm text-muted-foreground">
+        No invoices match this search.
       </div>
     );
   }
@@ -84,7 +110,7 @@ export const InvoiceListTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {invoices.map((invoice) => {
+          {visibleInvoices.map((invoice) => {
             const company = invoice.company_id
               ? companyById.get(String(invoice.company_id))
               : null;

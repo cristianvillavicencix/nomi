@@ -178,7 +178,7 @@ export const SubmissionDetailPage = () => {
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => exportSubmissionPdf(submission, form)}
           >
@@ -187,7 +187,7 @@ export const SubmissionDetailPage = () => {
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => statusMutation.mutate("reviewed")}
           >
@@ -196,7 +196,7 @@ export const SubmissionDetailPage = () => {
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => statusMutation.mutate("spam")}
           >
@@ -350,7 +350,7 @@ export const SubmissionDetailPage = () => {
 
           <div className="flex flex-wrap gap-2 border-t pt-4">
             {!submission.contact_id ? (
-              <Button type="button" variant="outline" size="sm" asChild>
+              <Button type="button" variant="secondary" size="sm" asChild>
                 <Link to={createContactHref}>
                   <UserPlus className="mr-2 size-4" />
                   Create contact
@@ -358,7 +358,7 @@ export const SubmissionDetailPage = () => {
               </Button>
             ) : null}
             {submission.submitter_phone ? (
-              <Button type="button" variant="outline" size="sm" asChild>
+              <Button type="button" variant="secondary" size="sm" asChild>
                 <Link
                   to={`/messages?phone=${encodeURIComponent(submission.submitter_phone)}`}
                 >
@@ -368,7 +368,7 @@ export const SubmissionDetailPage = () => {
               </Button>
             ) : null}
             {submission.submitter_email ? (
-              <Button type="button" variant="outline" size="sm" asChild>
+              <Button type="button" variant="secondary" size="sm" asChild>
                 <a href={`mailto:${submission.submitter_email}`}>
                   <Mail className="mr-2 size-4" />
                   Reply via email

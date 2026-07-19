@@ -209,7 +209,7 @@ export const MarketingEmailCampaignDialog = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
           >
             Cancel

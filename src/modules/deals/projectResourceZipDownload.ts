@@ -3,7 +3,7 @@ import type { DealResource } from "@/modules/types";
 import { getProjectResourceSignedUrl } from "@/modules/deals/projectResourceUpload";
 
 const sanitizeFilename = (value: string) =>
-  value.replace(/[/\\?%*:|"<>]/g, "-").trim() || "file";
+  value.replace(/[/\\?%*:| "<>]/g, "-").trim() || "file";
 
 const resolveResourceDownloadUrl = async (entry: DealResource) => {
   if (entry.file.src) return entry.file.src;

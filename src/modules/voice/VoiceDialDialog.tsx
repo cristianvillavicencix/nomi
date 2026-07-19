@@ -104,7 +104,7 @@ export const VoiceDialDialog = ({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={() => handleClose(false)}
             disabled={isDialing}
           >

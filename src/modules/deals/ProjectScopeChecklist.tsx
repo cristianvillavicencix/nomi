@@ -117,7 +117,7 @@ export const ProjectScopeChecklist = () => {
             }
           }}
         />
-        <Button type="button" variant="outline" onClick={addCustomPage}>
+        <Button type="button" variant="secondary" onClick={addCustomPage}>
           <Plus className="size-4" />
           Add
         </Button>

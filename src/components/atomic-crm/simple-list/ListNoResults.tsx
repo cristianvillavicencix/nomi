@@ -25,7 +25,7 @@ export const ListNoResults = (props: ListNoResultsProps) => {
               _: "No results found with the current filters.",
             })}{" "}
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => setFilters({}, [])}
             >

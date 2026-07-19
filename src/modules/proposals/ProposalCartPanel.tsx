@@ -2,12 +2,16 @@ import { ArrowRight, Loader2, ShoppingBag, Trash2, Wallet } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { NumberInput } from "@/components/admin/number-input";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { isClientBillingSkipped } from "@/modules/billing/clientBillingProvider";
 import type { OnlinePaymentSetup } from "@/modules/billing/onlinePaymentSetupBridge";
-import type { ProposalLineDraft, ProposalTotals } from "@/modules/proposals/proposalCommercialUtils";
+import type {
+  ProposalLineDraft,
+  ProposalTotals,
+} from "@/modules/proposals/proposalCommercialUtils";
 import type { Proposal } from "@/modules/types";
 import { MoneyText } from "@/lib/permissions/MoneyText";
 import { ProposalBillingOnAcceptHint } from "@/modules/proposals/ProposalBillingOnAcceptHint";
@@ -40,16 +44,13 @@ const CartLineRow = ({
           <span className="font-medium text-primary"> · base</span>
         ) : null}
       </p>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+      <IconButton
+        className="shrink-0 text-muted-foreground hover:text-destructive"
         onClick={onRemove}
         aria-label="Remove line"
       >
         <Trash2 className="size-4" />
-      </Button>
+      </IconButton>
     </div>
     <div className="flex items-center gap-1.5">
       <Input
@@ -216,7 +217,7 @@ export const ProposalCartPanel = ({
               </p>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="h-8 gap-1.5"
                 onClick={onConfigurePayment}

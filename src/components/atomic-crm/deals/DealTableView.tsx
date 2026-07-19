@@ -18,6 +18,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -206,7 +207,7 @@ export const DealTableView = () => {
         </p>
         <Link
           to={getNewDealManualCreatePath()}
-          className={buttonVariants({ variant: "default" })}
+          className={buttonVariants({ variant: "primary" })}
         >
           New Project
         </Link>
@@ -295,7 +296,7 @@ export const DealTableView = () => {
                     >
                       {[primaryContact.first_name, primaryContact.last_name]
                         .filter(Boolean)
-                        .join(" ") || "—"}
+                        .join("") || "—"}
                     </Link>
                   ) : (
                     "—"
@@ -339,9 +340,9 @@ export const DealTableView = () => {
                 <TableCell onClick={stopPropagation}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8">
+                      <IconButton aria-label="More actions">
                         <MoreHorizontal className="size-4" />
-                      </Button>
+                      </IconButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>

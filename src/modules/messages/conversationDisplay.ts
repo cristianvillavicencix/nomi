@@ -58,6 +58,21 @@ export type ConversationDisplay = {
   activityAt?: string | null;
   dealHref?: string;
   memberAvatarSrc?: string | null;
+  /** Last message was sent by the current user (or outbound SMS). */
+  isOutboundPreview?: boolean;
+};
+
+const buildListPreview = ({
+  messagePreview,
+  fallback,
+  isOutboundOwn,
+}: {
+  messagePreview: string | null;
+  fallback: string;
+  isOutboundOwn: boolean;
+}) => {
+  if (!messagePreview) return fallback;
+  return isOutboundOwn ? `You: ${messagePreview}` : messagePreview;
 };
 
 export const getConversationDisplay = ({
@@ -81,6 +96,15 @@ export const getConversationDisplay = ({
     conversation.last_message_preview?.trim() ||
     (conversation.last_message_at ? "New message" : null);
 
+  const isOutbound = conversation.last_message_direction === "outbound";
+  const isOutboundOwn =
+    isOutbound &&
+    (conversation.type === "client" ||
+      (currentMemberId != null &&
+        conversation.last_message_author_member_id != null &&
+        String(conversation.last_message_author_member_id) ===
+          String(currentMemberId)));
+
   if (conversation.type === "client") {
     const contact =
       conversation.contact_id != null
@@ -101,9 +125,14 @@ export const getConversationDisplay = ({
     return {
       title,
       initials: getInitials(title),
-      preview: messagePreview || companyName || "No messages yet",
+      preview: buildListPreview({
+        messagePreview,
+        fallback: companyName || "No messages yet",
+        isOutboundOwn,
+      }),
       typeLabel,
       activityAt,
+      isOutboundPreview: isOutboundOwn,
       dealHref:
         conversation.deal_id != null
           ? `/deals/${conversation.deal_id}/show`
@@ -125,9 +154,14 @@ export const getConversationDisplay = ({
     return {
       title,
       initials: getInitials(title),
-      preview: messagePreview || "Start the project conversation",
+      preview: buildListPreview({
+        messagePreview,
+        fallback: "Start the project conversation",
+        isOutboundOwn,
+      }),
       typeLabel,
       activityAt,
+      isOutboundPreview: isOutboundOwn,
       dealHref:
         conversation.deal_id != null
           ? `/deals/${conversation.deal_id}/show`
@@ -158,9 +192,14 @@ export const getConversationDisplay = ({
   return {
     title: title || "Direct message",
     initials: getInitials(title || "DM"),
-    preview: messagePreview || "Say hello",
+    preview: buildListPreview({
+      messagePreview,
+      fallback: "Say hello",
+      isOutboundOwn,
+    }),
     typeLabel,
     activityAt,
+    isOutboundPreview: isOutboundOwn,
     memberAvatarSrc: otherMember?.avatar?.src ?? null,
   };
 };

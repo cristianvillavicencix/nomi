@@ -26,7 +26,7 @@ export const PortalUserMenu = ({
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="h-8 gap-2 text-xs"
         >

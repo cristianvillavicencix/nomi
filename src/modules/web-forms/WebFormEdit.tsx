@@ -54,7 +54,7 @@ export const WebFormEdit = () => {
       <div className="space-y-4 px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">Edit web form</h1>
-          <Button type="button" variant="outline" asChild>
+          <Button type="button" variant="secondary" asChild>
             <Link to={`/web-forms/${id}/show`}>Cancel</Link>
           </Button>
         </div>

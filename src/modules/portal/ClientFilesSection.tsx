@@ -19,7 +19,7 @@ import {
 import type { PortalResource } from "@/modules/portal/portalTypes";
 
 const sanitizeFilename = (value: string) =>
-  value.replace(/[/\\?%*:|"<>]/g, "-").trim() || "file";
+  value.replace(/[/\\?%*:| "<>]/g, "-").trim() || "file";
 
 const toLightboxResource = (entry: PortalResource): DealResource => ({
   id: entry.id,
@@ -158,7 +158,7 @@ export const ClientFilesSection = ({
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   disabled={downloadingFolder === folder.id}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -206,7 +206,7 @@ export const ClientFilesSection = ({
                           <Button
                             type="button"
                             size="sm"
-                            variant="outline"
+                            variant="secondary"
                             className="w-full"
                             asChild
                           >

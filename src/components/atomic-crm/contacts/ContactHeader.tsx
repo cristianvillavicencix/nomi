@@ -162,7 +162,7 @@ export const ContactHeader = ({
               <Button
                 onClick={onEdit}
                 size={embedded ? "sm" : "default"}
-                variant="outline"
+                variant="secondary"
               >
                 Edit
               </Button>

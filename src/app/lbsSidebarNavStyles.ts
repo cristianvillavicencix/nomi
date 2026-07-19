@@ -19,12 +19,6 @@ export const sidebarNavLinkCollapsedClass = (active: boolean) =>
       : "text-sidebar-foreground",
   );
 
-export const sidebarNavIconClass = (active: boolean) =>
-  cn(
-    "size-4 shrink-0",
-    active ? "text-sidebar-accent-foreground" : "text-muted-foreground",
-  );
-
 export const sidebarNavSubLinkClass = (active: boolean) =>
   cn(active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground");
 

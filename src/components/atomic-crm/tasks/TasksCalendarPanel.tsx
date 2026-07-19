@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarEventChip } from "@/modules/calendar/CalendarEventChip";
 import {
@@ -233,29 +234,21 @@ export const TasksCalendarPanel = ({ tasks }: { tasks: Task[] }) => {
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Calendar</h2>
         <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
+          <IconButton
             onClick={() => setAnchor((current) => addMonths(current, -1))}
             aria-label="Previous month"
           >
             <ChevronLeft className="size-4" />
-          </Button>
+          </IconButton>
           <span className="min-w-[88px] text-center text-sm font-medium">
             {formatMonthLabel(anchor)}
           </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
+          <IconButton
             onClick={() => setAnchor((current) => addMonths(current, 1))}
             aria-label="Next month"
           >
             <ChevronRight className="size-4" />
-          </Button>
+          </IconButton>
         </div>
       </div>
 

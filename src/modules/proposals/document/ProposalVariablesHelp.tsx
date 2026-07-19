@@ -23,7 +23,7 @@ export const ProposalVariablesHelp = ({
 }) => (
   <Popover>
     <PopoverTrigger asChild>
-      <Button type="button" variant="outline" size="sm">
+      <Button type="button" variant="secondary" size="sm">
         <Braces className="size-4" />
         {title}
       </Button>

@@ -164,7 +164,7 @@ export const ProjectActionsMenu = ({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="outline" size="sm" className="gap-1.5">
+          <Button type="button" variant="secondary" size="sm" className="gap-1.5">
             Actions
             <ChevronDown className="size-4 opacity-60" />
           </Button>

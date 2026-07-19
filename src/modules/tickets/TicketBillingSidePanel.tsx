@@ -54,6 +54,7 @@ import {
 import type { Company, Contact } from "@/components/atomic-crm/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -179,7 +180,7 @@ const TicketInvoicePaymentLink = ({
           </a>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-7 w-full rounded-none text-xs"
             onClick={() => void copyLink()}
@@ -552,9 +553,12 @@ export const TicketBillingSidePanel = ({
       refresh();
     },
     onError: (error: Error) =>
-      notify(error.message || "Could not deliver files. Try Retry delivery again.", {
-        type: "error",
-      }),
+      notify(
+        error.message || "Could not deliver files. Try Retry delivery again.",
+        {
+          type: "error",
+        },
+      ),
   });
 
   const markDeliveryReady = async () => {
@@ -727,7 +731,10 @@ export const TicketBillingSidePanel = ({
     }
     for (const file of fileArray) {
       if (file.size > MAX_TICKET_ATTACHMENT_BYTES) {
-        notify(`"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`, { type: "warning" });
+        notify(
+          `"${file.name}" exceeds the ${Math.round(MAX_TICKET_ATTACHMENT_BYTES / (1024 * 1024))} MB limit`,
+          { type: "warning" },
+        );
         return;
       }
     }
@@ -784,7 +791,7 @@ export const TicketBillingSidePanel = ({
       tabIndex={0}
       onClick={() => deliverableInputRef.current?.click()}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
+        if (event.key === "Enter" || event.key === "") {
           event.preventDefault();
           deliverableInputRef.current?.click();
         }
@@ -831,19 +838,15 @@ export const TicketBillingSidePanel = ({
             </p>
           </div>
           <div className="flex shrink-0 gap-0.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <IconButton
+              aria-label="Edit"
               className="size-7"
               onClick={() => openBillingDialogForEdit(file)}
             >
               <Pencil className="size-3.5" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            </IconButton>
+            <IconButton
+              aria-label="Delete"
               className="size-7"
               onClick={() =>
                 void deleteDeliverable(
@@ -854,7 +857,7 @@ export const TicketBillingSidePanel = ({
               }
             >
               <Trash2 className="size-3.5" />
-            </Button>
+            </IconButton>
           </div>
         </div>
         <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/60 pt-2 text-xs">
@@ -878,13 +881,7 @@ export const TicketBillingSidePanel = ({
     >
       <span className="min-w-0 truncate text-sm">{file.title}</span>
       {file.src ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7 shrink-0"
-          asChild
-        >
+        <IconButton aria-label="Download" className="size-7 shrink-0" asChild>
           <a
             href={file.src}
             target="_blank"
@@ -893,7 +890,7 @@ export const TicketBillingSidePanel = ({
           >
             <Download className="size-3.5" />
           </a>
-        </Button>
+        </IconButton>
       ) : null}
     </div>
   );
@@ -947,7 +944,7 @@ export const TicketBillingSidePanel = ({
       {canManualDeliver ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           className="w-full rounded-none"
           disabled={deliverMutation.isPending}
           onClick={() => deliverMutation.mutate()}
@@ -1019,7 +1016,7 @@ export const TicketBillingSidePanel = ({
             statusDate,
           ]
             .filter(Boolean)
-            .join(" · ")
+            .join(" ·")
         : null;
 
     return (
@@ -1141,7 +1138,7 @@ export const TicketBillingSidePanel = ({
                       handleCancelNewCycle();
                     }}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
+                      if (event.key === "Enter" || event.key === "") {
                         event.preventDefault();
                         event.stopPropagation();
                         handleCancelNewCycle();
@@ -1228,10 +1225,7 @@ export const TicketBillingSidePanel = ({
             {canViewAmounts ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  <IconButton
                     className="size-9 flex-col gap-0.5 py-1"
                     aria-label="Open invoice tools"
                     onClick={() => openPanel("invoice")}
@@ -1242,7 +1236,7 @@ export const TicketBillingSidePanel = ({
                         {deliverables.length}
                       </span>
                     ) : null}
-                  </Button>
+                  </IconButton>
                 </TooltipTrigger>
                 <TooltipContent side="left">
                   Invoice ({deliverables.length} files)
@@ -1252,16 +1246,13 @@ export const TicketBillingSidePanel = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <IconButton
                   className="size-9"
                   aria-label="Open text messages"
                   onClick={() => openPanel("sms")}
                 >
                   <MessageSquare className="size-4" />
-                </Button>
+                </IconButton>
               </TooltipTrigger>
               <TooltipContent side="left">Text client</TooltipContent>
             </Tooltip>
@@ -1328,11 +1319,9 @@ export const TicketBillingSidePanel = ({
             showNewInvoiceButton ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="size-8 shrink-0 rounded-none"
+                  <IconButton
+                    variant="secondary"
+                    className="shrink-0 rounded-none"
                     disabled={newInvoiceMutation.isPending}
                     aria-label="New invoice"
                     onClick={handleNewInvoiceClick}
@@ -1342,23 +1331,20 @@ export const TicketBillingSidePanel = ({
                     ) : (
                       <Plus className="size-3.5" />
                     )}
-                  </Button>
+                  </IconButton>
                 </TooltipTrigger>
                 <TooltipContent side="left">New invoice</TooltipContent>
               </Tooltip>
             ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 shrink-0"
+                <IconButton
+                  className="shrink-0"
                   aria-label="Hide tools panel"
                   onClick={() => setCollapsed(true)}
                 >
                   <PanelRightClose className="size-4" />
-                </Button>
+                </IconButton>
               </TooltipTrigger>
               <TooltipContent side="left">Hide panel</TooltipContent>
             </Tooltip>
@@ -1369,11 +1355,9 @@ export const TicketBillingSidePanel = ({
           <div className="flex justify-end border-b px-2 py-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-8 shrink-0 rounded-none"
+                <IconButton
+                  variant="secondary"
+                  className="shrink-0 rounded-none"
                   disabled={newInvoiceMutation.isPending}
                   aria-label="New invoice"
                   onClick={handleNewInvoiceClick}
@@ -1383,7 +1367,7 @@ export const TicketBillingSidePanel = ({
                   ) : (
                     <Plus className="size-3.5" />
                   )}
-                </Button>
+                </IconButton>
               </TooltipTrigger>
               <TooltipContent side="left">New invoice</TooltipContent>
             </Tooltip>

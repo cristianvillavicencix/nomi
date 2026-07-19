@@ -151,7 +151,7 @@ export const ShareRecordModal = ({
       {!hideTrigger ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => setOpen(true)}
         >

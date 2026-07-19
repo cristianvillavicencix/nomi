@@ -1,59 +1,114 @@
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { CircleNotch } from "@phosphor-icons/react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
+import {
+  buttonVariants,
+  type ButtonVariantProps,
+} from "@/components/ui/button.variants";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-  {
-    variants: {
-      variant: {
-        default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
-      },
+export type ButtonProps = React.ComponentProps<"button"> &
+  ButtonVariantProps & {
+    asChild?: boolean;
+    /** Shows a spinner and disables the button. Width stays stable. */
+    isLoading?: boolean;
+    /** Phosphor (or any) icon node before the label. */
+    leftIcon?: React.ReactNode;
+    /** Phosphor (or any) icon node after the label. */
+    rightIcon?: React.ReactNode;
+  };
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    {
+      className,
+      variant = "primary",
+      size = "md",
+      asChild = false,
+      isLoading = false,
+      leftIcon,
+      rightIcon,
+      disabled,
+      children,
+      type = "button",
+      ...props
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+    ref,
+  ) {
+    const Comp = asChild ? Slot : "button";
+    const isIconOnly = size === "icon";
+    const isDisabled = Boolean(disabled || isLoading);
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot : "button"
+    if (
+      import.meta.env.DEV &&
+      isIconOnly &&
+      !props["aria-label"] &&
+      !props["aria-labelledby"] &&
+      !props.title
+    ) {
+      console.warn(
+        'Button with size="icon" requires aria-label (or aria-labelledby / title).',
+      );
+    }
 
-  return (
-    <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
-}
+    // Do not wrap labeled children in a single <span>: Lucide/Phosphor SVGs are
+    // often display:block, which stacks icon above text inside a normal-flow span.
+    // Keep icon + label as direct flex children of the button (flex-row).
+    const content = asChild ? (
+      children
+    ) : (
+      <>
+        {isLoading ? (
+          <CircleNotch
+            weight="regular"
+            className="size-4 shrink-0 grow-0 animate-spin"
+            aria-hidden
+          />
+        ) : leftIcon ? (
+          <span
+            className="inline-flex size-4 shrink-0 grow-0 items-center justify-center [&_svg]:size-4"
+            aria-hidden
+          >
+            {leftIcon}
+          </span>
+        ) : null}
+        {children ? (
+          isLoading && isIconOnly ? (
+            <span className="sr-only">{children}</span>
+          ) : (
+            children
+          )
+        ) : null}
+        {!isLoading && rightIcon ? (
+          <span
+            className="inline-flex size-4 shrink-0 grow-0 items-center justify-center [&_svg]:size-4"
+            aria-hidden
+          >
+            {rightIcon}
+          </span>
+        ) : null}
+      </>
+    );
 
-export { Button, buttonVariants }
+    return (
+      <Comp
+        ref={ref}
+        data-slot="button"
+        data-variant={variant ?? "primary"}
+        data-size={size ?? "md"}
+        data-loading={isLoading ? "true" : undefined}
+        type={asChild ? undefined : type}
+        disabled={asChild ? undefined : isDisabled}
+        aria-busy={isLoading || undefined}
+        aria-disabled={asChild && isDisabled ? true : undefined}
+        className={cn(buttonVariants({ variant, size }), className)}
+        {...props}
+      >
+        {content}
+      </Comp>
+    );
+  },
+);
+
+export { Button, buttonVariants };

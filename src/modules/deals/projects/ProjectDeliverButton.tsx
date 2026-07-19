@@ -18,7 +18,7 @@ export const ProjectDeliverButton = ({ record }: { record: LbsDeal }) => {
       <Button
         type="button"
         size="sm"
-        variant={delivered ? "outline" : "default"}
+        variant={delivered ? "secondary" : "primary"}
         onClick={() => setOpen(true)}
       >
         <Rocket className="size-4" />

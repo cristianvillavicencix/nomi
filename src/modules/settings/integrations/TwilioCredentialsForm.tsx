@@ -3,22 +3,16 @@ import { Copy, Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import type { MessagingSettingsPublic } from "@/modules/types";
 import { BusinessHoursSettingsCard } from "@/modules/settings/communications/BusinessHoursSettingsCard";
 import { IntegrationFeatureSwitchRow } from "@/modules/settings/integrations/IntegrationFeatureSwitchRow";
 
-type PatchPayload = Parameters<
-  CrmDataProvider["updateMessagingSettings"]
->[0];
+type PatchPayload = Parameters<CrmDataProvider["updateMessagingSettings"]>[0];
 
 type Props = {
   settings: MessagingSettingsPublic | undefined;
@@ -67,7 +61,9 @@ export const TwilioCredentialsForm = ({
     setAccountSid(settings.twilio_account_sid ?? "");
     setPhoneNumber(settings.twilio_phone_number ?? "");
     setAuthToken("");
-    setMessagingServiceSid(settings.twilio_marketing_messaging_service_sid ?? "");
+    setMessagingServiceSid(
+      settings.twilio_marketing_messaging_service_sid ?? "",
+    );
     setMarketingPhone(settings.twilio_marketing_phone_number ?? "");
     setMarketingEmailFrom(settings.marketing_email_from ?? "");
     setTwimlAppSid(settings.voice_twiml_app_sid ?? "");
@@ -144,9 +140,7 @@ export const TwilioCredentialsForm = ({
               type="password"
               value={authToken}
               onChange={(e) => setAuthToken(e.target.value)}
-              placeholder={
-                settings?.has_auth_token ? "••••••••" : "Auth token"
-              }
+              placeholder={settings?.has_auth_token ? "••••••••" : "Auth token"}
               autoComplete="new-password"
             />
           </div>
@@ -182,14 +176,13 @@ export const TwilioCredentialsForm = ({
                   value={settings.webhook_url}
                   className="font-mono text-xs"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
+                <IconButton
+                  aria-label="Copy"
+                  variant="secondary"
                   onClick={() => void copyUrl(settings.webhook_url)}
                 >
                   <Copy className="size-4" />
-                </Button>
+                </IconButton>
               </div>
               <p className="text-[11px] text-muted-foreground">
                 Paste this URL in Twilio Console → Phone number → Messaging
@@ -200,7 +193,7 @@ export const TwilioCredentialsForm = ({
           {onTestSms ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               disabled={!smsEnabled || featureDisabled}
               onClick={onTestSms}
@@ -250,9 +243,9 @@ export const TwilioCredentialsForm = ({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="marketing-from">Campaign email From</Label>
+            <Label htmlFor="marketing-from ">Campaign email From</Label>
             <Input
-              id="marketing-from"
+              id="marketing-from "
               value={marketingEmailFrom}
               onChange={(e) => setMarketingEmailFrom(e.target.value)}
               placeholder="Marketing <news@company.com>"
@@ -317,7 +310,10 @@ export const TwilioCredentialsForm = ({
             />
           </div>
           {voiceEnabled && settings?.voice_twiml_url ? (
-            <WebhookCopyRow label="TwiML URL" value={settings.voice_twiml_url} />
+            <WebhookCopyRow
+              label="TwiML URL"
+              value={settings.voice_twiml_url}
+            />
           ) : null}
           {voiceEnabled && settings?.voice_status_webhook_url ? (
             <WebhookCopyRow
@@ -344,7 +340,11 @@ export const TwilioCredentialsForm = ({
             }}
           />
           {settings ? (
-            <div className={hoursEnabled ? undefined : "pointer-events-none opacity-50"}>
+            <div
+              className={
+                hoursEnabled ? undefined : "pointer-events-none opacity-50"
+              }
+            >
               <BusinessHoursSettingsCard
                 embedded
                 settings={settings}
@@ -374,25 +374,18 @@ export const TwilioCredentialsForm = ({
   );
 };
 
-const WebhookCopyRow = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) => (
+const WebhookCopyRow = ({ label, value }: { label: string; value: string }) => (
   <div className="space-y-1">
     <Label className="text-xs">{label}</Label>
     <div className="flex gap-2">
       <Input readOnly value={value} className="font-mono text-[10px]" />
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
+      <IconButton
+        aria-label="Copy"
+        variant="secondary"
         onClick={() => void navigator.clipboard.writeText(value)}
       >
         <Copy className="size-4" />
-      </Button>
+      </IconButton>
     </div>
   </div>
 );

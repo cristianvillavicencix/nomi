@@ -1,6 +1,7 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { Check, Link2, Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Table,
   TableBody,
@@ -43,7 +44,7 @@ const SETUP_SECTION_ID = "__setup__";
 
 const getProjectTypeLabel = (value?: string | null) =>
   lbsProjectTypeChoices.find((choice) => choice.value === value)?.label ??
-  value?.replace(/-/g, " ") ??
+  value?.replace(/-/g, "") ??
   "—";
 
 const getSectionSubtitle = (
@@ -157,17 +158,14 @@ const BriefTableRow = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-muted-foreground"
+                  <IconButton
+                    className="text-muted-foreground"
                     aria-label={`Edit ${title}`}
                     aria-expanded={isOpen}
                     onClick={onToggle}
                   >
                     <Pencil className="size-4" />
-                  </Button>
+                  </IconButton>
                 </TooltipTrigger>
                 <TooltipContent>Edit section</TooltipContent>
               </Tooltip>
@@ -212,16 +210,13 @@ const BriefSectionTableRow = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8 text-muted-foreground"
+            <IconButton
+              className="text-muted-foreground"
               aria-label={`Request ${section.title} from client`}
               onClick={() => onRequestSection(scopeForBriefSection(section.id))}
             >
               <Link2 className="size-4" />
-            </Button>
+            </IconButton>
           </TooltipTrigger>
           <TooltipContent>Request this section</TooltipContent>
         </Tooltip>
@@ -277,7 +272,7 @@ export const WebsiteBriefAccordion = ({
     deliveryDateLabel ? `Delivery ${deliveryDateLabel}` : null,
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(" ·");
 
   const setupPercent = getSectionProgressPercent(
     Number(Boolean(record.project_type)) +

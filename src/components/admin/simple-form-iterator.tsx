@@ -32,7 +32,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Tooltip,
   TooltipContent,
@@ -221,8 +222,7 @@ export const SimpleFormIteratorItem = React.forwardRef(
           ref={ref}
           className={cn(
             "flex flex-row items-start justify-between gap-2 pb-2 border-b border-border last:border-b-0",
-            // Align the buttons with the input
-            "[&:has(label)>.simple-form-iterator-item-actions]:pt-10",
+            // Align the buttons with the input"[&:has(label)>.simple-form-iterator-item-actions]:pt-10",
           )}
         >
           {label != null && label !== false && (
@@ -284,16 +284,14 @@ export const AddItemButton = (props: React.ComponentProps<"button">) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+          <IconButton
+            aria-label="Add"
             onClick={() => add()}
             className={cn("button-add", `button-add-${source}`, className)}
             {...rest}
           >
             <PlusCircle className="h-5 w-5" />
-          </Button>
+          </IconButton>
         </TooltipTrigger>
         <TooltipContent>{translate("ra.action.add")}</TooltipContent>
       </Tooltip>
@@ -404,9 +402,9 @@ export const ClearArrayButton = (props: React.ComponentProps<"button">) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button type="button" variant="ghost" size="icon" {...props}>
+          <IconButton aria-label="Delete" {...props}>
             <Trash className="h-5 w-5 text-red-500" />
-          </Button>
+          </IconButton>
         </TooltipTrigger>
         <TooltipContent>
           {translate("ra.action.clear_array_input")}
@@ -441,10 +439,8 @@ export const RemoveItemButton = (props: React.ComponentProps<"button">) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+          <IconButton
+            aria-label="Remove"
             onClick={() => remove()}
             className={cn(
               "button-remove",
@@ -454,7 +450,7 @@ export const RemoveItemButton = (props: React.ComponentProps<"button">) => {
             {...rest}
           >
             <XCircle className="h-5 w-5 text-red-500" />
-          </Button>
+          </IconButton>
         </TooltipTrigger>
         <TooltipContent>{translate("ra.action.remove")}</TooltipContent>
       </Tooltip>

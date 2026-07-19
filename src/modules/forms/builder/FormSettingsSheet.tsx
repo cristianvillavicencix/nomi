@@ -579,7 +579,7 @@ export const FormSettingsSheet = ({
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   disabled={generateLinkMutation.isPending}
                   onClick={() => generateLinkMutation.mutate()}
                 >

@@ -1,7 +1,8 @@
 import { ChevronDown, MoreHorizontal, Receipt } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Accordion,
   AccordionContent,
@@ -181,16 +182,13 @@ export const InvoicePaymentsReceivedPanel = ({
                       <TableCell className="px-1 py-1.5 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
+                            <IconButton
                               className="size-7"
                               aria-label="Payment actions"
                               disabled={resendPending}
                             >
                               <MoreHorizontal className="size-3.5" />
-                            </Button>
+                            </IconButton>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onSelect={onResendReceipt}>

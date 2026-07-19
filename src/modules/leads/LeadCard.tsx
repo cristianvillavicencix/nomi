@@ -20,7 +20,8 @@ import {
 
 import { Confirm } from "@/components/admin/confirm";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { Contact } from "@/components/atomic-crm/types";
@@ -174,7 +175,7 @@ export const LeadCard = ({
         tabIndex={0}
         onClick={() => openLead(isDragging)}
         onKeyDown={(event: KeyboardEvent) => {
-          if (event.key === "Enter" || event.key === " ") {
+          if (event.key === "Enter" || event.key === "") {
             event.preventDefault();
             openLead(isDragging);
           }
@@ -206,258 +207,229 @@ export const LeadCard = ({
               <GripVertical className="size-3.5" />
             </div>
           ) : null}
-          <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    cardActionClassName(isDragging),
-                    "size-6",
-                  )}
-                  title="Activity history"
-                  onClick={(event) => {
-                    stopCardAction(event);
-                    setHistoryOpen(true);
-                  }}
-                >
-                  <History className="size-3.5" />
-                  <span className="sr-only">Activity history</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    cardActionClassName(isDragging),
-                    "size-6 hover:text-destructive",
-                  )}
-                  title="Delete lead"
-                  disabled={isDeleting}
-                  onClick={(event) => {
-                    stopCardAction(event);
-                    setDeleteOpen(true);
-                  }}
-                >
-                  <Trash2 className="size-3.5" />
-                  <span className="sr-only">Delete lead</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    cardActionClassName(isDragging),
-                    "size-6",
-                  )}
-                  title="Edit lead"
-                  onClick={(event) => {
-                    stopCardAction(event);
-                    setEditOpen(true);
-                  }}
-                >
-                  <Pencil className="size-3.5" />
-                  <span className="sr-only">Edit lead</span>
-                </Button>
+          <IconButton
+            className={cn(cardActionClassName(isDragging), "size-6")}
+            title="Activity history"
+            onClick={(event) => {
+              stopCardAction(event);
+              setHistoryOpen(true);
+            }}
+          >
+            <History className="size-3.5" />
+            <span className="sr-only">Activity history</span>
+          </IconButton>
+          <IconButton
+            className={cn(
+              cardActionClassName(isDragging),
+              "size-6 hover:text-destructive",
+            )}
+            title="Delete lead"
+            disabled={isDeleting}
+            onClick={(event) => {
+              stopCardAction(event);
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="size-3.5" />
+            <span className="sr-only">Delete lead</span>
+          </IconButton>
+          <IconButton
+            className={cn(cardActionClassName(isDragging), "size-6")}
+            title="Edit lead"
+            onClick={(event) => {
+              stopCardAction(event);
+              setEditOpen(true);
+            }}
+          >
+            <Pencil className="size-3.5" />
+            <span className="sr-only">Edit lead</span>
+          </IconButton>
+        </div>
+
+        <div className="pr-5">
+          <div className="flex items-start gap-2">
+            <Avatar className="size-[34px] shrink-0">
+              <AvatarFallback className="bg-muted text-[11px] font-semibold">
+                {getLeadInitials(lead)}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-1">
+                <p className="min-w-0 truncate text-sm font-medium leading-snug group-hover:underline">
+                  {name}
+                </p>
+                <SourceIcon
+                  className="size-3.5 shrink-0 text-muted-foreground"
+                  aria-label={source.label}
+                  title={source.label}
+                />
               </div>
-
-              <div className="pr-5">
-                <div className="flex items-start gap-2">
-                  <Avatar className="size-[34px] shrink-0">
-                    <AvatarFallback className="bg-muted text-[11px] font-semibold">
-                      {getLeadInitials(lead)}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-1">
-                      <p className="min-w-0 truncate text-sm font-medium leading-snug group-hover:underline">
-                        {name}
-                      </p>
-                      <SourceIcon
-                        className="size-3.5 shrink-0 text-muted-foreground"
-                        aria-label={source.label}
-                        title={source.label}
-                      />
-                    </div>
-                    {lead.interested_service ? (
-                      <p className="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
-                        {lead.interested_service}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="mt-1.5 space-y-0.5">
-                  {phone ? (
-                    <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
-                      <Phone className="size-3 shrink-0" />
-                      <span className="truncate">{phone.display}</span>
-                    </div>
-                  ) : null}
-
-                  {showEmail && email ? (
-                    <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
-                      <Mail className="size-3 shrink-0" />
-                      <span className="truncate">{email}</span>
-                    </div>
-                  ) : null}
-
-                  {showQuote && canViewAmounts ? (
-                    <div className="text-xs font-medium leading-snug text-foreground">
-                      <MoneyText value={lead.lead_value_estimate} compact />
-                    </div>
-                  ) : null}
-
-                  <div className="flex items-center gap-1.5">
-                    {assignees.length > 0 ? (
-                      <>
-                        <div className="flex -space-x-1">
-                          {assignees.slice(0, 3).map((assignee) => (
-                            <Avatar
-                              key={assignee.id}
-                              className="size-5 ring-1 ring-background"
-                            >
-                              <AvatarFallback
-                                className="text-[9px] font-semibold text-white"
-                                style={{
-                                  backgroundColor: getMemberAccentColor(
-                                    assignee.id,
-                                  ),
-                                }}
-                              >
-                                {getMemberInitials(assignee)}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                        </div>
-                        <span className="truncate text-[11px] leading-snug text-muted-foreground">
-                          {assignees.length === 1
-                            ? getMemberDisplayName(assignees[0]!)
-                            : `${getMemberDisplayName(assignees[0]!)} +${assignees.length - 1}`}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-[11px] leading-snug text-muted-foreground">
-                        Unassigned
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {stage !== "new" ? (
-                  <p
-                    className={cn(
-                      "mt-1.5 text-[11px] leading-snug",
-                      activityStale
-                        ? "font-medium text-amber-600 dark:text-amber-500"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {formatLeadActivityFooter(activity)}
-                  </p>
-                ) : null}
-
-                {!isTerminal ? (
-                  <div
-                    className="-mx-2 -mb-2 mt-1.5 flex items-stretch border-t border-border/60"
-                    onClick={stopCardNavigation}
-                    onPointerDown={stopCardNavigation}
-                  >
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className={cn(cardToolbarIconClassName, "flex-1 rounded-bl-lg")}
-                      title="Call"
-                      disabled={!canCallPhone}
-                      onClick={(event) => {
-                        stopCardAction(event);
-                        if (phone?.e164) {
-                          void callPhone({
-                            to: phone.e164,
-                            contactId: lead.id,
-                          });
-                        }
-                      }}
-                    >
-                      <PhoneCall className="size-3.5" />
-                      <span className="sr-only">Call</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        cardToolbarIconClassName,
-                        "flex-1 border-l border-border/60",
-                      )}
-                      title="SMS"
-                      disabled={!contactHasSmsPhone(lead)}
-                      onClick={openSms}
-                    >
-                      <MessageSquare className="size-3.5" />
-                      <span className="sr-only">SMS</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        cardToolbarIconClassName,
-                        "flex-1 border-l border-border/60 text-emerald-600 hover:text-emerald-700 dark:text-emerald-500",
-                      )}
-                      title="Mark as won"
-                      onClick={(event) => {
-                        stopCardAction(event);
-                        requestStageChange(lead, "won");
-                      }}
-                    >
-                      <Trophy className="size-3.5" />
-                      <span className="sr-only">Mark as won</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        cardToolbarIconClassName,
-                        "flex-1 rounded-br-lg border-l border-border/60 text-destructive hover:text-destructive",
-                      )}
-                      title="Mark as lost"
-                      onClick={(event) => {
-                        stopCardAction(event);
-                        requestStageChange(lead, "lost");
-                      }}
-                    >
-                      <XCircle className="size-3.5" />
-                      <span className="sr-only">Mark as lost</span>
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-
-              <LeadActivitySheet
-                lead={lead}
-                open={historyOpen}
-                onOpenChange={setHistoryOpen}
-              />
-              <LeadEditDialog
-                open={editOpen}
-                onOpenChange={setEditOpen}
-                contactId={lead.id}
-              />
-              <Confirm
-                isOpen={deleteOpen}
-                title="Delete this lead?"
-                content="This action cannot be undone."
-                confirm="Delete"
-                confirmColor="warning"
-                onConfirm={handleDelete}
-                onClose={() => setDeleteOpen(false)}
-                loading={isDeleting}
-              />
-            </Card>
+              {lead.interested_service ? (
+                <p className="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
+                  {lead.interested_service}
+                </p>
+              ) : null}
+            </div>
           </div>
+
+          <div className="mt-1.5 space-y-0.5">
+            {phone ? (
+              <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                <Phone className="size-3 shrink-0" />
+                <span className="truncate">{phone.display}</span>
+              </div>
+            ) : null}
+
+            {showEmail && email ? (
+              <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                <Mail className="size-3 shrink-0" />
+                <span className="truncate">{email}</span>
+              </div>
+            ) : null}
+
+            {showQuote && canViewAmounts ? (
+              <div className="text-xs font-medium leading-snug text-foreground">
+                <MoneyText value={lead.lead_value_estimate} compact />
+              </div>
+            ) : null}
+
+            <div className="flex items-center gap-1.5">
+              {assignees.length > 0 ? (
+                <>
+                  <div className="flex -space-x-1">
+                    {assignees.slice(0, 3).map((assignee) => (
+                      <Avatar
+                        key={assignee.id}
+                        className="size-5 ring-1 ring-background"
+                      >
+                        <AvatarFallback
+                          className="text-[9px] font-semibold text-white"
+                          style={{
+                            backgroundColor: getMemberAccentColor(assignee.id),
+                          }}
+                        >
+                          {getMemberInitials(assignee)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
+                  <span className="truncate text-[11px] leading-snug text-muted-foreground">
+                    {assignees.length === 1
+                      ? getMemberDisplayName(assignees[0]!)
+                      : `${getMemberDisplayName(assignees[0]!)} +${assignees.length - 1}`}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[11px] leading-snug text-muted-foreground">
+                  Unassigned
+                </span>
+              )}
+            </div>
+          </div>
+
+          {stage !== "new" ? (
+            <p
+              className={cn(
+                "mt-1.5 text-[11px] leading-snug",
+                activityStale
+                  ? "font-medium text-amber-600 dark:text-amber-500"
+                  : "text-muted-foreground",
+              )}
+            >
+              {formatLeadActivityFooter(activity)}
+            </p>
+          ) : null}
+
+          {!isTerminal ? (
+            <div
+              className="-mx-2 -mb-2 mt-1.5 flex items-stretch border-t border-border/60"
+              onClick={stopCardNavigation}
+              onPointerDown={stopCardNavigation}
+            >
+              <IconButton
+                className={cn(cardToolbarIconClassName, "flex-1 rounded-bl-lg")}
+                title="Call"
+                disabled={!canCallPhone}
+                onClick={(event) => {
+                  stopCardAction(event);
+                  if (phone?.e164) {
+                    void callPhone({
+                      to: phone.e164,
+                      contactId: lead.id,
+                    });
+                  }
+                }}
+              >
+                <PhoneCall className="size-3.5" />
+                <span className="sr-only">Call</span>
+              </IconButton>
+              <IconButton
+                className={cn(
+                  cardToolbarIconClassName,
+                  "flex-1 border-l border-border/60",
+                )}
+                title="SMS"
+                disabled={!contactHasSmsPhone(lead)}
+                onClick={openSms}
+              >
+                <MessageSquare className="size-3.5" />
+                <span className="sr-only">SMS</span>
+              </IconButton>
+              <IconButton
+                className={cn(
+                  cardToolbarIconClassName,
+                  "flex-1 border-l border-border/60 text-emerald-600 hover:text-emerald-700 dark:text-emerald-500",
+                )}
+                title="Mark as won"
+                onClick={(event) => {
+                  stopCardAction(event);
+                  requestStageChange(lead, "won");
+                }}
+              >
+                <Trophy className="size-3.5" />
+                <span className="sr-only">Mark as won</span>
+              </IconButton>
+              <IconButton
+                className={cn(
+                  cardToolbarIconClassName,
+                  "flex-1 rounded-br-lg border-l border-border/60 text-destructive hover:text-destructive",
+                )}
+                title="Mark as lost"
+                onClick={(event) => {
+                  stopCardAction(event);
+                  requestStageChange(lead, "lost");
+                }}
+              >
+                <XCircle className="size-3.5" />
+                <span className="sr-only">Mark as lost</span>
+              </IconButton>
+            </div>
+          ) : null}
+        </div>
+
+        <LeadActivitySheet
+          lead={lead}
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+        />
+        <LeadEditDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          contactId={lead.id}
+        />
+        <Confirm
+          isOpen={deleteOpen}
+          title="Delete this lead? "
+          content="This action cannot be undone."
+          confirm="Delete"
+          confirmColor="warning"
+          onConfirm={handleDelete}
+          onClose={() => setDeleteOpen(false)}
+          loading={isDeleting}
+        />
+      </Card>
+    </div>
   );
 
   if (layout === "sidebar") {

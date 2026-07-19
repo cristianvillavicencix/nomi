@@ -72,7 +72,7 @@ export const PersonContextCard = ({
       {onViewProfile ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="h-8 w-full gap-1.5"
           onClick={onViewProfile}
@@ -82,7 +82,7 @@ export const PersonContextCard = ({
         </Button>
       ) : (
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="h-8 w-full gap-1.5"
           asChild
@@ -160,7 +160,7 @@ export const CompanyContextCard = ({
           )}
         </div>
       </div>
-      <Button variant="outline" size="sm" className="h-8 w-full gap-1.5" asChild>
+      <Button variant="secondary" size="sm" className="h-8 w-full gap-1.5" asChild>
         <Link to={viewProfileHref}>
           View company
           <ArrowRight className="size-3.5" />

@@ -5,15 +5,16 @@ import {
   ChevronsUpDown,
   ExternalLink,
   Loader2,
+  Plus,
   Search,
   Star,
-  UserPlus,
   X,
 } from "lucide-react";
 import { Link } from "react-router";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Command,
   CommandEmpty,
@@ -21,31 +22,27 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
+  CommandSeparator} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  PopoverTrigger} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { entitySearchPopoverClassName } from "@/modules/shared/referenceAutocompleteOptions";
 import type { Contact } from "@/components/atomic-crm/types";
 import { ContactFormDialog } from "@/modules/contacts/ContactFormDialog";
 import {
   getContactEmail,
-  getContactFullName,
-} from "@/modules/clients/clientShowUtils";
+  getContactFullName} from "@/modules/clients/clientShowUtils";
 import type { PrimaryContactDraft } from "@/modules/clients/primaryContactDraft";
 import { getPersonShowPath } from "@/app/routing";
 import {
   EntitySearchGroup,
   EntitySearchOption,
   EntitySearchToolbar,
-  SelectedEntityRow,
-} from "@/modules/shared/entityPickerUi";
+  SelectedEntityRow} from "@/modules/shared/entityPickerUi";
 import { buildContactSearchMeta } from "@/modules/shared/referenceAutocompleteOptions";
 
 const pickPrimaryPhone = (contact?: Contact | null) =>
@@ -90,8 +87,7 @@ const SelectedPrimaryContactRow = ({
   email,
   phone,
   profileHref,
-  onRemove,
-}: {
+  onRemove}: {
   name: string;
   email: string;
   phone: string;
@@ -112,8 +108,7 @@ const CreatePrimaryContactPicker = ({
   draftPrimaryContact,
   onSelectContact,
   onSelectDraftContact,
-  onClearContact,
-}: Pick<
+  onClearContact}: Pick<
   PrimaryContactReferenceCardProps,
   | "selectedContactId"
   | "draftPrimaryContact"
@@ -137,11 +132,9 @@ const CreatePrimaryContactPicker = ({
     {
       filter: {
         ...UNASSIGNED_CONTACT_FILTER,
-        ...(trimmedSearch ? { q: trimmedSearch } : {}),
-      },
+        ...(trimmedSearch ? { q: trimmedSearch } : {})},
       pagination: { page: 1, perPage: 20 },
-      sort: { field: "last_name", order: "ASC" },
-    },
+      sort: { field: "last_name", order: "ASC" }},
     { enabled: shouldFetchUnassigned },
   );
 
@@ -161,8 +154,7 @@ const CreatePrimaryContactPicker = ({
           : [],
         phone_jsonb: draftPrimaryContact.phone
           ? [{ number: draftPrimaryContact.phone, type: "Work" as const }]
-          : [],
-      } satisfies Partial<Contact> as Contact;
+          : []} satisfies Partial<Contact> as Contact;
     }
     if (selectedContactId == null) return undefined;
     if (
@@ -202,7 +194,7 @@ const CreatePrimaryContactPicker = ({
         onSearchOpenChange={setSearchOpen}
         searchPlaceholder="Search unassigned contacts…"
         addButtonLabel="Add contact"
-        addButtonIcon={<UserPlus className="size-4" />}
+        addButtonIcon={<Plus className="size-4" />}
         onAddClick={() => setNewContactOpen(true)}
         isFetching={isFetching}
         emptyMessage="No unassigned contacts found."
@@ -282,8 +274,7 @@ export const PrimaryContactReferenceCard = ({
   draftPrimaryContact,
   onSelectContact,
   onSelectDraftContact,
-  onClearContact,
-}: PrimaryContactReferenceCardProps) => {
+  onClearContact}: PrimaryContactReferenceCardProps) => {
   const refresh = useRefresh();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newContactOpen, setNewContactOpen] = useState(false);
@@ -299,11 +290,9 @@ export const PrimaryContactReferenceCard = ({
       {
         filter: { "company_id@eq": companyId! },
         pagination: { page: 1, perPage: 200 },
-        sort: { field: "first_name", order: "ASC" },
-      },
+        sort: { field: "first_name", order: "ASC" }},
       {
-        enabled: !isCreate && companyId != null && companyId !== "",
-      },
+        enabled: !isCreate && companyId != null && companyId !== ""},
     );
 
   const contacts = useMemo(() => {
@@ -475,7 +464,8 @@ export const PrimaryContactReferenceCard = ({
                     onSelect={openNewContact}
                     className="font-medium"
                   >
-                    <UserPlus className="mr-2 size-4" />+ New contact
+                    <Plus className="mr-2 size-4" />
+                    New contact
                   </CommandItem>
                 </CommandGroup>
               </>
@@ -503,7 +493,7 @@ export const PrimaryContactReferenceCard = ({
           </p>
         </div>
         {activeContact?.id != null ? (
-          <Button asChild variant="ghost" size="icon" className="shrink-0">
+          <IconButton aria-label="Open link" asChild className="shrink-0">
             <Link
               to={getPersonShowPath(activeContact)}
               target="_blank"
@@ -512,7 +502,7 @@ export const PrimaryContactReferenceCard = ({
             >
               <ExternalLink className="size-4" />
             </Link>
-          </Button>
+          </IconButton>
         ) : null}
       </div>
 
@@ -520,7 +510,7 @@ export const PrimaryContactReferenceCard = ({
         {renderPicker(
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             role="combobox"
             aria-expanded={pickerOpen}
             className="h-auto min-h-9 min-w-[12rem] flex-1 justify-between py-2 font-normal sm:flex-none sm:w-[min(100%,24rem)]"

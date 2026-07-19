@@ -24,8 +24,8 @@ export const CalendarEventDeleteButton = ({
   return (
     <Button
       type="button"
-      variant="outline"
-      size="default"
+      variant="secondary"
+      size="md"
       disabled={isPending || record?.id == null}
       className="cursor-pointer border-destructive! text-destructive! hover:bg-destructive/10! focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40"
       onClick={() => {

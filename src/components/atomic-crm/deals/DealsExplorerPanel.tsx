@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useGetList, useGetMany, useStore } from "ra-core";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -99,15 +100,13 @@ export const DealsExplorerPanel = ({
   if (minimized) {
     return (
       <aside className="hidden xl:flex h-full w-12 shrink-0 flex-col items-center border-r border-border bg-background py-3">
-        <Button
-          variant="ghost"
-          size="icon"
+        <IconButton
           onClick={() => setMinimized(false)}
           aria-label="Expand projects panel"
           title="Expand projects panel"
         >
           <PanelRightOpen className="h-4 w-4" />
-        </Button>
+        </IconButton>
         <span className="mt-4 text-[10px] uppercase tracking-wide text-muted-foreground [writing-mode:vertical-rl] rotate-180">
           Quick navigation
         </span>
@@ -123,15 +122,13 @@ export const DealsExplorerPanel = ({
             <h3 className="text-sm font-semibold">Projects</h3>
             <p className="text-xs text-muted-foreground">Quick navigation</p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
+          <IconButton
             onClick={() => setMinimized(true)}
             aria-label="Minimize projects panel"
             title="Minimize projects panel"
           >
             <PanelLeftClose className="h-4 w-4" />
-          </Button>
+          </IconButton>
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -177,7 +174,7 @@ export const DealsExplorerPanel = ({
               const ownerName = ownerContact
                 ? [ownerContact.first_name, ownerContact.last_name]
                     .filter(Boolean)
-                    .join(" ")
+                    .join("")
                 : "—";
               const manager = deal.organization_member_id
                 ? salesById[String(deal.organization_member_id)]
@@ -185,7 +182,7 @@ export const DealsExplorerPanel = ({
               const managerName = manager
                 ? [manager.first_name, manager.last_name]
                     .filter(Boolean)
-                    .join(" ")
+                    .join("")
                 : "—";
 
               return (

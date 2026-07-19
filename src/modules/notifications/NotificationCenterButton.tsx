@@ -11,6 +11,7 @@ import { Link } from "react-router";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { buildSettingsSearchParams } from "@/modules/settings/settingsNavigation";
 import {
   Sheet,
@@ -330,13 +331,12 @@ export const NotificationCenterButton = () => {
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="relative size-8"
+      <IconButton
+        variant="secondary"
+        className="relative size-9"
         onClick={() => setOpen(true)}
         title="Notifications"
+        aria-label="Notifications"
       >
         <Bell className="size-4" />
         {unread > 0 ? (
@@ -345,7 +345,7 @@ export const NotificationCenterButton = () => {
           </Badge>
         ) : null}
         <span className="sr-only">Notifications</span>
-      </Button>
+      </IconButton>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="flex w-full flex-col sm:max-w-lg">
@@ -434,7 +434,7 @@ export const NotificationCenterButton = () => {
           </div>
 
           <div className="border-t pt-3">
-            <Button variant="outline" size="sm" asChild className="w-full">
+            <Button variant="secondary" size="sm" asChild className="w-full">
               <Link
                 to={{
                   pathname: "/settings",

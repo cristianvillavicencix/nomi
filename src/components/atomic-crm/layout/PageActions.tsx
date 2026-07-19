@@ -6,7 +6,6 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { ListContext } from "ra-core";
 
 /**
  * Two-piece portal that lets list pages "teleport" their toolbar buttons
@@ -122,37 +121,55 @@ export const PageActionsTrailing = ({ children }: { children: ReactNode }) => {
 };
 
 /**
- * Tiny header label used inside <PageActions> so every module gets the
- * same "Module name (count)" style — like "Leads (76)".
- *
- * If `count` is omitted, it tries to read the total from the surrounding
- * <List> via useListContext. When there's no list context (e.g. Messages
- * or Calendar) it just renders the label without the count.
+ * Tiny header label used inside <PageActions> — e.g. "Leads".
+ * Prefer list totals in `ModuleSearchField` placeholders, not here.
+ * Pass `count` only for rare explicit cases (not list directory totals).
  */
 export const PageTitle = ({
   label,
   count,
 }: {
   label: string;
+  /** Only shown when explicitly passed — do not use for list totals (put those in ModuleSearchField). */
   count?: number | null;
 }) => {
-  // Read the list controller directly so we can render this title both
-  // inside and outside a <List> (Calendar / Messages, etc.).
-  const listContext = useContext(ListContext) as
-    | { total?: number | null }
-    | undefined
-    | null;
-  const resolvedCount =
-    count !== undefined ? count : (listContext?.total ?? null);
-
   return (
     <h1 className="mr-2 flex items-baseline gap-1.5 text-sm font-semibold whitespace-nowrap">
       <span>{label}</span>
-      {resolvedCount != null ? (
+      {count != null ? (
         <span className="text-xs font-normal text-muted-foreground tabular-nums">
-          ({resolvedCount.toLocaleString()})
+          ({count.toLocaleString()})
         </span>
       ) : null}
     </h1>
   );
 };
+
+/**
+ * Responsive label for header toolbar controls (PageActions).
+ *
+ * Pattern: keep a single horizontal row (slot scrolls); collapse text so
+ * icon+aria-label remain on narrow viewports.
+ * - `primary` (create CTAs): label from `sm` up
+ * - `secondary` (filters, view toggles): label from `md` up
+ */
+export const ToolbarLabel = ({
+  children,
+  priority = "secondary",
+}: {
+  children: ReactNode;
+  priority?: "primary" | "secondary";
+}) => (
+  <span
+    className={
+      priority === "primary" ? "hidden sm:inline" : "hidden md:inline"
+    }
+  >
+    {children}
+  </span>
+);
+
+/** Cluster of actions on the right side of PageActions — never wrap. */
+export const PAGE_ACTIONS_CLUSTER =
+  "ml-auto flex shrink-0 flex-nowrap items-center gap-2";
+

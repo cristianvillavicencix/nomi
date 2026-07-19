@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { buildSettingsSearchParams } from "@/modules/settings/settingsNavigation";
 
 export const DesktopMessageAlertsSection = () => (
-  <Button type="button" size="sm" variant="outline" asChild>
+  <Button type="button" size="sm" variant="secondary" asChild>
     <Link
       to={{
         pathname: "/settings",

@@ -3,6 +3,7 @@ import { CircleX, Edit, Save } from "lucide-react";
 import { useNotify, useUpdate } from "ra-core";
 import type { TicketMessage } from "@/modules/types";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
 
@@ -85,10 +86,7 @@ export const TicketInternalNoteActions = ({
   if (!canEdit) return null;
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
+    <IconButton
       className="size-7 shrink-0"
       aria-label="Edit internal note"
       onClick={(event) => {
@@ -97,6 +95,6 @@ export const TicketInternalNoteActions = ({
       }}
     >
       <Edit className="size-3.5" />
-    </Button>
+    </IconButton>
   );
 };

@@ -16,3 +16,10 @@ const isTruthyEnv = (raw: unknown): boolean => {
  */
 export const isAccountsHubEnabled = (): boolean =>
   isTruthyEnv(import.meta.env.VITE_ACCOUNTS_HUB);
+
+/**
+ * Ask Sigma assistant build flag. Prefer `useCrmAssistantAvailable` for UI —
+ * that also respects Settings → Integrations → Ask Sigma.
+ */
+export const isCrmAssistantEnvEnabled = (): boolean =>
+  isTruthyEnv(import.meta.env.VITE_CRM_ASSISTANT_ENABLED);

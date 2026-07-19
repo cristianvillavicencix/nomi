@@ -195,7 +195,7 @@ export const EmailDeliverySettingsSection = ({
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 disabled={
                   !data?.configured ||
                   !testEmail.trim() ||
