@@ -1,8 +1,10 @@
 import type { Contact } from "@/components/atomic-crm/types";
+import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 import {
-  formatDurationLabel,
-  formatEventTimeRange,
-} from "@/modules/calendar/calendarReminderOptions";
+  buildClientMeetingConfirmationSmsPreview,
+  formatMeetingScheduleLine,
+  resolveClientTimezone,
+} from "@/modules/meetings/meetingNotificationCopy";
 
 const DEFAULT_INTRO = "Join our video call using the link below:";
 
@@ -14,28 +16,6 @@ export type QuickMeetingShareParts = {
   smsBody: string;
 };
 
-const formatScheduledMeetingLine = ({
-  eventDate,
-  eventTime,
-  durationMinutes,
-}: {
-  eventDate?: string | null;
-  eventTime?: string | null;
-  durationMinutes?: number | null;
-}) => {
-  if (!eventDate?.trim()) return null;
-  const dateLabel = new Date(`${eventDate}T12:00:00`).toLocaleDateString(
-    undefined,
-    { weekday: "long", month: "long", day: "numeric" },
-  );
-  const timeLabel = formatEventTimeRange(eventTime, durationMinutes);
-  if (!timeLabel) return dateLabel;
-  const durationLabel = formatDurationLabel(durationMinutes);
-  return durationLabel
-    ? `${dateLabel} at ${timeLabel} (${durationLabel})`
-    : `${dateLabel} at ${timeLabel}`;
-};
-
 export const buildQuickMeetingShareParts = ({
   contact,
   meetingUrl,
@@ -45,6 +25,8 @@ export const buildQuickMeetingShareParts = ({
   eventDate,
   eventTime,
   durationMinutes,
+  meetingTimezone,
+  calendarUrl,
 }: {
   contact?: Contact | null;
   meetingUrl: string;
@@ -54,14 +36,21 @@ export const buildQuickMeetingShareParts = ({
   eventDate?: string | null;
   eventTime?: string | null;
   durationMinutes?: number | null;
+  /** Host/workspace IANA timezone (usually America/New_York). */
+  meetingTimezone?: string | null;
+  calendarUrl?: string | null;
 }): QuickMeetingShareParts => {
   const contactFirst = contact?.first_name?.trim();
   const greeting = contactFirst ? `Hi ${contactFirst},` : "Hi,";
   const notesTrimmed = notes?.trim();
-  const scheduledLine = formatScheduledMeetingLine({
+  const hostTz = meetingTimezone?.trim() || DEFAULT_ORG_TIMEZONE;
+  const clientTz = resolveClientTimezone(contact);
+  const scheduledLine = formatMeetingScheduleLine({
     eventDate,
     eventTime,
     durationMinutes,
+    meetingTimezone: hostTz,
+    viewerTimezone: clientTz,
   });
   const introBody = scheduledLine
     ? `${scheduledLine}\n\n${DEFAULT_INTRO}`
@@ -71,9 +60,19 @@ export const buildQuickMeetingShareParts = ({
   const signature = `${sender} from ${org}`;
   const url = meetingUrl.trim();
 
-  const smsBody = notesTrimmed
-    ? [greeting, "", notesTrimmed, "", introBody, url, "", signature].join("\n")
-    : [greeting, "", introBody, url, "", signature].join("\n");
+  const smsBody = buildClientMeetingConfirmationSmsPreview({
+    contactFirstName: contact?.first_name,
+    hostFirstName: senderFirstName,
+    orgName,
+    notes,
+    meetingUrl: url,
+    calendarUrl,
+    eventDate,
+    eventTime,
+    durationMinutes,
+    meetingTimezone: hostTz,
+    clientTimezone: clientTz,
+  });
 
   return {
     greeting,

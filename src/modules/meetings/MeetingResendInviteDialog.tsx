@@ -10,6 +10,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import type { CalendarEventRecord, Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 import { InvoiceSendDeliveryPreview } from "@/modules/billing/InvoiceSendDeliveryPreview";
 import { getContactEmail } from "@/modules/billing/billingUtils";
 import { getContactPhone } from "@/modules/clients/clientShowUtils";
@@ -46,6 +48,7 @@ export const MeetingResendInviteDialog = ({
   const notify = useNotify();
   const { identity } = useGetIdentity();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const config = useConfigurationContext();
   const [sending, setSending] = useState(false);
 
   const contactId = meeting.contact_id as Identifier | null | undefined;
@@ -68,6 +71,10 @@ export const MeetingResendInviteDialog = ({
 
   const orgName = emailSettings?.org_name?.trim() || "Latino Business Support";
   const meetingTitle = String(meeting.title ?? "").trim() || "Video call";
+  const meetingTimezone =
+    String(meeting.timezone ?? "").trim() ||
+    String(config.companyTimezone ?? "").trim() ||
+    DEFAULT_ORG_TIMEZONE;
 
   const share = useMemo(
     () =>
@@ -80,8 +87,9 @@ export const MeetingResendInviteDialog = ({
         eventDate: meeting.event_date,
         eventTime: meeting.event_time,
         durationMinutes: meeting.duration_minutes,
+        meetingTimezone,
       }),
-    [contact, identity, meeting, orgName],
+    [contact, identity, meeting, meetingTimezone, orgName],
   );
 
   const emailTo = getContactEmail(contact) ?? "";
@@ -120,7 +128,9 @@ export const MeetingResendInviteDialog = ({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {channel === "email" ? "Resend email invitation" : "Resend SMS invitation"}
+            {channel === "email"
+              ? "Resend email invitation"
+              : "Resend SMS invitation"}
           </DialogTitle>
           <DialogDescription>
             Review the message below before sending to{" "}
@@ -147,7 +157,11 @@ export const MeetingResendInviteDialog = ({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={() => void handleSend()} disabled={sending}>
+          <Button
+            type="button"
+            onClick={() => void handleSend()}
+            disabled={sending}
+          >
             {sending ? <Loader2 className="size-4 animate-spin" /> : null}
             {channel === "email" ? "Send email" : "Send SMS"}
           </Button>

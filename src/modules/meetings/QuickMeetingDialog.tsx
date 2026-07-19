@@ -36,7 +36,9 @@ import {
 import { Label } from "@/components/ui/label";
 import type { Contact } from "@/components/atomic-crm/types";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { prepareCalendarEventWriteData } from "@/modules/calendar/calendarEventWriteData";
+import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 import {
   DEFAULT_MEETING_DURATION_MINUTES,
   DURATION_CHOICES,
@@ -175,9 +177,12 @@ export const QuickMeetingDialog = ({
   const dataProvider = useDataProvider<CrmDataProvider>();
   const notify = useNotify();
   const refresh = useRefresh();
+  const config = useConfigurationContext();
   const { smsEnabled } = useMessagingEnabled();
   const { data: meetingNotifySettings } =
     useOrganizationMeetingNotificationSettings(open);
+  const workspaceTimezone =
+    String(config.companyTimezone ?? "").trim() || DEFAULT_ORG_TIMEZONE;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shareEmail, setShareEmail] = useState(
     DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_email_default,
@@ -246,12 +251,16 @@ export const QuickMeetingDialog = ({
 
     setIsSubmitting(true);
     try {
-      const payload = prepareCalendarEventWriteData({
-        ...values,
-        event_date: toDateKey(new Date()),
-        event_time: roundToNextFiveMinutes(new Date()),
-        organization_member_id: identity.id,
-      });
+      const payload = prepareCalendarEventWriteData(
+        {
+          ...values,
+          event_date: toDateKey(new Date()),
+          event_time: roundToNextFiveMinutes(new Date()),
+          organization_member_id: identity.id,
+          timezone: workspaceTimezone,
+        },
+        { defaultTimezone: workspaceTimezone },
+      );
 
       const created = await dataProvider.create("calendar_events", {
         data: payload,

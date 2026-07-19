@@ -1,4 +1,8 @@
-/** English SMS/email copy for video meeting notifications (edge). */
+/**
+ * English SMS/email copy for video meeting notifications (edge).
+ * Keep in sync with src/modules/meetings/meetingNotificationCopy.ts (preview).
+ * Fixture: NY host 11:00 + Chicago client → includes "10:00 AM CT your time".
+ */
 
 import {
   DEFAULT_ORG_TIMEZONE,

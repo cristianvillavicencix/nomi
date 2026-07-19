@@ -2,6 +2,7 @@ import {
   DURATION_NONE,
   REMIND_BEFORE_NONE,
 } from "@/modules/calendar/calendarReminderOptions";
+import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 
 const NULLABLE_ID_FIELDS = [
   "contact_id",
@@ -19,8 +20,14 @@ const toNullableId = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+export type PrepareCalendarEventOptions = {
+  /** Workspace/host IANA timezone when the event does not already set one. */
+  defaultTimezone?: string | null;
+};
+
 export const prepareCalendarEventWriteData = (
   data: Record<string, unknown>,
+  options?: PrepareCalendarEventOptions,
 ) => {
   const next: Record<string, unknown> = { ...data };
 
@@ -62,6 +69,14 @@ export const prepareCalendarEventWriteData = (
 
   if (next.meeting_url === "") {
     next.meeting_url = null;
+  }
+
+  const existingTz = String(next.timezone ?? "").trim();
+  if (!existingTz) {
+    next.timezone =
+      String(options?.defaultTimezone ?? "").trim() || DEFAULT_ORG_TIMEZONE;
+  } else {
+    next.timezone = existingTz;
   }
 
   next.updated_at = new Date().toISOString();

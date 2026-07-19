@@ -31,8 +31,10 @@ import type {
   Contact,
   OrganizationMember,
 } from "@/components/atomic-crm/types";
+import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
 import { formatOrganizationMemberName } from "@/modules/billing/billingUtils";
 import { prepareCalendarEventWriteData } from "@/modules/calendar/calendarEventWriteData";
+import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 import { CalendarTimeInput } from "@/modules/calendar/CalendarTimeInput";
 import {
   getContactDisplayName,
@@ -201,6 +203,9 @@ export const CalendarReminderDialog = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const config = useConfigurationContext();
+  const workspaceTimezone =
+    String(config.companyTimezone ?? "").trim() || DEFAULT_ORG_TIMEZONE;
   const isEdit = reminderId != null;
   const { data: meetingNotifySettings } =
     useOrganizationMeetingNotificationSettings(open && variant === "meeting");
@@ -210,6 +215,16 @@ export const CalendarReminderDialog = ({
   const [shareSms, setShareSms] = useState(
     DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_sms_default,
   );
+
+  const transformCalendarEvent = (data: Record<string, unknown>) =>
+    prepareCalendarEventWriteData(
+      {
+        ...data,
+        timezone:
+          String(data.timezone ?? "").trim() || workspaceTimezone,
+      },
+      { defaultTimezone: workspaceTimezone },
+    );
 
   const { data: emailSettings } = useQuery({
     queryKey: ["email-delivery-settings"],
@@ -292,7 +307,7 @@ export const CalendarReminderDialog = ({
       <EditBase
         id={reminderId}
         resource="calendar_events"
-        transform={prepareCalendarEventWriteData}
+        transform={transformCalendarEvent}
         mutationMode="pessimistic"
         mutationOptions={{
           onSuccess: handleEditSuccess,
@@ -333,7 +348,7 @@ export const CalendarReminderDialog = ({
           completed_at: null,
           ...initialRecord,
         }}
-        transform={prepareCalendarEventWriteData}
+        transform={transformCalendarEvent}
         mutationMode="pessimistic"
         mutationOptions={{
           onSuccess: (record) => {
