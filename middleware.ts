@@ -14,21 +14,26 @@ const shareEnv = readShareMetaEnv({
   VITE_SITE_URL: process.env.VITE_SITE_URL,
 });
 
-const PUBLIC_SHARE_PREFIXES = [
-  "/book/",
-  "/b/",
-  "/forms/",
-  "/f/",
-  "/proposal/",
-  "/pr/",
-  "/invoice/",
-  "/iv/",
-  "/portal/",
-  "/p/",
-];
-
-const isPublicSharePath = (pathname: string) =>
-  PUBLIC_SHARE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+/** Match public share URLs without colliding (e.g. /p vs /pr, /b vs /book). */
+const isPublicSharePath = (pathname: string) => {
+  const roots = [
+    "/b",
+    "/c",
+    "/cal",
+    "/f",
+    "/pr",
+    "/iv",
+    "/p",
+    "/book",
+    "/forms",
+    "/proposal",
+    "/invoice",
+    "/portal",
+  ];
+  return roots.some(
+    (root) => pathname === root || pathname.startsWith(`${root}/`),
+  );
+};
 
 export default function middleware(request: Request) {
   const url = new URL(request.url);
@@ -51,6 +56,8 @@ export const config = {
   matcher: [
     "/book/:path*",
     "/b/:path*",
+    "/c/:path*",
+    "/cal/:path*",
     "/forms/:path*",
     "/f/:path*",
     "/proposal/:path*",

@@ -44,9 +44,11 @@ import {
   DEFAULT_MEETING_DURATION_MINUTES,
 } from "@/modules/calendar/calendarReminderOptions";
 import { toDateKey } from "@/modules/calendar/calendarUtils";
-import { MeetingLinkActions } from "@/modules/meetings/MeetingLinkActions";
-import { MeetingResendInviteActions } from "@/modules/meetings/MeetingResendInviteActions";
-import { MeetingDoneSwitch, MarkMeetingDoneButton } from "@/modules/meetings/MeetingDoneSwitch";
+import { MeetingRowActionsMenu } from "@/modules/meetings/MeetingRowActionsMenu";
+import {
+  MeetingDoneSwitch,
+  MarkMeetingDoneButton,
+} from "@/modules/meetings/MeetingDoneSwitch";
 import { QuickMeetingDialog } from "@/modules/meetings/QuickMeetingDialog";
 
 type MeetingsTab = "upcoming" | "past";
@@ -282,7 +284,7 @@ export const MeetingsPage = () => {
                   >
                     {tab === "upcoming" ? "Done" : "Status"}
                   </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-[52px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -335,9 +337,9 @@ export const MeetingsPage = () => {
                           <MeetingDoneSwitch meeting={meeting} />
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         {isPastTab ? (
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1">
                             {isDone ? (
                               <span className="text-sm text-muted-foreground">
                                 —
@@ -361,24 +363,14 @@ export const MeetingsPage = () => {
                             )}
                           </div>
                         ) : (
-                          <div className="flex flex-wrap items-center justify-end gap-2">
-                            <MeetingLinkActions
-                              meetingUrl={meeting.meeting_url}
-                            />
-                            <MeetingResendInviteActions meeting={meeting} />
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => {
-                                setEditId(meeting.id);
-                                setEditDateKey(meeting.event_date);
-                                setScheduleOpen(true);
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          </div>
+                          <MeetingRowActionsMenu
+                            meeting={meeting}
+                            onEdit={() => {
+                              setEditId(meeting.id);
+                              setEditDateKey(meeting.event_date);
+                              setScheduleOpen(true);
+                            }}
+                          />
                         )}
                       </TableCell>
                     </TableRow>

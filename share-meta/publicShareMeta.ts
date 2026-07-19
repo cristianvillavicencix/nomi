@@ -1,8 +1,16 @@
-export const DEFAULT_SHARE_SITE_NAME = "Latino Business Support";
-export const DEFAULT_SHARE_TITLE = "Latino Business Support";
+/**
+ * Open Graph / social share meta for public CRM links.
+ *
+ * iMessage and similar crawlers cache previews aggressively — after changing
+ * og:image or titles, test with a new short URL or a cache-bust query.
+ * Middleware serves this HTML to crawlers; the SPA uses the same resolver.
+ */
+
+export const DEFAULT_SHARE_SITE_NAME = "Sigma by Latino Business Support";
+export const DEFAULT_SHARE_TITLE = "Sigma by Latino Business Support";
 export const DEFAULT_SHARE_DESCRIPTION =
-  "Booking, forms, proposals, invoices, and client updates from Latino Business Support.";
-export const DEFAULT_SHARE_IMAGE_PATH = "/og/lbs-share-card.jpg";
+  "Booking, forms, proposals, invoices, and client updates from Sigma by Latino Business Support.";
+export const DEFAULT_SHARE_IMAGE_PATH = "/og/sigma-default.jpg";
 export const DEFAULT_PUBLIC_APP_ORIGIN = "https://www.nomicrm.com";
 
 export type PublicShareMeta = {
@@ -68,40 +76,57 @@ type ShareRouteRule = {
   test: (pathname: string) => boolean;
   title: string;
   description: string;
+  imagePath: string;
 };
 
 const SHARE_ROUTE_RULES: ShareRouteRule[] = [
   {
     test: (pathname) =>
+      /^\/c(\/|$)/.test(pathname) || /^\/cal(\/|$)/.test(pathname),
+    title: "Add to calendar · video call",
+    description:
+      "Save this video call to your calendar and join with one tap — Sigma by Latino Business Support.",
+    imagePath: "/og/sigma-meeting.jpg",
+  },
+  {
+    test: (pathname) =>
       /^\/b(\/|$)/.test(pathname) || /^\/book(\/|$)/.test(pathname),
     title: "Book an appointment",
     description:
-      "Choose a service and schedule your visit with Latino Business Support.",
+      "Choose a time and schedule your visit with Sigma by Latino Business Support.",
+    imagePath: "/og/sigma-booking.jpg",
   },
   {
     test: (pathname) =>
       /^\/forms(\/|$)/.test(pathname) || /^\/f(\/|$)/.test(pathname),
     title: "Complete your form",
-    description: "Secure form from Latino Business Support.",
+    description:
+      "Secure form from Sigma by Latino Business Support — fill it out in a few minutes.",
+    imagePath: "/og/sigma-form.jpg",
   },
   {
     test: (pathname) =>
       /^\/proposal(\/|$)/.test(pathname) || /^\/pr(\/|$)/.test(pathname),
-    title: "View your proposal",
-    description: "Review your proposal from Latino Business Support.",
+    title: "Review your proposal",
+    description:
+      "Open your proposal from Sigma by Latino Business Support and review the details.",
+    imagePath: "/og/sigma-proposal.jpg",
   },
   {
     test: (pathname) =>
       /^\/invoice(\/|$)/.test(pathname) || /^\/iv(\/|$)/.test(pathname),
-    title: "Pay your invoice",
-    description: "View and pay your invoice from Latino Business Support.",
+    title: "View & pay your invoice",
+    description:
+      "View your invoice and pay securely online with Sigma by Latino Business Support.",
+    imagePath: "/og/sigma-invoice.jpg",
   },
   {
     test: (pathname) =>
       /^\/portal(\/|$)/.test(pathname) || /^\/p(\/|$)/.test(pathname),
     title: "Client portal",
     description:
-      "Access your projects and documents from Latino Business Support.",
+      "Access your projects and documents from Sigma by Latino Business Support.",
+    imagePath: "/og/sigma-portal.jpg",
   },
 ];
 
@@ -114,10 +139,16 @@ export const resolvePublicShareMeta = (
   const rule = SHARE_ROUTE_RULES.find((entry) => entry.test(pathname));
   if (!rule) return base;
 
+  const origin = (env.publicAppOrigin || DEFAULT_PUBLIC_APP_ORIGIN).replace(
+    /\/$/,
+    "",
+  );
+
   return {
     ...base,
     title: `${rule.title} · ${base.siteName}`,
     description: rule.description,
+    imageUrl: toAbsoluteShareUrl(origin, rule.imagePath),
     url: pageUrl,
   };
 };
@@ -135,10 +166,14 @@ export const isSocialPreviewCrawler = (userAgent: string) => {
     ua.includes("whatsapp") ||
     ua.includes("pinterest") ||
     ua.includes("embedly") ||
+    ua.includes("skypeuripreview") ||
     ua.includes("preview") ||
     ua.includes("googlebot") ||
     ua.includes("bingbot") ||
-    ua.includes("applebot")
+    ua.includes("applebot") ||
+    // Apple Messages / Link Presentation often includes these tokens
+    ua.includes("imessage") ||
+    ua.includes("messages") && ua.includes("apple")
   );
 };
 
@@ -161,6 +196,8 @@ export const buildSharePreviewHtml = (meta: PublicShareMeta) => {
     <meta property="og:title" content="${escape(meta.title)}" />
     <meta property="og:description" content="${escape(meta.description)}" />
     <meta property="og:image" content="${escape(meta.imageUrl)}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:url" content="${escape(meta.url)}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escape(meta.title)}" />
