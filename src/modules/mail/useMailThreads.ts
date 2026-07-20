@@ -20,6 +20,7 @@ export function useMailThreads(params: {
   return useQuery({
     queryKey: ["mail_threads", accountId, folder, search, labelId],
     enabled,
+    refetchInterval: 30_000,
     queryFn: async (): Promise<MailThread[]> => {
       const trimmed = search.trim();
       if (trimmed.length > 0) {
@@ -99,6 +100,7 @@ export function useMailMessages(threadId: number | null) {
   return useQuery({
     queryKey: ["mail_messages", threadId],
     enabled: threadId != null,
+    refetchInterval: threadId != null ? 30_000 : false,
     queryFn: async (): Promise<MailMessage[]> => {
       const { data, error } = await supabase
         .from("mail_messages")

@@ -60,15 +60,23 @@ Without the worker, IMAP accounts can still be **connected** in Settings; sync w
 
 After connect (or **Sync now…** / Mail **Sync…**), the UI asks **Sync mail from…** (7 / 30 / 90 / 365 days, custom date, or capped “as much as possible”). That `since` value is passed to `mail_sync` (Gmail `after:`, Graph `$filter`, IMAP worker `SINCE`).
 
-### Cron
+### Cron (near-live)
 
-Invoke periodically (pg_cron / external):
+Scheduled every minute via pg_cron (`mail_sync_every_minute` → `invoke_mail_sync_cron`). Reuses vault secrets `website_monitor_project_url` + `website_monitor_cron_secret`. Edge `mail_sync` accepts `x-cron-secret` matching `CRON_SECRET` (same value as the vault cron secret) or a service-role bearer.
+
+Accounts sync when `last_sync_at` is null or older than **1 minute**. Cron uses an incremental lookback from `last_sync_at` (1h overlap), not the original bulk-sync date. Concurrent syncs for the same account are skipped. While `/mail` is open, the thread list also refetches every 30s.
+
+Manual invoke:
 
 ```http
 POST /functions/v1/mail_sync
-Authorization: Bearer <service_role>
-{ "action": "cron", "limit": 10 }
+x-cron-secret: <CRON_SECRET>
+Content-Type: application/json
+
+{ "action": "cron", "limit": 20 }
 ```
+
+After deploying decode fixes, run **Sync…** once per mailbox to refresh stored bodies (UTF-8 / HTML).
 
 ### Retention
 

@@ -45,6 +45,17 @@ function gmailAfterQuery(since: string | null): string {
   return `in:inbox after:${y}/${m}/${day}`;
 }
 
+function decodeGmailBodyData(data: string): string {
+  const normalized = data.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
 async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
   const accessToken = await getFreshGoogleAccessToken(account);
   const q = encodeURIComponent(gmailAfterQuery(opts.since));
@@ -114,10 +125,10 @@ async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
         const mime = String(part.mimeType || "");
         const data = (part.body as { data?: string } | undefined)?.data;
         if (data && mime === "text/html" && !bodyHtml) {
-          bodyHtml = atob(data.replace(/-/g, "+").replace(/_/g, "/"));
+          bodyHtml = decodeGmailBodyData(data);
         }
         if (data && mime === "text/plain" && !bodyText) {
-          bodyText = atob(data.replace(/-/g, "+").replace(/_/g, "/"));
+          bodyText = decodeGmailBodyData(data);
         }
         const parts = part.parts as Record<string, unknown>[] | undefined;
         if (parts) parts.forEach((p) => walk(p));
@@ -282,6 +293,17 @@ async function runSync(accountId: number, opts: SyncOptions) {
   const account = await loadMailAccount(accountId);
   if (!account) throw new Error("Account not found");
 
+  const { data: running } = await supabaseAdmin
+    .from("mail_sync_jobs")
+    .select("id")
+    .eq("account_id", account.id)
+    .eq("status", "running")
+    .limit(1)
+    .maybeSingle();
+  if (running?.id) {
+    return { ok: true, synced: 0, skipped: true, reason: "sync_already_running" };
+  }
+
   const { data: job } = await supabaseAdmin
     .from("mail_sync_jobs")
     .insert({
@@ -372,27 +394,42 @@ Deno.serve(async (req) => {
   }
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  const auth = await authenticateMailMember(req);
-  if ("error" in auth) return json({ error: auth.error }, auth.status);
-
   const body = await req.json().catch(() => ({}));
-  const opts = parseSyncOptions(body as Record<string, unknown>);
+  const isCronAction = body.action === "cron" || body.sync_due === true;
+  const cronSecret = Deno.env.get("CRON_SECRET")?.trim();
+  const cronHeader = req.headers.get("x-cron-secret")?.trim();
+  const cronAuthorized = Boolean(
+    cronSecret &&
+      (cronHeader === cronSecret ||
+        req.headers.get("authorization")?.trim() === `Bearer ${cronSecret}`),
+  );
 
-  if (body.action === "cron" || body.sync_due === true) {
-    if (auth.member.user_id !== "service_role") {
+  if (isCronAction) {
+    const auth = await authenticateMailMember(req);
+    const serviceOk = !("error" in auth) &&
+      auth.member.user_id === "service_role";
+    if (!serviceOk && !cronAuthorized) {
       return json({ error: "Forbidden" }, 403);
     }
+
+    const opts = parseSyncOptions(body as Record<string, unknown>);
     const { data: due } = await supabaseAdmin.rpc("mail_accounts_due_for_sync", {
       p_limit: Number(body.limit) || 10,
     });
     const results = [];
     for (const row of due ?? []) {
       try {
-        const cursor = row.sync_cursor as { last_since?: string } | null;
+        // Incremental lookback: prefer last_sync_at (with 1h overlap), not the
+        // original bulk-sync "since" stored in sync_cursor (that re-fetches weeks).
+        const lastSync = row.last_sync_at
+          ? new Date(String(row.last_sync_at)).getTime()
+          : NaN;
+        const sinceIso = Number.isFinite(lastSync)
+          ? new Date(lastSync - 60 * 60 * 1000).toISOString()
+          : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const cronOpts: SyncOptions = {
-          since: cursor?.last_since ??
-            new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          maxResults: 100,
+          since: sinceIso,
+          maxResults: Math.min(50, opts.maxResults || 50),
         };
         results.push(await runSync(row.id, cronOpts));
       } catch (e) {
@@ -404,6 +441,11 @@ Deno.serve(async (req) => {
     }
     return json({ ok: true, results });
   }
+
+  const auth = await authenticateMailMember(req);
+  if ("error" in auth) return json({ error: auth.error }, auth.status);
+
+  const opts = parseSyncOptions(body as Record<string, unknown>);
 
   const accountId = Number(body.account_id);
   if (!accountId) return json({ error: "account_id required" }, 400);

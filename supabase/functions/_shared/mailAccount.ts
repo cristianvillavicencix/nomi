@@ -339,6 +339,22 @@ export async function upsertThreadAndMessage(params: {
         is_unread: params.isUnread,
       })
       .eq("id", threadId);
+  } else {
+    // Refresh bodies on re-sync (fixes UTF-8 / provider content updates).
+    await supabaseAdmin
+      .from("mail_messages")
+      .update({
+        subject: params.subject,
+        body_html: params.bodyHtml,
+        body_text: params.bodyText,
+        from_email: params.fromEmail,
+        from_name: params.fromName,
+        to_emails: params.toEmails,
+        cc_emails: params.ccEmails,
+        is_read: !params.isUnread,
+        has_attachments: params.hasAttachments ?? false,
+      })
+      .eq("id", existingMsg.id);
   }
 
   return threadId!;
