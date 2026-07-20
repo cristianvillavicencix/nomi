@@ -4,12 +4,19 @@ import {
   ArrowBendDoubleUpLeft,
   ArrowBendUpRight,
   ArrowsClockwise,
+  CaretDown,
   EnvelopeOpen,
   EnvelopeSimple,
   Star,
   Trash,
 } from "@phosphor-icons/react";
 import { IconButton } from "@/components/ui/icon-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { MailThread } from "./types";
@@ -17,6 +24,7 @@ import type { MailThread } from "./types";
 export function MailToolbar({
   thread,
   className,
+  syncing = false,
   onReply,
   onReplyAll,
   onForward,
@@ -25,9 +33,11 @@ export function MailToolbar({
   onTrash,
   onToggleRead,
   onSync,
+  onSyncFromDate,
 }: {
   thread: MailThread | null;
   className?: string;
+  syncing?: boolean;
   onReply: () => void;
   onReplyAll: () => void;
   onForward: () => void;
@@ -36,6 +46,7 @@ export function MailToolbar({
   onTrash: () => void;
   onToggleRead: () => void;
   onSync: () => void;
+  onSyncFromDate?: () => void;
 }) {
   const disabled = thread == null;
 
@@ -46,11 +57,7 @@ export function MailToolbar({
         className,
       )}
     >
-      <IconButton
-        aria-label="Reply"
-        disabled={disabled}
-        onClick={onReply}
-      >
+      <IconButton aria-label="Reply" disabled={disabled} onClick={onReply}>
         <ArrowBendUpLeft className="size-4" />
       </IconButton>
       <IconButton
@@ -106,10 +113,34 @@ export function MailToolbar({
         <Trash className="size-4" />
       </IconButton>
 
-      <div className="ml-auto">
-        <IconButton aria-label="Sync mailbox" onClick={onSync}>
-          <ArrowsClockwise className="size-4" />
+      <div className="ml-auto flex items-center">
+        <IconButton
+          aria-label="Sync mailbox"
+          disabled={syncing}
+          onClick={onSync}
+        >
+          <ArrowsClockwise
+            className={cn("size-4", syncing && "animate-spin")}
+          />
         </IconButton>
+        {onSyncFromDate ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <IconButton
+                aria-label="More sync options"
+                disabled={syncing}
+                className="size-8"
+              >
+                <CaretDown className="size-3.5" />
+              </IconButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onSyncFromDate}>
+                Sync from date…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
     </div>
   );

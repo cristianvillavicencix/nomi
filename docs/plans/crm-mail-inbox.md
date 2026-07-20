@@ -15,7 +15,8 @@ Unified mail client for organization and personal mailboxes. Separate from ticke
 | 0 Schema, RLS, permissions, nav, Settings panel, Mail shell | Done |
 | 1 Google + Microsoft OAuth, `mail_sync`, read UI | Done |
 | 2 Compose / reply / drafts / `mail_send` | Done |
-| 3 IMAP/SMTP Settings wizard + worker hook | Done (worker optional) |
+| 3 IMAP/SMTP Settings wizard + worker hook | Done (worker optional; SMTP retries 465/587) |
+| Sent folder (sync + UI) | Done (Gmail `in:sent`, Graph `sentitems`, IMAP Sent mailbox) |
 | 4 Labels, FTS search, bulk actions, ticket bridge flag | Done |
 | 5 Sync health, retention RPC, docs, smoke notes | Done |
 

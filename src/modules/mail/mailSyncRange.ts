@@ -47,6 +47,20 @@ export function resolveMailSyncRange(
   return { since: daysAgoIsoDate(days), max_results, preset };
 }
 
+/** One-click Sync: recent mail only (no range dialog). */
+export function incrementalMailSyncRange(
+  lastSyncAt: string | null,
+): MailSyncRange {
+  if (lastSyncAt) {
+    const overlapMs = 60 * 60 * 1000;
+    const since = new Date(
+      new Date(lastSyncAt).getTime() - overlapMs,
+    ).toISOString();
+    return { since, max_results: 50, preset: "custom" };
+  }
+  return { since: daysAgoIsoDate(2), max_results: 50, preset: "custom" };
+}
+
 export const MAIL_SYNC_PRESET_OPTIONS: Array<{
   value: MailSyncPreset;
   label: string;

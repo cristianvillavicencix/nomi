@@ -33,15 +33,51 @@ import { syncMailAccount } from "./mailApi";
 import { useMailThreads, useMailMessages } from "./useMailThreads";
 import { useMailLabels } from "./useMailLabels";
 import type { MailSyncRange } from "./mailSyncRange";
-import type { MailAccount, MailThread } from "./types";
+import { incrementalMailSyncRange } from "./mailSyncRange";
+import type { MailAccount, MailMessage, MailThread } from "./types";
 
 const MOBILE_FOLDERS: Array<{ id: MailFolderId; label: string }> = [
   { id: "inbox", label: "Inbox" },
   { id: "unread", label: "Unread" },
   { id: "starred", label: "Starred" },
+  { id: "sent", label: "Sent" },
   { id: "archived", label: "Archived" },
   { id: "trash", label: "Trash" },
 ];
+
+function messageBodyHtml(
+  last: MailMessage | undefined,
+  snippet: string | null | undefined,
+): string {
+  if (last?.body_html?.trim()) return last.body_html;
+  if (last?.body_text?.trim()) {
+    return `<p>${last.body_text.replace(/\n/g, "<br/>")}</p>`;
+  }
+  if (snippet?.trim()) return `<p>${snippet}</p>`;
+  return "";
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function buildReplyQuoteHtml(last: MailMessage | undefined, snippet: string | null) {
+  const quoted = messageBodyHtml(last, snippet);
+  const from = escapeHtml(
+    last?.from_name?.trim() || last?.from_email?.trim() || "Unknown",
+  );
+  const when = last?.sent_at
+    ? escapeHtml(new Date(last.sent_at).toLocaleString())
+    : "";
+  const header = when
+    ? `On ${when}, ${from} wrote:`
+    : `${from} wrote:`;
+  return `<p><br></p><p>${header}</p><blockquote style="margin:0 0 0 0.8ex;border-left:1px solid #ccc;padding-left:1ex">${quoted || "<p></p>"}</blockquote>`;
+}
 
 export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const notify = useNotify();
@@ -59,6 +95,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
   const [syncTarget, setSyncTarget] = useState<MailAccount | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const [mobileShowThread, setMobileShowThread] = useState(false);
 
   const { data: threads = [], isPending } = useMailThreads({
@@ -145,23 +182,17 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         setComposeTo(fromEmail);
         setComposeCc("");
         setComposeSubject("");
-        setComposeBody("");
+        setComposeBody(buildReplyQuoteHtml(last, selected.snippet));
       } else if (mode === "reply_all") {
         setComposeTo(fromEmail);
         setComposeCc([...new Set(others)].join(", "));
         setComposeSubject("");
-        setComposeBody("");
+        setComposeBody(buildReplyQuoteHtml(last, selected.snippet));
       } else if (mode === "forward") {
         setComposeTo("");
         setComposeCc("");
         setComposeSubject("");
-        const quoted =
-          last?.body_html ||
-          (last?.body_text
-            ? `<p>${last.body_text.replace(/\n/g, "<br/>")}</p>`
-            : selected.snippet
-              ? `<p>${selected.snippet}</p>`
-              : "");
+        const quoted = messageBodyHtml(last, selected.snippet);
         setComposeBody(
           `<p><br></p><p>---------- Forwarded message ----------</p>${quoted}`,
         );
@@ -170,10 +201,38 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     setComposeOpen(true);
   };
 
-  const syncAccount = useMemo(() => {
-    if (accountFilter === "all") return accounts[0] ?? null;
-    return accounts.find((a) => a.id === accountFilter) ?? accounts[0] ?? null;
+  const accountsToSync = useMemo(() => {
+    const connected = accounts.filter((a) => a.status === "connected");
+    if (accountFilter === "all") return connected;
+    const one = connected.find((a) => a.id === accountFilter);
+    return one ? [one] : connected.slice(0, 1);
   }, [accountFilter, accounts]);
+
+  const runQuickSync = async () => {
+    if (accountsToSync.length === 0 || syncing) return;
+    setSyncing(true);
+    let total = 0;
+    try {
+      for (const account of accountsToSync) {
+        const range = incrementalMailSyncRange(account.last_sync_at);
+        const result = await syncMailAccount(account.id, {
+          since: range.since,
+          max_results: range.max_results,
+        });
+        total += result.synced ?? 0;
+      }
+      notify(
+        `Synced ${total} message${total === 1 ? "" : "s"}`,
+        { type: "success" },
+      );
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Sync failed", { type: "error" });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const runSync = async (range: MailSyncRange) => {
     if (!syncTarget) return;
@@ -245,29 +304,32 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             </SelectContent>
           </Select>
           <Input
-            className="h-8 max-w-sm flex-1"
+            className="h-8 min-w-[10rem] max-w-sm flex-1"
             placeholder="Search mail…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <Button type="button" size="sm" variant="secondary" asChild>
-            <Link to={mailboxesSettingsPath()}>
-              <GearSix className="size-4" />
-              Mailboxes
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => openCompose("new")}
-          >
-            <Plus className="size-4" />
-            Compose
-          </Button>
+          <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+            <Button type="button" size="sm" variant="secondary" asChild>
+              <Link to={mailboxesSettingsPath()}>
+                <GearSix className="size-4" />
+                Mailboxes
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => openCompose("new")}
+            >
+              <Plus className="size-4" />
+              Compose
+            </Button>
+          </div>
         </div>
 
         <MailToolbar
           thread={selected}
+          syncing={syncing}
           onReply={() => openCompose("reply")}
           onReplyAll={() => openCompose("reply_all")}
           onForward={() => openCompose("forward")}
@@ -292,7 +354,14 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             void updateThread(selected, { is_unread: !selected.is_unread });
           }}
           onSync={() => {
-            if (syncAccount) setSyncTarget(syncAccount);
+            void runQuickSync();
+          }}
+          onSyncFromDate={() => {
+            const target =
+              accountFilter === "all"
+                ? accountsToSync[0] ?? null
+                : accountsToSync[0] ?? null;
+            if (target) setSyncTarget(target);
           }}
         />
 

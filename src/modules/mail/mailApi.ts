@@ -9,9 +9,13 @@ async function authHeaders() {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Not signed in");
+  const apikey =
+    (import.meta.env.VITE_SB_PUBLISHABLE_KEY as string | undefined) ||
+    (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined);
+  if (!apikey) throw new Error("Supabase publishable key is not configured");
   return {
     Authorization: `Bearer ${token}`,
-    apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+    apikey,
     "Content-Type": "application/json",
   };
 }
@@ -98,6 +102,7 @@ export async function testAndSaveImapAccount(payload: {
   imap_port?: number;
   smtp_host?: string;
   smtp_port?: number;
+  mail_provider?: string;
 }) {
   const headers = await authHeaders();
   const res = await fetch(`${functionsBase()}/mail_imap`, {

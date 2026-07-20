@@ -216,7 +216,15 @@ Deno.serve(async (req) => {
         }),
       });
       if (!res.ok) {
-        throw new Error((await res.text()) || "IMAP/SMTP send failed");
+        const raw = await res.text();
+        let detail = raw || "IMAP/SMTP send failed";
+        try {
+          const parsed = JSON.parse(raw) as { error?: string };
+          if (parsed.error) detail = parsed.error;
+        } catch {
+          /* keep raw */
+        }
+        throw new Error(detail);
       }
     } else {
       throw new Error("Unsupported provider");

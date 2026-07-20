@@ -3,6 +3,26 @@ import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { MailFolderId } from "./MailFolderRail";
 import type { MailMessage, MailThread } from "./types";
 
+async function loadSentThreadIds(
+  accountId: number | "all",
+): Promise<number[]> {
+  let q = supabase
+    .from("mail_messages")
+    .select("thread_id")
+    .eq("direction", "outbound")
+    .limit(500);
+  if (accountId !== "all") q = q.eq("account_id", accountId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return [
+    ...new Set(
+      (data ?? [])
+        .map((row) => Number((row as { thread_id: number }).thread_id))
+        .filter(Boolean),
+    ),
+  ];
+}
+
 export function useMailThreads(params: {
   accountId: number | "all";
   folder: MailFolderId;
@@ -31,15 +51,31 @@ export function useMailThreads(params: {
         });
         if (error) throw error;
         let rows = (data ?? []) as MailThread[];
-        rows = applyFolderFilter(rows, folder);
+        rows = await applyFolderFilter(rows, folder, accountId);
         if (labelId != null) {
-          rows = rows.filter((t) =>
-            Array.isArray((t as { label_ids?: number[] }).label_ids)
-              ? (t as { label_ids: number[] }).label_ids.includes(labelId)
-              : false,
-          );
+          rows = rows.filter((t) => {
+            const ids = (t as MailThread & { label_ids?: number[] }).label_ids;
+            return Array.isArray(ids) ? ids.includes(labelId) : false;
+          });
         }
         return rows;
+      }
+
+      if (folder === "sent") {
+        const sentIds = await loadSentThreadIds(accountId);
+        if (sentIds.length === 0) return [];
+        let q = supabase
+          .from("mail_threads")
+          .select("*")
+          .in("id", sentIds)
+          .eq("is_trashed", false)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(100);
+        if (accountId !== "all") q = q.eq("account_id", accountId);
+        if (labelId != null) q = q.contains("label_ids", [labelId]);
+        const { data, error } = await q;
+        if (error) throw error;
+        return (data ?? []) as MailThread[];
       }
 
       let q = supabase
@@ -76,10 +112,11 @@ export function useMailThreads(params: {
   });
 }
 
-function applyFolderFilter(
+async function applyFolderFilter(
   rows: MailThread[],
   folder: MailFolderId,
-): MailThread[] {
+  accountId: number | "all",
+): Promise<MailThread[]> {
   switch (folder) {
     case "inbox":
       return rows.filter((t) => !t.is_trashed && !t.is_archived);
@@ -87,6 +124,10 @@ function applyFolderFilter(
       return rows.filter((t) => !t.is_trashed && t.is_unread);
     case "starred":
       return rows.filter((t) => !t.is_trashed && t.is_starred);
+    case "sent": {
+      const sentIds = new Set(await loadSentThreadIds(accountId));
+      return rows.filter((t) => !t.is_trashed && sentIds.has(t.id));
+    }
     case "archived":
       return rows.filter((t) => !t.is_trashed && t.is_archived);
     case "trash":

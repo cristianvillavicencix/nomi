@@ -28,7 +28,16 @@ export function MailImapDialog({
   const [password, setPassword] = useState("");
   const [imapHost, setImapHost] = useState("");
   const [smtpHost, setSmtpHost] = useState("");
+  const [smtpPort, setSmtpPort] = useState("465");
+  const [mailProvider, setMailProvider] = useState<"" | "hostinger">("");
   const [pending, setPending] = useState(false);
+
+  const applyHostinger = () => {
+    setMailProvider("hostinger");
+    setImapHost("imap.hostinger.com");
+    setSmtpHost("smtp.hostinger.com");
+    setSmtpPort("465");
+  };
 
   const handleConnect = async () => {
     if (!email.trim() || !password) {
@@ -43,6 +52,8 @@ export function MailImapDialog({
         password,
         imap_host: imapHost.trim() || undefined,
         smtp_host: smtpHost.trim() || undefined,
+        smtp_port: smtpPort ? Number(smtpPort) : undefined,
+        mail_provider: mailProvider || undefined,
       });
       notify("Mailbox connected", { type: "success" });
       onConnected(Number(result.account_id), email.trim());
@@ -63,7 +74,9 @@ export function MailImapDialog({
           <DialogTitle>Add other account</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Use an app password when your provider requires it (Gmail IMAP, etc.).
+          Use an app password when your provider requires it. For Hostinger
+          domains, use the Hostinger defaults button so SMTP is set correctly
+          (send needs SMTP, not only IMAP).
         </p>
         <div className="space-y-3">
           <div className="space-y-1.5">
@@ -84,23 +97,50 @@ export function MailImapDialog({
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={applyHostinger}
+          >
+            Use Hostinger defaults
+          </Button>
           <div className="space-y-1.5">
-            <Label htmlFor="imap-host">IMAP host (optional)</Label>
+            <Label htmlFor="imap-host">IMAP host</Label>
             <Input
               id="imap-host"
               placeholder="imap.example.com"
               value={imapHost}
-              onChange={(e) => setImapHost(e.target.value)}
+              onChange={(e) => {
+                setMailProvider("");
+                setImapHost(e.target.value);
+              }}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="smtp-host">SMTP host (optional)</Label>
+            <Label htmlFor="smtp-host">SMTP host</Label>
             <Input
               id="smtp-host"
               placeholder="smtp.example.com"
               value={smtpHost}
-              onChange={(e) => setSmtpHost(e.target.value)}
+              onChange={(e) => {
+                setMailProvider("");
+                setSmtpHost(e.target.value);
+              }}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="smtp-port">SMTP port</Label>
+            <Input
+              id="smtp-port"
+              inputMode="numeric"
+              placeholder="465 or 587"
+              value={smtpPort}
+              onChange={(e) => setSmtpPort(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Prefer 465 (SSL). If send times out, try 587 (STARTTLS).
+            </p>
           </div>
         </div>
         <DialogFooter>

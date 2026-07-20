@@ -54,6 +54,14 @@ const PRESETS: Record<
   },
 };
 
+/** Hostinger-style hosting (custom domains often use these hosts). */
+const HOSTINGER_PRESET = {
+  imap_host: "imap.hostinger.com",
+  imap_port: 993,
+  smtp_host: "smtp.hostinger.com",
+  smtp_port: 465,
+};
+
 async function probeTcp(host: string, port: number, timeoutMs = 8000) {
   const conn = await Promise.race([
     Deno.connect({ hostname: host, port }),
@@ -103,7 +111,8 @@ Deno.serve(async (req) => {
   }
 
   const domain = email.split("@")[1] || "";
-  const preset = PRESETS[domain];
+  const hint = String(body.mail_provider || "").toLowerCase();
+  const preset = hint === "hostinger" ? HOSTINGER_PRESET : PRESETS[domain];
   const imapHost = String(body.imap_host || preset?.imap_host || "").trim();
   const imapPort = Number(body.imap_port || preset?.imap_port || 993);
   const smtpHost = String(body.smtp_host || preset?.smtp_host || "").trim();

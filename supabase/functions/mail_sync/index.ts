@@ -36,13 +36,17 @@ function parseSyncOptions(body: Record<string, unknown>): SyncOptions {
   return { since, maxResults };
 }
 
-function gmailAfterQuery(since: string | null): string {
-  if (!since) return "in:inbox";
+function gmailFolderQuery(
+  folder: "inbox" | "sent",
+  since: string | null,
+): string {
+  const base = folder === "sent" ? "in:sent" : "in:inbox";
+  if (!since) return base;
   const d = new Date(since);
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");
-  return `in:inbox after:${y}/${m}/${day}`;
+  return `${base} after:${y}/${m}/${day}`;
 }
 
 function decodeGmailBodyData(data: string): string {
@@ -56,12 +60,16 @@ function decodeGmailBodyData(data: string): string {
   return new TextDecoder("utf-8").decode(bytes);
 }
 
-async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
-  const accessToken = await getFreshGoogleAccessToken(account);
-  const q = encodeURIComponent(gmailAfterQuery(opts.since));
+async function syncGoogleFolder(
+  account: MailAccountRow,
+  accessToken: string,
+  folder: "inbox" | "sent",
+  opts: SyncOptions,
+  seen: Set<string>,
+): Promise<number> {
+  const q = encodeURIComponent(gmailFolderQuery(folder, opts.since));
   let pageToken: string | undefined;
   let synced = 0;
-  const seen = new Set<string>();
 
   while (synced < opts.maxResults) {
     const pageSize = Math.min(100, opts.maxResults - synced);
@@ -140,6 +148,10 @@ async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
       const internalDate = detail.internalDate
         ? new Date(Number(detail.internalDate)).toISOString()
         : null;
+      const isOutbound =
+        folder === "sent" ||
+        fromEmail === account.email.toLowerCase() ||
+        labelIds.includes("SENT");
 
       await upsertThreadAndMessage({
         account,
@@ -154,9 +166,8 @@ async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
         bodyHtml,
         bodyText,
         sentAt: internalDate,
-        isUnread,
-        direction:
-          fromEmail === account.email.toLowerCase() ? "outbound" : "inbound",
+        isUnread: isOutbound ? false : isUnread,
+        direction: isOutbound ? "outbound" : "inbound",
         hasAttachments: Boolean(
           detail.payload?.parts?.some?.(
             (p: { filename?: string }) => p.filename,
@@ -169,6 +180,30 @@ async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
     pageToken = listJson.nextPageToken;
     if (!pageToken) break;
   }
+
+  return synced;
+}
+
+async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
+  const accessToken = await getFreshGoogleAccessToken(account);
+  const seen = new Set<string>();
+  const perFolder = Math.max(10, Math.ceil(opts.maxResults / 2));
+  const folderOpts = { ...opts, maxResults: perFolder };
+  let synced = 0;
+  synced += await syncGoogleFolder(
+    account,
+    accessToken,
+    "inbox",
+    folderOpts,
+    seen,
+  );
+  synced += await syncGoogleFolder(
+    account,
+    accessToken,
+    "sent",
+    folderOpts,
+    seen,
+  );
 
   const labelsRes = await fetch(
     "https://gmail.googleapis.com/gmail/v1/users/me/labels",
@@ -193,11 +228,15 @@ async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
   return synced;
 }
 
-async function syncMicrosoft(account: MailAccountRow, opts: SyncOptions) {
-  const accessToken = await getFreshMicrosoftAccessToken(account);
+async function syncMicrosoftFolder(
+  account: MailAccountRow,
+  accessToken: string,
+  folder: "inbox" | "sentitems",
+  opts: SyncOptions,
+): Promise<number> {
   let synced = 0;
   let nextUrl: string | null =
-    `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=${
+    `https://graph.microsoft.com/v1.0/me/mailFolders/${folder}/messages?$top=${
       Math.min(50, opts.maxResults)
     }&$orderby=receivedDateTime desc&$select=id,conversationId,subject,bodyPreview,from,toRecipients,ccRecipients,receivedDateTime,isRead,hasAttachments,body`;
 
@@ -233,6 +272,9 @@ async function syncMicrosoft(account: MailAccountRow, opts: SyncOptions) {
           String(r.emailAddress?.address || "").toLowerCase()
         )
         .filter(Boolean);
+      const isOutbound =
+        folder === "sentitems" ||
+        fromEmail === account.email.toLowerCase();
       await upsertThreadAndMessage({
         account,
         providerThreadId: String(msg.conversationId || msg.id),
@@ -246,15 +288,34 @@ async function syncMicrosoft(account: MailAccountRow, opts: SyncOptions) {
         bodyHtml: msg.body?.contentType === "html" ? msg.body.content : null,
         bodyText: msg.body?.contentType === "text" ? msg.body.content : null,
         sentAt: msg.receivedDateTime ?? null,
-        isUnread: msg.isRead === false,
-        direction:
-          fromEmail === account.email.toLowerCase() ? "outbound" : "inbound",
+        isUnread: isOutbound ? false : msg.isRead === false,
+        direction: isOutbound ? "outbound" : "inbound",
         hasAttachments: Boolean(msg.hasAttachments),
       });
       synced += 1;
     }
     nextUrl = listJson["@odata.nextLink"] ?? null;
   }
+  return synced;
+}
+
+async function syncMicrosoft(account: MailAccountRow, opts: SyncOptions) {
+  const accessToken = await getFreshMicrosoftAccessToken(account);
+  const perFolder = Math.max(10, Math.ceil(opts.maxResults / 2));
+  const folderOpts = { ...opts, maxResults: perFolder };
+  let synced = 0;
+  synced += await syncMicrosoftFolder(
+    account,
+    accessToken,
+    "inbox",
+    folderOpts,
+  );
+  synced += await syncMicrosoftFolder(
+    account,
+    accessToken,
+    "sentitems",
+    folderOpts,
+  );
   return synced;
 }
 

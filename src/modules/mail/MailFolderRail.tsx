@@ -4,6 +4,7 @@ import {
   Star,
   Archive,
   Trash,
+  PaperPlaneTilt,
   Tag,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ export type MailFolderId =
   | "inbox"
   | "unread"
   | "starred"
+  | "sent"
   | "archived"
   | "trash";
 
@@ -24,6 +26,7 @@ const FOLDERS: Array<{
   { id: "inbox", label: "Inbox", icon: Tray },
   { id: "unread", label: "Unread", icon: EnvelopeSimple },
   { id: "starred", label: "Starred", icon: Star },
+  { id: "sent", label: "Sent", icon: PaperPlaneTilt },
   { id: "archived", label: "Archived", icon: Archive },
   { id: "trash", label: "Trash", icon: Trash },
 ];
