@@ -5,8 +5,8 @@ import {
   getContactPhoneRaw,
 } from "@/modules/clients/clientShowUtils";
 
-const looksLikeUrl = (value: string) => {
-  const trimmed = value.trim();
+const looksLikeUrl = (value?: string | null) => {
+  const trimmed = value?.trim() ?? "";
   if (!trimmed) return false;
   if (/^https?:\/\//i.test(trimmed)) return true;
   if (/^www\./i.test(trimmed)) return true;

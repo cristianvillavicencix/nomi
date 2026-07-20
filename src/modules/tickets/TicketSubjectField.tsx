@@ -18,13 +18,13 @@ export const TicketSubjectField = ({
   inputClassName,
 }: TicketSubjectFieldProps) => {
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(ticket.subject);
+  const [value, setValue] = useState(ticket.subject ?? "");
   const [update, { isPending }] = useUpdate();
   const notify = useNotify();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setValue(ticket.subject);
+    setValue(ticket.subject ?? "");
   }, [ticket.subject]);
 
   useEffect(() => {
@@ -35,19 +35,19 @@ export const TicketSubjectField = ({
   }, [editing]);
 
   const cancel = () => {
-    setValue(ticket.subject);
+    setValue(ticket.subject ?? "");
     setEditing(false);
   };
 
   const save = () => {
-    const next = value.trim();
+    const next = String(value ?? "").trim();
     if (!next) {
       notify("Subject cannot be empty", { type: "warning" });
-      setValue(ticket.subject);
+      setValue(ticket.subject ?? "");
       setEditing(false);
       return;
     }
-    if (next === ticket.subject) {
+    if (next === (ticket.subject ?? "")) {
       setEditing(false);
       return;
     }
@@ -59,7 +59,7 @@ export const TicketSubjectField = ({
         onSuccess: () => setEditing(false),
         onError: () => {
           notify("Could not update subject", { type: "error" });
-          setValue(ticket.subject);
+          setValue(ticket.subject ?? "");
           setEditing(false);
         },
       },

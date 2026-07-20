@@ -110,7 +110,7 @@ export const NewTicketDialog = ({
   );
 
   const handleSubmit = async (values: NewTicketFormValues) => {
-    const subject = values.subject.trim();
+    const subject = String(values.subject ?? "").trim();
     if (!subject) {
       notify("Subject is required", { type: "warning" });
       return;
@@ -156,7 +156,7 @@ export const NewTicketDialog = ({
         { returnPromise: true },
       )) as { id: Identifier };
 
-      const description = values.description.trim();
+      const description = String(values.description ?? "").trim();
       if (description && ticket?.id != null) {
         await dataProvider.replyTicket({
           ticketId: ticket.id,
