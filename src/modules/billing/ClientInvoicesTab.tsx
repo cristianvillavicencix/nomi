@@ -5,20 +5,12 @@ import { List } from "@/components/admin/list";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { CreateClientInvoiceDialog } from "@/modules/billing/CreateClientInvoiceDialog";
 import { InvoiceBillingWorkspace } from "@/modules/billing/InvoiceBillingWorkspace";
-import { type InvoiceStatusFilter } from "@/modules/billing/billingDisplayUtils";
+import {
+  buildInvoiceListFilter,
+  type InvoiceStatusFilter,
+} from "@/modules/billing/billingDisplayUtils";
 import { isBillingInvoiceWorkspace } from "@/modules/billing/billingWorkspaceMode";
 import { cn } from "@/lib/utils";
-
-const buildInvoiceFilter = (statusFilter: InvoiceStatusFilter) => {
-  if (statusFilter === "all") return {};
-  if (statusFilter === "overdue") {
-    return {
-      "status@eq": "sent",
-      "due_date@lt": new Date().toISOString().slice(0, 10),
-    };
-  }
-  return { "status@eq": statusFilter };
-};
 
 export const ClientInvoicesTab = () => {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>("all");
@@ -31,7 +23,7 @@ export const ClientInvoicesTab = () => {
   );
 
   const listFilter = useMemo(
-    () => buildInvoiceFilter(statusFilter),
+    () => buildInvoiceListFilter(statusFilter),
     [statusFilter],
   );
 

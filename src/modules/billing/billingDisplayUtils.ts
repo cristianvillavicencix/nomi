@@ -108,6 +108,22 @@ export const INVOICE_FILTER_OPTIONS: Array<{
   { value: "void", label: "Void" },
 ];
 
+/** List filters for `client_invoices`; "all" excludes void (see Void tab). */
+export const buildInvoiceListFilter = (
+  statusFilter: InvoiceStatusFilter,
+): Record<string, string> => {
+  if (statusFilter === "all") {
+    return { "status@neq": "void" };
+  }
+  if (statusFilter === "overdue") {
+    return {
+      "status@eq": "sent",
+      "due_date@lt": todayIso(),
+    };
+  }
+  return { "status@eq": statusFilter };
+};
+
 export const isClientInvoiceOverdue = (invoice: {
   status?: string | null;
   due_date?: string | null;
@@ -124,7 +140,7 @@ export const countInvoicesByStatusFilter = (
   }>,
 ): Record<InvoiceStatusFilter, number> => {
   const counts: Record<InvoiceStatusFilter, number> = {
-    all: invoices.length,
+    all: 0,
     draft: 0,
     sent: 0,
     paid: 0,
@@ -134,9 +150,13 @@ export const countInvoicesByStatusFilter = (
 
   for (const invoice of invoices) {
     const status = invoice.status?.toLowerCase() ?? "";
+    if (status === "void") {
+      counts.void += 1;
+      continue;
+    }
+    counts.all += 1;
     if (status === "draft") counts.draft += 1;
     else if (status === "paid") counts.paid += 1;
-    else if (status === "void") counts.void += 1;
     else if (status === "sent" || status === "overdue") {
       counts.sent += 1;
       if (isClientInvoiceOverdue(invoice)) counts.overdue += 1;
