@@ -10,9 +10,8 @@ import {
   formatPublicInvoiceLineTitle,
   type PublicInvoiceDeliveryInfo,
 } from "@/modules/billing/public/publicInvoiceDeliveryMessage";
+import { PRODUCT_MARK_SRC, PRODUCT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
-
-const PORTAL_NAVY = "var(--brand-navy)";
 
 const formatMoney = (value: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
@@ -60,13 +59,11 @@ export const PublicInvoicePaymentSummary = ({
     <div className={cn("divide-y divide-border/50", className)}>
       <header className="flex items-start justify-between gap-3 px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
         <div className="flex min-w-0 items-start gap-3">
-          <div
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
-            style={{ backgroundColor: PORTAL_NAVY }}
-            aria-hidden
-          >
-            L
-          </div>
+          <img
+            src={PRODUCT_MARK_SRC}
+            alt={PRODUCT_NAME}
+            className="size-10 shrink-0 rounded-lg object-contain"
+          />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">
               {organization.name}
