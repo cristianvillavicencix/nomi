@@ -108,14 +108,22 @@ export type PublicInvoicePayload = {
   } | null;
 };
 
+/** Location state when navigating from `/iv/:shortCode` to the portal invoice page. */
+export type PublicInvoiceLocationState = {
+  publicInvoicePayload?: PublicInvoicePayload;
+};
+
 export const fetchPublicInvoice = (token: string) =>
   invokePublicFunction<PublicInvoicePayload>("get_public_invoice", { token });
 
+/** Full invoice payload via short share code (same Edge Function as token fetch). */
+export const fetchPublicInvoiceByShortCode = (shortCode: string) =>
+  invokePublicFunction<PublicInvoicePayload>("get_public_invoice", {
+    short_code: shortCode,
+  });
+
 export const resolvePublicInvoiceShortCode = async (shortCode: string) => {
-  const payload = await invokePublicFunction<{ token: string }>(
-    "get_public_invoice",
-    { short_code: shortCode },
-  );
+  const payload = await fetchPublicInvoiceByShortCode(shortCode);
   return payload.token;
 };
 

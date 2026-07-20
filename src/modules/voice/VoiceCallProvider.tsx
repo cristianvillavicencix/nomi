@@ -25,6 +25,7 @@ import { stopVoiceCallRingtone, unlockVoiceCallAudio } from "@/modules/voice/voi
 import {
   formatCallerPhoneLabel,
   resolveIncomingCallerPhone,
+  resolveSmsThreadDisplayName,
 } from "@/modules/voice/voiceCallerUtils";
 
 const emptyIncomingCallerInfo = (
@@ -36,6 +37,7 @@ const emptyIncomingCallerInfo = (
     phoneE164,
     displayPhone,
     isKnownContact: false,
+    isKnownFromMessages: false,
     isLookupPending: Boolean(phoneE164),
   };
 };
@@ -238,26 +240,86 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
 
       try {
         const contact = await dataProvider.lookupContactByPhone(base.phoneE164);
-        if (!contact?.id) {
-          setIncomingCallerInfo({ ...base, isLookupPending: false });
+        if (contact?.id) {
+          const contactName =
+            contact.full_name?.trim() ||
+            `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
+            base.displayPhone;
+
+          setIncomingCallerInfo({
+            phoneE164: base.phoneE164,
+            displayPhone: base.displayPhone,
+            contactId: contact.id,
+            contactName,
+            companyName: contact.company_name,
+            isKnownContact: true,
+            isKnownFromMessages: false,
+            isLookupPending: false,
+          });
+          setIncomingCallerLabel(contactName);
           return;
         }
 
-        const contactName =
-          contact.full_name?.trim() ||
-          `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.trim() ||
-          base.displayPhone;
+        const conversation = await dataProvider.findClientConversationByPhone(
+          base.phoneE164,
+        );
+
+        if (conversation?.contact_id != null) {
+          try {
+            const { data: linked } = await dataProvider.getOne("contacts", {
+              id: conversation.contact_id,
+            });
+            const contactName =
+              `${linked?.first_name ?? ""} ${linked?.last_name ?? ""}`.trim() ||
+              resolveSmsThreadDisplayName(
+                conversation.title,
+                base.phoneE164,
+                base.displayPhone,
+              ) ||
+              base.displayPhone;
+            setIncomingCallerInfo({
+              phoneE164: base.phoneE164,
+              displayPhone: base.displayPhone,
+              contactId: conversation.contact_id,
+              conversationId: conversation.id,
+              contactName,
+              companyName: linked?.company_name ?? null,
+              isKnownContact: true,
+              isKnownFromMessages: false,
+              isLookupPending: false,
+            });
+            setIncomingCallerLabel(contactName);
+            return;
+          } catch {
+            // Fall through to SMS title / unknown.
+          }
+        }
+
+        const smsName = resolveSmsThreadDisplayName(
+          conversation?.title,
+          base.phoneE164,
+          base.displayPhone,
+        );
+
+        if (conversation?.id && smsName) {
+          setIncomingCallerInfo({
+            phoneE164: base.phoneE164,
+            displayPhone: base.displayPhone,
+            conversationId: conversation.id,
+            contactName: smsName,
+            isKnownContact: false,
+            isKnownFromMessages: true,
+            isLookupPending: false,
+          });
+          setIncomingCallerLabel(smsName);
+          return;
+        }
 
         setIncomingCallerInfo({
-          phoneE164: base.phoneE164,
-          displayPhone: base.displayPhone,
-          contactId: contact.id,
-          contactName,
-          companyName: contact.company_name,
-          isKnownContact: true,
+          ...base,
+          conversationId: conversation?.id,
           isLookupPending: false,
         });
-        setIncomingCallerLabel(contactName);
       } catch {
         setIncomingCallerInfo({ ...base, isLookupPending: false });
       }
@@ -479,6 +541,7 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     setActiveCallParty({
       phoneLabel,
       contactId: info?.contactId ?? null,
+      conversationId: info?.conversationId ?? null,
       contactName: info?.contactName ?? null,
       companyName: info?.companyName ?? null,
     });

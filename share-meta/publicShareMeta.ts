@@ -114,7 +114,9 @@ const SHARE_ROUTE_RULES: ShareRouteRule[] = [
   },
   {
     test: (pathname) =>
-      /^\/invoice(\/|$)/.test(pathname) || /^\/iv(\/|$)/.test(pathname),
+      /^\/invoice(\/|$)/.test(pathname) ||
+      /^\/iv(\/|$)/.test(pathname) ||
+      /^\/portal\/invoice(\/|$)/.test(pathname),
     title: "View & pay your invoice",
     description:
       "View your invoice and pay securely online with Sigma by Latino Business Support.",

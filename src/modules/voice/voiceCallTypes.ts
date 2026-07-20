@@ -4,9 +4,13 @@ export type IncomingCallerInfo = {
   phoneE164: string | null;
   displayPhone: string;
   contactId?: Identifier;
+  conversationId?: Identifier;
+  /** CRM contact name, or SMS thread title when not yet saved as a contact. */
   contactName?: string | null;
   companyName?: string | null;
   isKnownContact: boolean;
+  /** Has a Messages SMS thread (title) but no CRM contact yet. */
+  isKnownFromMessages: boolean;
   isLookupPending: boolean;
 };
 

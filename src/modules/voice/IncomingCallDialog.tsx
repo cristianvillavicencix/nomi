@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Minimize2, Phone, PhoneOff, UserRound } from "lucide-react";
+import { MessageSquare, Minimize2, Phone, PhoneOff, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -70,6 +70,11 @@ export const IncomingCallDialog = () => {
                     <UserRound className="mr-1 size-3.5" />
                     Contact in CRM
                   </Badge>
+                ) : info?.isKnownFromMessages ? (
+                  <Badge className="bg-sky-500/15 text-sky-800 hover:bg-sky-500/15 dark:text-sky-200">
+                    <MessageSquare className="mr-1 size-3.5" />
+                    Known from Messages
+                  </Badge>
                 ) : (
                   <Badge variant="outline">Unknown number</Badge>
                 )}
@@ -80,7 +85,15 @@ export const IncomingCallDialog = () => {
               {info?.companyName ? (
                 <p className="text-sm text-muted-foreground">{info.companyName}</p>
               ) : null}
-              {!info?.isKnownContact && !info?.isLookupPending ? (
+              {info?.isKnownFromMessages && !info.isLookupPending ? (
+                <p className="text-sm text-muted-foreground">
+                  This number has an SMS thread but is not saved as a CRM contact
+                  yet. Save it from Messages to link the profile.
+                </p>
+              ) : null}
+              {!info?.isKnownContact &&
+              !info?.isKnownFromMessages &&
+              !info?.isLookupPending ? (
                 <p className="text-sm text-muted-foreground">
                   This number is not saved as a contact yet.
                 </p>

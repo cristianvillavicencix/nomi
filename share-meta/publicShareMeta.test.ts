@@ -43,6 +43,16 @@ describe("resolvePublicShareMeta", () => {
     expect(meta.imageUrl).toBe(`${origin}/og/sigma-invoice.jpg`);
   });
 
+  it("resolves portal invoice links like invoice share", () => {
+    const meta = resolvePublicShareMeta(
+      "/portal/invoice/token-abc",
+      `${origin}/portal/invoice/token-abc`,
+      { publicAppOrigin: origin },
+    );
+    expect(meta.title).toContain("View & pay your invoice");
+    expect(meta.imageUrl).toBe(`${origin}/og/sigma-invoice.jpg`);
+  });
+
   it("resolves form links", () => {
     const meta = resolvePublicShareMeta("/f/xyz", `${origin}/f/xyz`, {
       publicAppOrigin: origin,

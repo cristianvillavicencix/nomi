@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router";
 import { InvoiceDocumentPreview } from "@/modules/billing/InvoiceDocumentPreview";
 import {
   buildClientInvoicePdfContext,
@@ -10,6 +15,7 @@ import { computeInvoiceBalanceDue } from "@/modules/billing/invoicePaymentUtils"
 import { lineItemsToInvoiceDrafts } from "@/modules/billing/invoiceLineUtils";
 import {
   fetchPublicInvoice,
+  type PublicInvoiceLocationState,
   type PublicInvoicePayload,
 } from "@/modules/billing/public/publicInvoiceApi";
 import { PayInvoiceDialog } from "@/modules/billing/public/PayInvoiceDialog";
@@ -22,6 +28,13 @@ import {
   type PortalLocale,
 } from "@/modules/portal/portalI18n";
 import { INVOICE_DOCUMENT_MAX_WIDTH_CLASS } from "@/modules/billing/invoiceDocumentLayout";
+import type {
+  ClientInvoice,
+  ClientInvoiceLineItem,
+} from "@/modules/types";
+
+const payShellClassName =
+  "flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-x-hidden bg-slate-50 px-3 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-4 sm:py-10 lg:px-6";
 
 const payloadToInvoiceRecord = (
   payload: PublicInvoicePayload,
@@ -67,6 +80,9 @@ const payloadToInvoiceRecord = (
 
 export const ClientPortalInvoicePage = () => {
   const { token = "" } = useParams();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [locale, setLocale] = useState<PortalLocale>(() => {
     const stored = localStorage.getItem(PORTAL_LOCALE_KEY);
     return stored === "en" ? "en" : "es";
@@ -94,8 +110,24 @@ export const ClientPortalInvoicePage = () => {
   }, [token]);
 
   useEffect(() => {
+    if (!token) {
+      setError("Invalid link");
+      setLoading(false);
+      return;
+    }
+
+    const cached = (
+      location.state as PublicInvoiceLocationState | null
+    )?.publicInvoicePayload;
+    if (cached?.token === token) {
+      setPayload(cached);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     loadInvoice();
-  }, [loadInvoice]);
+  }, [token, location.state, loadInvoice]);
 
   const fullPortalHref = useMemo(() => {
     if (!payload?.portal_token) return null;
@@ -133,8 +165,6 @@ export const ClientPortalInvoicePage = () => {
   };
 
   const accountEmail = payload?.bill_to.email ?? null;
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const payRequested =
     searchParams.get("pay") === "1" ||
     searchParams.get("pay") === "true" ||
@@ -150,9 +180,31 @@ export const ClientPortalInvoicePage = () => {
       ) > 0.01,
   );
 
-  if (!loading && !error && payModeActive && payload) {
+  // Pay path: no Invoice chrome while loading or while the payment UI is active.
+  if (payRequested && loading) {
     return (
-      <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-x-hidden bg-slate-50 px-3 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-4 sm:py-10 lg:px-6">
+      <div className={payShellClassName}>
+        <div className="flex items-center justify-center text-sm text-muted-foreground">
+          <Loader2 className="mr-2 size-4 animate-spin" />
+          Loading invoice…
+        </div>
+      </div>
+    );
+  }
+
+  if (payRequested && (error || !payload) && !loading) {
+    return (
+      <div className={payShellClassName}>
+        <p className="max-w-md px-6 text-center text-sm text-muted-foreground">
+          {error ?? "Invoice not found"}
+        </p>
+      </div>
+    );
+  }
+
+  if (payModeActive && payload) {
+    return (
+      <div className={payShellClassName}>
         <PublicInvoicePaymentFlow
           token={payload.token}
           payload={payload}

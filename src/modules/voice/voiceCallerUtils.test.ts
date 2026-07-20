@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   formatCallerPhoneLabel,
+  isPhoneOnlyConversationTitle,
   resolveIncomingCallerPhone,
+  resolveSmsThreadDisplayName,
 } from "@/modules/voice/voiceCallerUtils";
 
 describe("voiceCallerUtils", () => {
@@ -30,5 +32,32 @@ describe("voiceCallerUtils", () => {
         To: "client:member-1-2",
       }),
     ).toBe("(555) 123-4567");
+  });
+
+  it("treats E.164 and formatted phones as phone-only titles", () => {
+    expect(
+      isPhoneOnlyConversationTitle(
+        "+14752570243",
+        "+14752570243",
+        "(475) 257-0243",
+      ),
+    ).toBe(true);
+    expect(
+      isPhoneOnlyConversationTitle(
+        "(475) 257-0243",
+        "+14752570243",
+        "(475) 257-0243",
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps human SMS thread titles", () => {
+    expect(
+      resolveSmsThreadDisplayName(
+        "Cristian_villavicencio",
+        "+14752570243",
+        "(475) 257-0243",
+      ),
+    ).toBe("Cristian_villavicencio");
   });
 });

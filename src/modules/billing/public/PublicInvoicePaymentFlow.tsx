@@ -989,7 +989,9 @@ const InvoiceStripeCheckout = ({
           )}
         >
           <Loader2 className="size-4 animate-spin" />
-          Loading payment options…
+          {focusPaymentEntry
+            ? "Loading invoice…"
+            : "Loading payment options…"}
         </div>
       ) : checkout.initialError ? (
         <p
