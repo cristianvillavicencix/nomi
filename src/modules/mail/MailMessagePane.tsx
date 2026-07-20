@@ -135,14 +135,18 @@ export function MailMessagePane({
                 ) : null}
               </header>
               {message.body_html ? (
-                <div
-                  className="prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeMailHtml(message.body_html),
-                  }}
-                />
+                // Always render HTML on a light canvas (Gmail-style) so
+                // marketing backgrounds stay inside the message, not the CRM chrome.
+                <div className="mt-1 overflow-hidden rounded-md border border-black/10 bg-white text-neutral-900 shadow-sm isolate">
+                  <div
+                    className="mail-html-canvas max-w-none overflow-x-auto p-3 text-[13px] leading-normal [&_a]:text-blue-700 [&_img]:h-auto [&_img]:max-w-full"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeMailHtml(message.body_html),
+                    }}
+                  />
+                </div>
               ) : (
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
                   {message.body_text || ""}
                 </pre>
               )}
