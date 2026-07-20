@@ -10,6 +10,7 @@ import {
   upsertThreadAndMessage,
   type MailAccountRow,
 } from "../_shared/mailAccount.ts";
+import { stripCidFromHtml } from "../_shared/stripCidFromHtml.ts";
 
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -20,6 +21,13 @@ const json = (payload: unknown, status = 200) =>
 type SyncOptions = {
   since: string | null;
   maxResults: number;
+};
+
+type GmailPart = {
+  mimeType?: string;
+  filename?: string;
+  body?: { data?: string; attachmentId?: string; size?: number };
+  parts?: GmailPart[];
 };
 
 function parseSyncOptions(body: Record<string, unknown>): SyncOptions {
@@ -58,6 +66,72 @@ function decodeGmailBodyData(data: string): string {
     bytes[i] = binary.charCodeAt(i);
   }
   return new TextDecoder("utf-8").decode(bytes);
+}
+
+async function fetchGmailAttachmentData(
+  accessToken: string,
+  messageId: string,
+  attachmentId: string,
+): Promise<string | null> {
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/attachments/${attachmentId}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (!json?.data || typeof json.data !== "string") return null;
+  return decodeGmailBodyData(json.data);
+}
+
+async function extractGmailBodies(
+  accessToken: string,
+  messageId: string,
+  payload: GmailPart | undefined,
+): Promise<{ bodyHtml: string | null; bodyText: string | null }> {
+  let bodyHtml: string | null = null;
+  let bodyText: string | null = null;
+  const pendingHtml: string[] = [];
+  const pendingText: string[] = [];
+
+  const walk = (part: GmailPart | undefined) => {
+    if (!part) return;
+    const mime = String(part.mimeType || "").toLowerCase();
+    const data = part.body?.data;
+    const attachmentId = part.body?.attachmentId;
+    if (mime === "text/html") {
+      if (data && !bodyHtml) bodyHtml = decodeGmailBodyData(data);
+      else if (attachmentId) pendingHtml.push(attachmentId);
+    } else if (mime === "text/plain") {
+      if (data && !bodyText) bodyText = decodeGmailBodyData(data);
+      else if (attachmentId) pendingText.push(attachmentId);
+    }
+    for (const child of part.parts ?? []) walk(child);
+  };
+  walk(payload);
+
+  if (!bodyHtml && pendingHtml[0]) {
+    bodyHtml = await fetchGmailAttachmentData(
+      accessToken,
+      messageId,
+      pendingHtml[0],
+    );
+  }
+  if (!bodyText && pendingText[0]) {
+    bodyText = await fetchGmailAttachmentData(
+      accessToken,
+      messageId,
+      pendingText[0],
+    );
+  }
+
+  if (bodyHtml) bodyHtml = stripCidFromHtml(bodyHtml) || bodyHtml;
+
+  return { bodyHtml, bodyText };
+}
+
+function prepareStoredHtml(html: string | null): string | null {
+  if (!html?.trim()) return null;
+  return stripCidFromHtml(html) || html;
 }
 
 async function syncGoogleFolder(
@@ -126,22 +200,12 @@ async function syncGoogleFolder(
             return (m?.[1] || s).toLowerCase();
           });
 
-      let bodyHtml: string | null = null;
-      let bodyText: string | null = null;
-      const walk = (part: Record<string, unknown> | undefined) => {
-        if (!part) return;
-        const mime = String(part.mimeType || "");
-        const data = (part.body as { data?: string } | undefined)?.data;
-        if (data && mime === "text/html" && !bodyHtml) {
-          bodyHtml = decodeGmailBodyData(data);
-        }
-        if (data && mime === "text/plain" && !bodyText) {
-          bodyText = decodeGmailBodyData(data);
-        }
-        const parts = part.parts as Record<string, unknown>[] | undefined;
-        if (parts) parts.forEach((p) => walk(p));
-      };
-      walk(detail.payload);
+      const messageId = String(detail.id || msg.id);
+      const { bodyHtml, bodyText } = await extractGmailBodies(
+        accessToken,
+        messageId,
+        detail.payload as GmailPart | undefined,
+      );
 
       const labelIds = (detail.labelIds ?? []) as string[];
       const isUnread = labelIds.includes("UNREAD");
@@ -156,7 +220,7 @@ async function syncGoogleFolder(
       await upsertThreadAndMessage({
         account,
         providerThreadId: String(detail.threadId || msg.threadId),
-        providerMessageId: String(detail.id || msg.id),
+        providerMessageId: messageId,
         subject,
         snippet: detail.snippet ?? null,
         fromEmail,
@@ -249,7 +313,10 @@ async function syncMicrosoftFolder(
 
   while (nextUrl && synced < opts.maxResults) {
     const listRes = await fetch(nextUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Prefer: 'outlook.body-content-type="html"',
+      },
     });
     const listJson = await listRes.json();
     if (!listRes.ok) {
@@ -275,6 +342,13 @@ async function syncMicrosoftFolder(
       const isOutbound =
         folder === "sentitems" ||
         fromEmail === account.email.toLowerCase();
+      const content = typeof msg.body?.content === "string"
+        ? msg.body.content
+        : null;
+      const contentType = String(msg.body?.contentType || "").toLowerCase();
+      const looksHtml =
+        contentType === "html" ||
+        Boolean(content && /<[a-z][\s\S]*>/i.test(content));
       await upsertThreadAndMessage({
         account,
         providerThreadId: String(msg.conversationId || msg.id),
@@ -285,8 +359,8 @@ async function syncMicrosoftFolder(
         fromName,
         toEmails,
         ccEmails,
-        bodyHtml: msg.body?.contentType === "html" ? msg.body.content : null,
-        bodyText: msg.body?.contentType === "text" ? msg.body.content : null,
+        bodyHtml: looksHtml ? prepareStoredHtml(content) : null,
+        bodyText: !looksHtml ? content : null,
         sentAt: msg.receivedDateTime ?? null,
         isUnread: isOutbound ? false : msg.isRead === false,
         direction: isOutbound ? "outbound" : "inbound",

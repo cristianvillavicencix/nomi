@@ -16,8 +16,73 @@ const json = (payload: unknown, status = 200) =>
     headers: { "Content-Type": "application/json", ...corsHeaders },
   });
 
+const MAX_ATTACHMENTS = 5;
+const MAX_FILE_BYTES = 4 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
+
+type MailAttachmentIn = {
+  filename: string;
+  content_type: string;
+  content_base64: string;
+  size_bytes?: number;
+};
+
 function toMimeAddress(email: string) {
   return email.trim();
+}
+
+function encodeSubject(subject: string) {
+  // Keep ASCII subjects plain; encode UTF-8 subjects for MIME.
+  if (/^[\x20-\x7E]*$/.test(subject)) return subject;
+  const b64 = btoa(unescape(encodeURIComponent(subject)));
+  return `=?UTF-8?B?${b64}?=`;
+}
+
+function foldBase64(b64: string) {
+  return b64.replace(/.{1,76}/g, (line) => `${line}\r\n`).trimEnd();
+}
+
+function sanitizeFilename(name: string) {
+  return name.replace(/[\r\n"\\]/g, "_").slice(0, 180) || "attachment";
+}
+
+function parseAttachments(raw: unknown): MailAttachmentIn[] {
+  if (!Array.isArray(raw)) return [];
+  const out: MailAttachmentIn[] = [];
+  let total = 0;
+  for (const item of raw) {
+    if (out.length >= MAX_ATTACHMENTS) break;
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const filename = sanitizeFilename(String(row.filename || "attachment"));
+    const contentType = String(row.content_type || "application/octet-stream")
+      .split(";")[0]
+      .trim() || "application/octet-stream";
+    const contentBase64 = String(row.content_base64 || "").replace(/\s+/g, "");
+    if (!contentBase64) continue;
+    const size =
+      typeof row.size_bytes === "number" && row.size_bytes > 0
+        ? row.size_bytes
+        : Math.floor((contentBase64.length * 3) / 4);
+    if (size > MAX_FILE_BYTES) {
+      throw new Error(
+        `Attachment "${filename}" exceeds ${Math.floor(MAX_FILE_BYTES / (1024 * 1024))} MB`,
+      );
+    }
+    total += size;
+    if (total > MAX_TOTAL_BYTES) {
+      throw new Error(
+        `Attachments exceed ${Math.floor(MAX_TOTAL_BYTES / (1024 * 1024))} MB total`,
+      );
+    }
+    out.push({
+      filename,
+      content_type: contentType,
+      content_base64: contentBase64,
+      size_bytes: size,
+    });
+  }
+  return out;
 }
 
 function buildRawMime(params: {
@@ -28,8 +93,27 @@ function buildRawMime(params: {
   subject: string;
   bodyHtml: string;
   inReplyTo?: string;
+  attachments?: MailAttachmentIn[];
 }) {
-  const boundary = `nomi_${crypto.randomUUID().replace(/-/g, "")}`;
+  const attachments = params.attachments ?? [];
+  const altBoundary = `nomi_alt_${crypto.randomUUID().replace(/-/g, "")}`;
+  const mixedBoundary = `nomi_mix_${crypto.randomUUID().replace(/-/g, "")}`;
+  const text = params.bodyHtml.replace(/<[^>]+>/g, " ");
+
+  const alternative = [
+    `--${altBoundary}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    text,
+    `--${altBoundary}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    params.bodyHtml,
+    `--${altBoundary}--`,
+  ].join("\r\n");
+
   const headers = [
     `From: ${params.from}`,
     `To: ${params.to.map(toMimeAddress).join(", ")}`,
@@ -37,35 +121,48 @@ function buildRawMime(params: {
     params.bcc?.length
       ? `Bcc: ${params.bcc.map(toMimeAddress).join(", ")}`
       : null,
-    `Subject: ${params.subject}`,
+    `Subject: ${encodeSubject(params.subject)}`,
     "MIME-Version: 1.0",
     params.inReplyTo ? `In-Reply-To: ${params.inReplyTo}` : null,
     params.inReplyTo ? `References: ${params.inReplyTo}` : null,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-  ]
-    .filter(Boolean)
-    .join("\r\n");
+  ].filter(Boolean);
 
-  const text = params.bodyHtml.replace(/<[^>]+>/g, " ");
-  const body = [
-    `--${boundary}`,
-    "Content-Type: text/plain; charset=UTF-8",
-    "",
-    text,
-    `--${boundary}`,
-    "Content-Type: text/html; charset=UTF-8",
-    "",
-    params.bodyHtml,
-    `--${boundary}--`,
-  ].join("\r\n");
+  let body: string;
+  if (attachments.length === 0) {
+    headers.push(
+      `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+    );
+    body = alternative;
+  } else {
+    headers.push(
+      `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
+    );
+    const parts = [
+      `--${mixedBoundary}`,
+      `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+      "",
+      alternative,
+    ];
+    for (const file of attachments) {
+      const safeName = sanitizeFilename(file.filename);
+      parts.push(
+        `--${mixedBoundary}`,
+        `Content-Type: ${file.content_type}; name="${safeName}"`,
+        "Content-Transfer-Encoding: base64",
+        `Content-Disposition: attachment; filename="${safeName}"`,
+        "",
+        foldBase64(file.content_base64),
+      );
+    }
+    parts.push(`--${mixedBoundary}--`);
+    body = parts.join("\r\n");
+  }
 
-  const raw = `${headers}\r\n\r\n${body}`;
-  // Gmail expects URL-safe base64
-  const b64 = btoa(unescape(encodeURIComponent(raw)))
+  const raw = `${headers.join("\r\n")}\r\n\r\n${body}`;
+  return btoa(unescape(encodeURIComponent(raw)))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
-  return b64;
 }
 
 Deno.serve(async (req) => {
@@ -90,6 +187,16 @@ Deno.serve(async (req) => {
   const threadId = body.thread_id ? Number(body.thread_id) : null;
   const inReplyTo = body.in_reply_to ? String(body.in_reply_to) : undefined;
   const saveDraft = body.save_draft === true;
+
+  let attachments: MailAttachmentIn[] = [];
+  try {
+    attachments = parseAttachments(body.attachments);
+  } catch (e) {
+    return json(
+      { error: e instanceof Error ? e.message : "Invalid attachments" },
+      400,
+    );
+  }
 
   if (!accountId || (!saveDraft && to.length === 0)) {
     return json({ error: "account_id and to[] required" }, 400);
@@ -142,6 +249,7 @@ Deno.serve(async (req) => {
         subject,
         bodyHtml,
         inReplyTo,
+        attachments,
       });
       const sendRes = await fetch(
         "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
@@ -183,6 +291,12 @@ Deno.serve(async (req) => {
               bccRecipients: bcc.map((address) => ({
                 emailAddress: { address },
               })),
+              attachments: attachments.map((file) => ({
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                name: file.filename,
+                contentType: file.content_type,
+                contentBytes: file.content_base64,
+              })),
             },
             saveToSentItems: true,
           }),
@@ -213,6 +327,11 @@ Deno.serve(async (req) => {
           bcc,
           subject,
           body_html: bodyHtml,
+          attachments: attachments.map((file) => ({
+            filename: file.filename,
+            content_type: file.content_type,
+            content_base64: file.content_base64,
+          })),
         }),
       });
       if (!res.ok) {
@@ -239,7 +358,7 @@ Deno.serve(async (req) => {
       providerThreadId = th?.provider_thread_id ?? `local-${threadId}`;
     }
 
-    await upsertThreadAndMessage({
+    const upserted = await upsertThreadAndMessage({
       account,
       providerThreadId: providerThreadId!,
       providerMessageId,
@@ -254,7 +373,21 @@ Deno.serve(async (req) => {
       sentAt: new Date().toISOString(),
       isUnread: false,
       direction: "outbound",
+      hasAttachments: attachments.length > 0,
     });
+
+    if (attachments.length > 0 && upserted.messageId) {
+      await supabaseAdmin.from("mail_attachments").insert(
+        attachments.map((file) => ({
+          message_id: upserted.messageId,
+          account_id: account.id,
+          org_id: account.org_id,
+          filename: file.filename,
+          mime_type: file.content_type,
+          size_bytes: file.size_bytes ?? null,
+        })),
+      );
+    }
 
     return json({ ok: true, provider_message_id: providerMessageId });
   } catch (e) {

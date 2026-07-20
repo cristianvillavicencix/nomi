@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { MailFolderId } from "./MailFolderRail";
-import type { MailMessage, MailThread } from "./types";
+import type { MailAttachment, MailMessage, MailThread } from "./types";
 
 async function loadSentThreadIds(
   accountId: number | "all",
@@ -150,6 +150,22 @@ export function useMailMessages(threadId: number | null) {
         .order("sent_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data ?? []) as MailMessage[];
+    },
+  });
+}
+
+export function useMailAttachments(messageIds: number[]) {
+  const key = messageIds.slice().sort((a, b) => a - b).join(",");
+  return useQuery({
+    queryKey: ["mail_attachments", key],
+    enabled: messageIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("mail_attachments")
+        .select("id, message_id, filename, mime_type, size_bytes, storage_path")
+        .in("message_id", messageIds);
+      if (error) throw error;
+      return (data ?? []) as MailAttachment[];
     },
   });
 }

@@ -1,7 +1,16 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  File,
+  FilePdf,
   ListBullets,
   ListNumbers,
+  Paperclip,
   PaperPlaneTilt,
   TextB,
   TextItalic,
@@ -35,6 +44,18 @@ import type { MailAccount, MailThread } from "./types";
 
 export type MailComposeMode = "new" | "reply" | "reply_all" | "forward";
 
+const MAX_ATTACHMENTS = 5;
+const MAX_FILE_BYTES = 4 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
+
+type ComposeAttachment = {
+  id: string;
+  filename: string;
+  content_type: string;
+  content_base64: string;
+  size_bytes: number;
+};
+
 function exec(cmd: string) {
   document.execCommand(cmd, false);
 }
@@ -44,6 +65,33 @@ function parseEmails(raw: string): string[] {
     .split(/[,;\s]+/)
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+function formatBytes(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function AttachmentIcon({ mime, filename }: { mime: string; filename: string }) {
+  const lower = filename.toLowerCase();
+  if (mime.includes("pdf") || lower.endsWith(".pdf")) {
+    return <FilePdf className="size-5 text-red-600" weight="fill" />;
+  }
+  return <File className="size-5 text-muted-foreground" weight="fill" />;
 }
 
 function RecipientChips({
@@ -92,9 +140,7 @@ function RecipientChips({
               type="button"
               className="rounded-full p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
               aria-label={`Remove ${email}`}
-              onClick={() =>
-                onChange(emails.filter((e) => e !== email))
-              }
+              onClick={() => onChange(emails.filter((e) => e !== email))}
             >
               <X className="size-3" weight="bold" />
             </button>
@@ -124,6 +170,64 @@ function RecipientChips({
   );
 }
 
+function FormatToolbar({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-0.5 rounded-lg border bg-background px-1 py-0.5 shadow-md",
+        className,
+      )}
+    >
+      <IconButton
+        aria-label="Bold"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          exec("bold");
+        }}
+      >
+        <TextB className="size-4" />
+      </IconButton>
+      <IconButton
+        aria-label="Italic"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          exec("italic");
+        }}
+      >
+        <TextItalic className="size-4" />
+      </IconButton>
+      <IconButton
+        aria-label="Underline"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          exec("underline");
+        }}
+      >
+        <TextUnderline className="size-4" />
+      </IconButton>
+      <Separator orientation="vertical" className="mx-1 h-5" />
+      <IconButton
+        aria-label="Bullet list"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          exec("insertUnorderedList");
+        }}
+      >
+        <ListBullets className="size-4" />
+      </IconButton>
+      <IconButton
+        aria-label="Numbered list"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          exec("insertOrderedList");
+        }}
+      >
+        <ListNumbers className="size-4" />
+      </IconButton>
+    </div>
+  );
+}
+
 export function MailComposeDialog({
   open,
   onOpenChange,
@@ -148,6 +252,8 @@ export function MailComposeDialog({
   const notify = useNotify();
   const queryClient = useQueryClient();
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const editorShellRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const sendable = accounts.filter((a) => a.status === "connected");
   const [accountId, setAccountId] = useState("");
   const [to, setTo] = useState<string[]>([]);
@@ -156,7 +262,12 @@ export function MailComposeDialog({
   const [showBcc, setShowBcc] = useState(false);
   const [bcc, setBcc] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
+  const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
   const [pending, setPending] = useState(false);
+  const [formatPos, setFormatPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -166,6 +277,8 @@ export function MailComposeDialog({
     setBcc([]);
     setShowCc(Boolean(initialCc));
     setShowBcc(false);
+    setAttachments([]);
+    setFormatPos(null);
     if (initialSubject) {
       setSubject(initialSubject);
     } else if (replyTo?.subject) {
@@ -185,6 +298,42 @@ export function MailComposeDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, replyTo?.id, mode, initialTo, initialCc, initialSubject, initialBody]);
 
+  const updateFormatToolbar = useCallback(() => {
+    const sel = window.getSelection();
+    const editor = editorRef.current;
+    const shell = editorShellRef.current;
+    if (!sel || !editor || !shell || sel.isCollapsed || sel.rangeCount === 0) {
+      setFormatPos(null);
+      return;
+    }
+    const anchor = sel.anchorNode;
+    if (!anchor || !editor.contains(anchor)) {
+      setFormatPos(null);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const shellRect = shell.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      setFormatPos(null);
+      return;
+    }
+    setFormatPos({
+      top: Math.max(8, rect.top - shellRect.top - 44),
+      left: Math.min(
+        Math.max(8, rect.left - shellRect.left + rect.width / 2 - 90),
+        shellRect.width - 200,
+      ),
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onSel = () => updateFormatToolbar();
+    document.addEventListener("selectionchange", onSel);
+    return () => document.removeEventListener("selectionchange", onSel);
+  }, [open, updateFormatToolbar]);
+
   const title =
     mode === "forward"
       ? "Forward"
@@ -193,6 +342,49 @@ export function MailComposeDialog({
         : mode === "reply"
           ? "Reply"
           : "New email";
+
+  const addFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    const next = [...attachments];
+    let total = next.reduce((sum, a) => sum + a.size_bytes, 0);
+    for (const file of list) {
+      if (next.length >= MAX_ATTACHMENTS) {
+        notify(`You can attach up to ${MAX_ATTACHMENTS} files`, {
+          type: "warning",
+        });
+        break;
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        notify(
+          `"${file.name}" exceeds ${MAX_FILE_BYTES / (1024 * 1024)} MB`,
+          { type: "warning" },
+        );
+        continue;
+      }
+      if (total + file.size > MAX_TOTAL_BYTES) {
+        notify(
+          `Attachments exceed ${MAX_TOTAL_BYTES / (1024 * 1024)} MB total`,
+          { type: "warning" },
+        );
+        break;
+      }
+      try {
+        const content_base64 = await fileToBase64(file);
+        next.push({
+          id: crypto.randomUUID(),
+          filename: file.name,
+          content_type: file.type || "application/octet-stream",
+          content_base64,
+          size_bytes: file.size,
+        });
+        total += file.size;
+      } catch {
+        notify(`Could not read "${file.name}"`, { type: "error" });
+      }
+    }
+    setAttachments(next);
+  };
 
   const handleSend = async (asDraft = false) => {
     const id = Number(accountId);
@@ -214,6 +406,14 @@ export function MailComposeDialog({
         body_html: bodyHtml,
         thread_id: mode === "forward" ? undefined : replyTo?.id,
         save_draft: asDraft,
+        attachments: asDraft
+          ? undefined
+          : attachments.map(({ filename, content_type, content_base64, size_bytes }) => ({
+              filename,
+              content_type,
+              content_base64,
+              size_bytes,
+            })),
       });
       notify(asDraft ? "Draft saved" : "Message sent", { type: "success" });
       void queryClient.invalidateQueries({ queryKey: ["mail_threads"] });
@@ -312,60 +512,22 @@ export function MailComposeDialog({
           </div>
         </div>
 
-        <div className="border-t">
-          <div className="flex items-center gap-0.5 border-b bg-muted/30 px-2 py-1">
-            <IconButton
-              aria-label="Bold"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                exec("bold");
-              }}
+        <div ref={editorShellRef} className="relative border-t">
+          {formatPos ? (
+            <div
+              className="pointer-events-auto absolute z-10"
+              style={{ top: formatPos.top, left: formatPos.left }}
             >
-              <TextB className="size-4" />
-            </IconButton>
-            <IconButton
-              aria-label="Italic"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                exec("italic");
-              }}
-            >
-              <TextItalic className="size-4" />
-            </IconButton>
-            <IconButton
-              aria-label="Underline"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                exec("underline");
-              }}
-            >
-              <TextUnderline className="size-4" />
-            </IconButton>
-            <Separator orientation="vertical" className="mx-1 h-5" />
-            <IconButton
-              aria-label="Bullet list"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                exec("insertUnorderedList");
-              }}
-            >
-              <ListBullets className="size-4" />
-            </IconButton>
-            <IconButton
-              aria-label="Numbered list"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                exec("insertOrderedList");
-              }}
-            >
-              <ListNumbers className="size-4" />
-            </IconButton>
-          </div>
+              <FormatToolbar />
+            </div>
+          ) : null}
           <div
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
             data-placeholder="Write your message…"
+            onMouseUp={updateFormatToolbar}
+            onKeyUp={updateFormatToolbar}
             className={cn(
               "mail-compose-editor min-h-[220px] max-h-[420px] overflow-y-auto px-4 py-3 text-sm leading-relaxed outline-none",
               "[&_a]:text-primary [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_p+p]:mt-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
@@ -374,18 +536,79 @@ export function MailComposeDialog({
           />
         </div>
 
+        {attachments.length > 0 ? (
+          <div className="space-y-2 border-t px-4 py-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              {attachments.length} attachment
+              {attachments.length === 1 ? "" : "s"}
+            </p>
+            <ul className="space-y-2">
+              {attachments.map((file) => (
+                <li
+                  key={file.id}
+                  className="flex items-center gap-3 rounded-lg border bg-muted/20 px-3 py-2"
+                >
+                  <AttachmentIcon
+                    mime={file.content_type}
+                    filename={file.filename}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {file.filename}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBytes(file.size_bytes)}
+                    </p>
+                  </div>
+                  <IconButton
+                    aria-label={`Remove ${file.filename}`}
+                    onClick={() =>
+                      setAttachments((prev) =>
+                        prev.filter((a) => a.id !== file.id),
+                      )
+                    }
+                  >
+                    <X className="size-4" />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) void addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+
         <DialogFooter className="gap-2 border-t px-4 py-3 sm:justify-between">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
+          <div className="flex items-center gap-1">
+            <IconButton
+              aria-label="Attach files"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={pending || attachments.length >= MAX_ATTACHMENTS}
+            >
+              <Paperclip className="size-4" />
+            </IconButton>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+          </div>
           <div className="flex gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => void handleSend(true)}
               disabled={pending}
             >
@@ -393,11 +616,14 @@ export function MailComposeDialog({
             </Button>
             <Button
               type="button"
+              variant="primary"
+              className="bg-foreground text-background hover:bg-foreground/90"
               onClick={() => void handleSend(false)}
               disabled={pending}
+              isLoading={pending}
             >
               <PaperPlaneTilt className="size-4" weight="fill" />
-              {pending ? "Sending…" : "Send"}
+              Send
             </Button>
           </div>
         </DialogFooter>

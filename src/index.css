@@ -390,3 +390,35 @@ html.nomi-form-embed,
 html.nomi-form-embed body {
   background: transparent;
 }
+
+/* Mail reader — keep marketing HTML inside a light, bounded canvas */
+.mail-html-canvas {
+  color: #171717;
+  word-break: break-word;
+}
+
+.mail-html-canvas a {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.mail-html-canvas img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.mail-html-canvas table {
+  max-width: 100% !important;
+  border-collapse: collapse;
+}
+
+.mail-html-canvas td,
+.mail-html-canvas th {
+  word-break: break-word;
+}
+
+.mail-html-canvas pre {
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+

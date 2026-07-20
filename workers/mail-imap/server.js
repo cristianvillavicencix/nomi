@@ -158,6 +158,13 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
     .maybeSingle();
 
   if (!existingMsg) {
+    const rawHtml = parsed.html || null;
+    const bodyHtml = rawHtml
+      ? rawHtml
+          .replace(/<img\b[^>]*\bsrc\s*=\s*["']cid:[^"']+["'][^>]*>/gi, "")
+          .replace(/\bsrc\s*=\s*(["'])cid:[^"']+\1/gi, "src=$1$1")
+          .replace(/url\((["']?)cid:[^)"']+\1\)/gi, "none")
+      : null;
     await sb.from("mail_messages").insert({
       thread_id: threadId,
       account_id: account.id,
@@ -169,7 +176,7 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
       to_emails: toEmails,
       cc_emails: ccEmails,
       subject,
-      body_html: parsed.html || null,
+      body_html: bodyHtml,
       body_text: parsed.text || null,
       sent_at: sentAt,
       is_read: direction === "outbound",
@@ -322,6 +329,15 @@ async function sendAccount(body) {
       bcc: (body.bcc || []).join(", ") || undefined,
       subject: body.subject || "",
       html: body.body_html || "",
+      attachments: Array.isArray(body.attachments)
+        ? body.attachments
+            .filter((a) => a && a.content_base64 && a.filename)
+            .map((a) => ({
+              filename: String(a.filename),
+              contentType: String(a.content_type || "application/octet-stream"),
+              content: Buffer.from(String(a.content_base64), "base64"),
+            }))
+        : undefined,
     });
   } finally {
     try {

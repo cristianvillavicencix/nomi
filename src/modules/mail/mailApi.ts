@@ -81,6 +81,12 @@ export async function sendMailMessage(payload: {
   thread_id?: number;
   in_reply_to?: string;
   save_draft?: boolean;
+  attachments?: Array<{
+    filename: string;
+    content_type: string;
+    content_base64: string;
+    size_bytes?: number;
+  }>;
 }) {
   const headers = await authHeaders();
   const res = await fetch(`${functionsBase()}/mail_send`, {

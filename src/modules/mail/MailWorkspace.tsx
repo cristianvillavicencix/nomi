@@ -113,10 +113,71 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     void queryClient.invalidateQueries({ queryKey: ["mail_messages"] });
   };
 
+  /** After removing the open thread from the current folder, open the next (or previous) in the list. */
+  const selectNeighborAfterRemoval = (removedIds: number | number[]) => {
+    const removed = new Set(
+      Array.isArray(removedIds) ? removedIds : [removedIds],
+    );
+    const currentId = selected?.id;
+    if (currentId == null || !removed.has(currentId)) {
+      return;
+    }
+    const index = threads.findIndex((t) => t.id === currentId);
+    if (index < 0) {
+      setSelected(null);
+      setMobileShowThread(false);
+      return;
+    }
+    let neighbor: MailThread | null = null;
+    for (let i = index + 1; i < threads.length; i++) {
+      if (!removed.has(threads[i].id)) {
+        neighbor = threads[i];
+        break;
+      }
+    }
+    if (!neighbor) {
+      for (let i = index - 1; i >= 0; i--) {
+        if (!removed.has(threads[i].id)) {
+          neighbor = threads[i];
+          break;
+        }
+      }
+    }
+    setSelected(neighbor);
+    setMobileShowThread(Boolean(neighbor));
+    if (neighbor?.is_unread) {
+      void updateThreadQuiet(neighbor, { is_unread: false });
+    }
+  };
+
+  const updateThreadQuiet = async (
+    thread: MailThread,
+    patch: Partial<MailThread>,
+  ) => {
+    const { error } = await supabase
+      .from("mail_threads")
+      .update(patch)
+      .eq("id", thread.id);
+    if (error) return;
+    if (patch.is_unread === false) {
+      await supabase
+        .from("mail_messages")
+        .update({ is_read: true })
+        .eq("thread_id", thread.id);
+    }
+    invalidate();
+  };
+
   const updateThread = async (
     thread: MailThread,
     patch: Partial<MailThread>,
   ) => {
+    const leavesFolder =
+      patch.is_trashed === true ||
+      patch.is_archived === true ||
+      (folder === "unread" && patch.is_unread === false) ||
+      (folder === "starred" && patch.is_starred === false);
+
     const { error } = await supabase
       .from("mail_threads")
       .update(patch)
@@ -132,7 +193,11 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         .eq("thread_id", thread.id);
     }
     if (selected?.id === thread.id) {
-      setSelected({ ...thread, ...patch });
+      if (leavesFolder) {
+        selectNeighborAfterRemoval(thread.id);
+      } else {
+        setSelected({ ...thread, ...patch });
+      }
     }
     invalidate();
   };
@@ -152,8 +217,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     setSelectedIds(new Set());
     if (selected && ids.includes(selected.id)) {
       if (patch.is_trashed || patch.is_archived) {
-        setSelected(null);
-        setMobileShowThread(false);
+        selectNeighborAfterRemoval(ids);
       } else {
         setSelected({ ...selected, ...patch });
       }
@@ -340,14 +404,10 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           onArchive={() => {
             if (!selected) return;
             void updateThread(selected, { is_archived: true });
-            setSelected(null);
-            setMobileShowThread(false);
           }}
           onTrash={() => {
             if (!selected) return;
             void updateThread(selected, { is_trashed: true });
-            setSelected(null);
-            setMobileShowThread(false);
           }}
           onToggleRead={() => {
             if (!selected) return;

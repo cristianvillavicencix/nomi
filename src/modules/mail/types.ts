@@ -38,6 +38,15 @@ export type MailThread = {
   message_count: number;
 };
 
+export type MailAttachment = {
+  id: number;
+  message_id: number;
+  filename: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  storage_path: string | null;
+};
+
 export type MailMessage = {
   id: number;
   thread_id: number;

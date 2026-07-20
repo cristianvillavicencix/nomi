@@ -314,24 +314,29 @@ export async function upsertThreadAndMessage(params: {
     .maybeSingle();
 
   if (!existingMsg) {
-    await supabaseAdmin.from("mail_messages").insert({
-      thread_id: threadId,
-      account_id: account.id,
-      org_id: account.org_id,
-      provider_message_id: params.providerMessageId,
-      direction: params.direction,
-      from_email: params.fromEmail,
-      from_name: params.fromName,
-      to_emails: params.toEmails,
-      cc_emails: params.ccEmails,
-      subject: params.subject,
-      body_html: params.bodyHtml,
-      body_text: params.bodyText,
-      sent_at: params.sentAt,
-      is_read: !params.isUnread,
-      has_attachments: params.hasAttachments ?? false,
-      send_status: params.direction === "outbound" ? "sent" : null,
-    });
+    const { data: insertedMsg, error: msgError } = await supabaseAdmin
+      .from("mail_messages")
+      .insert({
+        thread_id: threadId,
+        account_id: account.id,
+        org_id: account.org_id,
+        provider_message_id: params.providerMessageId,
+        direction: params.direction,
+        from_email: params.fromEmail,
+        from_name: params.fromName,
+        to_emails: params.toEmails,
+        cc_emails: params.ccEmails,
+        subject: params.subject,
+        body_html: params.bodyHtml,
+        body_text: params.bodyText,
+        sent_at: params.sentAt,
+        is_read: !params.isUnread,
+        has_attachments: params.hasAttachments ?? false,
+        send_status: params.direction === "outbound" ? "sent" : null,
+      })
+      .select("id")
+      .single();
+    if (msgError) throw msgError;
     await supabaseAdmin
       .from("mail_threads")
       .update({
@@ -339,6 +344,7 @@ export async function upsertThreadAndMessage(params: {
         is_unread: params.isUnread,
       })
       .eq("id", threadId);
+    return { threadId: threadId!, messageId: insertedMsg.id as number };
   } else {
     // Refresh bodies on re-sync (fixes UTF-8 / provider content updates).
     await supabaseAdmin
@@ -355,7 +361,6 @@ export async function upsertThreadAndMessage(params: {
         has_attachments: params.hasAttachments ?? false,
       })
       .eq("id", existingMsg.id);
+    return { threadId: threadId!, messageId: existingMsg.id as number };
   }
-
-  return threadId!;
 }

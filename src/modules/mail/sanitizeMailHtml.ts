@@ -1,11 +1,36 @@
 /**
- * Sanitize synced HTML email bodies for safe rendering in the Mail pane.
- * Allows inline styles so messages look closer to the provider; still strips
- * scripts, iframes, forms, and event-handler attributes.
- * Neutralizes root html/body backgrounds so marketing mail cannot paint the
- * whole CRM reader — nested content keeps its own styles inside the canvas.
+ * Sanitize synced HTML email bodies for the Mail reader.
+ * Keeps marketing layout (inline colors/styles) while stripping scripts,
+ * cid: images, root document chrome, and layout that escapes the canvas.
  */
 import DOMPurify from "dompurify";
+
+let mailSanitizeHookInstalled = false;
+
+const LAYOUT_BREAKING_STYLE_PROPS = new Set([
+  "position",
+  "float",
+  "z-index",
+  "top",
+  "left",
+  "right",
+  "bottom",
+  "transform",
+]);
+
+const cleanInlineStyle = (raw: string) =>
+  raw
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .filter((chunk) => {
+      const prop = chunk.split(":")[0]?.trim().toLowerCase();
+      if (!prop) return false;
+      if (LAYOUT_BREAKING_STYLE_PROPS.has(prop)) return false;
+      if (prop === "margin" && /-\d/.test(chunk)) return false;
+      return true;
+    })
+    .join("; ");
 
 const stripRootDocumentChrome = (html: string): string =>
   html
@@ -32,12 +57,78 @@ const stripRootDocumentChrome = (html: string): string =>
     })
     .replace(/<\/body>/gi, "</div>");
 
+const stripCidReferences = (html: string): string =>
+  html
+    .replace(/<img\b[^>]*\bsrc\s*=\s*["']cid:[^"']+["'][^>]*>/gi, "")
+    .replace(/\bsrc\s*=\s*(["'])cid:[^"']+\1/gi, "src=$1$1")
+    .replace(/url\((["']?)cid:[^)"']+\1\)/gi, "none");
+
+const installMailSanitizeHooks = () => {
+  if (mailSanitizeHookInstalled) return;
+  mailSanitizeHookInstalled = true;
+
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    if (!(node instanceof HTMLElement)) return;
+
+    if (node.tagName === "IMG") {
+      const src = node.getAttribute("src")?.trim().toLowerCase() ?? "";
+      if (src.startsWith("cid:") || !src) {
+        node.remove();
+        return;
+      }
+      node.removeAttribute("width");
+      node.removeAttribute("height");
+      node.style.setProperty("max-width", "100%", "important");
+      node.style.setProperty("height", "auto", "important");
+    }
+
+    if (node.tagName === "TABLE") {
+      node.style.setProperty("max-width", "100%", "important");
+      node.removeAttribute("width");
+    }
+
+    if (node.tagName === "A") {
+      node.setAttribute("target", "_blank");
+      node.setAttribute("rel", "noopener noreferrer");
+    }
+
+    if (node.hasAttribute("style")) {
+      const cleaned = cleanInlineStyle(node.getAttribute("style") ?? "");
+      if (cleaned) node.setAttribute("style", cleaned);
+      else node.removeAttribute("style");
+    }
+
+    // Keep marketing layout but prevent escaping the reader canvas.
+    if (LAYOUT_BREAKING_STYLE_PROPS.size) {
+      const pos = node.style.position?.toLowerCase();
+      if (pos === "fixed" || pos === "absolute" || pos === "sticky") {
+        node.style.position = "relative";
+      }
+      if (node.style.float && node.style.float !== "none") {
+        node.style.float = "none";
+      }
+    }
+  });
+};
+
 export function sanitizeMailHtml(html: string): string {
-  const clean = DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true },
+  installMailSanitizeHooks();
+  const prepared = stripRootDocumentChrome(stripCidReferences(html));
+  return DOMPurify.sanitize(prepared, {
+    ADD_ATTR: [
+      "target",
+      "style",
+      "align",
+      "valign",
+      "width",
+      "height",
+      "bgcolor",
+      "cellpadding",
+      "cellspacing",
+      "border",
+    ],
     FORBID_TAGS: ["script", "iframe", "object", "embed", "form"],
     FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus"],
     ALLOW_DATA_ATTR: false,
   });
-  return stripRootDocumentChrome(clean);
 }

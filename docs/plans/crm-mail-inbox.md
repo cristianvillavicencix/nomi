@@ -17,6 +17,8 @@ Unified mail client for organization and personal mailboxes. Separate from ticke
 | 2 Compose / reply / drafts / `mail_send` | Done |
 | 3 IMAP/SMTP Settings wizard + worker hook | Done (worker optional; SMTP retries 465/587) |
 | Sent folder (sync + UI) | Done (Gmail `in:sent`, Graph `sentitems`, IMAP Sent mailbox) |
+| Compose polish (chips, Cc/Bcc, contextual format, solid Send, attachments) | Done (≤5 files, 4 MB each, 8 MB total; Gmail/Graph/IMAP) |
+| HTML render fidelity | Done (Gmail `attachmentId` bodies, Graph HTML Prefer, CID strip, ticket-style sanitize, single light canvas) |
 | 4 Labels, FTS search, bulk actions, ticket bridge flag | Done |
 | 5 Sync health, retention RPC, docs, smoke notes | Done |
 
