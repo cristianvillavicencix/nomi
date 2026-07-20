@@ -20,9 +20,13 @@ export const isAccountsHubEnabled = (): boolean =>
 /**
  * Ask Sigma assistant build flag. Prefer `useCrmAssistantAvailable` for UI —
  * that also respects Settings → Integrations → Ask Sigma.
+ * Unset defaults to enabled; set `0` / `false` / `off` to hide.
  */
-export const isCrmAssistantEnvEnabled = (): boolean =>
-  isTruthyEnv(import.meta.env.VITE_CRM_ASSISTANT_ENABLED);
+export const isCrmAssistantEnvEnabled = (): boolean => {
+  const raw = import.meta.env.VITE_CRM_ASSISTANT_ENABLED;
+  if (raw == null || String(raw).trim() === "") return true;
+  return isTruthyEnv(raw);
+};
 
 /**
  * Optional CRM bridge: show “Create ticket” from a mail thread.

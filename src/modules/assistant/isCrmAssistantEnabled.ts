@@ -1,7 +1,7 @@
 /**
  * Frontend feature flag for Ask Sigma (CRM Claude Assistant).
- * Enabled when `VITE_CRM_ASSISTANT_ENABLED` is truthy (`1` / `true` / `yes` / `on`).
- * Default: enabled in development when unset; production requires explicit flag.
+ * Enabled when `VITE_CRM_ASSISTANT_ENABLED` is truthy (`1` / `true` / `yes` / `on`),
+ * or when unset (shipping default). Set to `0` / `false` / `off` to hide the chrome.
  *
  * Workspace admins can still disable Ask Sigma under Settings → Integrations → Ask Sigma
  * (`organizations.assistant_settings.enabled`). Prefer `useCrmAssistantAvailable`
@@ -19,12 +19,12 @@ const isFalsyEnv = (raw: unknown): boolean => {
   return value === "0" || value === "false" || value === "no" || value === "off";
 };
 
-/** Raw Vite env / DEV default — ignores org settings. */
+/** Raw Vite env — ignores org settings. Unset defaults to enabled. */
 export const isCrmAssistantEnvEnabled = (): boolean => {
   const raw = import.meta.env.VITE_CRM_ASSISTANT_ENABLED;
   if (isFalsyEnv(raw)) return false;
   if (isTruthyEnv(raw)) return true;
-  return Boolean(import.meta.env.DEV);
+  return true;
 };
 
 /** @deprecated Prefer `isCrmAssistantEnvEnabled` or `useCrmAssistantAvailable`. */

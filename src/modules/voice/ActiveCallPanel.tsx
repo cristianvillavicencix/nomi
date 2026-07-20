@@ -34,9 +34,12 @@ type WorkspaceTab = "details" | "notes" | "activity";
 export const ActiveCallPanel = ({
   party,
   className,
+  maxHeight = 420,
 }: {
   party: ActiveCallParty | null;
   className?: string;
+  /** Caps panel height so it expands above the control bar without leaving the viewport. */
+  maxHeight?: number;
 }) => {
   const notify = useNotify();
   const { identity } = useGetIdentity();
@@ -149,9 +152,10 @@ export const ActiveCallPanel = ({
   return (
     <div
       className={cn(
-        "flex max-h-[min(420px,55vh)] w-full flex-col overflow-hidden rounded-t-xl border border-b-0 border-border/60 bg-background/95 shadow-lg backdrop-blur",
+        "flex w-full flex-col overflow-hidden rounded-t-xl border border-b-0 border-border/60 bg-background/95 shadow-lg backdrop-blur",
         className,
       )}
+      style={{ maxHeight }}
     >
       <div className="shrink-0 border-b px-4 py-3">
         <div className="flex items-start gap-3">

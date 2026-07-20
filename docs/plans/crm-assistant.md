@@ -25,8 +25,8 @@ CrmAssistantPanel → Edge crm_assistant (JWT) → Anthropic /v1/messages + tool
 
 ### Feature flag
 
-- Frontend: `VITE_CRM_ASSISTANT_ENABLED=1` (or `true` / `yes` / `on`)
-- Workspace toggle: Settings → Integrations → **Ask Nomi** (`organizations.assistant_settings.enabled`)
+- Frontend: `VITE_CRM_ASSISTANT_ENABLED` — unset or truthy shows Ask Sigma; set `0` / `false` / `off` to hide
+- Workspace toggle: Settings → Integrations → **Ask Sigma** (`organizations.assistant_settings.enabled`)
 - Capability: `crm.assistant.use` (admins always; users/read_only per matrix)
 
 ## Persistence

@@ -1,16 +1,11 @@
 import type { MouseEvent } from "react";
 import { Link } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  initialsOf,
+  resolveAvatarUrl,
+} from "@/components/avatar/resolveAvatar";
 import type { Deal, OrganizationMember } from "@/components/atomic-crm/types";
-
-const getMemberInitials = (
-  member: Pick<OrganizationMember, "first_name" | "last_name">,
-) => {
-  const first = (member.first_name ?? "").trim().charAt(0);
-  const last = (member.last_name ?? "").trim().charAt(0);
-  const initials = `${first}${last}`.toUpperCase();
-  return initials || "—";
-};
 
 const getMemberName = (
   member: Pick<OrganizationMember, "first_name" | "last_name">,
@@ -53,11 +48,11 @@ export const ProjectAssignedAvatars = ({
               >
                 <Avatar className="size-7">
                   <AvatarImage
-                    src={member.avatar?.src ?? undefined}
+                    src={resolveAvatarUrl(member, 64)}
                     alt={getMemberName(member)}
                   />
                   <AvatarFallback className="bg-muted text-[10px] font-medium">
-                    {getMemberInitials(member)}
+                    {initialsOf(member)}
                   </AvatarFallback>
                 </Avatar>
               </Link>
@@ -88,9 +83,9 @@ export const ProjectAssignedAvatars = ({
       onClick={onClick}
     >
       <Avatar className="size-7">
-        <AvatarImage src={member.avatar?.src ?? undefined} alt={name} />
+        <AvatarImage src={resolveAvatarUrl(member, 64)} alt={name} />
         <AvatarFallback className="bg-muted text-[10px] font-medium">
-          {getMemberInitials(member)}
+          {initialsOf(member)}
         </AvatarFallback>
       </Avatar>
     </Link>
