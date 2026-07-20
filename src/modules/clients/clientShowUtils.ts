@@ -1,7 +1,12 @@
 import type { Contact } from "@/components/atomic-crm/types";
 import { formatPhoneDisplay } from "@/utils/phone";
 
-export const CLIENT_TABS = ["activity", "projects", "financial"] as const;
+export const CLIENT_TABS = [
+  "activity",
+  "deals",
+  "financial",
+  "tickets",
+] as const;
 
 export type ClientTab = (typeof CLIENT_TABS)[number];
 
@@ -29,13 +34,13 @@ const LEGACY_TAB_MAP: Record<
   informacion: { tab: "activity" },
   referrals: { tab: "activity" },
   contacts: { tab: "activity" },
-  tickets: { tab: "activity" },
+  projects: { tab: "deals" },
   proposals: { tab: "financial", section: "proposals" },
   contracts: { tab: "financial", section: "contracts" },
   "web-forms": { tab: "activity" },
   tasks: { tab: "activity", section: "tasks" },
   notes: { tab: "activity", section: "notes" },
-  files: { tab: "projects" },
+  files: { tab: "deals" },
 };
 
 export const resolveClientTabFromUrl = (

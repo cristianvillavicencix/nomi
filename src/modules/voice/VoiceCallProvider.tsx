@@ -15,6 +15,7 @@ import { IncomingCallDialog } from "@/modules/voice/IncomingCallDialog";
 import { IncomingCallBanner } from "@/modules/voice/IncomingCallBanner";
 import { ActiveCallBar } from "@/modules/voice/ActiveCallBar";
 import type {
+  ActiveCallParty,
   IncomingCallerInfo,
   PlaceVoiceCallParams,
   VoiceCallState,
@@ -39,6 +40,22 @@ const emptyIncomingCallerInfo = (
   };
 };
 
+const clearActiveCallUi = (
+  setters: {
+    setActiveCallLabel: (v: string | null) => void;
+    setActiveCallParty: (v: ActiveCallParty | null) => void;
+    setCallConnectedAt: (v: number | null) => void;
+    setIsMuted: (v: boolean) => void;
+    setCallWorkspaceOpen: (v: boolean) => void;
+  },
+) => {
+  setters.setActiveCallLabel(null);
+  setters.setActiveCallParty(null);
+  setters.setCallConnectedAt(null);
+  setters.setIsMuted(false);
+  setters.setCallWorkspaceOpen(false);
+};
+
 export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   const dataProvider = useDataProvider<CrmDataProvider>();
   const queryClient = useQueryClient();
@@ -57,6 +74,11 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     useState<IncomingCallerInfo | null>(null);
   const [incomingUiMinimized, setIncomingUiMinimized] = useState(false);
   const [activeCallLabel, setActiveCallLabel] = useState<string | null>(null);
+  const [activeCallParty, setActiveCallParty] =
+    useState<ActiveCallParty | null>(null);
+  const [callConnectedAt, setCallConnectedAt] = useState<number | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [callWorkspaceOpen, setCallWorkspaceOpen] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
 
   const canUseVoice = memberHasVoiceCallCapability(
@@ -94,7 +116,13 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
       setIncomingCallerLabel(null);
       setIncomingCallerInfo(null);
       setIncomingUiMinimized(false);
-      setActiveCallLabel(null);
+      clearActiveCallUi({
+        setActiveCallLabel,
+        setActiveCallParty,
+        setCallConnectedAt,
+        setIsMuted,
+        setCallWorkspaceOpen,
+      });
       setIsRegistered(false);
       const device = deviceRef.current;
       deviceRef.current = null;
@@ -109,19 +137,45 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
 
   const bindCallEvents = useCallback(
     (call: Call) => {
+      const syncFromCallStatus = () => {
+        const status = call.status();
+        if (status === "open") {
+          setErrorMessage(null);
+          setCallConnectedAt((current) => current ?? Date.now());
+          setIsMuted(call.isMuted());
+          setCallState("open");
+        } else if (status === "ringing") {
+          setCallState("ringing");
+          setErrorMessage(null);
+        } else if (status === "connecting" || status === "reconnecting") {
+          setCallState("connecting");
+        }
+      };
+
       call.on("ringing", () => {
         setCallState("ringing");
         setErrorMessage(null);
       });
       call.on("accept", () => {
         setErrorMessage(null);
+        setCallConnectedAt(Date.now());
+        setIsMuted(call.isMuted());
         setCallState("open");
+      });
+      call.on("mute", (muted: boolean) => {
+        setIsMuted(Boolean(muted));
       });
       call.on("disconnect", () => {
         if (activeCallRef.current === call) {
           activeCallRef.current = null;
         }
-        setActiveCallLabel(null);
+        clearActiveCallUi({
+          setActiveCallLabel,
+          setActiveCallParty,
+          setCallConnectedAt,
+          setIsMuted,
+          setCallWorkspaceOpen,
+        });
         setCallState("idle");
         invalidateCallHistory();
       });
@@ -129,13 +183,25 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
         if (activeCallRef.current === call) {
           activeCallRef.current = null;
         }
-        setActiveCallLabel(null);
+        clearActiveCallUi({
+          setActiveCallLabel,
+          setActiveCallParty,
+          setCallConnectedAt,
+          setIsMuted,
+          setCallWorkspaceOpen,
+        });
         setCallState("idle");
         invalidateCallHistory();
       });
       call.on("reject", () => {
         activeCallRef.current = null;
-        setActiveCallLabel(null);
+        clearActiveCallUi({
+          setActiveCallLabel,
+          setActiveCallParty,
+          setCallConnectedAt,
+          setIsMuted,
+          setCallWorkspaceOpen,
+        });
         setErrorMessage("Call was rejected or could not connect.");
         setCallState("error");
         invalidateCallHistory();
@@ -145,6 +211,9 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
         setCallState("error");
         invalidateCallHistory();
       });
+
+      // device.connect() / accept() may already be past the event we care about.
+      syncFromCallStatus();
     },
     [invalidateCallHistory],
   );
@@ -301,9 +370,39 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   const hangUp = useCallback(() => {
     activeCallRef.current?.disconnect();
     activeCallRef.current = null;
-    setActiveCallLabel(null);
+    clearActiveCallUi({
+      setActiveCallLabel,
+      setActiveCallParty,
+      setCallConnectedAt,
+      setIsMuted,
+      setCallWorkspaceOpen,
+    });
     setCallState("idle");
     setErrorMessage(null);
+  }, []);
+
+  const setMuted = useCallback((muted: boolean) => {
+    const call = activeCallRef.current;
+    // Optimistic UI so the bar reacts even if Twilio is slow to emit `mute`.
+    setIsMuted(muted);
+    if (!call) return;
+    try {
+      call.mute(muted);
+      setIsMuted(call.isMuted());
+    } catch (error) {
+      console.error("[VoiceCallProvider] mute failed", error);
+      setIsMuted(!muted);
+    }
+  }, []);
+
+  const sendDigits = useCallback((digits: string) => {
+    const call = activeCallRef.current;
+    if (!call || !digits) return;
+    try {
+      call.sendDigits(digits);
+    } catch (error) {
+      console.error("[VoiceCallProvider] sendDigits failed", error);
+    }
   }, []);
 
   const placeCall = useCallback(
@@ -325,9 +424,18 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
         );
       }
 
+      const phoneLabel = formatUsPhoneDisplayFromAny(normalizedTo);
       setErrorMessage(null);
       setCallState("connecting");
-      setActiveCallLabel(formatUsPhoneDisplayFromAny(normalizedTo));
+      setCallConnectedAt(null);
+      setIsMuted(false);
+      setActiveCallLabel(phoneLabel);
+      setActiveCallParty({
+        phoneLabel,
+        contactId: params.contactId ?? null,
+        conversationId: params.conversationId ?? null,
+        dealId: params.dealId ?? null,
+      });
 
       const device = await ensureDevice();
       const connectParams: Record<string, string> = {
@@ -355,21 +463,37 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
   const acceptIncoming = useCallback(() => {
     const call = incomingCall;
     if (!call) return;
+    const info = incomingCallerInfo;
     const label =
-      incomingCallerInfo?.contactName ??
+      info?.contactName ??
       incomingCallerLabel ??
-      incomingCallerInfo?.displayPhone ??
+      info?.displayPhone ??
       null;
+    const phoneLabel = info?.displayPhone ?? label ?? "Incoming call";
     setIncomingCall(null);
     incomingCallRef.current = null;
     setIncomingCallerLabel(null);
     setIncomingCallerInfo(null);
     setIncomingUiMinimized(false);
     setActiveCallLabel(label);
+    setActiveCallParty({
+      phoneLabel,
+      contactId: info?.contactId ?? null,
+      contactName: info?.contactName ?? null,
+      companyName: info?.companyName ?? null,
+    });
+    setCallConnectedAt(null);
+    setIsMuted(false);
     setCallState("connecting");
     activeCallRef.current = call;
     bindCallEvents(call);
     call.accept();
+    // accept() can move the call to open before/without a late event.
+    if (call.status() === "open") {
+      setCallConnectedAt(Date.now());
+      setIsMuted(call.isMuted());
+      setCallState("open");
+    }
   }, [bindCallEvents, incomingCall, incomingCallerInfo, incomingCallerLabel]);
 
   const rejectIncoming = useCallback(() => {
@@ -397,6 +521,13 @@ export const VoiceCallProvider = ({ children }: { children: ReactNode }) => {
     incomingCallerInfo,
     incomingUiMinimized,
     activeCallLabel,
+    activeCallParty,
+    callConnectedAt,
+    isMuted,
+    setMuted,
+    sendDigits,
+    callWorkspaceOpen,
+    setCallWorkspaceOpen,
     placeCall,
     hangUp,
     acceptIncoming,

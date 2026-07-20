@@ -84,8 +84,8 @@ export const ClientProjectsTab = ({
       <ClientTabEmpty
         message={
           contactId
-            ? "No projects linked to this contact yet."
-            : "No projects for this client yet. Use the + button above to create one."
+            ? "No deals linked to this contact yet."
+            : "No deals for this client yet. Use More → New deal to create one."
         }
       />
     );
@@ -96,7 +96,7 @@ export const ClientProjectsTab = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Project</TableHead>
+            <TableHead>Deal</TableHead>
             <TableHead>Stage</TableHead>
             <TableHead className="hidden md:table-cell">Amount</TableHead>
             <TableHead className="hidden lg:table-cell">Updated</TableHead>
@@ -229,7 +229,7 @@ export const ClientInvoicesTab = ({
 
   if (data.length === 0) {
     return (
-      <ClientTabEmpty message="No invoices for this client yet. Ticket invoices and standalone invoices appear here once created." />
+      <ClientTabEmpty message="No invoices for this client yet. Use New invoice to create one." />
     );
   }
 

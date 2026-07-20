@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useGetList, useGetOne, type Identifier } from "ra-core";
+import { useGetList, useGetOne } from "ra-core";
 import { Avatar } from "@/components/atomic-crm/contacts/Avatar";
 import { CompanyAvatar } from "@/components/atomic-crm/companies/CompanyAvatar";
 import {
@@ -9,23 +9,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import { findDealLabel } from "@/components/atomic-crm/deals/deal";
 import type { CompanyWithPrimaryContact } from "@/modules/clients/clientProfile";
 import {
   getPrimaryContactFullName,
   getPrimaryContactPhoneRaw,
 } from "@/modules/clients/clientProfile";
 import { CrmPhoneDisplay } from "@/modules/voice/CrmPhoneDisplay";
-import { Badge } from "@/components/ui/badge";
-import {
-  ClientOpenDealsTab,
-  ClientTicketsTab,
-} from "@/modules/clients/ClientTabPanels";
+import { ClientTicketsTab } from "@/modules/clients/ClientTabPanels";
 import { ReferralsTab } from "@/modules/leads/ReferralsTab";
-import { NewDealDialog } from "@/modules/deals/NewDealDialog";
-import { buildOpenDealsFilter } from "@/modules/deals/openDealFilters";
-import type { Contact, Deal } from "@/components/atomic-crm/types";
+import type { Contact } from "@/components/atomic-crm/types";
 import type { Ticket } from "@/modules/types";
 import {
   getContactEmail,
@@ -41,21 +33,12 @@ import {
   RelatedEmptyState,
   RelatedSection,
 } from "@/modules/shared/RelatedSection";
-import { MoneyText } from "@/lib/permissions/MoneyText";
 
-type SidebarPanel =
-  | "company"
-  | "deals"
-  | "tickets"
-  | "referrals"
-  | "referrer"
-  | null;
+type SidebarPanel = "company" | "tickets" | "referrals" | "referrer" | null;
 
 type ContactRelatedSidebarProps = {
   contact: Contact;
   counts: {
-    deals: number;
-    projects: number;
     tickets: number;
     referrals: number;
   };
@@ -66,8 +49,6 @@ export const ContactRelatedSidebar = ({
   counts,
 }: ContactRelatedSidebarProps) => {
   const [panel, setPanel] = useState<SidebarPanel>(null);
-  const [newDealOpen, setNewDealOpen] = useState(false);
-  const { dealStages, dealPipelineStatuses } = useConfigurationContext();
 
   const { data: company, isPending: companyPending } =
     useGetOne<CompanyWithPrimaryContact>(
@@ -86,18 +67,6 @@ export const ContactRelatedSidebar = ({
     "companies",
     { id: contact.referred_by_company_id! },
     { enabled: contact.referred_by_company_id != null },
-  );
-
-  const { data: openDeals = [] } = useGetList<Deal>(
-    "deals",
-    {
-      filter: buildOpenDealsFilter(dealPipelineStatuses, dealStages, {
-        "contact_ids@cs": `{${contact.id}}`,
-      }),
-      pagination: { page: 1, perPage: 3 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
   );
 
   const { data: tickets = [] } = useGetList<Ticket>(
@@ -133,17 +102,15 @@ export const ContactRelatedSidebar = ({
   const panelTitle =
     panel === "company"
       ? "Company"
-      : panel === "deals"
-        ? "Deals"
-        : panel === "tickets"
-          ? "Tickets"
-          : panel === "referrals"
-            ? "Referrals"
-            : "Referred by";
+      : panel === "tickets"
+        ? "Tickets"
+        : panel === "referrals"
+          ? "Referrals"
+          : "Referred by";
 
   return (
     <>
-      <RelatedAccordion defaultValue={["company", "deals"]}>
+      <RelatedAccordion defaultValue={["company"]}>
         <RelatedSection
           value="company"
           title="Company"
@@ -230,37 +197,6 @@ export const ContactRelatedSidebar = ({
         ) : null}
 
         <RelatedSection
-          value="deals"
-          title="Deals"
-          count={counts.deals}
-          onAdd={
-            contact.company_id != null ? () => setNewDealOpen(true) : undefined
-          }
-          onViewAll={() => setPanel("deals")}
-          empty={
-            <RelatedEmptyState message="No open deals linked to this contact yet." />
-          }
-        >
-          <div className="space-y-2">
-            {openDeals.map((deal) => (
-              <Link
-                key={deal.id}
-                to={`/deals/${deal.id}/show`}
-                className={relatedPreviewItemClassName}
-              >
-                <p className="font-medium">{deal.name}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <Badge variant="outline" className="text-[10px] capitalize">
-                    {findDealLabel(dealStages, deal.stage)}
-                  </Badge>
-                  <MoneyText value={deal.amount} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </RelatedSection>
-
-        <RelatedSection
           value="tickets"
           title="Tickets"
           count={counts.tickets}
@@ -332,9 +268,6 @@ export const ContactRelatedSidebar = ({
             <SheetTitle>{panelTitle}</SheetTitle>
           </SheetHeader>
           <div className="mt-4">
-            {panel === "deals" ? (
-              <ClientOpenDealsTab contactId={contact.id} />
-            ) : null}
             {panel === "tickets" ? (
               <ClientTicketsTab
                 companyId={contact.company_id ?? undefined}
@@ -384,15 +317,6 @@ export const ContactRelatedSidebar = ({
           </div>
         </SheetContent>
       </Sheet>
-
-      {contact.company_id != null ? (
-        <NewDealDialog
-          open={newDealOpen}
-          onOpenChange={setNewDealOpen}
-          companyId={contact.company_id}
-          defaultContactId={contact.id}
-        />
-      ) : null}
     </>
   );
 };

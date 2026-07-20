@@ -10,6 +10,16 @@ export type IncomingCallerInfo = {
   isLookupPending: boolean;
 };
 
+/** Party linked to the active outbound/inbound call (for the in-call workspace). */
+export type ActiveCallParty = {
+  phoneLabel: string;
+  contactId?: Identifier | null;
+  conversationId?: Identifier | null;
+  dealId?: Identifier | null;
+  contactName?: string | null;
+  companyName?: string | null;
+};
+
 export type VoiceCallState =
   | "idle"
   | "initializing"

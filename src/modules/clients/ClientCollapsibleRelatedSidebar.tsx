@@ -1,4 +1,4 @@
-import { Briefcase, Handshake, LifeBuoy, UserRound, Users } from "lucide-react";
+import { Handshake, UserRound, Users } from "lucide-react";
 import type { ComponentProps } from "react";
 import { ClientRelatedSidebar } from "@/modules/clients/ClientRelatedSidebar";
 import { CollapsibleRelatedPanel } from "@/modules/shared/CollapsibleRelatedPanel";
@@ -29,18 +29,6 @@ export const ClientCollapsibleRelatedSidebar = (
           icon: <UserRound className="size-4" />,
           count: counts.leads,
           label: "Leads",
-        },
-        {
-          key: "deals",
-          icon: <Briefcase className="size-4" />,
-          count: counts.deals,
-          label: "Deals",
-        },
-        {
-          key: "tickets",
-          icon: <LifeBuoy className="size-4" />,
-          count: counts.tickets,
-          label: "Tickets",
         },
         {
           key: "referrals",

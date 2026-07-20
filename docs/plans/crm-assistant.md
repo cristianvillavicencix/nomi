@@ -50,7 +50,9 @@ RLS: members only see their own conversations in their org.
 | `get_ticket_summary` | `support.tickets.view` |
 | `search_deals` | `crm.pipeline.view` |
 | `list_calendar_events` | `calendar.view` or `crm.tasks.view` |
-| `search_invoices` | `proposals.view` + amount masking via `view_amounts.show` |
+| `list_tasks` | `crm.tasks.view` (mine/team, today/overdue/upcoming) |
+| `search_invoices` | `proposals.view` + amount masking via `view_amounts.show`; use `status=draft` for drafts |
+| `org_monthly_summary` | any of tickets/pipeline/tasks/proposals view (partial skip if missing) |
 | `navigate_to` | any authenticated assistant user |
 
 ### Phase 2 — confirm mutations

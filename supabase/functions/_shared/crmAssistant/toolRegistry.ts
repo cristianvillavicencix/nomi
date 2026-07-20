@@ -354,13 +354,21 @@ const listCalendarEvents: AssistantTool = {
 
 const searchInvoices: AssistantTool = {
   name: "search_invoices",
-  description: "Search client invoices by number, status, or company id.",
+  description:
+    "List or search client invoices. Use status=draft for draft invoices (no query needed). Also supports sent, paid, overdue, void. Optional query matches invoice_number.",
   capabilities: ["proposals.view"],
   input_schema: {
     type: "object",
     properties: {
-      query: { type: "string" },
-      status: { type: "string" },
+      query: {
+        type: "string",
+        description:
+          "Invoice number fragment. Optional when status is set (e.g. draft).",
+      },
+      status: {
+        type: "string",
+        description: "draft | sent | paid | overdue | void | open (sent+overdue)",
+      },
       company_id: { type: "number" },
       limit: { type: "number" },
     },
@@ -369,10 +377,20 @@ const searchInvoices: AssistantTool = {
     const missing = requireAny(ctx, ["proposals.view"]);
     if (missing) return deny(missing);
     const canViewAmounts = hasMemberCapability(ctx.member, "view_amounts.show");
-    const limit = Math.min(Math.max(num(input.limit) ?? 10, 1), 15);
-    const query = str(input.query);
-    const status = str(input.status);
+    const limit = Math.min(Math.max(num(input.limit) ?? 15, 1), 30);
+    let query = str(input.query);
+    let status = str(input.status).toLowerCase();
     const companyId = num(input.company_id);
+
+    // If the user typed a status word as the query, treat it as status.
+    const statusAlias = query.toLowerCase();
+    if (
+      !status &&
+      ["draft", "sent", "paid", "overdue", "void", "open"].includes(statusAlias)
+    ) {
+      status = statusAlias;
+      query = "";
+    }
 
     let q = ctx.supabase
       .from("client_invoices")
@@ -383,7 +401,11 @@ const searchInvoices: AssistantTool = {
       .order("created_at", { ascending: false })
       .limit(limit);
 
-    if (status) q = q.eq("status", status);
+    if (status === "open") {
+      q = q.in("status", ["sent", "overdue"]);
+    } else if (status) {
+      q = q.eq("status", status);
+    }
     if (companyId != null) q = q.eq("company_id", companyId);
     if (query) q = q.ilike("invoice_number", `%${query}%`);
 
@@ -393,6 +415,8 @@ const searchInvoices: AssistantTool = {
     return {
       ok: true,
       data: {
+        filter: { query: query || null, status: status || null, company_id: companyId },
+        count: (data ?? []).length,
         invoices: (data ?? []).map((inv) => ({
           id: inv.id,
           invoice_number: inv.invoice_number,
@@ -412,7 +436,7 @@ const searchInvoices: AssistantTool = {
 const navigateTo: AssistantTool = {
   name: "navigate_to",
   description:
-    "Ask the client app to open an in-app path (e.g. /tickets/77/show).",
+    "Ask the client app to open an in-app path (e.g. /tickets/77/show, /billing/invoices/new?company_id=12, /companies/5/show).",
   input_schema: {
     type: "object",
     properties: {
@@ -1150,14 +1174,391 @@ const planMeeting: AssistantTool = {
   },
 };
 
+const dayBoundsUtc = (isoDate: string) => {
+  const start = `${isoDate}T00:00:00.000Z`;
+  const endDate = new Date(`${isoDate}T00:00:00.000Z`);
+  endDate.setUTCDate(endDate.getUTCDate() + 1);
+  return { start, end: endDate.toISOString() };
+};
+
+const listTasks: AssistantTool = {
+  name: "list_tasks",
+  description:
+    "List CRM tasks (Work). Use for “my tasks today”, “team tasks”, overdue, or upcoming. Prefer this over calendar for to-dos.",
+  capabilities: ["crm.tasks.view"],
+  input_schema: {
+    type: "object",
+    properties: {
+      scope: {
+        type: "string",
+        description: "mine (default) | team (all open tasks in the org)",
+      },
+      due: {
+        type: "string",
+        description: "today | overdue | upcoming | all",
+      },
+      include_done: {
+        type: "boolean",
+        description: "Include completed tasks (default false)",
+      },
+      limit: { type: "number" },
+    },
+  },
+  execute: async (ctx, input) => {
+    const missing = requireAny(ctx, ["crm.tasks.view"]);
+    if (missing) return deny(missing);
+
+    const scope = (str(input.scope) || "mine").toLowerCase();
+    const due = (str(input.due) || "today").toLowerCase();
+    const includeDone = Boolean(input.include_done);
+    const limit = Math.min(Math.max(num(input.limit) ?? 25, 1), 50);
+    const memberId = Number(ctx.member.id);
+    const today = new Date().toISOString().slice(0, 10);
+    const { start: todayStart, end: tomorrowStart } = dayBoundsUtc(today);
+
+    let q = ctx.supabase
+      .from("tasks")
+      .select(
+        "id, text, type, due_date, done_date, contact_id, deal_id, organization_member_id, assignee_person_ids, priority",
+      )
+      .eq("org_id", ctx.orgId)
+      .order("due_date", { ascending: true })
+      .limit(limit);
+
+    if (!includeDone) {
+      q = q.is("done_date", null);
+    }
+
+    if (due === "today") {
+      q = q.gte("due_date", todayStart).lt("due_date", tomorrowStart);
+    } else if (due === "overdue") {
+      q = q.lt("due_date", todayStart);
+    } else if (due === "upcoming") {
+      q = q.gte("due_date", tomorrowStart);
+    }
+
+    if (scope !== "team" && Number.isFinite(memberId)) {
+      q = q.or(
+        `organization_member_id.eq.${memberId},assignee_person_ids.cs.{${memberId}}`,
+      );
+    }
+
+    const { data, error } = await q;
+    if (error) return { ok: false, error: error.message };
+
+    return {
+      ok: true,
+      data: {
+        scope: scope === "team" ? "team" : "mine",
+        due,
+        as_of_date: today,
+        count: (data ?? []).length,
+        tasks: (data ?? []).map((task) => ({
+          id: task.id,
+          text: task.text,
+          type: task.type,
+          due_date: task.due_date,
+          done: Boolean(task.done_date),
+          contact_id: task.contact_id,
+          deal_id: task.deal_id,
+          organization_member_id: task.organization_member_id,
+          priority: task.priority ?? "normal",
+        })),
+      },
+    };
+  },
+};
+
+const orgMonthlySummary: AssistantTool = {
+  name: "org_monthly_summary",
+  description:
+    "Monthly CRM snapshot: tickets, invoices, deals, tasks. Use for “resumen mensual”, month overview, or KPIs.",
+  capabilities: [
+    "crm.contacts.view",
+    "crm.companies.view",
+    "support.tickets.view",
+    "crm.pipeline.view",
+    "crm.tasks.view",
+    "proposals.view",
+  ],
+  input_schema: {
+    type: "object",
+    properties: {
+      year_month: {
+        type: "string",
+        description: "YYYY-MM (default: current UTC month)",
+      },
+    },
+  },
+  execute: async (ctx, input) => {
+    const now = new Date();
+    const raw = str(input.year_month);
+    const yearMonth = /^\d{4}-\d{2}$/.test(raw)
+      ? raw
+      : `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const [y, m] = yearMonth.split("-").map(Number);
+    const monthStart = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+    const monthEnd = new Date(Date.UTC(y, m, 1)).toISOString();
+
+    const canTickets = hasMemberCapability(ctx.member, "support.tickets.view");
+    const canPipeline = hasMemberCapability(ctx.member, "crm.pipeline.view");
+    const canTasks = hasMemberCapability(ctx.member, "crm.tasks.view");
+    const canInvoices = hasMemberCapability(ctx.member, "proposals.view");
+    const canAmounts = hasMemberCapability(ctx.member, "view_amounts.show");
+
+    const countExact = async (
+      table: string,
+      // deno-lint-ignore no-explicit-any
+      patch: (q: any) => any,
+    ) => {
+      // deno-lint-ignore no-explicit-any
+      let q: any = ctx.supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", ctx.orgId);
+      q = patch(q);
+      const { count, error } = await q;
+      if (error) throw new Error(`${table}: ${error.message}`);
+      return count ?? 0;
+    };
+
+    const summary: Record<string, unknown> = {
+      year_month: yearMonth,
+      period: { start: monthStart, end: monthEnd },
+    };
+
+    try {
+      if (canTickets) {
+        summary.tickets = {
+          created_this_month: await countExact("tickets", (q) =>
+            q.gte("created_at", monthStart).lt("created_at", monthEnd),
+          ),
+          currently_openish: await countExact("tickets", (q) =>
+            q
+              .is("merged_into_ticket_id", null)
+              .in("status", ["new", "open", "pending", "waiting"]),
+          ),
+        };
+      } else {
+        summary.tickets = { skipped: "missing support.tickets.view" };
+      }
+
+      if (canInvoices) {
+        let amountCreated: number | undefined;
+        if (canAmounts) {
+          const { data: rows, error } = await ctx.supabase
+            .from("client_invoices")
+            .select("amount")
+            .eq("org_id", ctx.orgId)
+            .gte("created_at", monthStart)
+            .lt("created_at", monthEnd);
+          if (error) throw new Error(error.message);
+          amountCreated = (rows ?? []).reduce(
+            (sum, row) => sum + Number(row.amount ?? 0),
+            0,
+          );
+        }
+
+        summary.invoices = {
+          created_this_month: await countExact("client_invoices", (q) =>
+            q.gte("created_at", monthStart).lt("created_at", monthEnd),
+          ),
+          draft_open: await countExact("client_invoices", (q) =>
+            q.eq("status", "draft"),
+          ),
+          sent_open: await countExact("client_invoices", (q) =>
+            q.eq("status", "sent"),
+          ),
+          paid_created_this_month: await countExact("client_invoices", (q) =>
+            q
+              .eq("status", "paid")
+              .gte("created_at", monthStart)
+              .lt("created_at", monthEnd),
+          ),
+          amount_created_this_month: amountCreated,
+          amount_hidden: !canAmounts,
+        };
+      } else {
+        summary.invoices = { skipped: "missing proposals.view" };
+      }
+
+      if (canPipeline) {
+        summary.deals = {
+          created_this_month: await countExact("deals", (q) =>
+            q.gte("created_at", monthStart).lt("created_at", monthEnd),
+          ),
+          openish: await countExact("deals", (q) =>
+            q.not("stage", "in", '("won","lost")'),
+          ),
+        };
+      } else {
+        summary.deals = { skipped: "missing crm.pipeline.view" };
+      }
+
+      if (canTasks) {
+        summary.tasks = {
+          due_this_month: await countExact("tasks", (q) =>
+            q.gte("due_date", monthStart).lt("due_date", monthEnd),
+          ),
+          completed_this_month: await countExact("tasks", (q) =>
+            q
+              .not("done_date", "is", null)
+              .gte("done_date", monthStart)
+              .lt("done_date", monthEnd),
+          ),
+          currently_open: await countExact("tasks", (q) =>
+            q.is("done_date", null),
+          ),
+        };
+      } else {
+        summary.tasks = { skipped: "missing crm.tasks.view" };
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "Summary failed",
+      };
+    }
+
+    return { ok: true, data: summary };
+  },
+};
+
+const getCompanySummary: AssistantTool = {
+  name: "get_company_summary",
+  description:
+    "Summarize one company/client by id or name: contacts, open deals, tickets, and recent invoices. Use for random questions about a client.",
+  capabilities: ["crm.companies.view"],
+  input_schema: {
+    type: "object",
+    properties: {
+      company_id: { type: "number" },
+      query: {
+        type: "string",
+        description: "Company name when company_id is unknown",
+      },
+    },
+  },
+  execute: async (ctx, input) => {
+    const missing = requireAny(ctx, ["crm.companies.view"]);
+    if (missing) return deny(missing);
+    const canViewAmounts = hasMemberCapability(ctx.member, "view_amounts.show");
+    let companyId = num(input.company_id);
+    const query = str(input.query);
+
+    if (companyId == null && query) {
+      const { data: matches, error: searchError } = await ctx.supabase
+        .from("companies")
+        .select("id, name, sector, website, city, state_abbr, phone_number")
+        .eq("org_id", ctx.orgId)
+        .ilike("name", `%${query}%`)
+        .limit(5);
+      if (searchError) return { ok: false, error: searchError.message };
+      if (!matches?.length) {
+        return { ok: true, data: { found: false, query, companies: [] } };
+      }
+      if (matches.length > 1) {
+        return {
+          ok: true,
+          data: {
+            found: false,
+            ambiguous: true,
+            query,
+            companies: matches,
+          },
+        };
+      }
+      companyId = Number(matches[0].id);
+    }
+
+    if (companyId == null) {
+      return { ok: false, error: "company_id or query is required" };
+    }
+
+    const { data: company, error: companyError } = await ctx.supabase
+      .from("companies")
+      .select(
+        "id, name, sector, website, city, state_abbr, phone_number, primary_contact_id",
+      )
+      .eq("org_id", ctx.orgId)
+      .eq("id", companyId)
+      .maybeSingle();
+
+    if (companyError) return { ok: false, error: companyError.message };
+    if (!company) return { ok: false, error: "Company not found" };
+
+    const [contactsRes, dealsRes, ticketsRes, invoicesRes] = await Promise.all([
+      ctx.supabase
+        .from("contacts")
+        .select("id, first_name, last_name, status")
+        .eq("org_id", ctx.orgId)
+        .eq("company_id", companyId)
+        .limit(20),
+      ctx.supabase
+        .from("deals")
+        .select("id, name, stage, amount, updated_at")
+        .eq("org_id", ctx.orgId)
+        .eq("company_id", companyId)
+        .order("updated_at", { ascending: false })
+        .limit(10),
+      ctx.supabase
+        .from("tickets")
+        .select("id, subject, status, priority, updated_at")
+        .eq("org_id", ctx.orgId)
+        .eq("company_id", companyId)
+        .is("merged_into_ticket_id", null)
+        .order("updated_at", { ascending: false })
+        .limit(10),
+      ctx.supabase
+        .from("client_invoices")
+        .select(
+          "id, invoice_number, status, amount, currency, due_date, created_at",
+        )
+        .eq("org_id", ctx.orgId)
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+
+    return {
+      ok: true,
+      data: {
+        found: true,
+        company,
+        contacts: contactsRes.data ?? [],
+        deals: (dealsRes.data ?? []).map((deal) => ({
+          ...deal,
+          amount: canViewAmounts ? deal.amount : undefined,
+          amount_hidden: !canViewAmounts,
+        })),
+        tickets: ticketsRes.data ?? [],
+        invoices: (invoicesRes.data ?? []).map((inv) => ({
+          id: inv.id,
+          invoice_number: inv.invoice_number,
+          status: inv.status,
+          due_date: inv.due_date,
+          currency: inv.currency,
+          amount: canViewAmounts ? inv.amount : undefined,
+          amount_hidden: !canViewAmounts,
+        })),
+        create_invoice_path: `/billing/invoices/new?company_id=${companyId}`,
+        company_show_path: `/companies/${companyId}/show`,
+      },
+    };
+  },
+};
+
 export const ASSISTANT_TOOLS: AssistantTool[] = [
   searchContacts,
   searchCompanies,
+  getCompanySummary,
   searchTickets,
   getTicketSummary,
   searchDeals,
   listCalendarEvents,
   searchInvoices,
+  listTasks,
+  orgMonthlySummary,
   navigateTo,
   createTask,
   scheduleMeeting,

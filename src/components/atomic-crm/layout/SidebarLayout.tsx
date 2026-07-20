@@ -42,6 +42,7 @@ import {
 import { CrmAssistantButton } from "@/modules/assistant";
 import { SpotlightSearchButton } from "@/components/atomic-crm/layout/SpotlightSearchButton";
 import { GlobalQuickCreateMenu } from "@/components/atomic-crm/layout/GlobalQuickCreateMenu";
+import { GlobalCommsHeaderActions } from "@/components/atomic-crm/layout/GlobalCommsHeaderActions";
 import { NotificationCenterButton } from "@/modules/notifications/NotificationCenterButton";
 import {
   isProposalFocusModePath,
@@ -266,6 +267,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         <div className="flex shrink-0 items-center gap-2">
           <PageActionsTrailingSlot className="flex items-center" />
           <GlobalQuickCreateMenu />
+          <GlobalCommsHeaderActions />
           <CrmAssistantButton />
           <SpotlightSearchButton />
           <NotificationCenterButton />
@@ -276,6 +278,7 @@ export const SidebarLayout = ({ children }: { children: ReactNode }) => {
         <PageActionsSlot className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" />
         <PageActionsTrailingSlot className="ml-auto flex items-center" />
         <GlobalQuickCreateMenu />
+        <GlobalCommsHeaderActions />
         <CrmAssistantButton />
         <SpotlightSearchButton variant="hidden" />
         <NotificationCenterButton />

@@ -1,10 +1,4 @@
-import {
-  Briefcase,
-  Building2,
-  Handshake,
-  LifeBuoy,
-  UserRound,
-} from "lucide-react";
+import { Building2, Handshake, LifeBuoy, UserRound } from "lucide-react";
 import type { ComponentProps } from "react";
 import { ContactRelatedSidebar } from "@/modules/contacts/ContactRelatedSidebar";
 import { CollapsibleRelatedPanel } from "@/modules/shared/CollapsibleRelatedPanel";
@@ -39,12 +33,6 @@ export const ContactCollapsibleRelatedSidebar = (
               ? 1
               : 0,
           label: "Referred by",
-        },
-        {
-          key: "deals",
-          icon: <Briefcase className="size-4" />,
-          count: counts.deals,
-          label: "Deals",
         },
         {
           key: "tickets",

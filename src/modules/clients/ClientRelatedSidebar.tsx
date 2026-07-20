@@ -9,18 +9,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useConfigurationContext } from "@/components/atomic-crm/root/ConfigurationContext";
-import { findDealLabel } from "@/components/atomic-crm/deals/deal";
-import type { Company, Contact, Deal } from "@/components/atomic-crm/types";
-import type { Ticket } from "@/modules/types";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import { ClientContactsTab } from "@/modules/clients/ClientContactsTab";
-import {
-  ClientOpenDealsTab,
-  ClientTicketsTab,
-} from "@/modules/clients/ClientTabPanels";
 import { ReferralsTab } from "@/modules/leads/ReferralsTab";
-import { NewDealDialog } from "@/modules/deals/NewDealDialog";
-import { buildOpenDealsFilter } from "@/modules/deals/openDealFilters";
 import {
   getContactEmail,
   getContactFullName,
@@ -37,25 +28,15 @@ import {
   RelatedEmptyState,
   RelatedSection,
 } from "@/modules/shared/RelatedSection";
-import { MoneyText } from "@/lib/permissions/MoneyText";
 
-type SidebarPanel =
-  | "contacts"
-  | "deals"
-  | "leads"
-  | "tickets"
-  | "referrals"
-  | null;
+type SidebarPanel = "contacts" | "leads" | "referrals" | null;
 
 type ClientRelatedSidebarProps = {
   companyId: Company["id"];
   primaryContactId?: Identifier | null;
   counts: {
     contacts: number;
-    deals: number;
     leads: number;
-    projects: number;
-    tickets: number;
     referrals: number;
   };
   onAddContact: () => void;
@@ -70,8 +51,6 @@ export const ClientRelatedSidebar = ({
   onOpenContact,
 }: ClientRelatedSidebarProps) => {
   const [panel, setPanel] = useState<SidebarPanel>(null);
-  const [newDealOpen, setNewDealOpen] = useState(false);
-  const { dealStages, dealPipelineStatuses } = useConfigurationContext();
   const { data: contacts = [] } = useGetList<Contact>(
     "contacts",
     {
@@ -98,28 +77,6 @@ export const ClientRelatedSidebar = ({
     { staleTime: 30_000 },
   );
 
-  const { data: openDeals = [] } = useGetList<Deal>(
-    "deals",
-    {
-      filter: buildOpenDealsFilter(dealPipelineStatuses, dealStages, {
-        "company_id@eq": companyId,
-      }),
-      pagination: { page: 1, perPage: 3 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
-
-  const { data: tickets = [] } = useGetList<Ticket>(
-    "tickets",
-    {
-      filter: { "company_id@eq": companyId },
-      pagination: { page: 1, perPage: 3 },
-      sort: { field: "updated_at", order: "DESC" },
-    },
-    { staleTime: 30_000 },
-  );
-
   const { data: referrals = [] } = useGetList<Contact>(
     "contacts",
     {
@@ -130,27 +87,16 @@ export const ClientRelatedSidebar = ({
     { staleTime: 30_000 },
   );
 
-  const ticketCreateParams = new URLSearchParams({
-    company_id: String(companyId),
-  });
-  if (primaryContactId != null) {
-    ticketCreateParams.set("contact_id", String(primaryContactId));
-  }
-
   const panelTitle =
     panel === "contacts"
       ? "Contacts"
-      : panel === "deals"
-        ? "Deals"
-        : panel === "leads"
-          ? "Leads"
-          : panel === "tickets"
-            ? "Tickets"
-            : "Referrals";
+      : panel === "leads"
+        ? "Leads"
+        : "Referrals";
 
   return (
     <>
-      <RelatedAccordion defaultValue={["contacts", "deals"]}>
+      <RelatedAccordion defaultValue={["contacts"]}>
         <RelatedSection
           value="contacts"
           title="Contacts"
@@ -199,35 +145,6 @@ export const ClientRelatedSidebar = ({
         </RelatedSection>
 
         <RelatedSection
-          value="deals"
-          title="Deals"
-          count={counts.deals}
-          onAdd={() => setNewDealOpen(true)}
-          onViewAll={() => setPanel("deals")}
-          empty={
-            <RelatedEmptyState message="No open deals for this company yet." />
-          }
-        >
-          <div className="space-y-2">
-            {openDeals.map((deal) => (
-              <Link
-                key={deal.id}
-                to={`/deals/${deal.id}/show`}
-                className={relatedPreviewItemClassName}
-              >
-                <p className="font-medium">{deal.name}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <Badge variant="outline" className="text-[10px] capitalize">
-                    {findDealLabel(dealStages, deal.stage)}
-                  </Badge>
-                  <MoneyText value={deal.amount} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </RelatedSection>
-
-        <RelatedSection
           value="leads"
           title="Leads"
           count={counts.leads}
@@ -268,36 +185,6 @@ export const ClientRelatedSidebar = ({
                     )}
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        </RelatedSection>
-
-        <RelatedSection
-          value="tickets"
-          title="Tickets"
-          count={counts.tickets}
-          addHref={`/tickets/create?${ticketCreateParams.toString()}`}
-          onViewAll={() => setPanel("tickets")}
-          empty={
-            <RelatedEmptyState message="No support tickets for this company." />
-          }
-        >
-          <div className="space-y-2">
-            {tickets.map((ticket) => (
-              <Link
-                key={ticket.id}
-                to={`/tickets/${ticket.id}/show`}
-                className={relatedPreviewItemClassName}
-              >
-                <p className="font-medium">
-                  {ticket.subject ?? `Ticket #${ticket.id}`}
-                </p>
-                {ticket.status ? (
-                  <p className="text-sm capitalize text-muted-foreground">
-                    {ticket.status.replace(/_/g, " ")}
-                  </p>
-                ) : null}
               </Link>
             ))}
           </div>
@@ -351,9 +238,6 @@ export const ClientRelatedSidebar = ({
                 primaryContactId={primaryContactId}
               />
             ) : null}
-            {panel === "deals" ? (
-              <ClientOpenDealsTab companyId={companyId} />
-            ) : null}
             {panel === "leads" ? (
               <ClientContactsTab
                 companyId={companyId}
@@ -361,22 +245,12 @@ export const ClientRelatedSidebar = ({
                 statusFilter="leads"
               />
             ) : null}
-            {panel === "tickets" ? (
-              <ClientTicketsTab companyId={companyId} />
-            ) : null}
             {panel === "referrals" ? (
               <ReferralsTab referrerCompanyId={companyId} />
             ) : null}
           </div>
         </SheetContent>
       </Sheet>
-
-      <NewDealDialog
-        open={newDealOpen}
-        onOpenChange={setNewDealOpen}
-        companyId={companyId}
-        defaultContactId={primaryContactId}
-      />
     </>
   );
 };

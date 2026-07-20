@@ -105,10 +105,10 @@ export const ContactShowContent = ({
               {tabLabel("activity", "Activity", activityCount)}
             </TabsTrigger>
             <TabsTrigger
-              value="projects"
+              value="deals"
               className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
             >
-              {tabLabel("projects", "Projects", counts.projects)}
+              {tabLabel("deals", "Deals", counts.projects)}
             </TabsTrigger>
             <TabsTrigger
               value="financial"
@@ -130,9 +130,9 @@ export const ContactShowContent = ({
               }}
             />
           </TabsContent>
-          <TabsContent value="projects" className="mt-0">
+          <TabsContent value="deals" className="mt-0">
             <ClientTabSectionCard
-              title="Projects"
+              title="Deals"
               count={counts.projects}
               flush
             >
@@ -174,8 +174,6 @@ export const ContactShowContent = ({
   const sidebarProps = {
     contact: record,
     counts: {
-      deals: counts.deals,
-      projects: counts.projects,
       tickets: counts.tickets,
       referrals: counts.referrals,
     },

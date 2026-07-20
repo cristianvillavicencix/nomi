@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useSearchParams } from "react-router";
+import { Plus } from "lucide-react";
 import { useGetList, useGetOne } from "ra-core";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -45,6 +47,8 @@ import {
   buildProjectPaymentRows,
   mergeClientFinancialPaymentRows,
 } from "@/modules/clients/clientFinancialPayments";
+import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
+import { getClientInvoiceCreatePath } from "@/app/routing";
 
 const TabLoading = () => (
   <div className="space-y-2">
@@ -70,6 +74,7 @@ export const ClientFinancialTab = ({
   syncUrl = true,
 }: ClientFinancialTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const canCreateInvoice = useMemberCapability("proposals.send");
   const sectionFromUrl =
     syncUrl && searchParams.get("tab") === "financial"
       ? getValidFinancialSection(searchParams.get("section"))
@@ -129,6 +134,16 @@ export const ClientFinancialTab = ({
         value="invoices"
         title="Invoices"
         count={counts.invoices}
+        action={
+          canCreateInvoice ? (
+            <Button variant="ghost" size="sm" className="h-8 gap-1 px-2" asChild>
+              <Link to={getClientInvoiceCreatePath(companyId)}>
+                <Plus className="size-3.5" aria-hidden />
+                New invoice
+              </Link>
+            </Button>
+          ) : null
+        }
       >
         <ClientTabContentCard flush>
           <ClientInvoicesTab companyId={companyId} />

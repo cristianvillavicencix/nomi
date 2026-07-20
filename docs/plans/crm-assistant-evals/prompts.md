@@ -11,6 +11,9 @@ Use these prompts manually after deploy. Expect real org data (or a clear “not
 5. “Find deals in stage [stage]”
 6. “What’s on my calendar this week?”
 7. “Search invoices for [invoice number or company]”
+7b. “Show draft invoices” / “facturas en draft”
+7c. “My tasks today” / “tareas del equipo de hoy”
+7d. “Resumen mensual” / “monthly summary”
 8. “Open ticket [id]”
 9. “Go to contact [id]”
 

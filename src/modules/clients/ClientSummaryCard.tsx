@@ -217,7 +217,7 @@ export const ClientSummaryCard = ({
         />
       }
     >
-      <EntityMetaRow>
+      <EntityMetaRow columnsClassName="sm:grid-cols-2 lg:grid-cols-[minmax(7rem,1.1fr)_minmax(4.5rem,0.65fr)_minmax(12rem,2.4fr)_minmax(7rem,0.95fr)_minmax(5rem,0.8fr)]">
         <EntityMetaItem label="Primary contact">
           {canOpenPrimary ? (
             <button
@@ -240,7 +240,12 @@ export const ClientSummaryCard = ({
         <EntityMetaItem label="Owner">
           {owner ? <OrganizationMemberName member={owner} /> : "—"}
         </EntityMetaItem>
-        <EntityMetaItem label="Location">{locationLabel}</EntityMetaItem>
+        <EntityMetaItem
+          label="Location"
+          valueClassName="whitespace-normal break-words"
+        >
+          {locationLabel}
+        </EntityMetaItem>
         <EntityMetaItem label="Phone">
           <CrmPhoneDisplay
             phone={getPrimaryContactPhoneRaw(record)}

@@ -31,16 +31,13 @@ import {
 import {
   ModuleSearchField,
   ModuleToolbar,
-  ModuleToolbarActions,
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { useMemberCapability } from "@/components/atomic-crm/providers/commons/useMemberCapability";
-import { CreateTicketButton } from "@/modules/tickets/CreateTicketButton";
 import { EditTicketDialog } from "@/modules/tickets/EditTicketDialog";
 import { TicketDetailPanel } from "@/modules/tickets/TicketDetailPanel";
 import { TicketEmptyDetailState } from "@/modules/tickets/TicketEmptyDetailState";
 import { TicketInboxBulkBar } from "@/modules/tickets/TicketInboxBulkBar";
 import { TicketListItem } from "@/modules/tickets/TicketListItem";
-import { TicketStatusBreadcrumb } from "@/modules/tickets/TicketStatusBreadcrumb";
 import { matchesTicketSearch } from "@/modules/tickets/ticketInboxQueue";
 import {
   type TicketStatusFilterId,
@@ -156,7 +153,6 @@ const TicketsInboxLayout = ({
   statusFilter: TicketStatusFilterId;
 }) => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const notify = useNotify();
   const refresh = useRefresh();
   const [deleteOne] = useDelete();
@@ -415,16 +411,6 @@ const TicketsInboxLayout = ({
     setSearchQuery(value);
   };
 
-  const handleStatusFilter = (status: TicketStatusFilterId) => {
-    const nextParams = new URLSearchParams(searchParams);
-    if (status === "all") {
-      nextParams.delete("status");
-    } else {
-      nextParams.set("status", status);
-    }
-    setSearchParams(nextParams, { replace: true });
-  };
-
   const handleDeleteTicket = async () => {
     if (!ticketToDelete) return;
     setDeletePending(true);
@@ -463,19 +449,21 @@ const TicketsInboxLayout = ({
             isMobile && selectedId && "hidden",
           )}
         >
-          <div className="shrink-0 space-y-3 border-b bg-background p-3">
+          <div className="shrink-0 space-y-0 border-b bg-background p-3">
             <ModuleToolbar>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="-ml-1 h-8 shrink-0 gap-1.5 px-2"
-                onClick={() => navigate("/tickets")}
-                aria-label="All tickets"
-              >
-                <ArrowLeft className="size-3.5" />
-                All tickets
-              </Button>
+              {statusFilter !== "all" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-1 h-8 shrink-0 gap-1.5 px-2"
+                  onClick={() => navigate("/tickets")}
+                  aria-label="All tickets"
+                >
+                  <ArrowLeft className="size-3.5" />
+                  All tickets
+                </Button>
+              ) : null}
               <ModuleSearchField
                 value={searchQuery}
                 onChange={handleSearch}
@@ -483,15 +471,7 @@ const TicketsInboxLayout = ({
                 total={counts.all}
                 itemSingular="ticket"
               />
-              <ModuleToolbarActions>
-                <CreateTicketButton alwaysShowLabel />
-              </ModuleToolbarActions>
             </ModuleToolbar>
-            <TicketStatusBreadcrumb
-              active={statusFilter}
-              counts={counts}
-              onSelect={(status) => handleStatusFilter(status)}
-            />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">

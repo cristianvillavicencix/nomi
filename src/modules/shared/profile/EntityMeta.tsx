@@ -5,16 +5,24 @@ export const EntityMetaItem = ({
   label,
   children,
   className,
+  valueClassName,
 }: {
   label: string;
   children: ReactNode;
   className?: string;
+  /** Overrides the default single-line truncate on the value. */
+  valueClassName?: string;
 }) => (
   <div className={cn("min-w-0", className)}>
     <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
       {label}
     </p>
-    <div className="mt-0.5 truncate text-sm font-medium text-foreground">
+    <div
+      className={cn(
+        "mt-0.5 text-sm font-medium text-foreground",
+        valueClassName ?? "truncate",
+      )}
+    >
       {children}
     </div>
   </div>

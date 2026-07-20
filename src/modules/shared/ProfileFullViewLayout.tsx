@@ -11,7 +11,9 @@ type ProfileFullViewLayoutProps = {
 };
 
 /**
- * Full-view profile shell: identity header on top, then main (~70%) + related sidebar (~30%).
+ * Full-view profile shell: identity header on top, then main + related sidebar.
+ * Sidebar column is `auto` so a collapsed Related rail stays flush right
+ * (a fixed 300px column left empty space beside the w-10 rail).
  */
 export const ProfileFullViewLayout = ({
   header,
@@ -33,9 +35,9 @@ export const ProfileFullViewLayout = ({
   return (
     <div className={cn("space-y-4", className)}>
       {header}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="min-w-0">{main}</div>
-        {sidebar}
+        <div className="justify-self-end">{sidebar}</div>
       </div>
     </div>
   );

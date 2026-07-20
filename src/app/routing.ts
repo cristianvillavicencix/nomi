@@ -124,6 +124,17 @@ export const getClientProposalCreatePath = (
   return query ? `/proposals/create?${query}` : "/proposals/create";
 };
 
+export const getClientInvoiceCreatePath = (
+  companyId?: string | number | null,
+  contactId?: string | number | null,
+) => {
+  const params = new URLSearchParams();
+  if (companyId != null) params.set("company_id", String(companyId));
+  if (contactId != null) params.set("contact_id", String(contactId));
+  const query = params.toString();
+  return query ? `/billing/invoices/new?${query}` : "/billing/invoices/new";
+};
+
 export const getLeadProposalCreatePath = (
   contactId: string | number,
   companyId?: string | number | null,

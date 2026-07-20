@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { htmlToPlainText } from "@/modules/tickets/ticketReplyRichText";
 
 const PREVIEW_MAX_LENGTH = 140;
 
@@ -60,10 +61,7 @@ const getMessageBodyText = (message: TicketMessage) => {
 
 const getMessagePreview = (message: TicketMessage) => {
   const source = getMessageBodyText(message);
-  const text = source
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, "")
-    .trim();
+  const text = htmlToPlainText(source).replace(/\s+/g, " ").trim();
   if (!text) return "No message content";
   if (text.length <= PREVIEW_MAX_LENGTH) return text;
   return `${text.slice(0, PREVIEW_MAX_LENGTH).trimEnd()}…`;
@@ -72,7 +70,7 @@ const getMessagePreview = (message: TicketMessage) => {
 const formatRecipientList = (emails?: string[] | null) => {
   const list = (emails ?? []).map((email) => email.trim()).filter(Boolean);
   if (!list.length) return null;
-  return list.join(",");
+  return list.join(", ");
 };
 
 type ThreadTreeTone =

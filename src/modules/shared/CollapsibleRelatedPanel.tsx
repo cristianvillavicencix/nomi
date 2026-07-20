@@ -35,7 +35,7 @@ export const CollapsibleRelatedPanel = ({
 
   if (collapsed) {
     return (
-      <aside className="sticky top-2 flex w-10 shrink-0 flex-col items-center gap-3 self-start py-3">
+      <aside className="sticky top-2 flex w-10 shrink-0 flex-col items-center gap-3 self-start justify-self-end py-3">
         <Tooltip>
           <TooltipTrigger asChild>
             <IconButton

@@ -1,9 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDataProvider, useGetIdentity, useGetOne, useNotify } from "ra-core";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
-import type { Contact } from "@/components/atomic-crm/types";
+import type { Company, Contact } from "@/components/atomic-crm/types";
 import {
   PageActions,
   PageTitle,
@@ -48,10 +48,12 @@ import type { ClientInvoice, ClientInvoiceLineItem } from "@/modules/types";
 
 export const StandaloneInvoiceCreatePage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const notify = useNotify();
   const dataProvider = useDataProvider<CrmDataProvider>();
   const { data: identity } = useGetIdentity();
   const { title, companyLegalName } = useConfigurationContext();
+  const prefillAppliedRef = useRef(false);
 
   const organizationName = useMemo(
     () => resolveInvoiceOrganizationName({ title, companyLegalName }),
@@ -102,6 +104,70 @@ export const StandaloneInvoiceCreatePage = () => {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [paymentSetupOpen, setPaymentSetupOpen] = useState(false);
+
+  const prefillCompanyId = searchParams.get("company_id")?.trim() || "";
+  const prefillContactId = searchParams.get("contact_id")?.trim() || "";
+
+  const { data: prefillCompany } = useGetOne<Company>(
+    "companies",
+    { id: prefillCompanyId },
+    { enabled: Boolean(prefillCompanyId) },
+  );
+  const { data: prefillContact } = useGetOne<Contact>(
+    "contacts",
+    { id: prefillContactId },
+    { enabled: Boolean(prefillContactId) },
+  );
+
+  useEffect(() => {
+    if (prefillAppliedRef.current || billTo) return;
+
+    if (prefillCompanyId) {
+      if (!prefillCompany) return;
+      const contact =
+        prefillContact &&
+        String(prefillContact.company_id ?? "") === String(prefillCompany.id)
+          ? prefillContact
+          : null;
+      setBillTo({
+        companyId: Number(prefillCompany.id),
+        contactId: contact
+          ? Number(contact.id)
+          : prefillCompany.primary_contact_id != null
+            ? Number(prefillCompany.primary_contact_id)
+            : null,
+        label: prefillCompany.name,
+        company: prefillCompany,
+        contact,
+      });
+      prefillAppliedRef.current = true;
+      return;
+    }
+
+    if (!prefillContactId || !prefillContact) return;
+
+    setBillTo({
+      companyId:
+        prefillContact.company_id != null
+          ? Number(prefillContact.company_id)
+          : null,
+      contactId: Number(prefillContact.id),
+      label:
+        [prefillContact.first_name, prefillContact.last_name]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || `Contact #${prefillContact.id}`,
+      company: null,
+      contact: prefillContact,
+    });
+    prefillAppliedRef.current = true;
+  }, [
+    billTo,
+    prefillCompany,
+    prefillCompanyId,
+    prefillContact,
+    prefillContactId,
+  ]);
 
   const companyId = billTo?.companyId ?? billTo?.contact?.company_id ?? null;
   const { data: companyFromContact } = useGetOne(

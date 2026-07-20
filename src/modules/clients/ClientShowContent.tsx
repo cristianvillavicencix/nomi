@@ -13,7 +13,7 @@ import { ClientCollapsibleRelatedSidebar } from "@/modules/clients/ClientCollaps
 import { ClientRelatedSidebar } from "@/modules/clients/ClientRelatedSidebar";
 import { ClientShowActions } from "@/modules/clients/ClientShowActions";
 import { ClientSummaryCard } from "@/modules/clients/ClientSummaryCard";
-import { ClientProjectsTab } from "@/modules/clients/ClientTabPanels";
+import { ClientProjectsTab, ClientTicketsTab } from "@/modules/clients/ClientTabPanels";
 import { ClientTabSectionCard } from "@/modules/clients/ClientTabSectionCard";
 import { ContactShowSheet } from "@/modules/clients/ContactShowSheet";
 import {
@@ -123,16 +123,22 @@ export const ClientShowContent = () => {
               {tabLabel("activity", "Activity", activityCount)}
             </TabsTrigger>
             <TabsTrigger
-              value="projects"
+              value="deals"
               className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
             >
-              {tabLabel("projects", "Projects", counts.projects)}
+              {tabLabel("deals", "Deals", counts.projects)}
             </TabsTrigger>
             <TabsTrigger
               value="financial"
               className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
             >
               {tabLabel("financial", "Financial", financialCount)}
+            </TabsTrigger>
+            <TabsTrigger
+              value="tickets"
+              className="shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              {tabLabel("tickets", "Tickets", counts.tickets)}
             </TabsTrigger>
           </TabsList>
 
@@ -147,12 +153,8 @@ export const ClientShowContent = () => {
               }}
             />
           </TabsContent>
-          <TabsContent value="projects" className="mt-0">
-            <ClientTabSectionCard
-              title="Projects"
-              count={counts.projects}
-              flush
-            >
+          <TabsContent value="deals" className="mt-0">
+            <ClientTabSectionCard title="Deals" count={counts.projects} flush>
               <ClientProjectsTab companyId={record.id} />
             </ClientTabSectionCard>
           </TabsContent>
@@ -167,6 +169,15 @@ export const ClientShowContent = () => {
               }}
             />
           </TabsContent>
+          <TabsContent value="tickets" className="mt-0">
+            <ClientTabSectionCard
+              title="Tickets"
+              count={counts.tickets}
+              flush
+            >
+              <ClientTicketsTab companyId={record.id} />
+            </ClientTabSectionCard>
+          </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
@@ -177,10 +188,7 @@ export const ClientShowContent = () => {
     primaryContactId: record.primary_contact_id,
     counts: {
       contacts: counts.contacts,
-      deals: counts.deals,
       leads: counts.leads,
-      projects: counts.projects,
-      tickets: counts.tickets,
       referrals: counts.referrals,
     },
     onAddContact: () => setAddContactOpen(true),

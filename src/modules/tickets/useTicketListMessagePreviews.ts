@@ -1,15 +1,13 @@
 import { useMemo } from "react";
 import { useGetList } from "ra-core";
 import type { TicketMessage } from "@/modules/types";
+import { htmlToPlainText } from "@/modules/tickets/ticketReplyRichText";
 
 const PREVIEW_MAX_LENGTH = 120;
 
 const buildPreview = (message: TicketMessage) => {
   const source = message.body?.trim() || message.html_body || "";
-  const text = source
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const text = htmlToPlainText(source).replace(/\s+/g, " ").trim();
   if (!text) {
     if (Array.isArray(message.attachments) && message.attachments.length > 0) {
       return "Attachment";
