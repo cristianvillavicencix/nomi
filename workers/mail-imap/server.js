@@ -107,14 +107,6 @@ function sanitizeAttachmentFilename(name) {
 async function syncImapMessageAttachments(sb, account, messageId, attachments) {
   if (!messageId || !attachments?.length) return;
 
-  const { data: existingRows } = await sb
-    .from("mail_attachments")
-    .select("id")
-    .eq("message_id", messageId)
-    .not("storage_path", "is", null)
-    .limit(1);
-  if (existingRows?.length) return;
-
   let totalBytes = 0;
   let count = 0;
   for (const att of attachments) {
@@ -124,12 +116,26 @@ async function syncImapMessageAttachments(sb, account, messageId, attachments) {
     if (content.length > MAX_MAIL_FILE_BYTES) continue;
     if (totalBytes + content.length > MAX_MAIL_TOTAL_BYTES) break;
 
+    const rawContentId = att.contentId || att.cid || null;
+    const contentId = rawContentId
+      ? String(rawContentId).replace(/^<|>$/g, "").replace(/^cid:/i, "").toLowerCase()
+      : null;
     const filename = sanitizeAttachmentFilename(
-      att.filename || `attachment-${count + 1}`,
+      att.filename ||
+        (contentId ? `inline-${contentId.slice(0, 48)}` : `attachment-${count + 1}`),
     );
     const providerId = String(
-      att.contentId || att.checksum || att.cid || `imap-${count}`,
+      rawContentId || att.checksum || att.contentId || att.cid || `imap-${count}`,
     ).replace(/[<>]/g, "");
+
+    const { data: existing } = await sb
+      .from("mail_attachments")
+      .select("id")
+      .eq("message_id", messageId)
+      .eq("provider_attachment_id", providerId)
+      .maybeSingle();
+    if (existing?.id) continue;
+
     const storagePath = `${account.org_id}/${account.id}/${messageId}/${providerId}-${filename}`;
 
     const { error: uploadError } = await sb.storage
@@ -152,6 +158,7 @@ async function syncImapMessageAttachments(sb, account, messageId, attachments) {
       mime_type: att.contentType || null,
       size_bytes: content.length,
       storage_path: storagePath,
+      content_id: contentId,
     });
     if (insertError) {
       console.error("imap_attachment_row_failed", insertError.message);
@@ -160,6 +167,20 @@ async function syncImapMessageAttachments(sb, account, messageId, attachments) {
     totalBytes += content.length;
     count += 1;
   }
+}
+
+function isInlineImageAttachment(att) {
+  if (!att.content?.length) return false;
+  const mime = String(att.contentType || "").toLowerCase();
+  if (!mime.startsWith("image/")) return false;
+  const cid = att.contentId || att.cid;
+  const disposition = String(att.contentDisposition || "").toLowerCase();
+  return Boolean(cid) || disposition === "inline" || att.related === true;
+}
+
+function isFileAttachment(att) {
+  if (!att.content?.length || !att.filename) return false;
+  return !isInlineImageAttachment(att);
 }
 
 async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
@@ -228,21 +249,16 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
     .eq("provider_message_id", providerMessageId)
     .maybeSingle();
 
-  const attachmentList = (parsed.attachments || []).filter(
-    (att) => att.content?.length && att.filename,
-  );
-  const hasAttachments = attachmentList.length > 0;
+  const allAttachments = parsed.attachments || [];
+  const inlineAttachments = allAttachments.filter(isInlineImageAttachment);
+  const fileAttachments = allAttachments.filter(isFileAttachment);
+  const syncAttachments = [...fileAttachments, ...inlineAttachments];
+  const hasAttachments = syncAttachments.length > 0;
 
   let messageId = existingMsg?.id;
 
   if (!existingMsg) {
-    const rawHtml = parsed.html || null;
-    const bodyHtml = rawHtml
-      ? rawHtml
-          .replace(/<img\b[^>]*\bsrc\s*=\s*["']cid:[^"']+["'][^>]*>/gi, "")
-          .replace(/\bsrc\s*=\s*(["'])cid:[^"']+\1/gi, "src=$1$1")
-          .replace(/url\((["']?)cid:[^)"']+\1\)/gi, "none")
-      : null;
+    const bodyHtml = parsed.html || null;
     const { data: insertedMsg, error: msgError } = await sb
       .from("mail_messages")
       .insert({
@@ -281,8 +297,8 @@ async function upsertMessage(sb, account, parsed, rawUid, mailbox = "INBOX") {
     messageId = existingMsg.id;
   }
 
-  if (hasAttachments && messageId) {
-    await syncImapMessageAttachments(sb, account, messageId, attachmentList);
+  if (syncAttachments.length > 0 && messageId) {
+    await syncImapMessageAttachments(sb, account, messageId, syncAttachments);
   }
 }
 
