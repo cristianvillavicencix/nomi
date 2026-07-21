@@ -62,12 +62,20 @@ export async function syncMailAccount(
       max_results: range?.max_results ?? 200,
     }),
   });
-  const json = (await res.json()) as {
-    ok?: boolean;
-    synced?: number;
-    error?: string;
-  };
-  if (!res.ok) throw new Error(json.error ?? "Sync failed");
+  const raw = await res.text();
+  let json: { ok?: boolean; synced?: number; error?: string } = {};
+  try {
+    json = raw ? (JSON.parse(raw) as typeof json) : {};
+  } catch {
+    /* non-JSON error body */
+  }
+  if (!res.ok) {
+    const detail =
+      json.error ||
+      (raw.trim() && raw.length < 500 ? raw.trim() : null) ||
+      `Sync failed (${res.status})`;
+    throw new Error(detail);
+  }
   return json;
 }
 

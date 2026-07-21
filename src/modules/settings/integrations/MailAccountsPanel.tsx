@@ -329,7 +329,6 @@ export function MailAccountsPanel() {
       refresh();
     } catch (e) {
       notify(e instanceof Error ? e.message : "Sync failed", { type: "error" });
-      throw e;
     }
   };
 

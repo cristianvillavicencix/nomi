@@ -523,7 +523,15 @@ async function runSync(accountId: number, opts: SyncOptions) {
     }
     return { ok: true, synced, since: opts.since };
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Sync failed";
+    const message =
+      e instanceof Error
+        ? e.message
+        : e &&
+            typeof e === "object" &&
+            "message" in e &&
+            typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : "Sync failed";
     await supabaseAdmin
       .from("mail_accounts")
       .update({
@@ -623,9 +631,15 @@ Deno.serve(async (req) => {
     const result = await runSync(accountId, opts);
     return json(result);
   } catch (e) {
-    return json(
-      { error: e instanceof Error ? e.message : "Sync failed" },
-      500,
-    );
+    const message =
+      e instanceof Error
+        ? e.message
+        : e &&
+            typeof e === "object" &&
+            "message" in e &&
+            typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : "Sync failed";
+    return json({ error: message }, 500);
   }
 });

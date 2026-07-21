@@ -308,7 +308,7 @@ export async function upsertThreadAndMessage(params: {
       })
       .select("id")
       .single();
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     threadId = inserted.id;
   }
 
@@ -342,7 +342,7 @@ export async function upsertThreadAndMessage(params: {
       })
       .select("id")
       .single();
-    if (msgError) throw msgError;
+    if (msgError) throw new Error(msgError.message);
     await supabaseAdmin
       .from("mail_threads")
       .update({

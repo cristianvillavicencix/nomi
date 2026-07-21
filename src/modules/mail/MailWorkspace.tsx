@@ -319,7 +319,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
       void queryClient.invalidateQueries({ queryKey: ["mail_accounts_safe"] });
     } catch (e) {
       notify(e instanceof Error ? e.message : "Sync failed", { type: "error" });
-      throw e;
     }
   };
 
