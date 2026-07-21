@@ -59,6 +59,7 @@ export async function syncCalendarEventBookingAfterUpdate(
     .update({
       follow_up_scheduled_notified_at: null,
       follow_up_reminder_sent_at: null,
+      reminder_sent_at: [],
     })
     .eq("id", params.calendarEventId);
 

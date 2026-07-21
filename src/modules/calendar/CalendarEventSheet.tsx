@@ -1,4 +1,9 @@
+import {
+  WorkCreateEventFields,
+  WorkCreateTaskFields,
+} from "@/modules/work/WorkCreateFormFields";
 import { useEffect, useState, type ReactNode } from "react";
+import { useFormContext } from "react-hook-form";
 import {
   CreateBase,
   EditBase,
@@ -58,11 +63,10 @@ import {
   isTaskWorkCategory,
   WorkCreateCategoryPicker,
 } from "@/modules/work/WorkCreateCategoryPicker";
+import { CalendarReminderOffsetsInput } from "@/modules/calendar/CalendarReminderOffsetsInput";
 import {
-  WorkCreateEventFields,
-  WorkCreateTaskFields,
-} from "@/modules/work/WorkCreateFormFields";
-import type { WorkCategory } from "@/modules/work/workTypes";
+  TeamMemberMultiSelect,
+} from "@/modules/shared/TeamMemberMultiSelect";
 
 const dealOptionText = (choice: {
   name?: string | null;
@@ -99,6 +103,32 @@ const getCategoryHint = (category: WorkCategory) => {
   return "Follow up uses a due date and optional time.";
 };
 
+const CalendarEventFormInitializer = () => {
+  const { getValues, setValue } = useFormContext();
+
+  useEffect(() => {
+    const assignees = getValues("assignee_member_ids");
+    if (!Array.isArray(assignees) || assignees.length === 0) {
+      const owner = getValues("organization_member_id");
+      if (owner != null && owner !== "") {
+        setValue("assignee_member_ids", [owner], { shouldDirty: false });
+      }
+    }
+
+    const offsets = getValues("reminder_offsets_minutes");
+    if (!Array.isArray(offsets) || offsets.length === 0) {
+      const legacy = getValues("remind_before_minutes");
+      if (legacy != null && legacy !== "") {
+        setValue("reminder_offsets_minutes", [Number(legacy)], {
+          shouldDirty: false,
+        });
+      }
+    }
+  }, [getValues, setValue]);
+
+  return null;
+};
+
 const CalendarEventEditForm = ({
   isMeeting,
   onDeleteSuccess,
@@ -120,6 +150,7 @@ const CalendarEventEditForm = ({
 
   return (
     <Form className="flex flex-col gap-4">
+      <CalendarEventFormInitializer />
       <DialogHeader>
         <DialogTitle>Edit event</DialogTitle>
       </DialogHeader>
@@ -141,14 +172,7 @@ const CalendarEventEditForm = ({
         parse={parseDuration}
         helperText="How long the event lasts"
       />
-      <SelectInput
-        source="remind_before_minutes"
-        label="Remind me"
-        choices={[...REMIND_BEFORE_CHOICES]}
-        format={formatRemindBefore}
-        parse={parseRemindBefore}
-        helperText="Alert before the scheduled time"
-      />
+      <CalendarReminderOffsetsInput />
       <TextInput
         source="description"
         label="Notes"
@@ -177,19 +201,11 @@ const CalendarEventEditForm = ({
             filterToQuery={(searchText) => ({ q: searchText })}
           />
         </ReferenceInput>
-        <ReferenceInput
-          source="organization_member_id"
-          reference="organization_members"
-        >
-          <AutocompleteInput
-            label="Assigned"
-            optionText={memberOptionText}
-            inputText={memberOptionText}
-            helperText={false}
-            modal
-            filterToQuery={(searchText) => ({ q: searchText })}
-          />
-        </ReferenceInput>
+        <TeamMemberMultiSelect
+          source="assignee_member_ids"
+          label="Assignees"
+          required
+        />
       </div>
 
       <BooleanInput
@@ -445,25 +461,17 @@ export const CalendarEventSheet = ({
           deal_id: dealId ?? null,
           due_date: dateKey,
           organization_member_id: identity.id,
-          assignee_person_ids: [],
+          assignee_person_ids: [identity.id],
           collaborator_person_ids: [],
           priority: "normal",
           internal: false,
         }}
-        transform={(data) => {
-          const normalized = normalizeTaskCreateData({
+        transform={(data) =>
+          normalizeTaskCreateData({
             ...data,
             deal_id: dealId ?? data.deal_id ?? null,
-          });
-          const assigneeId = Number(data.organization_member_id);
-          if (
-            Number.isFinite(assigneeId) &&
-            (normalized.assignee_person_ids?.length ?? 0) === 0
-          ) {
-            normalized.assignee_person_ids = [assigneeId];
-          }
-          return normalized;
-        }}
+          })
+        }
         mutationOptions={{ onSuccess: handleTaskSuccess }}
       >
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -490,12 +498,14 @@ export const CalendarEventSheet = ({
           event_date: dateKey,
           event_time: initialTime,
           duration_minutes: DEFAULT_MEETING_DURATION_MINUTES,
+          reminder_offsets_minutes: [15],
           remind_before_minutes: 15,
           description: "",
           meeting_url: null,
           contact_id: null,
           deal_id: dealId ?? null,
           organization_member_id: identity.id,
+          assignee_member_ids: [identity.id],
           completed_at: null,
         }}
         transform={transformCalendarEvent}
@@ -532,11 +542,14 @@ export const CalendarEventSheet = ({
         event_date: dateKey,
         event_time: initialTime,
         duration_minutes: null,
+        reminder_offsets_minutes:
+          category === "follow_up" ? [15] : [],
         remind_before_minutes: category === "follow_up" ? 15 : null,
         description: "",
         contact_id: null,
         deal_id: dealId ?? null,
         organization_member_id: identity.id,
+        assignee_member_ids: [identity.id],
         completed_at: null,
       }}
       transform={transformCalendarEvent}

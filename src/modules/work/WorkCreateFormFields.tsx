@@ -4,15 +4,16 @@ import { SelectInput } from "@/components/admin/select-input";
 import { TextInput } from "@/components/admin/text-input";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { required } from "ra-core";
-import type {
-  Contact,
-  OrganizationMember,
-} from "@/components/atomic-crm/types";
+import type { Contact } from "@/components/atomic-crm/types";
 import { TASK_PRIORITIES } from "@/components/atomic-crm/tasks/taskConstants";
 import { TaskDescriptionMentionInput } from "@/components/atomic-crm/tasks/TaskDescriptionMentionInput";
-import { formatOrganizationMemberName } from "@/modules/billing/billingUtils";
+import { CalendarReminderOffsetsInput } from "@/modules/calendar/CalendarReminderOffsetsInput";
 import { CalendarTimeInput } from "@/modules/calendar/CalendarTimeInput";
 import { getContactDisplayName } from "@/modules/calendar/calendarReminderOptions";
+import {
+  TeamMemberCollaboratorSelect,
+  TeamMemberMultiSelect,
+} from "@/modules/shared/TeamMemberMultiSelect";
 import type { WorkCategory } from "@/modules/work/workTypes";
 
 const dealOptionText = (choice: {
@@ -21,9 +22,6 @@ const dealOptionText = (choice: {
 }) => choice.name?.trim() || `Project #${choice.id}`;
 
 const contactOptionText = (contact: Contact) => getContactDisplayName(contact);
-
-const memberOptionText = (member: OrganizationMember) =>
-  formatOrganizationMemberName(member) ?? `Member #${member.id}`;
 
 export const WorkCreateTaskFields = ({
   category,
@@ -63,7 +61,13 @@ export const WorkCreateTaskFields = ({
         <span className="hidden sm:block" aria-hidden />
       )}
     </div>
-    <WorkCreateLinkFields includeAssigned showContactLink />
+    <TeamMemberMultiSelect
+      source="assignee_person_ids"
+      label="Assignees"
+      required
+    />
+    <TeamMemberCollaboratorSelect />
+    <WorkCreateLinkFields showContactLink />
   </>
 );
 
@@ -93,15 +97,19 @@ export const WorkCreateEventFields = ({
         helperText={false}
       />
     </div>
-    <WorkCreateLinkFields includeAssigned showContactLink />
+    <TeamMemberMultiSelect
+      source="assignee_member_ids"
+      label="Assignees"
+      required
+    />
+    <CalendarReminderOffsetsInput />
+    <WorkCreateLinkFields showContactLink />
   </>
 );
 
 const WorkCreateLinkFields = ({
-  includeAssigned = false,
   showContactLink = true,
 }: {
-  includeAssigned?: boolean;
   showContactLink?: boolean;
 }) => (
   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -115,21 +123,6 @@ const WorkCreateLinkFields = ({
         filterToQuery={(searchText) => ({ q: searchText })}
       />
     </ReferenceInput>
-    {includeAssigned ? (
-      <ReferenceInput
-        source="organization_member_id"
-        reference="organization_members"
-      >
-        <AutocompleteInput
-          label="Assign to"
-          optionText={memberOptionText}
-          inputText={memberOptionText}
-          helperText={false}
-          modal
-          filterToQuery={(searchText) => ({ q: searchText })}
-        />
-      </ReferenceInput>
-    ) : null}
     {showContactLink ? (
       <ReferenceInput source="contact_id" reference="contacts_summary">
         <AutocompleteInput

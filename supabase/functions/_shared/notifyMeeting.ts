@@ -49,6 +49,7 @@ type MeetingEventRow = {
   contact_id?: number | null;
   deal_id?: number | null;
   organization_member_id?: number | null;
+  assignee_member_ids?: number[] | null;
   completed_at?: string | null;
   host_confirmation_sent_at?: string | null;
   meeting_client_invite_sent_at?: string | null;
@@ -56,6 +57,26 @@ type MeetingEventRow = {
   host_reminder_5_sent_at?: string | null;
   client_reminder_15_sent_at?: string | null;
   client_reminder_5_sent_at?: string | null;
+};
+
+const resolveMeetingAssigneeMemberIds = (
+  row: Pick<
+    MeetingEventRow,
+    "assignee_member_ids" | "organization_member_id"
+  >,
+  fallbackMemberId: number,
+) => {
+  const fromArray = Array.isArray(row.assignee_member_ids)
+    ? row.assignee_member_ids
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id))
+    : [];
+  if (fromArray.length > 0) {
+    return [...new Set(fromArray)];
+  }
+  const owner = Number(row.organization_member_id);
+  if (Number.isFinite(owner)) return [owner];
+  return [fallbackMemberId];
 };
 
 const toE164 = (phone: string): string | null => {
@@ -290,7 +311,7 @@ export async function notifyMeetingScheduled(
   const { data: event } = await supabase
     .from("calendar_events")
     .select(
-      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, deal_id, organization_member_id, completed_at, host_confirmation_sent_at, meeting_client_invite_sent_at",
+      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, deal_id, organization_member_id, assignee_member_ids, completed_at, host_confirmation_sent_at, meeting_client_invite_sent_at",
     )
     .eq("id", params.calendarEventId)
     .eq("org_id", params.orgId)
@@ -394,27 +415,42 @@ export async function notifyMeetingScheduled(
   const wantHost =
     params.forceHostConfirm !== false && settings.host_confirmation_on_create;
   if (wantHost && !row.host_confirmation_sent_at) {
-    const hostPhone = await resolveMemberNotificationPhone(
-      supabase,
-      Number(row.organization_member_id ?? params.memberId),
-    );
-    if (!hostPhone) {
-      result.host_sms = { sent: false, reason: "host_phone_missing" };
-    } else {
+    const assigneeIds = resolveMeetingAssigneeMemberIds(row, params.memberId);
+    let anySent = false;
+    let lastReason: string | undefined;
+
+    for (const assigneeId of assigneeIds) {
+      const hostPhone = await resolveMemberNotificationPhone(
+        supabase,
+        assigneeId,
+      );
+      if (!hostPhone) {
+        lastReason = "host_phone_missing";
+        continue;
+      }
       const body = buildHostMeetingConfirmationSms({
         ...copyBase,
         contactName,
       });
       const sms = await sendOrgSms(params.orgId, hostPhone, body);
       if (sms.ok) {
-        await supabase
-          .from("calendar_events")
-          .update({ host_confirmation_sent_at: new Date().toISOString() })
-          .eq("id", row.id);
-        result.host_sms = { sent: true };
+        anySent = true;
       } else {
-        result.host_sms = { sent: false, reason: sms.reason };
+        lastReason = sms.reason;
       }
+    }
+
+    if (anySent) {
+      await supabase
+        .from("calendar_events")
+        .update({ host_confirmation_sent_at: new Date().toISOString() })
+        .eq("id", row.id);
+      result.host_sms = { sent: true };
+    } else {
+      result.host_sms = {
+        sent: false,
+        reason: lastReason ?? "host_phone_missing",
+      };
     }
   } else if (!wantHost) {
     result.host_sms = { sent: false, reason: "disabled" };
@@ -576,7 +612,7 @@ export async function notifyMeetingRescheduled(
   const { data: event } = await supabase
     .from("calendar_events")
     .select(
-      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, deal_id, organization_member_id, completed_at",
+      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, deal_id, organization_member_id, assignee_member_ids, completed_at",
     )
     .eq("id", params.calendarEventId)
     .eq("org_id", params.orgId)
@@ -670,22 +706,34 @@ export async function notifyMeetingRescheduled(
   };
 
   if (settings.host_confirmation_on_create) {
-    const hostPhone = await resolveMemberNotificationPhone(
-      supabase,
-      Number(row.organization_member_id ?? params.memberId),
-    );
-    if (!hostPhone) {
-      result.host_sms = { sent: false, reason: "host_phone_missing" };
-    } else {
+    const assigneeIds = resolveMeetingAssigneeMemberIds(row, params.memberId);
+    let anySent = false;
+    let lastReason: string | undefined;
+
+    for (const assigneeId of assigneeIds) {
+      const hostPhone = await resolveMemberNotificationPhone(
+        supabase,
+        assigneeId,
+      );
+      if (!hostPhone) {
+        lastReason = "host_phone_missing";
+        continue;
+      }
       const body = buildHostMeetingRescheduleSms({
         ...copyBase,
         contactName,
       });
       const sms = await sendOrgSms(params.orgId, hostPhone, body);
-      result.host_sms = sms.ok
-        ? { sent: true }
-        : { sent: false, reason: sms.reason };
+      if (sms.ok) {
+        anySent = true;
+      } else {
+        lastReason = sms.reason;
+      }
     }
+
+    result.host_sms = anySent
+      ? { sent: true }
+      : { sent: false, reason: lastReason ?? "host_phone_missing" };
   } else {
     result.host_sms = { sent: false, reason: "disabled" };
   }

@@ -49,7 +49,8 @@ import { MeetingScheduleForm } from "@/modules/meetings/MeetingScheduleForm";
 import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingShareNotifications";
 import { sendCalendarEventUpdateNotifications } from "@/modules/calendar/sendCalendarEventUpdateNotifications";
 import { useOrganizationMeetingNotificationSettings } from "@/modules/settings/useOrganizationMeetingNotificationSettings";
-import { DEFAULT_MEETING_NOTIFICATION_SETTINGS } from "@/modules/meetings/meetingNotificationSettings";
+import { CalendarReminderOffsetsInput } from "@/modules/calendar/CalendarReminderOffsetsInput";
+import { TeamMemberMultiSelect } from "@/modules/shared/TeamMemberMultiSelect";
 
 const dealOptionText = (choice: {
   name?: string | null;
@@ -109,14 +110,7 @@ const CalendarEventForm = ({
       parse={parseDuration}
       helperText="How long the meeting or event lasts"
     />
-    <SelectInput
-      source="remind_before_minutes"
-      label="Remind me"
-      choices={[...REMIND_BEFORE_CHOICES]}
-      format={formatRemindBefore}
-      parse={parseRemindBefore}
-      helperText="Alert before the scheduled time"
-    />
+    <CalendarReminderOffsetsInput />
     <TextInput
       source="description"
       label="Notes"
@@ -148,19 +142,11 @@ const CalendarEventForm = ({
           filterToQuery={(searchText) => ({ q: searchText })}
         />
       </ReferenceInput>
-      <ReferenceInput
-        source="organization_member_id"
-        reference="organization_members"
-      >
-        <AutocompleteInput
-          label="Assigned"
-          optionText={memberOptionText}
-          inputText={memberOptionText}
-          helperText={false}
-          modal
-          filterToQuery={(searchText) => ({ q: searchText })}
-        />
-      </ReferenceInput>
+      <TeamMemberMultiSelect
+        source="assignee_member_ids"
+        label="Assignees"
+        required
+      />
     </div>
 
     {isEdit ? (
@@ -372,12 +358,14 @@ export const CalendarReminderDialog = ({
           event_date: dateKey,
           event_time: null,
           duration_minutes: null,
+          reminder_offsets_minutes: [15],
           remind_before_minutes: 15,
           description: "",
           meeting_url: null,
           contact_id: null,
           deal_id: null,
           organization_member_id: identity.id,
+          assignee_member_ids: [identity.id],
           completed_at: null,
           ...initialRecord,
         }}

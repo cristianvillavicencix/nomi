@@ -1,6 +1,7 @@
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 import type { CalendarEvent } from "@/modules/calendar/calendarUtils";
 import { CalendarEventAssigneeAvatars } from "@/modules/calendar/CalendarEventAssigneeAvatars";
+import { getCalendarEventAssigneeColorClassName } from "@/modules/calendar/calendarAssigneeColors";
 import {
   getEventClassName,
   getEventLabel,
@@ -24,11 +25,16 @@ export const CalendarEventChip = ({
   showAssigneeAvatars?: boolean;
   membersById?: Map<string, OrganizationMember>;
 }) => {
+  const typeClassName = getEventClassName(event);
+  const assigneeClassName = getCalendarEventAssigneeColorClassName(event);
+  const isMuted =
+    typeClassName.includes("line-through") ||
+    typeClassName.includes("text-muted-foreground");
   const className = cn(
     "block w-full rounded border px-1.5 text-left text-[11px] font-medium leading-5 transition-opacity",
     compact ? "py-0" : "py-0.5",
     onClick && !isStatic && "hover:opacity-80",
-    getEventClassName(event),
+    isMuted ? typeClassName : (assigneeClassName ?? typeClassName),
     extraClassName,
   );
   const label = getEventLabel(event);

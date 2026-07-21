@@ -30,6 +30,7 @@ type CalendarEventRow = {
   event_time: string | null;
   duration_minutes: number | null;
   remind_before_minutes: number | null;
+  reminder_offsets_minutes: number[] | null;
   description: string | null;
   meeting_url: string | null;
 };
@@ -132,7 +133,7 @@ const fetchMemberCalendarEvents = async (
   const { data, error } = await client
     .from("calendar_events")
     .select(
-      "id, title, event_date, event_time, duration_minutes, remind_before_minutes, description, meeting_url",
+      "id, title, event_date, event_time, duration_minutes, remind_before_minutes, reminder_offsets_minutes, description, meeting_url",
     )
     .eq("org_id", orgId)
     .eq("organization_member_id", memberId)
@@ -196,6 +197,14 @@ const calendarEventToIcal = (
     .filter(Boolean)
     .join("\n\n");
 
+  const offsets =
+    Array.isArray(event.reminder_offsets_minutes) &&
+    event.reminder_offsets_minutes.length > 0
+      ? event.reminder_offsets_minutes
+      : event.remind_before_minutes != null
+        ? [event.remind_before_minutes]
+        : [];
+
   return {
     uid: `nomi-event-${event.id}@nomicrm.com`,
     summary: event.title,
@@ -206,7 +215,8 @@ const calendarEventToIcal = (
     startTime: event.event_time,
     tzid,
     durationMinutes: event.duration_minutes,
-    alarmMinutesBefore: event.remind_before_minutes,
+    alarmMinutesBefore: offsets[0] ?? event.remind_before_minutes,
+    alarmMinutesBeforeList: offsets,
   };
 };
 

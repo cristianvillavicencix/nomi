@@ -31,7 +31,8 @@ import {
 import { MeetingContactTitleSync } from "@/modules/meetings/meetingFormUtils";
 import { MeetingShareOptions } from "@/modules/meetings/MeetingShareOptions";
 import { MeetingVideoCallSection } from "@/modules/meetings/MeetingVideoCallSection";
-import { QuickMeetingContactCreateDialog } from "@/modules/meetings/QuickMeetingContactCreateDialog";
+import { CalendarReminderOffsetsInput } from "@/modules/calendar/CalendarReminderOffsetsInput";
+import { TeamMemberMultiSelect } from "@/modules/shared/TeamMemberMultiSelect";
 
 const dealOptionText = (choice: {
   name?: string | null;
@@ -165,6 +166,15 @@ const MeetingScheduleFormFields = ({
             </ReferenceInput>
           </MeetingFormRow>
 
+          <MeetingFormRow label="Team">
+            <TeamMemberMultiSelect
+              source="assignee_member_ids"
+              label={false}
+              required
+              placeholder="Select meeting assignees"
+            />
+          </MeetingFormRow>
+
           <MeetingFormRow label="Title">
             <TextInput
               source="title"
@@ -201,15 +211,8 @@ const MeetingScheduleFormFields = ({
             />
           </MeetingFormRow>
 
-          <MeetingFormRow label="Remind me">
-            <SelectInput
-              source="remind_before_minutes"
-              label={false}
-              choices={[...REMIND_BEFORE_CHOICES]}
-              format={formatRemindBefore}
-              parse={parseRemindBefore}
-              helperText={false}
-            />
+          <MeetingFormRow label="Reminders">
+            <CalendarReminderOffsetsInput label={false} />
           </MeetingFormRow>
 
           <MeetingFormRow label="Notes">

@@ -47,10 +47,11 @@ describe("calendarEventAssignees", () => {
       record: {
         id: 5,
         organization_member_id: 7,
+        assignee_member_ids: [7, 8],
       },
     } as CalendarEvent;
 
+    expect(calendarEventInvolvesMember(event, 8)).toBe(true);
     expect(calendarEventInvolvesMember(event, 7)).toBe(true);
-    expect(calendarEventInvolvesMember(event, 8)).toBe(false);
   });
 });

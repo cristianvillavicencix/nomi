@@ -82,6 +82,7 @@ export type IcalEventInput = {
   tzid?: string;
   durationMinutes?: number | null;
   alarmMinutesBefore?: number | null;
+  alarmMinutesBeforeList?: number[] | null;
 };
 
 const buildValarmLines = (minutesBefore: number) => [
@@ -129,7 +130,15 @@ const buildVeventLines = (event: IcalEventInput): string[] => {
     lines.push(`DTEND;TZID=${tzid}:${endDate}T${endTime}`);
   }
 
-  if (event.alarmMinutesBefore && event.alarmMinutesBefore > 0) {
+  const alarmOffsets =
+    event.alarmMinutesBeforeList?.filter(
+      (value) => Number.isFinite(value) && value > 0,
+    ) ?? [];
+  if (alarmOffsets.length > 0) {
+    for (const minutesBefore of alarmOffsets) {
+      lines.push(...buildValarmLines(minutesBefore));
+    }
+  } else if (event.alarmMinutesBefore && event.alarmMinutesBefore > 0) {
     lines.push(...buildValarmLines(event.alarmMinutesBefore));
   }
 

@@ -3,6 +3,10 @@ import { SelectInput } from "@/components/admin/select-input";
 import { required } from "ra-core";
 import { TASK_PRIORITIES } from "@/components/atomic-crm/tasks/taskConstants";
 import { TaskDescriptionMentionInput } from "@/components/atomic-crm/tasks/TaskDescriptionMentionInput";
+import {
+  TeamMemberCollaboratorSelect,
+  TeamMemberMultiSelect,
+} from "@/modules/shared/TeamMemberMultiSelect";
 
 export const TaskFormContent = ({
   defaultDealId,
@@ -35,5 +39,11 @@ export const TaskFormContent = ({
         defaultValue="normal"
       />
     </div>
+    <TeamMemberMultiSelect
+      source="assignee_person_ids"
+      label="Assignees"
+      required
+    />
+    <TeamMemberCollaboratorSelect />
   </div>
 );

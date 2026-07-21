@@ -133,9 +133,9 @@ export const WorkPageContent = () => {
   const isAdminLevel = useIsAdminLevel();
   const { membersById } = useCalendarAssigneeMembers(
     filteredEventsByDate,
-    isAdminLevel,
+    true,
   );
-  const showAssigneeAvatars = isAdminLevel;
+  const showAssigneeAvatars = true;
 
   const filteredGroupedItems = useMemo(
     () =>

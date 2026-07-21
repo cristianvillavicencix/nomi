@@ -10,12 +10,16 @@ import {
   Users,
   Video,
 } from "lucide-react";
+import type { OrganizationMember } from "@/components/atomic-crm/types";
+import { getMemberName } from "@/components/atomic-crm/tasks/taskMemberOptions";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { CalendarEventAssigneeAvatars } from "@/modules/calendar/CalendarEventAssigneeAvatars";
+import { getCalendarEventMemberIds } from "@/modules/calendar/calendarEventAssignees";
 import {
   getCalendarEntryMeta,
   getEventLabel,
@@ -23,6 +27,7 @@ import {
   type CalendarEvent,
 } from "@/modules/calendar/calendarUtils";
 import { formatEventTimeRange } from "@/modules/calendar/calendarReminderOptions";
+import { formatReminderOffsetsSummary } from "@/modules/calendar/calendarReminderWriteUtils";
 import { cn } from "@/lib/utils";
 
 const getEventTypeMeta = (event: CalendarEvent) => {
@@ -50,20 +55,37 @@ const getEventTypeMeta = (event: CalendarEvent) => {
   return { label: "Event", icon: Bell };
 };
 
+const getReminderSummary = (event: CalendarEvent) => {
+  if (!isCalendarEntryEvent(event)) return null;
+  const offsets =
+    event.record.reminder_offsets_minutes ??
+    (event.record.remind_before_minutes != null
+      ? [event.record.remind_before_minutes]
+      : []);
+  return formatReminderOffsetsSummary(offsets);
+};
+
 export const CalendarEventPreviewPopover = ({
   event,
   children,
   onEdit,
   outsideBusinessHours = false,
+  membersById,
 }: {
   event: CalendarEvent;
   children: React.ReactNode;
   onEdit: (event: CalendarEvent) => void;
   outsideBusinessHours?: boolean;
+  membersById?: Map<string, OrganizationMember>;
 }) => {
   const [open, setOpen] = useState(false);
   const { label: typeLabel, icon: TypeIcon } = getEventTypeMeta(event);
   const title = getEventLabel(event);
+  const reminderSummary = getReminderSummary(event);
+  const memberIds = getCalendarEventMemberIds(event);
+  const assigneeMembers = memberIds
+    .map((id) => membersById?.get(String(id)))
+    .filter((member): member is OrganizationMember => Boolean(member));
 
   const timeLabel = isCalendarEntryEvent(event)
     ? formatEventTimeRange(
@@ -124,6 +146,30 @@ export const CalendarEventPreviewPopover = ({
               <Pencil className="size-3.5" />
             </Button>
           </div>
+
+          {membersById && assigneeMembers.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <CalendarEventAssigneeAvatars
+                event={event}
+                membersById={membersById}
+              />
+              <p className="min-w-0 truncate text-xs text-muted-foreground">
+                {assigneeMembers
+                  .slice(0, 3)
+                  .map((member) => getMemberName(member))
+                  .join(", ")}
+                {assigneeMembers.length > 3
+                  ? ` +${assigneeMembers.length - 3}`
+                  : ""}
+              </p>
+            </div>
+          ) : null}
+
+          {reminderSummary ? (
+            <p className="text-xs text-muted-foreground">
+              Reminders: {reminderSummary}
+            </p>
+          ) : null}
 
           {isCalendarEntryEvent(event) && event.record.description ? (
             <p className="line-clamp-3 text-xs text-muted-foreground">

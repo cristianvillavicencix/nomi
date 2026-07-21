@@ -305,6 +305,8 @@ export type CalendarEventRecord = {
   event_time?: string | null;
   duration_minutes?: number | null;
   remind_before_minutes?: number | null;
+  reminder_offsets_minutes?: number[];
+  reminder_sent_at?: string[];
   description?: string | null;
   meeting_url?: string | null;
   timezone?: string | null;
@@ -312,6 +314,7 @@ export type CalendarEventRecord = {
   contact_id?: Identifier | null;
   company_id?: Identifier | null;
   organization_member_id?: Identifier | null;
+  assignee_member_ids?: Identifier[];
   completed_at?: string | null;
   created_at?: string;
   updated_at?: string;

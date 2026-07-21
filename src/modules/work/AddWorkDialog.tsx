@@ -110,7 +110,6 @@ export const AddWorkDialog = ({
 
   if (!open) return null;
 
-  // Meeting uses CalendarReminderDialog (same form as day → Schedule meeting).
   if (isMeetingWorkCategory(category) && onScheduleMeeting) {
     return null;
   }
@@ -125,25 +124,17 @@ export const AddWorkDialog = ({
           deal_id: dealId ?? null,
           due_date: defaultDate,
           organization_member_id: identity.id,
-          assignee_person_ids: [],
+          assignee_person_ids: [identity.id],
           collaborator_person_ids: [],
           priority: "normal",
           internal: false,
         }}
-        transform={(data) => {
-          const normalized = normalizeTaskCreateData({
+        transform={(data) =>
+          normalizeTaskCreateData({
             ...data,
             deal_id: dealId ?? data.deal_id ?? null,
-          });
-          const assigneeId = Number(data.organization_member_id);
-          if (
-            Number.isFinite(assigneeId) &&
-            (normalized.assignee_person_ids?.length ?? 0) === 0
-          ) {
-            normalized.assignee_person_ids = [assigneeId];
-          }
-          return normalized;
-        }}
+          })
+        }
         mutationOptions={{ onSuccess: handleTaskSuccess }}
       >
         <Dialog
@@ -188,11 +179,14 @@ export const AddWorkDialog = ({
         event_date: defaultDate,
         event_time: null,
         duration_minutes: null,
+        reminder_offsets_minutes:
+          category === "follow_up" ? [15] : [],
         remind_before_minutes: category === "follow_up" ? 15 : null,
         description: "",
         contact_id: null,
         deal_id: dealId ?? null,
         organization_member_id: identity.id,
+        assignee_member_ids: [identity.id],
         completed_at: null,
       }}
       transform={prepareCalendarEventWriteData}
@@ -216,6 +210,11 @@ export const AddWorkDialog = ({
               onChange={handleCategoryChange}
             />
             <WorkCreateEventFields category={category} />
+            {category === "follow_up" ? (
+              <p className="text-xs text-muted-foreground">
+                Default reminder: 15 minutes before.
+              </p>
+            ) : null}
             <p className="rounded-sm border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
               {categoryHint}
             </p>

@@ -2,6 +2,10 @@ import {
   DURATION_NONE,
   REMIND_BEFORE_NONE,
 } from "@/modules/calendar/calendarReminderOptions";
+import {
+  legacyRemindBeforeFromOffsets,
+  normalizeReminderOffsetsMinutes,
+} from "@/modules/calendar/calendarReminderWriteUtils";
 import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 
 const NULLABLE_ID_FIELDS = [
@@ -18,6 +22,15 @@ const toNullableId = (value: unknown) => {
   if (value === "" || value == null) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const toNumericIdArray = (value: unknown): number[] => {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value.map((item) => Number(item)).filter((item) => Number.isFinite(item)),
+    ),
+  );
 };
 
 export type PrepareCalendarEventOptions = {
@@ -40,6 +53,26 @@ export const prepareCalendarEventWriteData = (
       next[field] = toNullableId(next[field]);
     }
   });
+
+  const assigneeMemberIds = toNumericIdArray(next.assignee_member_ids);
+  const legacyOwner = toNullableId(next.organization_member_id);
+  if (assigneeMemberIds.length > 0) {
+    next.assignee_member_ids = assigneeMemberIds;
+    next.organization_member_id = assigneeMemberIds[0];
+  } else if (legacyOwner != null) {
+    next.assignee_member_ids = [legacyOwner];
+    next.organization_member_id = legacyOwner;
+  } else {
+    next.assignee_member_ids = [];
+  }
+
+  const reminderOffsets = normalizeReminderOffsetsMinutes(
+    next.reminder_offsets_minutes ?? next.remind_before_minutes,
+  );
+  next.reminder_offsets_minutes = reminderOffsets;
+  next.remind_before_minutes = legacyRemindBeforeFromOffsets(reminderOffsets);
+
+  delete next.reminder_sent_at;
 
   if (
     next.remind_before_minutes === REMIND_BEFORE_NONE ||

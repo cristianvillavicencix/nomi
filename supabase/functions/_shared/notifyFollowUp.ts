@@ -13,11 +13,15 @@ type CalendarEventRow = {
   event_time?: string | null;
   description?: string | null;
   remind_before_minutes?: number | null;
+  reminder_offsets_minutes?: number[] | null;
+  reminder_sent_at?: string[] | null;
   contact_id?: number | null;
   organization_member_id?: number | null;
+  assignee_member_ids?: number[] | null;
   completed_at?: string | null;
   follow_up_scheduled_notified_at?: string | null;
   follow_up_reminder_sent_at?: string | null;
+  meeting_url?: string | null;
 };
 
 type ContactRow = {
@@ -423,14 +427,12 @@ export async function processDueCalendarFollowUpReminders(
 ) {
   const now = Date.now();
 
-  // Exclude video meetings (meeting_url set) — those use processDueMeetingReminders.
   const { data: events, error } = await supabase
     .from("calendar_events")
     .select(
-      "id, event_date, event_time, remind_before_minutes, completed_at, follow_up_reminder_sent_at, contact_id, organization_member_id, meeting_url",
+      "id, event_date, event_time, remind_before_minutes, reminder_offsets_minutes, reminder_sent_at, completed_at, follow_up_reminder_sent_at, contact_id, organization_member_id, meeting_url",
     )
     .is("completed_at", null)
-    .is("follow_up_reminder_sent_at", null)
     .is("meeting_url", null)
     .not("contact_id", "is", null)
     .not("organization_member_id", "is", null);
@@ -450,32 +452,60 @@ export async function processDueCalendarFollowUpReminders(
     if (!eventAt) continue;
 
     const eventAtMs = eventAt.getTime();
-    const remindMinutes =
-      event.remind_before_minutes != null &&
-      Number.isFinite(Number(event.remind_before_minutes))
-        ? Number(event.remind_before_minutes)
-        : 15;
-    const notifyAt = eventAtMs - remindMinutes * 60 * 1000;
+    const offsets =
+      Array.isArray(event.reminder_offsets_minutes) &&
+      event.reminder_offsets_minutes.length > 0
+        ? event.reminder_offsets_minutes
+            .map((value) => Number(value))
+            .filter((value) => Number.isFinite(value))
+        : [
+            event.remind_before_minutes != null &&
+            Number.isFinite(Number(event.remind_before_minutes))
+              ? Number(event.remind_before_minutes)
+              : 15,
+          ];
 
-    // Event already passed — mark reminded without SMS (clears historical backlog).
+    const sentAt = Array.isArray(event.reminder_sent_at)
+      ? [...event.reminder_sent_at]
+      : [];
+
     if (now >= eventAtMs) {
-      await supabase
-        .from("calendar_events")
-        .update({ follow_up_reminder_sent_at: new Date().toISOString() })
-        .eq("id", event.id)
-        .is("follow_up_reminder_sent_at", null);
+      if (!event.follow_up_reminder_sent_at) {
+        await supabase
+          .from("calendar_events")
+          .update({ follow_up_reminder_sent_at: new Date().toISOString() })
+          .eq("id", event.id)
+          .is("follow_up_reminder_sent_at", null);
+      }
       continue;
     }
 
-    if (now < notifyAt) continue;
+    for (let index = 0; index < offsets.length; index += 1) {
+      if (sentAt[index]) continue;
+      const remindMinutes = offsets[index];
+      const notifyAt = eventAtMs - remindMinutes * 60 * 1000;
+      if (now < notifyAt) continue;
 
-    const result = await notifyFollowUpForCalendarEvent(
-      supabase,
-      event.id,
-      "reminder",
-      options,
-    );
-    results.push(result);
+      const result = await notifyFollowUpForCalendarEvent(
+        supabase,
+        event.id,
+        "reminder",
+        options,
+      );
+      results.push(result);
+
+      sentAt[index] = new Date().toISOString();
+      await supabase
+        .from("calendar_events")
+        .update({
+          reminder_sent_at: sentAt,
+          follow_up_reminder_sent_at:
+            index === offsets.length - 1
+              ? sentAt[index]
+              : event.follow_up_reminder_sent_at,
+        })
+        .eq("id", event.id);
+    }
   }
 
   return results;

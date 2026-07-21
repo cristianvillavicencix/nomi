@@ -1,5 +1,6 @@
 import type { Task } from "@/components/atomic-crm/types";
 import { applyMentionIdsToTaskData } from "@/components/atomic-crm/tasks/taskMentions";
+import { syncTaskOwnerFromAssignees } from "@/components/atomic-crm/tasks/normalizeTaskAssignees";
 
 export const TASK_PRIORITIES = [
   { value: "low", label: "Low" },
@@ -75,7 +76,7 @@ export const normalizeTaskCreateData = (data: Record<string, unknown>) => {
     mentionedMemberIds = [organizationMemberId];
   }
 
-  return {
+  return syncTaskOwnerFromAssignees({
     ...withMentions,
     contact_id,
     type: withMentions.type || "none",
@@ -85,5 +86,5 @@ export const normalizeTaskCreateData = (data: Record<string, unknown>) => {
     collaborator_person_ids: collaboratorPersonIds,
     mentioned_member_ids: mentionedMemberIds,
     due_date: dueDate.toISOString(),
-  };
+  });
 };

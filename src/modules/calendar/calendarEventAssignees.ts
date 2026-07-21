@@ -21,8 +21,14 @@ export const getCalendarEventMemberIds = (event: CalendarEvent): number[] => {
   }
 
   if (isCalendarEntryEvent(event)) {
-    const memberId = Number(event.record.organization_member_id);
-    return Number.isFinite(memberId) ? [memberId] : [];
+    const ids = new Set<number>([
+      ...toMemberIds(event.record.assignee_member_ids),
+    ]);
+    const ownerId = Number(event.record.organization_member_id);
+    if (ids.size === 0 && Number.isFinite(ownerId)) {
+      ids.add(ownerId);
+    }
+    return Array.from(ids);
   }
 
   return [];

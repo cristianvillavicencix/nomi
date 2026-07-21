@@ -16,6 +16,10 @@ import {
   type CalendarEvent,
 } from "@/modules/calendar/calendarUtils";
 import {
+  computeHourOccupancy,
+  getOccupancyBackgroundClass,
+} from "@/modules/calendar/calendarOccupancy";
+import {
   formatMinutesAsTime,
   getCurrentTimeIndicator,
   getHourLabels,
@@ -85,6 +89,11 @@ export const CalendarTimeWeekGrid = ({
             startHour: gridStartHour,
             endHour: gridEndHour,
           }),
+          occupancy: computeHourOccupancy({
+            events: dayEvents,
+            startHour: gridStartHour,
+            endHour: gridEndHour,
+          }),
         };
       }),
     [days, eventsByDate, gridEndHour, gridStartHour, schedule],
@@ -151,7 +160,7 @@ export const CalendarTimeWeekGrid = ({
 
         <div className={cn("grid min-w-0 flex-1", gridColsClass)}>
           {dayLayouts.map(
-            ({ dateKey, day, daySchedule, untimed, timedBlocks }) => {
+            ({ dateKey, day, daySchedule, untimed, timedBlocks, occupancy }) => {
               const isToday = dateKey === todayKey;
 
               if (daySchedule.closed) {
@@ -208,6 +217,9 @@ export const CalendarTimeWeekGrid = ({
                       const withinDay =
                         hour >= daySchedule.startHour &&
                         hour < daySchedule.endHour;
+                      const occupancyClass = getOccupancyBackgroundClass(
+                        occupancy[hourIndex]?.ratio ?? 0,
+                      );
 
                       return (
                         <button
@@ -217,7 +229,7 @@ export const CalendarTimeWeekGrid = ({
                           className={cn(
                             "absolute inset-x-0 border-b border-border/40 transition-colors",
                             withinDay
-                              ? "hover:bg-primary/5"
+                              ? cn("hover:bg-primary/5", occupancyClass)
                               : "cursor-not-allowed bg-muted/20",
                           )}
                           style={{

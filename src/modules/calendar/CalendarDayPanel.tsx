@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Plus, X } from "lucide-react";
 import type { OrganizationMember } from "@/components/atomic-crm/types";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,10 @@ import {
   toDateKey,
   type CalendarEvent,
 } from "@/modules/calendar/calendarUtils";
+import {
+  computeHourOccupancy,
+  getOccupancyBackgroundClass,
+} from "@/modules/calendar/calendarOccupancy";
 import { cn } from "@/lib/utils";
 
 export const CalendarDayPanel = ({
@@ -45,8 +50,6 @@ export const CalendarDayPanel = ({
   showAssigneeAvatars?: boolean;
   membersById?: Map<string, OrganizationMember>;
 }) => {
-  if (!open) return null;
-
   const daySchedule = schedule.getDaySchedule(dateKey);
   const gridStartHour = schedule.gridStartHour;
   const gridEndHour = schedule.gridEndHour;
@@ -64,6 +67,17 @@ export const CalendarDayPanel = ({
         endHour: gridEndHour,
       })
     : null;
+  const occupancy = useMemo(
+    () =>
+      computeHourOccupancy({
+        events,
+        startHour: gridStartHour,
+        endHour: gridEndHour,
+      }),
+    [events, gridEndHour, gridStartHour],
+  );
+
+  if (!open) return null;
 
   return (
     <aside className="absolute inset-y-0 right-0 z-20 flex w-full max-w-none flex-col border-l bg-background shadow-xl animate-in slide-in-from-right-4 duration-300 motion-reduce:animate-none sm:w-1/2 sm:min-w-[20rem] sm:max-w-[32rem]">
@@ -152,6 +166,9 @@ export const CalendarDayPanel = ({
                     const withinDay =
                       hour >= daySchedule.startHour &&
                       hour < daySchedule.endHour;
+                    const occupancyClass = getOccupancyBackgroundClass(
+                      occupancy[hourIndex]?.ratio ?? 0,
+                    );
 
                     return (
                       <button
@@ -161,7 +178,7 @@ export const CalendarDayPanel = ({
                         className={cn(
                           "absolute inset-x-0 border-b border-border/40 transition-colors",
                           withinDay
-                            ? "hover:bg-primary/5"
+                            ? cn("hover:bg-primary/5", occupancyClass)
                             : "cursor-not-allowed bg-muted/30",
                         )}
                         style={{
