@@ -257,6 +257,8 @@ export async function upsertThreadAndMessage(params: {
   isUnread: boolean;
   direction: "inbound" | "outbound";
   hasAttachments?: boolean;
+  isTrashed?: boolean;
+  isSpam?: boolean;
 }) {
   const { account } = params;
   const participants = [
@@ -283,6 +285,8 @@ export async function upsertThreadAndMessage(params: {
         participants,
         last_message_at: params.sentAt,
         is_unread: params.isUnread || undefined,
+        is_trashed: params.isTrashed ?? undefined,
+        is_spam: params.isSpam ?? undefined,
         updated_at: new Date().toISOString(),
       })
       .eq("id", threadId);
@@ -298,6 +302,8 @@ export async function upsertThreadAndMessage(params: {
         participants,
         last_message_at: params.sentAt,
         is_unread: params.isUnread,
+        is_trashed: params.isTrashed ?? false,
+        is_spam: params.isSpam ?? false,
         message_count: 0,
       })
       .select("id")

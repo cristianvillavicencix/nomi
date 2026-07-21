@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
-import { PencilSimple, GearSix, Plus } from "@phosphor-icons/react";
+import { PencilSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -27,8 +25,9 @@ import {
   MailFolderRail,
   type MailFolderId,
 } from "./MailFolderRail";
-import { MailToolbar } from "./MailToolbar";
-import { mailboxesSettingsPath } from "./mailSettingsPath";
+import { MailDetailToolbar } from "./MailToolbar";
+import { MailThreadFilters } from "./MailThreadFilters";
+import type { MailListFilter } from "./mailListFilters";
 import { syncMailAccount } from "./mailApi";
 import { useMailThreads, useMailMessages } from "./useMailThreads";
 import { useMailLabels } from "./useMailLabels";
@@ -38,10 +37,9 @@ import type { MailAccount, MailMessage, MailThread } from "./types";
 
 const MOBILE_FOLDERS: Array<{ id: MailFolderId; label: string }> = [
   { id: "inbox", label: "Inbox" },
-  { id: "unread", label: "Unread" },
-  { id: "starred", label: "Starred" },
   { id: "sent", label: "Sent" },
-  { id: "archived", label: "Archived" },
+  { id: "draft", label: "Drafts" },
+  { id: "spam", label: "Spam" },
   { id: "trash", label: "Trash" },
 ];
 
@@ -84,6 +82,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const queryClient = useQueryClient();
   const [accountFilter, setAccountFilter] = useState<number | "all">("all");
   const [folder, setFolder] = useState<MailFolderId>("inbox");
+  const [listFilter, setListFilter] = useState<MailListFilter>("all");
   const [labelId, setLabelId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<MailThread | null>(null);
@@ -101,6 +100,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
   const { data: threads = [], isPending } = useMailThreads({
     accountId: accountFilter,
     folder,
+    listFilter,
     search,
     labelId,
   });
@@ -175,8 +175,12 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
     const leavesFolder =
       patch.is_trashed === true ||
       patch.is_archived === true ||
-      (folder === "unread" && patch.is_unread === false) ||
-      (folder === "starred" && patch.is_starred === false);
+      patch.is_spam === true ||
+      (listFilter === "unread" && patch.is_unread === false) ||
+      (listFilter === "starred" && patch.is_starred === false) ||
+      (folder === "draft" && patch.is_draft === false) ||
+      (folder === "trash" && patch.is_trashed === false) ||
+      (folder === "spam" && patch.is_spam === false);
 
     const { error } = await supabase
       .from("mail_threads")
@@ -330,6 +334,7 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         folder={folder}
         onFolderChange={(f) => {
           setFolder(f);
+          setListFilter("all");
           setSelected(null);
           setMobileShowThread(false);
         }}
@@ -342,21 +347,32 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
         }}
         labels={labels}
         labelId={labelId}
-        onLabelChange={setLabelId}
+        onLabelChange={(id) => {
+          setLabelId(id);
+          setListFilter("all");
+        }}
+        onCompose={() => openCompose("new")}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <div
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col md:flex-none md:w-[320px] md:max-w-[360px] md:shrink-0",
+          "border-r bg-background",
+          mobileShowThread && "hidden md:flex",
+        )}
+      >
+        <div className="flex items-center gap-2 border-b px-2 py-2 md:hidden">
           <Select
             value={folder}
             onValueChange={(v) => {
               setFolder(v as MailFolderId);
+              setListFilter("all");
               setLabelId(null);
               setSelected(null);
               setMobileShowThread(false);
             }}
           >
-            <SelectTrigger className="h-8 w-[120px] md:hidden">
+            <SelectTrigger className="h-8 w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -367,35 +383,110 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
               ))}
             </SelectContent>
           </Select>
-          <Input
-            className="h-8 min-w-[10rem] max-w-sm flex-1"
-            placeholder="Search mail…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
-            <Button type="button" size="sm" variant="secondary" asChild>
-              <Link to={mailboxesSettingsPath()}>
-                <GearSix className="size-4" />
-                Mailboxes
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => openCompose("new")}
-            >
-              <Plus className="size-4" />
-              Compose
-            </Button>
-          </div>
         </div>
 
-        <MailToolbar
+        <MailThreadFilters
+          folder={folder}
+          listFilter={listFilter}
+          onListFilterChange={(next) => {
+            setListFilter(next);
+            setSelected(null);
+            setMobileShowThread(false);
+          }}
+          searchQuery={search}
+          onSearchQueryChange={setSearch}
+        />
+
+        {threads.length > 0 ? (
+          <div className="flex items-center gap-2 border-b px-3 py-1.5 text-xs text-muted-foreground">
+            <Checkbox
+              checked={
+                selectedIds.size > 0 && selectedIds.size === threads.length
+              }
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  setSelectedIds(new Set(threads.map((t) => t.id)));
+                } else {
+                  setSelectedIds(new Set());
+                }
+              }}
+            />
+            <span className="flex-1">
+              {selectedIds.size > 0
+                ? `${selectedIds.size} selected`
+                : `${threads.length} conversation${threads.length === 1 ? "" : "s"}`}
+            </span>
+            {selectedIds.size > 0 ? (
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => void bulkUpdate({ is_starred: true })}
+                >
+                  Star
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => void bulkUpdate({ is_archived: true })}
+                >
+                  Archive
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => void bulkUpdate({ is_trashed: true })}
+                >
+                  Trash
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {isPending ? (
+          <p className="p-4 text-sm text-muted-foreground">Loading…</p>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <MailThreadList
+            threads={threads}
+            selectedId={selected?.id ?? null}
+            selectedIds={selectedIds}
+            onToggleSelect={(id, on) => {
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (on) next.add(id);
+                else next.delete(id);
+                return next;
+              });
+            }}
+            onSelect={(thread) => {
+              setSelected(thread);
+              setMobileShowThread(true);
+              if (thread.is_unread) {
+                void updateThread(thread, { is_unread: false });
+              }
+            }}
+          />
+          </div>
+        )}
+      </div>
+
+      <div
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          !mobileShowThread && "hidden md:flex",
+        )}
+      >
+        <MailDetailToolbar
           thread={selected}
           syncing={syncing}
           onReply={() => openCompose("reply")}
-          onReplyAll={() => openCompose("reply_all")}
           onForward={() => openCompose("forward")}
           onToggleStar={() => {
             if (!selected) return;
@@ -409,10 +500,6 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
             if (!selected) return;
             void updateThread(selected, { is_trashed: true });
           }}
-          onToggleRead={() => {
-            if (!selected) return;
-            void updateThread(selected, { is_unread: !selected.is_unread });
-          }}
           onSync={() => {
             void runQuickSync();
           }}
@@ -425,107 +512,14 @@ export function MailWorkspace({ accounts }: { accounts: MailAccount[] }) {
           }}
         />
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(260px,340px)_1fr]">
-          <div
-            className={cn(
-              "flex min-h-0 flex-col border-r",
-              mobileShowThread && "hidden md:flex",
-            )}
-          >
-            {threads.length > 0 ? (
-              <div className="flex items-center gap-2 border-b px-3 py-1.5 text-xs text-muted-foreground">
-                <Checkbox
-                  checked={
-                    selectedIds.size > 0 &&
-                    selectedIds.size === threads.length
-                  }
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedIds(new Set(threads.map((t) => t.id)));
-                    } else {
-                      setSelectedIds(new Set());
-                    }
-                  }}
-                />
-                <span className="flex-1">
-                  {folder.charAt(0).toUpperCase() + folder.slice(1)}
-                  {selectedIds.size > 0
-                    ? ` · ${selectedIds.size} selected`
-                    : ` · ${threads.length}`}
-                </span>
-                {selectedIds.size > 0 ? (
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => void bulkUpdate({ is_starred: true })}
-                    >
-                      Star
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => void bulkUpdate({ is_archived: true })}
-                    >
-                      Archive
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => void bulkUpdate({ is_trashed: true })}
-                    >
-                      Trash
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {isPending ? (
-              <p className="p-4 text-sm text-muted-foreground">Loading…</p>
-            ) : (
-              <MailThreadList
-                threads={threads}
-                selectedId={selected?.id ?? null}
-                selectedIds={selectedIds}
-                onToggleSelect={(id, on) => {
-                  setSelectedIds((prev) => {
-                    const next = new Set(prev);
-                    if (on) next.add(id);
-                    else next.delete(id);
-                    return next;
-                  });
-                }}
-                onSelect={(thread) => {
-                  setSelected(thread);
-                  setMobileShowThread(true);
-                  if (thread.is_unread) {
-                    void updateThread(thread, { is_unread: false });
-                  }
-                }}
-              />
-            )}
-          </div>
-
-          <div
-            className={cn(
-              "min-h-0",
-              !mobileShowThread && "hidden md:block",
-            )}
-          >
-            <MailMessagePane
-              thread={selected}
-              onBack={() => setMobileShowThread(false)}
-              onReply={() => openCompose("reply")}
-              onReplyAll={() => openCompose("reply_all")}
-              onForward={() => openCompose("forward")}
-            />
-          </div>
+        <div className="min-h-0 flex-1">
+          <MailMessagePane
+            thread={selected}
+            onBack={() => setMobileShowThread(false)}
+            onReply={() => openCompose("reply")}
+            onReplyAll={() => openCompose("reply_all")}
+            onForward={() => openCompose("forward")}
+          />
         </div>
       </div>
 

@@ -15,6 +15,8 @@ export type MailAccount = {
   email: string;
   display_name: string | null;
   status: MailAccountStatus;
+  imap_host?: string | null;
+  smtp_host?: string | null;
   last_sync_at: string | null;
   error_message: string | null;
   created_at: string;
@@ -35,6 +37,7 @@ export type MailThread = {
   is_draft: boolean;
   is_archived: boolean;
   is_trashed: boolean;
+  is_spam: boolean;
   message_count: number;
 };
 

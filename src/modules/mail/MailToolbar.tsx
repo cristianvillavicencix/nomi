@@ -1,12 +1,11 @@
+import { Link } from "react-router";
 import {
   Archive,
   ArrowBendUpLeft,
-  ArrowBendDoubleUpLeft,
   ArrowBendUpRight,
   ArrowsClockwise,
   CaretDown,
-  EnvelopeOpen,
-  EnvelopeSimple,
+  GearSix,
   Star,
   Trash,
 } from "@phosphor-icons/react";
@@ -19,19 +18,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { mailboxesSettingsPath } from "./mailSettingsPath";
 import type { MailThread } from "./types";
 
-export function MailToolbar({
+export function MailDetailToolbar({
   thread,
   className,
   syncing = false,
   onReply,
-  onReplyAll,
   onForward,
   onToggleStar,
   onArchive,
   onTrash,
-  onToggleRead,
   onSync,
   onSyncFromDate,
 }: {
@@ -39,12 +37,10 @@ export function MailToolbar({
   className?: string;
   syncing?: boolean;
   onReply: () => void;
-  onReplyAll: () => void;
   onForward: () => void;
   onToggleStar: () => void;
   onArchive: () => void;
   onTrash: () => void;
-  onToggleRead: () => void;
   onSync: () => void;
   onSyncFromDate?: () => void;
 }) {
@@ -53,19 +49,12 @@ export function MailToolbar({
   return (
     <div
       className={cn(
-        "flex h-10 shrink-0 items-center gap-0.5 border-b px-2",
+        "flex h-11 shrink-0 items-center gap-0.5 border-b px-2",
         className,
       )}
     >
       <IconButton aria-label="Reply" disabled={disabled} onClick={onReply}>
         <ArrowBendUpLeft className="size-4" />
-      </IconButton>
-      <IconButton
-        aria-label="Reply all"
-        disabled={disabled}
-        onClick={onReplyAll}
-      >
-        <ArrowBendDoubleUpLeft className="size-4" />
       </IconButton>
       <IconButton
         aria-label="Forward"
@@ -88,17 +77,6 @@ export function MailToolbar({
         />
       </IconButton>
       <IconButton
-        aria-label={thread?.is_unread ? "Mark read" : "Mark unread"}
-        disabled={disabled}
-        onClick={onToggleRead}
-      >
-        {thread?.is_unread ? (
-          <EnvelopeOpen className="size-4" />
-        ) : (
-          <EnvelopeSimple className="size-4" />
-        )}
-      </IconButton>
-      <IconButton
         aria-label="Archive"
         disabled={disabled}
         onClick={onArchive}
@@ -113,7 +91,7 @@ export function MailToolbar({
         <Trash className="size-4" />
       </IconButton>
 
-      <div className="ml-auto flex items-center">
+      <div className="ml-auto flex items-center gap-0.5">
         <IconButton
           aria-label="Sync mailbox"
           disabled={syncing}
@@ -135,13 +113,21 @@ export function MailToolbar({
               </IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onSyncFromDate}>
+              <DropdownMenuItem disabled={syncing} onClick={onSyncFromDate}>
                 Sync from date…
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
+        <IconButton aria-label="Mail settings" asChild>
+          <Link to={mailboxesSettingsPath()}>
+            <GearSix className="size-4" />
+          </Link>
+        </IconButton>
       </div>
     </div>
   );
 }
+
+/** @deprecated use MailDetailToolbar */
+export const MailToolbar = MailDetailToolbar;

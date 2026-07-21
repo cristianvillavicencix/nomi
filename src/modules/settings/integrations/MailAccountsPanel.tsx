@@ -23,6 +23,11 @@ import { MailImapDialog } from "@/modules/mail/MailImapDialog";
 import { MailSyncRangeDialog } from "@/modules/mail/MailSyncRangeDialog";
 import type { MailSyncRange } from "@/modules/mail/mailSyncRange";
 import type { MailAccount } from "@/modules/mail/types";
+import { MailAccountAvatar } from "@/modules/mail/mailAccountAvatar";
+import {
+  MAIL_BRAND_LABELS,
+  resolveMailBrand,
+} from "@/modules/mail/mailProviderBrand";
 
 function SyncHealthPanel({ orgAccounts }: { orgAccounts: MailAccount[] }) {
   const { data: jobs = [] } = useQuery({
@@ -171,14 +176,12 @@ function AccountRows({
               key={account.id}
               className="flex flex-wrap items-center gap-3 px-3 py-2.5"
             >
-              <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase">
-                {account.email.charAt(0)}
-              </div>
+              <MailAccountAvatar account={account} size="md" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{account.email}</div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="secondary" className="capitalize">
-                    {account.provider}
+                  <Badge variant="secondary">
+                    {MAIL_BRAND_LABELS[resolveMailBrand(account)]}
                   </Badge>
                   <span className="capitalize">
                     {account.status.replace("_", " ")}

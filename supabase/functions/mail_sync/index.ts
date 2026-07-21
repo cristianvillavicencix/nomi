@@ -45,10 +45,17 @@ function parseSyncOptions(body: Record<string, unknown>): SyncOptions {
 }
 
 function gmailFolderQuery(
-  folder: "inbox" | "sent",
+  folder: "inbox" | "sent" | "spam" | "trash",
   since: string | null,
 ): string {
-  const base = folder === "sent" ? "in:sent" : "in:inbox";
+  const base =
+    folder === "sent"
+      ? "in:sent"
+      : folder === "spam"
+        ? "in:spam"
+        : folder === "trash"
+          ? "in:trash"
+          : "in:inbox";
   if (!since) return base;
   const d = new Date(since);
   const y = d.getUTCFullYear();
@@ -137,7 +144,7 @@ function prepareStoredHtml(html: string | null): string | null {
 async function syncGoogleFolder(
   account: MailAccountRow,
   accessToken: string,
-  folder: "inbox" | "sent",
+  folder: "inbox" | "sent" | "spam" | "trash",
   opts: SyncOptions,
   seen: Set<string>,
 ): Promise<number> {
@@ -232,6 +239,8 @@ async function syncGoogleFolder(
         sentAt: internalDate,
         isUnread: isOutbound ? false : isUnread,
         direction: isOutbound ? "outbound" : "inbound",
+        isTrashed: labelIds.includes("TRASH") || folder === "trash",
+        isSpam: labelIds.includes("SPAM") || folder === "spam",
         hasAttachments: Boolean(
           detail.payload?.parts?.some?.(
             (p: { filename?: string }) => p.filename,
@@ -251,7 +260,7 @@ async function syncGoogleFolder(
 async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
   const accessToken = await getFreshGoogleAccessToken(account);
   const seen = new Set<string>();
-  const perFolder = Math.max(10, Math.ceil(opts.maxResults / 2));
+  const perFolder = Math.max(10, Math.ceil(opts.maxResults / 4));
   const folderOpts = { ...opts, maxResults: perFolder };
   let synced = 0;
   synced += await syncGoogleFolder(
@@ -265,6 +274,20 @@ async function syncGoogle(account: MailAccountRow, opts: SyncOptions) {
     account,
     accessToken,
     "sent",
+    folderOpts,
+    seen,
+  );
+  synced += await syncGoogleFolder(
+    account,
+    accessToken,
+    "spam",
+    folderOpts,
+    seen,
+  );
+  synced += await syncGoogleFolder(
+    account,
+    accessToken,
+    "trash",
     folderOpts,
     seen,
   );

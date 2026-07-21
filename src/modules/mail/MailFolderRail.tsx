@@ -1,22 +1,33 @@
 import {
   Tray,
-  EnvelopeSimple,
-  Star,
-  Archive,
-  Trash,
   PaperPlaneTilt,
+  PencilSimpleLine,
+  Trash,
+  Prohibit,
   Tag,
+  Plus,
+  CaretDown,
+  Check,
 } from "@phosphor-icons/react";
+import { Link } from "react-router";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import {
+  MailAccountAvatar,
+  MailAllAccountsAvatar,
+} from "./mailAccountAvatar";
+import { mailboxesSettingsPath } from "./mailSettingsPath";
 import type { MailAccount, MailLabel } from "./types";
 
-export type MailFolderId =
-  | "inbox"
-  | "unread"
-  | "starred"
-  | "sent"
-  | "archived"
-  | "trash";
+export type MailFolderId = "inbox" | "sent" | "draft" | "trash" | "spam";
 
 const FOLDERS: Array<{
   id: MailFolderId;
@@ -24,12 +35,15 @@ const FOLDERS: Array<{
   icon: typeof Tray;
 }> = [
   { id: "inbox", label: "Inbox", icon: Tray },
-  { id: "unread", label: "Unread", icon: EnvelopeSimple },
-  { id: "starred", label: "Starred", icon: Star },
   { id: "sent", label: "Sent", icon: PaperPlaneTilt },
-  { id: "archived", label: "Archived", icon: Archive },
+  { id: "draft", label: "Drafts", icon: PencilSimpleLine },
+  { id: "spam", label: "Spam", icon: Prohibit },
   { id: "trash", label: "Trash", icon: Trash },
 ];
+
+function accountLabel(account: MailAccount) {
+  return account.display_name?.trim() || account.email;
+}
 
 export function MailFolderRail({
   folder,
@@ -40,6 +54,7 @@ export function MailFolderRail({
   labels,
   labelId,
   onLabelChange,
+  onCompose,
   className,
 }: {
   folder: MailFolderId;
@@ -50,56 +65,97 @@ export function MailFolderRail({
   labels: MailLabel[];
   labelId: number | null;
   onLabelChange: (id: number | null) => void;
+  onCompose: () => void;
   className?: string;
 }) {
+  const selectedAccount =
+    accountFilter === "all"
+      ? null
+      : accounts.find((a) => a.id === accountFilter) ?? null;
+
   return (
     <aside
       className={cn(
-        "flex h-full min-h-0 w-[200px] shrink-0 flex-col border-r bg-muted/20",
+        "flex h-full min-h-0 w-[220px] shrink-0 flex-col border-r bg-muted/20",
         className,
       )}
     >
-      <div className="border-b px-3 py-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Mailboxes
-        </p>
-        <nav className="mt-2 space-y-0.5">
-          <button
-            type="button"
-            onClick={() => onAccountFilterChange("all")}
-            className={cn(
-              "flex w-full truncate rounded-md px-2 py-1.5 text-left text-sm",
-              accountFilter === "all"
-                ? "bg-muted font-medium text-foreground"
-                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-            )}
-          >
-            All accounts
-          </button>
-          {accounts.map((account) => (
-            <button
-              key={account.id}
+      <div className="space-y-2 border-b p-3">
+        <Button type="button" className="w-full justify-center gap-2" onClick={onCompose}>
+          <Plus className="size-4" weight="bold" />
+          Compose
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
               type="button"
-              onClick={() => onAccountFilterChange(account.id)}
-              className={cn(
-                "flex w-full truncate rounded-md px-2 py-1.5 text-left text-sm",
-                accountFilter === account.id
-                  ? "bg-muted font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-              )}
-              title={account.email}
+              variant="outline"
+              className="h-auto w-full justify-between gap-2 px-2 py-2"
             >
-              {account.email}
-            </button>
-          ))}
-        </nav>
+              <span className="flex min-w-0 items-center gap-2">
+                {selectedAccount ? (
+                  <MailAccountAvatar account={selectedAccount} />
+                ) : (
+                  <MailAllAccountsAvatar />
+                )}
+                <span className="min-w-0 text-left">
+                  <span className="block truncate text-sm font-medium">
+                    {selectedAccount ? accountLabel(selectedAccount) : "All mailboxes"}
+                  </span>
+                  {selectedAccount ? (
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {selectedAccount.email}
+                    </span>
+                  ) : (
+                    <span className="block text-[11px] text-muted-foreground">
+                      {accounts.length} connected
+                    </span>
+                  )}
+                </span>
+              </span>
+              <CaretDown className="size-4 shrink-0 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+            <DropdownMenuLabel>Mailboxes</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => onAccountFilterChange("all")}>
+              <MailAllAccountsAvatar className="size-6" />
+              <span className="flex-1">All mailboxes</span>
+              {accountFilter === "all" ? (
+                <Check className="size-4 text-primary" weight="bold" />
+              ) : null}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {accounts.map((account) => (
+              <DropdownMenuItem
+                key={account.id}
+                onClick={() => onAccountFilterChange(account.id)}
+              >
+                <MailAccountAvatar account={account} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">{accountLabel(account)}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {account.email}
+                  </span>
+                </span>
+                {accountFilter === account.id ? (
+                  <Check className="size-4 shrink-0 text-primary" weight="bold" />
+                ) : null}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to={mailboxesSettingsPath()} className="cursor-pointer">
+                Manage mailboxes…
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-3">
-        <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Folders
-        </p>
-        <nav className="mt-1.5 space-y-0.5">
+        <nav className="space-y-0.5">
           {FOLDERS.map((item) => {
             const Icon = item.icon;
             const active = folder === item.id && labelId == null;
@@ -112,13 +168,16 @@ export function MailFolderRail({
                   onFolderChange(item.id);
                 }}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+                  "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm",
                   active
                     ? "bg-primary/10 font-medium text-foreground"
                     : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                 )}
               >
-                <Icon className="size-4 shrink-0" weight={active ? "fill" : "regular"} />
+                <Icon
+                  className="size-4 shrink-0"
+                  weight={active ? "fill" : "regular"}
+                />
                 {item.label}
               </button>
             );
@@ -127,10 +186,10 @@ export function MailFolderRail({
 
         {labels.length > 0 ? (
           <>
-            <p className="mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-1.5 mt-4 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Labels
             </p>
-            <nav className="mt-1.5 space-y-0.5">
+            <nav className="space-y-0.5">
               {labels.map((label) => {
                 const active = labelId === label.id;
                 return (
@@ -142,7 +201,7 @@ export function MailFolderRail({
                       onLabelChange(label.id);
                     }}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+                      "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm",
                       active
                         ? "bg-primary/10 font-medium text-foreground"
                         : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
