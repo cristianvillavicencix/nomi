@@ -16,6 +16,7 @@ export type WorkPreferences = {
   typeFilter: string;
   priorityFilter: string;
   projectId: Identifier | null;
+  teamMemberId: Identifier | null;
   categories: WorkCategory[];
   calendarView: CalendarView;
   includeDoneTasks: boolean;
@@ -35,18 +36,19 @@ export const ALL_WORK_CATEGORIES: WorkCategory[] = [
 const ALL_CATEGORIES = ALL_WORK_CATEGORIES;
 
 const DEFAULT_PREFERENCES: WorkPreferences = {
-  viewMode: "list",
+  viewMode: "calendar",
   status: "open",
   scope: "mine",
   typeFilter: "all",
   priorityFilter: "all",
   projectId: null,
+  teamMemberId: null,
   categories: ALL_CATEGORIES,
   calendarView: "week",
   includeDoneTasks: false,
   includeCompletedReminders: false,
   showSaturday: true,
-  showSunday: true,
+  showSunday: false,
 };
 
 const readLegacyTaskPreferences = (): Partial<WorkPreferences> => {
@@ -114,10 +116,7 @@ const readPreferences = (): WorkPreferences => {
       : ALL_CATEGORIES;
 
     return {
-      viewMode:
-        parsed.viewMode === "calendar" || parsed.viewMode === "today"
-          ? parsed.viewMode
-          : "list",
+      viewMode: "calendar",
       status: parsed.status === "done" ? "done" : "open",
       scope:
         parsed.scope === "team" ||
@@ -128,6 +127,7 @@ const readPreferences = (): WorkPreferences => {
       typeFilter: parsed.typeFilter ?? "all",
       priorityFilter: parsed.priorityFilter ?? "all",
       projectId: parsed.projectId ?? null,
+      teamMemberId: parsed.teamMemberId ?? null,
       categories: categories.length > 0 ? categories : ALL_CATEGORIES,
       calendarView: parsed.calendarView === "week" ? "week" : "month",
       includeDoneTasks: Boolean(parsed.includeDoneTasks),
@@ -155,6 +155,7 @@ export const workPreferencesHaveActiveFilters = (
   preferences.scope !== "mine" ||
   preferences.priorityFilter !== "all" ||
   preferences.projectId != null ||
+  preferences.teamMemberId != null ||
   preferences.categories.length !== ALL_CATEGORIES.length;
 
 export const useWorkPreferences = () => {

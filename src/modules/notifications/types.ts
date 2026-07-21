@@ -4,6 +4,7 @@ export type NotificationCategory =
   | "tickets_message"
   | "tickets_assigned"
   | "tasks_mention"
+  | "tasks_rescheduled"
   | "leads_followup_due"
   | "leads_stale"
   | "bookings_new";
@@ -16,6 +17,7 @@ export type NotificationPrefs = {
   tickets_message: boolean;
   tickets_assigned: boolean;
   tasks_mention: boolean;
+  tasks_rescheduled: boolean;
   leads_followup_due: boolean;
   leads_stale: boolean;
   bookings_new: boolean;
@@ -56,6 +58,10 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<
   tasks_mention: {
     label: "Task mentions",
     description: "When someone tags you on a task.",
+  },
+  tasks_rescheduled: {
+    label: "Task due date changes",
+    description: "When a task you own or follow gets a new due date.",
   },
   leads_followup_due: {
     label: "Lead follow-up due",

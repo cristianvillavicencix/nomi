@@ -1637,6 +1637,24 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
     client_email: { sent: true },
     client_sms: { sent: true },
   }),
+  notifyMeetingRescheduled: async () => ({
+    ok: true,
+    calendar_url: "https://example.com/c/demo",
+    host_sms: { sent: true },
+    client_email: { sent: true },
+    client_sms: { sent: true },
+  }),
+  syncCalendarEventBooking: async () => ({
+    ok: true,
+    has_booking: false,
+  }),
+  notifyTaskRescheduled: async () => ({
+    ok: true,
+    recipients: 1,
+    sent: 1,
+    skipped: 0,
+    reasons: [],
+  }),
   sendClientSms: async ({
     conversationId,
     contactId,

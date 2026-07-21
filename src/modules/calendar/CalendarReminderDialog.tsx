@@ -6,6 +6,7 @@ import {
   required,
   useDataProvider,
   useGetIdentity,
+  useGetOne,
   useNotify,
   useRefresh,
   type Identifier,
@@ -28,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type {
+  CalendarEventRecord,
   Contact,
   OrganizationMember,
 } from "@/components/atomic-crm/types";
@@ -45,6 +47,7 @@ import {
 } from "@/modules/calendar/calendarReminderOptions";
 import { MeetingScheduleForm } from "@/modules/meetings/MeetingScheduleForm";
 import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingShareNotifications";
+import { sendCalendarEventUpdateNotifications } from "@/modules/calendar/sendCalendarEventUpdateNotifications";
 import { useOrganizationMeetingNotificationSettings } from "@/modules/settings/useOrganizationMeetingNotificationSettings";
 import { DEFAULT_MEETING_NOTIFICATION_SETTINGS } from "@/modules/meetings/meetingNotificationSettings";
 
@@ -216,6 +219,12 @@ export const CalendarReminderDialog = ({
     DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_sms_default,
   );
 
+  const { data: previousEvent } = useGetOne<CalendarEventRecord>(
+    "calendar_events",
+    { id: reminderId! },
+    { enabled: open && isEdit && reminderId != null },
+  );
+
   const transformCalendarEvent = (data: Record<string, unknown>) =>
     prepareCalendarEventWriteData(
       {
@@ -276,7 +285,29 @@ export const CalendarReminderDialog = ({
     notify(variant === "meeting" ? "Meeting scheduled" : "Event added");
   };
 
-  const handleEditSuccess = () => {
+  const handleEditSuccess = async (record?: Record<string, unknown>) => {
+    const updated = (record ?? {}) as CalendarEventRecord;
+    if (previousEvent) {
+      const notifyDefaults =
+        meetingNotifySettings ?? DEFAULT_MEETING_NOTIFICATION_SETTINGS;
+      const { warnings } = await sendCalendarEventUpdateNotifications({
+        previous: previousEvent,
+        updated,
+        dataProvider,
+        notify,
+        shareEmail:
+          variant === "meeting"
+            ? notifyDefaults.client_invite_email_default
+            : false,
+        shareSms:
+          variant === "meeting"
+            ? notifyDefaults.client_invite_sms_default
+            : false,
+      });
+      if (warnings.length > 0) {
+        notify(warnings.join(". "), { type: "warning" });
+      }
+    }
     refresh();
     closeDialog();
     notify(variant === "meeting" ? "Meeting updated" : "Event updated");
@@ -310,7 +341,9 @@ export const CalendarReminderDialog = ({
         transform={transformCalendarEvent}
         mutationMode="pessimistic"
         mutationOptions={{
-          onSuccess: handleEditSuccess,
+          onSuccess: (record) => {
+            void handleEditSuccess(record as Record<string, unknown>);
+          },
           onError: handleMutationError,
         }}
         redirect={false}

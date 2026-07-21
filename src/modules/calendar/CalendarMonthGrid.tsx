@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { CalendarEventChip } from "@/modules/calendar/CalendarEventChip";
+import type { OrganizationMember } from "@/components/atomic-crm/types";
+import { CalendarInteractiveEventChip } from "@/modules/calendar/CalendarInteractiveEventChip";
+import type { CalendarBusinessHoursSchedule } from "@/modules/calendar/calendarBusinessHours";
+import { isEventOutsideBusinessHours } from "@/modules/calendar/calendarBusinessHours";
 import {
   GRID_COLUMN_CLASS,
   getMonthGridDays,
@@ -19,14 +22,22 @@ export const CalendarMonthGrid = ({
   anchor,
   eventsByDate,
   displayOptions,
+  schedule,
   onSelectDay,
   onSelectEvent,
+  onEditEvent,
+  showAssigneeAvatars = false,
+  membersById,
 }: {
   anchor: Date;
   eventsByDate: Record<string, CalendarEvent[]>;
   displayOptions: CalendarDisplayOptions;
+  schedule: CalendarBusinessHoursSchedule;
   onSelectDay: (dateKey: string) => void;
   onSelectEvent: (event: CalendarEvent) => void;
+  onEditEvent: (event: CalendarEvent) => void;
+  showAssigneeAvatars?: boolean;
+  membersById?: Map<string, OrganizationMember>;
 }) => {
   const days = getMonthGridDays(anchor);
   const today = new Date();
@@ -76,6 +87,7 @@ export const CalendarMonthGrid = ({
               );
               const inMonth = isSameMonth(day, anchor);
               const isToday = isSameDay(day, today);
+              const daySchedule = schedule.getDaySchedule(day);
 
               return (
                 <div
@@ -96,6 +108,8 @@ export const CalendarMonthGrid = ({
                     "min-h-28 cursor-pointer border-b border-r p-2 text-left align-top transition-colors hover:bg-muted/30",
                     getWeekendCellClassName(day),
                     !inMonth && "text-muted-foreground opacity-70",
+                    daySchedule.closed &&
+                      "bg-[repeating-linear-gradient(-45deg,transparent,transparent_6px,rgba(0,0,0,0.03)_6px,rgba(0,0,0,0.03)_12px)]",
                   )}
                 >
                   <div className="mb-1 flex items-center justify-between gap-1">
@@ -108,7 +122,11 @@ export const CalendarMonthGrid = ({
                     >
                       {day.getDate()}
                     </span>
-                    {hiddenCount > 0 ? (
+                    {daySchedule.closed ? (
+                      <span className="text-[10px] text-muted-foreground">
+                        Closed
+                      </span>
+                    ) : hiddenCount > 0 ? (
                       <span className="text-[10px] text-muted-foreground">
                         +{hiddenCount}
                       </span>
@@ -117,11 +135,21 @@ export const CalendarMonthGrid = ({
 
                   <div className="space-y-1">
                     {visibleEvents.map((event) => (
-                      <CalendarEventChip
+                      <CalendarInteractiveEventChip
                         key={event.id}
                         event={event}
                         compact
                         onClick={onSelectEvent}
+                        onEdit={onEditEvent}
+                        showAssigneeAvatars={showAssigneeAvatars}
+                        membersById={membersById}
+                        outsideBusinessHours={isEventOutsideBusinessHours(
+                          {
+                            date: event.date,
+                            time: "time" in event ? event.time : null,
+                          },
+                          schedule,
+                        )}
                       />
                     ))}
                   </div>

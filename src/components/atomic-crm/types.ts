@@ -294,6 +294,7 @@ export type TaskTagNotification = {
   task_id: Identifier;
   person_id?: Identifier | null;
   recipient_organization_member_id: Identifier;
+  kind?: "mention" | "due_date_rescheduled";
   read_at?: string | null;
   created_at?: string;
 } & Pick<RaRecord, "id">;

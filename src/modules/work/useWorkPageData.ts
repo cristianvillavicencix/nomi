@@ -11,6 +11,7 @@ import {
   groupEventsByDate,
   toDateKey,
 } from "@/modules/calendar/calendarUtils";
+import { calendarEventInvolvesMember } from "@/modules/calendar/calendarEventAssignees";
 import { useCalendarEvents } from "@/modules/calendar/useCalendarEvents";
 import { computeTaskStats } from "@/components/atomic-crm/tasks/taskStats";
 import {
@@ -42,7 +43,7 @@ export const useWorkPageData = ({
 
   const { events, isPending: isEventsPending } = useCalendarEvents({
     anchor,
-    view: preferences.viewMode === "today" ? "week" : preferences.calendarView,
+    view: preferences.calendarView,
     includeDoneTasks: includeDoneForCalendar,
     includeCompletedReminders: preferences.includeCompletedReminders,
     projectId: preferences.projectId,
@@ -138,9 +139,16 @@ export const useWorkPageData = ({
     [allWorkItems, preferences.categories],
   );
 
+  const memberFilteredWorkItems = useMemo(() => {
+    if (preferences.teamMemberId == null) return workItems;
+    return workItems.filter((item) =>
+      calendarEventInvolvesMember(item.event, preferences.teamMemberId!),
+    );
+  }, [preferences.teamMemberId, workItems]);
+
   const filteredEvents = useMemo(
-    () => workItems.map((item) => item.event),
-    [workItems],
+    () => memberFilteredWorkItems.map((item) => item.event),
+    [memberFilteredWorkItems],
   );
 
   /** Calendar / sidebar / day dialog — same category filter as the list. */
@@ -159,10 +167,10 @@ export const useWorkPageData = ({
 
   const groupedItems = useMemo(
     () =>
-      groupWorkItems(workItems, toDateKey(new Date()), {
+      groupWorkItems(memberFilteredWorkItems, toDateKey(new Date()), {
         includeDone: preferences.status === "done",
       }),
-    [workItems, preferences.status],
+    [memberFilteredWorkItems, preferences.status],
   );
 
   const stats = useMemo(() => computeTaskStats(tasks), [tasks]);
@@ -178,7 +186,7 @@ export const useWorkPageData = ({
     tasks,
     events: filteredEvents,
     eventsByDate,
-    workItems,
+    workItems: memberFilteredWorkItems,
     categoryCounts,
     groupedItems,
     stats,

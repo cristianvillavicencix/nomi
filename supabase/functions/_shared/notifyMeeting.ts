@@ -6,7 +6,9 @@ import {
   buildClientMeetingConfirmationSms,
   buildClientMeetingEmailParts,
   buildClientMeetingReminderSms,
+  buildClientMeetingRescheduleSms,
   buildHostMeetingConfirmationSms,
+  buildHostMeetingRescheduleSms,
   buildHostMeetingReminderSms,
 } from "./meetingNotificationCopy.ts";
 import {
@@ -536,6 +538,271 @@ export async function notifyMeetingScheduled(
       .from("calendar_events")
       .update({ meeting_client_invite_sent_at: new Date().toISOString() })
       .eq("id", row.id);
+  }
+
+  return result;
+}
+
+/** Notify host + optional client when a video meeting is rescheduled from CRM. */
+export async function notifyMeetingRescheduled(
+  supabase: SupabaseClient,
+  params: {
+    orgId: number;
+    calendarEventId: number;
+    memberId: number;
+    shareEmail?: boolean;
+    shareSms?: boolean;
+    appBaseUrl?: string | null;
+  },
+): Promise<NotifyMeetingScheduledResult> {
+  const result: NotifyMeetingScheduledResult = {
+    calendar_url: null,
+    host_sms: { sent: false },
+    client_email: { sent: false },
+    client_sms: { sent: false },
+  };
+
+  await supabase
+    .from("calendar_events")
+    .update({
+      host_reminder_15_sent_at: null,
+      host_reminder_5_sent_at: null,
+      client_reminder_15_sent_at: null,
+      client_reminder_5_sent_at: null,
+    })
+    .eq("id", params.calendarEventId)
+    .eq("org_id", params.orgId);
+
+  const { data: event } = await supabase
+    .from("calendar_events")
+    .select(
+      "id, org_id, title, description, event_date, event_time, duration_minutes, meeting_url, timezone, contact_id, deal_id, organization_member_id, completed_at",
+    )
+    .eq("id", params.calendarEventId)
+    .eq("org_id", params.orgId)
+    .maybeSingle();
+
+  const row = event as MeetingEventRow | null;
+  if (!row?.id || !row.meeting_url?.trim()) {
+    result.host_sms.reason = "not_a_meeting";
+    return result;
+  }
+
+  if (row.completed_at) {
+    result.host_sms.reason = "completed";
+    return result;
+  }
+
+  const settings = await loadOrgMeetingNotificationSettings(
+    supabase,
+    params.orgId,
+  );
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("name, booking_settings")
+    .eq("id", params.orgId)
+    .maybeSingle();
+  const orgName = org?.name?.trim() || "Latino Business Support";
+  const bookingTz =
+    normalizeBookingSettings(org?.booking_settings).timezone_label ||
+    DEFAULT_ORG_TIMEZONE;
+  const meetingTimezone = row.timezone?.trim() || bookingTz;
+
+  const { data: hostMember } = await supabase
+    .from("organization_members")
+    .select("id, first_name, last_name")
+    .eq("id", row.organization_member_id ?? params.memberId)
+    .maybeSingle();
+
+  let contact: {
+    id: number;
+    first_name?: string | null;
+    last_name?: string | null;
+    phone_jsonb?: unknown;
+    timezone?: string | null;
+    state_abbr?: string | null;
+    zipcode?: string | null;
+    country?: string | null;
+  } | null = null;
+  if (row.contact_id) {
+    const { data } = await supabase
+      .from("contacts")
+      .select(
+        "id, first_name, last_name, phone_jsonb, timezone, state_abbr, zipcode, country",
+      )
+      .eq("id", row.contact_id)
+      .maybeSingle();
+    contact = data;
+  }
+
+  let clientTimezone =
+    contact?.timezone?.trim() ||
+    inferUsTimezoneFromAddress({
+      stateAbbr: contact?.state_abbr,
+      zipcode: contact?.zipcode,
+      country: contact?.country,
+    });
+
+  const contactName =
+    `${contact?.first_name ?? ""} ${contact?.last_name ?? ""}`.trim() || null;
+
+  let calendarUrl: string | null = null;
+  if (settings.include_add_to_calendar_link) {
+    const share = await ensurePublicCalendarEventShare(supabase, {
+      orgId: params.orgId,
+      calendarEventId: row.id,
+      createdByMemberId: params.memberId,
+      baseUrl: params.appBaseUrl,
+    });
+    calendarUrl = share?.calendarUrl ?? null;
+    result.calendar_url = calendarUrl;
+  }
+
+  const copyBase = {
+    meetingUrl: row.meeting_url.trim(),
+    calendarUrl,
+    eventDate: row.event_date,
+    eventTime: row.event_time,
+    durationMinutes: row.duration_minutes,
+    meetingTimezone,
+    clientTimezone,
+  };
+
+  if (settings.host_confirmation_on_create) {
+    const hostPhone = await resolveMemberNotificationPhone(
+      supabase,
+      Number(row.organization_member_id ?? params.memberId),
+    );
+    if (!hostPhone) {
+      result.host_sms = { sent: false, reason: "host_phone_missing" };
+    } else {
+      const body = buildHostMeetingRescheduleSms({
+        ...copyBase,
+        contactName,
+      });
+      const sms = await sendOrgSms(params.orgId, hostPhone, body);
+      result.host_sms = sms.ok
+        ? { sent: true }
+        : { sent: false, reason: sms.reason };
+    }
+  } else {
+    result.host_sms = { sent: false, reason: "disabled" };
+  }
+
+  const shareEmail = params.shareEmail === true;
+  const shareSms = params.shareSms === true;
+
+  if (!row.contact_id || (!shareEmail && !shareSms)) {
+    if (!shareEmail && !shareSms) {
+      result.client_email = { sent: false, reason: "skipped" };
+      result.client_sms = { sent: false, reason: "skipped" };
+    } else {
+      result.client_email = { sent: false, reason: "no_contact" };
+      result.client_sms = { sent: false, reason: "no_contact" };
+    }
+    return result;
+  }
+
+  const emailParts = buildClientMeetingEmailParts({
+    ...copyBase,
+    contactFirstName: contact?.first_name,
+    hostFirstName: hostMember?.first_name,
+    orgName,
+    notes: row.description,
+    title: row.title,
+  });
+
+  if (shareEmail) {
+    try {
+      const to = await resolveContactEmail(supabase, row.contact_id);
+      if (!to) {
+        result.client_email = { sent: false, reason: "no_email" };
+      } else if (!(await isOrgTransactionalEmailConfigured(params.orgId))) {
+        result.client_email = { sent: false, reason: "email_not_configured" };
+      } else {
+        const generalFrom = await resolveOrgGeneralFrom(params.orgId, orgName);
+        const introCore = emailParts.intro.replace(
+          "Join our video call using the link below:",
+          "Your video call was rescheduled. Join using the link below:",
+        );
+        const calendarLine = emailParts.calendarUrl
+          ? `\n\nAdd to calendar: ${emailParts.calendarUrl}`
+          : "";
+        const textBody = [
+          emailParts.greeting,
+          "",
+          introCore,
+          copyBase.meetingUrl,
+          calendarLine.trim(),
+          "",
+          emailParts.signature,
+        ]
+          .filter(Boolean)
+          .join("\n");
+        const introHtml = escapeHtml(introCore).replace(/\n/g, "<br>");
+        const calendarHtml = emailParts.calendarUrl
+          ? `<p style="margin:0 0 16px;"><a href="${escapeHtml(emailParts.calendarUrl)}" style="color:#378ADD;font-weight:600;">Add to calendar</a></p>`
+          : "";
+        const htmlBody = `
+          <div style="font-family:system-ui,-apple-system,sans-serif;color:#0f172a;line-height:1.6;max-width:520px;margin:0 auto;">
+            <p style="margin:0 0 16px;font-size:16px;">${escapeHtml(emailParts.greeting)}</p>
+            <p style="margin:0 0 20px;font-size:15px;color:#334155;">${introHtml}</p>
+            <p style="margin:0 0 16px;">
+              <a href="${escapeHtml(copyBase.meetingUrl)}" style="display:inline-block;background:#378ADD;color:#ffffff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Join video call</a>
+            </p>
+            ${calendarHtml}
+            <p style="margin:0;font-size:14px;color:#64748b;">${escapeHtml(emailParts.signature)}</p>
+          </div>`;
+        await sendTransactionalEmail({
+          orgId: params.orgId,
+          orgName,
+          to,
+          subject: `${orgName}: Rescheduled — ${emailParts.subjectTitle}`,
+          textBody,
+          htmlBody,
+          fromEmail: generalFrom.email,
+          fromName: generalFrom.name,
+          replyTo: generalFrom.email,
+          emailChannel: "general",
+        });
+        result.client_email = { sent: true };
+      }
+    } catch (error) {
+      result.client_email = {
+        sent: false,
+        reason: error instanceof Error ? error.message : "email_failed",
+      };
+    }
+  } else {
+    result.client_email = { sent: false, reason: "skipped" };
+  }
+
+  if (shareSms) {
+    const phone = extractPrimaryPhone(contact?.phone_jsonb);
+    if (!phone) {
+      result.client_sms = { sent: false, reason: "no_phone" };
+    } else {
+      const body = buildClientMeetingRescheduleSms({
+        ...copyBase,
+        contactFirstName: contact?.first_name,
+        hostFirstName: hostMember?.first_name,
+        orgName,
+        notes: row.description,
+      });
+      const sms = await sendOrgSms(params.orgId, phone, body, {
+        logToConversation: true,
+        contactId: contact?.id ?? row.contact_id,
+        dealId: row.deal_id ?? null,
+        memberId: params.memberId,
+        contactTitle: contactName,
+      });
+      result.client_sms = sms.ok
+        ? { sent: true }
+        : { sent: false, reason: sms.reason };
+    }
+  } else {
+    result.client_sms = { sent: false, reason: "skipped" };
   }
 
   return result;

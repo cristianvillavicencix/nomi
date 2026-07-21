@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import type { OrganizationMember } from "@/components/atomic-crm/types";
 import { Button } from "@/components/ui/button";
 import { CalendarEventChip } from "@/modules/calendar/CalendarEventChip";
 import {
@@ -14,11 +15,15 @@ export const CalendarUpcomingPanel = ({
   events,
   onSelectEvent,
   onAddEvent,
+  showAssigneeAvatars = false,
+  membersById,
 }: {
   selectedDateKey: string;
   events: CalendarEvent[];
   onSelectEvent: (event: CalendarEvent) => void;
   onAddEvent: (dateKey: string) => void;
+  showAssigneeAvatars?: boolean;
+  membersById?: Map<string, OrganizationMember>;
 }) => (
   <aside className="flex min-h-0 flex-col gap-3 rounded-lg border bg-card p-4">
     <div className="flex items-start justify-between gap-2">
@@ -58,7 +63,12 @@ export const CalendarUpcomingPanel = ({
                 className="w-full rounded-md border p-2 text-left transition-colors hover:bg-muted/30"
                 onClick={() => onSelectEvent(event)}
               >
-                <CalendarEventChip event={event} static />
+                <CalendarEventChip
+                  event={event}
+                  static
+                  showAssigneeAvatars={showAssigneeAvatars}
+                  membersById={membersById}
+                />
                 {timeLabel ? (
                   <p className="mt-1 text-xs text-muted-foreground">
                     {timeLabel}

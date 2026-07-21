@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Save } from "lucide-react";
+import { useNotify } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -8,6 +10,16 @@ import type {
   BusinessHoursConfig,
   MessagingSettingsPublic,
 } from "@/modules/types";
+import {
+  useTicketWorkspaceSettings,
+  useTicketWorkspaceSettingsMutations,
+  TICKET_WORKSPACE_SETTINGS_QUERY_KEY,
+} from "@/modules/settings/tickets/useTicketWorkspaceSettings";
+import { hasConfiguredBusinessHours } from "@/modules/shared/organizationBusinessHours";
+import {
+  resolveBusinessHoursForSave,
+  resolveInitialBusinessHours,
+} from "@/modules/shared/ticketBusinessHoursMigration";
 
 const DAYS = [
   { key: "monday", label: "Monday" },
@@ -26,12 +38,32 @@ export const BusinessHoursSettingsCard = ({
   embedded = false,
 }: {
   settings: MessagingSettingsPublic;
-  onSave: (payload: Partial<MessagingSettingsPublic>) => void;
+  onSave: (
+    payload: Partial<MessagingSettingsPublic>,
+  ) => Promise<MessagingSettingsPublic> | void;
   saving?: boolean;
   embedded?: boolean;
 }) => {
+  const notify = useNotify();
+  const queryClient = useQueryClient();
+  const { data: ticketSettings } = useTicketWorkspaceSettings();
+  const { patchWorkspace } = useTicketWorkspaceSettingsMutations();
+  const [localSaving, setLocalSaving] = useState(false);
+
+  const initial = useMemo(
+    () =>
+      resolveInitialBusinessHours(
+        settings.business_hours,
+        ticketSettings?.workspace,
+      ),
+    [settings.business_hours, ticketSettings?.workspace],
+  );
+
   const [businessHours, setBusinessHours] = useState<BusinessHoursConfig>(
-    settings.business_hours ?? {},
+    initial.hours,
+  );
+  const [importedFromTickets, setImportedFromTickets] = useState(
+    initial.importedFromTickets,
   );
   const [autoAckEnabled, setAutoAckEnabled] = useState(
     settings.auto_acknowledge_enabled ?? false,
@@ -49,7 +81,12 @@ export const BusinessHoursSettingsCard = ({
   );
 
   useEffect(() => {
-    setBusinessHours(settings.business_hours ?? {});
+    const next = resolveInitialBusinessHours(
+      settings.business_hours,
+      ticketSettings?.workspace,
+    );
+    setBusinessHours(next.hours);
+    setImportedFromTickets(next.importedFromTickets);
     setAutoAckEnabled(settings.auto_acknowledge_enabled ?? false);
     setAutoAckMessage(
       settings.auto_acknowledge_message ??
@@ -60,13 +97,14 @@ export const BusinessHoursSettingsCard = ({
       settings.out_of_hours_message ??
         "We are currently outside business hours. We will get back to you on the next business day.",
     );
-  }, [settings]);
+  }, [settings, ticketSettings?.workspace]);
 
   const updateDay = (
     key: string,
     field: "open" | "close" | "closed",
     value: string | boolean,
   ) => {
+    setImportedFromTickets(false);
     setBusinessHours((current) => ({
       ...current,
       [key]: {
@@ -75,6 +113,63 @@ export const BusinessHoursSettingsCard = ({
       },
     }));
   };
+
+  const handleSave = async () => {
+    setLocalSaving(true);
+    try {
+      const { businessHours: resolvedHours, migratedFromTickets } =
+        resolveBusinessHoursForSave(
+          businessHours,
+          settings.business_hours,
+          ticketSettings?.workspace,
+        );
+
+      await onSave({
+        business_hours: resolvedHours,
+        auto_acknowledge_enabled: autoAckEnabled,
+        auto_acknowledge_message: autoAckMessage.trim() || null,
+        out_of_hours_message: outOfHoursEnabled
+          ? outOfHoursMessage.trim() || null
+          : null,
+      });
+
+      if (hasConfiguredBusinessHours(resolvedHours)) {
+        await patchWorkspace({ business_hours_enabled: false });
+        await queryClient.invalidateQueries({
+          queryKey: TICKET_WORKSPACE_SETTINGS_QUERY_KEY,
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["messaging-settings"],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["messaging-settings", "business-hours"],
+        });
+      }
+
+      setImportedFromTickets(false);
+
+      const migratedNotice =
+        migratedFromTickets ||
+        (importedFromTickets && hasConfiguredBusinessHours(resolvedHours));
+
+      if (migratedNotice) {
+        notify(
+          "Business hours saved from the legacy Tickets schedule. Ticket fallback disabled.",
+          { type: "success" },
+        );
+      } else {
+        notify("Business hours saved", { type: "success" });
+      }
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not save hours", {
+        type: "error",
+      });
+    } finally {
+      setLocalSaving(false);
+    }
+  };
+
+  const isSaving = saving || localSaving;
 
   return (
     <div
@@ -88,6 +183,7 @@ export const BusinessHoursSettingsCard = ({
         <div>
           <h3 className="text-sm font-medium">Business hours & auto-reply</h3>
           <p className="mt-1 text-sm text-muted-foreground">
+            Shared with Calendar, ticket SLA, and inbound SMS auto-replies.
             Configure when your team is available and optional automatic replies
             for inbound SMS.
           </p>
@@ -95,6 +191,13 @@ export const BusinessHoursSettingsCard = ({
       ) : (
         <h4 className="text-sm font-medium">Business hours & auto-reply</h4>
       )}
+
+      {importedFromTickets ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+          Schedule imported from legacy Tickets settings. Save to apply it here
+          and disable the old fallback.
+        </p>
+      ) : null}
 
       <div className="space-y-2">
         {DAYS.map((day) => {
@@ -163,20 +266,7 @@ export const BusinessHoursSettingsCard = ({
         disabled={!outOfHoursEnabled}
       />
 
-      <Button
-        type="button"
-        onClick={() =>
-          onSave({
-            business_hours: businessHours,
-            auto_acknowledge_enabled: autoAckEnabled,
-            auto_acknowledge_message: autoAckMessage.trim() || null,
-            out_of_hours_message: outOfHoursEnabled
-              ? outOfHoursMessage.trim() || null
-              : null,
-          })
-        }
-        disabled={saving}
-      >
+      <Button type="button" onClick={() => void handleSave()} disabled={isSaving}>
         <Save className="size-4" />
         Save business hours
       </Button>

@@ -44,7 +44,7 @@ const TAB_CATEGORIES: Record<
   tickets: ["tickets_message", "tickets_assigned"],
   leads: ["leads_followup_due", "leads_stale"],
   messages: ["messages_sms", "messages_internal"],
-  tasks: ["tasks_mention"],
+  tasks: ["tasks_mention", "tasks_rescheduled"],
 };
 
 export const NOTIFICATION_CATEGORY_ICONS: Record<
@@ -56,6 +56,7 @@ export const NOTIFICATION_CATEGORY_ICONS: Record<
   tickets_message: MessageSquare,
   tickets_assigned: Ticket,
   tasks_mention: CheckSquare,
+  tasks_rescheduled: Clock,
   leads_followup_due: Clock,
   leads_stale: AlertCircle,
   bookings_new: CalendarCheck,
@@ -70,6 +71,7 @@ export const NOTIFICATION_CATEGORY_ACCENT: Record<
   tickets_message: "text-violet-600 bg-violet-500/10",
   tickets_assigned: "text-amber-600 bg-amber-500/10",
   tasks_mention: "text-blue-600 bg-blue-500/10",
+  tasks_rescheduled: "text-indigo-600 bg-indigo-500/10",
   leads_followup_due: "text-orange-600 bg-orange-500/10",
   leads_stale: "text-rose-600 bg-rose-500/10",
   bookings_new: "text-teal-600 bg-teal-500/10",

@@ -28,7 +28,12 @@ Deno.serve((req: Request) =>
       }
 
       const calendarEventId = Number(payload.calendar_event_id);
-      const kind = payload.kind === "reminder" ? "reminder" : "scheduled";
+      const kind =
+        payload.kind === "reminder"
+          ? "reminder"
+          : payload.kind === "rescheduled"
+            ? "rescheduled"
+            : "scheduled";
 
       if (!Number.isFinite(calendarEventId) || calendarEventId <= 0) {
         return createErrorResponse(400, "calendar_event_id is required");

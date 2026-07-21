@@ -6,6 +6,7 @@ import {
   required,
   useDataProvider,
   useGetIdentity,
+  useGetOne,
   useNotify,
   useRefresh,
   type Identifier,
@@ -29,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type {
+  CalendarEventRecord,
   Contact,
   OrganizationMember,
 } from "@/components/atomic-crm/types";
@@ -48,6 +50,7 @@ import {
 import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone/usTimezone";
 import { MeetingScheduleForm } from "@/modules/meetings/MeetingScheduleForm";
 import { sendMeetingShareNotifications } from "@/modules/meetings/sendMeetingShareNotifications";
+import { sendCalendarEventUpdateNotifications } from "@/modules/calendar/sendCalendarEventUpdateNotifications";
 import { DEFAULT_MEETING_NOTIFICATION_SETTINGS } from "@/modules/meetings/meetingNotificationSettings";
 import { useOrganizationMeetingNotificationSettings } from "@/modules/settings/useOrganizationMeetingNotificationSettings";
 import {
@@ -269,13 +272,19 @@ export const CalendarEventSheet = ({
 
   const { data: meetingNotifySettings } =
     useOrganizationMeetingNotificationSettings(
-      open && !isEdit && category === "meeting",
+      open && (isEdit ? editIsMeeting : category === "meeting"),
     );
   const [shareEmail, setShareEmail] = useState(
     DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_email_default,
   );
   const [shareSms, setShareSms] = useState(
     DEFAULT_MEETING_NOTIFICATION_SETTINGS.client_invite_sms_default,
+  );
+
+  const { data: previousEvent } = useGetOne<CalendarEventRecord>(
+    "calendar_events",
+    { id: editEventId! },
+    { enabled: open && isEdit && editEventId != null },
   );
 
   const { data: emailSettings } = useQuery({
@@ -362,7 +371,23 @@ export const CalendarEventSheet = ({
     notify(category === "meeting" ? "Meeting scheduled" : "Event added");
   };
 
-  const handleEventEditSuccess = () => {
+  const handleEventEditSuccess = async (record?: Record<string, unknown>) => {
+    const updated = (record ?? {}) as CalendarEventRecord;
+    if (previousEvent) {
+      const notifyDefaults =
+        meetingNotifySettings ?? DEFAULT_MEETING_NOTIFICATION_SETTINGS;
+      const { warnings } = await sendCalendarEventUpdateNotifications({
+        previous: previousEvent,
+        updated,
+        dataProvider,
+        notify,
+        shareEmail: notifyDefaults.client_invite_email_default,
+        shareSms: notifyDefaults.client_invite_sms_default,
+      });
+      if (warnings.length > 0) {
+        notify(warnings.join(". "), { type: "warning" });
+      }
+    }
     closeSheet();
     refresh();
     notify(editIsMeeting ? "Meeting updated" : "Event updated");
@@ -390,7 +415,9 @@ export const CalendarEventSheet = ({
         transform={transformCalendarEvent}
         mutationMode="pessimistic"
         mutationOptions={{
-          onSuccess: handleEventEditSuccess,
+          onSuccess: (record) => {
+            void handleEventEditSuccess(record as Record<string, unknown>);
+          },
           onError: handleMutationError,
         }}
         redirect={false}

@@ -138,6 +138,66 @@ export const buildHostMeetingConfirmationSms = ({
   return lines.join("\n");
 };
 
+export const buildHostMeetingRescheduleSms = ({
+  contactName,
+  ...base
+}: CopyBase & { contactName?: string | null }) => {
+  const who = contactName?.trim() || "your contact";
+  const schedule = formatMeetingScheduleLine({
+    ...base,
+    viewerTimezone: null,
+  });
+  const lines = [
+    `Meeting rescheduled with ${who}`,
+    ...(schedule ? [schedule] : []),
+    "",
+    `Join: ${base.meetingUrl.trim()}`,
+  ];
+  if (base.calendarUrl?.trim()) {
+    lines.push(`Add to calendar: ${base.calendarUrl.trim()}`);
+  }
+  return lines.join("\n");
+};
+
+export const buildClientMeetingRescheduleSms = ({
+  contactFirstName,
+  hostFirstName,
+  orgName,
+  notes,
+  ...base
+}: CopyBase & {
+  contactFirstName?: string | null;
+  hostFirstName?: string | null;
+  orgName?: string | null;
+  notes?: string | null;
+}) => {
+  const greeting = contactFirstName?.trim()
+    ? `Hi ${contactFirstName.trim()},`
+    : "Hi,";
+  const schedule = formatMeetingScheduleLine({
+    ...base,
+    viewerTimezone: base.clientTimezone,
+  });
+  const lines = [
+    greeting,
+    "",
+    "Your video call was rescheduled:",
+    schedule ?? "See details below.",
+    "",
+    `Join: ${base.meetingUrl.trim()}`,
+  ];
+  if (base.calendarUrl?.trim()) {
+    lines.push(`Add to calendar: ${base.calendarUrl.trim()}`);
+  }
+  if (notes?.trim()) {
+    lines.splice(2, 0, notes.trim(), "");
+  }
+  const sender = hostFirstName?.trim() || "Team";
+  const org = orgName?.trim() || "Latino Business Support";
+  lines.push("", `${sender} from ${org}`);
+  return lines.join("\n");
+};
+
 export const buildClientMeetingReminderSms = ({
   minutesBefore,
   hostFirstName,

@@ -3,7 +3,7 @@ import { getMessagingSettingsSecrets } from "./messagingSettings.ts";
 import { normalizeUsPhoneToE164 } from "./phone.ts";
 import { sendTwilioSms } from "./twilio.ts";
 
-export type FollowUpNotificationKind = "scheduled" | "reminder";
+export type FollowUpNotificationKind = "scheduled" | "reminder" | "rescheduled";
 
 type CalendarEventRow = {
   id: number;
@@ -225,6 +225,13 @@ const buildFollowUpMessage = ({
     );
   }
 
+  if (kind === "rescheduled") {
+    return `📅 Follow-up reagendado\nLead: ${contactLabel}${phoneLine}\nNuevo horario: ${whenLabel}${actionLine}${contextLine}${openLine}`.slice(
+      0,
+      1600,
+    );
+  }
+
   return `📋 Follow-up agendado\nLead: ${contactLabel}${phoneLine}\nCuándo: ${whenLabel}${actionLine}${contextLine}${openLine}`.slice(
     0,
     1600,
@@ -283,6 +290,16 @@ export async function notifyFollowUpForCalendarEvent(
       reason: "already_scheduled",
       calendarEventId,
     };
+  }
+
+  if (kind === "rescheduled") {
+    await supabase
+      .from("calendar_events")
+      .update({
+        follow_up_scheduled_notified_at: null,
+        follow_up_reminder_sent_at: null,
+      })
+      .eq("id", calendarEventId);
   }
 
   if (kind === "reminder" && row.follow_up_reminder_sent_at) {
@@ -384,9 +401,9 @@ export async function notifyFollowUpForCalendarEvent(
   }
 
   const notifiedColumn =
-    kind === "scheduled"
-      ? "follow_up_scheduled_notified_at"
-      : "follow_up_reminder_sent_at";
+    kind === "reminder"
+      ? "follow_up_reminder_sent_at"
+      : "follow_up_scheduled_notified_at";
 
   const { error: updateError } = await supabase
     .from("calendar_events")

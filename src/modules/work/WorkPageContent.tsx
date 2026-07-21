@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import {
-  CalendarDays,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
-  List,
   Plus,
   SlidersHorizontal,
-  Sun,
 } from "lucide-react";
 import { useGetList, type Identifier } from "ra-core";
-import type { Deal } from "@/components/atomic-crm/types";
+import type { Deal, OrganizationMember } from "@/components/atomic-crm/types";
+import { getMemberName } from "@/components/atomic-crm/tasks/taskMemberOptions";
 import {
   ModuleSearchField,
   ModuleToolbar,
@@ -19,7 +17,6 @@ import {
 } from "@/components/atomic-crm/layout/ModuleToolbar";
 import { TaskEdit } from "@/components/atomic-crm/tasks/TaskEdit";
 import { TaskEditSheet } from "@/components/atomic-crm/tasks/TaskEditSheet";
-import { useTaskParticipantsByTaskIds } from "@/components/atomic-crm/tasks/useTaskParticipants";
 import {
   useMarkTaskTagNotificationsRead,
   useUnreadTaskTagNotifications,
@@ -42,8 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { CalendarDayDialog } from "@/modules/calendar/CalendarDayDialog";
+import { CalendarDayPanel } from "@/modules/calendar/CalendarDayPanel";
 import { CalendarEventSheet } from "@/modules/calendar/CalendarEventSheet";
 import { CalendarKpiStrip } from "@/modules/calendar/CalendarKpiStrip";
 import {
@@ -64,29 +60,25 @@ import {
   type CalendarEvent,
   type CalendarView,
 } from "@/modules/calendar/calendarUtils";
+import { useCalendarBusinessHours } from "@/modules/calendar/useCalendarBusinessHours";
+import { useCalendarAssigneeMembers } from "@/modules/calendar/useCalendarAssigneeMembers";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsAdminLevel } from "@/lib/permissions/useIsAdminLevel";
 import { WorkCalendarView } from "@/modules/work/WorkCalendarView";
 import { WorkCategoryChips } from "@/modules/work/WorkCategoryChips";
 import { WORK_CATEGORY_OPTIONS } from "@/modules/work/workCategoryUtils";
 import { groupWorkItems } from "@/modules/work/workCategoryUtils";
-import { WorkListView } from "@/modules/work/WorkListView";
-import { WorkSidebarPanel } from "@/modules/work/WorkSidebarPanel";
-import { WorkTodayView } from "@/modules/work/WorkTodayView";
 import {
   useWorkPreferences,
   workPreferencesHaveActiveFilters,
   type WorkPreferences,
 } from "@/modules/work/useWorkPreferences";
 import { useWorkPageData } from "@/modules/work/useWorkPageData";
-import type { WorkCategory, WorkItem, WorkViewMode } from "@/modules/work/workTypes";
+import type { WorkCategory } from "@/modules/work/workTypes";
 
 const ALL_PROJECTS = "all";
+const ALL_TEAM_MEMBERS = "all";
 const getDealLabel = (deal: Deal) => deal.name?.trim() || `Project #${deal.id}`;
-
-const parseViewMode = (value: string | null): WorkViewMode => {
-  if (value === "calendar" || value === "today") return value;
-  return "list";
-};
 
 export const WorkPageContent = () => {
   const isMobile = useIsMobile();
@@ -97,22 +89,16 @@ export const WorkPageContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const view = parseViewMode(searchParams.get("view"));
-    if (view !== preferences.viewMode) {
-      setPreferences({ viewMode: view });
+    const view = searchParams.get("view");
+    if (view !== "calendar") {
+      const next = new URLSearchParams(searchParams);
+      next.set("view", "calendar");
+      setSearchParams(next, { replace: true });
     }
-  }, [searchParams, preferences.viewMode, setPreferences]);
-
-  const setViewMode = (viewMode: WorkViewMode) => {
-    setPreferences({ viewMode });
-    const next = new URLSearchParams(searchParams);
-    if (viewMode === "list") {
-      next.delete("view");
-    } else {
-      next.set("view", viewMode);
+    if (preferences.viewMode !== "calendar") {
+      setPreferences({ viewMode: "calendar" });
     }
-    setSearchParams(next, { replace: true });
-  };
+  }, [searchParams, preferences.viewMode, setPreferences, setSearchParams]);
 
   const {
     memberId,
@@ -144,6 +130,13 @@ export const WorkPageContent = () => {
     [eventsByDate, filteredWorkItems, searchQuery],
   );
 
+  const isAdminLevel = useIsAdminLevel();
+  const { membersById } = useCalendarAssigneeMembers(
+    filteredEventsByDate,
+    isAdminLevel,
+  );
+  const showAssigneeAvatars = isAdminLevel;
+
   const filteredGroupedItems = useMemo(
     () =>
       searchQuery.trim()
@@ -154,15 +147,6 @@ export const WorkPageContent = () => {
     [filteredWorkItems, groupedItems, preferences.status, searchQuery],
   );
 
-  const taskIds = useMemo(
-    () =>
-      filteredWorkItems
-        .filter((item) => item.event.kind === "task")
-        .map((item) => item.event.task.id),
-    [filteredWorkItems],
-  );
-  const { participantsByTaskId } = useTaskParticipantsByTaskIds(taskIds);
-
   const {
     notifications: unreadTagNotifications,
     total: unreadTaggedCount,
@@ -170,8 +154,8 @@ export const WorkPageContent = () => {
   } = useUnreadTaskTagNotifications(memberId);
   const { markRead } = useMarkTaskTagNotificationsRead();
 
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-  const [dayDialogOpen, setDayDialogOpen] = useState(false);
+  const [dayPanelOpen, setDayPanelOpen] = useState(false);
+  const [dayPanelDateKey, setDayPanelDateKey] = useState(() => toDateKey(new Date()));
   const [calendarSelectedDateKey, setCalendarSelectedDateKey] = useState(() =>
     toDateKey(new Date()),
   );
@@ -196,6 +180,16 @@ export const WorkPageContent = () => {
     { staleTime: 60_000 },
   );
 
+  const { data: teamMembers = [], isPending: isTeamMembersPending } =
+    useGetList<OrganizationMember>(
+      "organization_members",
+      {
+        pagination: { page: 1, perPage: 200 },
+        sort: { field: "first_name", order: "ASC" },
+      },
+      { enabled: isAdminLevel, staleTime: 60_000 },
+    );
+
   const scopeOptions = useMemo(() => {
     const taggedLabel =
       unreadTaggedCount > 0 ? `Tagged me (${unreadTaggedCount})` : "Tagged me";
@@ -207,26 +201,25 @@ export const WorkPageContent = () => {
     ];
   }, [unreadTaggedCount]);
 
-  const displayOptions = useMemo(
+  const fallbackDisplay = useMemo(
     () => ({
       showSaturday: preferences.showSaturday,
       showSunday: preferences.showSunday,
     }),
     [preferences.showSaturday, preferences.showSunday],
   );
+  const { schedule: businessHoursSchedule } =
+    useCalendarBusinessHours(fallbackDisplay);
 
-  const periodLabel = useMemo(() => {
-    if (preferences.viewMode === "today") {
-      return new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        day: "numeric",
-        month: "short",
-      });
-    }
-    return preferences.calendarView === "month"
-      ? formatMonthLabel(anchor)
-      : formatWeekLabel(anchor);
-  }, [anchor, preferences.calendarView, preferences.viewMode]);
+  const displayOptions = businessHoursSchedule.displayOptions;
+
+  const periodLabel = useMemo(
+    () =>
+      preferences.calendarView === "month"
+        ? formatMonthLabel(anchor)
+        : formatWeekLabel(anchor),
+    [anchor, preferences.calendarView],
+  );
 
   const shiftPeriod = (direction: -1 | 1) => {
     setAnchor((current) =>
@@ -236,11 +229,14 @@ export const WorkPageContent = () => {
     );
   };
 
-  const openDay = (dateKey: string) => {
-    setSelectedDateKey(dateKey);
+  const openDayPanel = (dateKey: string) => {
     setCalendarSelectedDateKey(dateKey);
-    setDayDialogOpen(true);
+    setDayPanelDateKey(dateKey);
+    setAnchor(parseDateKey(dateKey));
+    setDayPanelOpen(true);
   };
+
+  const closeDayPanel = () => setDayPanelOpen(false);
 
   const openEventSheet = ({
     dateKey,
@@ -260,7 +256,7 @@ export const WorkPageContent = () => {
     setEventSheetCategory(category);
     setEditEventId(eventId);
     setEditEventIsMeeting(isMeeting);
-    setDayDialogOpen(false);
+    setDayPanelOpen(false);
     setEventSheetOpen(true);
   };
 
@@ -275,11 +271,7 @@ export const WorkPageContent = () => {
   };
 
   const handleCalendarSelectDay = (dateKey: string) => {
-    setCalendarSelectedDateKey(dateKey);
-    setAnchor(parseDateKey(dateKey));
-    if (preferences.calendarView === "month") {
-      openDay(dateKey);
-    }
+    openDayPanel(dateKey);
   };
 
   const openEditReminder = (event: CalendarEntryEvent) => {
@@ -294,7 +286,7 @@ export const WorkPageContent = () => {
     if (event.kind === "task") {
       setEditTaskId(event.task.id);
       setEditTaskOpen(true);
-      setDayDialogOpen(false);
+      setDayPanelOpen(false);
       return;
     }
     if (isCalendarEntryEvent(event)) {
@@ -304,31 +296,23 @@ export const WorkPageContent = () => {
     navigate(`/deals/${event.dealId}/show?tab=overview`);
   };
 
-  const handleSelectWorkItem = (item: WorkItem) => {
-    handleSelectEvent(item.event);
+  const handleEditEvent = (event: CalendarEvent) => {
+    handleSelectEvent(event);
   };
 
-  const emptyMessage = useMemo(() => {
-    if (preferences.scope === "tagged") {
-      return unreadTaggedCount === 0
-        ? "No unread @ mentions."
-        : preferences.status === "done"
-          ? "No completed tasks in your unread mentions."
-          : "No open items in your unread mentions.";
+  const handleSelectSlot = (dateKey: string, time: string) => {
+    const daySchedule = businessHoursSchedule.getDaySchedule(dateKey);
+    if (daySchedule.closed) return;
+    if (
+      businessHoursSchedule.enabled &&
+      !businessHoursSchedule.isWithinBusinessHours(dateKey, time)
+    ) {
+      return;
     }
-    return preferences.status === "done"
-      ? "No completed items match these filters."
-      : "Nothing on your calendar matches these filters.";
-  }, [preferences.scope, preferences.status, unreadTaggedCount]);
-
-  const markAllTaggedRead = async () => {
-    await markRead(unreadTagNotifications);
-    await refetchTagNotifications();
+    openEventSheet({ dateKey, time, category: "activity" });
   };
 
-  const selectedDayEvents = selectedDateKey
-    ? (filteredEventsByDate[selectedDateKey] ?? [])
-    : [];
+  const dayPanelEvents = filteredEventsByDate[dayPanelDateKey] ?? [];
 
   const calendarSidebarEvents =
     filteredEventsByDate[calendarSelectedDateKey] ?? [];
@@ -342,13 +326,18 @@ export const WorkPageContent = () => {
     [filteredEventsByDate],
   );
 
+  const markAllTaggedRead = async () => {
+    await markRead(unreadTagNotifications);
+    await refetchTagNotifications();
+  };
+
   const hasAdvancedFilters =
     workPreferencesHaveActiveFilters(preferences) ||
     preferences.status !== "open" ||
     preferences.includeDoneTasks ||
     preferences.includeCompletedReminders ||
-    !preferences.showSaturday ||
-    !preferences.showSunday;
+    (!businessHoursSchedule.enabled &&
+      (!preferences.showSaturday || !preferences.showSunday));
 
   if (isPending) {
     return (
@@ -371,32 +360,6 @@ export const WorkPageContent = () => {
           itemSingular="item"
         />
         <ModuleToolbarActions>
-          <ToggleGroup
-            type="single"
-            value={preferences.viewMode}
-            onValueChange={(value) => {
-              if (value === "list" || value === "calendar" || value === "today") {
-                setViewMode(value);
-              }
-            }}
-            variant="outline"
-            size="sm"
-            className="w-fit shrink-0"
-          >
-            <ToggleGroupItem value="list" aria-label="List view">
-              <List className="size-4" />
-              List
-            </ToggleGroupItem>
-            <ToggleGroupItem value="calendar" aria-label="Calendar view">
-              <CalendarDays className="size-4" />
-              Calendar
-            </ToggleGroupItem>
-            <ToggleGroupItem value="today" aria-label="Today view">
-              <Sun className="size-4" />
-              Today
-            </ToggleGroupItem>
-          </ToggleGroup>
-
           {preferences.scope === "tagged" &&
           unreadTagNotifications.length > 0 ? (
             <Button
@@ -409,6 +372,38 @@ export const WorkPageContent = () => {
               Mark all read
             </Button>
           ) : null}
+        </ModuleToolbarActions>
+      </ModuleToolbar>
+
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <p className="text-sm text-muted-foreground">{stats.open} open</p>
+
+          <div className="flex items-center gap-1 rounded-sm border bg-background px-1 py-0.5">
+            <IconButton
+              onClick={() => shiftPeriod(-1)}
+              aria-label="Previous period"
+            >
+              <ChevronLeft className="size-4" />
+            </IconButton>
+            <span className="min-w-[96px] text-center text-sm font-medium tabular-nums">
+              {periodLabel}
+            </span>
+            <IconButton
+              onClick={() => shiftPeriod(1)}
+              aria-label="Next period"
+            >
+              <ChevronRight className="size-4" />
+            </IconButton>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          <WorkCategoryChips
+            selected={preferences.categories}
+            onChange={(categories) => setPreferences({ categories })}
+            counts={categoryCounts}
+          />
 
           <Popover>
             <PopoverTrigger asChild>
@@ -463,9 +458,19 @@ export const WorkPageContent = () => {
                   <Label>Scope</Label>
                   <Select
                     value={preferences.scope}
-                    onValueChange={(value) =>
-                      setPreferences({ scope: value as TaskScopeFilter })
-                    }
+                    onValueChange={(value) => {
+                      const scope = value as TaskScopeFilter;
+                      const updates: Partial<WorkPreferences> = { scope };
+                      if (
+                        scope === "mine" &&
+                        preferences.teamMemberId != null &&
+                        memberId != null &&
+                        String(preferences.teamMemberId) !== String(memberId)
+                      ) {
+                        updates.teamMemberId = null;
+                      }
+                      setPreferences(updates);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -479,6 +484,50 @@ export const WorkPageContent = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {isAdminLevel ? (
+                  <div className="space-y-2">
+                    <Label>Team member</Label>
+                    <Select
+                      value={
+                        preferences.teamMemberId != null
+                          ? String(preferences.teamMemberId)
+                          : ALL_TEAM_MEMBERS
+                      }
+                      onValueChange={(value) => {
+                        const teamMemberId =
+                          value === ALL_TEAM_MEMBERS ? null : value;
+                        const updates: Partial<WorkPreferences> = {
+                          teamMemberId,
+                        };
+                        if (
+                          teamMemberId != null &&
+                          memberId != null &&
+                          String(teamMemberId) !== String(memberId) &&
+                          preferences.scope === "mine"
+                        ) {
+                          updates.scope = "team";
+                        }
+                        setPreferences(updates);
+                      }}
+                      disabled={isTeamMembersPending}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All members" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ALL_TEAM_MEMBERS}>
+                          All members
+                        </SelectItem>
+                        {teamMembers.map((member) => (
+                          <SelectItem key={member.id} value={String(member.id)}>
+                            {getMemberName(member)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
 
                 <div className="space-y-2">
                   <Label>Status</Label>
@@ -501,25 +550,54 @@ export const WorkPageContent = () => {
                 </div>
               </div>
 
-              {preferences.viewMode === "calendar" ? (
-                <div className="space-y-2">
-                  <Label>Calendar layout</Label>
-                  <Select
-                    value={preferences.calendarView}
-                    onValueChange={(value) =>
-                      setPreferences({ calendarView: value as CalendarView })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="month">Month</SelectItem>
-                      <SelectItem value="week">Week</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-2">
+                <Label>Calendar layout</Label>
+                <Select
+                  value={preferences.calendarView}
+                  onValueChange={(value) =>
+                    setPreferences({ calendarView: value as CalendarView })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="month">Month</SelectItem>
+                    <SelectItem value="week">Week</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {businessHoursSchedule.enabled ? (
+                <p className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  Weekend visibility follows business hours from Settings →
+                  Connectors → Twilio → Business hours.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="work-show-saturday">Show Saturday</Label>
+                    <Switch
+                      id="work-show-saturday"
+                      checked={preferences.showSaturday}
+                      onCheckedChange={(checked) =>
+                        setPreferences({ showSaturday: checked })
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="work-show-sunday">Show Sunday</Label>
+                    <Switch
+                      id="work-show-sunday"
+                      checked={preferences.showSunday}
+                      onCheckedChange={(checked) =>
+                        setPreferences({ showSunday: checked })
+                      }
+                    />
+                  </div>
                 </div>
-              ) : null}
+              )}
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <Label htmlFor="work-show-completed-tasks">
@@ -547,26 +625,6 @@ export const WorkPageContent = () => {
                     }
                   />
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="work-show-saturday">Show Saturday</Label>
-                  <Switch
-                    id="work-show-saturday"
-                    checked={preferences.showSaturday}
-                    onCheckedChange={(checked) =>
-                      setPreferences({ showSaturday: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="work-show-sunday">Show Sunday</Label>
-                  <Switch
-                    id="work-show-sunday"
-                    checked={preferences.showSunday}
-                    onCheckedChange={(checked) =>
-                      setPreferences({ showSunday: checked })
-                    }
-                  />
-                </div>
               </div>
             </PopoverContent>
           </Popover>
@@ -583,132 +641,66 @@ export const WorkPageContent = () => {
             <Plus className="size-4" />
             Add
           </Button>
-        </ModuleToolbarActions>
-      </ModuleToolbar>
-
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">{stats.open} open</p>
-
-          {preferences.viewMode !== "today" ? (
-            <div className="flex items-center gap-1 rounded-sm border bg-background px-1 py-0.5">
-              <IconButton
-                onClick={() => shiftPeriod(-1)}
-                aria-label="Previous period"
-              >
-                <ChevronLeft className="size-4" />
-              </IconButton>
-              <span className="min-w-[96px] text-center text-sm font-medium tabular-nums">
-                {periodLabel}
-              </span>
-              <IconButton
-                onClick={() => shiftPeriod(1)}
-                aria-label="Next period"
-              >
-                <ChevronRight className="size-4" />
-              </IconButton>
-            </div>
-          ) : (
-            <span className="text-sm font-medium">{periodLabel}</span>
-          )}
         </div>
-
-        <WorkCategoryChips
-          selected={preferences.categories}
-          onChange={(categories) => setPreferences({ categories })}
-          counts={categoryCounts}
-        />
       </div>
 
-      {preferences.viewMode === "list" ? (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
-          <WorkListView
-            groupedItems={filteredGroupedItems}
-            participantsByTaskId={participantsByTaskId}
-            onSelectItem={handleSelectWorkItem}
-            emptyMessage={emptyMessage}
-            doneMode={preferences.status === "done"}
-          />
-          <div className="hidden xl:block">
-            <WorkSidebarPanel
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)] xl:items-start">
+        <div className="hidden xl:flex xl:flex-col xl:gap-4">
+          <aside className="rounded-lg border bg-card p-4">
+            <CalendarMiniMonth
               anchor={anchor}
-              onAnchorChange={setAnchor}
-              eventsByDate={filteredEventsByDate}
-              groupedCounts={{
-                overdue: filteredGroupedItems.overdue.length,
-                today: filteredGroupedItems.today.length,
-              }}
-              onSelectEvent={handleSelectEvent}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {preferences.viewMode === "calendar" ? (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)] xl:items-start">
-          <div className="hidden xl:flex xl:flex-col xl:gap-4">
-            <aside className="rounded-lg border bg-card p-4">
-              <CalendarMiniMonth
-                anchor={anchor}
-                selectedDateKey={calendarSelectedDateKey}
-                dotsByDate={categoryDotsByDate}
-                onSelectDay={handleCalendarSelectDay}
-                onAnchorChange={setAnchor}
-              />
-            </aside>
-            <CalendarUpcomingPanel
               selectedDateKey={calendarSelectedDateKey}
-              events={calendarSidebarEvents}
-              onSelectEvent={handleSelectEvent}
-              onAddEvent={(dateKey) => openEventSheet({ dateKey })}
-            />
-          </div>
-
-          <div className="min-w-0 space-y-3">
-            <CalendarKpiStrip
-              open={stats.open}
-              done={stats.done}
-              overdue={stats.overdue}
-              dueToday={filteredGroupedItems.today.length}
-            />
-            <WorkCalendarView
-              anchor={anchor}
-              view={preferences.calendarView}
-              eventsByDate={filteredEventsByDate}
-              displayOptions={displayOptions}
-              selectedDateKey={calendarSelectedDateKey}
+              dotsByDate={categoryDotsByDate}
               onSelectDay={handleCalendarSelectDay}
-              onSelectEvent={handleSelectEvent}
-              onSelectSlot={(dateKey, time) => {
-                openEventSheet({ dateKey, time, category: "activity" });
-              }}
+              onAnchorChange={setAnchor}
             />
-          </div>
+          </aside>
+          <CalendarUpcomingPanel
+            selectedDateKey={calendarSelectedDateKey}
+            events={calendarSidebarEvents}
+            onSelectEvent={handleSelectEvent}
+            onAddEvent={(dateKey) => openEventSheet({ dateKey })}
+            showAssigneeAvatars={showAssigneeAvatars}
+            membersById={membersById}
+          />
         </div>
-      ) : null}
 
-      {preferences.viewMode === "today" ? (
-        <WorkTodayView
-          eventsByDate={filteredEventsByDate}
-          workItems={filteredWorkItems}
-          participantsByTaskId={participantsByTaskId}
-          onSelectEvent={handleSelectEvent}
-          onSelectTask={(task) => {
-            setEditTaskId(task.id);
-            setEditTaskOpen(true);
-          }}
-        />
-      ) : null}
-
-      <CalendarDayDialog
-        dateKey={selectedDateKey}
-        events={selectedDayEvents}
-        open={dayDialogOpen}
-        onOpenChange={setDayDialogOpen}
-        onAddEvent={(dateKey) => openEventSheet({ dateKey })}
-        onEditTask={(event) => handleSelectEvent(event)}
-        onEditReminder={openEditReminder}
-      />
+        <div className="relative min-w-0 space-y-3">
+          <CalendarKpiStrip
+            open={stats.open}
+            done={stats.done}
+            overdue={stats.overdue}
+            dueToday={filteredGroupedItems.today.length}
+          />
+          <WorkCalendarView
+            anchor={anchor}
+            view={preferences.calendarView}
+            eventsByDate={filteredEventsByDate}
+            displayOptions={displayOptions}
+            schedule={businessHoursSchedule}
+            selectedDateKey={calendarSelectedDateKey}
+            onSelectDay={handleCalendarSelectDay}
+            onSelectEvent={handleSelectEvent}
+            onEditEvent={handleEditEvent}
+            onSelectSlot={handleSelectSlot}
+            showAssigneeAvatars={showAssigneeAvatars}
+            membersById={membersById}
+          />
+          <CalendarDayPanel
+            dateKey={dayPanelDateKey}
+            events={dayPanelEvents}
+            schedule={businessHoursSchedule}
+            open={dayPanelOpen}
+            onClose={closeDayPanel}
+            onSelectEvent={handleSelectEvent}
+            onEditEvent={handleEditEvent}
+            onSelectSlot={handleSelectSlot}
+            onAddEvent={(dateKey) => openEventSheet({ dateKey })}
+            showAssigneeAvatars={showAssigneeAvatars}
+            membersById={membersById}
+          />
+        </div>
+      </div>
 
       <CalendarEventSheet
         open={eventSheetOpen}

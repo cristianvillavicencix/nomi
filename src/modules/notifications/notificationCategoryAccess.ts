@@ -16,6 +16,7 @@ export const NOTIFICATION_CATEGORY_CAPABILITY: Record<
   tickets_message: "support.tickets.view",
   tickets_assigned: "support.tickets.view",
   tasks_mention: "crm.tasks.view",
+  tasks_rescheduled: "crm.tasks.view",
   leads_followup_due: "crm.contacts.view",
   leads_stale: "crm.contacts.view",
   bookings_new: "meetings.manage",
@@ -35,7 +36,7 @@ export const NOTIFICATION_CATEGORY_GROUPS: {
   },
   {
     title: "Tasks",
-    keys: ["tasks_mention"],
+    keys: ["tasks_mention", "tasks_rescheduled"],
   },
   {
     title: "Leads",

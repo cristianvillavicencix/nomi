@@ -20,6 +20,8 @@ import {
   prepareTaskWriteData,
   taskAssignmentFieldsChanged,
 } from "../../tasks/persistTaskAssignmentSideEffects";
+import { persistTaskDueDateSideEffects } from "../../tasks/persistTaskDueDateSideEffects";
+import { hasTaskDueDateChanged } from "../../tasks/taskDueDateUtils";
 import { invalidateResourceQueries } from "../queryInvalidation";
 import { isValidRecordId } from "@/lib/isValidRecordId";
 import { resolveOrgTimezoneFromAddress } from "@/lib/timezone/usTimezone";
@@ -664,6 +666,21 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
     afterUpdate: async (result, dataProvider) => {
       const context = taskUpdateContextById.get(String(result.data.id));
       taskUpdateContextById.delete(String(result.data.id));
+
+      if (
+        context?.previous &&
+        hasTaskDueDateChanged(
+          context.previous,
+          result.data as Record<string, unknown>,
+        )
+      ) {
+        await persistTaskDueDateSideEffects(
+          dataProvider as CrmDataProvider,
+          result.data.id,
+          result.data as Record<string, unknown>,
+          context.previous,
+        );
+      }
 
       if (context?.skipSideEffects) {
         return result;

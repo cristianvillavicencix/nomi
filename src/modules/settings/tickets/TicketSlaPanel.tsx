@@ -1,27 +1,70 @@
+import { Link } from "react-router";
+import { useDataProvider } from "ra-core";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { IntegrationFeatureSwitchRow } from "@/modules/settings/integrations/IntegrationFeatureSwitchRow";
+import type { CrmDataProvider } from "@/components/atomic-crm/providers/types";
 import { TicketSettingsPanelShell } from "@/modules/settings/tickets/TicketSettingsPanelShell";
 import { useTicketWorkspaceSettingsContext } from "@/modules/settings/tickets/useTicketWorkspaceSettings";
-
-const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+import {
+  BUSINESS_HOURS_SETTINGS_PATH,
+  formatBusinessHoursSummary,
+  hasConfiguredBusinessHours,
+} from "@/modules/shared/organizationBusinessHours";
 
 export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
   const { data, patchWorkspace, saving } = useTicketWorkspaceSettingsContext();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const { data: messagingSettings } = useQuery({
+    queryKey: ["messaging-settings", "business-hours"],
+    queryFn: () => dataProvider.getMessagingSettings(),
+    staleTime: 60_000,
+  });
   const workspace = data?.workspace;
   if (!workspace) return null;
 
+  const communicationsHours = messagingSettings?.business_hours;
+  const usesCommunications = hasConfiguredBusinessHours(communicationsHours);
+  const hoursSummary = formatBusinessHoursSummary(communicationsHours);
+
   const body = (
     <>
-      <IntegrationFeatureSwitchRow
-        label="Enable business hours"
-        description="Used for SLA reporting and future out-of-hours auto-replies."
-        checked={workspace.business_hours_enabled}
-        disabled={saving}
-        onCheckedChange={(checked) =>
-          void patchWorkspace({ business_hours_enabled: checked })
-        }
-      />
+      <div className="space-y-2 rounded-xl border bg-muted/10 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Business hours</p>
+          <p className="text-xs text-muted-foreground">
+            Shared with Calendar, SMS auto-replies, and SLA reporting. Edit in
+            Communications settings.
+          </p>
+        </div>
+        {usesCommunications && hoursSummary ? (
+          <p className="text-xs text-foreground">{hoursSummary}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            No business hours configured yet.
+          </p>
+        )}
+        <Link
+          to={BUSINESS_HOURS_SETTINGS_PATH}
+          className="inline-flex text-xs font-medium text-primary hover:underline"
+        >
+          Open Settings → Connectors → Twilio → Business hours
+        </Link>
+      </div>
+
+      {!usesCommunications && workspace.business_hours_enabled ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+          Legacy ticket business hours are still active. Save the shared schedule
+          in{" "}
+          <Link
+            to={BUSINESS_HOURS_SETTINGS_PATH}
+            className="font-medium text-primary hover:underline"
+          >
+            Connectors → Twilio → Business hours
+          </Link>{" "}
+          to migrate and disable this fallback.
+        </p>
+      ) : null}
 
       <div className="space-y-2">
         <Label>Timezone</Label>
@@ -31,6 +74,10 @@ export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
             void patchWorkspace({ business_hours_timezone: e.target.value })
           }
         />
+        <p className="text-xs text-muted-foreground">
+          Used for SLA reporting. Calendar slots follow Communications hours in
+          your browser timezone unless a dedicated org timezone is added later.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -47,63 +94,6 @@ export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
             });
           }}
         />
-      </div>
-
-      <div className="space-y-2 rounded-xl border p-3">
-        <p className="text-sm font-medium">Weekly schedule</p>
-        {DAYS.map((day) => {
-          const row = workspace.business_hours[day] ?? {
-            enabled: false,
-            start: "09:00",
-            end: "17:00",
-          };
-          return (
-            <div key={day} className="grid grid-cols-[72px_1fr_1fr_auto] items-center gap-2 text-xs">
-              <span className="uppercase text-muted-foreground">{day}</span>
-              <Input
-                type="time"
-                value={row.start}
-                disabled={!row.enabled}
-                onChange={(e) =>
-                  void patchWorkspace({
-                    business_hours: {
-                      ...workspace.business_hours,
-                      [day]: { ...row, start: e.target.value },
-                    },
-                  })
-                }
-              />
-              <Input
-                type="time"
-                value={row.end}
-                disabled={!row.enabled}
-                onChange={(e) =>
-                  void patchWorkspace({
-                    business_hours: {
-                      ...workspace.business_hours,
-                      [day]: { ...row, end: e.target.value },
-                    },
-                  })
-                }
-              />
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={row.enabled}
-                  onChange={(e) =>
-                    void patchWorkspace({
-                      business_hours: {
-                        ...workspace.business_hours,
-                        [day]: { ...row, enabled: e.target.checked },
-                      },
-                    })
-                  }
-                />
-                On
-              </label>
-            </div>
-          );
-        })}
       </div>
 
       <div className="space-y-2 rounded-xl border bg-muted/10 p-4">
@@ -135,7 +125,7 @@ export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
         <div className="space-y-1">
           <p className="text-sm font-medium">SLA & business hours</p>
           <p className="text-xs text-muted-foreground">
-            Business hours and first-response SLA target.
+            SLA targets and shared business hours reference.
           </p>
         </div>
         <div className="space-y-4">{body}</div>
@@ -146,7 +136,7 @@ export const TicketSlaPanel = ({ embedded }: { embedded?: boolean }) => {
   return (
     <TicketSettingsPanelShell
       title="SLA & business hours"
-      description="Business hours reference and first-response SLA target."
+      description="SLA targets and shared business hours reference."
     >
       {body}
     </TicketSettingsPanelShell>

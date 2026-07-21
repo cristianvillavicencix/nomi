@@ -792,7 +792,7 @@ export const messagingProvider = {
   },
   async notifyFollowUp(params: {
     calendarEventId: Identifier;
-    kind?: "scheduled" | "reminder";
+    kind?: "scheduled" | "reminder" | "rescheduled";
     appBaseUrl?: string | null;
   }) {
     const { data, error } = await invokeEdgeFunction<{
@@ -854,6 +854,114 @@ export const messagingProvider = {
         host_sms: { sent: false },
         client_email: { sent: false },
         client_sms: { sent: false },
+      }
+    );
+  },
+  async notifyMeetingRescheduled(params: {
+    calendarEventId: Identifier;
+    shareEmail?: boolean;
+    shareSms?: boolean;
+    appBaseUrl?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      calendar_url?: string | null;
+      host_sms?: { sent: boolean; reason?: string };
+      client_email?: { sent: boolean; reason?: string };
+      client_sms?: { sent: boolean; reason?: string };
+    }>("notify_meeting_rescheduled", {
+      method: "POST",
+      body: {
+        calendar_event_id: Number(params.calendarEventId),
+        share_email: params.shareEmail === true,
+        share_sms: params.shareSms === true,
+        app_base_url: params.appBaseUrl ?? undefined,
+      },
+    });
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to send meeting reschedule notifications",
+        ),
+      );
+    }
+    return (
+      data ?? {
+        ok: true,
+        calendar_url: null,
+        host_sms: { sent: false },
+        client_email: { sent: false },
+        client_sms: { sent: false },
+      }
+    );
+  },
+  async syncCalendarEventBooking(params: {
+    calendarEventId: Identifier;
+    appBaseUrl?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      has_booking?: boolean;
+      booking_id?: number | null;
+      host_notify?: { ok?: boolean; sent?: boolean; reason?: string };
+      guest_confirmation?: { sent: boolean; reason?: string };
+    }>("sync_calendar_event_update", {
+      method: "POST",
+      body: {
+        calendar_event_id: Number(params.calendarEventId),
+        app_base_url: params.appBaseUrl ?? undefined,
+      },
+    });
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to sync public booking",
+        ),
+      );
+    }
+    return (
+      data ?? {
+        ok: true,
+        has_booking: false,
+      }
+    );
+  },
+  async notifyTaskRescheduled(params: {
+    taskId: Identifier;
+    previousDueDate?: string | null;
+    appBaseUrl?: string | null;
+  }) {
+    const { data, error } = await invokeEdgeFunction<{
+      ok?: boolean;
+      recipients?: number;
+      sent?: number;
+      skipped?: number;
+      reasons?: string[];
+    }>("notify_task_rescheduled", {
+      method: "POST",
+      body: {
+        task_id: Number(params.taskId),
+        previous_due_date: params.previousDueDate ?? null,
+        app_base_url: params.appBaseUrl ?? undefined,
+      },
+    });
+    if (error) {
+      throw new Error(
+        await readEdgeFunctionErrorMessage(
+          error,
+          "Failed to send task reschedule notifications",
+        ),
+      );
+    }
+    return (
+      data ?? {
+        ok: true,
+        recipients: 0,
+        sent: 0,
+        skipped: 0,
+        reasons: [],
       }
     );
   },

@@ -8,6 +8,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   tickets_message: true,
   tickets_assigned: true,
   tasks_mention: true,
+  tasks_rescheduled: true,
   leads_followup_due: true,
   leads_stale: true,
   bookings_new: true,
@@ -49,6 +50,8 @@ export const isNotificationCategoryEnabled = (
       return prefs.tickets_assigned;
     case "tasks_mention":
       return prefs.tasks_mention;
+    case "tasks_rescheduled":
+      return prefs.tasks_rescheduled;
     case "leads_followup_due":
       return prefs.leads_followup_due;
     case "leads_stale":

@@ -348,8 +348,8 @@ export const TwilioCredentialsForm = ({
               <BusinessHoursSettingsCard
                 embedded
                 settings={settings}
-                saving={saving}
-                onSave={(payload) => onSave(payload)}
+                saving={patching}
+                onSave={(payload) => onPatch(payload)}
               />
             </div>
           ) : null}

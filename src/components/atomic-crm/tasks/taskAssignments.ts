@@ -1,5 +1,6 @@
 import type { DataProvider, Identifier } from "ra-core";
 import type { TaskTagNotification } from "@/components/atomic-crm/types";
+import { TASK_MENTION_NOTIFICATION_KIND } from "@/components/atomic-crm/tasks/taskDueDateNotifications";
 
 export type TaskAssigneeRole = "assignee" | "collaborator" | "watcher";
 
@@ -100,6 +101,7 @@ export const createTaskTagNotifications = async (
         data: {
           task_id: taskId,
           recipient_organization_member_id: recipient.id,
+          kind: TASK_MENTION_NOTIFICATION_KIND,
         },
       }),
     );

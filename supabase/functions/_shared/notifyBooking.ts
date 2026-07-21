@@ -352,7 +352,7 @@ export async function processBookingAfterSubmit(
   const hostNotify = await notifyFollowUpForCalendarEvent(
     supabase,
     input.calendarEventId,
-    input.rescheduled ? "scheduled" : "scheduled",
+    input.rescheduled ? "rescheduled" : "scheduled",
     { appBaseUrl: input.appBaseUrl },
   );
 
